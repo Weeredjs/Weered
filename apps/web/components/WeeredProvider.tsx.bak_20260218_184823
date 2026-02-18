@@ -47,8 +47,8 @@ type Ctx = {
   wsReady: boolean;
   wsState: number;
 
-  activeRoomId: string;
-  joinedRoomId: string;
+  activeRoomId: string;      // desired / viewed room
+  joinedRoomId: string;      // actually joined room
   setActiveRoomId: (id: string) => void;
 
   users: RoomUser[];
@@ -159,6 +159,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     wsRef.current = null;
   }
 
+  // Connect WS when token present
   useEffect(() => {
     if (!token) return;
 
@@ -206,6 +207,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
         };
         setMetaByRoom((prev) => ({ ...prev, [rid]: nextMeta }));
+
         setStatusByRoom((prev) => ({ ...prev, [rid]: "joined" }));
 
         if (rid && rid === activeRoomId) {
@@ -251,14 +253,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // NEW: history dump on join (persistence)
-      if (msg.type === "chat:history") {
-        const rid = String(msg.roomId || "");
-        const list = Array.isArray(msg.msgs) ? (msg.msgs as ChatMsg[]) : [];
-        setMsgsByRoom((prev) => ({ ...prev, [rid]: list.slice(-200) }));
-        return;
-      }
-
       if (msg.type === "chat:new") {
         const rid = String(msg.roomId || "");
         const m = msg.msg as ChatMsg;
@@ -296,6 +290,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     };
   }, [token, activeRoomId]);
 
+  // Join active room (do NOT leave current joined room until join confirmed)
   useEffect(() => {
     if (!wsReady) return;
     const ws = wsRef.current;
