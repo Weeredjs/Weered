@@ -1,24 +1,87 @@
 ﻿"use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useWeered } from "../../../components/WeeredProvider";
+
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:4001";
+
+type RoomUser = { id: string; name: string };
+type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 
 export default function RoomPage({ params }: { params: { roomId: string } }) {
   const roomId = String(params?.roomId || "");
-  const { setActiveRoomId, users, msgs, sendChat } = useWeered();
+  const [token, setToken] = useState<string>("");
+  const [me, setMe] = useState<any>(null);
+
+  const [users, setUsers] = useState<RoomUser[]>([]);
+  const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
 
+  const wsRef = useRef<WebSocket | null>(null);
+
   useEffect(() => {
-    if (roomId) setActiveRoomId(roomId);
-  }, [roomId, setActiveRoomId]);
+    try {
+      const t = localStorage.getItem("weered_token") || "";
+      const u = localStorage.getItem("weered_user") || "";
+      setToken(t);
+      setMe(u ? JSON.parse(u) : null);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!token || !roomId) return;
+
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "auth:hello", token }));
+    };
+
+    ws.onmessage = (ev) => {
+      let msg: any = null;
+      try { msg = JSON.parse(String(ev.data || "")); } catch { return; }
+      if (!msg || typeof msg.type !== "string") return;
+
+      // accept payload-wrapped or top-level
+      if (msg.payload && typeof msg.payload === "object") msg = { ...msg, ...msg.payload };
+
+      if (msg.type === "auth:ok") {
+        ws.send(JSON.stringify({ type: "presence:join", roomId }));
+        return;
+      }
+
+      if (msg.type === "presence:state" && String(msg.roomId || "") === roomId) {
+        setUsers(Array.isArray(msg.users) ? msg.users : []);
+        return;
+      }
+
+      if (msg.type === "chat:new" && String(msg.roomId || "") === roomId) {
+        const m = msg.msg as ChatMsg;
+        if (m && m.id) setMsgs((prev) => [...prev, m].slice(-200));
+        return;
+      }
+    };
+
+    ws.onclose = () => {};
+    ws.onerror = () => {};
+
+    return () => {
+      try { ws.send(JSON.stringify({ type: "presence:leave", roomId })); } catch {}
+      try { ws.close(); } catch {}
+      wsRef.current = null;
+    };
+  }, [token, roomId]);
 
   const canSend = useMemo(() => Boolean((text || "").trim()), [text]);
 
-  function doSend() {
+  function sendChat() {
     const body = (text || "").trim();
     if (!body) return;
-    sendChat(body);
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: "chat:send", roomId, body }));
     setText("");
   }
 
@@ -71,12 +134,12 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") sendChat(); }}
               placeholder="Message..."
               style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
             />
             <button
-              onClick={doSend}
+              onClick={sendChat}
               disabled={!canSend}
               style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #ddd", background: "#fff", cursor: "pointer", opacity: canSend ? 1 : 0.5 }}
             >
@@ -87,7 +150,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
       </div>
 
       <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
-        Room chat is mirrored in the Dock.
+        WS: {WS_URL} • API: {API}
       </div>
     </main>
   );

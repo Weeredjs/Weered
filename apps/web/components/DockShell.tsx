@@ -1,155 +1,272 @@
 ﻿"use client";
 
+import React, { useMemo, useState } from "react";
+import { useWeered } from "./WeeredProvider";
 
-import { apiBase, wsUrl, liveKitUrl } from "..\/weeredConfig";
-import React from "react";
-import { usePathname, useRouter } from "next/navigation";
-import DockBanOverlay from "./DockBanOverlay";
-import { weeredClient, ChatMessage } from "../app/weeredClient";
+export default function DockShell() {
+  const {
+    me,
+    authed,
+    wsReady,
+    wsState,
+    activeRoomId,
+    joinedRoomId,
+    users,
+    msgs,
+    meta,
+    admin,
+    role,
+    joinStatus,
+    sendChat,
+    logout,
 
-type Props = { children: React.ReactNode };
+    lockRoom,
+    unlockRoom,
+    promote,
+    demote,
+    kick,
+    ban,
+    unban,
+    admit,
+    deny,
+  } = useWeered();
 
-function roomIdFromPath(pathname: string | null): string | null {
-  if (!pathname) return null;
-  const m = pathname.match(/^\/room\/([^\/?#]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
-}
+  const [open, setOpen] = useState(true);
+  const [text, setText] = useState("");
+  const [showMod, setShowMod] = useState(true);
 
-export default function DockShell({ children }: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const activeRoomId = roomIdFromPath(pathname);
+  const canSend = useMemo(() => Boolean((text || "").trim()), [text]);
+  const canChat = useMemo(() => activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && joinStatus === "joined", [activeRoomId, joinedRoomId, joinStatus]);
 
-  const prevRoomRef = React.useRef<string | null>(null);
-
-  const [connected, setConnected] = React.useState(false);
-  const [authed, setAuthed] = React.useState(false);
-  const [draft, setDraft] = React.useState("");
-  const [msgs, setMsgs] = React.useState<ChatMessage[]>([]);
-  const [usersCount, setUsersCount] = React.useState<number>(0);
-
-  // Connect once (singleton client)
-  React.useEffect(() => {
-    weeredClient.connect();
-    setConnected(weeredClient.isConnected());
-    setAuthed(weeredClient.isAuthed());
-
-    const offOpen = weeredClient.on("ws:open", () => setConnected(true));
-    const offClose = weeredClient.on("ws:close", () => setConnected(false));
-    const offAuthOk = weeredClient.on("auth:ok", () => setAuthed(true));
-    const offAuthFail = weeredClient.on("auth:fail", () => setAuthed(false));
-
-    return () => { offOpen(); offClose(); offAuthOk(); offAuthFail(); };
-  }, []);
-
-  // âœ... Single source of truth for room membership: route -> leave/join
-  React.useEffect(() => {
-    const prev = prevRoomRef.current;
-
-    if (prev && prev !== activeRoomId) {
-      weeredClient.leaveRoom(prev);
-    }
-    if (activeRoomId && prev !== activeRoomId) {
-      weeredClient.joinRoom(activeRoomId);
-    }
-
-    prevRoomRef.current = activeRoomId ?? null;
-
-    // local UI reset when leaving room
-    if (!activeRoomId) {
-      setMsgs([]);
-      setUsersCount(0);
-    }
-  }, [activeRoomId]);
-
-  // Keep dock chat/presence synced for current room
-  React.useEffect(() => {
-    if (!activeRoomId) return;
-
-    setMsgs(weeredClient.getChat(activeRoomId));
-    const p = weeredClient.getPresence();
-    setUsersCount(p.roomId === activeRoomId ? p.users.length : 0);
-
-    const offChat = weeredClient.on("chat:new", () => {
-      setMsgs(weeredClient.getChat(activeRoomId));
-    });
-
-    const offPresence = weeredClient.on("presence:state", () => {
-      const pr = weeredClient.getPresence();
-      if (pr.roomId === activeRoomId) setUsersCount(pr.users.length);
-    });
-
-    return () => { offChat(); offPresence(); };
-  }, [activeRoomId]);
-
-  function goHome() {
-    router.push("/");
+  function doSend() {
+    const body = (text || "").trim();
+    if (!body) return;
+    sendChat(body);
+    setText("");
   }
 
-  function send() {
-    if (!activeRoomId) return;
-    weeredClient.chatSend(activeRoomId, draft);
-    setDraft("");
-  }
+  const panel: React.CSSProperties = {
+    position: "fixed",
+    right: 12,
+    bottom: 12,
+    width: open ? 460 : 120,
+    maxHeight: open ? "75vh" : 44,
+    overflow: "hidden",
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    background: "white",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+    zIndex: 9999,
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial",
+  };
+
+  const btn: React.CSSProperties = {
+    border: "1px solid #ddd",
+    borderRadius: 10,
+    padding: "6px 10px",
+    background: "#fff",
+    cursor: "pointer",
+    fontSize: 13,
+    lineHeight: "18px",
+  };
+
+  const pill: React.CSSProperties = {
+    border: "1px solid #eee",
+    borderRadius: 999,
+    padding: "2px 8px",
+    fontSize: 12,
+    background: "#fafafa",
+  };
+
+  const small: React.CSSProperties = { fontSize: 12, color: "#666" };
+
+  const isMod = role === "mod" || role === "owner";
+  const isOwner = role === "owner";
 
   return (
-    <>
-      {children}
-      <DockBanOverlay />
-
-      <div className="fixed bottom-4 right-4 z-40 w-[min(420px,92vw)] rounded-2xl bg-white/95 shadow-xl backdrop-blur">
-        <div className="flex items-center justify-between border-b px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-semibold">Weered Dock</div>
-            <div className="text-xs text-gray-500">
-              {connected ? "ws:connected" : "ws:offline"}  -  {authed ? "auth:ok" : "auth:?"}
+    <div style={panel}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: open ? "1px solid #eee" : "none", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>Dock</div>
+          {open ? (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+              <span style={pill}>view: {activeRoomId || "—"}</span>
+              <span style={pill}>joined: {joinedRoomId || "—"}</span>
+              <span style={pill}>users: {users.length}</span>
+              <span style={pill}>{wsReady ? "ws: up" : `ws: ${wsState}`}</span>
+              <span style={pill}>me: {me?.name || "—"}</span>
+              <span style={pill}>role: {role}</span>
+              {meta?.locked ? <span style={{ ...pill, borderColor: "#f3c" }}>locked</span> : null}
+              {!authed ? <span style={{ ...pill, borderColor: "#f3c" }}>not logged in</span> : null}
             </div>
-          </div>
-          <button className="rounded-lg border px-2 py-1 text-xs hover:bg-gray-50" onClick={goHome}>
-            Home
-          </button>
+          ) : null}
         </div>
 
-        <div className="px-3 py-2 text-xs text-gray-600">
-          Room: <span className="font-mono">{activeRoomId ?? "(not in a room)"}</span>
-          {activeRoomId ? <span>  -  users: {usersCount}</span> : null}
-        </div>
-
-        <div className="max-h-56 overflow-auto px-3 pb-2">
-          {activeRoomId ? (
-            msgs.length ? (
-              msgs.map((m) => (
-                <div key={m.id} className="mb-1 text-sm">
-                  <span className="text-gray-500">{m.user ? `${m.user}: ` : ""}</span>
-                  <span>{m.text}</span>
-                </div>
-              ))
-            ) : (
-              <div className="py-6 text-center text-sm text-gray-500">No messages yet.</div>
-            )
-          ) : (
-            <div className="py-6 text-center text-sm text-gray-500">Open a room to chat.</div>
-          )}
-        </div>
-
-        <div className="flex gap-2 border-t p-2">
-          <input
-            className="flex-1 rounded-xl border px-3 py-2 text-sm outline-none"
-            placeholder={activeRoomId ? "Message..." : "Join a room first..."}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-            disabled={!activeRoomId}
-          />
-          <button
-            className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-            onClick={send}
-            disabled={!activeRoomId || !draft.trim()}
-          >
-            Send
-          </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={btn} onClick={() => setOpen((v) => !v)}>{open ? "Close" : "Open"}</button>
+          <button style={btn} onClick={logout}>Logout</button>
         </div>
       </div>
-    </>
+
+      {open ? (
+        <div style={{ padding: 12, overflow: "auto", maxHeight: "calc(75vh - 52px)" }}>
+          {/* Status banner */}
+          {activeRoomId && !canChat ? (
+            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 10, marginBottom: 10, background: "#fafafa" }}>
+              <div style={{ fontWeight: 800, fontSize: 13 }}>Room status: {joinStatus}</div>
+              <div style={small}>
+                {joinStatus === "knocking" ? "Room is locked. Your knock is queued; wait for admit." : null}
+                {joinStatus === "banned" ? "You are banned from this room." : null}
+                {joinStatus === "joining" ? "Joining…" : null}
+                {joinStatus === "idle" ? "Not joined." : null}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Chat */}
+          <div style={{ border: "1px solid #f1f1f1", borderRadius: 12, padding: 10, minHeight: 160, maxHeight: 300, overflow: "auto" }}>
+            {msgs.length === 0 ? (
+              <div style={{ color: "#777", textAlign: "center", paddingTop: 40 }}>No messages yet.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {msgs.map((m) => (
+                  <div key={m.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 10 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>
+                      {m.user?.name || "?"} <span style={{ fontSize: 12, color: "#666" }}>({m.user?.role || "member"})</span>
+                    </div>
+                    <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{m.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
+              placeholder={canChat ? "Message..." : "Chat disabled until joined/admitted"}
+              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
+              disabled={!canChat}
+            />
+            <button
+              style={{ ...btn, padding: "10px 12px", opacity: canSend && canChat ? 1 : 0.5 }}
+              disabled={!canSend || !canChat}
+              onClick={doSend}
+            >
+              Send
+            </button>
+          </div>
+
+          {/* Presence */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
+              <span>Presence</span><span style={pill}>{users.length}</span>
+            </div>
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              {users.map((u) => (
+                <div key={u.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>
+                      {u.name} <span style={{ fontSize: 12, color: "#666" }}>({u.role || "member"})</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{u.id}</div>
+                  </div>
+
+                  {isMod ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
+                      {isOwner && u.role !== "owner" ? (
+                        <>
+                          {u.role === "mod" ? (
+                            <button style={btn} onClick={() => demote(u.id)}>Demote</button>
+                          ) : (
+                            <button style={btn} onClick={() => promote(u.id)}>Promote</button>
+                          )}
+                        </>
+                      ) : null}
+
+                      {u.role !== "owner" ? (
+                        <>
+                          <button style={btn} onClick={() => kick(u.id)}>Kick</button>
+                          <button style={btn} onClick={() => ban(u.id)}>Ban</button>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mod Tools */}
+          {isMod ? (
+            <div style={{ marginTop: 14, border: "1px solid #eee", borderRadius: 12, padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 900 }}>Mod Tools</div>
+                <button style={btn} onClick={() => setShowMod((v) => !v)}>{showMod ? "Hide" : "Show"}</button>
+              </div>
+
+              {showMod ? (
+                <>
+                  <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                    {meta?.locked ? (
+                      <button style={btn} onClick={unlockRoom}>Unlock Room</button>
+                    ) : (
+                      <button style={btn} onClick={lockRoom}>Lock Room</button>
+                    )}
+                    <span style={pill}>owner: {meta?.ownerId ? meta.ownerId.slice(0, 8) + "…" : "—"}</span>
+                    <span style={pill}>mods: {meta?.mods?.length ?? 0}</span>
+                    <span style={pill}>knocks: {admin?.knocks?.length ?? 0}</span>
+                    <span style={pill}>banned: {admin?.banned?.length ?? 0}</span>
+                  </div>
+
+                  {/* Knocks */}
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>Knock Queue</div>
+                    {admin?.knocks?.length ? (
+                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                        {admin.knocks.map((k) => (
+                          <div key={k.userId} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700 }}>{k.name}</div>
+                              <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{k.userId}</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button style={btn} onClick={() => admit(k.userId)}>Admit</button>
+                              <button style={btn} onClick={() => deny(k.userId)}>Deny</button>
+                              <button style={btn} onClick={() => ban(k.userId)}>Ban</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={small}>No knocks.</div>
+                    )}
+                  </div>
+
+                  {/* Banned */}
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>Banned</div>
+                    {admin?.banned?.length ? (
+                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                        {admin.banned.map((id) => (
+                          <div key={id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ fontSize: 12, color: "#666", wordBreak: "break-all" }}>{id}</div>
+                            <button style={btn} onClick={() => unban(id)}>Unban</button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={small}>No bans.</div>
+                    )}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

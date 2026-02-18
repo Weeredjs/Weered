@@ -1,0 +1,123 @@
+﻿"use client";
+
+import React, { useMemo, useState } from "react";
+import { useWeered } from "./WeeredProvider";
+
+export default function DockShell() {
+  const { me, authed, wsReady, wsState, activeRoomId, users, msgs, sendChat, logout } = useWeered();
+
+  const [open, setOpen] = useState(true);
+  const [text, setText] = useState("");
+
+  const canSend = useMemo(() => Boolean((text || "").trim()), [text]);
+
+  function doSend() {
+    const body = (text || "").trim();
+    if (!body) return;
+    sendChat(body);
+    setText("");
+  }
+
+  const panel: React.CSSProperties = {
+    position: "fixed",
+    right: 12,
+    bottom: 12,
+    width: open ? 420 : 120,
+    maxHeight: open ? "70vh" : 44,
+    overflow: "hidden",
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    background: "white",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+    zIndex: 9999,
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial",
+  };
+
+  const btn: React.CSSProperties = {
+    border: "1px solid #ddd",
+    borderRadius: 10,
+    padding: "6px 10px",
+    background: "#fff",
+    cursor: "pointer",
+    fontSize: 13,
+    lineHeight: "18px",
+  };
+
+  const pill: React.CSSProperties = {
+    border: "1px solid #eee",
+    borderRadius: 999,
+    padding: "2px 8px",
+    fontSize: 12,
+    background: "#fafafa",
+  };
+
+  return (
+    <div style={panel}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: open ? "1px solid #eee" : "none", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>Dock</div>
+          {open ? (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+              <span style={pill}>room: {activeRoomId || "—"}</span>
+              <span style={pill}>users: {users.length}</span>
+              <span style={pill}>{wsReady ? "ws: up" : `ws: ${wsState}`}</span>
+              <span style={pill}>me: {me?.name || "—"}</span>
+              {!authed ? <span style={{ ...pill, borderColor: "#f3c" }}>not logged in</span> : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={btn} onClick={() => setOpen((v) => !v)}>{open ? "Close" : "Open"}</button>
+          <button style={btn} onClick={logout}>Logout</button>
+        </div>
+      </div>
+
+      {open ? (
+        <div style={{ padding: 12, overflow: "auto", maxHeight: "calc(70vh - 52px)" }}>
+          <div style={{ border: "1px solid #f1f1f1", borderRadius: 12, padding: 10, minHeight: 160, maxHeight: 320, overflow: "auto" }}>
+            {msgs.length === 0 ? (
+              <div style={{ color: "#777", textAlign: "center", paddingTop: 40 }}>No messages yet.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {msgs.map((m) => (
+                  <div key={m.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 10 }}>
+                    <div style={{ fontWeight: 800, fontSize: 13 }}>{m.user?.name || "?"}</div>
+                    <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{m.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
+              placeholder="Message..."
+              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
+            />
+            <button style={{ ...btn, padding: "10px 12px", opacity: canSend ? 1 : 0.5 }} disabled={!canSend} onClick={doSend}>
+              Send
+            </button>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
+              <span>Presence</span><span style={pill}>{users.length}</span>
+            </div>
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              {users.map((u) => (
+                <div key={u.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name}</div>
+                  <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{u.id}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
