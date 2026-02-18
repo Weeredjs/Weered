@@ -1,20 +1,13 @@
-﻿import "dotenv/config";
-
-import Fastify from "fastify";
+﻿import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "jsonwebtoken";
 import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
-import { AccessToken } from "livekit-server-sdk";
 
 const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
 const HTTP_PORT = Number(process.env.PORT || 4000);
 const WS_PORT = Number(process.env.WS_PORT || 4001);
-
-const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws://127.0.0.1:7880";
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
 type AuthedUser = { id: string; name: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
@@ -162,7 +155,7 @@ function publishState(room: RoomState) {
     mods: Array.from(room.mods.values()),
   });
 
-  // Admin-only extra state
+  // Admin-only extra state (knocks + banned list + audit)
   for (const s of room.sockets) {
     const uid = s.user?.id;
     if (!uid) continue;
@@ -227,13 +220,6 @@ function verifyToken(token?: string): AuthedUser | null {
   }
 }
 
-function authFromHeader(authHeader?: string): AuthedUser | null {
-  if (!authHeader) return null;
-  const m = String(authHeader).match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  return verifyToken(m[1]);
-}
-
 const ROOM_ALPH = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 function shortRoomId(len = 6): string {
   const b = randomBytes(len);
@@ -254,13 +240,16 @@ function doJoin(ws: Sock, roomId: string) {
   const room = getRoom(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
+  // first real user becomes owner
   if (!room.ownerId) room.ownerId = ws.user!.id;
 
+  // banned gate
   if (room.banned.has(ws.user!.id)) {
     send(ws, { type: "room:banned", roomId });
     return false;
   }
 
+  // If switching rooms, leave old
   if (ws.roomId && ws.roomId !== roomId) leaveRoom(ws);
 
   ws.roomId = roomId;
@@ -303,38 +292,7 @@ async function main() {
     reply.code(r.statusCode).headers(r.headers).send(r.json());
   });
 
-  // Voice token minting (LiveKit)
-  app.post("/voice/token", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-
-    if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
-      return reply.code(500).send({ ok: false, error: "livekit_not_configured" });
-    }
-
-    const body: any = (req as any).body || {};
-    const roomId = String(body.roomId || body.room || "").trim().slice(0, 64);
-    if (!roomId) return reply.code(400).send({ ok: false, error: "missing_roomId" });
-
-    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: u.id,
-      name: u.name,
-    });
-
-    at.addGrant({
-      roomJoin: true,
-      room: roomId,
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
-
-    const token = await at.toJwt();
-
-    return reply.send({ ok: true, url: LIVEKIT_URL, token });
-  });
-
-  // Rooms list/create
+  // Rooms (in-memory) — hide lobby from list
   app.get("/rooms", async () => {
     const list = Array.from(rooms.values())
       .filter((r) => r.roomId !== "lobby")
@@ -420,14 +378,18 @@ async function main() {
         return;
       }
 
+      // ---- Presence join/leave ----
       if (msg.type === "presence:join") {
         const roomId = String(msg.roomId || "");
         if (!roomId) return;
 
         const room = getRoom(roomId);
         if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
+
+        // first real user becomes owner
         if (!room.ownerId) room.ownerId = ws.user.id;
 
+        // banned gate
         if (room.banned.has(ws.user.id)) {
           send(ws, { type: "room:banned", roomId });
           return;
@@ -435,12 +397,15 @@ async function main() {
 
         const uid = ws.user.id;
 
+        // locked gate for non-mod => knock + pending
         if (room.locked && !isModOrOwner(room, uid)) {
+          // enqueue knock (dedupe)
           if (!room.knocks.some((k) => k.userId === uid)) {
             room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
             if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
           }
 
+          // keep socket in pending so admit/deny can target it
           let p = room.pending.get(uid);
           if (!p) {
             p = new Set<Sock>();
@@ -451,6 +416,7 @@ async function main() {
 
           send(ws, { type: "room:knock:queued", roomId });
 
+          // notify mods/owner
           for (const s of room.sockets) {
             const sid = s.user?.id;
             if (!sid) continue;
@@ -467,6 +433,7 @@ async function main() {
       }
 
       if (msg.type === "presence:leave") {
+        // if they were pending, just clear pending
         if (ws.pendingRoomId) {
           const rid = ws.pendingRoomId;
           const r = rooms.get(rid);
@@ -483,6 +450,7 @@ async function main() {
         return;
       }
 
+      // ---- Chat ----
       if (msg.type === "chat:send") {
         const roomId = String(msg.roomId || "");
         const body = String(msg.body || "").trim();
@@ -507,6 +475,7 @@ async function main() {
         return;
       }
 
+      // All admin/mod actions require a room context
       const roomId = String(msg.roomId || ws.roomId || ws.pendingRoomId || "");
       if (!roomId) return;
       const room = rooms.get(roomId);
@@ -517,17 +486,20 @@ async function main() {
       const actorIsMod = isModOrOwner(room, actorId);
       const actorIsOwner = isOwner(room, actorId);
 
+      // ---- Rename room ----
       if (msg.type === "room:rename") {
         if (!actorIsMod) return;
         const nextName = String(msg.name || "").trim().slice(0, 64);
         if (!nextName) return;
         room.name = nextName;
+
         audit(room, { type: "room:rename", actorId, actorName, note: nextName });
         publishState(room);
         broadcast(room, { type: "room:renamed", roomId, name: room.name });
         return;
       }
 
+      // ---- Lock/Unlock ----
       if (msg.type === "room:lock") {
         if (!actorIsMod) return;
         room.locked = true;
@@ -536,7 +508,6 @@ async function main() {
         broadcast(room, { type: "room:locked", roomId, locked: true });
         return;
       }
-
       if (msg.type === "room:unlock") {
         if (!actorIsMod) return;
         room.locked = false;
@@ -546,6 +517,7 @@ async function main() {
         return;
       }
 
+      // ---- Admit/Deny knocks (admit now auto-joins pending sockets) ----
       if (msg.type === "room:admit") {
         if (!actorIsMod) return;
         const targetId = String(msg.userId || "");
@@ -589,6 +561,7 @@ async function main() {
         return;
       }
 
+      // ---- Kick ----
       if (msg.type === "mod:kick") {
         if (!actorIsMod) return;
         const targetId = String(msg.userId || "");
@@ -609,6 +582,7 @@ async function main() {
         return;
       }
 
+      // ---- Ban/Unban ----
       if (msg.type === "mod:ban") {
         if (!actorIsMod) return;
         const targetId = String(msg.userId || "");
@@ -617,6 +591,7 @@ async function main() {
 
         room.banned.add(targetId);
 
+        // kick
         room.users.delete(targetId);
         if (room.mods.has(targetId)) room.mods.delete(targetId);
 
@@ -641,6 +616,7 @@ async function main() {
         return;
       }
 
+      // ---- Promote/Demote (owner only) ----
       if (msg.type === "mod:promote") {
         if (!actorIsOwner) return;
         const targetId = String(msg.userId || "");
@@ -665,6 +641,7 @@ async function main() {
     });
 
     ws.on("close", () => {
+      // if pending somewhere, clean it
       if (ws.pendingRoomId && ws.user) {
         const r = rooms.get(ws.pendingRoomId);
         if (r) {
@@ -679,6 +656,7 @@ async function main() {
 }
 
 main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });
