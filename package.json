@@ -1,0 +1,14 @@
+{
+  "name": "weered",
+  "private": true,
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "infra:up": "docker compose up -d postgres redis livekit",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "25.2.3",
+    "@types/ws": "^8.18.1"
+  }
+}

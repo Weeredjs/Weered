@@ -1,0 +1,541 @@
+﻿import Fastify from "fastify";
+import cors from "@fastify/cors";
+import jwt from "jsonwebtoken";
+import { WebSocketServer } from "ws";
+import type { WebSocket } from "ws";
+import { randomUUID, randomBytes } from "crypto";
+
+const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
+const HTTP_PORT = Number(process.env.PORT || 4000);
+const WS_PORT = Number(process.env.WS_PORT || 4001);
+
+type Role = "owner" | "mod" | "member";
+type AuthedUser = { id: string; name: string };
+type RoomUser = { id: string; name: string; role: Role };
+type Knock = { id: string; name: string; ts: number };
+
+type Msg =
+  | { type: "auth:hello"; token?: string }
+  | { type: "presence:join"; roomId: string }
+  | { type: "presence:leave"; roomId: string }
+  | { type: "chat:send"; roomId: string; body: string }
+  | { type: "room:lock"; roomId: string; locked: boolean }
+  | { type: "room:knock"; roomId: string }
+  | { type: "room:admit"; roomId: string; userId: string }
+  | { type: "room:deny"; roomId: string; userId: string }
+  | { type: "room:kick"; roomId: string; userId: string }
+  | { type: "room:ban"; roomId: string; userId: string }
+  | { type: "room:unban"; roomId: string; userId: string }
+  | { type: "room:setRole"; roomId: string; userId: string; role: Role }
+  | { type: string; [k: string]: any };
+
+type Sock = WebSocket & {
+  user?: AuthedUser;
+  roomId?: string;
+};
+
+type RoomState = {
+  roomId: string;
+  name?: string;
+  locked: boolean;
+  users: Map<string, RoomUser>;
+  knocks: Map<string, Knock>;
+  banned: Set<string>;
+  admitted: Set<string>;
+  sockets: Set<Sock>;
+};
+
+const rooms = new Map<string, RoomState>();
+
+function getRoom(roomId: string): RoomState {
+  let r = rooms.get(roomId);
+  if (!r) {
+    r = {
+      roomId,
+      locked: false,
+      users: new Map(),
+      knocks: new Map(),
+      banned: new Set(),
+      admitted: new Set(),
+      sockets: new Set(),
+    };
+    rooms.set(roomId, r);
+  }
+  return r;
+}
+
+function roleRank(role: Role): number {
+  if (role === "owner") return 3;
+  if (role === "mod") return 2;
+  return 1;
+}
+
+function getUserRole(room: RoomState, userId: string): Role {
+  return room.users.get(userId)?.role || "member";
+}
+
+function canAtLeast(room: RoomState, userId: string, minRole: Role): boolean {
+  return roleRank(getUserRole(room, userId)) >= roleRank(minRole);
+}
+function __withPayload(msg: any) {
+  try {
+    if (!msg || typeof msg !== "object") return msg;
+    if ((msg as any).payload) return msg;
+    const { type, ...rest } = msg as any;
+    if (!type) return msg;
+    return { ...(msg as any), payload: rest };
+  } catch {
+    return msg;
+  }
+}
+function send(ws: Sock, msg: any) {
+  try {
+    if (ws.readyState === 1) ws.send(JSON.stringify(__withPayload(msg)));
+  } catch {}
+}
+
+function broadcast(room: RoomState, msg: any) {
+  for (const ws of room.sockets) send(ws, msg);
+}
+
+function snapshotState(room: RoomState) {
+  const users = Array.from(room.users.values()).sort((a, b) => {
+    // owner first, then mod, then member; then by name
+    const dr = roleRank(b.role) - roleRank(a.role);
+    if (dr !== 0) return dr;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+  const knocks = Array.from(room.knocks.values()).sort((a, b) => a.ts - b.ts);
+  const banned = Array.from(room.banned.values());
+  return { users, knocks, banned, locked: room.locked };
+}
+
+function publishState(room: RoomState) {
+  const s = snapshotState(room);
+  // Keep presence:state for backwards compatibility with the current web client
+  broadcast(room, { type: "presence:state", roomId: room.roomId, ...s });
+  // Also publish a room-specific state event (safe for future UI use)
+  broadcast(room, { type: "room:state", roomId: room.roomId, ...s });
+}
+
+function parseJson(raw: any): any | null {
+  try {
+    const s = typeof raw === "string" ? raw : raw?.toString?.("utf8");
+    if (!s) return null;
+    const o = JSON.parse(s);
+if (o && typeof o === "object" && (o as any).payload && typeof (o as any).payload === "object") {
+  return { ...(o as any), ...((o as any).payload) };
+}
+return o;} catch {
+    return null;
+  }
+}
+
+function verifyToken(token?: string): AuthedUser | null {
+  if (!token) return null;
+  try {
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+    const id = String(decoded?.sub || decoded?.id || "");
+    const name = String(decoded?.name || decoded?.username || "");
+    if (!id || !name) return null;
+    return { id, name };
+  } catch {
+    return null;
+  }
+}
+
+function leaveRoom(ws: Sock, roomId?: string) {
+  if (!roomId) return;
+  const room = rooms.get(roomId);
+  if (!room) return;
+
+  room.sockets.delete(ws);
+
+  if (ws.user) {
+    const existed = room.users.delete(ws.user.id);
+    if (existed) {
+      broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
+      publishState(room);
+    }
+  }
+
+  // drop empty rooms
+  if (room.sockets.size === 0 && room.users.size === 0 && room.knocks.size === 0) {
+    rooms.delete(roomId);
+  }
+}
+
+function joinRoom(ws: Sock, roomId: string) {
+  if (!ws.user) {
+    send(ws, { type: "auth:fail", reason: "Not authenticated" });
+    return;
+  }
+
+  // if already in a room, leave it first
+  if (ws.roomId && ws.roomId !== roomId) {
+    leaveRoom(ws, ws.roomId);
+    ws.roomId = undefined;
+  }
+
+  const room = getRoom(roomId);
+
+  // banned check
+  if (room.banned.has(ws.user.id)) {
+    send(ws, { type: "room:banned", roomId });
+    return;
+  }
+
+  // locked room gate (allow first entrant; allow admitted users; allow owner/mod already in room)
+  const isKnown = room.users.has(ws.user.id);
+  const isFirst = room.users.size === 0;
+  const isAdmitted = room.admitted.has(ws.user.id);
+
+  if (room.locked && !isFirst && !isKnown && !isAdmitted) {
+    send(ws, { type: "room:locked", roomId });
+    return;
+  }
+
+  room.sockets.add(ws);
+  ws.roomId = roomId;
+
+  if (!room.users.has(ws.user.id)) {
+    const role: Role = room.users.size === 0 ? "owner" : "member";
+    room.users.set(ws.user.id, { id: ws.user.id, name: ws.user.name, role });
+    broadcast(room, { type: "presence:join", roomId, user: { id: ws.user.id, name: ws.user.name, role } });
+  } else {
+    // keep name fresh in case dev-login username changed
+    const u = room.users.get(ws.user.id)!;
+    u.name = ws.user.name;
+    room.users.set(ws.user.id, u);
+  }
+
+  room.admitted.delete(ws.user.id);
+  publishState(room);
+}
+
+function require(ws: Sock, room: RoomState, minRole: Role): boolean {
+  if (!ws.user) return false;
+  if (!canAtLeast(room, ws.user.id, minRole)) {
+    send(ws, { type: "room:error", roomId: room.roomId, error: "insufficient_role", required: minRole });
+    return false;
+  }
+  return true;
+}
+
+function kickOrBanTarget(room: RoomState, userId: string, kind: "kick" | "ban") {
+  // remove from presence map immediately
+  const existed = room.users.delete(userId);
+  if (existed) {
+    broadcast(room, { type: "presence:leave", roomId: room.roomId, userId });
+  }
+
+  // notify + close any sockets in this room for that user
+  for (const s of Array.from(room.sockets)) {
+    if (s.user?.id === userId) {
+      send(s, { type: kind === "ban" ? "room:banned" : "room:kicked", roomId: room.roomId });
+      try { s.close(); } catch {}
+      room.sockets.delete(s);
+    }
+  }
+
+  publishState(room);
+}
+
+async function main() {
+  const app = Fastify({ logger: true });
+
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+  });
+
+  app.get("/health", async () => ({ ok: true }));
+
+    
+  // WEERED_ROOMS_HTTP_BEGIN
+  const __ROOM_ID_ALPH = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  function __shortRoomId(len = 6): string {
+    const b = randomBytes(len);
+    let out = "";
+    for (let i = 0; i < len; i++) out += __ROOM_ID_ALPH[b[i] % __ROOM_ID_ALPH.length];
+    return out;
+  }
+
+  function __roomMeta(room: RoomState) {
+    const id = room.roomId;
+    return {
+      id,
+      roomId: id,
+      name: (room as any).name || id,
+      locked: Boolean(room.locked),
+      users: room.users?.size ?? 0,
+    };
+  }
+
+  app.get("/rooms", async () => {
+    const list = Array.from(rooms.values()).map(__roomMeta);
+    return { ok: true, rooms: list };
+  });
+
+  app.post("/rooms", async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const nameRaw = typeof body.name === "string" ? body.name : "";
+    const name = (nameRaw || "").trim().slice(0, 64);
+
+    let wanted = typeof body.roomId === "string" ? body.roomId : "";
+    wanted = (wanted || "").trim();
+    if (wanted) wanted = wanted.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+
+    let id = wanted || __shortRoomId(6);
+
+    let tries = 0;
+    while (rooms.has(id) && tries < 10) {
+      id = __shortRoomId(6);
+      tries++;
+    }
+
+    const r = getRoom(id);
+    (r as any).name = name || (r as any).name || "";
+    const meta = __roomMeta(r);
+
+    return reply.send({
+      ok: true,
+      id: meta.id,
+      roomId: meta.roomId,
+      room: meta,
+    });
+  });
+
+  app.get("/rooms/:roomId", async (req, reply) => {
+    const roomId = String((req as any).params?.roomId || "");
+    const r = rooms.get(roomId);
+    if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
+    return reply.send({ ok: true, room: __roomMeta(r) });
+  });
+  // WEERED_ROOMS_HTTP_END// Dev login
+  app.post("/auth/dev-login", async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const usernameRaw = typeof body.username === "string" ? body.username : "";
+    const username = (usernameRaw || "Guest").trim().slice(0, 32);
+
+    const user = { id: randomUUID(), name: username };
+    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+
+    return reply.send({ token, user });
+  });
+
+  // Alias used by older web builds
+  app.post("/dev-login", async (req, reply) => {
+    return (app as any).inject({
+      method: "POST",
+      url: "/auth/dev-login",
+      payload: (req as any).body || {},
+    }).then((r: any) => {
+      reply.code(r.statusCode).headers(r.headers).send(r.json());
+    });
+  });
+
+  await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
+  app.log.info(`HTTP listening on http://127.0.0.1:${HTTP_PORT}`);
+
+  // WS server (separate port to match your current setup)
+  const wss = new WebSocketServer({ port: WS_PORT });
+  app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
+
+  wss.on("connection", (rawWs) => {
+    const ws = rawWs as Sock;
+
+    ws.on("message", (raw) => {
+      const msg = parseJson(raw) as Msg | null;
+// WEERED_WS_MSG_LOG
+if (msg && typeof (msg as any).type === "string") {
+  try {
+    app.log.info({ type: (msg as any).type, roomId: (msg as any).roomId }, "ws:msg");
+  } catch {}
+}if (!msg || typeof msg.type !== "string") return;
+
+      // auth handshake
+      if (msg.type === "auth:hello") {
+        const u = verifyToken((msg as any).token);
+        if (!u) {
+          send(ws, { type: "auth:fail", reason: "Invalid token" });
+          try { ws.close(); } catch {}
+          return;
+        }
+        ws.user = u;
+        send(ws, { type: "auth:ok", user: { id: u.id, name: u.name } });
+        return;
+      }
+
+      // everything else requires auth
+      if (!ws.user) {
+        send(ws, { type: "auth:fail", reason: "Not authenticated" });
+        try { ws.close(); } catch {}
+        return;
+      }
+
+      switch (msg.type) {
+        case "presence:join": {
+          if (!msg.roomId) return;
+          joinRoom(ws, msg.roomId);
+          return;
+        }
+        case "presence:leave": {
+          leaveRoom(ws, msg.roomId);
+          ws.roomId = undefined;
+          return;
+        }
+        case "chat:send": {
+          const roomId = (msg as any).roomId;
+          const body = String((msg as any).body || "").trim();
+          if (!roomId || !body) return;
+
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!room.users.has(ws.user.id)) return;
+
+          const u = room.users.get(ws.user.id)!;
+          const chatMsg = {
+            id: randomUUID(),
+            user: { id: u.id, name: u.name, role: u.role },
+            body,
+            ts: Date.now(),
+          };
+          broadcast(room, { type: "chat:new", roomId, msg: chatMsg });
+          return;
+        }
+
+        // === Moderation / Admin ===
+
+        case "room:lock": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "mod")) return;
+
+          room.locked = Boolean((msg as any).locked);
+          publishState(room);
+          return;
+        }
+
+        case "room:knock": {
+          const roomId = (msg as any).roomId;
+          if (!roomId) return;
+          const room = getRoom(roomId);
+
+          // knocking is allowed even if not "joined"
+          room.knocks.set(ws.user.id, { id: ws.user.id, name: ws.user.name, ts: Date.now() });
+          publishState(room);
+          return;
+        }
+
+        case "room:admit": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "mod")) return;
+
+          const userId = String((msg as any).userId || "");
+          if (!userId) return;
+          room.knocks.delete(userId);
+          room.admitted.add(userId);
+          publishState(room);
+          return;
+        }
+
+        case "room:deny": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "mod")) return;
+
+          const userId = String((msg as any).userId || "");
+          if (!userId) return;
+          room.knocks.delete(userId);
+          publishState(room);
+          return;
+        }
+
+        case "room:kick": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "mod")) return;
+
+          const userId = String((msg as any).userId || "");
+          if (!userId) return;
+          if (ws.user.id === userId) return; // can't kick self
+          if (roleRank(getUserRole(room, userId)) >= roleRank(getUserRole(room, ws.user.id))) return; // no kicking equal/higher
+          kickOrBanTarget(room, userId, "kick");
+          return;
+        }
+
+        case "room:ban": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "mod")) return;
+
+          const userId = String((msg as any).userId || "");
+          if (!userId) return;
+          if (ws.user.id === userId) return;
+          if (roleRank(getUserRole(room, userId)) >= roleRank(getUserRole(room, ws.user.id))) return;
+          room.banned.add(userId);
+          kickOrBanTarget(room, userId, "ban");
+          return;
+        }
+
+        case "room:unban": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "mod")) return;
+
+          const userId = String((msg as any).userId || "");
+          if (!userId) return;
+          room.banned.delete(userId);
+          publishState(room);
+          return;
+        }
+
+        case "room:setRole": {
+          const room = rooms.get((msg as any).roomId);
+          if (!room) return;
+          if (!require(ws, room, "owner")) return;
+
+          const userId = String((msg as any).userId || "");
+          const role = String((msg as any).role || "") as Role;
+          if (!userId) return;
+          if (role !== "owner" && role !== "mod" && role !== "member") return;
+
+          const target = room.users.get(userId);
+          if (!target) return;
+
+          // Allow owner transfer, but ensure at least one owner remains.
+          // If promoting someone else to owner, demote the current owner to mod (simple + predictable).
+          if (role === "owner") {
+            for (const u of room.users.values()) {
+              if (u.role === "owner" && u.id !== userId) u.role = "mod";
+            }
+          }
+
+          target.role = role;
+          room.users.set(userId, target);
+          publishState(room);
+          return;
+        }
+
+        default:
+          return;
+      }
+    });
+
+    ws.on("close", () => {
+      leaveRoom(ws, ws.roomId);
+      ws.roomId = undefined;
+    });
+  });
+}
+
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error(err);
+  process.exit(1);
+});
+
+
+

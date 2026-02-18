@@ -1,0 +1,4 @@
+﻿services:
+  web:
+    working_dir: /app/apps/web
+    command: ["sh","-lc","./node_modules/.bin/next dev -H 0.0.0.0 -p 3000"]

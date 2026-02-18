@@ -1,0 +1,28 @@
+﻿weered.ca, www.weered.ca {
+  reverse_proxy 127.0.0.1:3000
+}
+
+api.weered.ca {
+  @allowedOrigins header_regexp Origin ^(https://(weered\.ca|www\.weered\.ca)|http://(localhost|127\.0\.0\.1):3000)$
+
+  # CORS headers (applies to all requests with matching Origin, including OPTIONS)
+  header @allowedOrigins Access-Control-Allow-Origin "{http.request.header.Origin}"
+  header @allowedOrigins Access-Control-Allow-Credentials "true"
+  header @allowedOrigins Access-Control-Allow-Headers "content-type,authorization"
+  header @allowedOrigins Access-Control-Allow-Methods "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+  header @allowedOrigins Vary "Origin, Access-Control-Request-Headers"
+
+  # Preflight short-circuit
+  @preflight method OPTIONS
+  respond @preflight 204
+
+  reverse_proxy 127.0.0.1:4000
+}
+
+ws.weered.ca {
+  reverse_proxy 127.0.0.1:4001
+}
+
+livekit.weered.ca {
+  reverse_proxy 127.0.0.1:7880
+}

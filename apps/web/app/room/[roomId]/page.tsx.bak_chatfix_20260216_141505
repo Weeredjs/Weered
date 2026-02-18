@@ -1,0 +1,371 @@
+﻿"use client";
+import { useState, useEffect, useRef, useMemo } from "react";
+import RoomTools from './RoomTools'
+// --- Chat cache (local) ---
+type ChatMsg = {
+  id: string;
+  roomId: string;
+  fromUserId: string;
+  body: string;
+  createdAt: string;
+};
+
+const CHAT_CACHE_MAX = 200;
+function chatCacheKey(roomId: string) {
+  return "weered:chat:" + roomId;
+}
+function loadChatCache(roomId: string): ChatMsg[] {
+  try {
+    const raw = localStorage.getItem(chatCacheKey(roomId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as ChatMsg[]).slice(-CHAT_CACHE_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+function saveChatCache(roomId: string, msgs: ChatMsg[]) {
+  try {
+    localStorage.setItem(chatCacheKey(roomId), JSON.stringify(msgs.slice(-CHAT_CACHE_MAX)));
+  } catch {}
+}
+
+// -------------------- RANK_UI: helpers --------------------
+type UserCard = {
+  userId: string;
+  displayName: string;
+  globalRole?: string;
+  subscriptionTier?: string;
+  spaceRole?: string | null;
+  pinRank?: number;
+};
+
+function rankEmoji(u: UserCard): string {
+  // Unicode escapes avoid any console/codepage mojibake
+  if (u.spaceRole === "owner") return "\u{1F451}";         // ðŸ‘‘
+  const gr = String(u.globalRole ?? "user");
+  if (gr === "god") return "\u{1F7E3}";                    // ðŸŸ£
+  if (gr === "mod_supervisor") return "\u{1F6E1}\u{FE0F}";  // ðŸ›¡ï¸
+  if (gr === "global_mod") return "\u{1F7E2}";             // ðŸŸ¢
+  if (gr === "support") return "\u{1F9F0}";                // ðŸ§°
+  const tier = String(u.subscriptionTier ?? "free");
+  if (tier === "plus") return "\u{2795}";                  // âž•
+  return "\u{2022}";                                       // â€¢
+}
+function rankColor(u: UserCard): string {
+  if (u.spaceRole === "owner") return "#f5c542";
+  const gr = String(u.globalRole ?? "user");
+  if (gr === "god") return "#b36bff";
+  if (gr === "mod_supervisor") return "#39c6b6";
+  if (gr === "global_mod") return "#60d46b";
+  if (gr === "support") return "#5aa7ff";
+  const tier = String(u.subscriptionTier ?? "free");
+  if (tier === "plus") return "#ffd36a";
+  return "#9aa3b2";
+}
+
+function sortRoster(list: any[]): any[] {
+  const arr = Array.isArray(list) ? list.slice() : [];
+  arr.sort((a, b) => {
+    const pa = Number(a?.pinRank ?? 0);
+    const pb = Number(b?.pinRank ?? 0);
+    if (pb !== pa) return pb - pa;
+    const da = String(a?.displayName ?? "");
+    const db = String(b?.displayName ?? "");
+    return da.localeCompare(db);
+  });
+  return arr;
+}
+
+
+ // -------------------- ROSTER_UI: styles --------------------
+function _hexWithAlpha(hex: string, alphaHex: string): string {
+  if (typeof hex === "string" && /^#[0-9a-fA-F]{6}$/.test(hex)) return hex + alphaHex;
+  return hex;
+}
+
+function rankLabel(u: UserCard): string {
+  if (u.spaceRole === "owner") return "OWNER";
+  const gr = String(u.globalRole ?? "user");
+  if (gr === "god") return "GOD";
+  if (gr === "mod_supervisor") return "MOD SUP";
+  if (gr === "global_mod") return "MOD";
+  if (gr === "support") return "SUPPORT";
+  const tier = String(u.subscriptionTier ?? "free");
+  if (tier === "plus") return "PLUS";
+  return "";
+}
+
+function rankDetail(u: UserCard): string {
+  const parts: string[] = [];
+  if (u.spaceRole) parts.push(String(u.spaceRole));
+  else if (u.globalRole) parts.push(String(u.globalRole));
+  else parts.push("user");
+  if (String(u.subscriptionTier ?? "free") === "plus") parts.push("plus");
+  return parts.join(" - ");
+}
+
+function rosterRowStyle(u: UserCard): any {
+  const c = rankColor(u);
+  const label = rankLabel(u);
+  let bg = "transparent";
+
+  if (u.spaceRole === "owner") bg = _hexWithAlpha(c, "14");
+  else if (label && label !== "PLUS") bg = _hexWithAlpha(c, "10");
+  else if (label === "PLUS") bg = _hexWithAlpha(c, "0E");
+
+  return {
+    marginTop: 10,
+    padding: "8px 10px",
+    border: "1px solid #eee",
+    borderLeft: "4px solid " + c,
+    borderRadius: 12,
+    background: bg
+  };
+}
+
+function rosterPillStyle(u: UserCard): any {
+  const c = rankColor(u);
+  return {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    padding: "2px 8px",
+    borderRadius: 999,
+    border: "1px solid " + c,
+    color: c,
+    background: _hexWithAlpha(c, "14"),
+    textTransform: "uppercase",
+    whiteSpace: "nowrap"
+  };
+}
+export default function RoomPage({ params }: any) {
+  const roomId = params.roomId as string;
+
+  const [text, setText] = useState("");
+  const [log, setLog] = useState<Msg[]>([]);
+  const [users, setUsers] = useState<UserCard[]>([]);
+  const [wsStatus, setWsStatus] = useState("connecting...");
+  const [authStatus, setAuthStatus] = useState("pending");
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const lkRef = useRef<LKRoom | null>(null);
+
+  const token = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("token") || "";
+  }, []);
+
+  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_BASE!, []);
+  const wsUrl   = useMemo(() => process.env.NEXT_PUBLIC_WS_URL!, []);
+
+  function nameFor(userId: string) {
+    const u = users.find(x => x.userId === userId);
+    return u ? (rankEmoji(u) + " " + u.displayName).trim() : userId;
+  }
+
+  useEffect(() => {
+    // Load message history (cached chat)
+    (async () => {
+      try {
+        const res = await fetch(`${apiBase}/rooms/${roomId}/messages?limit=50`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const msgs = (data.messages ?? []) as any[];
+        setLog(msgs.map(m => ({ fromUserId: m.fromUserId, fromDisplayName: m.fromDisplayName, body: m.body })));
+      } catch {
+        // ignore for now; WS still works
+      }
+    })();
+  }, [apiBase, roomId, token]);
+
+  useEffect(() => {
+    setWsStatus(`connecting to ${wsUrl}`);
+    const ws = new WebSocket(wsUrl);
+      // CHAT_CACHE: chat:new listener (local persistence)
+      ws.addEventListener("message", (ev) => {
+        try {
+          const msg = JSON.parse(String((ev as any).data));
+          if (msg?.type !== "chat:new") return;
+          const p = msg?.payload;
+          if (!p || typeof p !== "object") return;
+          if (p.roomId !== roomId) return;
+          if (typeof p.body !== "string") return;
+          const createdAt = (typeof p.createdAt === "string") ? p.createdAt : new Date().toISOString();
+          const fromUserId = (typeof p.fromUserId === "string") ? p.fromUserId : "unknown";
+          const id = (typeof p.id === "string") ? p.id : (createdAt + "-" + Math.random().toString(16).slice(2));
+          const nextMsg: ChatMsg = { id, roomId: p.roomId, fromUserId, body: p.body, createdAt };
+          setMessages((prev) => {
+            const next = [...prev, nextMsg].slice(-CHAT_CACHE_MAX);
+            saveChatCache(roomId, next);
+            return next;
+          });
+        } catch {}
+      });
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setWsStatus("connected");
+      ws.send(JSON.stringify({ type: "auth:hello", payload: { token, client: "web" } }));
+      ws.send(JSON.stringify({ type: "presence:join", payload: { roomId } }));
+    };
+
+    ws.onmessage = (e) => {
+      let msg: any;
+      try { msg = JSON.parse(e.data); } catch { return; }
+
+      if (msg.type === "auth:ok") { setAuthStatus("ok"); return; }
+      if (msg.type === "auth:fail") { setAuthStatus("FAIL"); return; }
+
+      if (msg.type === "presence:state") {
+        setUsers((msg.payload?.users ?? []) as UserCard[]);
+        return;
+      }
+
+      if (msg.type === "chat:new") {
+        setLog(prev => [...prev, { fromUserId: msg.payload.fromUserId, body: msg.payload.body }]);
+        return;
+      }
+    };
+
+    ws.onerror = () => setWsStatus("WS error");
+    ws.onclose = () => setWsStatus("closed");
+
+    return () => {
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "presence:leave", payload: {} }));
+        }
+      } catch {}
+      ws.close();
+    };
+  }, [roomId, token, wsUrl]);
+  // --- Cached chat state ---
+  const [messages, setMessages] = useState<ChatMsg[]>([]);  useEffect(() => {
+    // SERVER_HISTORY: fetch room messages (cache first, then server)
+    if (!roomId) return;
+
+    const cached = loadChatCache(roomId);
+    setMessages(cached);
+
+    if (!token) return;
+
+    (async () => {
+      try {
+        const url = apiBase + "/rooms/" + encodeURIComponent(roomId) + "/messages?limit=50";
+        const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+        if (!res.ok) return;
+
+        const serverMsgs = (await res.json()) as ChatMsg[];
+        if (!Array.isArray(serverMsgs)) return;
+
+        const byId = new Map<string, ChatMsg>();
+        for (const m of cached) byId.set(m.id, m);
+        for (const m of serverMsgs) byId.set(m.id, m);
+
+        const merged = Array.from(byId.values())
+          .filter(m => m.roomId === roomId)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          .slice(-CHAT_CACHE_MAX);
+
+        setMessages(merged);
+        saveChatCache(roomId, merged);
+      } catch {}
+    })();
+  }, [roomId, token, apiBase]);async function joinVoice() {
+    const res = await fetch(`${apiBase}/voice/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ roomId })
+    });
+    const data = await res.json();
+
+    const lk = new LKRoom();
+    lkRef.current = lk;
+
+    await lk.connect(data.wsUrl, data.token);
+    await lk.localParticipant.setMicrophoneEnabled(true);
+  }
+
+  function send() {
+    const ws = wsRef.current;
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: "chat:send", payload: { roomId, body: text } }));
+    setText("");
+  }
+
+  return (
+    <main style={{ padding: 24 }}>
+      <h2>Room</h2>
+      <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
+        WS: <b>{wsStatus}</b> Â· Auth: <b>{authStatus}</b>
+      </div>
+      <details hidden open style={{ margin: "12px 0" }}>
+        <summary style={{ cursor: "pointer", userSelect: "none" }}>
+          Chat history (cached) <span style={{ opacity: 0.6 }}>({messages.length})</span>
+        </summary>
+        <div style={{ border: "1px solid rgba(255,255,255,0.12)", padding: 12, borderRadius: 8, maxHeight: 280, overflow: "auto", marginTop: 8 }}>
+          {messages.length === 0 ? (
+            <div style={{ opacity: 0.7, fontSize: 12 }}>No cached messages yet.</div>
+          ) : (
+            messages.map((m) => (
+              <div key={m.id} style={{ fontSize: 13, marginBottom: 10 }}>
+                <div style={{ fontSize: 11, opacity: 0.7 }}>
+                  {new Date(m.createdAt).toLocaleString()} Â· {m.fromUserId}
+                </div>
+                <div>{m.body}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </details>
+
+
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+        <div style={{ width: 280, border: "1px solid #ddd", padding: 12 }}>
+          <b>In room</b>
+          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+Pinned: owner -> roles -> plus/free
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            {users.map((u) => (
+              <div key={u.userId} style={rosterRowStyle(u)}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: rankColor(u), flex: "0 0 auto" }} />
+                    <span style={{ fontSize: 14, lineHeight: "14px", opacity: 0.9, flex: "0 0 auto" }}>{rankEmoji(u)}</span>
+                    <span style={{ fontWeight: u.spaceRole === "owner" ? 700 : 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {u.displayName}
+                    </span>
+                  </div>
+                  {rankLabel(u) ? <span style={rosterPillStyle(u)}>{rankLabel(u)}</span> : null}
+                </div>
+                <div style={{ marginTop: 4, fontSize: 12, opacity: 0.65 }}>
+                  {rankDetail(u)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button style={{ marginTop: 12 }} onClick={joinVoice}>Join Voice</button>
+  <RoomTools roomId={params.roomId} />
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <div style={{ border: "1px solid #ddd", padding: 12, height: 300, overflow: "auto" }}>
+            {log.map((m, i) => (
+              <div key={i}><b>{m.fromDisplayName ?? nameFor(m.fromUserId)}:</b> {m.body}</div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <input style={{ flex: 1 }} value={text} onChange={(e) => setText(e.target.value)} />
+            <button onClick={send}>Send</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

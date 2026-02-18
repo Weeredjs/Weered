@@ -1,0 +1,77 @@
+﻿import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { PrismaClient } from "@prisma/client";
+import { RoomType, SpaceType } from "@prisma/client";
+
+const DEFAULT_SPACE_ID = "default";
+
+function requireBearer(req: FastifyRequest, reply: FastifyReply) {
+  const a = req.headers.authorization || "";
+  if (!a.startsWith("Bearer ")) {
+    reply.code(401).send({ ok: false, error: "unauthorized" });
+    return;
+  }
+}
+
+function firstEnumValue<T extends Record<string, any>>(e: T, fallback: any) {
+  const v = Object.values(e)[0];
+  return (v ?? fallback) as any;
+}
+
+async function ensureDefaultSpace(prisma: PrismaClient) {
+  const type = firstEnumValue(SpaceType as any, "personal");
+  await (prisma as any).space.upsert({
+    where: { id: DEFAULT_SPACE_ID },
+    update: {},
+    create: { id: DEFAULT_SPACE_ID, name: "Default", type },
+  });
+}
+
+export function makeRoomsRoutes(prisma: PrismaClient) {
+  return async function roomsRoutes(app: FastifyInstance) {
+    // Ensure required parent entity exists once at startup
+    await ensureDefaultSpace(prisma);
+
+    // List rooms (minimal fields for UI)
+    app.get(
+      "/rooms",
+      { preHandler: requireBearer as any },
+      async (_req, _reply) => {
+        const rooms = await (prisma as any).room.findMany({
+          select: { id: true, name: true, roomType: true },
+          take: 200,
+        });
+        return { ok: true, rooms };
+      }
+    );
+
+    // Create room (optional id); always connects to DEFAULT_SPACE_ID
+    app.post(
+      "/rooms",
+      { preHandler: requireBearer as any },
+      async (req, reply) => {
+        const body = (req.body || {}) as any;
+
+        const roomType = body.roomType ?? firstEnumValue(RoomType as any, "office");
+        const name = body.name ?? body.id ?? "New Room";
+
+        try {
+          const created = await (prisma as any).room.create({
+            data: {
+              ...(body.id ? { id: String(body.id) } : {}),
+              name: String(name),
+              roomType,
+              space: { connect: { id: DEFAULT_SPACE_ID } },
+            },
+            select: { id: true, name: true, roomType: true },
+          });
+
+          return { ok: true, room: created };
+        } catch (err: any) {
+          // Common dev error: duplicate id
+          reply.code(400).send({ ok: false, error: String(err?.message ?? err) });
+          return;
+        }
+      }
+    );
+  };
+}

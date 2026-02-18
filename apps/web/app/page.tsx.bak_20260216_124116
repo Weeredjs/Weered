@@ -1,0 +1,78 @@
+﻿'use client'
+
+"use client";
+import { useEffect, useState } from "react";
+
+export default function Page() {
+  // auto-jump: last room after login
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.pathname !== '/') return
+
+    let tries = 0
+    const id = window.setInterval(() => {
+      tries++
+      if (tries > 40) { window.clearInterval(id); return }
+
+      try {
+        const last = window.localStorage.getItem('weered:lastRoomId')
+        if (!last || !last.trim()) return
+
+        let tok =
+          window.localStorage.getItem('weered:token') ||
+          window.localStorage.getItem('token') ||
+          window.localStorage.getItem('authToken') ||
+          window.localStorage.getItem('accessToken') ||
+          window.localStorage.getItem('jwt')
+
+        if ((!tok || !tok.trim())) {
+          const raw = window.localStorage.getItem('weered:auth')
+          if (raw && raw.trim().startsWith('{')) {
+            try {
+              const obj = JSON.parse(raw)
+              tok = (obj && (obj.token || obj.accessToken || obj.jwt)) ? String(obj.token || obj.accessToken || obj.jwt) : tok
+            } catch {}
+          }
+        }
+
+        if (!tok || !tok.trim()) return
+
+        window.clearInterval(id)
+        // AUTOJUMP_OFF window.location.href = '/room/' + encodeURIComponent(last.trim())
+      } catch {}
+    }, 250)
+
+    return () => window.clearInterval(id)
+  }, [])
+
+  const [name, setName] = useState("James");
+  const [loading, setLoading] = useState(false);
+
+  async function login() {
+    setLoading(true);
+    const api = process.env.NEXT_PUBLIC_API_BASE!;
+    const res = await fetch(`${api}/auth/dev-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: name })
+    });
+    const data = await res.json();
+    localStorage.setItem("token", data.token);
+    window.location.href = "/lobby";
+  }
+
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>Weered</h1>
+      <p title="Masthead easter egg">
+        🤣 I don’t sleep — I just sit in the lobby, staring at the “Join Room” button like it owes me money.
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input value={name} onChange={e => setName(e.target.value)} />
+        <button onClick={login} disabled={loading}>
+          {loading ? "..." : "Enter"}
+        </button>
+      </div>
+    </main>
+  );
+}

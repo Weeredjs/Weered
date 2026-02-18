@@ -1,0 +1,384 @@
+/**
+ * Weered WebSocket Client (singleton + fan-out subscribers)
+ * - SSR-safe
+ * - One WS per tab (HMR-safe global cache)
+ * - Dev login bootstrap LOCKED to POST /auth/dev-login (per API logs)
+ * - Queues join until auth:ok
+ */
+
+export type WsInbound = { type: string; [k: string]: any };
+export type WsOutbound = { type: string; [k: string]: any };
+
+export type ChatMessage = {
+  id: string;
+  roomId: string;
+  user?: string;
+  text: string;
+  ts: number;
+};
+
+export type PresenceState = {
+  roomId: string | null;
+  users: Array<{ id?: string; name?: string }>;
+};
+
+type Handler<T = any> = (msg: T) => void;
+
+const WS_URL =
+  (typeof process !== "undefined" && process.env && process.env.NEXT_PUBLIC_WS_URL) ||
+  "ws://127.0.0.1:4001";
+
+const API_BASE =
+  (typeof process !== "undefined" && process.env && process.env.NEXT_PUBLIC_API_BASE) ||
+  "http://127.0.0.1:4000";
+
+export const WEERED_API_BASE = String(API_BASE);
+
+function safeNow() { return Date.now(); }
+function makeId() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g: any = globalThis as any;
+  if (g?.crypto?.randomUUID) return g.crypto.randomUUID();
+  return `${safeNow()}_${Math.random().toString(16).slice(2)}`;
+}
+function pickTokenFromJson(data: any): string | null {
+  const t = data?.token ?? data?.access_token ?? data?.accessToken ?? data?.jwt ?? null;
+  return typeof t === "string" && t.length > 10 ? t : null;
+}
+
+export class WeeredClient {
+  private url: string;
+  private ws: WebSocket | null = null;
+
+  private token: string | null = null;
+
+  private subscribers = new Map<string, Set<Handler>>();
+  private anySubscribers = new Set<Handler<WsInbound>>();
+
+  private connected = false;
+  private authed = false;
+  private authError: string | null = null;
+
+  private currentRoomId: string | null = null;
+  private pendingJoinRoomId: string | null = null;
+
+  private presence: PresenceState = { roomId: null, users: [] };
+  private chatLog: ChatMessage[] = [];
+
+  private logLines: string[] = [];
+  private devLoginAttempted = false;
+  private devLoginInFlight: Promise<void> | null = null;
+  private refreshAfterFailAttempted = false;
+
+  constructor(url: string) {
+    this.url = url;
+  }
+
+  connect(): void {
+    if (typeof window === "undefined") return;
+
+    this.loadTokenFromStorage();
+
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      this.connected = true;
+      this.refreshAfterFailAttempted = false;
+      this.pushLog(`[ws] open ${this.url}`);
+      this.emit({ type: "ws:open" });
+      void this.ensureAuth();
+    };
+
+    this.ws.onclose = (ev) => {
+      this.pushLog(`[ws] close code=${ev.code} reason=${ev.reason || "(none)"}`);
+      this.connected = false;
+      this.authed = false;
+      this.authError = null;
+      this.emit({ type: "ws:close", code: ev.code, reason: ev.reason });
+
+      this.currentRoomId = null;
+      this.pendingJoinRoomId = null;
+      this.presence = { roomId: null, users: [] };
+    };
+
+    this.ws.onerror = () => {
+      this.pushLog(`[ws] error`);
+      this.emit({ type: "ws:error" });
+    };
+
+    this.ws.onmessage = (ev) => {
+      const raw = typeof ev.data === "string" ? ev.data : "";
+      try {
+        const msg = JSON.parse(raw) as WsInbound;
+        this.pushLog(`[ws] in ${msg.type}`);
+        this.handleInbound(msg);
+      } catch {
+        this.pushLog(`[ws] bad_json len=${raw.length}`);
+        this.emit({ type: "ws:bad_json", raw });
+      }
+    };
+  }
+
+  setToken(token: string | null) {
+    this.token = token;
+    if (typeof window !== "undefined") {
+      try {
+        if (token) localStorage.setItem("weered_token", token);
+        else localStorage.removeItem("weered_token");
+      } catch {}
+    }
+  }
+  clearToken() { this.setToken(null); }
+  getTokenPreview(): string {
+    if (!this.token) return "(none)";
+    return this.token.slice(0, 18) + "â€¦";
+  }
+
+  retryAuth() {
+    if (!this.connected) this.connect();
+    this.sendRaw({ type: "auth:hello", token: this.token ?? undefined });
+  }
+
+  async devLogin(): Promise<void> {
+    if (typeof window === "undefined") return;
+    if (this.devLoginInFlight) return this.devLoginInFlight;
+
+    // LOCKED per your logs: POST /auth/dev-login (200)
+    this.devLoginInFlight = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/dev-login`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+
+        if (!res.ok) {
+          this.pushLog(`[auth] dev-login failed status=${res.status}`);
+          return;
+        }
+
+        let data: any = null;
+        try { data = await res.json(); } catch {}
+        const t = pickTokenFromJson(data);
+        if (t) {
+          this.setToken(t);
+          this.pushLog(`[auth] dev-login ok token`);
+          return;
+        }
+
+        this.pushLog(`[auth] dev-login ok (cookie?)`);
+      } catch {
+        this.pushLog(`[auth] dev-login fetch error`);
+      }
+    })();
+
+    try { await this.devLoginInFlight; }
+    finally { this.devLoginInFlight = null; }
+  }
+
+  isConnected() { return this.connected; }
+  isAuthed() { return this.authed; }
+  getAuthError() { return this.authError; }
+  getRoomId() { return this.currentRoomId; }
+  getPresence(): PresenceState { return this.presence; }
+  getChat(roomId?: string | null): ChatMessage[] {
+    if (!roomId) return [];
+    return this.chatLog.filter((m) => m.roomId === roomId);
+  }
+  getDebugLog(): string[] { return [...this.logLines]; }
+
+  on<T = any>(type: string, handler: Handler<T>): () => void {
+    if (type === "*") {
+      this.anySubscribers.add(handler as Handler<WsInbound>);
+      return () => this.anySubscribers.delete(handler as Handler<WsInbound>);
+    }
+    const set = this.subscribers.get(type) ?? new Set<Handler>();
+    set.add(handler as Handler);
+    this.subscribers.set(type, set);
+    return () => {
+      const cur = this.subscribers.get(type);
+      if (!cur) return;
+      cur.delete(handler as Handler);
+      if (cur.size === 0) this.subscribers.delete(type);
+    };
+  }
+
+  joinRoom(roomId: string) {
+    if (!roomId) return;
+    this.connect();
+
+    this.currentRoomId = roomId;
+    this.presence = { roomId, users: this.presence.users };
+
+    if (!this.authed) {
+      this.pendingJoinRoomId = roomId;
+      return;
+    }
+    this.pendingJoinRoomId = null;
+    this.send("presence:join", { roomId });
+  }
+
+  leaveRoom(roomId?: string) {
+    const rid = roomId ?? this.currentRoomId;
+    if (!rid) return;
+    if (this.authed) this.send("presence:leave", { roomId: rid });
+
+    if (this.currentRoomId === rid) {
+      this.currentRoomId = null;
+      this.pendingJoinRoomId = null;
+      this.presence = { roomId: null, users: [] };
+    }
+  }
+
+  chatSend(roomId: string, text: string) {
+    const trimmed = (text ?? "").trim();
+    if (!trimmed) return;
+    if (!this.authed) return;
+    if (!roomId) return;
+    if (this.currentRoomId !== roomId) return;
+    this.send("chat:send", { roomId, text: trimmed });
+  }
+
+  send(type: string, payload: Record<string, any> = {}) {
+    this.sendRaw({ type, ...payload });
+  }
+
+  // -------- internals --------
+
+  private loadTokenFromStorage() {
+    if (typeof window === "undefined") return;
+    if (this.token) return;
+    try {
+      const t = localStorage.getItem("weered_token");
+      if (t && t.length > 10) this.token = t;
+    } catch {}
+  }
+
+  private async ensureAuth(): Promise<void> {
+    if (!this.token && !this.devLoginAttempted) {
+      this.devLoginAttempted = true;
+      await this.devLogin();
+    }
+    this.sendRaw({ type: "auth:hello", token: this.token ?? undefined });
+  }
+
+  private async refreshAuthAfterFailOnce(): Promise<void> {
+    if (this.refreshAfterFailAttempted) return;
+    this.refreshAfterFailAttempted = true;
+    this.clearToken();
+    await this.devLogin();
+    this.retryAuth();
+  }
+
+  private emit(msg: WsInbound) {
+    const set = this.subscribers.get(msg.type);
+    if (set) set.forEach((h) => { try { h(msg); } catch {} });
+    this.anySubscribers.forEach((h) => { try { h(msg); } catch {} });
+  }
+
+  private sendRaw(msg: WsOutbound) {
+        /* __WEERED_SEND_GUARD__ */
+    // Never send presence/chat messages before auth is established.
+    if (!this.authed && (msg.type?.startsWith("presence:") || msg.type?.startsWith("chat:"))) {
+      return;
+    }
+if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    try {
+      this.pushLog(`[ws] out ${msg.type}`);
+      this.ws.send(JSON.stringify(msg));
+    } catch {}
+  }
+
+  private pushLog(line: string) {
+    this.logLines.push(`${new Date().toISOString()} ${line}`);
+    if (this.logLines.length > 250) this.logLines.splice(0, this.logLines.length - 250);
+  }
+
+  private handleInbound(msg: WsInbound) {
+    switch (msg.type) {
+      case "auth:ok":
+        this.authed = true;
+        this.authError = null;
+        if (this.pendingJoinRoomId) {
+          const rid = this.pendingJoinRoomId;
+          this.pendingJoinRoomId = null;
+          this.send("presence:join", { roomId: rid });
+        } else if (this.currentRoomId) {
+          this.send("presence:join", { roomId: this.currentRoomId });
+        }
+        break;
+
+      case "auth:fail":
+        this.authed = false;
+        this.authError = String(msg.error ?? "auth_failed");
+        void this.refreshAuthAfterFailOnce();
+        break;
+
+      case "presence:state":
+        this.presence = {
+          roomId: typeof msg.roomId === "string" ? msg.roomId : this.currentRoomId,
+          users: Array.isArray(msg.users) ? msg.users : [],
+        };
+        break;
+
+      case "chat:new": {
+        const roomId = String(msg.roomId ?? "");
+        const text = String(msg.text ?? "");
+        if (roomId && text) {
+          const cm: ChatMessage = {
+            id: String(msg.id ?? makeId()),
+            roomId,
+            user: msg.user ? String(msg.user) : undefined,
+            text,
+            ts: typeof msg.ts === "number" ? msg.ts : safeNow(),
+          };
+          this.chatLog.push(cm);
+          if (this.chatLog.length > 500) this.chatLog.splice(0, this.chatLog.length - 500);
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+    this.emit(msg);
+  }
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __WEERED_CLIENT__: WeeredClient | undefined;
+}
+
+export const weeredClient: WeeredClient =
+  globalThis.__WEERED_CLIENT__ ?? (globalThis.__WEERED_CLIENT__ = new WeeredClient(String(WS_URL)));
+
+export function getWeeredClient() { return weeredClient; }
+/**
+ * Back-compat for older login page code.
+ * Accepts payloads containing a token field and installs it into the singleton client.
+ */
+export function applyAuthPayload(payload: any): boolean {
+  const t =
+    payload?.token ??
+    payload?.access_token ??
+    payload?.accessToken ??
+    payload?.jwt ??
+    null;
+
+  if (typeof t === "string" && t.length > 10) {
+    try {
+      weeredClient.setToken(t);
+      weeredClient.retryAuth();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
