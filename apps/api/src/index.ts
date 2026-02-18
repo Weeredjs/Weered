@@ -7,6 +7,9 @@ import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
+import { PrismaClient, RoomRole } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
 const HTTP_PORT = Number(process.env.PORT || 4000);
@@ -56,25 +59,80 @@ type RoomState = {
 
 const rooms = new Map<string, RoomState>();
 
-function getRoom(roomId: string): RoomState {
-  let r = rooms.get(roomId);
-  if (!r) {
-    r = {
-      roomId,
-      name: "",
-      users: new Map(),
-      sockets: new Set(),
-      msgs: [],
-      ownerId: undefined,
-      mods: new Set(),
-      banned: new Set(),
-      locked: false,
-      knocks: [],
-      pending: new Map(),
-      audit: [],
-    };
+function makeEmptyRoom(roomId: string): RoomState {
+  return {
+    roomId,
+    name: "",
+    users: new Map(),
+    sockets: new Set(),
+    msgs: [],
+    ownerId: undefined,
+    mods: new Set(),
+    banned: new Set(),
+    locked: false,
+    knocks: [],
+    pending: new Map(),
+    audit: [],
+  };
+}
+
+async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
+  const cached = rooms.get(roomId);
+  if (cached) return cached;
+
+  // Lobby stays in-memory only
+  if (roomId === "lobby") {
+    const r = makeEmptyRoom(roomId);
+    r.name = "Home Lobby";
     rooms.set(roomId, r);
+    return r;
   }
+
+  const dbRoom = await prisma.room.findUnique({
+    where: { id: roomId },
+    include: {
+      members: true,
+      bans: true,
+      messages: { orderBy: { ts: "asc" }, take: 80 },
+      audit: { orderBy: { ts: "asc" }, take: 80 },
+    },
+  });
+
+  const r = makeEmptyRoom(roomId);
+
+  if (!dbRoom) {
+    // Create a stub room record (ownerId assigned on first join)
+    await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
+  } else {
+    r.name = dbRoom.name || "";
+    r.locked = Boolean(dbRoom.locked);
+    r.ownerId = dbRoom.ownerId || undefined;
+
+    for (const m of dbRoom.members) {
+      if (m.role === "MOD") r.mods.add(m.userId);
+      // OWNER role is informational; actual owner gating uses room.ownerId
+    }
+    for (const b of dbRoom.bans) r.banned.add(b.userId);
+
+    r.msgs = dbRoom.messages.map((m) => ({
+      id: m.id,
+      user: { id: m.userId, name: m.userName || "?", role: "member" },
+      body: m.body,
+      ts: new Date(m.ts).getTime(),
+    }));
+
+    r.audit = dbRoom.audit.map((a) => ({
+      id: a.id,
+      ts: new Date(a.ts).getTime(),
+      type: a.type,
+      actorId: a.actorId,
+      actorName: a.actorName,
+      targetId: a.targetId || undefined,
+      note: a.note || undefined,
+    }));
+  }
+
+  rooms.set(roomId, r);
   return r;
 }
 
@@ -83,7 +141,6 @@ function safeJson(raw: any): any | null {
     const s = typeof raw === "string" ? raw : raw?.toString?.("utf8");
     if (!s) return null;
     const o = JSON.parse(s);
-    // Accept BOTH formats: {type, roomId,...} and {type, payload:{...}}
     if (o && typeof o === "object" && (o as any).payload && typeof (o as any).payload === "object") {
       return { ...(o as any), ...((o as any).payload) };
     }
@@ -94,7 +151,6 @@ function safeJson(raw: any): any | null {
 }
 
 function withPayload(msg: any) {
-  // Emit BOTH formats
   try {
     if (!msg || typeof msg !== "object") return msg;
     if ((msg as any).payload) return msg;
@@ -136,7 +192,24 @@ function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: numb
   room.audit.push(a);
   if (room.audit.length > 300) room.audit.splice(0, room.audit.length - 300);
 
-  // push to mods/owner live
+  // persist (fire-and-forget)
+  if (room.roomId !== "lobby") {
+    void prisma.roomAudit
+      .create({
+        data: {
+          id: a.id,
+          roomId: room.roomId,
+          type: a.type,
+          actorId: a.actorId,
+          actorName: a.actorName,
+          targetId: a.targetId || null,
+          note: a.note || null,
+          ts: new Date(a.ts),
+        },
+      })
+      .catch(() => {});
+  }
+
   for (const s of room.sockets) {
     const uid = s.user?.id;
     if (!uid) continue;
@@ -162,7 +235,6 @@ function publishState(room: RoomState) {
     mods: Array.from(room.mods.values()),
   });
 
-  // Admin-only extra state
   for (const s of room.sockets) {
     const uid = s.user?.id;
     if (!uid) continue;
@@ -250,13 +322,44 @@ function findSocketsByUser(room: RoomState, userId: string): Sock[] {
   return out;
 }
 
-function doJoin(ws: Sock, roomId: string) {
-  const room = getRoom(roomId);
+async function persistMember(room: RoomState, user: AuthedUser) {
+  if (room.roomId === "lobby") return;
+  const role = roleOf(room, user.id);
+  const dbRole = role === "owner" ? RoomRole.OWNER : role === "mod" ? RoomRole.MOD : RoomRole.MEMBER;
+
+  await prisma.roomMember.upsert({
+    where: { roomId_userId: { roomId: room.roomId, userId: user.id } },
+    update: { name: user.name, role: dbRole },
+    create: { roomId: room.roomId, userId: user.id, name: user.name, role: dbRole },
+  });
+}
+
+async function persistRoomBasics(room: RoomState) {
+  if (room.roomId === "lobby") return;
+  await prisma.room.update({
+    where: { id: room.roomId },
+    data: {
+      name: room.name || "",
+      locked: Boolean(room.locked),
+      ownerId: room.ownerId || null,
+    },
+  });
+}
+
+async function doJoin(ws: Sock, roomId: string) {
+  const room = await ensureRoomLoaded(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
-  if (!room.ownerId) room.ownerId = ws.user!.id;
+  // first real user becomes owner (persist)
+  if (!room.ownerId && ws.user) {
+    room.ownerId = ws.user.id;
+    if (room.roomId !== "lobby") {
+      await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
+    }
+  }
 
-  if (room.banned.has(ws.user!.id)) {
+  // banned gate
+  if (ws.user && room.banned.has(ws.user.id)) {
     send(ws, { type: "room:banned", roomId });
     return false;
   }
@@ -267,14 +370,25 @@ function doJoin(ws: Sock, roomId: string) {
   ws.pendingRoomId = undefined;
 
   room.sockets.add(ws);
-  room.pending.delete(ws.user!.id);
+  if (ws.user) room.pending.delete(ws.user.id);
 
-  if (!room.users.has(ws.user!.id)) {
-    room.users.set(ws.user!.id, { id: ws.user!.id, name: ws.user!.name });
-    broadcast(room, { type: "presence:join", roomId, user: { id: ws.user!.id, name: ws.user!.name } });
+  if (ws.user && !room.users.has(ws.user.id)) {
+    room.users.set(ws.user.id, { id: ws.user.id, name: ws.user.name });
+    broadcast(room, { type: "presence:join", roomId, user: { id: ws.user.id, name: ws.user.name } });
+  }
+
+  // Persist membership
+  if (ws.user) {
+    try { await persistMember(room, ws.user); } catch {}
   }
 
   publishState(room);
+
+  // Send recent chat history to the joining socket
+  if (room.msgs.length) {
+    send(ws, { type: "chat:history", roomId, msgs: room.msgs.slice(-80) });
+  }
+
   return true;
 }
 
@@ -282,7 +396,14 @@ async function main() {
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true, credentials: true });
 
-  app.get("/health", async () => ({ ok: true }));
+  app.get("/health", async () => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return { ok: true, db: "ok" };
+    } catch {
+      return { ok: true, db: "down" };
+    }
+  });
 
   app.post("/auth/dev-login", async (req, reply) => {
     const body: any = (req as any).body || {};
@@ -330,22 +451,32 @@ async function main() {
     });
 
     const token = await at.toJwt();
-
     return reply.send({ ok: true, url: LIVEKIT_URL, token });
   });
 
-  // Rooms list/create
+  // Rooms list/create (DB-backed)
   app.get("/rooms", async () => {
-    const list = Array.from(rooms.values())
-      .filter((r) => r.roomId !== "lobby")
+    const list = await prisma.room.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        locked: true,
+        _count: { select: { members: true } },
+      },
+    });
+
+    const roomsOut = list
+      .filter((r) => r.id !== "lobby")
       .map((r) => ({
-        id: r.roomId,
-        roomId: r.roomId,
-        name: r.name || r.roomId,
-        users: r.users.size,
+        id: r.id,
+        roomId: r.id,
+        name: r.name || r.id,
+        users: r._count.members,
         locked: Boolean(r.locked),
       }));
-    return { ok: true, rooms: list };
+
+    return { ok: true, rooms: roomsOut };
   });
 
   app.post("/rooms", async (req, reply) => {
@@ -359,35 +490,37 @@ async function main() {
 
     let id = wanted || shortRoomId(6);
     let tries = 0;
-    while (rooms.has(id) && tries < 10) {
+    while (tries < 10) {
+      const exists = await prisma.room.findUnique({ where: { id } });
+      if (!exists) break;
       id = shortRoomId(6);
       tries++;
     }
 
-    const r = getRoom(id);
+    await prisma.room.create({
+      data: { id, name: name || "", locked: false, ownerId: null },
+    });
+
+    // warm cache
+    const r = await ensureRoomLoaded(id);
     r.name = name || r.name || "";
+    rooms.set(id, r);
 
     return reply.send({
       ok: true,
-      id: r.roomId,
-      roomId: r.roomId,
-      room: { id: r.roomId, roomId: r.roomId, name: r.name || r.roomId, locked: Boolean(r.locked) },
+      id,
+      roomId: id,
+      room: { id, roomId: id, name: r.name || id, locked: Boolean(r.locked) },
     });
   });
 
   app.get("/rooms/:roomId", async (req, reply) => {
     const roomId = String((req as any).params?.roomId || "");
-    const r = rooms.get(roomId);
+    const r = await prisma.room.findUnique({ where: { id: roomId } });
     if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
     return reply.send({
       ok: true,
-      room: {
-        id: r.roomId,
-        roomId: r.roomId,
-        name: r.name || r.roomId,
-        users: r.users.size,
-        locked: Boolean(r.locked),
-      },
+      room: { id: r.id, roomId: r.id, name: r.name || r.id, locked: Boolean(r.locked) },
     });
   });
 
@@ -401,267 +534,334 @@ async function main() {
     const ws = rawWs as Sock;
 
     ws.on("message", (raw) => {
-      const msg = safeJson(raw);
-      if (!msg || typeof msg.type !== "string") return;
+      void (async () => {
+        const msg = safeJson(raw);
+        if (!msg || typeof msg.type !== "string") return;
 
-      if (msg.type === "auth:hello") {
-        const u = verifyToken(msg.token);
-        if (!u) {
-          send(ws, { type: "auth:fail", reason: "Invalid token" });
+        if (msg.type === "auth:hello") {
+          const u = verifyToken(msg.token);
+          if (!u) {
+            send(ws, { type: "auth:fail", reason: "Invalid token" });
+            return;
+          }
+          ws.user = u;
+          send(ws, { type: "auth:ok", user: { id: u.id, name: u.name } });
           return;
         }
-        ws.user = u;
-        send(ws, { type: "auth:ok", user: { id: u.id, name: u.name } });
-        return;
-      }
 
-      if (!ws.user) {
-        send(ws, { type: "auth:fail", reason: "Not authenticated" });
-        return;
-      }
+        if (!ws.user) {
+          send(ws, { type: "auth:fail", reason: "Not authenticated" });
+          return;
+        }
 
-      if (msg.type === "presence:join") {
-        const roomId = String(msg.roomId || "");
+        if (msg.type === "presence:join") {
+          const roomId = String(msg.roomId || "");
+          if (!roomId) return;
+
+          const room = await ensureRoomLoaded(roomId);
+
+          if (room.banned.has(ws.user.id)) {
+            send(ws, { type: "room:banned", roomId });
+            return;
+          }
+
+          const uid = ws.user.id;
+
+          // locked gate for non-mod => knock + pending
+          if (room.locked && !isModOrOwner(room, uid)) {
+            if (!room.knocks.some((k) => k.userId === uid)) {
+              room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
+              if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
+            }
+
+            let p = room.pending.get(uid);
+            if (!p) {
+              p = new Set<Sock>();
+              room.pending.set(uid, p);
+            }
+            p.add(ws);
+            ws.pendingRoomId = roomId;
+
+            send(ws, { type: "room:knock:queued", roomId });
+
+            for (const s of room.sockets) {
+              const sid = s.user?.id;
+              if (!sid) continue;
+              if (!isModOrOwner(room, sid)) continue;
+              send(s, { type: "room:knock", roomId, user: { id: uid, name: ws.user.name } });
+            }
+
+            publishState(room);
+            return;
+          }
+
+          await doJoin(ws, roomId);
+          return;
+        }
+
+        if (msg.type === "presence:leave") {
+          if (ws.pendingRoomId) {
+            const rid = ws.pendingRoomId;
+            const r = rooms.get(rid);
+            if (r) {
+              const set = r.pending.get(ws.user.id);
+              if (set) set.delete(ws);
+              if (set && set.size === 0) r.pending.delete(ws.user.id);
+              ws.pendingRoomId = undefined;
+              publishState(r);
+            }
+            return;
+          }
+          leaveRoom(ws);
+          return;
+        }
+
+        if (msg.type === "chat:send") {
+          const roomId = String(msg.roomId || "");
+          const body = String(msg.body || "").trim();
+          if (!roomId || !body) return;
+
+          const room = await ensureRoomLoaded(roomId);
+          if (!room.users.has(ws.user.id)) return;
+          if (room.banned.has(ws.user.id)) return;
+
+          const u = room.users.get(ws.user.id)!;
+          const m: ChatMsg = {
+            id: randomUUID(),
+            user: { id: u.id, name: u.name, role: roleOf(room, u.id) },
+            body,
+            ts: Date.now(),
+          };
+
+          room.msgs.push(m);
+          if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
+
+          // persist message
+          if (room.roomId !== "lobby") {
+            void prisma.roomMessage
+              .create({
+                data: {
+                  id: m.id,
+                  roomId: room.roomId,
+                  userId: m.user.id,
+                  userName: m.user.name,
+                  body: m.body,
+                  ts: new Date(m.ts),
+                },
+              })
+              .catch(() => {});
+          }
+
+          broadcast(room, { type: "chat:new", roomId, msg: m });
+          return;
+        }
+
+        const roomId = String(msg.roomId || ws.roomId || ws.pendingRoomId || "");
         if (!roomId) return;
+        const room = await ensureRoomLoaded(roomId);
 
-        const room = getRoom(roomId);
-        if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
-        if (!room.ownerId) room.ownerId = ws.user.id;
+        const actorId = ws.user.id;
+        const actorName = ws.user.name;
+        const actorIsMod = isModOrOwner(room, actorId);
+        const actorIsOwner = isOwner(room, actorId);
 
-        if (room.banned.has(ws.user.id)) {
-          send(ws, { type: "room:banned", roomId });
+        if (msg.type === "room:rename") {
+          if (!actorIsMod) return;
+          const nextName = String(msg.name || "").trim().slice(0, 64);
+          if (!nextName) return;
+          room.name = nextName;
+
+          await persistRoomBasics(room);
+          audit(room, { type: "room:rename", actorId, actorName, note: nextName });
+
+          publishState(room);
+          broadcast(room, { type: "room:renamed", roomId, name: room.name });
           return;
         }
 
-        const uid = ws.user.id;
+        if (msg.type === "room:lock") {
+          if (!actorIsMod) return;
+          room.locked = true;
 
-        if (room.locked && !isModOrOwner(room, uid)) {
-          if (!room.knocks.some((k) => k.userId === uid)) {
-            room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
-            if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
+          await persistRoomBasics(room);
+          audit(room, { type: "room:lock", actorId, actorName });
+
+          publishState(room);
+          broadcast(room, { type: "room:locked", roomId, locked: true });
+          return;
+        }
+
+        if (msg.type === "room:unlock") {
+          if (!actorIsMod) return;
+          room.locked = false;
+
+          await persistRoomBasics(room);
+          audit(room, { type: "room:unlock", actorId, actorName });
+
+          publishState(room);
+          broadcast(room, { type: "room:locked", roomId, locked: false });
+          return;
+        }
+
+        if (msg.type === "room:admit") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+
+          removeKnock(room, targetId);
+
+          const set = room.pending.get(targetId);
+          if (set && set.size) {
+            for (const s of set) {
+              if (!s.user || s.user.id !== targetId) continue;
+              await doJoin(s, roomId);
+              send(s, { type: "room:admitted", roomId });
+            }
           }
+          removePending(room, targetId);
 
-          let p = room.pending.get(uid);
-          if (!p) {
-            p = new Set<Sock>();
-            room.pending.set(uid, p);
-          }
-          p.add(ws);
-          ws.pendingRoomId = roomId;
-
-          send(ws, { type: "room:knock:queued", roomId });
-
-          for (const s of room.sockets) {
-            const sid = s.user?.id;
-            if (!sid) continue;
-            if (!isModOrOwner(room, sid)) continue;
-            send(s, { type: "room:knock", roomId, user: { id: uid, name: ws.user.name } });
-          }
-
+          audit(room, { type: "room:admit", actorId, actorName, targetId });
           publishState(room);
           return;
         }
 
-        doJoin(ws, roomId);
-        return;
-      }
+        if (msg.type === "room:deny") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
 
-      if (msg.type === "presence:leave") {
-        if (ws.pendingRoomId) {
-          const rid = ws.pendingRoomId;
-          const r = rooms.get(rid);
-          if (r) {
-            const set = r.pending.get(ws.user.id);
-            if (set) set.delete(ws);
-            if (set && set.size === 0) r.pending.delete(ws.user.id);
-            ws.pendingRoomId = undefined;
-            publishState(r);
+          removeKnock(room, targetId);
+
+          const set = room.pending.get(targetId);
+          if (set && set.size) {
+            for (const s of set) {
+              send(s, { type: "room:denied", roomId });
+              try { s.pendingRoomId = undefined; } catch {}
+            }
           }
+          removePending(room, targetId);
+
+          audit(room, { type: "room:deny", actorId, actorName, targetId });
+          publishState(room);
           return;
         }
-        leaveRoom(ws);
-        return;
-      }
 
-      if (msg.type === "chat:send") {
-        const roomId = String(msg.roomId || "");
-        const body = String(msg.body || "").trim();
-        if (!roomId || !body) return;
+        if (msg.type === "mod:kick") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+          if (isOwner(room, targetId)) return;
 
-        const room = rooms.get(roomId);
-        if (!room) return;
+          room.users.delete(targetId);
+          room.mods.delete(targetId);
 
-        if (!room.users.has(ws.user.id)) return;
-        if (room.banned.has(ws.user.id)) return;
-
-        const u = room.users.get(ws.user.id)!;
-        const m: ChatMsg = {
-          id: randomUUID(),
-          user: { id: u.id, name: u.name, role: roleOf(room, u.id) },
-          body,
-          ts: Date.now(),
-        };
-        room.msgs.push(m);
-        if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
-        broadcast(room, { type: "chat:new", roomId, msg: m });
-        return;
-      }
-
-      const roomId = String(msg.roomId || ws.roomId || ws.pendingRoomId || "");
-      if (!roomId) return;
-      const room = rooms.get(roomId);
-      if (!room) return;
-
-      const actorId = ws.user.id;
-      const actorName = ws.user.name;
-      const actorIsMod = isModOrOwner(room, actorId);
-      const actorIsOwner = isOwner(room, actorId);
-
-      if (msg.type === "room:rename") {
-        if (!actorIsMod) return;
-        const nextName = String(msg.name || "").trim().slice(0, 64);
-        if (!nextName) return;
-        room.name = nextName;
-        audit(room, { type: "room:rename", actorId, actorName, note: nextName });
-        publishState(room);
-        broadcast(room, { type: "room:renamed", roomId, name: room.name });
-        return;
-      }
-
-      if (msg.type === "room:lock") {
-        if (!actorIsMod) return;
-        room.locked = true;
-        audit(room, { type: "room:lock", actorId, actorName });
-        publishState(room);
-        broadcast(room, { type: "room:locked", roomId, locked: true });
-        return;
-      }
-
-      if (msg.type === "room:unlock") {
-        if (!actorIsMod) return;
-        room.locked = false;
-        audit(room, { type: "room:unlock", actorId, actorName });
-        publishState(room);
-        broadcast(room, { type: "room:locked", roomId, locked: false });
-        return;
-      }
-
-      if (msg.type === "room:admit") {
-        if (!actorIsMod) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-
-        removeKnock(room, targetId);
-
-        const set = room.pending.get(targetId);
-        if (set && set.size) {
-          for (const s of set) {
-            if (!s.user || s.user.id !== targetId) continue;
-            doJoin(s, roomId);
-            send(s, { type: "room:admitted", roomId });
+          // best-effort: keep member row but demote
+          if (room.roomId !== "lobby") {
+            void prisma.roomMember
+              .updateMany({ where: { roomId: room.roomId, userId: targetId }, data: { role: RoomRole.MEMBER } })
+              .catch(() => {});
           }
-        }
-        removePending(room, targetId);
 
-        audit(room, { type: "room:admit", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
-
-      if (msg.type === "room:deny") {
-        if (!actorIsMod) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-
-        removeKnock(room, targetId);
-
-        const set = room.pending.get(targetId);
-        if (set && set.size) {
-          for (const s of set) {
-            send(s, { type: "room:denied", roomId });
-            try { s.pendingRoomId = undefined; } catch {}
+          for (const s of findSocketsByUser(room, targetId)) {
+            send(s, { type: "mod:kicked", roomId });
+            try { (s as any).roomId = undefined; } catch {}
           }
-        }
-        removePending(room, targetId);
 
-        audit(room, { type: "room:deny", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
-
-      if (msg.type === "mod:kick") {
-        if (!actorIsMod) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-        if (isOwner(room, targetId)) return;
-
-        room.users.delete(targetId);
-        if (room.mods.has(targetId)) room.mods.delete(targetId);
-
-        for (const s of findSocketsByUser(room, targetId)) {
-          send(s, { type: "mod:kicked", roomId });
-          try { (s as any).roomId = undefined; } catch {}
+          broadcast(room, { type: "presence:leave", roomId, userId: targetId });
+          audit(room, { type: "mod:kick", actorId, actorName, targetId });
+          publishState(room);
+          return;
         }
 
-        broadcast(room, { type: "presence:leave", roomId, userId: targetId });
-        audit(room, { type: "mod:kick", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
+        if (msg.type === "mod:ban") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+          if (isOwner(room, targetId)) return;
 
-      if (msg.type === "mod:ban") {
-        if (!actorIsMod) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-        if (isOwner(room, targetId)) return;
+          room.banned.add(targetId);
+          room.users.delete(targetId);
+          room.mods.delete(targetId);
 
-        room.banned.add(targetId);
+          if (room.roomId !== "lobby") {
+            void prisma.roomBan
+              .upsert({
+                where: { roomId_userId: { roomId: room.roomId, userId: targetId } },
+                update: {},
+                create: { roomId: room.roomId, userId: targetId },
+              })
+              .catch(() => {});
+          }
 
-        room.users.delete(targetId);
-        if (room.mods.has(targetId)) room.mods.delete(targetId);
+          for (const s of findSocketsByUser(room, targetId)) {
+            send(s, { type: "mod:banned", roomId });
+            try { (s as any).roomId = undefined; } catch {}
+          }
 
-        for (const s of findSocketsByUser(room, targetId)) {
-          send(s, { type: "mod:banned", roomId });
-          try { (s as any).roomId = undefined; } catch {}
+          broadcast(room, { type: "presence:leave", roomId, userId: targetId });
+          audit(room, { type: "mod:ban", actorId, actorName, targetId });
+          publishState(room);
+          return;
         }
 
-        broadcast(room, { type: "presence:leave", roomId, userId: targetId });
-        audit(room, { type: "mod:ban", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
+        if (msg.type === "mod:unban") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
 
-      if (msg.type === "mod:unban") {
-        if (!actorIsMod) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-        room.banned.delete(targetId);
-        audit(room, { type: "mod:unban", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
+          room.banned.delete(targetId);
 
-      if (msg.type === "mod:promote") {
-        if (!actorIsOwner) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-        if (isOwner(room, targetId)) return;
-        room.mods.add(targetId);
-        audit(room, { type: "mod:promote", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
+          if (room.roomId !== "lobby") {
+            void prisma.roomBan.deleteMany({ where: { roomId: room.roomId, userId: targetId } }).catch(() => {});
+          }
 
-      if (msg.type === "mod:demote") {
-        if (!actorIsOwner) return;
-        const targetId = String(msg.userId || "");
-        if (!targetId) return;
-        if (isOwner(room, targetId)) return;
-        room.mods.delete(targetId);
-        audit(room, { type: "mod:demote", actorId, actorName, targetId });
-        publishState(room);
-        return;
-      }
+          audit(room, { type: "mod:unban", actorId, actorName, targetId });
+          publishState(room);
+          return;
+        }
+
+        if (msg.type === "mod:promote") {
+          if (!actorIsOwner) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+          if (isOwner(room, targetId)) return;
+
+          room.mods.add(targetId);
+
+          if (room.roomId !== "lobby") {
+            void prisma.roomMember
+              .upsert({
+                where: { roomId_userId: { roomId: room.roomId, userId: targetId } },
+                update: { role: RoomRole.MOD },
+                create: { roomId: room.roomId, userId: targetId, name: "", role: RoomRole.MOD },
+              })
+              .catch(() => {});
+          }
+
+          audit(room, { type: "mod:promote", actorId, actorName, targetId });
+          publishState(room);
+          return;
+        }
+
+        if (msg.type === "mod:demote") {
+          if (!actorIsOwner) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+          if (isOwner(room, targetId)) return;
+
+          room.mods.delete(targetId);
+
+          if (room.roomId !== "lobby") {
+            void prisma.roomMember
+              .updateMany({ where: { roomId: room.roomId, userId: targetId }, data: { role: RoomRole.MEMBER } })
+              .catch(() => {});
+          }
+
+          audit(room, { type: "mod:demote", actorId, actorName, targetId });
+          publishState(room);
+          return;
+        }
+      })();
     });
 
     ws.on("close", () => {
@@ -675,6 +875,12 @@ async function main() {
       }
       leaveRoom(ws);
     });
+  });
+
+  // tidy
+  process.on("SIGINT", async () => {
+    try { await prisma.$disconnect(); } catch {}
+    process.exit(0);
   });
 }
 
