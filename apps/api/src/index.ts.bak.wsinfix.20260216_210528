@@ -1,0 +1,584 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import jwt from 'jsonwebtoken';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
+
+const prisma = new PrismaClient();
+
+const HTTP_PORT = 4000;
+const WS_PORT = 4001;
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+const DEV_ORIGIN_1 = 'http://127.0.0.1:3000';
+const DEV_ORIGIN_2 = 'http://localhost:3000';
+
+type Role = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
+
+type WsIn =
+  | { type: 'auth:hello'; payload: { token: string } }
+  | { type: 'presence:join'; payload: { roomId: string } }
+  | { type: 'chat:send'; payload: { roomId: string; body: string } }
+  | { type: 'room:set_lock'; payload: { roomId: string; locked: boolean } }
+  | { type: 'room:knock'; payload: { roomId: string; message?: string } }
+  | { type: 'room:knocks:get'; payload: { roomId: string } }
+  | { type: 'room:admit'; payload: { roomId: string; userId: string } }
+  | { type: 'room:deny'; payload: { roomId: string; userId: string } }
+  | { type: 'room:set_role'; payload: { roomId: string; userId: string; role: Role } };
+  | { type: 'room:kick'; payload: { roomId: string; userId: string } };
+
+type UserLite = { id: string; name: string };
+type ClientCtx = { ws: any; user?: UserLite; roomId?: string; pendingRoomId?: string };
+
+type Knock = { userId: string; userName?: string; message?: string; createdAt: string };
+
+const clients = new Set<ClientCtx>();
+const roomClients = new Map<string, Set<ClientCtx>>();
+const knocksByRoom = new Map<string, Knock[]>();
+
+function send(ws: any, obj: any) {
+  try { ws.send(JSON.stringify(obj)); } catch {}
+}
+
+function broadcast(roomId: string, obj: any) {
+  const set = roomClients.get(roomId);
+  if (!set) return;
+  for (const c of set) send(c.ws, obj);
+}
+
+function shortId6(): string {
+  // 6-ish chars, url-safe
+  return crypto.randomBytes(4).toString('base64url').slice(0, 6);
+}
+
+async function ensureUser(name: string): Promise<UserLite> {
+  const u = await prisma.user.create({ data: { name } });
+  return { id: u.id, name: u.name };
+}
+
+async function ensureRoom(roomId: string, owner?: UserLite) {
+  const rid = roomId.trim();
+  if (!rid) throw new Error('bad_room_id');
+
+  const existing = await prisma.room.findUnique({ where: { id: rid } });
+  if (existing) return existing;
+
+  const created = await prisma.room.create({
+    data: {
+      id: rid,
+      name: null,
+      locked: false,
+      ownerId: owner?.id || null,
+    },
+  });
+
+  if (owner?.id) {
+    await prisma.roomMember.upsert({
+      where: { roomId_userId: { roomId: rid, userId: owner.id } },
+      update: { role: 'owner' },
+      create: { roomId: rid, userId: owner.id, role: 'owner' },
+    });
+  }
+
+  return created;
+}
+
+async function getRole(roomId: string, userId: string): Promise<Role> {
+  const m = await prisma.roomMember.findUnique({
+    where: { roomId_userId: { roomId, userId } },
+    select: { role: true },
+  });
+  if (!m?.role) return 'guest';
+  const r = String(m.role) as Role;
+  return (r === 'owner' || r === 'admin' || r === 'mod' || r === 'member') ? r : 'guest';
+}
+
+function removeFromRoom(ctx: ClientCtx) {
+  const rid = ctx.roomId;
+  if (!rid) return;
+  const set = roomClients.get(rid);
+  if (set) {
+    set.delete(ctx);
+    if (set.size === 0) roomClients.delete(rid);
+  }
+  ctx.roomId = undefined;
+}
+
+async function emitPresenceState(roomId: string) {
+  const set = roomClients.get(roomId);
+  if (!set) return;
+
+  const ids: string[] = [];
+  const nameById = new Map<string, string>();
+  for (const c of set) {
+    if (c.user?.id) {
+      ids.push(c.user.id);
+      nameById.set(c.user.id, c.user.name);
+    }
+  }
+
+  const members = await prisma.roomMember.findMany({
+    where: { roomId, userId: { in: ids } },
+    select: { userId: true, role: true },
+  });
+  const roleById = new Map<string, Role>();
+  for (const m of members) roleById.set(m.userId, (m.role as Role) || 'guest');
+
+  const payloadMembers = ids.map((id) => ({
+    id,
+    name: nameById.get(id) || id,
+    role: roleById.get(id) || 'guest',
+  }));
+
+  for (const c of set) {
+    send(c.ws, { type: 'presence:state', payload: { roomId, members: payloadMembers } });
+  }
+}
+
+function getKnocks(roomId: string): Knock[] {
+  return knocksByRoom.get(roomId) || [];
+}
+
+function upsertKnock(roomId: string, k: Knock) {
+  const cur = getKnocks(roomId).filter((x) => x.userId !== k.userId);
+  cur.push(k);
+  knocksByRoom.set(roomId, cur);
+}
+
+function removeKnock(roomId: string, userId: string) {
+  const cur = getKnocks(roomId).filter((x) => x.userId !== userId);
+  knocksByRoom.set(roomId, cur);
+}
+
+function isPriv(r: Role) { return r === 'owner' || r === 'admin' || r === 'mod'; }
+function canLock(r: Role) { return r === 'owner' || r === 'admin'; }
+function canManageRoles(r: Role) { return r === 'owner' || r === 'admin'; }
+
+async function joinRoom(ctx: ClientCtx, roomId: string) {
+  if (!ctx.user) {
+    send(ctx.ws, { type: 'server:error', error: 'unauthorized' });
+    return;
+  }
+
+  const room = await ensureRoom(roomId, ctx.user);
+
+  // must be a member if locked
+  let role = await getRole(roomId, ctx.user.id);
+
+  if (role === 'guest') {
+    if (room.locked) {
+      ctx.pendingRoomId = roomId;
+      send(ctx.ws, { type: 'room:locked', payload: { roomId } });
+      return;
+    }
+    // auto-enroll into unlocked rooms
+    await prisma.roomMember.upsert({
+      where: { roomId_userId: { roomId, userId: ctx.user.id } },
+      update: { role: 'member' },
+      create: { roomId, userId: ctx.user.id, role: 'member' },
+    });
+    role = 'member';
+  }
+
+  // move room
+  removeFromRoom(ctx);
+  ctx.roomId = roomId;
+  ctx.pendingRoomId = undefined;
+
+  let set = roomClients.get(roomId);
+  if (!set) { set = new Set<ClientCtx>(); roomClients.set(roomId, set); }
+  set.add(ctx);
+
+  await emitPresenceState(roomId);
+  broadcast(roomId, { type: 'presence:join', payload: { roomId, member: { id: ctx.user.id, name: ctx.user.name, role } } });
+
+  // send knocks to privileged users
+  if (isPriv(role)) {
+    send(ctx.ws, { type: 'room:knocks', payload: { roomId, knocks: getKnocks(roomId) } });
+  }
+}
+
+async function requireRoomRole(ctx: ClientCtx, roomId: string): Promise<Role> {
+  if (!ctx.user) return 'guest';
+  return await getRole(roomId, ctx.user.id);
+}
+
+const app = Fastify({ logger: true });
+
+await app.register(cors, {
+  origin: [DEV_ORIGIN_1, DEV_ORIGIN_2],
+  credentials: true,
+});
+
+app.get('/health', async () => ({ ok: true }));
+
+app.post('/auth/dev-login', async (req, reply) => {
+  const body = (req.body || {}) as any;
+  const name = String(body?.name || 'Weered').trim() || 'Weered';
+
+  const u = await ensureUser(name);
+  const token = jwt.sign({ sub: u.id, name: u.name }, JWT_SECRET, { expiresIn: '7d' });
+
+  return reply.send({ token, user: u });
+});
+
+app.get('/rooms', async () => {
+  const rooms = await prisma.room.findMany({
+    select: { id: true, name: true, locked: true, updatedAt: true, createdAt: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 100,
+  });
+  return { rooms };
+});
+
+app.post('/rooms', async (req, reply) => {
+  const auth = String((req.headers as any)?.authorization || '');
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!token) return reply.code(401).send({ error: 'unauthorized' });
+
+  let decoded: any;
+  try { decoded = jwt.verify(token, JWT_SECRET); } catch { return reply.code(401).send({ error: 'unauthorized' }); }
+  const userId = String(decoded?.sub || '');
+  const name = String(decoded?.name || 'Weered');
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+  const body = (req.body || {}) as any;
+  const roomName = String(body?.name || '').trim() || null;
+
+  // generate id
+  let id = '';
+  for (let i = 0; i < 10; i++) {
+    const cand = shortId6();
+    const exists = await prisma.room.findUnique({ where: { id: cand }, select: { id: true } });
+    if (!exists) { id = cand; break; }
+  }
+  if (!id) id = shortId6();
+
+  const room = await prisma.room.create({
+    data: { id, name: roomName, locked: false, ownerId: userId },
+  });
+
+  await prisma.roomMember.upsert({
+    where: { roomId_userId: { roomId: room.id, userId } },
+    update: { role: 'owner' },
+    create: { roomId: room.id, userId, role: 'owner' },
+  });
+
+  return reply.send({ room: { id: room.id, name: room.name, locked: room.locked } });
+});
+
+await app.listen({ port: HTTP_PORT, host: '127.0.0.1' });
+
+const wsHttp = http.createServer();
+const wss = new WebSocketServer({ server: wsHttp });
+
+wss.on('connection', (ws) => {
+  const ctx: ClientCtx = { ws };
+  clients.add(ctx);
+
+  ws.on('message', async (data: any) => {
+    const raw = typeof data === 'string' ? data : data.toString('utf8');
+    console.log('[ws] recv raw:', raw);
+
+    const msg = (safeJsonParse(raw) || {}) as WsIn;
+    const type = (msg as any)?.type;
+
+    // AUTH
+    if (type === 'auth:hello') {
+      const token = String((msg as any)?.payload?.token || '');
+      if (!token) { send(ws, { type: 'auth:fail' }); return; }
+      try {
+        const dec: any = jwt.verify(token, JWT_SECRET);
+        const userId = String(dec?.sub || '');
+        const name = String(dec?.name || 'Weered');
+        if (!userId) { send(ws, { type: 'auth:fail' }); return; }
+        ctx.user = { id: userId, name };
+        send(ws, { type: 'auth:ok', payload: { user: ctx.user } });
+
+        // if user previously tried to join a locked room and got admitted, re-attempt
+        if (ctx.pendingRoomId) await joinRoom(ctx, ctx.pendingRoomId);
+      } catch {
+        send(ws, { type: 'auth:fail' });
+      }
+      return;
+    }
+
+    if (!ctx.user) { send(ws, { type: 'server:error', error: 'unauthorized' }); return; }
+
+    // PRESENCE JOIN
+    if (type === 'presence:join') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      if (!roomId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+      await joinRoom(ctx, roomId);
+      return;
+    }
+
+    // CHAT SEND (broadcast even if DB write fails)
+    if (type === 'chat:send') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const body = String((msg as any)?.payload?.body || '').trim();
+      if (!roomId || !body) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+      if (ctx.roomId !== roomId) { send(ws, { type: 'server:error', error: 'not_in_room' }); return; }
+
+      const at = new Date().toISOString();
+      broadcast(roomId, { type: 'chat:new', payload: { roomId, body, at, from: { id: ctx.user.id, name: ctx.user.name } } });
+
+      try {
+        await prisma.message.create({ data: { roomId, userId: ctx.user.id, body } });
+      } catch (e: any) {
+        app.log.warn({ err: e }, 'message persist failed (non-fatal)');
+      }
+      return;
+    }
+
+    // LOCK/UNLOCK
+    if (type === 'room:set_lock') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const locked = !!(msg as any)?.payload?.locked;
+      if (!roomId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const role = await requireRoomRole(ctx, roomId);
+      if (!canLock(role)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+
+      const room = await ensureRoom(roomId, ctx.user);
+      const updated = await prisma.room.update({ where: { id: room.id }, data: { locked } });
+
+      broadcast(roomId, { type: 'room:lock_changed', payload: { roomId, locked: updated.locked } });
+      return;
+    }
+
+    // KNOCK
+    if (type === 'room:knock') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const message = String((msg as any)?.payload?.message || '').trim();
+      if (!roomId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const room = await ensureRoom(roomId, ctx.user);
+      const role = await requireRoomRole(ctx, roomId);
+
+      if (!room.locked) { send(ws, { type: 'server:error', error: 'room_not_locked' }); return; }
+      if (role !== 'guest') { send(ws, { type: 'server:error', error: 'already_member' }); return; }
+
+      const k: Knock = { userId: ctx.user.id, userName: ctx.user.name, message: message || undefined, createdAt: new Date().toISOString() };
+      upsertKnock(roomId, k);
+
+      // broadcast knock to anyone currently in room (UI only shows it for priv)
+      broadcast(roomId, { type: 'room:knock', payload: { roomId, ...k } });
+      return;
+    }
+
+    // KNOCKS GET
+    if (type === 'room:knocks:get') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      if (!roomId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+      const role = await requireRoomRole(ctx, roomId);
+      if (!isPriv(role)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+      send(ws, { type: 'room:knocks', payload: { roomId, knocks: getKnocks(roomId) } });
+      return;
+    }
+
+    // ADMIT / DENY
+    if (type === 'room:admit' || type === 'room:deny') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const userId = String((msg as any)?.payload?.userId || '').trim();
+      if (!roomId || !userId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const role = await requireRoomRole(ctx, roomId);
+      if (!isPriv(role)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+
+      if (type === 'room:deny') {
+        removeKnock(roomId, userId);
+        // notify target sockets
+        for (const c of clients) if (c.user?.id === userId) send(c.ws, { type: 'room:denied', payload: { roomId } });
+        broadcast(roomId, { type: 'room:knocks', payload: { roomId, knocks: getKnocks(roomId) } });
+        return;
+      }
+
+      // admit
+      removeKnock(roomId, userId);
+
+      await prisma.roomMember.upsert({
+        where: { roomId_userId: { roomId, userId } },
+        update: { role: 'member' },
+        create: { roomId, userId, role: 'member' },
+      });
+
+      // notify + auto-join if they were pending
+      for (const c of clients) {
+        if (c.user?.id !== userId) continue;
+        send(c.ws, { type: 'room:admitted', payload: { roomId } });
+        if (c.pendingRoomId === roomId) {
+          await joinRoom(c, roomId);
+        }
+      }
+
+      broadcast(roomId, { type: 'room:knocks', payload: { roomId, knocks: getKnocks(roomId) } });
+      return;
+    }
+
+    // KICK (removes from room, membership stays)
+    if (type === 'room:kick') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const userId = String((msg as any)?.payload?.userId || '').trim();
+      if (!roomId || !userId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const actorRole = await requireRoomRole(ctx, roomId);
+      if (!isPriv(actorRole)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+
+      if (ctx.user.id === userId) { send(ws, { type: 'server:error', error: 'cannot_kick_self' }); return; }
+
+      const targetRole = await getRole(roomId, userId);
+      if (targetRole === 'owner') { send(ws, { type: 'server:error', error: 'cannot_kick_owner' }); return; }
+
+      const set = roomClients.get(roomId);
+      if (set) {
+        for (const c of Array.from(set)) {
+          if (c.user?.id === userId) {
+            removeFromRoom(c);
+            send(c.ws, { type: 'room:kicked', payload: { roomId } });
+          }
+        }
+      }
+
+      broadcast(roomId, { type: 'presence:leave', payload: { roomId, memberId: userId } });
+      await emitPresenceState(roomId);
+      return;
+    }
+
+    // KICK (removes from room, membership stays)
+    if (type === 'room:kick') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const userId = String((msg as any)?.payload?.userId || '').trim();
+      if (!roomId || !userId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const actorRole = await requireRoomRole(ctx, roomId);
+      if (!isPriv(actorRole)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+
+      if (ctx.user.id === userId) { send(ws, { type: 'server:error', error: 'cannot_kick_self' }); return; }
+
+      const targetRole = await getRole(roomId, userId);
+      if (targetRole === 'owner') { send(ws, { type: 'server:error', error: 'cannot_kick_owner' }); return; }
+
+      const set = roomClients.get(roomId);
+      if (set) {
+        for (const c of Array.from(set)) {
+          if (c.user?.id === userId) {
+            removeFromRoom(c);
+            send(c.ws, { type: 'room:kicked', payload: { roomId } });
+          }
+        }
+      }
+
+      broadcast(roomId, { type: 'presence:leave', payload: { roomId, memberId: userId } });
+      await emitPresenceState(roomId);
+      return;
+    }
+
+    // KICK (removes from room, membership stays)
+    if (type === 'room:kick') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const userId = String((msg as any)?.payload?.userId || '').trim();
+      if (!roomId || !userId) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const actorRole = await requireRoomRole(ctx, roomId);
+      if (!isPriv(actorRole)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+
+      if (ctx.user.id === userId) { send(ws, { type: 'server:error', error: 'cannot_kick_self' }); return; }
+
+      const targetRole = await getRole(roomId, userId);
+      if (targetRole === 'owner') { send(ws, { type: 'server:error', error: 'cannot_kick_owner' }); return; }
+
+      const set = roomClients.get(roomId);
+      if (set) {
+        for (const c of Array.from(set)) {
+          if (c.user?.id === userId) {
+            removeFromRoom(c);
+            send(c.ws, { type: 'room:kicked', payload: { roomId } });
+          }
+        }
+      }
+
+      broadcast(roomId, { type: 'presence:leave', payload: { roomId, memberId: userId } });
+      await emitPresenceState(roomId);
+      return;
+    }
+
+    // SET ROLE
+    if (type === 'room:set_role') {
+      const roomId = String((msg as any)?.payload?.roomId || '').trim();
+      const userId = String((msg as any)?.payload?.userId || '').trim();
+      const newRole = String((msg as any)?.payload?.role || '').trim() as Role;
+      if (!roomId || !userId || !newRole) { send(ws, { type: 'server:error', error: 'bad_request' }); return; }
+
+      const actorRole = await requireRoomRole(ctx, roomId);
+      if (!canManageRoles(actorRole)) { send(ws, { type: 'server:error', error: 'forbidden' }); return; }
+
+      // prevent self-demotion (dev safety)
+      if (ctx.user.id === userId) { send(ws, { type: 'server:error', error: 'cannot_edit_self' }); return; }
+
+      // prevent editing owner
+      const targetRole = await getRole(roomId, userId);
+      if (targetRole === 'owner') { send(ws, { type: 'server:error', error: 'cannot_edit_owner' }); return; }
+
+      // admin cannot grant admin/owner
+      if (actorRole === 'admin' && (newRole === 'admin' || newRole === 'owner')) {
+        send(ws, { type: 'server:error', error: 'forbidden' });
+        return;
+      }
+
+      if (newRole === 'guest') {
+        await prisma.roomMember.deleteMany({ where: { roomId, userId } });
+
+        // kick if currently connected in room
+        const set = roomClients.get(roomId);
+        if (set) {
+          for (const c of set) {
+            if (c.user?.id === userId) {
+              removeFromRoom(c);
+              send(c.ws, { type: 'presence:leave', payload: { roomId, memberId: userId } });
+            }
+          }
+        }
+
+        broadcast(roomId, { type: 'room:role_changed', payload: { roomId, userId, role: 'guest' } });
+        await emitPresenceState(roomId);
+        return;
+      }
+
+      await prisma.roomMember.upsert({
+        where: { roomId_userId: { roomId, userId } },
+        update: { role: newRole },
+        create: { roomId, userId, role: newRole },
+      });
+
+      broadcast(roomId, { type: 'room:role_changed', payload: { roomId, userId, role: newRole } });
+      await emitPresenceState(roomId);
+      return;
+    }
+
+    // unknown message types ignored (by design)
+  });
+
+  ws.on('close', async () => {
+    clients.delete(ctx);
+    const rid = ctx.roomId;
+    const uid = ctx.user?.id;
+    removeFromRoom(ctx);
+    if (rid && uid) {
+      broadcast(rid, { type: 'presence:leave', payload: { roomId: rid, memberId: uid } });
+      await emitPresenceState(rid);
+    }
+  });
+});
+
+function safeJsonParse(raw: string): any | null {
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+wsHttp.listen(WS_PORT, '127.0.0.1', () => {
+  console.log(`[ws] listening on ws://127.0.0.1:${WS_PORT}`);
+});

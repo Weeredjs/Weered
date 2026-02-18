@@ -1,0 +1,241 @@
+﻿"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ensureRoom, getToken, wsBase } from "../../weeredClient";
+
+type UserCard = {
+  userId: string;
+  displayName: string;
+  rank?: number;
+};
+
+type ChatMsg = {
+  id?: string;
+  fromUserId?: string;
+  body: string;
+  createdAt?: string;
+};
+
+export default function RoomPage({ params }: { params: { roomId: string } }) {
+  const roomId = params?.roomId || "";
+  const wsRef = useRef<WebSocket | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [authStatus, setAuthStatus] = useState<"unknown" | "ok" | "fail">("unknown");
+  const [err, setErr] = useState<string>("");
+  const [me, setMe] = useState<{ userId: string; displayName: string } | null>(null);
+
+  const [users, setUsers] = useState<UserCard[]>([]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+
+  const [debugLastSend, setDebugLastSend] = useState<string>("");
+
+  const canSend = useMemo(() => wsStatus === "connected" && authStatus === "ok", [wsStatus, authStatus]);
+
+  function safeJsonParse(s: string) {
+    try { return JSON.parse(s); } catch { return null; }
+  }
+
+  function connect() {
+    const token = getToken();
+    if (!token) {
+      setErr("Not logged in. Go to /login first.");
+      setAuthStatus("fail");
+      return;
+    }
+
+    setErr("");
+    setWsStatus("connecting");
+
+    const ws = new WebSocket(wsBase());
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setWsStatus("connected");
+      // Auth handshake
+      ws.send(JSON.stringify({ type: "auth:hello", token, client: { app: "web" } }));
+    };
+
+    ws.onclose = () => {
+      setWsStatus("disconnected");
+      setAuthStatus("unknown");
+      wsRef.current = null;
+      // light reconnect
+      setTimeout(() => {
+        // only reconnect if still on this page
+        if (document.visibilityState === "visible") connect();
+      }, 800);
+    };
+
+    ws.onerror = () => {
+      // onclose will fire afterward in most cases
+    };
+
+    ws.onmessage = (ev) => {
+      const raw = typeof ev.data === "string" ? ev.data : "";
+      const msg = safeJsonParse(raw);
+      if (!msg || !msg.type) return;
+
+      switch (msg.type) {
+        case "auth:ok": {
+          setAuthStatus("ok");
+          setMe({ userId: msg.userId, displayName: msg.displayName });
+          // best-effort ensure DB room exists (for chat persistence)
+          ensureRoom(roomId);
+          // join presence
+          ws.send(JSON.stringify({ type: "presence:join", roomId }));
+          return;
+        }
+        case "auth:fail": {
+          setAuthStatus("fail");
+          setErr("Auth failed. Go to /login and try again.");
+          return;
+        }
+        case "presence:state": {
+          if (msg.roomId !== roomId) return;
+          setUsers(Array.isArray(msg.users) ? msg.users : []);
+          return;
+        }
+        case "presence:join": {
+          if (msg.roomId !== roomId) return;
+          const u = msg.user;
+          if (!u?.userId) return;
+          setUsers((prev) => {
+            if (prev.some((x) => x.userId === u.userId)) return prev;
+            return [...prev, u];
+          });
+          return;
+        }
+        case "presence:leave": {
+          if (msg.roomId !== roomId) return;
+          setUsers((prev) => prev.filter((x) => x.userId !== msg.userId));
+          return;
+        }
+        case "chat:new": {
+          if (msg.roomId !== roomId) return;
+          setMessages((prev) => [
+            ...prev,
+            { id: msg.id, fromUserId: msg.fromUserId, body: String(msg.body ?? ""), createdAt: msg.createdAt }
+          ]);
+          return;
+        }
+        case "server:error": {
+          setErr(String(msg.message ?? "Server error"));
+          return;
+        }
+        default:
+          return;
+      }
+    };
+  }
+
+  useEffect(() => {
+    connect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
+
+  function send() {
+    const ws = wsRef.current;
+
+    const raw = (inputRef.current?.value ?? "").toString();
+    const body = raw.trim();
+
+    // Debug line ALWAYS updates so you can see the click did something.
+    setDebugLastSend(`clicked: ws=${ws ? ws.readyState : "null"} bodyLen=${body.length}`);
+
+    if (!ws || ws.readyState !== 1) return;
+    if (authStatus !== "ok") return;
+    if (!body) return;
+
+    ws.send(JSON.stringify({ type: "chat:send", payload: { roomId, body } }));
+
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  return (
+    <main style={{ padding: 24 }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <h2 style={{ marginBottom: 6 }}>Room</h2>
+        <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 12 }}>
+          Room: <b>{roomId}</b> | WS: <b>{wsStatus}</b> | Auth: <b>{authStatus}</b>
+          {me ? <> | Me: <b>{me.displayName}</b></> : null}
+        </div>
+
+        {err ? (
+          <div style={{ border: "1px solid #fca5a5", background: "#fef2f2", padding: 10, borderRadius: 12, marginBottom: 12, whiteSpace: "pre-wrap" }}>
+            {err}
+          </div>
+        ) : null}
+
+        <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16 }}>
+          <section style={{ border: "1px solid #e5e7eb", borderRadius: 16, padding: 12 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Roster</div>
+            {users.length === 0 ? (
+              <div style={{ fontSize: 13, opacity: 0.75 }}>No users yet.</div>
+            ) : (
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {users.map((u) => (
+                  <li key={u.userId} style={{ padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{u.displayName}</div>
+                    <div style={{ fontSize: 11, opacity: 0.7 }}>{u.userId}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section style={{ border: "1px solid #e5e7eb", borderRadius: 16, padding: 12, display: "flex", flexDirection: "column", minHeight: 420 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Chat</div>
+
+            <div style={{ flex: 1, overflow: "auto", border: "1px solid #f3f4f6", borderRadius: 12, padding: 10, marginBottom: 10 }}>
+              {messages.length === 0 ? (
+                <div style={{ fontSize: 13, opacity: 0.75 }}>No messages yet.</div>
+              ) : (
+                messages.map((m, idx) => (
+                  <div key={m.id || idx} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, opacity: 0.8 }}>
+                      <b>{m.fromUserId || "?"}</b>
+                      {m.createdAt ? <> | {String(m.createdAt)}</> : null}
+                    </div>
+                    <div style={{ fontSize: 14 }}>{m.body}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                ref={inputRef}
+                data-weered-chat-input="1"
+                placeholder="message"
+                style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 12, padding: "10px 12px" }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") send();
+                }}
+              />
+              <button
+                type="button"
+                onClick={send}
+                disabled={!canSend}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  opacity: canSend ? 1 : 0.5,
+                  cursor: canSend ? "pointer" : "not-allowed"
+                }}
+              >
+                Send
+              </button>
+            </div>
+
+            <div style={{ marginTop: 8, fontSize: 11, opacity: 0.75 }}>
+              Debug: <code>{debugLastSend || "(none)"}</code>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}

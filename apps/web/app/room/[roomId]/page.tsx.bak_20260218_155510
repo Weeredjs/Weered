@@ -1,0 +1,128 @@
+﻿"use client";
+import RoomTools from "./RoomTools";
+import React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { weeredClient, ChatMessage } from "../../weeredClient";
+
+// WEERED_ROOMTOOLS_BRIDGE_BEGIN
+declare global {
+  interface Window {
+    __WEERED_WS?: WebSocket;
+    __WEERED_ME?: any;
+    __WEERED_ROOM_STATE?: any;
+    __WEERED_ROOM_ID?: string;
+  }
+}
+
+function __weeredRoomIdFromPath(): string | null {
+  try {
+    const p = window.location.pathname || "";
+    const m = p.match(/\/room\/([^\/?#]+)/i);
+    return m?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
+function __weeredBridge(msg: any, ws?: WebSocket) {
+  try {
+    if (ws && ws.readyState === 1) (window as any).__WEERED_WS = ws;
+    const roomId = String(msg?.roomId || (window as any).__WEERED_ROOM_ID || __weeredRoomIdFromPath() || "");
+    if (roomId) (window as any).__WEERED_ROOM_ID = roomId;
+
+    if (msg?.type === "auth:ok" && msg?.user) {
+      (window as any).__WEERED_ME = msg.user;
+      window.dispatchEvent(new CustomEvent("weered:me", { detail: msg.user }));
+    }
+
+    if (msg?.type === "presence:state" || msg?.type === "room:state") {
+      (window as any).__WEERED_ROOM_STATE = msg;
+      window.dispatchEvent(new CustomEvent("weered:roomstate", { detail: msg }));
+    }
+  } catch {}
+}
+// WEERED_ROOMTOOLS_BRIDGE_END
+
+
+export default function RoomPage() {
+  const router = useRouter();
+  const params = useParams();
+
+  const raw = (params as any)?.roomId;
+  const roomId = String(Array.isArray(raw) ? raw[0] : raw || "");
+
+  const [msgs, setMsgs] = React.useState<ChatMessage[]>([]);
+  const [draft, setDraft] = React.useState("");
+  const [usersCount, setUsersCount] = React.useState(0);
+
+  // UI subscriptions only  -  DockShell controls join/leave based on route
+  React.useEffect(() => {
+    if (!roomId) return;
+
+    weeredClient.connect();
+
+    setMsgs(weeredClient.getChat(roomId));
+    const p = weeredClient.getPresence();
+    setUsersCount(p.roomId === roomId ? p.users.length : 0);
+
+    const offChat = weeredClient.on("chat:new", () => {
+      setMsgs(weeredClient.getChat(roomId));
+    });
+
+    const offPresence = weeredClient.on("presence:state", () => {
+      const pr = weeredClient.getPresence();
+      if (pr.roomId === roomId) setUsersCount(pr.users.length);
+    });
+
+    return () => { offChat(); offPresence(); };
+  }, [roomId]);
+
+  function send() {
+    if (!roomId) return;
+    weeredClient.chatSend(roomId, draft);
+    setDraft("");
+  }
+
+  return (
+    <div className="mx-auto w-[min(920px,92vw)] py-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <div className="text-2xl font-bold">Room: {roomId}</div>
+          <div className="text-sm text-gray-600">Users: {usersCount}</div>
+        </div>
+        <button className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50" onClick={() => router.push("/")}>
+          Home
+        </button>
+      </div>
+
+      <div className="min-h-[320px] rounded-2xl border bg-white p-4">
+        {msgs.length ? (
+          msgs.map((m) => (
+            <div key={m.id} className="mb-2 text-sm">
+              <span className="text-gray-500">{m.user ? `${m.user}: ` : ""}</span>
+              <span>{m.text}</span>
+            </div>
+          ))
+        ) : (
+          <div className="py-12 text-center text-sm text-gray-500">No messages yet.</div>
+        )}
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        <input
+          className="flex-1 rounded-xl border px-3 py-2 text-sm outline-none"
+          placeholder="Message..."
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+        />
+        <button className="rounded-xl border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" onClick={send} disabled={!draft.trim()}>
+          Send
+        </button>
+      </div>
+      {/* WEERED_ROOMTOOLS_RENDER_BEGIN */}
+      <RoomTools />
+      {/* WEERED_ROOMTOOLS_RENDER_END */}
+    </div>
+  );
+}

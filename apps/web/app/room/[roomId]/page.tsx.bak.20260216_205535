@@ -1,0 +1,434 @@
+"use client";
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+
+type Role = "owner" | "admin" | "mod" | "member" | "guest";
+type Member = { id: string; name: string; role?: Role };
+type Knock = { userId: string; userName?: string; message?: string; createdAt: string };
+type ChatMsg = { at: string; from: string; body: string };
+
+function safeJsonParse(raw: string): any | null { try { return JSON.parse(raw); } catch { return null; } }
+
+export default function RoomPage() {
+  const router = useRouter();
+  const params = useParams();
+
+  const roomId = useMemo(() => {
+    const v: any = (params as any)?.roomId;
+    if (Array.isArray(v)) return String(v[0] || "");
+    return String(v || "");
+  }, [params]);
+
+  const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:4001";
+
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const [status, setStatus] = useState<"closed" | "connecting" | "open">("closed");
+  const [error, setError] = useState("");
+
+  const [token, setToken] = useState("");
+  const [meId, setMeId] = useState("");
+  const [meName, setMeName] = useState("");
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [myRole, setMyRole] = useState<Role>("guest");
+  const [roomLocked, setRoomLocked] = useState(false);
+
+  const [knocks, setKnocks] = useState<Knock[]>([]);
+  const [knockMsg, setKnockMsg] = useState("");
+
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState("");
+
+  const [lastSend, setLastSend] = useState("");
+  const [lastRecv, setLastRecv] = useState("");
+
+  const isAuthed = useMemo(() => !!token, [token]);
+  const isPriv = useMemo(() => myRole === "owner" || myRole === "admin" || myRole === "mod", [myRole]);
+  const canLock = useMemo(() => myRole === "owner" || myRole === "admin", [myRole]);
+  const canManageRoles = canLock;
+
+  const roleOptionsForActor = useMemo(() => {
+    if (myRole === "owner") return ["admin", "mod", "member"] as Role[];
+    if (myRole === "admin") return ["mod", "member"] as Role[];
+    return [] as Role[];
+  }, [myRole]);
+
+  useEffect(() => {
+    try {
+      setToken(localStorage.getItem("weered_token") || "");
+      setMeId(localStorage.getItem("weered_user_id") || "");
+      setMeName(localStorage.getItem("weered_name") || "");
+    } catch {}
+  }, []);
+
+  function sendJson(obj: any) {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const raw = JSON.stringify(obj);
+    ws.send(raw);
+    setLastSend(raw);
+  }
+
+  function disconnect() {
+    try { wsRef.current?.close(); } catch {}
+    wsRef.current = null;
+    setStatus("closed");
+  }
+
+  function connect() {
+    if (!token || !roomId) return;
+
+    setError("");
+    setStatus("connecting");
+
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setStatus("open");
+      setError("");
+      sendJson({ type: "auth:hello", payload: { token } });
+      sendJson({ type: "presence:join", payload: { roomId } });
+    };
+
+    ws.onmessage = (evt) => {
+      const raw = typeof evt.data === "string" ? evt.data : String(evt.data);
+      setLastRecv(raw);
+
+      const msg = safeJsonParse(raw);
+      if (!msg) return;
+
+      if (msg.type === "server:error") {
+        setError(msg.error || "server:error");
+        return;
+      }
+      if (msg.type === "auth:fail") {
+        setError("auth failed");
+        return;
+      }
+      if (msg.type === "auth:ok") {
+        const u = msg?.payload?.user;
+        const id = String(u?.id ?? "").trim();
+        const name = String(u?.name ?? "").trim();
+        if (id) { setMeId(id); try { localStorage.setItem("weered_user_id", id); } catch {} }
+        if (name) { setMeName(name); try { localStorage.setItem("weered_name", name); } catch {} }
+        return;
+      }
+
+      if (msg.type === "room:locked") {
+        setError("room is locked — knock to request access");
+        setMyRole("guest");
+        return;
+      }
+
+      if (msg.type === "room:lock_changed") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        setRoomLocked(!!msg?.payload?.locked);
+        return;
+      }
+
+      if (msg.type === "room:knocks") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        setKnocks(Array.isArray(msg?.payload?.knocks) ? msg.payload.knocks : []);
+        return;
+      }
+
+      if (msg.type === "room:knock") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        const k: Knock = {
+          userId: String(msg?.payload?.userId ?? ""),
+          userName: String(msg?.payload?.userName ?? ""),
+          message: String(msg?.payload?.message ?? ""),
+          createdAt: String(msg?.payload?.createdAt ?? new Date().toISOString()),
+        };
+        if (k.userId) setKnocks((prev) => {
+          const next = prev.filter((x) => x.userId !== k.userId);
+          next.push(k);
+          return next;
+        });
+        return;
+      }
+
+      if (msg.type === "room:admitted") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        setError("");
+        // server will typically auto-join if you were pending; just wait for presence state
+        return;
+      }
+
+      if (msg.type === "room:denied") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        setError("knock denied");
+        return;
+      }
+
+      if (msg.type === "room:role_changed") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        const userId = String(msg?.payload?.userId ?? "");
+        const role = String(msg?.payload?.role ?? "") as Role;
+        if (!userId || !role) return;
+        setMembers((prev) => prev.map((m) => (m.id === userId ? { ...m, role } : m)));
+        if (userId === meId) setMyRole(role);
+        return;
+      }
+
+      if (msg.type === "presence:state") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        const list = Array.isArray(msg?.payload?.members) ? msg.payload.members : [];
+        setMembers(list);
+        const me = list.find((m: any) => String(m?.id ?? "") === meId);
+        const r = (me?.role as Role) || "guest";
+        setMyRole(r);
+        return;
+      }
+
+      if (msg.type === "presence:join") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        const m = msg?.payload?.member;
+        if (m?.id) {
+          setMembers((prev) => {
+            const next = prev.filter((x) => x.id !== m.id);
+            next.push(m);
+            return next;
+          });
+          if (m.id === meId && m.role) setMyRole(m.role);
+        }
+        return;
+      }
+
+      if (msg.type === "presence:leave") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        const memberId = String(msg?.payload?.memberId ?? "");
+        if (memberId) setMembers((prev) => prev.filter((x) => x.id !== memberId));
+        return;
+      }
+
+      if (msg.type === "chat:new") {
+        if (String(msg?.payload?.roomId ?? "") !== roomId) return;
+        const body = String(msg?.payload?.body ?? "");
+        const at = String(msg?.payload?.at ?? new Date().toISOString());
+        const from = String(msg?.payload?.from?.name ?? "Unknown");
+        if (!body) return;
+        setMessages((prev) => [...prev, { at, from, body }]);
+        return;
+      }
+    };
+
+    ws.onerror = () => setError("ws error (see console)");
+    ws.onclose = () => setStatus("closed");
+  }
+
+  useEffect(() => {
+    if (!token || !roomId) return;
+    // connect once on page load (and reconnect via button)
+    connect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, roomId]);
+
+  function sendChat() {
+    const body = input.trim();
+    if (!body) return;
+    sendJson({ type: "chat:send", payload: { roomId, body } });
+    setInput("");
+  }
+
+  function refreshKnocks() {
+    sendJson({ type: "room:knocks:get", payload: { roomId } });
+  }
+
+  function setLock(locked: boolean) {
+    sendJson({ type: "room:set_lock", payload: { roomId, locked } });
+    setRoomLocked(locked); // optimistic
+    if (locked && isPriv) refreshKnocks();
+  }
+
+  function knock() {
+    sendJson({ type: "room:knock", payload: { roomId, message: knockMsg.trim() } });
+    setKnockMsg("");
+  }
+
+  function admit(userId: string) {
+    sendJson({ type: "room:admit", payload: { roomId, userId } });
+  }
+
+  function deny(userId: string) {
+    sendJson({ type: "room:deny", payload: { roomId, userId } });
+  }
+
+  function setRole(userId: string, role: Role) {
+    sendJson({ type: "room:set_role", payload: { roomId, userId, role } });
+  }
+
+  const chatDisabled = !roomId || (roomLocked && myRole === "guest");
+
+  return (
+    <div style={{ fontFamily: "system-ui, sans-serif", padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <a href="/" style={{ textDecoration: "underline" }}>Lobby</a>
+        <div style={{ fontWeight: 800 }}>Room: {roomId}</div>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontSize: 12, color: "#444" }}>
+            WS: <b>{status}</b>
+            <span style={{ marginLeft: 8, padding: "2px 8px", border: "1px solid #ddd", borderRadius: 999 }}>
+              {myRole}
+            </span>
+          </div>
+          <button onClick={() => { disconnect(); connect(); }}>Reconnect</button>
+        </div>
+      </div>
+
+      {!isAuthed ? (
+        <div style={{ padding: 12, border: "1px solid #eee", borderRadius: 12 }}>
+          <div style={{ fontWeight: 700 }}>Not logged in</div>
+          <div style={{ marginTop: 8 }}>
+            <button onClick={() => router.push("/login")}>Go to Login</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {error ? (
+            <div style={{ padding: 10, background: "#ffe5e5", border: "1px solid #ffb3b3", borderRadius: 10, marginBottom: 12 }}>
+              Error: {error}
+            </div>
+          ) : null}
+
+          <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 340px", gap: 12 }}>
+            {/* Presence */}
+            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, height: "70vh", overflow: "auto" }}>
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>Presence</div>
+
+              {members.map((m) => {
+                const r = (m.role || "guest") as Role;
+                const isOwnerTarget = r === "owner";
+                const isMe = m.id === meId;
+                const canEditThis = canManageRoles && !isMe && !isOwnerTarget;
+
+                return (
+                  <div key={m.id} style={{ padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ flex: 1 }}>
+                        <b>{m.name}</b>{" "}
+                        <span style={{ fontSize: 11, padding: "2px 8px", border: "1px solid #ddd", borderRadius: 999 }}>
+                          {r}
+                        </span>
+                      </div>
+
+                      {canEditThis ? (
+                        <select
+                          value={r}
+                          onChange={(e) => setRole(m.id, e.target.value as Role)}
+                          style={{ fontSize: 12, padding: 6, borderRadius: 8, border: "1px solid #ddd" }}
+                        >
+                          <option value={r}>{r}</option>
+                          {roleOptionsForActor.filter((x) => x !== r).map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                          <option value="guest">guest</option>
+                        </select>
+                      ) : null}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#777", fontFamily: "ui-monospace, SFMono-Regular" }}>{m.id}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Chat */}
+            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, height: "70vh", display: "flex", flexDirection: "column" }}>
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>Chat</div>
+
+              <div style={{ flex: 1, overflow: "auto", border: "1px solid #f3f3f3", borderRadius: 10, padding: 10 }}>
+                {messages.length === 0 ? <div style={{ color: "#777" }}>No messages yet.</div> : null}
+                {messages.map((m, i) => (
+                  <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid #f3f3f3" }}>
+                    <div style={{ fontSize: 12, color: "#666" }}>{m.at} — <b>{m.from}</b></div>
+                    <div>{m.body}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") sendChat(); }}
+                  placeholder={chatDisabled ? "Room locked — knock for access" : "Type a message"}
+                  disabled={chatDisabled}
+                  style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid #ddd" }}
+                />
+                <button disabled={chatDisabled} onClick={sendChat}>Send</button>
+              </div>
+
+              <div style={{ marginTop: 10, fontSize: 12 }}>
+                <div>Last send: <code>{lastSend}</code></div>
+                <div>Last recv: <code>{lastRecv}</code></div>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, height: "70vh", overflow: "auto" }}>
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>Room Controls</div>
+
+              <div style={{ border: "1px solid #f0f0f0", borderRadius: 12, padding: 10, marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Lock</div>
+                <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+                  Lock/unlock requires <b>owner</b> or <b>admin</b>. You are <b>{myRole}</b>.
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button disabled={!canLock} onClick={() => setLock(!roomLocked)} style={{ flex: 1 }}>
+                    {roomLocked ? "Unlock room" : "Lock room"}
+                  </button>
+                  <button disabled={!isPriv} onClick={refreshKnocks} style={{ flex: 1 }}>
+                    Refresh knocks
+                  </button>
+                </div>
+              </div>
+
+              {roomLocked && myRole === "guest" ? (
+                <div style={{ border: "1px solid #f0f0f0", borderRadius: 12, padding: 10, marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Room is locked</div>
+                  <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>Send a knock to request access.</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      value={knockMsg}
+                      onChange={(e) => setKnockMsg(e.target.value)}
+                      placeholder="Optional message"
+                      style={{ flex: 1, padding: 8, border: "1px solid #ddd", borderRadius: 10 }}
+                    />
+                    <button onClick={knock}>Knock</button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div style={{ border: "1px solid #f0f0f0", borderRadius: 12, padding: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontWeight: 700 }}>Knock Queue</div>
+                  <div style={{ marginLeft: "auto", fontSize: 12, color: "#666" }}>{knocks.length}</div>
+                </div>
+
+                {!isPriv ? <div style={{ marginTop: 8, color: "#777" }}>Requires mod/admin/owner.</div> : null}
+                {isPriv && knocks.length === 0 ? <div style={{ marginTop: 8, color: "#777" }}>No knocks.</div> : null}
+
+                {isPriv ? knocks.map((k) => (
+                  <div key={k.userId} style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f3f3" }}>
+                    <div style={{ fontSize: 13 }}><b>{k.userName || k.userId}</b></div>
+                    <div style={{ fontSize: 11, color: "#666" }}>{k.createdAt}</div>
+                    {k.message ? <div style={{ marginTop: 6, fontSize: 12 }}>{k.message}</div> : null}
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button onClick={() => admit(k.userId)} style={{ flex: 1 }}>Admit</button>
+                      <button onClick={() => deny(k.userId)} style={{ flex: 1 }}>Deny</button>
+                    </div>
+                  </div>
+                )) : null}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,83 @@
+﻿"use client";
+
+export const TOKEN_KEY = "weered:token";
+
+export function apiBase() {
+  return process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+}
+
+export function wsBase() {
+  return process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:4001";
+}
+
+export function getToken(): string {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function setToken(token: string) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {}
+}
+
+export function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {}
+}
+
+async function readTextSafe(r: Response) {
+  try {
+    return await r.text();
+  } catch {
+    return "";
+  }
+}
+
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const token = getToken();
+  const headers = new Headers(init?.headers || {});
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (!headers.has("Content-Type") && init?.body) headers.set("Content-Type", "application/json");
+  return fetch(`${apiBase()}${path}`, { ...init, headers });
+}
+
+export async function devLogin(displayName: string): Promise<string> {
+  const r = await fetch(`${apiBase()}/auth/dev-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName }),
+  });
+
+  const text = await readTextSafe(r);
+  let j: any = null;
+  try { j = text ? JSON.parse(text) : null; } catch {}
+
+  const token =
+    j?.token ||
+    j?.accessToken ||
+    j?.jwt ||
+    j?.data?.token ||
+    j?.data?.accessToken;
+
+  const ok = (typeof j?.ok === "boolean") ? j.ok : !!token;
+
+  if (!r.ok || !ok || !token) {
+    const msg = j?.error || j?.message || j?.msg || (text || `HTTP ${r.status}`);
+    throw new Error(msg);
+  }
+
+  return String(token);
+}
+
+export function ensureRoom(roomId: string) {
+  // Best-effort room creation so chat persistence works.
+  apiFetch("/rooms", {
+    method: "POST",
+    body: JSON.stringify({ id: roomId }),
+  }).then(() => {}).catch(() => {});
+}

@@ -1,0 +1,505 @@
+'use client';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { weeredWs, type WsMsg, type WsStatus } from '../../weeredClient';
+
+type Role = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
+
+type Member = {
+  id: string;
+  name?: string | null;
+  role?: Role;
+};
+
+type Knock = {
+  id: string;
+  userId: string;
+  userName?: string | null;
+  message?: string | null;
+  createdAt?: string | null;
+};
+
+type ChatLine = {
+  at: string;
+  fromName: string;
+  body: string;
+};
+
+function pickMemberName(m: Member): string {
+  return (m?.name ?? '') || (m?.id ? 'User ' + m.id.slice(0, 8) : 'Unknown');
+}
+
+function roleTag(r?: string | null): Role {
+  const v = String(r ?? '').toLowerCase();
+  if (v === 'owner' || v === 'admin' || v === 'mod' || v === 'member' || v === 'guest') return v as Role;
+  return 'guest';
+}
+
+function canAffect(actor: Role, target: Role): boolean {
+  if (actor === 'owner') return target !== 'owner';
+  if (actor === 'admin') return target !== 'owner' && target !== 'admin';
+  if (actor === 'mod') return target === 'member' || target === 'guest';
+  return false;
+}
+
+function roleOptionsForActor(actor: Role, target: Role): Role[] {
+  if (!canAffect(actor, target)) return [target];
+  if (actor === 'owner') return ['admin', 'mod', 'member', 'guest'];
+  if (actor === 'admin') return ['mod', 'member', 'guest'];
+  return [target];
+}
+
+export default function RoomPage() {
+  const params = useParams<{ roomId: string }>();
+  const router = useRouter();
+
+  const roomId = String(params?.roomId || '').trim();
+
+  const [token, setToken] = useState('');
+  const [meId, setMeId] = useState('');
+  const [meName, setMeName] = useState('');
+
+  const [status, setStatus] = useState<WsStatus>(weeredWs.getStatus());
+  const [error, setError] = useState('');
+
+  const [roomLocked, setRoomLocked] = useState(false);
+  const [myRole, setMyRole] = useState<Role>('guest');
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [knocks, setKnocks] = useState<Knock[]>([]);
+  const [knockMsg, setKnockMsg] = useState('');
+  const [messages, setMessages] = useState<ChatLine[]>([]);
+  const [input, setInput] = useState('');
+
+  const roomIdRef = useRef(roomId);
+  const meIdRef = useRef(meId);
+  const myRoleRef = useRef<Role>(myRole);
+  useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
+  useEffect(() => { meIdRef.current = meId; }, [meId]);
+  useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
+
+  const isPriv = useMemo(() => myRole === 'owner' || myRole === 'admin' || myRole === 'mod', [myRole]);
+  const canLock = useMemo(() => myRole === 'owner' || myRole === 'admin', [myRole]);
+
+  function readStorage() {
+    try {
+      return {
+        t: localStorage.getItem('weered_token') || '',
+        uid: localStorage.getItem('weered_user_id') || '',
+        nm: localStorage.getItem('weered_name') || '',
+      };
+    } catch {
+      return { t: '', uid: '', nm: '' };
+    }
+  }
+
+  useEffect(() => {
+    const sync = () => {
+      const s = readStorage();
+      if (s.t !== token) setToken(s.t);
+      if (s.uid !== meId) setMeId(s.uid);
+      if (s.nm !== meName) setMeName(s.nm);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      if (e.key.startsWith('weered_')) sync();
+    };
+    sync();
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', sync);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', sync);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => weeredWs.onStatus(setStatus), []);
+
+  useEffect(() => {
+    if (!token) {
+      weeredWs.disconnect();
+      setStatus('closed');
+      return;
+    }
+    weeredWs.setToken(token);
+    weeredWs.connect();
+  }, [token]);
+
+  function sendJson(obj: any) {
+    weeredWs.send(obj);
+  }
+
+  useEffect(() => {
+    return weeredWs.subscribe((_raw, msg: WsMsg | null) => {
+      if (!msg || typeof msg !== 'object') return;
+
+      const activeRoomId = roomIdRef.current;
+      const myId = meIdRef.current;
+
+      if (msg.type === 'error') {
+        const code =
+          String(msg?.payload?.code ?? '') ||
+          String(msg?.payload?.message ?? '') ||
+          String(msg?.payload ?? 'error');
+        setError(code);
+        return;
+      }
+
+      if (msg.type === 'auth:fail') {
+        setError('auth failed');
+        return;
+      }
+
+      if (msg.type === 'auth:ok') {
+        const uid = String(msg?.payload?.userId ?? msg?.payload?.id ?? '');
+        const nm = String(msg?.payload?.name ?? msg?.payload?.displayName ?? '');
+        if (uid) {
+          setMeId(uid);
+          try { localStorage.setItem('weered_user_id', uid); } catch {}
+        }
+        if (nm) {
+          setMeName(nm);
+          try { localStorage.setItem('weered_name', nm); } catch {}
+        }
+        setError('');
+        return;
+      }
+
+      const msgRoomId = String(msg?.payload?.roomId ?? '');
+      const isRoomScoped =
+        msg.type.startsWith('presence:') ||
+        msg.type.startsWith('chat:') ||
+        msg.type.startsWith('room:');
+
+      if (isRoomScoped && msgRoomId && activeRoomId && msgRoomId !== activeRoomId) return;
+
+      if (msg.type === 'room:locked') {
+        setRoomLocked(Boolean((msg?.payload?.locked ?? msg?.payload?.roomLocked) as any));
+        return;
+      }
+
+      if (msg.type === 'room:knocks') {
+        const list = Array.isArray(msg?.payload?.knocks) ? msg.payload.knocks : [];
+        setKnocks(list);
+        const locked = msg?.payload?.roomLocked;
+        if (typeof locked === 'boolean') setRoomLocked(locked);
+        return;
+      }
+
+      if (msg.type === 'room:role_changed') {
+        const userId = String(msg?.payload?.userId ?? '');
+        const role = roleTag(msg?.payload?.role ?? 'guest');
+        if (!userId) return;
+        setMembers((prev) => prev.map((m) => (m.id === userId ? { ...m, role } : m)));
+        if (userId === myId) setMyRole(role);
+        return;
+      }
+
+      if (msg.type === 'presence:state') {
+        const list = Array.isArray(msg?.payload?.members) ? msg.payload.members : [];
+        setMembers(list);
+
+        const me = list.find((m: any) => String(m?.id ?? '') === myId);
+        if (me) setMyRole(roleTag(me?.role ?? 'guest'));
+        return;
+      }
+
+      if (msg.type === 'presence:join') {
+        const member = msg?.payload?.member as any;
+        const id = String(member?.id ?? '');
+        if (!id) return;
+        const role = roleTag(member?.role ?? 'guest');
+        setMembers((prev) => {
+          const copy = prev.filter((m) => m.id !== id);
+          copy.push({ id, name: member?.name ?? null, role });
+          copy.sort((a, b) => pickMemberName(a).localeCompare(pickMemberName(b)));
+          return copy;
+        });
+        if (id === myId) setMyRole(role);
+        return;
+      }
+
+      if (msg.type === 'presence:leave') {
+        const userId = String(msg?.payload?.memberId ?? msg?.payload?.userId ?? '');
+        if (!userId) return;
+        setMembers((prev) => prev.filter((m) => m.id !== userId));
+        return;
+      }
+
+      if (msg.type === 'chat:new') {
+        const body = String(msg?.payload?.body ?? msg?.payload?.message?.body ?? '');
+        const at = String(msg?.payload?.at ?? msg?.payload?.message?.createdAt ?? '');
+        const fromName =
+          String(msg?.payload?.from?.name ?? msg?.payload?.message?.userName ?? msg?.payload?.userName ?? '') ||
+          'Unknown';
+
+        if (!body) return;
+
+        setMessages((prev) => prev.concat([{ at: at || new Date().toISOString(), fromName, body }]).slice(-200));
+        return;
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!roomId || !token || status !== 'open') return;
+
+    setMembers([]);
+    setKnocks([]);
+    setRoomLocked(false);
+    setMyRole('guest');
+    setMessages([]);
+    setError('');
+
+    weeredWs.joinRoom(roomId);
+    sendJson({ type: 'room:knocks:get', payload: { roomId } });
+
+    return () => {
+      weeredWs.leaveRoom(roomId);
+    };
+  }, [roomId, token, status]);
+
+  function goHome() {
+    if (roomId) weeredWs.leaveRoom(roomId);
+    router.push('/');
+  }
+
+  function sendChat() {
+    if (!roomId) return;
+    const body = (input || '').trim();
+    if (!body) return;
+    sendJson({ type: 'chat:send', payload: { roomId, body } });
+    setInput('');
+  }
+
+  function knock() {
+    if (!roomId) return;
+    const message = (knockMsg || '').trim();
+    sendJson({ type: 'room:knock', payload: { roomId, message } });
+  }
+
+  function refreshKnocks() {
+    if (!roomId) return;
+    sendJson({ type: 'room:knocks:get', payload: { roomId } });
+  }
+
+  function toggleLock() {
+    if (!roomId) return;
+    sendJson({ type: 'room:set_lock', payload: { roomId, locked: !roomLocked } });
+  }
+
+  function admit(knockId: string) {
+    if (!roomId || !knockId) return;
+    sendJson({ type: 'room:admit', payload: { roomId, knockId } });
+  }
+
+  function deny(knockId: string) {
+    if (!roomId || !knockId) return;
+    sendJson({ type: 'room:deny', payload: { roomId, knockId } });
+  }
+
+  function setRole(userId: string, role: Role) {
+    if (!roomId || !userId) return;
+    sendJson({ type: 'room:set_role', payload: { roomId, userId, role } });
+  }
+
+  function kick(userId: string) {
+    if (!roomId || !userId) return;
+    sendJson({ type: 'room:kick', payload: { roomId, userId } });
+  }
+
+  function banUser(userId: string) {
+    if (!roomId || !userId) return;
+    const reason = (window.prompt('Ban reason (optional):', '') || '').trim();
+    sendJson({ type: 'room:ban', payload: { roomId, userId, reason } });
+  }
+
+  return (
+    <div style={{ padding: 14, fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <button type="button" onClick={goHome} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '8px 10px', background: '#fff' }}>
+          Home
+        </button>
+
+        <div style={{ fontWeight: 800 }}>Room: {roomId}</div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 12, color: '#666' }}>WS: {status}</div>
+          <button type="button" onClick={() => weeredWs.connect()} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '6px 10px', background: '#fff' }}>
+            Reconnect
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10, fontSize: 12, color: '#666' }}>
+        You: {meName || '(guest)'} ({myRole})
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 10, padding: 10, border: '1px solid #f0c2c2', borderRadius: 10, background: '#fff6f6', color: '#b00020', fontSize: 12 }}>
+          Error: {error}
+          <button type="button" onClick={() => setError('')} style={{ marginLeft: 10, border: '1px solid #ddd', borderRadius: 8, padding: '2px 8px', background: '#fff' }}>
+            x
+          </button>
+        </div>
+      )}
+
+      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontWeight: 800 }}>Presence ({members.length})</div>
+            <div style={{ fontSize: 12, color: '#666' }}>Locked: {roomLocked ? 'yes' : 'no'}</div>
+          </div>
+
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button
+              type="button"
+              onClick={toggleLock}
+              disabled={!canLock}
+              style={{ border: '1px solid #ddd', borderRadius: 10, padding: '8px 10px', background: canLock ? '#fff' : '#f6f6f6' }}
+            >
+              {roomLocked ? 'Unlock' : 'Lock'}
+            </button>
+            <button
+              type="button"
+              onClick={refreshKnocks}
+              disabled={!canLock}
+              style={{ border: '1px solid #ddd', borderRadius: 10, padding: '8px 10px', background: canLock ? '#fff' : '#f6f6f6' }}
+            >
+              Refresh knocks
+            </button>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            {members.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#888' }}>No one here yet.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {members.map((m) => {
+                  const targetRole = roleTag(m.role);
+                  const actorRole = myRoleRef.current;
+                  const canAct =
+                    isPriv &&
+                    m.id !== meIdRef.current &&
+                    canAffect(actorRole, targetRole);
+
+                  return (
+                    <div key={m.id} style={{ border: '1px solid #f3f3f3', borderRadius: 12, padding: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                        <div style={{ fontSize: 12 }}>
+                          <div style={{ fontWeight: 700 }}>{pickMemberName(m)}</div>
+                          <div style={{ color: '#666' }}>{m.id}</div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {(myRole === 'owner' || myRole === 'admin') ? (
+                            <select
+                              value={targetRole}
+                              onChange={(e) => setRole(m.id, roleTag(e.target.value))}
+                              disabled={!canAffect(actorRole, targetRole)}
+                              style={{ padding: '6px 8px', border: '1px solid #ddd', borderRadius: 10, background: canAffect(actorRole, targetRole) ? '#fff' : '#f6f6f6' }}
+                            >
+                              {roleOptionsForActor(actorRole, targetRole).map((r) => (
+                                <option key={r} value={r}>{r}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span style={{ fontSize: 12, color: '#666', border: '1px solid #eee', borderRadius: 999, padding: '4px 10px' }}>
+                              {targetRole}
+                            </span>
+                          )}
+
+                          {canAct && (
+                            <>
+                              <button type="button" onClick={() => kick(m.id)} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '6px 10px', background: '#fff' }}>
+                                Kick
+                              </button>
+                              <button type="button" onClick={() => banUser(m.id)} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '6px 10px', background: '#fff' }}>
+                                Ban
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: 14 }}>
+          <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+            <div style={{ fontWeight: 800 }}>Knock Queue ({knocks.length})</div>
+
+            {!canLock && roomLocked && (
+              <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                <input value={knockMsg} onChange={(e) => setKnockMsg(e.target.value)} placeholder="Knock message (optional)" style={{ padding: 8, border: '1px solid #ddd', borderRadius: 10 }} />
+                <button type="button" onClick={knock} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '8px 12px', background: '#fff' }}>
+                  Knock
+                </button>
+              </div>
+            )}
+
+            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+              {knocks.length === 0 ? (
+                <div style={{ fontSize: 12, color: '#888' }}>{canLock ? 'No knocks.' : 'Requires mod/admin/owner.'}</div>
+              ) : (
+                knocks.map((k) => (
+                  <div key={k.id} style={{ border: '1px solid #f3f3f3', borderRadius: 12, padding: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                      <div style={{ fontSize: 12 }}>
+                        <div style={{ fontWeight: 700 }}>{k.userName || ('User ' + k.userId.slice(0, 8))}</div>
+                        {k.message ? <div style={{ color: '#666' }}>{k.message}</div> : null}
+                      </div>
+
+                      {canLock && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" onClick={() => admit(k.id)} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '6px 10px', background: '#fff' }}>
+                            Admit
+                          </button>
+                          <button type="button" onClick={() => deny(k.id)} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '6px 10px', background: '#fff' }}>
+                            Deny
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+            <div style={{ fontWeight: 800 }}>Chat</div>
+
+            <div style={{ marginTop: 10, maxHeight: 260, overflow: 'auto', border: '1px solid #f3f3f3', borderRadius: 12, padding: 10 }}>
+              {messages.length === 0 ? (
+                <div style={{ fontSize: 12, color: '#888' }}>No messages yet.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {messages.map((m, idx) => (
+                    <div key={idx} style={{ fontSize: 12 }}>
+                      <div style={{ color: '#666' }}>{m.fromName}{m.at ? <span style={{ marginLeft: 6 }}>{m.at}</span> : null}</div>
+                      <div>{m.body}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+              <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message" style={{ padding: 8, border: '1px solid #ddd', borderRadius: 10 }} />
+              <button type="button" onClick={sendChat} style={{ border: '1px solid #ddd', borderRadius: 10, padding: '8px 12px', background: '#fff' }}>
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

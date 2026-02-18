@@ -1,0 +1,239 @@
+'use client';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'next/navigation';
+
+type WsMsg = { type: string; [k: string]: any };
+
+type BanRecord = {
+  userId: string;
+  reason?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  displayName?: string | null;
+  userDisplayName?: string | null;
+  user?: {
+    id?: string | null;
+    displayName?: string | null;
+    name?: string | null;
+  } | null;
+};
+
+function getRoomId(params: any): string | null {
+  const raw = params?.roomId;
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw[0] ?? null;
+  return String(raw);
+}
+
+function pickName(b: BanRecord): string {
+  return (
+    (b.userDisplayName ?? '') ||
+    (b.displayName ?? '') ||
+    (b.user?.displayName ?? '') ||
+    (b.user?.name ?? '') ||
+    (b.userId ? ('User ' + b.userId.slice(0, 8)) : 'Unknown user')
+  );
+}
+
+export default function DockBanOverlay() {
+  const params = useParams();
+  const roomId = useMemo(() => getRoomId(params), [params]);
+
+  const wsUrl = (process.env.NEXT_PUBLIC_WS_URL ?? '').trim();
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const [open, setOpen] = useState(false);
+  const [authed, setAuthed] = useState(false);
+  const [connected, setConnected] = useState(false);
+
+  const [bans, setBans] = useState<BanRecord[]>([]);
+  const [reasonDraft, setReasonDraft] = useState<Record<string, string>>({});
+
+  const canRun = !!roomId && !!wsUrl;
+
+  const send = (m: any) => {
+    const ws = wsRef.current;
+    if (!ws) return;
+    if (ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify(m));
+  };
+
+  const requestBans = () => {
+    if (!roomId) return;
+    send({ type: 'room:bans:get', roomId });
+  };
+
+  const unban = (userId: string) => {
+    if (!roomId) return;
+    send({ type: 'room:unban', roomId, userId });
+    setTimeout(requestBans, 150);
+  };
+
+  const saveReason = (userId: string) => {
+    if (!roomId) return;
+    const reason = (reasonDraft[userId] ?? '').trim();
+    // Upsert reason by calling room:ban again
+    send({ type: 'room:ban', roomId, userId, reason });
+    setTimeout(requestBans, 150);
+  };
+
+  useEffect(() => {
+    if (!canRun) return;
+
+    setAuthed(false);
+    setConnected(false);
+    setBans([]);
+    setReasonDraft({});
+
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setConnected(true);
+      ws.send(JSON.stringify({ type: 'auth:hello' }));
+      ws.send(JSON.stringify({ type: 'room:bans:get', roomId }));
+    };
+
+    ws.onclose = () => {
+      setConnected(false);
+      setAuthed(false);
+    };
+
+    ws.onmessage = (ev) => {
+      let msg: WsMsg | null = null;
+      try { msg = JSON.parse(String(ev.data)); } catch { return; }
+      if (!msg?.type) return;
+
+      if (msg.type === 'auth:ok') {
+        setAuthed(true);
+        requestBans();
+        return;
+      }
+
+      if (msg.type === 'room:bans') {
+        const next: BanRecord[] =
+          (msg.bans as BanRecord[]) ??
+          (msg.payload?.bans as BanRecord[]) ??
+          (msg.data?.bans as BanRecord[]) ??
+          [];
+
+        setBans(Array.isArray(next) ? next : []);
+
+        setReasonDraft((prev) => {
+          const copy = { ...prev };
+          for (const b of (Array.isArray(next) ? next : [])) {
+            const id = b?.userId;
+            if (!id) continue;
+            if (copy[id] === undefined) copy[id] = (b.reason ?? '') as string;
+          }
+          return copy;
+        });
+
+        return;
+      }
+    };
+
+    return () => {
+      try { ws.close(); } catch {}
+      wsRef.current = null;
+    };
+  }, [canRun, roomId, wsUrl]);
+
+  if (!canRun) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[60]">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="rounded-md border px-3 py-2 text-sm bg-white/90 hover:bg-white shadow"
+        title="Bans"
+      >
+        Bans
+        <span className="ml-2 text-xs opacity-70">
+          {connected ? (authed ? '●' : '○') : '×'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-2 w-[420px] max-w-[90vw] rounded-lg border bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <div className="text-sm font-semibold">Banned users</div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={requestBans}
+                className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                title="Refresh"
+              >
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                title="Close"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          <div className="max-h-[60vh] overflow-auto p-3">
+            {bans.length === 0 ? (
+              <div className="text-sm opacity-70">No bans.</div>
+            ) : (
+              <div className="space-y-3">
+                {bans.map((b) => {
+                  const id = b.userId;
+                  const name = pickName(b);
+                  const draft = reasonDraft[id] ?? '';
+                  return (
+                    <div key={id} className="rounded-md border p-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{name}</div>
+                          <div className="text-xs opacity-60 truncate">{id}</div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => unban(id)}
+                          className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                          title="Unban"
+                        >
+                          Unban
+                        </button>
+                      </div>
+
+                      <div className="mt-2 flex items-center gap-2">
+                        <input
+                          value={draft}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setReasonDraft((prev) => ({ ...prev, [id]: v }));
+                          }}
+                          placeholder="Reason"
+                          className="w-full rounded border px-2 py-1 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveReason(id)}
+                          className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                          title="Save"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

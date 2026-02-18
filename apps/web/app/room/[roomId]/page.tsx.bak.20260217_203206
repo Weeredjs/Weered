@@ -1,0 +1,361 @@
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { weeredWs, type WsStatus, subscribeAuth, syncAuthFromStorage } from '../../weeredClient';
+type Role = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
+type Member = { id: string; name: string; role?: Role };
+type Knock = { userId: string; userName?: string; message?: string; createdAt: string };
+type ChatMsg = { at: string; from: string; body: string };
+
+function getRoomId(params: any): string {
+const raw = params?.roomId;
+if (!raw) return '';
+if (Array.isArray(raw)) return String(raw[0] ?? '');
+return String(raw);
+}
+
+export default function RoomPage() {
+const router = useRouter();
+const params = useParams();
+const roomId = useMemo(() => getRoomId(params).trim(), [params]);
+
+const [token, setToken] = useState('');
+const [meId, setMeId] = useState('');
+
+// WEE_LS_AUTH_SYNC_ROOM:start
+(() => {
+  const sync = () => {
+    try {
+      const t = localStorage.getItem('weered_token') || '';
+      const id = localStorage.getItem('weered_user_id') || '';
+      const name = localStorage.getItem('weered_name') || '';
+      setToken(t);
+      setMeId(id);
+      setMeName(name);
+    } catch {}
+  };
+
+  const onVis = () => { if (!document.hidden) sync(); };
+
+  sync();
+  window.addEventListener('weered:auth', sync);
+  window.addEventListener('focus', sync);
+  document.addEventListener('visibilitychange', onVis);
+
+  return () => {
+    window.removeEventListener('weered:auth', sync);
+    window.removeEventListener('focus', sync);
+    document.removeEventListener('visibilitychange', onVis);
+  };
+}, []);
+// WEE_LS_AUTH_SYNC_ROOM:end
+
+const [meName, setMeName] = useState('');
+
+// WEE_AUTH_SUB_ROOM:start
+(() => {
+  try { syncAuthFromStorage(); } catch {}
+  const unsub = subscribeAuth((a) => {
+    setToken(a?.token ?? '');
+    setMeId(a?.userId ?? '');
+    setMeName(a?.displayName ?? '');
+  });
+  const onAuth = () => { try { syncAuthFromStorage(); } catch {} };
+  window.addEventListener('weered:auth', onAuth);
+  return () => {
+    window.removeEventListener('weered:auth', onAuth);
+    try { unsub(); } catch {}
+  };
+}, []);
+// WEE_AUTH_SUB_ROOM:end
+
+const [myRole, setMyRole] = useState<Role>('guest');
+
+const [status, setStatus] = useState<WsStatus>(weeredWs.getStatus());
+const [error, setError] = useState('');
+
+const [roomLocked, setRoomLocked] = useState(false);
+const [members, setMembers] = useState<Member[]>([]);
+const [knocks, setKnocks] = useState<Knock[]>([]);
+const [messages, setMessages] = useState<ChatMsg[]>([]);
+const [input, setInput] = useState('');
+const [knockMsg, setKnockMsg] = useState('');
+
+const [lastSend, setLastSend] = useState('');
+const [lastRecv, setLastRecv] = useState('');
+
+const isPriv = useMemo(() => myRole === 'owner' || myRole === 'admin' || myRole === 'mod', [myRole]);
+const canLock = useMemo(() => myRole === 'owner' || myRole === 'admin', [myRole]);
+
+useEffect(() => {
+try {
+setToken(localStorage.getItem('weered_token') || '');
+setMeId(localStorage.getItem('weered_user_id') || '');
+setMeName(localStorage.getItem('weered_name') || '');
+} catch {}
+}, []);
+
+useEffect(() => weeredWs.onStatus(setStatus), []);
+
+useEffect(() => {
+return weeredWs.subscribe((raw, msg) => {
+setLastRecv(raw);
+if (!msg || !msg.type) return;
+
+if (msg.type === 'server:error') {
+setError(msg.error || 'server:error');
+return;
+}
+if (msg.type === 'auth:fail') {
+setError('auth failed');
+return;
+}
+if (msg.type === 'auth:ok') {
+const u = msg?.payload?.user;
+const id = String(u?.id ?? '').trim();
+const name = String(u?.name ?? '').trim();
+if (id) setMeId(id);
+if (name) setMeName(name);
+return;
+}
+
+// room-scoped
+if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+
+if (msg.type === 'room:locked') {
+setError('room is locked ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â knock to request access');
+setMyRole('guest');
+return;
+}
+
+if (msg.type === 'room:lock_changed') {
+setRoomLocked(!!msg?.payload?.locked);
+return;
+}
+
+if (msg.type === 'room:knocks') {
+setKnocks(Array.isArray(msg?.payload?.knocks) ? msg.payload.knocks : []);
+return;
+}
+
+if (msg.type === 'room:knock') {
+const k: Knock = {
+userId: String(msg?.payload?.userId ?? ''),
+userName: String(msg?.payload?.userName ?? ''),
+message: String(msg?.payload?.message ?? ''),
+createdAt: String(msg?.payload?.createdAt ?? new Date().toISOString()),
+};
+if (k.userId) setKnocks((prev) => {
+const next = prev.filter((x) => x.userId !== k.userId);
+next.push(k);
+return next;
+});
+return;
+}
+
+if (msg.type === 'room:role_changed') {
+const userId = String(msg?.payload?.userId ?? '');
+const role = String(msg?.payload?.role ?? '') as Role;
+if (!userId || !role) return;
+setMembers((prev) => prev.map((m) => (m.id === userId ? { ...m, role } : m)));
+if (userId === meId) setMyRole(role);
+return;
+}
+
+if (msg.type === 'presence:state') {
+const list = Array.isArray(msg?.payload?.members) ? msg.payload.members : [];
+setMembers(list);
+
+const me = list.find((m: any) => String(m?.id ?? '') === meId);
+const r = (me?.role as Role) || 'guest';
+setMyRole(r);
+return;
+}
+
+if (msg.type === 'presence:join') {
+const m = msg?.payload?.member;
+if (m?.id) {
+setMembers((prev) => {
+const next = prev.filter((x) => x.id !== m.id);
+next.push(m);
+return next;
+});
+if (m.id === meId && m.role) setMyRole(m.role);
+}
+return;
+}
+
+if (msg.type === 'presence:leave') {
+const memberId = String(msg?.payload?.memberId ?? '');
+if (memberId) setMembers((prev) => prev.filter((x) => x.id !== memberId));
+return;
+}
+
+if (msg.type === 'chat:new') {
+const body = String(msg?.payload?.body ?? '');
+const at = String(msg?.payload?.at ?? new Date().toISOString());
+const from = String(msg?.payload?.from?.name ?? 'Unknown');
+if (!body) return;
+setMessages((prev) => [...prev, { at, from, body }]);
+return;
+}
+});
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [roomId, meId]);
+
+useEffect(() => {
+if (!token) return;
+weeredWs.setToken(token);
+weeredWs.connect();
+}, [token]);
+
+useEffect(() => {
+if (!token || !roomId) return;
+if (status !== 'open') return;
+((weeredWs as any).setActiveRoom ? (weeredWs as any).setActiveRoom(roomId) : (weeredWs as any).joinRoom?.(roomId));
+}, [token, roomId, status]);
+
+function sendJson(obj: any) {
+const raw = weeredWs.send(obj);
+if (raw) setLastSend(raw);
+}
+
+function sendChat() {
+const body = input.trim();
+if (!body || !roomId) return;
+sendJson({ type: 'chat:send', payload: { roomId, body } });
+setInput('');
+}
+
+function knock() {
+if (!roomId) return;
+sendJson({ type: 'room:knock', payload: { roomId, message: knockMsg.trim() } });
+setKnockMsg('');
+}
+
+function refreshKnocks() {
+if (!roomId) return;
+sendJson({ type: 'room:knocks:get', payload: { roomId } });
+}
+
+function setLock(locked: boolean) {
+sendJson({ type: 'room:set_lock', payload: { roomId, locked } });
+setRoomLocked(locked);
+if (locked && isPriv) refreshKnocks();
+}
+
+return (
+<div style={{ padding: 16, fontFamily: 'system-ui, sans-serif', maxWidth: 980, margin: '0 auto' }}>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+<button onClick={() => router.push('/')} style={{ padding: '8px 10px' }}>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Home</button>
+<div style={{ fontWeight: 900, fontSize: 18 }}>Room: {roomId || 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â'}</div>
+<div style={{ marginLeft: 'auto', fontSize: 12, color: '#444' }}>
+WS: <b>{status}</b>
+</div>
+</div>
+
+{meName ? <div style={{ fontSize: 13, color: '#444', marginBottom: 10 }}>You: <b>{meName}</b> (<b>{myRole}</b>)</div> : null}
+
+{error ? (
+<div style={{ padding: 10, background: '#ffe5e5', border: '1px solid #ffb3b3', borderRadius: 10, marginBottom: 12 }}>
+Error: {error}
+</div>
+) : null}
+
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+<div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+<div style={{ fontWeight: 900, marginBottom: 8 }}>Presence ({members.length})</div>
+<div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Locked: <b>{roomLocked ? 'yes' : 'no'}</b></div>
+
+<div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+<button disabled={!canLock} onClick={() => setLock(!roomLocked)} style={{ flex: 1 }}>
+{roomLocked ? 'Unlock' : 'Lock'}
+</button>
+<button disabled={!isPriv} onClick={refreshKnocks} style={{ flex: 1 }}>
+Refresh knocks
+</button>
+</div>
+
+<div style={{ maxHeight: 360, overflow: 'auto', borderTop: '1px solid #f3f3f3' }}>
+{members.map((m) => (
+<div key={m.id} style={{ padding: '10px 0', borderBottom: '1px solid #f6f6f6' }}>
+<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+<div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
+<div style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #ddd', borderRadius: 999 }}>
+{(m.role || 'guest') as Role}
+</div>
+</div>
+<div style={{ fontSize: 11, color: '#777', fontFamily: 'ui-monospace, SFMono-Regular' }}>{m.id}</div>
+</div>
+))}
+</div>
+</div>
+
+<div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+<div style={{ fontWeight: 900, marginBottom: 8 }}>Knock Queue ({knocks.length})</div>
+
+{roomLocked && myRole === 'guest' ? (
+<div style={{ border: '1px solid #f0f0f0', borderRadius: 12, padding: 10, marginBottom: 10 }}>
+<div style={{ fontWeight: 700, marginBottom: 6 }}>Room is locked</div>
+<div style={{ display: 'flex', gap: 8 }}>
+<input
+value={knockMsg}
+onChange={(e) => setKnockMsg(e.target.value)}
+placeholder="Optional message"
+style={{ flex: 1, padding: 8, border: '1px solid #ddd', borderRadius: 10 }}
+/>
+<button onClick={knock}>Knock</button>
+</div>
+</div>
+) : null}
+
+{!isPriv ? <div style={{ color: '#777' }}>Requires mod/admin/owner.</div> : null}
+
+<div style={{ maxHeight: 360, overflow: 'auto', borderTop: '1px solid #f3f3f3' }}>
+{isPriv ? knocks.map((k) => (
+<div key={k.userId} style={{ padding: '10px 0', borderBottom: '1px solid #f6f6f6' }}>
+<div style={{ fontSize: 13 }}><b>{k.userName || k.userId}</b></div>
+<div style={{ fontSize: 11, color: '#666' }}>{k.createdAt}</div>
+{k.message ? <div style={{ marginTop: 6, fontSize: 12 }}>{k.message}</div> : null}
+</div>
+)) : null}
+</div>
+</div>
+</div>
+
+<div style={{ marginTop: 12, border: '1px solid #eee', borderRadius: 12, overflow: 'hidden' }}>
+<div style={{ padding: 10, borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 10 }}>
+<div style={{ fontWeight: 900 }}>Chat</div>
+<div style={{ marginLeft: 'auto', fontSize: 12, color: '#333' }}>
+Last send: <code>{lastSend}</code> &nbsp;|&nbsp; Last recv: <code>{lastRecv}</code>
+</div>
+</div>
+
+<div style={{ maxHeight: 320, overflow: 'auto', padding: 10 }}>
+{messages.length === 0 ? <div style={{ color: '#777' }}>No messages yet.</div> : null}
+{messages.map((m, i) => (
+<div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f3f3f3' }}>
+<div style={{ fontSize: 12, color: '#666' }}>{m.at} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â <b>{m.from}</b></div>
+<div>{m.body}</div>
+</div>
+))}
+</div>
+
+<div style={{ padding: 10, borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
+<input
+value={input}
+onChange={(e) => setInput(e.target.value)}
+onKeyDown={(e) => { if (e.key === 'Enter') sendChat(); }}
+placeholder={roomId ? (roomLocked && myRole === 'guest' ? 'Room locked ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â knock for access' : 'Type a message') : 'No room'}
+disabled={!roomId || (roomLocked && myRole === 'guest')}
+style={{ flex: 1, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
+/>
+<button disabled={!roomId || (roomLocked && myRole === 'guest')} onClick={sendChat} style={{ padding: '10px 14px' }}>
+Send
+</button>
+</div>
+</div>
+</div>
+);
+}

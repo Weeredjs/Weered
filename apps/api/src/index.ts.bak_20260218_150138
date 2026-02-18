@@ -1,0 +1,605 @@
+﻿import Fastify from "fastify";
+import cors from "@fastify/cors";
+import jwt from "jsonwebtoken";
+import { WebSocketServer, WebSocket } from "ws";
+import { randomUUID } from "crypto";
+
+type User = { id: string; name: string };
+type Role = "owner" | "admin" | "mod" | "member";
+
+const ROLE_RANK: Record<Role, number> = {
+  owner: 4,
+  admin: 3,
+  mod: 2,
+  member: 1,
+};
+
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const HTTP_PORT = Number(process.env.PORT || 4000);
+const WS_PORT = Number(process.env.WS_PORT || 4001);
+
+type WireMsg = { type: string; [k: string]: any };
+
+function safeJsonParse(s: string): any | null {
+  try { return JSON.parse(s); } catch { return null; }
+}
+function wsSend(ws: WebSocket, msg: WireMsg) {
+  try { ws.send(JSON.stringify(msg)); } catch { /* ignore */ }
+}
+
+type RoomUserEntry = {
+  user: User;
+  role: Role;
+  sockets: Set<WebSocket>;
+  mutedUntil?: number; // epoch ms
+};
+
+type KnockEntry = { user: User; at: number; note?: string };
+
+type RoomState = {
+  id: string;
+  createdAt: number;
+  locked: boolean;
+  topic: string | null;
+
+  // Active users (deduped by userId, can have multiple sockets)
+  users: Map<string, RoomUserEntry>;
+
+  // Persisted-ish role map (kept while room has history; cleared when empty)
+  roles: Map<string, Role>;
+
+  // Moderation
+  banned: Map<string, { userId: string; by: string; at: number; reason?: string }>;
+  knocks: Map<string, KnockEntry>;
+  allowed: Set<string>; // admitted userIds (used when locked)
+};
+
+const rooms = new Map<string, RoomState>();
+
+function getRoom(roomId: string): RoomState {
+  const existing = rooms.get(roomId);
+  if (existing) return existing;
+
+  const rs: RoomState = {
+    id: roomId,
+    createdAt: Date.now(),
+    locked: false,
+    topic: null,
+    users: new Map(),
+    roles: new Map(),
+    banned: new Map(),
+    knocks: new Map(),
+    allowed: new Set(),
+  };
+  rooms.set(roomId, rs);
+  return rs;
+}
+
+function publicState(room: RoomState) {
+  const users = Array.from(room.users.values()).map((e) => ({
+    id: e.user.id,
+    name: e.user.name,
+    role: e.role,
+    muted: typeof e.mutedUntil === "number" && e.mutedUntil > Date.now(),
+    mutedUntil: e.mutedUntil ?? null,
+  }));
+  const bans = Array.from(room.banned.values()).map((b) => ({
+    userId: b.userId,
+    by: b.by,
+    at: b.at,
+    reason: b.reason ?? null,
+  }));
+  const knocks = Array.from(room.knocks.values()).map((k) => ({
+    userId: k.user.id,
+    name: k.user.name,
+    at: k.at,
+    note: k.note ?? null,
+  }));
+
+  return {
+    roomId: room.id,
+    locked: room.locked,
+    topic: room.topic,
+    users,
+    bans,
+    knocks,
+  };
+}
+
+function broadcastRoom(room: RoomState, msg: WireMsg) {
+  // Dedup sockets (a user can have multiple sockets)
+  const allSockets = new Set<WebSocket>();
+  for (const e of room.users.values()) for (const s of e.sockets) allSockets.add(s);
+  for (const s of allSockets) wsSend(s, msg);
+}
+
+function broadcastState(room: RoomState) {
+  broadcastRoom(room, { type: "presence:state", ...publicState(room) });
+}
+
+function requireAuthed(ctx: ConnCtx): asserts ctx is ConnCtx & { user: User } {
+  if (!ctx.user) throw new Error("not authed");
+}
+function requireInRoom(ctx: ConnCtx): asserts ctx is ConnCtx & { user: User; roomId: string } {
+  if (!ctx.user) throw new Error("not authed");
+  if (!ctx.roomId) throw new Error("not in room");
+}
+function getActorEntry(room: RoomState, userId: string): RoomUserEntry | null {
+  const e = room.users.get(userId);
+  return e || null;
+}
+function roleOf(room: RoomState, userId: string): Role {
+  return room.roles.get(userId) || "member";
+}
+function canActOn(actorRole: Role, targetRole: Role) {
+  return ROLE_RANK[actorRole] > ROLE_RANK[targetRole];
+}
+
+function sanitizeRole(r: any): Role | null {
+  if (r === "owner" || r === "admin" || r === "mod" || r === "member") return r;
+  return null;
+}
+
+function pickNewOwner(room: RoomState): string | null {
+  // choose the highest role, then earliest-ish by iteration order
+  let bestId: string | null = null;
+  let bestRank = -1;
+  for (const [uid, entry] of room.users.entries()) {
+    const rank = ROLE_RANK[entry.role];
+    if (rank > bestRank) {
+      bestRank = rank;
+      bestId = uid;
+    }
+  }
+  return bestId;
+}
+
+type ConnCtx = {
+  ws: WebSocket;
+  user?: User;
+  roomId?: string;
+};
+
+function closeAllUserSockets(room: RoomState, userId: string, reasonType: string, extra?: any) {
+  const entry = room.users.get(userId);
+  if (!entry) return;
+  for (const s of entry.sockets) {
+    wsSend(s, { type: reasonType, roomId: room.id, ...(extra || {}) });
+    try { s.close(1000, reasonType); } catch {}
+  }
+}
+
+async function main() {
+  const app = Fastify({ logger: true });
+
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+  });
+
+  app.get("/health", async () => ({ ok: true }));
+
+  // Dev login: POST /auth/dev-login  { name? }
+  app.post("/auth/dev-login", async (req, reply) => {
+    const body = (req.body || {}) as any;
+    const nameRaw = typeof body?.name === "string" ? body.name : (typeof body?.username === "string" ? body.username : "");
+    const name = (nameRaw || "").trim() || `user-${Math.random().toString(16).slice(2, 8)}`;
+    const user: User = { id: randomUUID(), name };
+
+    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user });
+  });
+
+  // Alias used by some earlier clients
+  app.post("/dev-login", async (req, reply) => {
+    // @ts-ignore
+    return app.inject({ method: "POST", url: "/auth/dev-login", payload: req.body }).then((r) => reply.send(JSON.parse(r.body)));
+  });
+
+  app.listen({ host: "0.0.0.0", port: HTTP_PORT });
+
+  const wss = new WebSocketServer({ port: WS_PORT });
+  app.log.info(`WS listening at ws://0.0.0.0:${WS_PORT}`);
+
+  wss.on("connection", (ws) => {
+    const ctx: ConnCtx = { ws };
+
+    ws.on("message", (buf) => {
+      const raw = buf.toString();
+      const msg = safeJsonParse(raw);
+      if (!msg || typeof msg.type !== "string") {
+        wsSend(ws, { type: "error", message: "invalid message" });
+        return;
+      }
+
+      try {
+        handleWsMessage(ctx, msg as WireMsg);
+      } catch (e: any) {
+        wsSend(ws, { type: "error", message: e?.message || "error" });
+      }
+    });
+
+    ws.on("close", () => {
+      // Detach from room if joined
+      if (ctx.user && ctx.roomId) {
+        const room = getRoom(ctx.roomId);
+        const entry = room.users.get(ctx.user.id);
+        if (entry) {
+          entry.sockets.delete(ws);
+          if (entry.sockets.size === 0) {
+            // full user left room
+            room.users.delete(ctx.user.id);
+            broadcastRoom(room, { type: "presence:leave", roomId: room.id, userId: ctx.user.id });
+            // owner transfer if needed
+            if (entry.role === "owner" && room.users.size > 0) {
+              const newOwnerId = pickNewOwner(room);
+              if (newOwnerId) {
+                room.roles.set(newOwnerId, "owner");
+                const ne = room.users.get(newOwnerId);
+                if (ne) ne.role = "owner";
+              }
+            }
+            // if empty, clear room soft-state
+            if (room.users.size === 0) {
+              room.roles.clear();
+              room.banned.clear();
+              room.knocks.clear();
+              room.allowed.clear();
+              room.locked = false;
+              room.topic = null;
+            }
+            broadcastState(room);
+          }
+        }
+      }
+    });
+  });
+
+  function handleWsMessage(ctx: ConnCtx, msg: WireMsg) {
+    switch (msg.type) {
+      case "auth:hello": {
+        const token = typeof msg.token === "string" ? msg.token : "";
+        if (!token) {
+          wsSend(ctx.ws, { type: "auth:fail", message: "missing token" });
+          return;
+        }
+        let decoded: any;
+        try {
+          decoded = jwt.verify(token, JWT_SECRET);
+        } catch {
+          wsSend(ctx.ws, { type: "auth:fail", message: "bad token" });
+          return;
+        }
+        const user: User = { id: String(decoded.sub || ""), name: String(decoded.name || "") };
+        if (!user.id) {
+          wsSend(ctx.ws, { type: "auth:fail", message: "bad token payload" });
+          return;
+        }
+        ctx.user = user;
+        wsSend(ctx.ws, { type: "auth:ok", user });
+        return;
+      }
+
+      case "presence:join": {
+        requireAuthed(ctx);
+        const roomId = String(msg.roomId || "").trim();
+        if (!roomId) throw new Error("missing roomId");
+
+        const room = getRoom(roomId);
+
+        // Ban check
+        if (room.banned.has(ctx.user.id)) {
+          wsSend(ctx.ws, { type: "room:banned", roomId, reason: "banned" });
+          return;
+        }
+
+        // Lock check
+        if (room.locked && !room.allowed.has(ctx.user.id) && room.users.size > 0) {
+          wsSend(ctx.ws, { type: "room:locked", roomId, locked: true });
+          // add knock record as "seen" (optional)
+          room.knocks.set(ctx.user.id, { user: ctx.user, at: Date.now() });
+          broadcastState(room);
+          return;
+        }
+
+        ctx.roomId = roomId;
+
+        // Join (deduped by userId; attach socket)
+        let entry = room.users.get(ctx.user.id);
+        if (!entry) {
+          // assign role
+          let role: Role;
+          if (room.roles.size === 0 && room.users.size === 0) {
+            role = "owner";
+          } else {
+            role = roleOf(room, ctx.user.id);
+          }
+          room.roles.set(ctx.user.id, role);
+
+          entry = {
+            user: ctx.user,
+            role,
+            sockets: new Set<WebSocket>(),
+          };
+          room.users.set(ctx.user.id, entry);
+
+          // only broadcast join on first socket
+          broadcastRoom(room, { type: "presence:join", roomId, user: { id: ctx.user.id, name: ctx.user.name, role } });
+        } else {
+          // refresh name and role from roles map (in case)
+          entry.user = ctx.user;
+          entry.role = roleOf(room, ctx.user.id);
+        }
+
+        entry.sockets.add(ctx.ws);
+
+        // if locked room: once they joined, clear knock + allow
+        room.knocks.delete(ctx.user.id);
+        room.allowed.delete(ctx.user.id);
+
+        // always send full state snapshot to this socket
+        wsSend(ctx.ws, { type: "presence:state", ...publicState(room) });
+        // and broadcast updated state to everyone
+        broadcastState(room);
+        return;
+      }
+
+      case "presence:leave": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+        const entry = room.users.get(ctx.user.id);
+        if (!entry) return;
+        // close this socket; close handler will do the cleanup
+        try { ctx.ws.close(1000, "presence:leave"); } catch {}
+        return;
+      }
+
+      case "chat:send": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+        const body = typeof msg.body === "string" ? msg.body.trim() : "";
+        if (!body) return;
+
+        const entry = room.users.get(ctx.user.id);
+        if (!entry) throw new Error("not in room");
+
+        if (typeof entry.mutedUntil === "number" && entry.mutedUntil > Date.now()) {
+          wsSend(ctx.ws, { type: "chat:blocked", roomId: room.id, reason: "muted", mutedUntil: entry.mutedUntil });
+          return;
+        }
+
+        const chatMsg = {
+          id: randomUUID(),
+          roomId: room.id,
+          ts: Date.now(),
+          user: { id: ctx.user.id, name: ctx.user.name, role: entry.role },
+          body,
+        };
+        broadcastRoom(room, { type: "chat:new", ...chatMsg });
+        return;
+      }
+
+      // ======= MOD / ADMIN =======
+
+      case "room:set-lock": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const locked = !!msg.locked;
+        room.locked = locked;
+
+        // if locking, clear allowed (fresh knocks)
+        if (locked) room.allowed.clear();
+        broadcastState(room);
+        return;
+      }
+
+      case "room:set-topic": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const topic = typeof msg.topic === "string" ? msg.topic.trim() : "";
+        room.topic = topic || null;
+        broadcastState(room);
+        return;
+      }
+
+      case "room:knock": {
+        requireAuthed(ctx);
+        const roomId = String(msg.roomId || "").trim();
+        if (!roomId) throw new Error("missing roomId");
+        const room = getRoom(roomId);
+
+        if (room.banned.has(ctx.user.id)) {
+          wsSend(ctx.ws, { type: "room:banned", roomId, reason: "banned" });
+          return;
+        }
+
+        // store knock and notify mods by state update
+        const note = typeof msg.note === "string" ? msg.note.slice(0, 140) : undefined;
+        room.knocks.set(ctx.user.id, { user: ctx.user, at: Date.now(), note });
+        broadcastState(room);
+        wsSend(ctx.ws, { type: "room:knock:ok", roomId });
+        return;
+      }
+
+      case "room:admit": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const userId = String(msg.userId || "").trim();
+        if (!userId) throw new Error("missing userId");
+        room.allowed.add(userId);
+        room.knocks.delete(userId);
+        broadcastState(room);
+        return;
+      }
+
+      case "room:deny": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const userId = String(msg.userId || "").trim();
+        if (!userId) throw new Error("missing userId");
+        room.knocks.delete(userId);
+        broadcastState(room);
+        return;
+      }
+
+      case "room:set-role": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["admin"]) throw new Error("forbidden");
+
+        const targetId = String(msg.userId || "").trim();
+        if (!targetId) throw new Error("missing userId");
+        if (targetId === ctx.user.id) throw new Error("cannot change self");
+
+        const desired = sanitizeRole(msg.role);
+        if (!desired) throw new Error("bad role");
+        if (desired === "owner") throw new Error("owner role not assignable");
+
+        const targetRole = roleOf(room, targetId);
+        if (!canActOn(actor.role, targetRole)) throw new Error("cannot act on target");
+
+        // Admin can set mod/member; owner can set admin too
+        if (desired === "admin" && actor.role !== "owner") throw new Error("only owner can assign admin");
+
+        room.roles.set(targetId, desired);
+
+        const te = room.users.get(targetId);
+        if (te) te.role = desired;
+
+        broadcastState(room);
+        return;
+      }
+
+      case "room:kick": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const targetId = String(msg.userId || "").trim();
+        if (!targetId) throw new Error("missing userId");
+        if (targetId === ctx.user.id) throw new Error("cannot kick self");
+
+        const targetRole = roleOf(room, targetId);
+        if (!canActOn(actor.role, targetRole)) throw new Error("cannot act on target");
+
+        closeAllUserSockets(room, targetId, "room:kicked", { by: actor.user.id });
+        // state will update via socket close
+        return;
+      }
+
+      case "room:ban": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const targetId = String(msg.userId || "").trim();
+        if (!targetId) throw new Error("missing userId");
+        if (targetId === ctx.user.id) throw new Error("cannot ban self");
+
+        const targetRole = roleOf(room, targetId);
+        if (!canActOn(actor.role, targetRole)) throw new Error("cannot act on target");
+
+        const reason = typeof msg.reason === "string" ? msg.reason.slice(0, 140) : undefined;
+        room.banned.set(targetId, { userId: targetId, by: actor.user.id, at: Date.now(), reason });
+
+        closeAllUserSockets(room, targetId, "room:banned", { by: actor.user.id, reason: reason || null });
+        broadcastState(room);
+        return;
+      }
+
+      case "room:unban": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const targetId = String(msg.userId || "").trim();
+        if (!targetId) throw new Error("missing userId");
+
+        room.banned.delete(targetId);
+        broadcastState(room);
+        return;
+      }
+
+      case "room:mute": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const targetId = String(msg.userId || "").trim();
+        if (!targetId) throw new Error("missing userId");
+        if (targetId === ctx.user.id) throw new Error("cannot mute self");
+
+        const targetRole = roleOf(room, targetId);
+        if (!canActOn(actor.role, targetRole)) throw new Error("cannot act on target");
+
+        const minutes = Number(msg.minutes || 10);
+        const durMs = Math.max(1, Math.min(24 * 60, minutes)) * 60 * 1000;
+
+        const te = room.users.get(targetId);
+        if (te) te.mutedUntil = Date.now() + durMs;
+
+        broadcastState(room);
+        return;
+      }
+
+      case "room:unmute": {
+        requireInRoom(ctx);
+        const room = getRoom(ctx.roomId);
+
+        const actor = room.users.get(ctx.user.id);
+        if (!actor) throw new Error("not in room");
+        if (ROLE_RANK[actor.role] < ROLE_RANK["mod"]) throw new Error("forbidden");
+
+        const targetId = String(msg.userId || "").trim();
+        if (!targetId) throw new Error("missing userId");
+
+        const te = room.users.get(targetId);
+        if (te) te.mutedUntil = undefined;
+
+        broadcastState(room);
+        return;
+      }
+
+      default:
+        wsSend(ctx.ws, { type: "error", message: `unknown type: ${msg.type}` });
+        return;
+    }
+  }
+}
+
+main().catch((e) => {
+  // eslint-disable-next-line no-console
+  console.error(e);
+  process.exit(1);
+});

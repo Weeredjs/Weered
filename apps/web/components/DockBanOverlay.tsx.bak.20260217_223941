@@ -1,0 +1,68 @@
+"use client";
+
+import React from "react";
+import { weeredClient, WEERED_API_BASE } from "../app/weeredClient";
+
+/**
+ * Minimal overlay placeholder.
+ * Now includes Dev Login + Retry buttons so you can recover from auth_failed immediately.
+ */
+export default function DockBanOverlay() {
+  const [authErr, setAuthErr] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    const offFail = weeredClient.on("auth:fail", (m: any) => setAuthErr(String(m?.error ?? "auth_failed")));
+    const offOk = weeredClient.on("auth:ok", () => setAuthErr(null));
+    return () => { offFail(); offOk(); };
+  }, []);
+
+  async function doDevLogin() {
+    try {
+      setBusy(true);
+      await weeredClient.devLogin();
+      weeredClient.retryAuth();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function retry() {
+    weeredClient.retryAuth();
+  }
+
+  if (!authErr) return null;
+
+  // NOTE: if Tailwind isn't active, this will render as plain HTML (still fine).
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-[min(560px,92vw)] rounded-xl bg-white p-4 shadow-xl">
+        <div className="text-lg font-semibold">Not authenticated</div>
+        <div className="mt-2 text-sm text-gray-700">
+          Server says: <span className="font-mono">{authErr}</span>
+        </div>
+        <div className="mt-3 text-sm text-gray-600">
+          API base: <span className="font-mono">{WEERED_API_BASE}</span>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+            onClick={doDevLogin}
+            disabled={busy}
+          >
+            {busy ? "Dev Login…" : "Dev Login"}
+          </button>
+          <button
+            className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+            onClick={retry}
+          >
+            Retry Auth
+          </button>
+        </div>
+        <div className="mt-3 text-xs text-gray-500">
+          If dev-login endpoint differs, we’ll point the client at the correct route and stop guessing.
+        </div>
+      </div>
+    </div>
+  );
+}

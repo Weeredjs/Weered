@@ -1,0 +1,118 @@
+﻿"use client";
+
+import { useState } from "react";
+
+function apiBase() {
+  return process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+}
+
+function setToken(token: string) {
+  try {
+    localStorage.setItem("weered:token", token);
+  } catch {}
+}
+
+async function readJsonSafe(r: Response) {
+  const text = await r.text();
+  try {
+    return { ok: true, json: JSON.parse(text), text };
+  } catch {
+    return { ok: false, json: null, text };
+  }
+}
+
+export default function LoginPage() {
+  const [displayName, setDisplayName] = useState("Weered");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function onLogin() {
+    setErr("");
+    setLoading(true);
+    try {
+      const r = await fetch(`${apiBase()}/auth/dev-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName }),
+      });
+
+      const parsed = await readJsonSafe(r);
+
+      if (!parsed.ok) {
+        setErr(`HTTP ${r.status} (non-JSON): ${parsed.text || "<empty>"}`);
+        return;
+      }
+
+      const j: any = parsed.json;
+
+      // Accept multiple response shapes
+      const token =
+        j?.token ||
+        j?.accessToken ||
+        j?.jwt ||
+        j?.data?.token ||
+        j?.data?.accessToken;
+
+      const ok = (typeof j?.ok === "boolean") ? j.ok : !!token;
+
+      if (!r.ok || !ok || !token) {
+        const msg =
+          j?.error ||
+          j?.message ||
+          j?.msg ||
+          `HTTP ${r.status}: ${JSON.stringify(j)}`;
+        setErr(msg);
+        return;
+      }
+
+      setToken(String(token));
+      window.location.assign("/");
+    } catch (e: any) {
+      setErr(String(e?.message ?? e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen p-6">
+      <div className="mx-auto max-w-md space-y-4">
+        <h1 className="text-2xl font-semibold">Login</h1>
+        <p className="text-sm opacity-75">Dev login (local only).</p>
+
+        {err ? (
+          <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-wrap">
+            {err}
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border p-4 shadow-sm space-y-3">
+          <div>
+            <label className="text-xs opacity-70">Display name</label>
+            <input
+              className="mt-1 w-full rounded-lg border px-3 py-2"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          </div>
+
+          <button
+            className="rounded-lg border px-4 py-2 text-sm hover:bg-black/5 disabled:opacity-50"
+            onClick={onLogin}
+            disabled={loading}
+          >
+            {loading ? "Logging in…" : "Login"}
+          </button>
+
+          <button
+            className="rounded-lg border px-4 py-2 text-sm hover:bg-black/5"
+            onClick={() => window.location.assign("/")}
+            type="button"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}

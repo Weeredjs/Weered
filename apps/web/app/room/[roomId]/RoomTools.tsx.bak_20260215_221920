@@ -1,0 +1,174 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+
+type RoomState = { notes?: string; [k: string]: any }
+
+function pickToken(): string | null {
+  if (typeof window === 'undefined') return null
+
+  const keys = [
+    'weered:token',
+    'token',
+    'authToken',
+    'accessToken',
+    'jwt',
+    'weered:auth',
+  ]
+
+  for (const k of keys) {
+    const raw = window.localStorage.getItem(k)
+    if (!raw) continue
+
+    const v = raw.trim()
+    if (!v) continue
+
+    // If a JSON blob was stored, try to extract token-like fields
+    if (v.startsWith('{') && v.endsWith('}')) {
+      try {
+        const obj = JSON.parse(v)
+        for (const kk of ['token', 'accessToken', 'jwt']) {
+          if (obj && typeof obj[kk] === 'string' && obj[kk].trim()) return obj[kk].trim()
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    return v
+  }
+
+  return null
+}
+
+export default function RoomTools({ roomId }: { roomId: string }) {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:4000'
+
+  const [watchUrl, setWatchUrl] = useState('')
+  const [notes, setNotes] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'ok' | 'error'>('idle')
+  const [err, setErr] = useState<string | null>(null)
+
+  const authHeader = useMemo(() => {
+    const t = pickToken()
+    return t ? { Authorization: `Bearer ${t}` } : {}
+    // roomId in deps keeps it recalculating when room changes
+  }, [roomId])
+
+  async function openState() {
+    if (!roomId) return
+    setStatus('loading')
+    setErr(null)
+    try {
+      const res = await fetch(`${apiBase}/rooms/${encodeURIComponent(roomId)}/state`, {
+        headers: { ...authHeader },
+        cache: 'no-store',
+      })
+      if (!res.ok) throw new Error(`GET failed (${res.status})`)
+      const data = (await res.json()) as { state?: RoomState }
+      const st = data?.state ?? {}
+      setNotes(typeof st.notes === 'string' ? st.notes : '')
+      setStatus('ok')
+    } catch (e: any) {
+      setStatus('error')
+      setErr(e?.message || 'Open failed')
+    }
+  }
+
+  async function saveState() {
+    if (!roomId) return
+    setStatus('saving')
+    setErr(null)
+    try {
+      const res = await fetch(`${apiBase}/rooms/${encodeURIComponent(roomId)}/state`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ patch: { notes } }),
+      })
+      if (!res.ok) throw new Error(`PUT failed (${res.status})`)
+      await res.json()
+      setStatus('ok')
+    } catch (e: any) {
+      setStatus('error')
+      setErr(e?.message || 'Save failed')
+    }
+  }
+
+  async function copyWatchLink() {
+    try {
+      if (navigator?.clipboard) await navigator.clipboard.writeText(watchUrl)
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setWatchUrl(window.location.href)
+  }, [roomId])
+
+  useEffect(() => {
+    openState()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId])
+
+    useEffect(() => {
+    try { window.localStorage.setItem('weered:lastRoomId', roomId) } catch {}
+  }, [roomId])
+return ( <div className="mt-3 rounded-2xl border border-black/10 bg-white p-3 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold">Room Tools</div>
+        <div className="text-xs opacity-70">
+          {status === 'loading' && 'Loading…'}
+          {status === 'saving' && 'Saving…'}
+          {status === 'ok' && 'OK'}
+          {status === 'error' && 'Error'}
+        </div>
+      </div>
+
+      <div className="mt-2">
+        <div className="text-xs opacity-70">Watch link</div>
+        <div className="mt-1 flex gap-2">
+          <input
+            className="w-full rounded-xl border border-black/10 bg-white px-2 py-1 text-xs text-black/80"
+            value={watchUrl}
+            readOnly
+          />
+          <button
+            className="rounded-xl border border-black/10 bg-white px-3 py-1 text-xs hover:bg-black/[0.03] active:scale-[0.99]"
+            onClick={copyWatchLink}
+            type="button"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="text-xs opacity-70">Notes</div>
+        <textarea
+          className="mt-1 h-24 w-full resize-none rounded-xl border border-black/10 bg-white p-2 text-sm"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Shared notes for this room…"
+        />
+        <div className="mt-2 flex gap-2">
+          <button
+            className="rounded-xl border border-black/10 bg-white px-3 py-1 text-xs hover:bg-black/[0.03] active:scale-[0.99]"
+            onClick={saveState}
+            type="button"
+          >
+            Save
+          </button>
+          <button
+            className="rounded-xl border border-black/10 bg-white px-3 py-1 text-xs hover:bg-black/[0.03] active:scale-[0.99]"
+            onClick={openState}
+            type="button"
+          >
+            Open
+          </button>
+        </div>
+        {err && <div className="mt-2 text-xs text-red-600">{err}</div>}
+      </div>
+    </div>
+  )
+}

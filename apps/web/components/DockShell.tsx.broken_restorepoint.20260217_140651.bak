@@ -1,0 +1,725 @@
+'use client';
+
+import DockBanOverlay, { type BanRecord } from './DockBanOverlay';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import RoomActionsPanel from './RoomActionsPanel';
+import { useRouter } from 'next/navigation';
+
+import { weeredWs, type WsMsg, type WsStatus } from '../app/weeredClient';
+
+type Room = { id: string; name: string | null; locked: boolean; ownerId?: string | null; ownerName?: string | null };
+type Role = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
+type Member = { id: string; name: string; role?: Role };
+type Knock = { userId: string; userName?: string; message?: string; createdAt: string };
+type ChatMsg = { at: string; from: string; body: string };
+
+export default function DockShell() {
+  const router = useRouter();
+  const API = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:4000';
+
+  const [dockOpen, setDockOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const [token, setToken] = useState('');
+  const [meId, setMeId] = useState('');
+  const [meName, setMeName] = useState('');
+
+  const [status, setStatus] = useState<WsStatus>(weeredWs.getStatus());
+  const [error, setError] = useState('');
+
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [roomId, setRoomId] = useState('');
+  const [roomLocked, setRoomLocked] = useState<boolean>(false);
+  const [myRole, setMyRole] = useState<Role>('guest');
+
+  const [createName, setCreateName] = useState('');
+  const [joinId, setJoinId] = useState('');
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [knocks, setKnocks] = useState<Knock[]>([]);
+  const [knockMsg, setKnockMsg] = useState('');
+
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState('');
+
+  const [bans, setBans] = useState<BanRecord[]>([]);
+
+  const [lastSend, setLastSend] = useState('');
+  const [lastRecv, setLastRecv] = useState('');
+
+  const isAuthed = useMemo(() => !!token, [token]);
+  const isPriv = useMemo(() => myRole === 'owner' || myRole === 'admin' || myRole === 'mod', [myRole]);
+  const canLock = useMemo(() => myRole === 'owner' || myRole === 'admin', [myRole]);
+  const canManageRoles = canLock;
+
+  const roleOptionsForActor = useMemo(() => {
+    if (myRole === 'owner') return ['admin', 'mod', 'member'] as Role[];
+    if (myRole === 'admin') return ['mod', 'member'] as Role[];
+    return [] as Role[];
+  }, [myRole]);
+
+  // Load persisted UI state safely (client-only)
+  useEffect(() => {
+    try {
+      setToken(localStorage.getItem('weered_token') || '');
+      setMeId(localStorage.getItem('weered_user_id') || '');
+      setMeName(localStorage.getItem('weered_name') || '');
+      setDockOpen((localStorage.getItem('weered_dock_open') || '') === '1');
+      setChatOpen((localStorage.getItem('weered_chat_open') || '') === '1');
+      setRoomId(localStorage.getItem('weered_last_room') || '');
+      setJoinId(localStorage.getItem('weered_last_room') || '');
+    } catch {}
+  }, []);
+
+  // Persist UI state
+  useEffect(() => { try { localStorage.setItem('weered_dock_open', dockOpen ? '1' : '0'); } catch {} }, [dockOpen]);
+  useEffect(() => { try { localStorage.setItem('weered_chat_open', chatOpen ? '1' : '0'); } catch {} }, [chatOpen]);
+  useEffect(() => { try { if (roomId) localStorage.setItem('weered_last_room', roomId); } catch {} }, [roomId]);
+  useEffect(() => { try { if (meId) localStorage.setItem('weered_user_id', meId); } catch {} }, [meId]);
+  useEffect(() => { try { if (meName) localStorage.setItem('weered_name', meName); } catch {} }, [meName]);
+
+  // Mirror WS status from singleton
+  useEffect(() => weeredWs.onStatus(setStatus), []);
+
+  // Route incoming WS messages (single bus)
+  useEffect(() => {
+    return weeredWs.subscribe((raw, msg) => {
+      setLastRecv(raw);
+      if (!msg || !msg.type) return;
+
+      if (msg.type === 'server:error') {
+        setError(msg.error || 'server:error');
+        return;
+      }
+      if (msg.type === 'auth:fail') {
+        setError('auth failed');
+        return;
+      }
+
+      if (msg.type === 'auth:ok') {
+        const u = msg?.payload?.user;
+        const id = String(u?.id ?? '').trim();
+        const name = String(u?.name ?? '').trim();
+        if (id) setMeId(id);
+        if (name) setMeName(name);
+        return;
+      }
+
+      if (msg.type === 'room:locked') {
+        setError('room is locked — knock to request access');
+        setMyRole('guest');
+        setChatOpen(true);
+        return;      if (msg.type === 'room:locked') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const locked = msg?.payload?.locked ?? false;
+        setRoomLocked(locked);  // Set the room lock state
+        setError(locked ? 'Room is locked' : '');
+        setMyRole(locked ? 'guest' : 'member');  // Ensure guests can only knock
+      }
+      }
+
+      if (msg.type === 'room:lock_changed') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        setRoomLocked(!!msg?.payload?.locked);
+        refreshRooms();
+        return;
+      }
+
+      if (msg.type === 'room:knocks') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        setKnocks(Array.isArray(msg?.payload?.knocks) ? msg.payload.knocks : []);
+        return;
+      }
+
+      if (msg.type === 'room:knock') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const k: Knock = {
+          userId: String(msg?.payload?.userId ?? ''),
+          userName: String(msg?.payload?.userName ?? ''),
+          message: String(msg?.payload?.message ?? ''),
+          createdAt: String(msg?.payload?.createdAt ?? new Date().toISOString()),
+        };
+        if (k.userId) setKnocks((prev) => {
+          const next = prev.filter((x) => x.userId !== k.userId);
+          next.push(k);
+          return next;
+        });
+        return;
+      }
+
+      if (msg.type === 'room:admitted') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        setError('');
+        return;
+      }
+
+      if (msg.type === 'room:denied') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        setError('knock denied');
+        return;
+      }
+
+      if (msg.type === 'room:role_changed') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const userId = String(msg?.payload?.userId ?? '');
+        const role = String(msg?.payload?.role ?? '') as Role;
+        if (!userId || !role) return;
+        setMembers((prev) => prev.map((m) => (m.id === userId ? { ...m, role } : m)));
+        if (userId === meId) setMyRole(role);
+        return;
+      }
+
+      if (msg.type === 'presence:state') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const list = Array.isArray(msg?.payload?.members) ? msg.payload.members : [];
+        setMembers(list);
+
+        const me = list.find((m: any) => String(m?.id ?? '') === meId);
+        const r = (me?.role as Role) || 'guest';
+        setMyRole(r);
+        return;
+      }
+
+      if (msg.type === 'presence:join') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const m = msg?.payload?.member;
+        if (m?.id) {
+          setMembers((prev) => {
+            const next = prev.filter((x) => x.id !== m.id);
+            next.push(m);
+            return next;
+          });
+          if (m.id === meId && m.role) setMyRole(m.role);
+        }
+        return;
+      }
+
+      if (msg.type === 'presence:leave') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const memberId = String(msg?.payload?.memberId ?? '');
+        if (memberId) setMembers((prev) => prev.filter((x) => x.id !== memberId));
+        return;
+      }
+
+      if (msg.type === 'chat:new') {
+        if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+        const body = String(msg?.payload?.body ?? '');
+        const at = String(msg?.payload?.at ?? new Date().toISOString());
+        const from = String(msg?.payload?.from?.name ?? 'Unknown');
+        if (!body) return;
+        setMessages((prev) => [...prev, { at, from, body }]);
+        return;
+      }
+
+      if (msg.type === 'room:bans') {
+        const rid = String(msg?.payload?.roomId ?? msg?.roomId ?? '');
+        if (rid && rid !== roomId) return;
+        const list =
+          (Array.isArray(msg?.payload?.bans) ? msg.payload.bans : null) ??
+          (Array.isArray((msg as any)?.bans) ? (msg as any).bans : null) ??
+          [];
+        setBans(list as BanRecord[]);
+        return;
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, meId]);
+
+  // Keep role in sync if meId lands after presence:state
+  useEffect(() => {
+    if (!meId) return;
+    const me = members.find((m: any) => String(m?.id ?? '') === meId);
+    const r = (me?.role as Role) || 'guest';
+    setMyRole(r);
+  }, [meId, members]);
+
+  function sendJson(obj: any) {
+    const raw = weeredWs.send(obj);
+    if (raw) setLastSend(raw);
+  }
+
+  function disconnect() {
+    setMembers([]);
+    setKnocks([]);
+    setRoomLocked(false);
+    setRoomId('');
+    setMyRole('guest');
+    weeredWs.disconnect();
+}() {
+    setMembers([]);
+    setKnocks([]);
+    setRoomLocked(false);
+    setRoomId('');
+    setMyRole('guest');
+    weeredWs.disconnect();
+}() {
+    setMembers([]);
+    setKnocks([]);
+    setRoomLocked(false);
+    setRoomId('');
+    setMyRole('guest');
+    weeredWs.disconnect();
+}() {
+    setMembers([]);
+    setKnocks([]);
+    setRoomLocked(false);
+    setRoomId('');
+    setMyRole('guest');
+    weeredWs.disconnect();
+}() {
+    setMembers([]);
+    setKnocks([]);
+    setRoomLocked(false);
+    setRoomId('');
+    setMyRole('guest');
+}      // Reset session state on room leave to ensure proper rejoin functionality
+      setMembers([]);
+      setKnocks([]);
+      setRoomLocked(false);
+      setRoomId('');
+      setMyRole('guest');      // Reset session state on room leave to ensure proper rejoin functionality
+      setMembers([]);
+      setKnocks([]);
+      setRoomLocked(false);
+      setRoomId('');
+      setMyRole('guest');() {
+    weeredWs.disconnect();
+  }
+
+  function connect() {
+    if (!token) return;
+    setError('');
+    weeredWs.connect(token);
+  }
+
+  async function refreshRooms() {
+    try {
+      const res = await fetch(API + '/rooms');
+      const data = await res.json();
+      const list = Array.isArray(data?.rooms) ? data.rooms : [];
+      setRooms(list);
+      if (roomId) {
+        const r = list.find((x: Room) => x.id === roomId);
+        if (r) setRoomLocked(!!r.locked);
+      }
+    } catch (e: any) {
+      setError(String(e?.message || e));
+    }
+  }
+
+  useEffect(() => { refreshRooms(); /* eslint-disable-next-line */ }, []);
+
+  // Auto-connect when UI is being used (singleton WS)
+  useEffect(() => {
+    const wants = !!token && (dockOpen || chatOpen || !!roomId);
+    if (!wants) return;
+    weeredWs.setToken(token);
+    weeredWs.connect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, dockOpen, chatOpen, roomId]);
+
+  // Ensure presence join for current room
+  useEffect(() => {
+    if (!token || !roomId) return;
+    if (status !== 'open') return;
+    weeredWs.joinRoom(roomId);
+  }, [token, roomId, status]);
+
+  // Auto-refresh bans for priv roles when connected
+  useEffect(() => {
+    if (!roomId || !isPriv) return;
+    if (status !== 'open') return;
+    refreshBans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, isPriv, status]);
+
+  function selectRoom(id: string) {
+    const rid = id.trim();
+    if (!rid) return;
+    setRoomId(rid);
+    setMessages([]);
+    setMembers([]);
+    setKnocks([]);
+    setMyRole('guest');
+    setChatOpen(true);
+
+    const r = rooms.find((x) => x.id === rid);
+    setRoomLocked(!!r?.locked);
+
+    weeredWs.setToken(token);
+    weeredWs.connect();
+    if (weeredWs.getStatus() === 'open') weeredWs.joinRoom(rid);
+
+    refreshRooms();
+  }
+
+  async function createRoom() {
+    try {
+      const res = await fetch(API + '/rooms', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + token },
+        body: JSON.stringify({ name: createName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'create_failed');
+      const id = String(data?.room?.id || '');
+      if (!id) throw new Error('no_room_id');
+      setCreateName('');
+      await refreshRooms();
+      selectRoom(id);
+    } catch (e: any) {
+      setError(String(e?.message || e));
+    }
+  }
+
+  function sendChat() {
+    const body = input.trim();
+    if (!body || !roomId) return;
+    sendJson({ type: 'chat:send', payload: { roomId, body } });
+    setInput('');
+  }
+
+  function knock() {
+    if (!roomId) return;
+    sendJson({ type: 'room:knock', payload: { roomId, message: knockMsg.trim() } });
+    setKnockMsg('');
+  }
+
+  function refreshKnocks() {
+    if (!roomId) return;
+    sendJson({ type: 'room:knocks:get', payload: { roomId } });
+  }
+
+  function admit(userId: string) {
+    sendJson({ type: 'room:admit', payload: { roomId, userId } });
+  }
+
+  function deny(userId: string) {
+    sendJson({ type: 'room:deny', payload: { roomId, userId } });
+  }
+
+  function setLock(locked: boolean) {
+    sendJson({ type: 'room:set_lock', payload: { roomId, locked } });
+    setRoomLocked(locked);
+    refreshRooms();
+    if (locked && isPriv) refreshKnocks();
+  }
+
+  function setRole(userId: string, role: Role) {
+    if (!roomId || !userId || !role) return;
+    sendJson({ type: 'room:set_role', payload: { roomId, userId, role } });
+  }
+
+  function refreshBans() {
+    if (!roomId) return;
+    sendJson({ type: 'room:bans:get', payload: { roomId } });
+  }
+
+  function unbanUser(userId: string) {
+    if (!roomId || !userId) return;
+    sendJson({ type: 'room:unban', payload: { roomId, userId } });
+    setTimeout(refreshBans, 150);
+  }
+
+  function saveBanReason(userId: string, reason: string) {
+    if (!roomId || !userId) return;
+    sendJson({ type: 'room:ban', payload: { roomId, userId, reason } });
+    setTimeout(refreshBans, 150);
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setDockOpen((v) => !v)}
+        style={{
+          position: 'fixed',
+          right: 10,
+          top: 80,
+          zIndex: 9999,
+          padding: '10px 12px',
+          borderRadius: 10,
+          border: '1px solid #ccc',
+          background: '#fff',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+        title="Toggle Weered Dock"
+      >
+        {dockOpen ? 'Close' : 'Weered'}
+      </button>
+
+      <DockBanOverlay
+        roomId={roomId}
+        isPriv={isPriv}
+        bans={bans}
+        onRefresh={refreshBans}
+        onUnban={unbanUser}
+        onSaveReason={saveBanReason}
+      />
+
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          height: '100vh',
+          width: dockOpen ? 340 : 0,
+          overflow: 'hidden',
+          zIndex: 9998,
+          background: '#fff',
+          borderLeft: dockOpen ? '1px solid #ddd' : 'none',
+          boxShadow: dockOpen ? '-8px 0 24px rgba(0,0,0,0.08)' : 'none',
+          fontFamily: 'system-ui, sans-serif',
+          transition: 'width 140ms ease-out',
+        }}
+      >
+        <div style={{ padding: 12, borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontWeight: 800 }}>Weered</div>
+          <div style={{ fontSize: 12, color: '#555' }}>
+            {meName ? <span>{meName}</span> : null}
+            <span style={{ marginLeft: 8, padding: '2px 8px', border: '1px solid #ddd', borderRadius: 999, fontSize: 11 }}>
+              {myRole}
+            </span>
+          </div>
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#444' }}>
+            WS: <b>{status}</b>{' '}
+            <button onClick={() => { disconnect(); connect(); }} style={{ marginLeft: 6 }}>Reconnect</button>
+          </div>
+        </div>
+
+        {!isAuthed ? (
+          <div style={{ padding: 12 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Not logged in</div>
+            <button onClick={() => router.push('/login')}>Go to Login</button>
+          </div>
+        ) : (
+          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12, height: 'calc(100vh - 54px)' }}>
+            {error ? (
+              <div style={{ padding: 10, background: '#ffe5e5', border: '1px solid #ffb3b3', borderRadius: 10 }}>
+                Error: {error}
+              </div>
+            ) : null}
+
+            <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 10 }}>
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>Rooms</div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="New room name (optional)"
+                  style={{ flex: 1, padding: 8, border: '1px solid #ddd', borderRadius: 10 }}
+                />
+                <button onClick={createRoom}>Create</button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <input
+                  value={joinId}
+                  onChange={(e) => setJoinId(e.target.value)}
+                  placeholder="Join by id"
+                  style={{ flex: 1, padding: 8, border: '1px solid #ddd', borderRadius: 10 }}
+                />
+                <button onClick={() => selectRoom(joinId)}>Join</button>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <button onClick={refreshRooms}>Refresh list</button>
+              </div>
+
+              <div style={{ marginTop: 10, maxHeight: 220, overflow: 'auto', borderTop: '1px solid #f3f3f3' }}>
+                {rooms.length === 0 ? <div style={{ padding: '10px 0', color: '#777' }}>No rooms yet.</div> : null}
+                {rooms.map((r) => (
+                  <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid #f6f6f6', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontFamily: 'ui-monospace, SFMono-Regular', fontSize: 12, width: 84 }}>{r.id}</div>
+                    <div style={{ flex: 1, fontSize: 13 }}>
+                      {r.name || <span style={{ color: '#777' }}>(unnamed)</span>}
+                      {r.locked ? <span style={{ marginLeft: 8, fontSize: 11, color: '#b00' }}>LOCKED</span> : null}
+                    </div>
+                    <button onClick={() => selectRoom(r.id)}>Open</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 10, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontWeight: 800 }}>Room</div>
+                <div style={{ marginLeft: 'auto', fontSize: 12, color: '#555' }}>
+                  <b>{roomId || '—'}</b>
+                  {roomId ? (
+                    <span style={{ marginLeft: 8, padding: '2px 8px', border: '1px solid #ddd', borderRadius: 999, fontSize: 11 }}>
+                      {roomLocked ? 'locked' : 'open'}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              {roomId ? (
+                <div style={{ border: '1px solid #f0f0f0', borderRadius: 12, padding: 10 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Lock</div>
+                  <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                    Lock/unlock requires <b>owner</b> or <b>admin</b>. You are <b>{myRole}</b>.
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button disabled={!canLock} onClick={() => setLock(!roomLocked)} style={{ flex: 1 }}>
+                      {roomLocked ? 'Unlock room' : 'Lock room'}
+                    </button>
+                    <button disabled={!isPriv} onClick={refreshKnocks} style={{ flex: 1 }}>
+                      Refresh knocks
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {roomId && roomLocked && myRole === 'guest' ? (
+                <div style={{ border: '1px solid #f0f0f0', borderRadius: 12, padding: 10 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Room is locked</div>
+                  <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Send a knock to request access.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      value={knockMsg}
+                      onChange={(e) => setKnockMsg(e.target.value)}
+                      placeholder="Optional message"
+                      style={{ flex: 1, padding: 8, border: '1px solid #ddd', borderRadius: 10 }}
+                    />
+                    <button onClick={knock}>Knock</button>
+                  </div>
+                </div>
+              ) : null}
+
+              {roomId ? (
+                <div style={{ border: '1px solid #f0f0f0', borderRadius: 12, padding: 10, overflow: 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontWeight: 700 }}>Knock Queue</div>
+                    <div style={{ marginLeft: 'auto', fontSize: 12, color: '#666' }}>{knocks.length}</div>
+                  </div>
+
+                  {!isPriv ? <div style={{ marginTop: 8, color: '#777' }}>Requires mod/admin/owner.</div> : null}
+                  {isPriv && knocks.length === 0 ? <div style={{ marginTop: 8, color: '#777' }}>No knocks.</div> : null}
+
+                  {isPriv ? knocks.map((k) => (
+                    <div key={k.userId} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f3f3f3' }}>
+                      <div style={{ fontSize: 13 }}><b>{k.userName || k.userId}</b></div>
+                      <div style={{ fontSize: 11, color: '#666' }}>{k.createdAt}</div>
+                      {k.message ? <div style={{ marginTop: 6, fontSize: 12 }}>{k.message}</div> : null}
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button onClick={() => admit(k.userId)} style={{ flex: 1 }}>Admit</button>
+                        <button onClick={() => deny(k.userId)} style={{ flex: 1 }}>Deny</button>
+                      </div>
+                    </div>
+                  )) : null}
+                </div>
+              ) : null}
+
+              <div style={{ border: '1px solid #f0f0f0', borderRadius: 12, padding: 10, overflow: 'auto', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontWeight: 800 }}>Presence</div>
+                  <div style={{ marginLeft: 'auto', fontSize: 12, color: '#555' }}>{members.length}</div>
+                </div>
+
+                {roomId && members.length === 0 ? <div style={{ color: '#777', marginTop: 8 }}>No one here yet.</div> : null}
+                {!roomId ? <div style={{ color: '#777', marginTop: 8 }}>Select a room to join presence.</div> : null}
+
+                {members.map((m) => {
+                  const r = (m.role || 'guest') as Role;
+                  const isOwnerTarget = r === 'owner';
+                  const isMe = m.id === meId;
+                  const canEditThis = canManageRoles && !isMe && !isOwnerTarget;
+
+                  return (
+                    <div key={m.id} style={{ padding: '8px 0', borderBottom: '1px solid #f6f6f6' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ fontSize: 13, flex: 1 }}>
+                          {m.name}{' '}
+                          <span style={{ marginLeft: 6, fontSize: 11, padding: '2px 8px', border: '1px solid #ddd', borderRadius: 999 }}>
+                            {r}
+                          </span>
+                        </div>
+
+                        {roomId && canEditThis ? (
+                          <select
+                            value={r}
+                            onChange={(e) => setRole(m.id, e.target.value as Role)}
+                            style={{ fontSize: 12, padding: 6, borderRadius: 8, border: '1px solid #ddd' }}
+                            title="Set role"
+                          >
+                            <option value={r}>{r}</option>
+                            {roleOptionsForActor.filter((x) => x !== r).map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : null}
+                      </div>
+
+                      <div style={{ fontSize: 11, color: '#777', fontFamily: 'ui-monospace, SFMono-Regular' }}>{m.id}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button disabled={!roomId || (roomLocked && myRole === 'guest')} onClick={() => setChatOpen(true)} style={{ flex: 1 }}>Open Chat</button>
+                <button disabled={!roomId} onClick={() => roomId && router.push('/room/' + roomId)} style={{ flex: 1 }}>Full View</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: dockOpen ? 340 : 0,
+          bottom: 0,
+          height: chatOpen ? '34vh' : 0,
+          overflow: 'hidden',
+          zIndex: 9997,
+          background: '#fff',
+          borderTop: chatOpen ? '1px solid #ddd' : 'none',
+          boxShadow: chatOpen ? '0 -8px 24px rgba(0,0,0,0.08)' : 'none',
+          transition: 'height 140ms ease-out',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        <div style={{ padding: 10, borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontWeight: 800 }}>Chat</div>
+          <div style={{ color: '#555', fontSize: 12 }}>Room: <b>{roomId || '—'}</b></div>
+          <div style={{ marginLeft: 'auto' }}>
+            <button onClick={() => setChatOpen(false)}>Close</button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(34vh - 48px)' }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
+            {messages.length === 0 ? <div style={{ color: '#777' }}>No messages yet.</div> : null}
+            {messages.map((m, i) => (
+              <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f3f3f3' }}>
+                <div style={{ fontSize: 12, color: '#666' }}>{m.at} — <b>{m.from}</b></div>
+                <div>{m.body}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: 10, borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') sendChat(); }}
+              placeholder={roomId ? (roomLocked && myRole === 'guest' ? 'Room locked — knock for access' : 'Type a message') : 'Select a room first'}
+              disabled={!roomId || (roomLocked && myRole === 'guest')}
+              style={{ flex: 1, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
+            />
+            <button disabled={!roomId || (roomLocked && myRole === 'guest')} onClick={sendChat} style={{ padding: '10px 14px' }}>Send</button>
+          </div>
+
+          <div style={{ padding: '0 10px 10px', fontSize: 12, color: '#333' }}>
+            <div>Last send: <code>{lastSend}</code></div>
+            <div>Last recv: <code>{lastRecv}</code></div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

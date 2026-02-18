@@ -1,0 +1,2 @@
+﻿ℹ️ Already patched (marker found): HTTP: room message history
+Log written to: C:\Weered\_patch_log.txt

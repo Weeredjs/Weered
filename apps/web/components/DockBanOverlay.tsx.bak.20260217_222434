@@ -1,0 +1,38 @@
+"use client";
+
+import React from "react";
+import { weeredClient } from "../app/weeredClient";
+
+/**
+ * Minimal overlay placeholder.
+ * Keeps builds stable while you iterate on ban/knock/admit UX.
+ */
+export default function DockBanOverlay() {
+  const [authErr, setAuthErr] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // subscribe once, cleanup properly (prevents fan-out duplicates)
+    const offFail = weeredClient.on("auth:fail", (m: any) => setAuthErr(String(m?.error ?? "auth_failed")));
+    const offOk = weeredClient.on("auth:ok", () => setAuthErr(null));
+    return () => {
+      offFail();
+      offOk();
+    };
+  }, []);
+
+  if (!authErr) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-[min(520px,92vw)] rounded-xl bg-white p-4 shadow-xl">
+        <div className="text-lg font-semibold">Not authenticated</div>
+        <div className="mt-2 text-sm text-gray-700">
+          Server says: <span className="font-mono">{authErr}</span>
+        </div>
+        <div className="mt-3 text-sm text-gray-600">
+          Tip: use your dev-login flow (or set a token) before joining rooms.
+        </div>
+      </div>
+    </div>
+  );
+}

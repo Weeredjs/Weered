@@ -1,0 +1,24 @@
+﻿port: 7880
+
+redis:
+  address: redis:6379
+
+rtc:
+  port_range_start: 50000
+  port_range_end: 50100
+  tcp_port: 7881
+  use_external_ip: false
+
+keys:
+  devkey: devsecret
+
+logging:
+  level: info
+  pion_level: error
+  json: false
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  departure_timeout: 20
+  max_participants: 0

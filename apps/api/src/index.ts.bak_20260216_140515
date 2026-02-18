@@ -1,0 +1,421 @@
+﻿import "dotenv/config";
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import jwt from "jsonwebtoken";
+import { WebSocketServer } from "ws";
+import { PrismaClient, SpaceType, SpaceRole, RoomType, PrivacyMode, MessageScope } from "@prisma/client";
+import { AccessToken } from "livekit-server-sdk";
+import { roomsStateRoutes } from './routes/roomsState'
+import { makeRoomsRoutes } from "./routes/rooms";
+
+const prisma = new PrismaClient();
+const app = Fastify({ logger: true });
+await app.register(cors, { origin: true });
+
+const PORT = Number(process.env.PORT ?? 4000);
+const WS_PORT = Number(process.env.WS_PORT ?? 4001);
+
+const JWT_SECRET = process.env.JWT_SECRET!;
+const LIVEKIT_URL = process.env.LIVEKIT_URL!;
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY!;
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET!;
+
+function signToken(userId: string) {
+  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: "30d" });
+}
+function verifyToken(token: string): string | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload?.sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureHomeSpace(userId: string) {
+  const existing = await prisma.space.findFirst({ where: { ownerUserId: userId, type: SpaceType.home } });
+  if (existing) return existing;
+
+  const space = await prisma.space.create({
+    data: { ownerUserId: userId, type: SpaceType.home, name: "Home" }
+  });
+
+  await prisma.membership.create({
+    data: { userId, spaceId: space.id, role: SpaceRole.owner }
+  });
+
+  const rooms = [
+    { name: "Gaming", roomType: RoomType.gaming, privacyMode: PrivacyMode.public },
+    { name: "Office", roomType: RoomType.office, privacyMode: PrivacyMode.knock },
+    { name: "Watch", roomType: RoomType.watch, privacyMode: PrivacyMode.public },
+    { name: "Chill", roomType: RoomType.table, privacyMode: PrivacyMode.public }
+  ];
+
+  for (const r of rooms) {
+    const room = await prisma.room.create({ data: { spaceId: space.id, ...r } });
+    await prisma.roomState.create({ data: { roomId: room.id, stateJson: {} } });
+  }
+
+  return space;
+}
+
+function getBearer(req: any): string {
+  const auth = String(req.headers.authorization ?? "");
+  return auth.startsWith("Bearer ") ? auth.slice(7) : "";
+}
+
+app.get("/health", async () => ({ ok: true }));
+
+// Day-1 dev login: POST { displayName } => token + user + auto Home Lobby
+app.post("/auth/dev-login", async (req, reply) => {
+  const body = req.body as any;
+  const displayName = String(body?.displayName ?? "").trim();
+  if (!displayName) return reply.code(400).send({ error: "displayName required" });
+
+  let user = await prisma.user.findFirst({ where: { displayName } });
+  if (!user) user = await prisma.user.create({ data: { displayName } });
+
+  await ensureHomeSpace(user.id);
+
+  const token = signToken(user.id);
+  return {
+    token,
+    user: {
+      id: user.id,
+      displayName: user.displayName,
+      globalRole: user.globalRole,
+      subscriptionTier: user.subscriptionTier
+    }
+  };
+});
+
+app.get("/spaces", async (req, reply) => {
+  const userId = verifyToken(getBearer(req));
+  if (!userId) return reply.code(401).send({ error: "unauthorized" });
+
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    include: { space: true }
+  });
+
+  return memberships.map(m => ({
+    id: m.space.id,
+    name: m.space.name,
+    type: m.space.type,
+    role: m.role,
+    ownerUserId: m.space.ownerUserId
+  }));
+});
+
+app.get("/spaces/:spaceId/rooms", async (req, reply) => {
+  const userId = verifyToken(getBearer(req));
+  if (!userId) return reply.code(401).send({ error: "unauthorized" });
+
+  const spaceId = (req.params as any).spaceId as string;
+
+  const mem = await prisma.membership.findFirst({ where: { userId, spaceId } });
+  if (!mem) return reply.code(403).send({ error: "forbidden" });
+
+  const rooms = await prisma.room.findMany({ where: { spaceId }, orderBy: { createdAt: "asc" } });
+  return rooms.map(r => ({ id: r.id, name: r.name, roomType: r.roomType, privacyMode: r.privacyMode }));
+});
+
+app.post("/voice/token", async (req, reply) => {
+  const userId = verifyToken(getBearer(req));
+  if (!userId) return reply.code(401).send({ error: "unauthorized" });
+
+  const body = req.body as any;
+  const roomId = String(body?.roomId ?? "");
+  if (!roomId) return reply.code(400).send({ error: "roomId required" });
+
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return reply.code(404).send({ error: "room not found" });
+
+  const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  if (!mem) return reply.code(403).send({ error: "forbidden" });
+
+  const livekitRoom = `space_${room.spaceId}__room_${room.id}`;
+
+  const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+    identity: userId,
+    name: userId
+  });
+  at.addGrant({ room: livekitRoom, roomJoin: true, canPublish: true, canSubscribe: true });
+
+  return { wsUrl: LIVEKIT_URL, token: await at.toJwt(), livekitRoom };
+});
+
+ 
+// -------------------- HTTP: room message history --------------------
+app.get("/rooms/:roomId/messages", async (req, reply) => {
+  const userId = verifyToken(getBearer(req));
+  if (!userId) return reply.code(401).send({ error: "unauthorized" });
+
+  const roomId = String((req.params as any)?.roomId ?? "");
+  if (!roomId) return reply.code(400).send({ error: "roomId required" });
+
+  const q: any = (req as any).query ?? {};
+  let limit = parseInt(String(q.limit ?? "50"), 10);
+  if (!Number.isFinite(limit) || limit <= 0) limit = 50;
+  if (limit > 200) limit = 200;
+
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return reply.code(404).send({ error: "room not found" });
+
+  const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  if (!mem) return reply.code(403).send({ error: "forbidden" });
+
+  const msgs = await prisma.message.findMany({
+    where: { scope: MessageScope.room, roomId },
+    orderBy: { createdAt: "desc" },
+    take: limit
+  });
+
+  msgs.reverse();
+  return msgs.map(m => ({
+    id: m.id,
+    roomId: roomId,
+    fromUserId: m.fromUserId,
+    body: m.body,
+    createdAt: m.createdAt.toISOString()
+  }));
+});
+ // -------------------- HTTP: room state (Home Lobby) --------------------
+// Persist small per-room state (watch link, tabs, notes, etc.)
+app.get("/rooms/:roomId/state", async (req, reply) => {
+  const userId = verifyToken(getBearer(req));
+  if (!userId) return reply.code(401).send({ error: "unauthorized" });
+
+  const roomId = String((req.params as any)?.roomId ?? "");
+  if (!roomId) return reply.code(400).send({ error: "roomId required" });
+
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return reply.code(404).send({ error: "room not found" });
+
+  const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  if (!mem) return reply.code(403).send({ error: "forbidden" });
+
+  const rs = await prisma.roomState.findUnique({ where: { roomId } });
+  const state = (rs?.stateJson as any) ?? {};
+  return { roomId, state };
+});
+
+app.put("/rooms/:roomId/state", async (req, reply) => {
+  const userId = verifyToken(getBearer(req));
+  if (!userId) return reply.code(401).send({ error: "unauthorized" });
+
+  const roomId = String((req.params as any)?.roomId ?? "");
+  if (!roomId) return reply.code(400).send({ error: "roomId required" });
+
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return reply.code(404).send({ error: "room not found" });
+
+  const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  if (!mem) return reply.code(403).send({ error: "forbidden" });
+
+  const body = (req.body as any) ?? {};
+  const patch = body.patch;
+
+  if (patch && (typeof patch !== "object" || Array.isArray(patch))) {
+    return reply.code(400).send({ error: "patch must be an object" });
+  }
+
+  const prev = await prisma.roomState.findUnique({ where: { roomId } });
+  const prevState = (prev?.stateJson as any) ?? {};
+  const nextState = patch ? { ...prevState, ...patch } : prevState;
+
+  await prisma.roomState.upsert({
+    where: { roomId },
+    create: { roomId, stateJson: nextState },
+    update: { stateJson: nextState }
+  });
+
+  return { ok: true, roomId, state: nextState };
+});
+app.register(roomsStateRoutes)
+
+
+
+app.register(makeRoomsRoutes(prisma));
+
+await app.listen({ port: PORT, host: "0.0.0.0" });
+
+
+// -------------------- WS (presence + room-scoped chat) --------------------
+type Conn = {
+  ws: any;
+  userId?: string;
+  displayName?: string;
+  roomId?: string;
+};
+
+const conns = new Set<Conn>();
+const rooms = new Map<string, Set<Conn>>();
+
+function roomSet(roomId: string) {
+  if (!rooms.has(roomId)) rooms.set(roomId, new Set());
+  return rooms.get(roomId)!;
+}
+
+function broadcastRoom(roomId: string, msg: any) {
+  const set = rooms.get(roomId);
+  if (!set) return;
+  const data = JSON.stringify(msg);
+  for (const c of set) c.ws.send(data);
+}
+
+async function buildUserCard(userId: string, roomId?: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  let spaceRole: string | null = null;
+
+  if (roomId) {
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (room) {
+      const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+      spaceRole = mem?.role ?? null;
+    }
+  }
+
+  const globalRole = user?.globalRole ?? "user";
+  const subscriptionTier = user?.subscriptionTier ?? "free";
+
+  const pinRank =
+    spaceRole === "owner" ? 1000 :
+    globalRole === "god" ? 900 :
+    globalRole === "mod_supervisor" ? 800 :
+    globalRole === "global_mod" ? 700 :
+    globalRole === "support" ? 600 :
+    subscriptionTier === "plus" ? 200 : 100;
+
+  return {
+    userId,
+    displayName: user?.displayName ?? "User",
+    globalRole,
+    subscriptionTier,
+    spaceRole,
+    pinRank
+  };
+}
+
+async function roster(roomId: string) {
+  const set = rooms.get(roomId) ?? new Set();
+  const cards = await Promise.all(
+    Array.from(set)
+      .filter(c => c.userId)
+      .map(c => buildUserCard(c.userId!, roomId))
+  );
+  cards.sort((a, b) => b.pinRank - a.pinRank || a.displayName.localeCompare(b.displayName));
+  return cards;
+}
+
+const wss = new WebSocketServer({ port: WS_PORT });
+wss.on("connection", (ws) => {
+  const conn: Conn = { ws };
+  conns.add(conn);
+
+  ws.on("message", async (raw: Buffer) => {
+    try {
+    let msg: any;
+    try { msg = JSON.parse(raw.toString("utf8")); } catch { return; }
+    const { type, payload } = msg;
+
+    if (type === "auth:hello") {
+      const userId = verifyToken(String(payload?.token ?? ""));
+      if (!userId) { ws.send(JSON.stringify({ type: "auth:fail" })); return; }
+      conn.userId = userId;
+
+      const u = await prisma.user.findUnique({ where: { id: userId } });
+      conn.displayName = u?.displayName ?? "User";
+
+      ws.send(JSON.stringify({ type: "auth:ok", payload: { userId, displayName: conn.displayName } }));
+      return;
+    }
+
+    if (!conn.userId) return;
+
+    if (type === "presence:join") {
+      const roomId = String(payload?.roomId ?? "");
+      if (!roomId) return;
+
+      if (conn.roomId) {
+        const prev = conn.roomId;
+        roomSet(prev).delete(conn);
+        broadcastRoom(prev, { type: "presence:leave", payload: { roomId: prev, userId: conn.userId } });
+        broadcastRoom(prev, { type: "presence:state", payload: { roomId: prev, users: await roster(prev) } });
+      }
+
+      conn.roomId = roomId;
+      roomSet(roomId).add(conn);
+
+      const card = await buildUserCard(conn.userId, roomId);
+      broadcastRoom(roomId, { type: "presence:join", payload: { roomId, user: card } });
+      broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+      return;
+    }
+
+    if (type === "presence:leave") {
+      const roomId = conn.roomId;
+      if (!roomId) return;
+
+      roomSet(roomId).delete(conn);
+      conn.roomId = undefined;
+
+      broadcastRoom(roomId, { type: "presence:leave", payload: { roomId, userId: conn.userId } });
+      broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+      return;
+    }
+
+    if (type === "chat:send") {
+      const roomId = String(payload?.roomId ?? conn.roomId ?? "");
+      const body = String(payload?.body ?? "").trim();
+      if (!roomId || !body) return;
+
+      // Ensure Room exists before inserting messages (prevents FK crash)
+            // Chat should not create rooms/spaces. If room is missing, fail fast.
+      const __room = await prisma.room.findUnique({ where: { id: roomId }, select: { id: true } });
+      if (!__room) {
+        try { ws.send(JSON.stringify({ type: 'server:error', error: 'room_not_found' })); } catch {}
+        return;
+      }
+
+
+      const saved = await prisma.message.create({
+        data: {
+          scope: MessageScope.room,
+          roomId,
+          dmKey: null,
+          fromUserId: conn.userId,
+          body
+        }
+      });
+
+      broadcastRoom(roomId, {
+        type: "chat:new",
+        payload: {
+          id: saved.id,
+          roomId,
+          fromUserId: conn.userId,
+          body,
+          createdAt: saved.createdAt.toISOString()
+        }
+      });
+      return;
+    }
+    } catch (err) {
+      console.error('[ws] message handler error', err);
+      try { ws.send(JSON.stringify({ type: 'server:error', error: String((err && err.message) || err) })); } catch {}
+    }
+  });
+
+  ws.on("close", async () => {
+    conns.delete(conn);
+    if (conn.roomId && conn.userId) {
+      const roomId = conn.roomId;
+      roomSet(roomId).delete(conn);
+      broadcastRoom(roomId, { type: "presence:leave", payload: { roomId, userId: conn.userId } });
+      broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+    }
+  });
+});
+
+console.log(`WS listening on ws://localhost:${WS_PORT}`);

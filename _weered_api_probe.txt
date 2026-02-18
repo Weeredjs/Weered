@@ -1,0 +1,479 @@
+﻿=== Weered API probe ===
+API_DIR: C:\Weered\apps\api
+FILES_SCANNED: 1
+
+=== HITS: .listen ===
+  C:\Weered\apps\api\src\index.ts:146: await app.listen({ port: PORT, host: "0.0.0.0" });
+
+=== HITS: listen( ===
+  C:\Weered\apps\api\src\index.ts:146: await app.listen({ port: PORT, host: "0.0.0.0" });
+
+=== HITS: listen: ===
+  (none)
+
+=== HITS: createServer ===
+  (none)
+
+=== HITS: Fastify ===
+  C:\Weered\apps\api\src\index.ts:2: import Fastify from "fastify";
+  C:\Weered\apps\api\src\index.ts:3: import cors from "@fastify/cors";
+  C:\Weered\apps\api\src\index.ts:10: const app = Fastify({ logger: true });
+
+=== HITS: fastify( ===
+  C:\Weered\apps\api\src\index.ts:10: const app = Fastify({ logger: true });
+
+=== HITS: websocket ===
+  C:\Weered\apps\api\src\index.ts:5: import { WebSocketServer } from "ws";
+  C:\Weered\apps\api\src\index.ts:216: const wss = new WebSocketServer({ port: WS_PORT });
+
+=== HITS: WebSocket ===
+  C:\Weered\apps\api\src\index.ts:5: import { WebSocketServer } from "ws";
+  C:\Weered\apps\api\src\index.ts:216: const wss = new WebSocketServer({ port: WS_PORT });
+
+=== HITS: ws://127.0.0.1:4001 ===
+  (none)
+
+=== HITS: 4001 ===
+  C:\Weered\apps\api\src\index.ts:14: const WS_PORT = Number(process.env.WS_PORT ?? 4001);
+
+=== HITS: 4000 ===
+  C:\Weered\apps\api\src\index.ts:13: const PORT = Number(process.env.PORT ?? 4000);
+
+=== HITS: chat:send ===
+  C:\Weered\apps\api\src\index.ts:272: if (type === "chat:send") {
+
+=== HITS: chat:new ===
+  C:\Weered\apps\api\src\index.ts:288: type: "chat:new",
+
+=== HITS: presence:join ===
+  C:\Weered\apps\api\src\index.ts:240: if (type === "presence:join") {
+  C:\Weered\apps\api\src\index.ts:255: broadcastRoom(roomId, { type: "presence:join", payload: { roomId, user: card } });
+
+=== HITS: presence:state ===
+  C:\Weered\apps\api\src\index.ts:248: broadcastRoom(prev, { type: "presence:state", payload: { roomId: prev, users: await roster(prev) } });
+  C:\Weered\apps\api\src\index.ts:256: broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+  C:\Weered\apps\api\src\index.ts:268: broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+  C:\Weered\apps\api\src\index.ts:307: broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+
+=== HITS: auth:hello ===
+  C:\Weered\apps\api\src\index.ts:226: if (type === "auth:hello") {
+
+=== CONTEXT: FIRST LISTEN HIT ===
+
+--- C:\Weered\apps\api\src\index.ts (L36-L256) ---
+   36: 
+   37:   const space = await prisma.space.create({
+   38:     data: { ownerUserId: userId, type: SpaceType.home, name: "Home" }
+   39:   });
+   40: 
+   41:   await prisma.membership.create({
+   42:     data: { userId, spaceId: space.id, role: SpaceRole.owner }
+   43:   });
+   44: 
+   45:   const rooms = [
+   46:     { name: "Gaming", roomType: RoomType.gaming, privacyMode: PrivacyMode.public },
+   47:     { name: "Office", roomType: RoomType.office, privacyMode: PrivacyMode.knock },
+   48:     { name: "Watch", roomType: RoomType.watch, privacyMode: PrivacyMode.public },
+   49:     { name: "Chill", roomType: RoomType.table, privacyMode: PrivacyMode.public }
+   50:   ];
+   51: 
+   52:   for (const r of rooms) {
+   53:     const room = await prisma.room.create({ data: { spaceId: space.id, ...r } });
+   54:     await prisma.roomState.create({ data: { roomId: room.id, stateJson: {} } });
+   55:   }
+   56: 
+   57:   return space;
+   58: }
+   59: 
+   60: function getBearer(req: any): string {
+   61:   const auth = String(req.headers.authorization ?? "");
+   62:   return auth.startsWith("Bearer ") ? auth.slice(7) : "";
+   63: }
+   64: 
+   65: app.get("/health", async () => ({ ok: true }));
+   66: 
+   67: // Day-1 dev login: POST { displayName } => token + user + auto Home Lobby
+   68: app.post("/auth/dev-login", async (req, reply) => {
+   69:   const body = req.body as any;
+   70:   const displayName = String(body?.displayName ?? "").trim();
+   71:   if (!displayName) return reply.code(400).send({ error: "displayName required" });
+   72: 
+   73:   let user = await prisma.user.findFirst({ where: { displayName } });
+   74:   if (!user) user = await prisma.user.create({ data: { displayName } });
+   75: 
+   76:   await ensureHomeSpace(user.id);
+   77: 
+   78:   const token = signToken(user.id);
+   79:   return {
+   80:     token,
+   81:     user: {
+   82:       id: user.id,
+   83:       displayName: user.displayName,
+   84:       globalRole: user.globalRole,
+   85:       subscriptionTier: user.subscriptionTier
+   86:     }
+   87:   };
+   88: });
+   89: 
+   90: app.get("/spaces", async (req, reply) => {
+   91:   const userId = verifyToken(getBearer(req));
+   92:   if (!userId) return reply.code(401).send({ error: "unauthorized" });
+   93: 
+   94:   const memberships = await prisma.membership.findMany({
+   95:     where: { userId },
+   96:     include: { space: true }
+   97:   });
+   98: 
+   99:   return memberships.map(m => ({
+  100:     id: m.space.id,
+  101:     name: m.space.name,
+  102:     type: m.space.type,
+  103:     role: m.role,
+  104:     ownerUserId: m.space.ownerUserId
+  105:   }));
+  106: });
+  107: 
+  108: app.get("/spaces/:spaceId/rooms", async (req, reply) => {
+  109:   const userId = verifyToken(getBearer(req));
+  110:   if (!userId) return reply.code(401).send({ error: "unauthorized" });
+  111: 
+  112:   const spaceId = (req.params as any).spaceId as string;
+  113: 
+  114:   const mem = await prisma.membership.findFirst({ where: { userId, spaceId } });
+  115:   if (!mem) return reply.code(403).send({ error: "forbidden" });
+  116: 
+  117:   const rooms = await prisma.room.findMany({ where: { spaceId }, orderBy: { createdAt: "asc" } });
+  118:   return rooms.map(r => ({ id: r.id, name: r.name, roomType: r.roomType, privacyMode: r.privacyMode }));
+  119: });
+  120: 
+  121: app.post("/voice/token", async (req, reply) => {
+  122:   const userId = verifyToken(getBearer(req));
+  123:   if (!userId) return reply.code(401).send({ error: "unauthorized" });
+  124: 
+  125:   const body = req.body as any;
+  126:   const roomId = String(body?.roomId ?? "");
+  127:   if (!roomId) return reply.code(400).send({ error: "roomId required" });
+  128: 
+  129:   const room = await prisma.room.findUnique({ where: { id: roomId } });
+  130:   if (!room) return reply.code(404).send({ error: "room not found" });
+  131: 
+  132:   const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  133:   if (!mem) return reply.code(403).send({ error: "forbidden" });
+  134: 
+  135:   const livekitRoom = `space_${room.spaceId}__room_${room.id}`;
+  136: 
+  137:   const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+  138:     identity: userId,
+  139:     name: userId
+  140:   });
+  141:   at.addGrant({ room: livekitRoom, roomJoin: true, canPublish: true, canSubscribe: true });
+  142: 
+  143:   return { wsUrl: LIVEKIT_URL, token: await at.toJwt(), livekitRoom };
+  144: });
+  145: 
+  146: await app.listen({ port: PORT, host: "0.0.0.0" });
+  147: 
+  148: 
+  149: // -------------------- WS (presence + room-scoped chat) --------------------
+  150: type Conn = {
+  151:   ws: any;
+  152:   userId?: string;
+  153:   displayName?: string;
+  154:   roomId?: string;
+  155: };
+  156: 
+  157: const conns = new Set<Conn>();
+  158: const rooms = new Map<string, Set<Conn>>();
+  159: 
+  160: function roomSet(roomId: string) {
+  161:   if (!rooms.has(roomId)) rooms.set(roomId, new Set());
+  162:   return rooms.get(roomId)!;
+  163: }
+  164: 
+  165: function broadcastRoom(roomId: string, msg: any) {
+  166:   const set = rooms.get(roomId);
+  167:   if (!set) return;
+  168:   const data = JSON.stringify(msg);
+  169:   for (const c of set) c.ws.send(data);
+  170: }
+  171: 
+  172: async function buildUserCard(userId: string, roomId?: string) {
+  173:   const user = await prisma.user.findUnique({ where: { id: userId } });
+  174:   let spaceRole: string | null = null;
+  175: 
+  176:   if (roomId) {
+  177:     const room = await prisma.room.findUnique({ where: { id: roomId } });
+  178:     if (room) {
+  179:       const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  180:       spaceRole = mem?.role ?? null;
+  181:     }
+  182:   }
+  183: 
+  184:   const globalRole = user?.globalRole ?? "user";
+  185:   const subscriptionTier = user?.subscriptionTier ?? "free";
+  186: 
+  187:   const pinRank =
+  188:     spaceRole === "owner" ? 1000 :
+  189:     globalRole === "god" ? 900 :
+  190:     globalRole === "mod_supervisor" ? 800 :
+  191:     globalRole === "global_mod" ? 700 :
+  192:     globalRole === "support" ? 600 :
+  193:     subscriptionTier === "plus" ? 200 : 100;
+  194: 
+  195:   return {
+  196:     userId,
+  197:     displayName: user?.displayName ?? "User",
+  198:     globalRole,
+  199:     subscriptionTier,
+  200:     spaceRole,
+  201:     pinRank
+  202:   };
+  203: }
+  204: 
+  205: async function roster(roomId: string) {
+  206:   const set = rooms.get(roomId) ?? new Set();
+  207:   const cards = await Promise.all(
+  208:     Array.from(set)
+  209:       .filter(c => c.userId)
+  210:       .map(c => buildUserCard(c.userId!, roomId))
+  211:   );
+  212:   cards.sort((a, b) => b.pinRank - a.pinRank || a.displayName.localeCompare(b.displayName));
+  213:   return cards;
+  214: }
+  215: 
+  216: const wss = new WebSocketServer({ port: WS_PORT });
+  217: wss.on("connection", (ws) => {
+  218:   const conn: Conn = { ws };
+  219:   conns.add(conn);
+  220: 
+  221:   ws.on("message", async (raw: Buffer) => {
+  222:     let msg: any;
+  223:     try { msg = JSON.parse(raw.toString("utf8")); } catch { return; }
+  224:     const { type, payload } = msg;
+  225: 
+  226:     if (type === "auth:hello") {
+  227:       const userId = verifyToken(String(payload?.token ?? ""));
+  228:       if (!userId) { ws.send(JSON.stringify({ type: "auth:fail" })); return; }
+  229:       conn.userId = userId;
+  230: 
+  231:       const u = await prisma.user.findUnique({ where: { id: userId } });
+  232:       conn.displayName = u?.displayName ?? "User";
+  233: 
+  234:       ws.send(JSON.stringify({ type: "auth:ok", payload: { userId, displayName: conn.displayName } }));
+  235:       return;
+  236:     }
+  237: 
+  238:     if (!conn.userId) return;
+  239: 
+  240:     if (type === "presence:join") {
+  241:       const roomId = String(payload?.roomId ?? "");
+  242:       if (!roomId) return;
+  243: 
+  244:       if (conn.roomId) {
+  245:         const prev = conn.roomId;
+  246:         roomSet(prev).delete(conn);
+  247:         broadcastRoom(prev, { type: "presence:leave", payload: { roomId: prev, userId: conn.userId } });
+  248:         broadcastRoom(prev, { type: "presence:state", payload: { roomId: prev, users: await roster(prev) } });
+  249:       }
+  250: 
+  251:       conn.roomId = roomId;
+  252:       roomSet(roomId).add(conn);
+  253: 
+  254:       const card = await buildUserCard(conn.userId, roomId);
+  255:       broadcastRoom(roomId, { type: "presence:join", payload: { roomId, user: card } });
+  256:       broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+
+=== CONTEXT: FIRST chat:send HIT ===
+
+--- C:\Weered\apps\api\src\index.ts (L122-L312) ---
+  122:   const userId = verifyToken(getBearer(req));
+  123:   if (!userId) return reply.code(401).send({ error: "unauthorized" });
+  124: 
+  125:   const body = req.body as any;
+  126:   const roomId = String(body?.roomId ?? "");
+  127:   if (!roomId) return reply.code(400).send({ error: "roomId required" });
+  128: 
+  129:   const room = await prisma.room.findUnique({ where: { id: roomId } });
+  130:   if (!room) return reply.code(404).send({ error: "room not found" });
+  131: 
+  132:   const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  133:   if (!mem) return reply.code(403).send({ error: "forbidden" });
+  134: 
+  135:   const livekitRoom = `space_${room.spaceId}__room_${room.id}`;
+  136: 
+  137:   const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+  138:     identity: userId,
+  139:     name: userId
+  140:   });
+  141:   at.addGrant({ room: livekitRoom, roomJoin: true, canPublish: true, canSubscribe: true });
+  142: 
+  143:   return { wsUrl: LIVEKIT_URL, token: await at.toJwt(), livekitRoom };
+  144: });
+  145: 
+  146: await app.listen({ port: PORT, host: "0.0.0.0" });
+  147: 
+  148: 
+  149: // -------------------- WS (presence + room-scoped chat) --------------------
+  150: type Conn = {
+  151:   ws: any;
+  152:   userId?: string;
+  153:   displayName?: string;
+  154:   roomId?: string;
+  155: };
+  156: 
+  157: const conns = new Set<Conn>();
+  158: const rooms = new Map<string, Set<Conn>>();
+  159: 
+  160: function roomSet(roomId: string) {
+  161:   if (!rooms.has(roomId)) rooms.set(roomId, new Set());
+  162:   return rooms.get(roomId)!;
+  163: }
+  164: 
+  165: function broadcastRoom(roomId: string, msg: any) {
+  166:   const set = rooms.get(roomId);
+  167:   if (!set) return;
+  168:   const data = JSON.stringify(msg);
+  169:   for (const c of set) c.ws.send(data);
+  170: }
+  171: 
+  172: async function buildUserCard(userId: string, roomId?: string) {
+  173:   const user = await prisma.user.findUnique({ where: { id: userId } });
+  174:   let spaceRole: string | null = null;
+  175: 
+  176:   if (roomId) {
+  177:     const room = await prisma.room.findUnique({ where: { id: roomId } });
+  178:     if (room) {
+  179:       const mem = await prisma.membership.findFirst({ where: { userId, spaceId: room.spaceId } });
+  180:       spaceRole = mem?.role ?? null;
+  181:     }
+  182:   }
+  183: 
+  184:   const globalRole = user?.globalRole ?? "user";
+  185:   const subscriptionTier = user?.subscriptionTier ?? "free";
+  186: 
+  187:   const pinRank =
+  188:     spaceRole === "owner" ? 1000 :
+  189:     globalRole === "god" ? 900 :
+  190:     globalRole === "mod_supervisor" ? 800 :
+  191:     globalRole === "global_mod" ? 700 :
+  192:     globalRole === "support" ? 600 :
+  193:     subscriptionTier === "plus" ? 200 : 100;
+  194: 
+  195:   return {
+  196:     userId,
+  197:     displayName: user?.displayName ?? "User",
+  198:     globalRole,
+  199:     subscriptionTier,
+  200:     spaceRole,
+  201:     pinRank
+  202:   };
+  203: }
+  204: 
+  205: async function roster(roomId: string) {
+  206:   const set = rooms.get(roomId) ?? new Set();
+  207:   const cards = await Promise.all(
+  208:     Array.from(set)
+  209:       .filter(c => c.userId)
+  210:       .map(c => buildUserCard(c.userId!, roomId))
+  211:   );
+  212:   cards.sort((a, b) => b.pinRank - a.pinRank || a.displayName.localeCompare(b.displayName));
+  213:   return cards;
+  214: }
+  215: 
+  216: const wss = new WebSocketServer({ port: WS_PORT });
+  217: wss.on("connection", (ws) => {
+  218:   const conn: Conn = { ws };
+  219:   conns.add(conn);
+  220: 
+  221:   ws.on("message", async (raw: Buffer) => {
+  222:     let msg: any;
+  223:     try { msg = JSON.parse(raw.toString("utf8")); } catch { return; }
+  224:     const { type, payload } = msg;
+  225: 
+  226:     if (type === "auth:hello") {
+  227:       const userId = verifyToken(String(payload?.token ?? ""));
+  228:       if (!userId) { ws.send(JSON.stringify({ type: "auth:fail" })); return; }
+  229:       conn.userId = userId;
+  230: 
+  231:       const u = await prisma.user.findUnique({ where: { id: userId } });
+  232:       conn.displayName = u?.displayName ?? "User";
+  233: 
+  234:       ws.send(JSON.stringify({ type: "auth:ok", payload: { userId, displayName: conn.displayName } }));
+  235:       return;
+  236:     }
+  237: 
+  238:     if (!conn.userId) return;
+  239: 
+  240:     if (type === "presence:join") {
+  241:       const roomId = String(payload?.roomId ?? "");
+  242:       if (!roomId) return;
+  243: 
+  244:       if (conn.roomId) {
+  245:         const prev = conn.roomId;
+  246:         roomSet(prev).delete(conn);
+  247:         broadcastRoom(prev, { type: "presence:leave", payload: { roomId: prev, userId: conn.userId } });
+  248:         broadcastRoom(prev, { type: "presence:state", payload: { roomId: prev, users: await roster(prev) } });
+  249:       }
+  250: 
+  251:       conn.roomId = roomId;
+  252:       roomSet(roomId).add(conn);
+  253: 
+  254:       const card = await buildUserCard(conn.userId, roomId);
+  255:       broadcastRoom(roomId, { type: "presence:join", payload: { roomId, user: card } });
+  256:       broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+  257:       return;
+  258:     }
+  259: 
+  260:     if (type === "presence:leave") {
+  261:       const roomId = conn.roomId;
+  262:       if (!roomId) return;
+  263: 
+  264:       roomSet(roomId).delete(conn);
+  265:       conn.roomId = undefined;
+  266: 
+  267:       broadcastRoom(roomId, { type: "presence:leave", payload: { roomId, userId: conn.userId } });
+  268:       broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+  269:       return;
+  270:     }
+  271: 
+  272:     if (type === "chat:send") {
+  273:       const roomId = String(payload?.roomId ?? conn.roomId ?? "");
+  274:       const body = String(payload?.body ?? "").trim();
+  275:       if (!roomId || !body) return;
+  276: 
+  277:       const saved = await prisma.message.create({
+  278:         data: {
+  279:           scope: MessageScope.room,
+  280:           roomId,
+  281:           dmKey: null,
+  282:           fromUserId: conn.userId,
+  283:           body
+  284:         }
+  285:       });
+  286: 
+  287:       broadcastRoom(roomId, {
+  288:         type: "chat:new",
+  289:         payload: {
+  290:           id: saved.id,
+  291:           roomId,
+  292:           fromUserId: conn.userId,
+  293:           body,
+  294:           createdAt: saved.createdAt.toISOString()
+  295:         }
+  296:       });
+  297:       return;
+  298:     }
+  299:   });
+  300: 
+  301:   ws.on("close", async () => {
+  302:     conns.delete(conn);
+  303:     if (conn.roomId && conn.userId) {
+  304:       const roomId = conn.roomId;
+  305:       roomSet(roomId).delete(conn);
+  306:       broadcastRoom(roomId, { type: "presence:leave", payload: { roomId, userId: conn.userId } });
+  307:       broadcastRoom(roomId, { type: "presence:state", payload: { roomId, users: await roster(roomId) } });
+  308:     }
+  309:   });
+  310: });
+  311: 
+  312: console.log(`WS listening on ws://localhost:${WS_PORT}`);

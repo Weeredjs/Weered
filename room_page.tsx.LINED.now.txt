@@ -1,0 +1,315 @@
+    1: 'use client';
+    2: 
+    3: import React, { useEffect, useMemo, useState } from 'react';
+    4: import { useParams, useRouter } from 'next/navigation';
+    5: import { weeredWs, type WsStatus } from '../../weeredClient';
+    6: 
+    7: type Role = 'owner' | 'admin' | 'mod' | 'member' | 'guest';
+    8: type Member = { id: string; name: string; role?: Role };
+    9: type Knock = { userId: string; userName?: string; message?: string; createdAt: string };
+   10: type ChatMsg = { at: string; from: string; body: string };
+   11: 
+   12: function getRoomId(params: any): string {
+   13:   const raw = params?.roomId;
+   14:   if (!raw) return '';
+   15:   if (Array.isArray(raw)) return String(raw[0] ?? '');
+   16:   return String(raw);
+   17: }
+   18: 
+   19: export default function RoomPage() {
+   20:   const router = useRouter();
+   21:   const params = useParams();
+   22:   const roomId = useMemo(() => getRoomId(params).trim(), [params]);
+   23: 
+   24:   const [token, setToken] = useState('');
+   25:   const [meId, setMeId] = useState('');
+   26:   const [meName, setMeName] = useState('');
+   27:   const [myRole, setMyRole] = useState<Role>('guest');
+   28: 
+   29:   const [status, setStatus] = useState<WsStatus>(weeredWs.getStatus());
+   30:   const [error, setError] = useState('');
+   31: 
+   32:   const [roomLocked, setRoomLocked] = useState(false);
+   33:   const [members, setMembers] = useState<Member[]>([]);
+   34:   const [knocks, setKnocks] = useState<Knock[]>([]);
+   35:   const [messages, setMessages] = useState<ChatMsg[]>([]);
+   36:   const [input, setInput] = useState('');
+   37:   const [knockMsg, setKnockMsg] = useState('');
+   38: 
+   39:   const [lastSend, setLastSend] = useState('');
+   40:   const [lastRecv, setLastRecv] = useState('');
+   41: 
+   42:   const isPriv = useMemo(() => myRole === 'owner' || myRole === 'admin' || myRole === 'mod', [myRole]);
+   43:   const canLock = useMemo(() => myRole === 'owner' || myRole === 'admin', [myRole]);
+   44: 
+   45:   useEffect(() => {
+   46:     try {
+   47:       setToken(localStorage.getItem('weered_token') || '');
+   48:       setMeId(localStorage.getItem('weered_user_id') || '');
+   49:       setMeName(localStorage.getItem('weered_name') || '');
+   50:     } catch {}
+   51:   }, []);
+   52: 
+   53:   useEffect(() => weeredWs.onStatus(setStatus), []);
+   54: 
+   55:   useEffect(() => {
+   56:     return weeredWs.subscribe((raw, msg) => {
+   57:       setLastRecv(raw);
+   58:       if (!msg || !msg.type) return;
+   59: 
+   60:       if (msg.type === 'server:error') {
+   61:         setError(msg.error || 'server:error');
+   62:         return;
+   63:       }
+   64:       if (msg.type === 'auth:fail') {
+   65:         setError('auth failed');
+   66:         return;
+   67:       }
+   68:       if (msg.type === 'auth:ok') {
+   69:         const u = msg?.payload?.user;
+   70:         const id = String(u?.id ?? '').trim();
+   71:         const name = String(u?.name ?? '').trim();
+   72:         if (id) setMeId(id);
+   73:         if (name) setMeName(name);
+   74:         return;
+   75:       }
+   76: 
+   77:       // room-scoped
+   78:       if (String(msg?.payload?.roomId ?? '') !== roomId) return;
+   79: 
+   80:       if (msg.type === 'room:locked') {
+   81:         setError('room is locked — knock to request access');
+   82:         setMyRole('guest');
+   83:         return;
+   84:       }
+   85: 
+   86:       if (msg.type === 'room:lock_changed') {
+   87:         setRoomLocked(!!msg?.payload?.locked);
+   88:         return;
+   89:       }
+   90: 
+   91:       if (msg.type === 'room:knocks') {
+   92:         setKnocks(Array.isArray(msg?.payload?.knocks) ? msg.payload.knocks : []);
+   93:         return;
+   94:       }
+   95: 
+   96:       if (msg.type === 'room:knock') {
+   97:         const k: Knock = {
+   98:           userId: String(msg?.payload?.userId ?? ''),
+   99:           userName: String(msg?.payload?.userName ?? ''),
+  100:           message: String(msg?.payload?.message ?? ''),
+  101:           createdAt: String(msg?.payload?.createdAt ?? new Date().toISOString()),
+  102:         };
+  103:         if (k.userId) setKnocks((prev) => {
+  104:           const next = prev.filter((x) => x.userId !== k.userId);
+  105:           next.push(k);
+  106:           return next;
+  107:         });
+  108:         return;
+  109:       }
+  110: 
+  111:       if (msg.type === 'room:role_changed') {
+  112:         const userId = String(msg?.payload?.userId ?? '');
+  113:         const role = String(msg?.payload?.role ?? '') as Role;
+  114:         if (!userId || !role) return;
+  115:         setMembers((prev) => prev.map((m) => (m.id === userId ? { ...m, role } : m)));
+  116:         if (userId === meId) setMyRole(role);
+  117:         return;
+  118:       }
+  119: 
+  120:       if (msg.type === 'presence:state') {
+  121:         const list = Array.isArray(msg?.payload?.members) ? msg.payload.members : [];
+  122:         setMembers(list);
+  123: 
+  124:         const me = list.find((m: any) => String(m?.id ?? '') === meId);
+  125:         const r = (me?.role as Role) || 'guest';
+  126:         setMyRole(r);
+  127:         return;
+  128:       }
+  129: 
+  130:       if (msg.type === 'presence:join') {
+  131:         const m = msg?.payload?.member;
+  132:         if (m?.id) {
+  133:           setMembers((prev) => {
+  134:             const next = prev.filter((x) => x.id !== m.id);
+  135:             next.push(m);
+  136:             return next;
+  137:           });
+  138:           if (m.id === meId && m.role) setMyRole(m.role);
+  139:         }
+  140:         return;
+  141:       }
+  142: 
+  143:       if (msg.type === 'presence:leave') {
+  144:         const memberId = String(msg?.payload?.memberId ?? '');
+  145:         if (memberId) setMembers((prev) => prev.filter((x) => x.id !== memberId));
+  146:         return;
+  147:       }
+  148: 
+  149:       if (msg.type === 'chat:new') {
+  150:         const body = String(msg?.payload?.body ?? '');
+  151:         const at = String(msg?.payload?.at ?? new Date().toISOString());
+  152:         const from = String(msg?.payload?.from?.name ?? 'Unknown');
+  153:         if (!body) return;
+  154:         setMessages((prev) => [...prev, { at, from, body }]);
+  155:         return;
+  156:       }
+  157:     });
+  158:     // eslint-disable-next-line react-hooks/exhaustive-deps
+  159:   }, [roomId, meId]);
+  160: 
+  161:   useEffect(() => {
+  162:     if (!token) return;
+  163:     weeredWs.setToken(token);
+  164:     weeredWs.connect();
+  165:   }, [token]);
+  166: 
+  167:   useEffect(() => {
+  168:     if (!token || !roomId) return;
+  169:     if (status !== 'open') return;
+  170:     weeredWs.joinRoom(roomId);
+  171:   }, [token, roomId, status]);
+  172: 
+  173:   function sendJson(obj: any) {
+  174:     const raw = weeredWs.send(obj);
+  175:     if (raw) setLastSend(raw);
+  176:   }
+  177: 
+  178:   function sendChat() {
+  179:     const body = input.trim();
+  180:     if (!body || !roomId) return;
+  181:     sendJson({ type: 'chat:send', payload: { roomId, body } });
+  182:     setInput('');
+  183:   }
+  184: 
+  185:   function knock() {
+  186:     if (!roomId) return;
+  187:     sendJson({ type: 'room:knock', payload: { roomId, message: knockMsg.trim() } });
+  188:     setKnockMsg('');
+  189:   }
+  190: 
+  191:   function refreshKnocks() {
+  192:     if (!roomId) return;
+  193:     sendJson({ type: 'room:knocks:get', payload: { roomId } });
+  194:   }
+  195: 
+  196:   function setLock(locked: boolean) {
+  197:     sendJson({ type: 'room:set_lock', payload: { roomId, locked } });
+  198:     setRoomLocked(locked);
+  199:     if (locked && isPriv) refreshKnocks();
+  200:   }
+  201: 
+  202:   return (
+  203:     <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif', maxWidth: 980, margin: '0 auto' }}>
+  204:       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+  205:         <button onClick={() => router.push('/')} style={{ padding: '8px 10px' }}>← Home</button>
+  206:         <div style={{ fontWeight: 900, fontSize: 18 }}>Room: {roomId || '—'}</div>
+  207:         <div style={{ marginLeft: 'auto', fontSize: 12, color: '#444' }}>
+  208:           WS: <b>{status}</b>
+  209:         </div>
+  210:       </div>
+  211: 
+  212:       {meName ? <div style={{ fontSize: 13, color: '#444', marginBottom: 10 }}>You: <b>{meName}</b> (<b>{myRole}</b>)</div> : null}
+  213: 
+  214:       {error ? (
+  215:         <div style={{ padding: 10, background: '#ffe5e5', border: '1px solid #ffb3b3', borderRadius: 10, marginBottom: 12 }}>
+  216:           Error: {error}
+  217:         </div>
+  218:       ) : null}
+  219: 
+  220:       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+  221:         <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+  222:           <div style={{ fontWeight: 900, marginBottom: 8 }}>Presence ({members.length})</div>
+  223:           <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Locked: <b>{roomLocked ? 'yes' : 'no'}</b></div>
+  224: 
+  225:           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+  226:             <button disabled={!canLock} onClick={() => setLock(!roomLocked)} style={{ flex: 1 }}>
+  227:               {roomLocked ? 'Unlock' : 'Lock'}
+  228:             </button>
+  229:             <button disabled={!isPriv} onClick={refreshKnocks} style={{ flex: 1 }}>
+  230:               Refresh knocks
+  231:             </button>
+  232:           </div>
+  233: 
+  234:           <div style={{ maxHeight: 360, overflow: 'auto', borderTop: '1px solid #f3f3f3' }}>
+  235:             {members.map((m) => (
+  236:               <div key={m.id} style={{ padding: '10px 0', borderBottom: '1px solid #f6f6f6' }}>
+  237:                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+  238:                   <div style={{ fontSize: 13, flex: 1 }}>{m.name}</div>
+  239:                   <div style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #ddd', borderRadius: 999 }}>
+  240:                     {(m.role || 'guest') as Role}
+  241:                   </div>
+  242:                 </div>
+  243:                 <div style={{ fontSize: 11, color: '#777', fontFamily: 'ui-monospace, SFMono-Regular' }}>{m.id}</div>
+  244:               </div>
+  245:             ))}
+  246:           </div>
+  247:         </div>
+  248: 
+  249:         <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12 }}>
+  250:           <div style={{ fontWeight: 900, marginBottom: 8 }}>Knock Queue ({knocks.length})</div>
+  251: 
+  252:           {roomLocked && myRole === 'guest' ? (
+  253:             <div style={{ border: '1px solid #f0f0f0', borderRadius: 12, padding: 10, marginBottom: 10 }}>
+  254:               <div style={{ fontWeight: 700, marginBottom: 6 }}>Room is locked</div>
+  255:               <div style={{ display: 'flex', gap: 8 }}>
+  256:                 <input
+  257:                   value={knockMsg}
+  258:                   onChange={(e) => setKnockMsg(e.target.value)}
+  259:                   placeholder="Optional message"
+  260:                   style={{ flex: 1, padding: 8, border: '1px solid #ddd', borderRadius: 10 }}
+  261:                 />
+  262:                 <button onClick={knock}>Knock</button>
+  263:               </div>
+  264:             </div>
+  265:           ) : null}
+  266: 
+  267:           {!isPriv ? <div style={{ color: '#777' }}>Requires mod/admin/owner.</div> : null}
+  268: 
+  269:           <div style={{ maxHeight: 360, overflow: 'auto', borderTop: '1px solid #f3f3f3' }}>
+  270:             {isPriv ? knocks.map((k) => (
+  271:               <div key={k.userId} style={{ padding: '10px 0', borderBottom: '1px solid #f6f6f6' }}>
+  272:                 <div style={{ fontSize: 13 }}><b>{k.userName || k.userId}</b></div>
+  273:                 <div style={{ fontSize: 11, color: '#666' }}>{k.createdAt}</div>
+  274:                 {k.message ? <div style={{ marginTop: 6, fontSize: 12 }}>{k.message}</div> : null}
+  275:               </div>
+  276:             )) : null}
+  277:           </div>
+  278:         </div>
+  279:       </div>
+  280: 
+  281:       <div style={{ marginTop: 12, border: '1px solid #eee', borderRadius: 12, overflow: 'hidden' }}>
+  282:         <div style={{ padding: 10, borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 10 }}>
+  283:           <div style={{ fontWeight: 900 }}>Chat</div>
+  284:           <div style={{ marginLeft: 'auto', fontSize: 12, color: '#333' }}>
+  285:             Last send: <code>{lastSend}</code> &nbsp;|&nbsp; Last recv: <code>{lastRecv}</code>
+  286:           </div>
+  287:         </div>
+  288: 
+  289:         <div style={{ maxHeight: 320, overflow: 'auto', padding: 10 }}>
+  290:           {messages.length === 0 ? <div style={{ color: '#777' }}>No messages yet.</div> : null}
+  291:           {messages.map((m, i) => (
+  292:             <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f3f3f3' }}>
+  293:               <div style={{ fontSize: 12, color: '#666' }}>{m.at} — <b>{m.from}</b></div>
+  294:               <div>{m.body}</div>
+  295:             </div>
+  296:           ))}
+  297:         </div>
+  298: 
+  299:         <div style={{ padding: 10, borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
+  300:           <input
+  301:             value={input}
+  302:             onChange={(e) => setInput(e.target.value)}
+  303:             onKeyDown={(e) => { if (e.key === 'Enter') sendChat(); }}
+  304:             placeholder={roomId ? (roomLocked && myRole === 'guest' ? 'Room locked — knock for access' : 'Type a message') : 'No room'}
+  305:             disabled={!roomId || (roomLocked && myRole === 'guest')}
+  306:             style={{ flex: 1, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
+  307:           />
+  308:           <button disabled={!roomId || (roomLocked && myRole === 'guest')} onClick={sendChat} style={{ padding: '10px 14px' }}>
+  309:             Send
+  310:           </button>
+  311:         </div>
+  312:       </div>
+  313:     </div>
+  314:   );
+  315: }
