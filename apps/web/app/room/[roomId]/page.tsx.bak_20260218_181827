@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useWeered } from "../../../components/WeeredProvider";
 import RoomTools from "./RoomTools";
-import VoicePanel from "./VoicePanel";
 
 export default function RoomPage({ params }: { params: { roomId: string } }) {
   const roomId = String(params?.roomId || "");
@@ -37,9 +36,8 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         </Link>
       </div>
 
-      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ marginTop: 12 }}>
         <RoomTools roomId={roomId} />
-        <VoicePanel roomId={roomId} />
       </div>
 
       <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "260px 1fr", gap: 12 }}>
@@ -96,7 +94,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
       </div>
 
       <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
-        Room chat mirrors in the Dock. Voice is LiveKit.
+        Room chat mirrors in the Dock.
       </div>
     </main>
   );
