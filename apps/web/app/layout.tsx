@@ -1,17 +1,15 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import DockShell from '../components/DockShell';
-
-export const metadata: Metadata = {
-  title: 'Weered',
-  description: 'Weered lobby + rooms + chat',
-};
+﻿import React from "react";
+import { WeeredProvider } from "../components/WeeredProvider";
+import DockShell from "../components/DockShell";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <DockShell>{children}</DockShell>
+        <WeeredProvider>
+          {children}
+          <DockShell />
+        </WeeredProvider>
       </body>
     </html>
   );
