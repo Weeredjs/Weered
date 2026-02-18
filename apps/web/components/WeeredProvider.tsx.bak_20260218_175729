@@ -10,19 +10,7 @@ type RoomUser = { id: string; name: string; role?: Role };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
 
-type AuditItem = {
-  id: string;
-  ts: number;
-  type: string;
-  actorId: string;
-  actorName: string;
-  targetId?: string;
-  targetName?: string;
-  note?: string;
-};
-
 type RoomMeta = {
-  name: string;
   locked: boolean;
   ownerId: string;
   mods: string[];
@@ -31,7 +19,6 @@ type RoomMeta = {
 type AdminState = {
   knocks: Knock[];
   banned: string[];
-  audit: AuditItem[];
 };
 
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";
@@ -51,19 +38,17 @@ type Ctx = {
   joinedRoomId: string;      // actually joined room
   setActiveRoomId: (id: string) => void;
 
-  users: RoomUser[];
-  msgs: ChatMsg[];
-  meta: RoomMeta | null;
-  admin: AdminState | null;
-  role: Role;
-  joinStatus: JoinStatus;
+  users: RoomUser[];         // for active room
+  msgs: ChatMsg[];           // for active room
+  meta: RoomMeta | null;     // for active room
+  admin: AdminState | null;  // for active room (mods only)
+  role: Role;                // my role in active room
+  joinStatus: JoinStatus;    // status for active room
 
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
 
   sendChat: (body: string) => void;
-
-  renameRoom: (name: string) => void;
 
   lockRoom: () => void;
   unlockRoom: () => void;
@@ -159,7 +144,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     wsRef.current = null;
   }
 
-  // Connect WS when token present
+  // Connect WS when we have a token
   useEffect(() => {
     if (!token) return;
 
@@ -201,15 +186,14 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         setUsersByRoom((prev) => ({ ...prev, [rid]: list }));
 
         const nextMeta: RoomMeta = {
-          name: String(msg.name || rid || ""),
           locked: Boolean(msg.locked),
           ownerId: String(msg.ownerId || ""),
           mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
         };
         setMetaByRoom((prev) => ({ ...prev, [rid]: nextMeta }));
 
+        // join-confirmation: if this is the active room, consider it joined and leave old joined room
         setStatusByRoom((prev) => ({ ...prev, [rid]: "joined" }));
-
         if (rid && rid === activeRoomId) {
           setJoinedRoomId((prevJoined) => {
             const old = prevJoined;
@@ -227,29 +211,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const st: AdminState = {
           knocks: Array.isArray(msg.knocks) ? msg.knocks : [],
           banned: Array.isArray(msg.banned) ? msg.banned.map(String) : [],
-          audit: Array.isArray(msg.audit) ? msg.audit : [],
         };
         setAdminByRoom((prev) => ({ ...prev, [rid]: st }));
 
         const nextMeta: RoomMeta = {
-          name: String(msg.name || rid || ""),
           locked: Boolean(msg.locked),
           ownerId: String(msg.ownerId || ""),
           mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
         };
         setMetaByRoom((prev) => ({ ...prev, [rid]: nextMeta }));
-        return;
-      }
-
-      if (msg.type === "room:audit") {
-        const rid = String(msg.roomId || "");
-        const item = msg.item as AuditItem;
-        if (!item || !item.id) return;
-        setAdminByRoom((prev) => {
-          const cur = prev[rid] || { knocks: [], banned: [], audit: [] };
-          const nextAudit = [...(cur.audit || []), item].slice(-80);
-          return { ...prev, [rid]: { ...cur, audit: nextAudit } };
-        });
         return;
       }
 
@@ -274,12 +244,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "room:banned") {
         const rid = String(msg.roomId || "");
         setStatusByRoom((prev) => ({ ...prev, [rid]: "banned" }));
-        return;
-      }
-
-      if (msg.type === "room:denied") {
-        const rid = String(msg.roomId || "");
-        setStatusByRoom((prev) => ({ ...prev, [rid]: "denied" }));
         return;
       }
     };
@@ -325,8 +289,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     ws.send(JSON.stringify({ type, roomId, ...payload }));
   }
 
-  const renameRoom = (name: string) => sendAdmin("room:rename", { name });
-
   const lockRoom = () => sendAdmin("room:lock");
   const unlockRoom = () => sendAdmin("room:unlock");
   const promote = (userId: string) => sendAdmin("mod:promote", { userId });
@@ -363,8 +325,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     logout,
 
     sendChat,
-
-    renameRoom,
 
     lockRoom,
     unlockRoom,

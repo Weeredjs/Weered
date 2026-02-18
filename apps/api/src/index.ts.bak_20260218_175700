@@ -10,23 +10,11 @@ const HTTP_PORT = Number(process.env.PORT || 4000);
 const WS_PORT = Number(process.env.WS_PORT || 4001);
 
 type AuthedUser = { id: string; name: string };
-type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
+type Sock = WebSocket & { user?: AuthedUser; roomId?: string };
 
-type Role = "owner" | "mod" | "member";
-type RoomUser = { id: string; name: string; role?: Role };
+type RoomUser = { id: string; name: string; role?: "owner" | "mod" | "member" };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
-
-type AuditItem = {
-  id: string;
-  ts: number;
-  type: string;
-  actorId: string;
-  actorName: string;
-  targetId?: string;
-  targetName?: string;
-  note?: string;
-};
 
 type RoomState = {
   roomId: string;
@@ -42,9 +30,6 @@ type RoomState = {
   locked: boolean;
 
   knocks: Knock[];
-  pending: Map<string, Set<Sock>>; // userId -> sockets waiting for admit
-
-  audit: AuditItem[];
 };
 
 const rooms = new Map<string, RoomState>();
@@ -63,8 +48,6 @@ function getRoom(roomId: string): RoomState {
       banned: new Set(),
       locked: false,
       knocks: [],
-      pending: new Map(),
-      audit: [],
     };
     rooms.set(roomId, r);
   }
@@ -118,24 +101,10 @@ function isMod(room: RoomState, userId?: string) {
 function isModOrOwner(room: RoomState, userId?: string) {
   return isOwner(room, userId) || isMod(room, userId);
 }
-function roleOf(room: RoomState, userId: string): Role {
+function roleOf(room: RoomState, userId: string): "owner" | "mod" | "member" {
   if (isOwner(room, userId)) return "owner";
   if (isMod(room, userId)) return "mod";
   return "member";
-}
-
-function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: number }) {
-  const a: AuditItem = { id: randomUUID(), ts: item.ts ?? Date.now(), ...item };
-  room.audit.push(a);
-  if (room.audit.length > 300) room.audit.splice(0, room.audit.length - 300);
-
-  // push to mods/owner live
-  for (const s of room.sockets) {
-    const uid = s.user?.id;
-    if (!uid) continue;
-    if (!isModOrOwner(room, uid)) continue;
-    send(s, { type: "room:audit", roomId: room.roomId, item: a });
-  }
 }
 
 function publishState(room: RoomState) {
@@ -147,7 +116,6 @@ function publishState(room: RoomState) {
   broadcast(room, {
     type: "presence:state",
     roomId: room.roomId,
-    name: room.name || room.roomId,
     users,
     count: users.length,
     locked: Boolean(room.locked),
@@ -155,7 +123,7 @@ function publishState(room: RoomState) {
     mods: Array.from(room.mods.values()),
   });
 
-  // Admin-only extra state (knocks + banned list + audit)
+  // Admin-only extra state (knocks + banned list)
   for (const s of room.sockets) {
     const uid = s.user?.id;
     if (!uid) continue;
@@ -163,13 +131,11 @@ function publishState(room: RoomState) {
     send(s, {
       type: "room:adminState",
       roomId: room.roomId,
-      name: room.name || room.roomId,
       locked: Boolean(room.locked),
       ownerId: room.ownerId || "",
       mods: Array.from(room.mods.values()),
       knocks: room.knocks.slice(-50),
       banned: Array.from(room.banned.values()),
-      audit: room.audit.slice(-50),
     });
   }
 }
@@ -191,20 +157,6 @@ function leaveRoom(ws: Sock) {
   if (room.sockets.size === 0 && room.users.size === 0 && room.roomId !== "lobby") {
     rooms.delete(roomId);
   }
-}
-
-function removePending(room: RoomState, userId: string) {
-  const set = room.pending.get(userId);
-  if (set) {
-    for (const s of set) {
-      try { s.pendingRoomId = undefined; } catch {}
-    }
-  }
-  room.pending.delete(userId);
-}
-
-function removeKnock(room: RoomState, userId: string) {
-  room.knocks = room.knocks.filter((k) => k.userId !== userId);
 }
 
 function verifyToken(token?: string): AuthedUser | null {
@@ -236,35 +188,8 @@ function findSocketsByUser(room: RoomState, userId: string): Sock[] {
   return out;
 }
 
-function doJoin(ws: Sock, roomId: string) {
-  const room = getRoom(roomId);
-  if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
-
-  // first real user becomes owner
-  if (!room.ownerId) room.ownerId = ws.user!.id;
-
-  // banned gate
-  if (room.banned.has(ws.user!.id)) {
-    send(ws, { type: "room:banned", roomId });
-    return false;
-  }
-
-  // If switching rooms, leave old
-  if (ws.roomId && ws.roomId !== roomId) leaveRoom(ws);
-
-  ws.roomId = roomId;
-  ws.pendingRoomId = undefined;
-
-  room.sockets.add(ws);
-  room.pending.delete(ws.user!.id);
-
-  if (!room.users.has(ws.user!.id)) {
-    room.users.set(ws.user!.id, { id: ws.user!.id, name: ws.user!.name });
-    broadcast(room, { type: "presence:join", roomId, user: { id: ws.user!.id, name: ws.user!.name } });
-  }
-
-  publishState(room);
-  return true;
+function removeKnock(room: RoomState, userId: string) {
+  room.knocks = room.knocks.filter((k) => k.userId !== userId);
 }
 
 async function main() {
@@ -395,25 +320,14 @@ async function main() {
           return;
         }
 
+        // locked gate for non-mod
         const uid = ws.user.id;
-
-        // locked gate for non-mod => knock + pending
         if (room.locked && !isModOrOwner(room, uid)) {
           // enqueue knock (dedupe)
           if (!room.knocks.some((k) => k.userId === uid)) {
             room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
             if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
           }
-
-          // keep socket in pending so admit/deny can target it
-          let p = room.pending.get(uid);
-          if (!p) {
-            p = new Set<Sock>();
-            room.pending.set(uid, p);
-          }
-          p.add(ws);
-          ws.pendingRoomId = roomId;
-
           send(ws, { type: "room:knock:queued", roomId });
 
           // notify mods/owner
@@ -423,29 +337,26 @@ async function main() {
             if (!isModOrOwner(room, sid)) continue;
             send(s, { type: "room:knock", roomId, user: { id: uid, name: ws.user.name } });
           }
-
           publishState(room);
           return;
         }
 
-        doJoin(ws, roomId);
+        // If switching rooms, leave old
+        if (ws.roomId && ws.roomId !== roomId) leaveRoom(ws);
+
+        ws.roomId = roomId;
+        room.sockets.add(ws);
+
+        if (!room.users.has(ws.user.id)) {
+          room.users.set(ws.user.id, { id: ws.user.id, name: ws.user.name });
+          broadcast(room, { type: "presence:join", roomId, user: { id: ws.user.id, name: ws.user.name } });
+        }
+
+        publishState(room);
         return;
       }
 
       if (msg.type === "presence:leave") {
-        // if they were pending, just clear pending
-        if (ws.pendingRoomId) {
-          const rid = ws.pendingRoomId;
-          const r = rooms.get(rid);
-          if (r) {
-            const set = r.pending.get(ws.user.id);
-            if (set) set.delete(ws);
-            if (set && set.size === 0) r.pending.delete(ws.user.id);
-            ws.pendingRoomId = undefined;
-            publishState(r);
-          }
-          return;
-        }
         leaveRoom(ws);
         return;
       }
@@ -475,35 +386,20 @@ async function main() {
         return;
       }
 
-      // All admin/mod actions require a room context
-      const roomId = String(msg.roomId || ws.roomId || ws.pendingRoomId || "");
+      // All admin/mod actions require being in a room
+      const roomId = String(msg.roomId || ws.roomId || "");
       if (!roomId) return;
       const room = rooms.get(roomId);
       if (!room) return;
 
       const actorId = ws.user.id;
-      const actorName = ws.user.name;
       const actorIsMod = isModOrOwner(room, actorId);
       const actorIsOwner = isOwner(room, actorId);
-
-      // ---- Rename room ----
-      if (msg.type === "room:rename") {
-        if (!actorIsMod) return;
-        const nextName = String(msg.name || "").trim().slice(0, 64);
-        if (!nextName) return;
-        room.name = nextName;
-
-        audit(room, { type: "room:rename", actorId, actorName, note: nextName });
-        publishState(room);
-        broadcast(room, { type: "room:renamed", roomId, name: room.name });
-        return;
-      }
 
       // ---- Lock/Unlock ----
       if (msg.type === "room:lock") {
         if (!actorIsMod) return;
         room.locked = true;
-        audit(room, { type: "room:lock", actorId, actorName });
         publishState(room);
         broadcast(room, { type: "room:locked", roomId, locked: true });
         return;
@@ -511,13 +407,12 @@ async function main() {
       if (msg.type === "room:unlock") {
         if (!actorIsMod) return;
         room.locked = false;
-        audit(room, { type: "room:unlock", actorId, actorName });
         publishState(room);
         broadcast(room, { type: "room:locked", roomId, locked: false });
         return;
       }
 
-      // ---- Admit/Deny knocks (admit now auto-joins pending sockets) ----
+      // ---- Admit/Deny knocks ----
       if (msg.type === "room:admit") {
         if (!actorIsMod) return;
         const targetId = String(msg.userId || "");
@@ -525,17 +420,8 @@ async function main() {
 
         removeKnock(room, targetId);
 
-        const set = room.pending.get(targetId);
-        if (set && set.size) {
-          for (const s of set) {
-            if (!s.user || s.user.id !== targetId) continue;
-            doJoin(s, roomId);
-            send(s, { type: "room:admitted", roomId });
-          }
-        }
-        removePending(room, targetId);
-
-        audit(room, { type: "room:admit", actorId, actorName, targetId });
+        // allow join by sending a direct "admitted" hint (client will re-join)
+        send(ws, { type: "room:admit:ok", roomId, userId: targetId });
         publishState(room);
         return;
       }
@@ -544,19 +430,7 @@ async function main() {
         if (!actorIsMod) return;
         const targetId = String(msg.userId || "");
         if (!targetId) return;
-
         removeKnock(room, targetId);
-
-        const set = room.pending.get(targetId);
-        if (set && set.size) {
-          for (const s of set) {
-            send(s, { type: "room:denied", roomId });
-            try { s.pendingRoomId = undefined; } catch {}
-          }
-        }
-        removePending(room, targetId);
-
-        audit(room, { type: "room:deny", actorId, actorName, targetId });
         publishState(room);
         return;
       }
@@ -566,8 +440,9 @@ async function main() {
         if (!actorIsMod) return;
         const targetId = String(msg.userId || "");
         if (!targetId) return;
-        if (isOwner(room, targetId)) return;
+        if (isOwner(room, targetId)) return; // don't kick owner
 
+        // remove + disconnect their sockets
         room.users.delete(targetId);
         if (room.mods.has(targetId)) room.mods.delete(targetId);
 
@@ -577,7 +452,6 @@ async function main() {
         }
 
         broadcast(room, { type: "presence:leave", roomId, userId: targetId });
-        audit(room, { type: "mod:kick", actorId, actorName, targetId });
         publishState(room);
         return;
       }
@@ -601,7 +475,6 @@ async function main() {
         }
 
         broadcast(room, { type: "presence:leave", roomId, userId: targetId });
-        audit(room, { type: "mod:ban", actorId, actorName, targetId });
         publishState(room);
         return;
       }
@@ -611,7 +484,6 @@ async function main() {
         const targetId = String(msg.userId || "");
         if (!targetId) return;
         room.banned.delete(targetId);
-        audit(room, { type: "mod:unban", actorId, actorName, targetId });
         publishState(room);
         return;
       }
@@ -623,7 +495,6 @@ async function main() {
         if (!targetId) return;
         if (isOwner(room, targetId)) return;
         room.mods.add(targetId);
-        audit(room, { type: "mod:promote", actorId, actorName, targetId });
         publishState(room);
         return;
       }
@@ -634,22 +505,12 @@ async function main() {
         if (!targetId) return;
         if (isOwner(room, targetId)) return;
         room.mods.delete(targetId);
-        audit(room, { type: "mod:demote", actorId, actorName, targetId });
         publishState(room);
         return;
       }
     });
 
     ws.on("close", () => {
-      // if pending somewhere, clean it
-      if (ws.pendingRoomId && ws.user) {
-        const r = rooms.get(ws.pendingRoomId);
-        if (r) {
-          const set = r.pending.get(ws.user.id);
-          if (set) set.delete(ws);
-          if (set && set.size === 0) r.pending.delete(ws.user.id);
-        }
-      }
       leaveRoom(ws);
     });
   });
