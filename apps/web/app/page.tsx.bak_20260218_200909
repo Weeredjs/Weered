@@ -4,8 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWeered } from "../components/WeeredProvider";
-import LobbyCreateRoom from "../components/LobbyCreateRoom";
-import LobbyRoomsList from "../components/LobbyRoomsList";
 
 export default function HomePage() {
   const router = useRouter();
@@ -52,8 +50,6 @@ export default function HomePage() {
     <main style={{ padding: 18, fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
         <h2 style={{ margin: 0 }}>Weered Lobby</h2>
-          <LobbyRoomsList />
-          <LobbyCreateRoom />
         <button
           onClick={loadRooms}
           style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "#fff", cursor: "pointer" }}
@@ -136,5 +132,3 @@ export default function HomePage() {
     </main>
   );
 }
-
-

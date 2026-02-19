@@ -406,29 +406,16 @@ async function main() {
   });
 
   app.post("/auth/dev-login", async (req, reply) => {
-  const body: any = (req as any).body || {};
-  const raw = typeof body.username === "string" ? body.username : "";
-  let name = (raw || "").trim().slice(0, 32);
+    const body: any = (req as any).body || {};
+    const usernameRaw = typeof body.username === "string" ? body.username : "";
+    const username = (usernameRaw || "Guest").trim().slice(0, 32);
 
-  // If blank, avoid collisions by generating a guest handle
-  if (!name) {
-    const suf = Math.floor(Math.random() * 9000 + 1000);
-    name = `Guest-${suf}`;
-  }
-
-  const usernameKey = name.toLowerCase();
-
-  const u = await prisma.user.upsert({
-    where: { usernameKey },
-    update: { name },
-    create: { usernameKey, name },
+    const user = { id: randomUUID(), name: username };
+    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user });
   });
 
-  const user = { id: u.id, name: u.name || name };
-  const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
-
-  return reply.send({ token, user });
-});  app.post("/dev-login", async (req, reply) => {
+  app.post("/dev-login", async (req, reply) => {
     const r = await (app as any).inject({
       method: "POST",
       url: "/auth/dev-login",
@@ -901,4 +888,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

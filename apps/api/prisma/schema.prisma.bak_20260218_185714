@@ -79,10 +79,3 @@ model RoomAudit {
 
   @@index([roomId, ts])
 }
-model User {
-  id          String   @id @default(cuid())
-  usernameKey String   @unique
-  name        String   @default("")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
