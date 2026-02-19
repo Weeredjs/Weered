@@ -58,7 +58,7 @@ export default function LobbyRoomsList() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search rooms…"
-          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", minWidth: 240 }}
+          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd", minWidth: 240 }}
         />
         <div style={{ fontSize: 12, opacity: 0.7 }}>{rooms.length} shown</div>
       </div>
@@ -74,7 +74,7 @@ export default function LobbyRoomsList() {
             <div
               key={id || name}
               style={{
-                border: "1px solid var(--weered-border)",
+                border: "1px solid #eee",
                 borderRadius: 12,
                 padding: 10,
                 display: "flex",
@@ -91,12 +91,12 @@ export default function LobbyRoomsList() {
                     {name}
                   </div>
                   {locked ? (
-                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--weered-border)", opacity: 0.85 }}>
+                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid #ddd", opacity: 0.85 }}>
                       Locked
                     </span>
                   ) : null}
                   {typeof n === "number" ? (
-                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--weered-border)", opacity: 0.85 }}>
+                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid #ddd", opacity: 0.85 }}>
                       {n} online
                     </span>
                   ) : null}
@@ -109,7 +109,7 @@ export default function LobbyRoomsList() {
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); doJoin(r); }}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+                  style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
                 >
                   {locked ? "Knock" : "Join"}
                 </button>
@@ -125,4 +125,3 @@ export default function LobbyRoomsList() {
     </div>
   );
 }
-

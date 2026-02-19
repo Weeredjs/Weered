@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -35,7 +35,7 @@ export default function RoomActionsPanel(props: Props) {
       <div style={{ fontWeight: 800, marginBottom: 10 }}>Room Members</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {members.map((m) => (
-          <div key={m.id} style={{ display: 'flex', gap: 10, padding: 10, borderBottom: '1px solid var(--weered-border)' }}>
+          <div key={m.id} style={{ display: 'flex', gap: 10, padding: 10, borderBottom: '1px solid #ddd' }}>
             <div style={{ flex: 1 }}>{m.name} ({m.role})</div>
             <div>
               {m.role !== 'owner' && m.role !== 'admin' && (
@@ -47,14 +47,14 @@ export default function RoomActionsPanel(props: Props) {
         ))}
       </div>
 
-      <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--weered-border)', borderBottom: '1px solid var(--weered-border)' }}>
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #eee', borderBottom: '1px solid #eee' }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>Ban List</div>
         {bans.length === 0 ? (
           <div>No bans.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {bans.map((b) => (
-              <div key={b.userId} style={{ display: 'flex', gap: 10, padding: 10, borderBottom: '1px solid var(--weered-border)' }}>
+              <div key={b.userId} style={{ display: 'flex', gap: 10, padding: 10, borderBottom: '1px solid #ddd' }}>
                 <div style={{ flex: 1 }}>{b.displayName || b.userId}</div>
                 <div>{b.reason}</div>
               </div>

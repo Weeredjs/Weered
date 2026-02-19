@@ -38,7 +38,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
           <h2 style={{ margin: 0 }}>Room</h2>
           <div style={{ fontSize: 12, color: "#666" }}>id: {roomId}</div>
         </div>
-        <Link href="/" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", background: "#fff", textDecoration: "none" }}>
+        <Link href="/" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "#fff", textDecoration: "none" }}>
           Home
         </Link>
       </div>
@@ -49,14 +49,14 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
       </div>
 
       <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "260px 1fr", gap: 12 }}>
-        <aside style={{ border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, minHeight: 300 }}>
+        <aside style={{ border: "1px solid #eee", borderRadius: 14, padding: 12, minHeight: 300 }}>
           <div style={{ fontWeight: 900 }}>Presence</div>
           <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
             {users.length === 0 ? (
               <div style={{ color: "#777" }}>No users yet.</div>
             ) : (
               users.map((u) => (
-                <div key={u.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8 }}>
+                <div key={u.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8 }}>
                   <div style={{ fontWeight: 800, fontSize: 13 }}>{u.name}</div>
                   <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{u.id}</div>
                 </div>
@@ -65,14 +65,14 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
           </div>
         </aside>
 
-        <section style={{ border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, minHeight: 300, display: "flex", flexDirection: "column" }}>
+        <section style={{ border: "1px solid #eee", borderRadius: 14, padding: 12, minHeight: 300, display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, overflow: "auto", padding: 8, border: "1px solid #f1f1f1", borderRadius: 12 }}>
             {msgs.length === 0 ? (
               <div style={{ color: "#777", textAlign: "center", marginTop: 50 }}>No messages yet.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {msgs.map((m) => (
-                  <div key={m.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
+                  <div key={m.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 10 }}>
                     <div style={{ fontWeight: 900, fontSize: 13 }}>{m.user?.name || "?"}</div>
                     <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{m.body}</div>
                   </div>
@@ -87,13 +87,13 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
               placeholder={canChat ? "Message..." : "Chat disabled until joined/admitted"}
-              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
+              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
               disabled={!canChat}
             />
             <button
               onClick={doSend}
               disabled={!canSend || !canChat}
-              style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-border)", background: "#fff", cursor: "pointer", opacity: canSend && canChat ? 1 : 0.5 }}
+              style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #ddd", background: "#fff", cursor: "pointer", opacity: canSend && canChat ? 1 : 0.5 }}
             >
               Send
             </button>
@@ -109,8 +109,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 </main>
   );
 }
-
-
 
 
 

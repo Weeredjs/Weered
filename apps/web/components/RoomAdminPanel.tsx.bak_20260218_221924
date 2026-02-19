@@ -41,7 +41,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
           value={rename}
           onChange={(e) => setRename(e.target.value)}
           placeholder="Room name…"
-          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", minWidth: 220 }}
+          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd", minWidth: 220 }}
         />
         <button
           onClick={() => {
@@ -50,7 +50,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
             w.renameRoom(v);
             setRename("");
           }}
-          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
         >
           Rename
         </button>
@@ -58,14 +58,14 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
         {!locked ? (
           <button
             onClick={() => w.lockRoom()}
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
           >
             Lock
           </button>
         ) : (
           <button
             onClick={() => w.unlockRoom()}
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
           >
             Unlock
           </button>
@@ -82,15 +82,15 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
             {admin!.knocks!.slice().reverse().map((k) => (
               <div
                 key={k.userId}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: 8, border: "1px solid var(--weered-border)", borderRadius: 10 }}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: 8, border: "1px solid #eee", borderRadius: 10 }}
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{k.name}</div>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>{k.userId} · {fmt(k.ts)}</div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => w.admit(k.userId)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}>Admit</button>
-                  <button onClick={() => w.deny(k.userId)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}>Deny</button>
+                  <button onClick={() => w.admit(k.userId)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd" }}>Admit</button>
+                  <button onClick={() => w.deny(k.userId)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd" }}>Deny</button>
                 </div>
               </div>
             ))}
@@ -115,7 +115,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
               const canBan = isAdmin && !isMe && uRole !== "owner";
 
               return (
-                <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: 8, border: "1px solid var(--weered-border)", borderRadius: 10 }}>
+                <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: 8, border: "1px solid #eee", borderRadius: 10 }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {u.name} {isMe ? "(you)" : ""} <span style={{ fontSize: 12, opacity: 0.7 }}>· {uRole}</span>
@@ -124,16 +124,16 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                     {canPromote && (
-                      <button onClick={() => w.promote(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}>Promote</button>
+                      <button onClick={() => w.promote(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd" }}>Promote</button>
                     )}
                     {canDemote && (
-                      <button onClick={() => w.demote(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}>Demote</button>
+                      <button onClick={() => w.demote(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd" }}>Demote</button>
                     )}
                     {canKick && (
-                      <button onClick={() => w.kick(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}>Kick</button>
+                      <button onClick={() => w.kick(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd" }}>Kick</button>
                     )}
                     {canBan && (
-                      <button onClick={() => w.ban(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}>Ban</button>
+                      <button onClick={() => w.ban(u.id)} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd" }}>Ban</button>
                     )}
                   </div>
                 </div>
@@ -151,7 +151,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
             value={banInput}
             onChange={(e) => setBanInput(e.target.value)}
             placeholder="UserId to unban…"
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", minWidth: 240 }}
+            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd", minWidth: 240 }}
           />
           <button
             onClick={() => {
@@ -160,7 +160,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
               w.unban(v);
               setBanInput("");
             }}
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
           >
             Unban
           </button>
@@ -176,7 +176,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
         {(admin?.audit?.length || 0) === 0 ? (
           <div style={{ fontSize: 12, opacity: 0.7 }}>No audit yet.</div>
         ) : (
-          <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid var(--weered-border)", borderRadius: 10, padding: 8 }}>
+          <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid #eee", borderRadius: 10, padding: 8 }}>
             {admin!.audit!.slice().reverse().map((a) => (
               <div key={a.id} style={{ fontSize: 12, padding: "6px 0", borderBottom: "1px solid #f2f2f2" }}>
                 <div>
@@ -195,4 +195,3 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
     </div>
   );
 }
-

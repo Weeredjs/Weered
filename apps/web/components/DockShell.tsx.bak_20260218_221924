@@ -62,30 +62,30 @@ export default function DockShell() {
     width: open ? 480 : 120,
     maxHeight: open ? "78vh" : 44,
     overflow: "hidden",
-    border: "1px solid var(--weered-border)",
+    border: "1px solid #ddd",
     borderRadius: 12,
-    background: "var(--weered-panel)",
+    background: "white",
     boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
     zIndex: 9999,
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial",
   };
 
   const btn: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
+    border: "1px solid #ddd",
     borderRadius: 10,
     padding: "6px 10px",
-    background: "var(--weered-panel)",
+    background: "#fff",
     cursor: "pointer",
     fontSize: 13,
     lineHeight: "18px",
   };
 
   const pill: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
+    border: "1px solid #eee",
     borderRadius: 999,
     padding: "2px 8px",
     fontSize: 12,
-    background: "rgba(255,255,255,0.06)",
+    background: "#fafafa",
   };
 
   const small: React.CSSProperties = { fontSize: 12, color: "#666" };
@@ -97,7 +97,7 @@ export default function DockShell() {
 
   return (
     <div style={panel}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: open ? "1px solid var(--weered-border)" : "none", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: open ? "1px solid #eee" : "none", gap: 10 }}>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontWeight: 900, fontSize: 13 }}>Dock</div>
           {open ? (
@@ -125,7 +125,7 @@ export default function DockShell() {
         <div style={{ padding: 12, overflow: "auto", maxHeight: "calc(78vh - 52px)" }}>
           {/* Status banner */}
           {activeRoomId && !canChat ? (
-            <div style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10, marginBottom: 10, background: "rgba(255,255,255,0.06)" }}>
+            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 10, marginBottom: 10, background: "#fafafa" }}>
               <div style={{ fontWeight: 900, fontSize: 13 }}>Room status: {joinStatus}</div>
               <div style={small}>
                 {joinStatus === "knocking" ? "Room is locked. Your knock is queued; wait for admit." : null}
@@ -143,7 +143,7 @@ export default function DockShell() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {msgs.map((m) => (
-                  <div key={m.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
+                  <div key={m.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 10 }}>
                     <div style={{ fontWeight: 900, fontSize: 13 }}>
                       {m.user?.name || "?"} <span style={{ fontSize: 12, color: "#666" }}>({m.user?.role || "member"})</span>
                     </div>
@@ -160,7 +160,7 @@ export default function DockShell() {
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
               placeholder={canChat ? "Message..." : "Chat disabled until joined/admitted"}
-              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
+              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
               disabled={!canChat}
             />
             <button
@@ -179,7 +179,7 @@ export default function DockShell() {
             </div>
             <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
               {users.map((u) => (
-                <div key={u.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <div key={u.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: 13 }}>
                       {u.name} <span style={{ fontSize: 12, color: "#666" }}>({u.role || "member"})</span>
@@ -214,7 +214,7 @@ export default function DockShell() {
 
           {/* Mod Tools */}
           {isMod ? (
-            <div style={{ marginTop: 14, border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
+            <div style={{ marginTop: 14, border: "1px solid #eee", borderRadius: 12, padding: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontWeight: 900 }}>Mod Tools</div>
                 <button style={btn} onClick={() => setShowMod((v) => !v)}>{showMod ? "Hide" : "Show"}</button>
@@ -240,7 +240,7 @@ export default function DockShell() {
                       value={roomNameDraft}
                       onChange={(e) => setRoomNameDraft(e.target.value)}
                       placeholder="Rename room…"
-                      style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
+                      style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
                     />
                     <button
                       style={{ ...btn, padding: "10px 12px", opacity: roomNameDraft.trim() ? 1 : 0.5 }}
@@ -257,7 +257,7 @@ export default function DockShell() {
                     {admin?.knocks?.length ? (
                       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                         {admin.knocks.map((k) => (
-                          <div key={k.userId} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                          <div key={k.userId} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontWeight: 800 }}>{k.name}</div>
                               <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{k.userId}</div>
@@ -281,7 +281,7 @@ export default function DockShell() {
                     {admin?.banned?.length ? (
                       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                         {admin.banned.map((id) => (
-                          <div key={id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
+                          <div key={id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
                             <div style={{ fontSize: 12, color: "#666", wordBreak: "break-all" }}>{id}</div>
                             <button style={btn} onClick={() => unban(id)}>Unban</button>
                           </div>
@@ -298,7 +298,7 @@ export default function DockShell() {
                     {admin?.audit?.length ? (
                       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                         {[...admin.audit].slice(-20).reverse().map((a) => (
-                          <div key={a.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8 }}>
+                          <div key={a.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8 }}>
                             <div style={{ fontSize: 12 }}>
                               <b>{a.type}</b> • {fmtTs(a.ts)}
                             </div>
@@ -321,5 +321,3 @@ export default function DockShell() {
     </div>
   );
 }
-
-
