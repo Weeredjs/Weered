@@ -104,7 +104,7 @@ export default function LobbyCreateRoom() {
     <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       <button
         onClick={() => { setStatus(""); setOpen(true); }}
-        style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+        style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
       >
         + Create room
       </button>
@@ -127,7 +127,7 @@ export default function LobbyCreateRoom() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: "min(520px, 96vw)", background: "#fff", borderRadius: 14, padding: 14, border: "1px solid var(--weered-border)" }}
+            style={{ width: "min(520px, 96vw)", background: "#fff", borderRadius: 14, padding: 14, border: "1px solid #eee" }}
           >
             <div style={{ fontWeight: 800, fontSize: 16 }}>Create Room</div>
 
@@ -136,26 +136,26 @@ export default function LobbyCreateRoom() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Room name (optional)…"
-                style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-border)" }}
+                style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #ddd" }}
               />
               <input
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
                 placeholder="Custom room id (optional, e.g. dev-hangout)…"
-                style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-border)" }}
+                style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #ddd" }}
               />
             </div>
 
             <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <button
                 onClick={() => setOpen(false)}
-                style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+                style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #ddd" }}
               >
                 Cancel
               </button>
               <button
                 onClick={onCreate}
-                style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+                style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #ddd" }}
               >
                 Create
               </button>
@@ -166,4 +166,3 @@ export default function LobbyCreateRoom() {
     </div>
   );
 }
-

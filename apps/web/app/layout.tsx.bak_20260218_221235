@@ -1,8 +1,5 @@
-﻿import "./globals.css";
-import React from "react";
-import "./globals.css";
+﻿import React from "react";
 import { WeeredProvider } from "../components/WeeredProvider";
-import "./globals.css";
 import DockShell from "../components/DockShell";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,4 +14,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

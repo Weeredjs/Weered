@@ -25,13 +25,13 @@ export default function RoomTools({ roomId }: { roomId: string }) {
   const isMod = role === "mod" || role === "owner";
 
   const card: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
+    border: "1px solid #eee",
     borderRadius: 14,
     padding: 12,
     background: "white",
   };
   const btn: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
+    border: "1px solid #ddd",
     borderRadius: 10,
     padding: "6px 10px",
     background: "#fff",
@@ -39,7 +39,7 @@ export default function RoomTools({ roomId }: { roomId: string }) {
     fontSize: 13,
   };
   const pill: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
+    border: "1px solid #eee",
     borderRadius: 999,
     padding: "2px 8px",
     fontSize: 12,
@@ -76,7 +76,7 @@ export default function RoomTools({ roomId }: { roomId: string }) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Rename room…"
-              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
+              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid #ddd" }}
             />
             <button
               style={{ ...btn, padding: "10px 12px", opacity: draft.trim() ? 1 : 0.5 }}
@@ -93,7 +93,7 @@ export default function RoomTools({ roomId }: { roomId: string }) {
               <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{admin?.knocks?.length ?? 0}</div>
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                 {(admin?.knocks || []).slice(-10).reverse().map((k) => (
-                  <div key={k.userId} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <div key={k.userId} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 800, fontSize: 13 }}>{k.name}</div>
                       <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{k.userId}</div>
@@ -112,7 +112,7 @@ export default function RoomTools({ roomId }: { roomId: string }) {
               <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{admin?.banned?.length ?? 0}</div>
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                 {(admin?.banned || []).slice(-10).reverse().map((id) => (
-                  <div key={id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <div key={id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{id}</div>
                     <button style={btn} onClick={() => unban(id)}>Unban</button>
                   </div>
@@ -125,4 +125,3 @@ export default function RoomTools({ roomId }: { roomId: string }) {
     </div>
   );
 }
-

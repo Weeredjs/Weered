@@ -32,7 +32,7 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     const list: { id: string; name: string; isLocal: boolean }[] = [];
     if (r.localParticipant) list.push({ id: r.localParticipant.identity, name: r.localParticipant.name || "Me", isLocal: true });
 
-    (((r as any).participants ?? (r as any).remoteParticipants) ?? new Map()).forEach((p) => {
+    r.participants.forEach((p) => {
       list.push({ id: p.identity, name: p.name || p.identity, isLocal: false });
     });
 
@@ -132,9 +132,9 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const card: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, background: "white" };
-  const btn: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 10, padding: "6px 10px", background: "#fff", cursor: "pointer", fontSize: 13 };
-  const pill: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 999, padding: "2px 8px", fontSize: 12, background: "#fafafa" };
+  const card: React.CSSProperties = { border: "1px solid #eee", borderRadius: 14, padding: 12, background: "white" };
+  const btn: React.CSSProperties = { border: "1px solid #ddd", borderRadius: 10, padding: "6px 10px", background: "#fff", cursor: "pointer", fontSize: 13 };
+  const pill: React.CSSProperties = { border: "1px solid #eee", borderRadius: 999, padding: "2px 8px", fontSize: 12, background: "#fafafa" };
 
   return (
     <div style={card}>
@@ -180,5 +180,3 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     </div>
   );
 }
-
-

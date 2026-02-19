@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* ---- previous custom styles (preserved) ---- */
+/* Weered globals (minimal, safe) */
+html, body {
+  padding: 0;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}

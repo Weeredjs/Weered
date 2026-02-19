@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { apiBase } from "../apiBase";
 import { applyAuthPayload } from '../weeredClient';
@@ -40,7 +40,7 @@ export default function LoginPage() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid var(--weered-border)' }}
+          style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
           placeholder="Your display name"
         />
         <button onClick={login} style={{ padding: '10px 14px' }}>Login</button>
@@ -49,4 +49,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

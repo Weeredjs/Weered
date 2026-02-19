@@ -8,7 +8,6 @@ rtc:
   port_range_end: 50100
   tcp_port: 7881
   use_external_ip: false
-  node_ip: 192.168.0.106
 keys:
   weered_dev: weered_dev_secret_1234567890
   devkey: devsecret
@@ -23,6 +22,4 @@ room:
   empty_timeout: 300
   departure_timeout: 20
   max_participants: 0
-
-
 
