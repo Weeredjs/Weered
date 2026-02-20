@@ -1,13 +1,118 @@
 ﻿"use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 
-function fmtTs(ts: number) {
-  try { return new Date(ts).toLocaleTimeString(); } catch { return String(ts); }
+type DmMsg = { id: string; at: number; from: "me" | "them"; body: string };
+type DmThread = { id: string; peer: string; peerId?: string; msgs: DmMsg[] };
+
+const DM_KEY = "weered_dm_threads_v0";
+
+function __id() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function pickFirstString(...vals: any[]): string {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+function b64UrlDecode(input: string): string {
+  try {
+    const s = String(input || "").replace(/-/g, "+").replace(/_/g, "/");
+    const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
+    const raw = atob(s + pad);
+    const pct = Array.prototype.map
+      .call(raw, (c: string) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+      .join("");
+    return decodeURIComponent(pct);
+  } catch {
+    try {
+      return atob(String(input || ""));
+    } catch {
+      return "";
+    }
+  }
+}
+
+function decodeJwtClaims(token?: string | null): any {
+  try {
+    const t = String(token || "");
+    const parts = t.split(".");
+    if (parts.length !== 3) return null;
+    const json = b64UrlDecode(parts[1]);
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
+}
+
+function normRole(v: any): string {
+  const s = String(v || "").trim();
+  return s ? s.toUpperCase() : "";
+}
+
+function globalIcon(role: string): string {
+  const r = normRole(role);
+  if (r === "GOD") return "👑";
+  if (r === "ADMIN") return "🛡️";
+  if (r === "STAFF") return "🧰";
+  if (r === "MOD") return "🔧";
+  if (r === "VIP") return "⭐";
+  return "🏷️";
+}
+
+function Pill(props: { label: string; title?: string; tone?: "violet" | "slate" | "green" | "amber" | "red" }) {
+  const tone = props.tone || "slate";
+  const bg =
+    tone === "violet"
+      ? "rgba(124,58,237,.18)"
+      : tone === "green"
+      ? "rgba(16,185,129,.16)"
+      : tone === "amber"
+      ? "rgba(245,158,11,.16)"
+      : tone === "red"
+      ? "rgba(239,68,68,.16)"
+      : "rgba(148,163,184,.14)";
+  const bd =
+    tone === "violet"
+      ? "rgba(217,70,239,.35)"
+      : tone === "green"
+      ? "rgba(16,185,129,.35)"
+      : tone === "amber"
+      ? "rgba(245,158,11,.35)"
+      : tone === "red"
+      ? "rgba(239,68,68,.35)"
+      : "rgba(148,163,184,.22)";
+
+  return (
+    <span
+      title={props.title || props.label}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "2px 8px",
+        borderRadius: 999,
+        border: `1px solid ${bd}`,
+        background: bg,
+        color: "rgba(229,231,235,.95)",
+        fontSize: 11,
+        lineHeight: "16px",
+        fontWeight: 800,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {props.label}
+    </span>
+  );
 }
 
 export default function DockShell() {
+  const ctx: any = (useWeered?.() as any) || {};
+
   const {
     me,
     authed,
@@ -23,303 +128,470 @@ export default function DockShell() {
     joinStatus,
     sendChat,
     logout,
-
     renameRoom,
-
     lockRoom,
     unlockRoom,
-    promote,
-    demote,
-    kick,
-    ban,
-    unban,
+    knock,
     admit,
-    deny,
-  } = useWeered();
+  } = ctx || {};
 
   const [open, setOpen] = useState(true);
+  const [tab, setTab] = useState<"room" | "dms">("room");
   const [text, setText] = useState("");
-  const [showMod, setShowMod] = useState(true);
-  const [roomNameDraft, setRoomNameDraft] = useState("");
 
-  const canSend = useMemo(() => Boolean((text || "").trim()), [text]);
-  const canChat = useMemo(
-    () => activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && joinStatus === "joined",
-    [activeRoomId, joinedRoomId, joinStatus]
-  );
+  const viewId = String(activeRoomId || "");
+  const joinedId = String(joinedRoomId || "");
+  const needJoin = !!viewId && viewId !== joinedId;
 
-  function doSend() {
-    const body = (text || "").trim();
-    if (!body) return;
-    sendChat(body);
-    setText("");
+  const wsUp = useMemo(() => {
+    if (!!wsReady) return true;
+    if (wsState === 1) return true;
+    if (typeof wsState === "string" && wsState.toLowerCase() === "open") return true;
+    return false;
+  }, [wsReady, wsState]);
+
+  const tokenMaybe = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return (
+      pickFirstString(
+        ctx?.token,
+        ctx?.authToken,
+        ctx?.jwt,
+        ctx?.auth?.token,
+        ctx?.session?.token,
+        me?.token,
+        me?.jwt
+      ) ||
+      pickFirstString(
+        localStorage.getItem("weered_token"),
+        localStorage.getItem("token"),
+        localStorage.getItem("auth_token"),
+        localStorage.getItem("jwt"),
+        localStorage.getItem("weered.jwt"),
+        localStorage.getItem("weered.auth")
+      )
+    );
+  }, [ctx, me]);
+
+  const claims = useMemo(() => decodeJwtClaims(tokenMaybe), [tokenMaybe]);
+
+  const globalRole = useMemo(() => {
+    const gr = pickFirstString(
+      me?.globalRole,
+      me?.global_role,
+      me?.user?.globalRole,
+      me?.user?.global_role,
+      claims?.globalRole,
+      claims?.global_role,
+      claims?.gr
+    );
+    return normRole(gr);
+  }, [me, claims]);
+
+  const meName = pickFirstString(me?.name, me?.username, "Guest");
+  const roomTitle = pickFirstString(meta?.name, viewId, "—");
+  const roomRole = normRole(pickFirstString(role, joinStatus?.role));
+
+  // ---- DM state (local-only v0)
+  const [dmThreads, setDmThreads] = useState<DmThread[]>([]);
+  const [dmActiveId, setDmActiveId] = useState<string>("");
+  const [dmPeer, setDmPeer] = useState("");
+  const [dmDraft, setDmDraft] = useState("");
+  const dmEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(DM_KEY) || "[]";
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) setDmThreads(arr);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(DM_KEY, JSON.stringify(dmThreads || []));
+    } catch {}
+  }, [dmThreads]);
+
+  useEffect(() => {
+    try { dmEndRef.current?.scrollIntoView({ behavior: "smooth" }); } catch {}
+  }, [dmActiveId, dmThreads]);
+
+  const dmActive = useMemo(() => dmThreads.find((t) => t.id === dmActiveId) || null, [dmThreads, dmActiveId]);
+
+  function call(fn: any, ...args: any[]) {
+    try { if (typeof fn === "function") return fn(...args); } catch {}
+    return undefined;
+  }
+
+  function sendRoomChat(body: string) {
+    const b = String(body || "").trim();
+    if (!b) return;
+
+    try { if (typeof sendChat === "function") { sendChat(b); return; } } catch {}
+    try { if (typeof sendChat === "function") { sendChat(viewId || joinedId, b); return; } } catch {}
+    try { if (typeof sendChat === "function") { sendChat({ roomId: viewId || joinedId, body: b }); return; } } catch {}
+  }
+
+  function dmCreateThread() {
+    const peer = dmPeer.trim();
+    if (!peer) return;
+    const existing = dmThreads.find((t) => t.peer.toLowerCase() === peer.toLowerCase());
+    if (existing) { setDmActiveId(existing.id); setDmPeer(""); return; }
+    const t: DmThread = { id: __id(), peer, msgs: [] };
+    const next = [t, ...(dmThreads || [])];
+    setDmThreads(next);
+    setDmActiveId(t.id);
+    setDmPeer("");
+  }
+
+  function dmSend() {
+    if (!dmActive) return;
+    const b = dmDraft.trim();
+    if (!b) return;
+    const m: DmMsg = { id: __id(), at: Date.now(), from: "me", body: b };
+    const next = dmThreads.map((t) => (t.id === dmActive.id ? { ...t, msgs: [...(t.msgs || []), m] } : t));
+    setDmThreads(next);
+    setDmDraft("");
   }
 
   const panel: React.CSSProperties = {
     position: "fixed",
-    right: 12,
-    bottom: 12,
-    width: open ? 480 : 120,
-    maxHeight: open ? "78vh" : 44,
+    right: 14,
+    top: 88,
+    width: 360,
+    maxWidth: "92vw",
+    height: "calc(100vh - 110px)",
+    background: "rgba(11,15,26,.86)",
+    border: "1px solid rgba(148,163,184,.18)",
+    borderRadius: 16,
+    boxShadow: "0 16px 60px rgba(0,0,0,.45)",
+    backdropFilter: "blur(10px)",
     overflow: "hidden",
-    border: "1px solid var(--weered-border)",
-    borderRadius: 12,
-    background: "var(--weered-panel)",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
     zIndex: 9999,
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial",
+    color: "rgba(229,231,235,.96)",
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
   };
 
   const btn: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
-    borderRadius: 10,
     padding: "6px 10px",
-    background: "var(--weered-panel)",
+    borderRadius: 10,
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(255,255,255,.06)",
+    color: "rgba(229,231,235,.95)",
     cursor: "pointer",
-    fontSize: 13,
-    lineHeight: "18px",
-  };
-
-  const pill: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
-    borderRadius: 999,
-    padding: "2px 8px",
+    fontWeight: 800,
     fontSize: 12,
-    background: "rgba(255,255,255,0.06)",
   };
 
-  const small: React.CSSProperties = { fontSize: 12, color: "#666" };
+  const btnActive: React.CSSProperties = {
+    ...btn,
+    border: "1px solid rgba(217,70,239,.35)",
+    background: "rgba(124,58,237,.18)",
+  };
 
-  const isMod = role === "mod" || role === "owner";
-  const isOwner = role === "owner";
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: 14,
+          top: 88,
+          zIndex: 9999,
+          padding: "8px 12px",
+          borderRadius: 999,
+          border: "1px solid rgba(217,70,239,.35)",
+          background: "rgba(124,58,237,.18)",
+          color: "rgba(229,231,235,.95)",
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+      >
+        Dock
+      </button>
+    );
+  }
 
-  const roomTitle = meta?.name || activeRoomId || "—";
+  const userArr: any[] = Array.isArray(users) ? users : [];
+  const msgArr: any[] = Array.isArray(msgs) ? msgs : [];
 
   return (
     <div style={panel}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: open ? "1px solid var(--weered-border)" : "none", gap: 10 }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontWeight: 900, fontSize: 13 }}>Dock</div>
-          {open ? (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-              <span style={pill}>room: {roomTitle}</span>
-              <span style={pill}>view: {activeRoomId || "—"}</span>
-              <span style={pill}>joined: {joinedRoomId || "—"}</span>
-              <span style={pill}>users: {users.length}</span>
-              <span style={pill}>{wsReady ? "ws: up" : `ws: ${wsState}`}</span>
-              <span style={pill}>me: {me?.name || "—"}</span>
-              <span style={pill}>role: {role}</span>
-              {meta?.locked ? <span style={{ ...pill, borderColor: "#f3c" }}>locked</span> : null}
-              {!authed ? <span style={{ ...pill, borderColor: "#f3c" }}>not logged in</span> : null}
-            </div>
-          ) : null}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: "1px solid rgba(148,163,184,.12)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div style={{ fontWeight: 950, letterSpacing: ".2px" }}>Dock</div>
+          {globalRole ? <Pill tone="violet" label={`global: ${globalIcon(globalRole)} ${globalRole}`} /> : null}
         </div>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={btn} onClick={() => setOpen((v) => !v)}>{open ? "Close" : "Open"}</button>
-          <button style={btn} onClick={logout}>Logout</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button style={tab === "room" ? btnActive : btn} onClick={() => setTab("room")}>Room</button>
+          <button style={tab === "dms" ? btnActive : btn} onClick={() => setTab("dms")}>DMs</button>
+          <button style={btn} onClick={() => setOpen(false)}>Close</button>
         </div>
       </div>
 
-      {open ? (
-        <div style={{ padding: 12, overflow: "auto", maxHeight: "calc(78vh - 52px)" }}>
-          {/* Status banner */}
-          {activeRoomId && !canChat ? (
-            <div style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10, marginBottom: 10, background: "rgba(255,255,255,0.06)" }}>
-              <div style={{ fontWeight: 900, fontSize: 13 }}>Room status: {joinStatus}</div>
-              <div style={small}>
-                {joinStatus === "knocking" ? "Room is locked. Your knock is queued; wait for admit." : null}
-                {joinStatus === "banned" ? "You are banned from this room." : null}
-                {joinStatus === "denied" ? "You were denied entry." : null}
-                {joinStatus === "joining" ? "Joining…" : null}
-              </div>
-            </div>
-          ) : null}
-
-          {/* Chat */}
-          <div style={{ border: "1px solid #f1f1f1", borderRadius: 12, padding: 10, minHeight: 160, maxHeight: 300, overflow: "auto" }}>
-            {msgs.length === 0 ? (
-              <div style={{ color: "#777", textAlign: "center", paddingTop: 40 }}>No messages yet.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {msgs.map((m) => (
-                  <div key={m.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
-                    <div style={{ fontWeight: 900, fontSize: 13 }}>
-                      {m.user?.name || "?"} <span style={{ fontSize: 12, color: "#666" }}>({m.user?.role || "member"})</span>
-                    </div>
-                    <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{m.body}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
-              placeholder={canChat ? "Message..." : "Chat disabled until joined/admitted"}
-              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
-              disabled={!canChat}
-            />
-            <button
-              style={{ ...btn, padding: "10px 12px", opacity: canSend && canChat ? 1 : 0.5 }}
-              disabled={!canSend || !canChat}
-              onClick={doSend}
-            >
-              Send
-            </button>
-          </div>
-
-          {/* Presence */}
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontWeight: 900, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
-              <span>Presence</span><span style={pill}>{users.length}</span>
-            </div>
-            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-              {users.map((u) => (
-                <div key={u.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: 13 }}>
-                      {u.name} <span style={{ fontSize: 12, color: "#666" }}>({u.role || "member"})</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{u.id}</div>
-                  </div>
-
-                  {isMod ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
-                      {isOwner && u.role !== "owner" ? (
-                        <>
-                          {u.role === "mod" ? (
-                            <button style={btn} onClick={() => demote(u.id)}>Demote</button>
-                          ) : (
-                            <button style={btn} onClick={() => promote(u.id)}>Promote</button>
-                          )}
-                        </>
-                      ) : null}
-
-                      {u.role !== "owner" ? (
-                        <>
-                          <button style={btn} onClick={() => kick(u.id)}>Kick</button>
-                          <button style={btn} onClick={() => ban(u.id)}>Ban</button>
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Mod Tools */}
-          {isMod ? (
-            <div style={{ marginTop: 14, border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontWeight: 900 }}>Mod Tools</div>
-                <button style={btn} onClick={() => setShowMod((v) => !v)}>{showMod ? "Hide" : "Show"}</button>
-              </div>
-
-              {showMod ? (
-                <>
-                  <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
-                    {meta?.locked ? (
-                      <button style={btn} onClick={unlockRoom}>Unlock Room</button>
-                    ) : (
-                      <button style={btn} onClick={lockRoom}>Lock Room</button>
-                    )}
-
-                    <span style={pill}>knocks: {admin?.knocks?.length ?? 0}</span>
-                    <span style={pill}>banned: {admin?.banned?.length ?? 0}</span>
-                    <span style={pill}>audit: {admin?.audit?.length ?? 0}</span>
-                  </div>
-
-                  {/* Rename */}
-                  <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-                    <input
-                      value={roomNameDraft}
-                      onChange={(e) => setRoomNameDraft(e.target.value)}
-                      placeholder="Rename room…"
-                      style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
-                    />
-                    <button
-                      style={{ ...btn, padding: "10px 12px", opacity: roomNameDraft.trim() ? 1 : 0.5 }}
-                      disabled={!roomNameDraft.trim()}
-                      onClick={() => { renameRoom(roomNameDraft.trim()); setRoomNameDraft(""); }}
-                    >
-                      Rename
-                    </button>
-                  </div>
-
-                  {/* Knocks */}
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontWeight: 900, fontSize: 13 }}>Knock Queue</div>
-                    {admin?.knocks?.length ? (
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                        {admin.knocks.map((k) => (
-                          <div key={k.userId} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 800 }}>{k.name}</div>
-                              <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{k.userId}</div>
-                            </div>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              <button style={btn} onClick={() => admit(k.userId)}>Admit</button>
-                              <button style={btn} onClick={() => deny(k.userId)}>Deny</button>
-                              <button style={btn} onClick={() => ban(k.userId)}>Ban</button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={small}>No knocks.</div>
-                    )}
-                  </div>
-
-                  {/* Banned */}
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontWeight: 900, fontSize: 13 }}>Banned</div>
-                    {admin?.banned?.length ? (
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                        {admin.banned.map((id) => (
-                          <div key={id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 10 }}>
-                            <div style={{ fontSize: 12, color: "#666", wordBreak: "break-all" }}>{id}</div>
-                            <button style={btn} onClick={() => unban(id)}>Unban</button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={small}>No bans.</div>
-                    )}
-                  </div>
-
-                  {/* Audit */}
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontWeight: 900, fontSize: 13 }}>Audit Log</div>
-                    {admin?.audit?.length ? (
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                        {[...admin.audit].slice(-20).reverse().map((a) => (
-                          <div key={a.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8 }}>
-                            <div style={{ fontSize: 12 }}>
-                              <b>{a.type}</b> • {fmtTs(a.ts)}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                              by <b>{a.actorName}</b>{a.targetId ? ` → ${a.targetId}` : ""}{a.note ? ` • ${a.note}` : ""}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={small}>No audit yet.</div>
-                    )}
-                  </div>
-                </>
-              ) : null}
-            </div>
-          ) : null}
+      <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          <Pill tone={wsUp ? "green" : "red"} label={`ws: ${wsUp ? "up" : "down"}`} />
+          <Pill tone="slate" label={`me: ${meName}`} />
+          <Pill tone="slate" label={`role: ${roomRole || "none"}`} />
+          <Pill tone="slate" label={`room: ${roomTitle}`} />
+          {typeof logout === "function" ? <button style={btn} onClick={() => call(logout)}>Logout</button> : null}
         </div>
-      ) : null}
+
+        {tab === "room" ? (
+          <>
+            {needJoin ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <Pill tone="amber" label="chat disabled until joined/admitted" />
+                {typeof knock === "function" ? <button style={btn} onClick={() => call(knock, viewId)}>Knock</button> : null}
+                {typeof admit === "function" ? <button style={btn} onClick={() => call(admit, viewId, me?.id)}>Join</button> : null}
+              </div>
+            ) : null}
+
+            <div style={{ border: "1px solid rgba(148,163,184,.14)", borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(148,163,184,.12)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
+                Room chat (dock mirror)
+              </div>
+              <div style={{ padding: 10, height: 190, overflow: "auto" }}>
+                {msgArr.length ? (
+                  msgArr.slice(-80).map((m: any, i: number) => {
+                    const who = pickFirstString(m?.user?.name, m?.name, m?.from, "—");
+                    const body = pickFirstString(m?.body, m?.text, "");
+                    return (
+                      <div key={m?.id || i} style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, opacity: 0.7 }}>{who}</div>
+                        <div style={{ fontSize: 13, lineHeight: "18px" }}>{body}</div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ opacity: 0.6, fontSize: 12 }}>No messages yet.</div>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8, padding: 10, borderTop: "1px solid rgba(148,163,184,.12)" }}>
+                <input
+                  value={text}
+                  onChange={(e) => setText((e.target as any).value || "")}
+                  placeholder="Message…"
+                  style={{
+                    flex: 1,
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(148,163,184,.18)",
+                    background: "rgba(255,255,255,.06)",
+                    color: "rgba(229,231,235,.95)",
+                    outline: "none",
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e as any).key === "Enter") {
+                      sendRoomChat(text);
+                      setText("");
+                    }
+                  }}
+                />
+                <button
+                  style={btn}
+                  onClick={() => {
+                    sendRoomChat(text);
+                    setText("");
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid rgba(148,163,184,.14)", borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(148,163,184,.12)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
+                Presence ({userArr.length})
+              </div>
+              <div style={{ maxHeight: 200, overflow: "auto" }}>
+                {userArr.length ? (
+                  userArr.map((u: any) => {
+                    const uname = pickFirstString(u?.name, u?.username, "—");
+                    const ugr = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.user?.globalRole, u?.user?.global_role));
+                    const ur = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
+                    const isMe = !!me?.id && u?.id === me?.id;
+                    return (
+                      <div key={u?.id || uname} style={{ padding: "10px 10px", borderBottom: "1px solid rgba(148,163,184,.08)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 900 }}>{uname}{isMe ? " (you)" : ""}</span>
+                          {ugr ? <Pill tone="violet" label={`${globalIcon(ugr)} ${ugr}`} /> : null}
+                          {ur ? <Pill tone="slate" label={`room: ${ur}`} /> : null}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ padding: 10, opacity: 0.6, fontSize: 12 }}>No users yet.</div>
+                )}
+              </div>
+            </div>
+
+            {(admin || roomRole === "OWNER" || roomRole === "MOD") ? (
+              <div style={{ border: "1px solid rgba(148,163,184,.14)", borderRadius: 14, overflow: "hidden" }}>
+                <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(148,163,184,.12)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
+                  Mod tools (light)
+                </div>
+                <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {typeof lockRoom === "function" ? <button style={btn} onClick={() => call(lockRoom, viewId)}>Lock</button> : null}
+                    {typeof unlockRoom === "function" ? <button style={btn} onClick={() => call(unlockRoom, viewId)}>Unlock</button> : null}
+                    {typeof renameRoom === "function" ? (
+                      <button
+                        style={btn}
+                        onClick={() => {
+                          const next = prompt("New room name?");
+                          if (next) call(renameRoom, viewId, next);
+                        }}
+                      >
+                        Rename…
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div style={{ border: "1px solid rgba(148,163,184,.14)", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(148,163,184,.12)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
+              Private messages (local-only v0)
+            </div>
+
+            <div style={{ padding: 10, display: "flex", gap: 10 }}>
+              <div style={{ width: 150, flex: "0 0 150px" }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                  <input
+                    value={dmPeer}
+                    onChange={(e) => setDmPeer((e.target as any).value || "")}
+                    placeholder="Username…"
+                    style={{
+                      flex: 1,
+                      padding: "8px 10px",
+                      borderRadius: 12,
+                      border: "1px solid rgba(148,163,184,.18)",
+                      background: "rgba(255,255,255,.06)",
+                      color: "rgba(229,231,235,.95)",
+                      outline: "none",
+                      fontSize: 12,
+                    }}
+                    onKeyDown={(e) => { if ((e as any).key === "Enter") dmCreateThread(); }}
+                  />
+                  <button style={btn} onClick={dmCreateThread}>+</button>
+                </div>
+
+                <div style={{ border: "1px solid rgba(148,163,184,.12)", borderRadius: 12, overflow: "hidden" }}>
+                  {(dmThreads || []).length ? (
+                    (dmThreads || []).map((t) => {
+                      const active = t.id === dmActiveId;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => setDmActiveId(t.id)}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            padding: "10px 10px",
+                            border: "0",
+                            borderBottom: "1px solid rgba(148,163,184,.08)",
+                            background: active ? "rgba(124,58,237,.18)" : "transparent",
+                            color: "rgba(229,231,235,.95)",
+                            cursor: "pointer",
+                            fontWeight: 900,
+                            fontSize: 12,
+                          }}
+                        >
+                          @{t.peer}
+                          <div style={{ opacity: 0.6, fontWeight: 700, fontSize: 11, marginTop: 2 }}>
+                            {(t.msgs || []).length} msg
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: 10, opacity: 0.6, fontSize: 12 }}>No threads yet.</div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {dmActive ? (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ fontWeight: 950 }}>@{dmActive.peer}</div>
+                      <button
+                        style={btn}
+                        onClick={() => {
+                          const next = (dmThreads || []).filter((t) => t.id !== dmActive.id);
+                          setDmThreads(next);
+                          setDmActiveId(next[0]?.id || "");
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+
+                    <div style={{ height: 230, overflow: "auto", padding: 10, borderRadius: 12, border: "1px solid rgba(148,163,184,.12)" }}>
+                      {(dmActive.msgs || []).length ? (
+                        dmActive.msgs.map((m) => (
+                          <div key={m.id} style={{ marginBottom: 10, display: "flex", justifyContent: m.from === "me" ? "flex-end" : "flex-start" }}>
+                            <div
+                              style={{
+                                maxWidth: "85%",
+                                padding: "8px 10px",
+                                borderRadius: 12,
+                                border: "1px solid rgba(148,163,184,.14)",
+                                background: m.from === "me" ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.06)",
+                              }}
+                            >
+                              <div style={{ fontSize: 13, lineHeight: "18px" }}>{m.body}</div>
+                              <div style={{ opacity: 0.6, fontSize: 11, marginTop: 4 }}>
+                                {new Date(m.at).toLocaleTimeString()}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ opacity: 0.6, fontSize: 12 }}>No messages yet.</div>
+                      )}
+                      <div ref={dmEndRef} />
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <input
+                        value={dmDraft}
+                        onChange={(e) => setDmDraft((e.target as any).value || "")}
+                        placeholder="Message…"
+                        style={{
+                          flex: 1,
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          border: "1px solid rgba(148,163,184,.18)",
+                          background: "rgba(255,255,255,.06)",
+                          color: "rgba(229,231,235,.95)",
+                          outline: "none",
+                        }}
+                        onKeyDown={(e) => { if ((e as any).key === "Enter") dmSend(); }}
+                      />
+                      <button style={btn} onClick={dmSend}>Send</button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ opacity: 0.6, fontSize: 12 }}>Select a thread or create one.</div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ padding: "8px 10px", borderTop: "1px solid rgba(148,163,184,.12)", opacity: 0.65, fontSize: 12 }}>
+              v0 = localStorage only. Next: wire DMs to API + WS routing.
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-
