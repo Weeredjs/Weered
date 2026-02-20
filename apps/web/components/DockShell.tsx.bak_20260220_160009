@@ -292,8 +292,8 @@ const viewId = String(activeRoomId || "");
           width: "100%",
           maxWidth: "100%",
           height: "calc(100vh - 32px)",
-          background: "rgba(17,24,39,.94)",
-          border: "1px solid rgba(148,163,184,.26)",
+          background: "rgba(11,15,26,.86)",
+          border: "1px solid rgba(148,163,184,.18)",
           borderRadius: 16,
           boxShadow: "0 16px 60px rgba(0,0,0,.45)",
           backdropFilter: "blur(10px)",
@@ -310,8 +310,8 @@ const viewId = String(activeRoomId || "");
           width: 320,
           maxWidth: "92vw",
           height: "calc(100vh - 110px)",
-          background: "rgba(17,24,39,.94)",
-          border: "1px solid rgba(148,163,184,.26)",
+          background: "rgba(11,15,26,.86)",
+          border: "1px solid rgba(148,163,184,.18)",
           borderRadius: 16,
           boxShadow: "0 16px 60px rgba(0,0,0,.45)",
           backdropFilter: "blur(10px)",
@@ -325,7 +325,7 @@ const viewId = String(activeRoomId || "");
   const btn: React.CSSProperties = {
     padding: "6px 10px",
     borderRadius: 10,
-    border: "1px solid rgba(148,163,184,.26)",
+    border: "1px solid rgba(148,163,184,.18)",
     background: "rgba(255,255,255,.06)",
     color: "rgba(229,231,235,.95)",
     cursor: "pointer",
@@ -427,7 +427,7 @@ const viewId = String(activeRoomId || "");
                     flex: 1,
                     padding: "10px 12px",
                     borderRadius: 12,
-                    border: "1px solid rgba(148,163,184,.26)",
+                    border: "1px solid rgba(148,163,184,.18)",
                     background: "rgba(255,255,255,.06)",
                     color: "rgba(229,231,235,.95)",
                     outline: "none",
@@ -509,8 +509,8 @@ const viewId = String(activeRoomId || "");
               Private messages (local-only v0)
             </div>
 
-            <div style={{ padding: 10, display: "grid", gap: 10, gridTemplateColumns: "1fr" }}>
-              <div style={{ width: "100%" }}>
+            <div style={{ padding: 10, display: "flex", gap: 10 }}>
+              <div style={{ width: 150, flex: "0 0 150px" }}>
                 <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                   <input
                     value={dmPeer}
@@ -520,7 +520,7 @@ const viewId = String(activeRoomId || "");
                       flex: 1,
                       padding: "8px 10px",
                       borderRadius: 12,
-                      border: "1px solid rgba(148,163,184,.26)",
+                      border: "1px solid rgba(148,163,184,.18)",
                       background: "rgba(255,255,255,.06)",
                       color: "rgba(229,231,235,.95)",
                       outline: "none",
@@ -617,7 +617,7 @@ const viewId = String(activeRoomId || "");
                           flex: 1,
                           padding: "10px 12px",
                           borderRadius: 12,
-                          border: "1px solid rgba(148,163,184,.26)",
+                          border: "1px solid rgba(148,163,184,.18)",
                           background: "rgba(255,255,255,.06)",
                           color: "rgba(229,231,235,.95)",
                           outline: "none",
@@ -628,7 +628,7 @@ const viewId = String(activeRoomId || "");
                     </div>
                   </>
                 ) : (
-                  <div style={{ opacity: 0.7, fontSize: 12, padding: "10px 0", lineHeight: 1.35 }}>Select a thread or create one.</div>
+                  <div style={{ opacity: 0.6, fontSize: 12 }}>Select a thread or create one.</div>
                 )}
               </div>
             </div>

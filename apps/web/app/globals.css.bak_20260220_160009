@@ -402,7 +402,7 @@ button{
 }
 
 .weered-you{ margin-left:6px; font-size:11px; font-weight:950; opacity:.65; }
-.weered-flairicon{ margin-left:6px; font-size:12px; opacity:.95; }
+.weered-paidicon{ margin-left:6px; font-size:12px; opacity:.95; }
 
 /* bigger + clearer dot */
 .weered-mark{
@@ -501,41 +501,3 @@ button{
 [data-weered-room-centerrow="1"] > :first-child { display: none !important; }
 [data-weered-room-centerrow="1"] { grid-template-columns: 1fr !important; }
 /* WEERED_HIDE_ROOM_CENTER_PRESENCE_END */
-
-/* WEERED_DOCK_TWEAKS_V1_BEGIN */
-/* Flair icon next to names */
-.weered-flairicon{
-  margin-left: 6px;
-  font-size: 12px;
-  opacity: .92;
-}
-
-/* Slightly brighter dock feel (DockShell inline background also patched) */
-.weered-right{
-  filter: brightness(1.02);
-}
-/* WEERED_DOCK_TWEAKS_V1_END */
-
-/* WEERED_LEFTNAV_V2_BEGIN */
-/* Left rail links should read as buttons */
-.weered-left-link{
-  display:block;
-  border-bottom: none !important;
-  margin: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148,163,184,.24);
-  background: rgba(255,255,255,.05);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
-}
-
-.weered-left-link:hover{
-  background: rgba(255,255,255,.08);
-  border-color: rgba(148,163,184,.32);
-}
-
-.weered-left-link-active{
-  background: rgba(124,58,237,.16) !important;
-  border-color: rgba(217,70,239,.34) !important;
-  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
-}
-/* WEERED_LEFTNAV_V2_END */

@@ -48,12 +48,12 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         <VoicePanel roomId={roomId} />
       </div>
 
-      <div data-weered-room-centerrow="1" style={{ marginTop: 12, display: "grid", gridTemplateColumns: "260px 1fr", gap: 12 }}>
+      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "260px 1fr", gap: 12 }}>
         <aside style={{ border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, minHeight: 300 }}>
-          <div data-weered-center-presence="1" style={{ fontWeight: 900 }}>Presence</div>
+          <div style={{ display: "none",  fontWeight: 900 }}>Presence</div>
           <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
             {users.length === 0 ? (
-              <div style={{ display: "none",  color: "#777" }}>No users yet.</div>
+              <div style={{ color: "#777" }}>No users yet.</div>
             ) : (
               users.map((u) => (
                 <div key={u.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8 }}>
@@ -109,4 +109,8 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 </main>
   );
 }
+
+
+
+
 

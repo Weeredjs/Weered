@@ -110,7 +110,7 @@ function Pill(props: { label: string; title?: string; tone?: "violet" | "slate" 
   );
 }
 
-export default function DockShell(props: { forceMode?: "rail" | "floating" } = {}) {
+export default function DockShell() {
   const ctx: any = (useWeered?.() as any) || {};
 
   const {
@@ -139,34 +139,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
   const [tab, setTab] = useState<"room" | "dms">("room");
   const [text, setText] = useState("");
 
-  const [dockMode, setDockMode] = useState<"rail" | "floating">(props.forceMode || "floating");
-
-  useEffect(() => {
-    if (props.forceMode) {
-      setDockMode(props.forceMode);
-      if (props.forceMode === "rail") setOpen(true);
-      return;
-    }
-    if (typeof window === "undefined") return;
-
-    const mq = window.matchMedia("(min-width: 1100px)");
-    const apply = () => {
-      const mode = mq.matches ? "rail" : "floating";
-      setDockMode(mode);
-      if (mode === "rail") setOpen(true); // rail mode should not be "closed"
-    };
-    apply();
-
-    try {
-      mq.addEventListener("change", apply);
-      return () => mq.removeEventListener("change", apply);
-    } catch {
-      // Safari fallback
-      mq.addListener(apply);
-      return () => mq.removeListener(apply);
-    }
-  }, [props.forceMode]);
-const viewId = String(activeRoomId || "");
+  const viewId = String(activeRoomId || "");
   const joinedId = String(joinedRoomId || "");
   const needJoin = !!viewId && viewId !== joinedId;
 
@@ -284,48 +257,29 @@ const viewId = String(activeRoomId || "");
     setDmDraft("");
   }
 
-  const panel: React.CSSProperties =
-    dockMode === "rail"
-      ? {
-          position: "sticky",
-          top: 16,
-          width: "100%",
-          maxWidth: "100%",
-          height: "calc(100vh - 32px)",
-          background: "rgba(17,24,39,.94)",
-          border: "1px solid rgba(148,163,184,.26)",
-          borderRadius: 16,
-          boxShadow: "0 16px 60px rgba(0,0,0,.45)",
-          backdropFilter: "blur(10px)",
-          overflow: "hidden",
-          zIndex: 40,
-          color: "rgba(229,231,235,.96)",
-          fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-          maxHeight: "calc(100vh - 32px)",
-        }
-      : {
-          position: "fixed",
-          right: 14,
-          top: 88,
-          width: 320,
-          maxWidth: "92vw",
-          height: "calc(100vh - 110px)",
-          background: "rgba(17,24,39,.94)",
-          border: "1px solid rgba(148,163,184,.26)",
-          borderRadius: 16,
-          boxShadow: "0 16px 60px rgba(0,0,0,.45)",
-          backdropFilter: "blur(10px)",
-          overflow: "hidden",
-          zIndex: 9999,
-          color: "rgba(229,231,235,.96)",
-          fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-          maxHeight: "calc(100vh - 24px)",
-        };
+  const panel: React.CSSProperties = {
+    position: "fixed",
+    right: 14,
+    top: 88,
+    width: 320,
+    maxWidth: "92vw",
+    height: "calc(100vh - 110px)",
+    background: "rgba(11,15,26,.86)",
+    border: "1px solid rgba(148,163,184,.18)",
+    borderRadius: 16,
+    boxShadow: "0 16px 60px rgba(0,0,0,.45)",
+    backdropFilter: "blur(10px)",
+    overflow: "hidden",
+    zIndex: 9999,
+    color: "rgba(229,231,235,.96)",
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+    maxHeight: "calc(100vh - 24px)",
+  };
 
   const btn: React.CSSProperties = {
     padding: "6px 10px",
     borderRadius: 10,
-    border: "1px solid rgba(148,163,184,.26)",
+    border: "1px solid rgba(148,163,184,.18)",
     background: "rgba(255,255,255,.06)",
     color: "rgba(229,231,235,.95)",
     cursor: "pointer",
@@ -427,7 +381,7 @@ const viewId = String(activeRoomId || "");
                     flex: 1,
                     padding: "10px 12px",
                     borderRadius: 12,
-                    border: "1px solid rgba(148,163,184,.26)",
+                    border: "1px solid rgba(148,163,184,.18)",
                     background: "rgba(255,255,255,.06)",
                     color: "rgba(229,231,235,.95)",
                     outline: "none",
@@ -509,8 +463,8 @@ const viewId = String(activeRoomId || "");
               Private messages (local-only v0)
             </div>
 
-            <div style={{ padding: 10, display: "grid", gap: 10, gridTemplateColumns: "1fr" }}>
-              <div style={{ width: "100%" }}>
+            <div style={{ padding: 10, display: "flex", gap: 10 }}>
+              <div style={{ width: 150, flex: "0 0 150px" }}>
                 <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                   <input
                     value={dmPeer}
@@ -520,7 +474,7 @@ const viewId = String(activeRoomId || "");
                       flex: 1,
                       padding: "8px 10px",
                       borderRadius: 12,
-                      border: "1px solid rgba(148,163,184,.26)",
+                      border: "1px solid rgba(148,163,184,.18)",
                       background: "rgba(255,255,255,.06)",
                       color: "rgba(229,231,235,.95)",
                       outline: "none",
@@ -617,7 +571,7 @@ const viewId = String(activeRoomId || "");
                           flex: 1,
                           padding: "10px 12px",
                           borderRadius: 12,
-                          border: "1px solid rgba(148,163,184,.26)",
+                          border: "1px solid rgba(148,163,184,.18)",
                           background: "rgba(255,255,255,.06)",
                           color: "rgba(229,231,235,.95)",
                           outline: "none",
@@ -628,7 +582,7 @@ const viewId = String(activeRoomId || "");
                     </div>
                   </>
                 ) : (
-                  <div style={{ opacity: 0.7, fontSize: 12, padding: "10px 0", lineHeight: 1.35 }}>Select a thread or create one.</div>
+                  <div style={{ opacity: 0.6, fontSize: 12 }}>Select a thread or create one.</div>
                 )}
               </div>
             </div>

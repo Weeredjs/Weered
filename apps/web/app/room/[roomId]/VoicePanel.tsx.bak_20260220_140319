@@ -132,8 +132,8 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const card: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, background: "rgba(15,23,42,.92)" };
-  const btn: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 10, padding: "6px 10px", background: "rgba(15,23,42,.92)", cursor: "pointer", fontSize: 13 };
+  const card: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, background: "white" };
+  const btn: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 10, padding: "6px 10px", background: "#fff", cursor: "pointer", fontSize: 13 };
   const pill: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 999, padding: "2px 8px", fontSize: 12, background: "#fafafa" };
 
   return (

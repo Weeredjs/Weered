@@ -2,7 +2,6 @@
 import React from "react";
 import { WeeredProvider } from "../components/WeeredProvider";
 import DockShell from "../components/DockShell";
-import LeftRail from "../components/LeftRail";
 
 /**
  * WEERED_SHELL_V1
@@ -15,7 +14,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <WeeredProvider>
           <div className="weered-shell">
-            <aside className="weered-left"><LeftRail /></aside>
+            <aside className="weered-left">
+              <div className="weered-left-inner">
+                <a className="weered-brand" href="/">
+                  <span className="weered-brand-dot" aria-hidden="true" />
+                  <span className="weered-brand-text">weered</span>
+                </a>
+
+                <div className="weered-left-section">
+                  <div className="weered-left-title">Communities</div>
+                  <a className="weered-left-link" href="/lobby">Lobby</a>
+                  <a className="weered-left-link" href="/">Home</a>
+
+                  <div className="weered-left-hint">
+                    Next: real subreddit list + search.
+                  </div>
+                </div>
+              </div>
+            </aside>
 
             <main className="weered-center">
               {children}

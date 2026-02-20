@@ -515,27 +515,3 @@ button{
   filter: brightness(1.02);
 }
 /* WEERED_DOCK_TWEAKS_V1_END */
-
-/* WEERED_LEFTNAV_V2_BEGIN */
-/* Left rail links should read as buttons */
-.weered-left-link{
-  display:block;
-  border-bottom: none !important;
-  margin: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148,163,184,.24);
-  background: rgba(255,255,255,.05);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
-}
-
-.weered-left-link:hover{
-  background: rgba(255,255,255,.08);
-  border-color: rgba(148,163,184,.32);
-}
-
-.weered-left-link-active{
-  background: rgba(124,58,237,.16) !important;
-  border-color: rgba(217,70,239,.34) !important;
-  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
-}
-/* WEERED_LEFTNAV_V2_END */
