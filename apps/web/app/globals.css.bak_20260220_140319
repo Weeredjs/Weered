@@ -386,9 +386,21 @@ button{
 }
 /* WEERED_UI_V2_END */
 
-/* WEERED_FLAIR_V2_BEGIN */
-.weered-presence-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.weered-presence-left{ display:flex; align-items:center; gap:8px; min-width:0; }
+/* WEERED_FLAIR_V1_BEGIN */
+.weered-presence-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.weered-presence-left{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+
 .weered-presence-namewrap{ min-width:0; }
 
 .weered-presence-name{
@@ -397,70 +409,75 @@ button{
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  max-width:190px;
-  line-height:1.15;
+  max-width: 190px;
+  line-height: 1.15;
 }
 
-.weered-you{ margin-left:6px; font-size:11px; font-weight:950; opacity:.65; }
-.weered-flairicon{ margin-left:6px; font-size:12px; opacity:.95; }
+.weered-you{
+  margin-left:6px;
+  font-size:11px;
+  font-weight:950;
+  opacity:.65;
+}
 
-/* bigger + clearer dot */
+.weered-paidicon{
+  margin-left:6px;
+  font-size:12px;
+  opacity:.95;
+}
+
 .weered-mark{
-  width:11px;
-  height:11px;
+  width:10px;
+  height:10px;
   border-radius:999px;
-  background: rgba(203,213,225,.16);
-  border: 1px solid rgba(148,163,184,.22);
-  box-shadow: 0 0 10px rgba(0,0,0,.28);
+  background: rgba(203,213,225,.18);
+  border: 1px solid rgba(148,163,184,.18);
+  box-shadow: 0 0 10px rgba(0,0,0,.25);
   flex: 0 0 auto;
 }
 
-.weered-mark-none{ background: rgba(203,213,225,.12); }
+.weered-mark-none{
+  background: rgba(203,213,225,.12);
+}
 
 .weered-mark-paid{
   background: linear-gradient(135deg, #7C3AED 0%, #D946EF 100%);
-  border-color: rgba(217,70,239,.38);
-  box-shadow: 0 0 16px rgba(217,70,239,.22);
-}
-
-.weered-mark-owner{
-  background: rgba(167,139,250,.95);
-  border-color: rgba(167,139,250,.45);
-  box-shadow: 0 0 16px rgba(167,139,250,.18);
+  border-color: rgba(217,70,239,.35);
+  box-shadow: 0 0 14px rgba(217,70,239,.20);
 }
 
 .weered-mark-mod{
-  background: rgba(34,197,94,.90);
-  border-color: rgba(34,197,94,.42);
-  box-shadow: 0 0 16px rgba(34,197,94,.18);
+  background: rgba(34,197,94,.85);
+  border-color: rgba(34,197,94,.40);
+  box-shadow: 0 0 14px rgba(34,197,94,.16);
 }
 
 .weered-mark-admin{
-  background: rgba(249,115,22,.92);
-  border-color: rgba(249,115,22,.42);
-  box-shadow: 0 0 16px rgba(249,115,22,.18);
+  background: rgba(249,115,22,.90);
+  border-color: rgba(249,115,22,.40);
+  box-shadow: 0 0 14px rgba(249,115,22,.16);
 }
 
 .weered-mark-staff{
-  background: rgba(56,189,248,.92);
-  border-color: rgba(56,189,248,.42);
-  box-shadow: 0 0 16px rgba(56,189,248,.18);
+  background: rgba(56,189,248,.90);
+  border-color: rgba(56,189,248,.40);
+  box-shadow: 0 0 14px rgba(56,189,248,.16);
 }
 
 .weered-mark-god{
   background: linear-gradient(135deg, #7C3AED 0%, #D946EF 100%);
-  border-color: rgba(217,70,239,.50);
-  box-shadow: 0 0 20px rgba(217,70,239,.28);
+  border-color: rgba(217,70,239,.45);
+  box-shadow: 0 0 18px rgba(217,70,239,.26);
 }
 
 /* name tints */
 .weered-name-paid{ color: rgba(232,213,255,.98); }
-.weered-name-owner{ color: rgba(233,213,255,.98); }
 .weered-name-mod{ color: rgba(187,247,208,.98); }
 .weered-name-admin{ color: rgba(255,237,213,.98); }
 .weered-name-staff{ color: rgba(186,230,253,.98); }
 .weered-name-god{ color: rgba(243,244,246,.98); }
 
+/* right-side badge for staff roles (paid stays "clean") */
 .weered-badge{
   font-size:11px;
   font-weight:1000;
@@ -472,12 +489,12 @@ button{
   flex: 0 0 auto;
 }
 
-.weered-badge-owner{ border-color: rgba(167,139,250,.40); background: rgba(167,139,250,.14); }
-.weered-badge-mod{ border-color: rgba(34,197,94,.38); background: rgba(34,197,94,.14); }
-.weered-badge-admin{ border-color: rgba(249,115,22,.38); background: rgba(249,115,22,.14); }
-.weered-badge-staff{ border-color: rgba(56,189,248,.38); background: rgba(56,189,248,.14); }
-.weered-badge-god{ border-color: rgba(217,70,239,.44); background: rgba(124,58,237,.20); }
+.weered-badge-mod{ border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.14); }
+.weered-badge-admin{ border-color: rgba(249,115,22,.35); background: rgba(249,115,22,.14); }
+.weered-badge-staff{ border-color: rgba(56,189,248,.35); background: rgba(56,189,248,.14); }
+.weered-badge-god{ border-color: rgba(217,70,239,.40); background: rgba(124,58,237,.20); }
 
+/* footer legend */
 .weered-presence-foot{
   padding: 8px 10px 10px 10px;
   border-top: 1px solid rgba(148,163,184,.10);
@@ -487,55 +504,16 @@ button{
   flex-wrap:wrap;
   align-items:center;
 }
-.weered-legend{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-.weered-legend-item{ display:flex; align-items:center; gap:6px; opacity:.82; }
-/* WEERED_FLAIR_V2_END */
-
-/* WEERED_HIDE_CENTER_PRESENCE_BEGIN */
-/* Hide the center Presence card in Room view (Presence already lives in LeftRail + Dock) */
-[data-weered-center-presence="1"] { display: none !important; }
-/* WEERED_HIDE_CENTER_PRESENCE_END */
-
-/* WEERED_HIDE_ROOM_CENTER_PRESENCE_BEGIN */
-/* Room view: hide the center Presence card (left column of the 2-col grid). Presence lives in LeftRail + Dock. */
-[data-weered-room-centerrow="1"] > :first-child { display: none !important; }
-[data-weered-room-centerrow="1"] { grid-template-columns: 1fr !important; }
-/* WEERED_HIDE_ROOM_CENTER_PRESENCE_END */
-
-/* WEERED_DOCK_TWEAKS_V1_BEGIN */
-/* Flair icon next to names */
-.weered-flairicon{
-  margin-left: 6px;
-  font-size: 12px;
-  opacity: .92;
+.weered-legend{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
-
-/* Slightly brighter dock feel (DockShell inline background also patched) */
-.weered-right{
-  filter: brightness(1.02);
+.weered-legend-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  opacity:.8;
 }
-/* WEERED_DOCK_TWEAKS_V1_END */
-
-/* WEERED_LEFTNAV_V2_BEGIN */
-/* Left rail links should read as buttons */
-.weered-left-link{
-  display:block;
-  border-bottom: none !important;
-  margin: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148,163,184,.24);
-  background: rgba(255,255,255,.05);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
-}
-
-.weered-left-link:hover{
-  background: rgba(255,255,255,.08);
-  border-color: rgba(148,163,184,.32);
-}
-
-.weered-left-link-active{
-  background: rgba(124,58,237,.16) !important;
-  border-color: rgba(217,70,239,.34) !important;
-  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
-}
-/* WEERED_LEFTNAV_V2_END */
+/* WEERED_FLAIR_V1_END */

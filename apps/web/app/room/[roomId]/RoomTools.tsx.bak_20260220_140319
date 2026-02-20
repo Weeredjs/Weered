@@ -28,13 +28,13 @@ export default function RoomTools({ roomId }: { roomId: string }) {
     border: "1px solid var(--weered-border)",
     borderRadius: 14,
     padding: 12,
-    background: "rgba(15,23,42,.92)",
+    background: "white",
   };
   const btn: React.CSSProperties = {
     border: "1px solid var(--weered-border)",
     borderRadius: 10,
     padding: "6px 10px",
-    background: "rgba(15,23,42,.92)",
+    background: "#fff",
     cursor: "pointer",
     fontSize: 13,
   };
