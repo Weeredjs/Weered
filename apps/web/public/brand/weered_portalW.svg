@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="weeredGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#D946EF"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0
+                0 0.7 0 0 0
+                0 0 1 0 0
+                0 0 0 0.9 0" result="colored"/>
+      <feMerge>
+        <feMergeNode in="colored"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background (remove this rect if you need transparent) -->
+  <rect width="512" height="512" rx="96" fill="#0B0F1A"/>
+
+  <!-- W shape -->
+  <path d="M92 132
+           L162 380
+           Q170 408 196 408
+           Q212 408 226 392
+           L256 356
+           L286 392
+           Q300 408 316 408
+           Q342 408 350 380
+           L420 132
+           Q426 112 412 98
+           Q398 84 378 90
+           Q364 94 358 112
+           L308 292
+           L284 260
+           Q272 244 256 244
+           Q240 244 228 260
+           L204 292
+           L154 112
+           Q148 94 134 90
+           Q114 84 100 98
+           Q86 112 92 132 Z"
+        fill="url(#weeredGrad)" filter="url(#glow)"/>
+
+  <!-- Portal cutout -->
+  <path d="M256 188
+           C214 188 186 222 186 266
+           C186 314 214 356 256 356
+           C298 356 326 314 326 266
+           C326 222 298 188 256 188 Z"
+        fill="#0B0F1A"/>
+
+  <!-- Portal inner glow ring -->
+  <path d="M256 210
+           C228 210 206 234 206 266
+           C206 302 228 334 256 334
+           C284 334 306 302 306 266
+           C306 234 284 210 256 210 Z"
+        fill="none" stroke="url(#weeredGrad)" stroke-width="14" filter="url(#glow)"/>
+</svg>

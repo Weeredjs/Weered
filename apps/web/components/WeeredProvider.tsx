@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -86,6 +87,7 @@ function normalizeInbound(msg: any) {
 }
 
 export function WeeredProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [me, setMe] = useState<any>(null);
 
@@ -171,6 +173,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     try {
       localStorage.removeItem("weered_token");
       localStorage.removeItem("weered_user");
+    try { router.replace("/"); } catch {}
     } catch {}
     setToken("");
     setMe(null);
