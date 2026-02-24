@@ -144,13 +144,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
       setMe(j.user || null);
       localStorage.setItem("weered_token", j.token);
       localStorage.setItem("weered_user", JSON.stringify(j.user || null));
-    
-      // Reconnect WS immediately with the new token/user (no refresh needed)
-      try { wsRef.current?.close(); } catch {}
-      wsRef.current = null;
-      setWsReady(false);
-      setWsState(WebSocket.CLOSED);
-}
+    }
   }
 
   function logout() {
@@ -444,8 +438,6 @@ export function useWeered() {
   if (!ctx) throw new Error("useWeered must be used within WeeredProvider");
   return ctx;
 }
-
-
 
 
 

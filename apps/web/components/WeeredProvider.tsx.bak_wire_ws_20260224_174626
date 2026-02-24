@@ -93,9 +93,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [wsReady, setWsReady] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
-  
-  const lastAuthTokenRef = useRef<string>("");
-const [activeRoomId, setActiveRoomId] = useState<string>("");
+  const [activeRoomId, setActiveRoomId] = useState<string>("");
   const [joinedRoomId, setJoinedRoomId] = useState<string>("");
 
   const [usersByRoom, setUsersByRoom] = useState<Record<string, RoomUser[]>>({});
@@ -144,13 +142,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
       setMe(j.user || null);
       localStorage.setItem("weered_token", j.token);
       localStorage.setItem("weered_user", JSON.stringify(j.user || null));
-    
-      // Reconnect WS immediately with the new token/user (no refresh needed)
-      try { wsRef.current?.close(); } catch {}
-      wsRef.current = null;
-      setWsReady(false);
-      setWsState(WebSocket.CLOSED);
-}
+    }
   }
 
   function logout() {
@@ -184,28 +176,15 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
   useEffect(() => {
     if (!token) return;
 
-        // Re-auth on token change if WS is already open
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      if (token && token !== lastAuthTokenRef.current) {
-        try {
-          lastAuthTokenRef.current = token;
-          wsRef.current.send(JSON.stringify({ type: "auth:hello", token }));
-        } catch {}
-      }
-      return;
-    }
-    if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) return;
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setWsState(ws.readyState);
-      
-      const tok = (() => { try { return localStorage.getItem("weered_token") || token; } catch { return token; } })();
-      lastAuthTokenRef.current = tok || "";
-      ws.send(JSON.stringify({ type: "auth:hello", token: tok }));
-};
+      ws.send(JSON.stringify({ type: "auth:hello", token }));
+    };
 
     ws.onclose = () => {
       setWsState(WebSocket.CLOSED);
@@ -226,29 +205,10 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
       if (msg.type === "auth:ok") {
         setWsReady(true);
         setWsState(WebSocket.OPEN);
-
-        // Prefer user from server payload; fallback to persisted dev-login user
-        const u = (msg.user ?? msg.payload?.user) || null;
-        if (u) {
-          setMe(u);
-          try { localStorage.setItem("weered_user", JSON.stringify(u)); } catch {}
-        } else {
-          try {
-            const uRaw = localStorage.getItem("weered_user") || "";
-            if (uRaw) setMe(JSON.parse(uRaw));
-          } catch {}
-        }
         return;
       }
 
-      
-      if (msg.type === "auth:fail") {
-        setWsReady(false);
-        setWsState(WebSocket.OPEN);
-        console.warn("WS auth:fail", msg.reason || msg);
-        return;
-      }
-if (msg.type === "presence:state") {
+      if (msg.type === "presence:state") {
         const rid = String(msg.roomId || "");
         const list = Array.isArray(msg.users) ? msg.users : [];
         setUsersByRoom((prev) => ({ ...prev, [rid]: list }));
@@ -444,8 +404,4 @@ export function useWeered() {
   if (!ctx) throw new Error("useWeered must be used within WeeredProvider");
   return ctx;
 }
-
-
-
-
 
