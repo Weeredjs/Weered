@@ -1,0 +1,10 @@
+﻿
+# Next.js build
+apps/web/.next/
+# Local patch backups
+*.bak_*
+
+
+# Local assets
+weered-brand-kit.zip
+

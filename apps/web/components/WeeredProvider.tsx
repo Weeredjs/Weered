@@ -92,6 +92,20 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
   const [wsReady, setWsReady] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const joinedOnceRef = useRef(false);
+
+  function sendJoinDefaultRoom() {
+    if (joinedOnceRef.current) return;
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    // Default room used by current UI
+    const rid = joinedRoomId || activeRoomId || "lobby";
+    try {
+      ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+      joinedOnceRef.current = true;
+    } catch {}
+  }
 
   
   const lastAuthTokenRef = useRef<string>("");
@@ -180,7 +194,13 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
         try { setMe(JSON.parse(uRaw)); } catch {}
       }
     } catch {}
-  }, []);
+  }, []);  // Re-join presence when activeRoomId changes (only after WS is ready)
+  useEffect(() => {
+    if (!wsReady) return;
+    joinedOnceRef.current = false;
+    sendJoinDefaultRoom();
+  }, [wsReady, activeRoomId]);
+
   useEffect(() => {
     if (!token) return;
 
@@ -227,7 +247,9 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
         setWsReady(true);
         setWsState(WebSocket.OPEN);
 
-        // Prefer user from server payload; fallback to persisted dev-login user
+        
+        sendJoinDefaultRoom();
+// Prefer user from server payload; fallback to persisted dev-login user
         const u = (msg.user ?? msg.payload?.user) || null;
         if (u) {
           setMe(u);
@@ -250,7 +272,10 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
       }
 if (msg.type === "presence:state") {
         const rid = String(msg.roomId || "");
-        const list = Array.isArray(msg.users) ? msg.users : [];
+        
+        // Ensure UI room id matches server presence room
+        if (rid && !activeRoomId) setActiveRoomId(rid);
+const list = Array.isArray(msg.users) ? msg.users : [];
         setUsersByRoom((prev) => ({ ...prev, [rid]: list }));
 
         const nextMeta: RoomMeta = {
@@ -444,6 +469,11 @@ export function useWeered() {
   if (!ctx) throw new Error("useWeered must be used within WeeredProvider");
   return ctx;
 }
+
+
+
+
+
 
 
 
