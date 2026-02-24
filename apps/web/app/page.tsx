@@ -1,147 +1,148 @@
 ﻿"use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import React from "react";
 import { useRouter } from "next/navigation";
-import { useWeered } from "../components/WeeredProvider";
-import LobbyCreateRoom from "../components/LobbyCreateRoom";
-import LobbyRoomsList from "../components/LobbyRoomsList";
-import WeeredBrand from "../components/WeeredBrand";
 
-export default function HomePage() {
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+export default function Page() {
   const router = useRouter();
-  const { apiBase, authed, me, devLogin, setActiveRoomId } = useWeered();
+  const [username, setUsername] = React.useState("Weered");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string>("");
 
-  const [username, setUsername] = useState("Guest");
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [createName, setCreateName] = useState("");
-
-  useEffect(() => {
-    setActiveRoomId("lobby");
-  }, [setActiveRoomId]);
-
-  async function loadRooms() {
+  React.useEffect(() => {
+    // If already logged in, go straight to lobby
     try {
-      const r = await fetch(`${apiBase}/rooms`, { cache: "no-store" });
-      const j = await r.json();
-      setRooms(Array.isArray(j?.rooms) ? j.rooms : []);
-    } catch {
-      setRooms([]);
+      const tok = localStorage.getItem("weered_token") || "";
+      if (tok) router.replace("/lobby");
+    } catch {}
+  }, [router]);
+
+  async function login() {
+    setErr("");
+    setBusy(true);
+    try {
+      const r = await fetch(`${API}/auth/dev-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        throw new Error(`Login failed (${r.status}) ${txt}`.slice(0, 240));
+      }
+
+      const j: any = await r.json();
+      if (!j?.token) throw new Error("No token returned");
+
+      try {
+        localStorage.setItem("weered_token", j.token);
+        localStorage.setItem("weered_user", JSON.stringify(j.user || null));
+      } catch {}
+
+      router.replace("/lobby");
+    } catch (e: any) {
+      setErr(e?.message || "Failed to login");
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function createRoom() {
-    try {
-      const r = await fetch(`${apiBase}/rooms`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: createName || "" }),
-      });
-      const j = await r.json();
-      const roomId = String(j?.roomId || j?.id || "");
-      if (roomId) router.push(`/room/${encodeURIComponent(roomId)}`);
-    } catch {}
-  }
-
-  useEffect(() => {
-    loadRooms();
-    const h = setInterval(loadRooms, 2500);
-    return () => clearInterval(h);
-  }, []);
-
   return (
-    <main style={{ padding: 18, fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <WeeredBrand />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <h2 style={{ margin: 0 }}>Weered Lobby</h2>
-          <LobbyRoomsList />
-          <LobbyCreateRoom />
-        <button
-          onClick={loadRooms}
-          style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", background: "rgba(15,23,42,.92)", cursor: "pointer" }}
-        >
-          Refresh
-        </button>
+    <div className="min-h-screen bg-[#0B0F1A] text-[#E5E7EB]">
+      {/* soft ambient glow */}
+      <div className="pointer-events-none fixed inset-0">
+        <div
+          className="absolute -top-24 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-3xl opacity-40"
+          style={{ background: "linear-gradient(135deg,#7C3AED,#D946EF)" }}
+        />
+        <div
+          className="absolute -bottom-32 right-[-120px] h-[420px] w-[420px] rounded-full blur-3xl opacity-20"
+          style={{ background: "linear-gradient(135deg,#7C3AED,#D946EF)" }}
+        />
       </div>
 
-      <div style={{ marginTop: 10, color: "rgba(203,213,225,.72)" }}>
-        {authed ? (
-          <>Logged in as <b>{me?.name || "?"}</b> • Lobby chat is in the Dock</>
-        ) : (
-          <>Not logged in</>
-        )}
-      </div>
-
-      <section style={{ marginTop: 16, border: "1px solid var(--weered-border)", borderRadius: 14, padding: 14 }}>
-        <div style={{ fontWeight: 700 }}>Dev Login</div>
-        <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Your name"
-            style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
-          />
-          <button
-            onClick={() => devLogin(username)}
-            style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-border)", background: "rgba(15,23,42,.92)", cursor: "pointer" }}
-          >
-            Login
-          </button>
-        </div>
-      </section>
-
-      <section style={{ marginTop: 16, border: "1px solid var(--weered-border)", borderRadius: 14, padding: 14 }}>
-        <div style={{ fontWeight: 700 }}>Create Room</div>
-        <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
-          <input
-            value={createName}
-            onChange={(e) => setCreateName(e.target.value)}
-            placeholder="Optional room name"
-            style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
-          />
-          <button
-            onClick={createRoom}
-            style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-border)", background: "rgba(15,23,42,.92)", cursor: "pointer" }}
-          >
-            Create
-          </button>
-        </div>
-      </section>
-
-      <section style={{ marginTop: 16, border: "1px solid var(--weered-border)", borderRadius: 14, padding: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontWeight: 700 }}>Recent Rooms</div>
-          <span style={{ fontSize: 12, color: "#666" }}>{rooms.length}</span>
-        </div>
-
-        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-          {rooms.length === 0 ? (
-            <div style={{ color: "#777" }}>No rooms yet.</div>
-          ) : (
-            rooms.map((r) => (
-              <div key={r.roomId} style={{ display: "flex", justifyContent: "space-between", gap: 10, border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700 }}>{r.name || r.roomId}</div>
-                  <div style={{ fontSize: 12, color: "#666", wordBreak: "break-all" }}>{r.roomId}</div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#666" }}>users: {r.users ?? 0}</span>
-                  <Link href={`/room/${encodeURIComponent(r.roomId)}`} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", background: "rgba(15,23,42,.92)", textDecoration: "none" }}>
-                    Open
-                  </Link>
+      <main className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-6">
+        <div className="grid w-full grid-cols-1 gap-10 lg:grid-cols-2">
+          {/* left: brand */}
+          <div className="flex flex-col justify-center">
+            <div className="flex items-center gap-4">
+              <img
+                src="/brand/weered_badge_512.png"
+                alt="weered"
+                className="h-14 w-14 rounded-2xl"
+              />
+              <div>
+                <div className="text-3xl font-semibold tracking-tight">weered</div>
+                <div className="mt-1 text-sm opacity-70">
+                  Portal-first chat + presence, built for lobbies.
                 </div>
               </div>
-            ))
-          )}
+            </div>
+
+            <div className="mt-8 rounded-2xl border border-[#1F2937] bg-[#121826] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              <div className="text-sm font-medium opacity-80">What you&apos;re entering</div>
+              <ul className="mt-3 space-y-2 text-sm opacity-70">
+                <li>• Real-time lobby presence + chat</li>
+                <li>• Docked controls, fast navigation</li>
+                <li>• Reddit browser temporarily disabled (placeholder mode)</li>
+              </ul>
+              <div className="mt-4 text-xs opacity-50">
+                Tip: This is dev login (JWT). We’ll harden auth once the UI is locked.
+              </div>
+            </div>
+          </div>
+
+          {/* right: login card */}
+          <div className="flex items-center justify-center">
+            <div className="w-full max-w-md rounded-2xl border border-[#1F2937] bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold">Sign in</div>
+                  <div className="text-sm opacity-70">Enter a username to continue.</div>
+                </div>
+                <img
+                  src="/brand/weered_badge_512.png"
+                  alt="badge"
+                  className="h-10 w-10 rounded-xl opacity-90"
+                />
+              </div>
+
+              <label className="mt-6 block text-sm opacity-80">Username</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-[#1F2937] bg-[#0B0F1A] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                placeholder="Weered"
+                autoComplete="off"
+              />
+
+              {err ? (
+                <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {err}
+                </div>
+              ) : null}
+
+              <button
+                onClick={login}
+                disabled={busy || !username.trim()}
+                className="mt-6 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg,#7C3AED,#D946EF)" }}
+              >
+                {busy ? "Signing in..." : "Login"}
+              </button>
+
+              <div className="mt-4 text-center text-xs opacity-60">
+                By continuing you agree this is dev mode.
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
-
-
-
 
 
