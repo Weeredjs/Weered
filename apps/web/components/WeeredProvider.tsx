@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -94,18 +94,27 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
   const [wsReady, setWsReady] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const joinedOnceRef = useRef(false);
+  const lastJoinedRidRef = useRef<string>("");
 
   function sendJoinDefaultRoom() {
-    if (joinedOnceRef.current) return;
+    
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
     // Default room used by current UI
-    const rid = joinedRoomId || activeRoomId || "lobby";
+    const ridRaw = joinedRoomId || activeRoomId;
+    if (!ridRaw) return;
+    let rid = ridRaw;
+    try { rid = decodeURIComponent(ridRaw); } catch {}
+
+    // Avoid spamming: only join when rid changes
+    if (lastJoinedRidRef.current === rid) return;
+    lastJoinedRidRef.current = rid;
     try {
-      ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
-      joinedOnceRef.current = true;
+      console.log("[weered] sending presence:join", rid, "wsReady=", wsReady, "me=", me?.name || me);
+ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+      try { ws.send(JSON.stringify({ type: "chat:history", roomId: rid, limit: 50 })); } catch {}
+      /* joinedOnceRef removed */
     } catch {}
   }
 
@@ -135,16 +144,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     return "member";
   }, [meta, me]);
 
-  useEffect(() => {
-    try {
-      const t = localStorage.getItem("weered_token") || "";
-      const u = localStorage.getItem("weered_user") || "";
-      if (t) setToken(t);
-      if (u) setMe(JSON.parse(u));
-    } catch {}
-  }, []);
-
-  async function devLogin(username: string) {
+    async function devLogin(username: string) {
     const r = await fetch(`${API}/auth/dev-login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,21 +152,17 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     });
     const j = await r.json();
     if (j?.token) {
-      // Force WS to reconnect using the new token
-      try { wsRef.current?.close(); } catch {}
-      wsRef.current = null;
-
-      setToken(j.token);
-      setMe(j.user || null);
-      localStorage.setItem("weered_token", j.token);
-      localStorage.setItem("weered_user", JSON.stringify(j.user || null));
-    
-      // Reconnect WS immediately with the new token/user (no refresh needed)
+      // Force WS to reconnect using the new token (avoid refresh)
       try { wsRef.current?.close(); } catch {}
       wsRef.current = null;
       setWsReady(false);
       setWsState(WebSocket.CLOSED);
-}
+
+      setToken(j.token);
+      setMe(j.user || null);
+      try { localStorage.setItem("weered_token", j.token); } catch {}
+      try { localStorage.setItem("weered_user", JSON.stringify(j.user || null)); } catch {}
+    }
   }
 
   function logout() {
@@ -183,7 +179,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     setAdminByRoom({});
     setStatusByRoom({});
     setActiveRoomId("");
-    setJoinedRoomId("");
+    /* keep joinedRoomId on ws close */
     try { wsRef.current?.close(); } catch {}
     wsRef.current = null;
   }
@@ -200,9 +196,9 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
   }, []);  // Re-join presence when activeRoomId changes (only after WS is ready)
   useEffect(() => {
     if (!wsReady) return;
-    joinedOnceRef.current = false;
+    lastJoinedRidRef.current = "";
     sendJoinDefaultRoom();
-  }, [wsReady, activeRoomId]);
+  }, [wsReady, activeRoomId, joinedRoomId]);
 
   useEffect(() => {
     if (!token) return;
@@ -220,6 +216,24 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) return;
 
     const ws = new WebSocket(WS_URL);
+
+    // --- debug: raw inbound logging (temporary) ---
+    ws.addEventListener("open", () => console.log("[weered] ws open", WS_URL));
+    ws.addEventListener("close", (e) => console.log("[weered] ws close", e.code, e.reason));
+    ws.addEventListener("error", (e) => console.log("[weered] ws error", e));
+
+    ws.addEventListener("message", (ev: MessageEvent) => {
+      try {
+        const raw = typeof ev.data === "string" ? ev.data : "";
+        console.log("[weered] ws raw", raw.slice(0, 500));
+        const parsed = raw ? JSON.parse(raw) : null;
+        const msg = normalizeInbound(parsed);
+        console.log("[weered] ws in", msg?.type, msg);
+      } catch (err) {
+        console.log("[weered] ws in parse error", err);
+      }
+    });
+    // --- /debug ---
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -233,7 +247,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     ws.onclose = () => {
       setWsState(WebSocket.CLOSED);
       setWsReady(false);
-      setJoinedRoomId("");
+      /* keep joinedRoomId on ws close */
     };
 
     ws.onerror = () => {
@@ -276,7 +290,28 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
 if (msg.type === "presence:state") {
         const rid = String(msg.roomId || "");
         
-        // Ensure UI room id matches server presence room
+        
+      
+      // Consider presence:state membership as "joined" (prevents UI stuck in disabled state)
+      try {
+        const meId = String(me?.id || "");
+        const list = Array.isArray((msg as any).users) ? (msg as any).users : [];
+        const inRoom = !!meId && list.some((u: any) => String(u?.id || "") === meId);
+        if (inRoom && rid) {
+          setJoinedRoomId(rid);
+          setJoinStatus("joined");
+        }
+      } catch {}// Treat presence:state membership as "joined" for that room
+      try {
+        const viewRid = String(activeRoomId || "");
+        const meId = String(me?.id || "");
+        const list = Array.isArray((msg as any).users) ? (msg as any).users : [];
+        const inRoom = !!meId && list.some((u: any) => String(u?.id || "") === meId);
+        if (inRoom && rid && viewRid && rid === viewRid) {
+          setJoinedRoomId(rid);
+          setJoinStatus("joined");
+        }
+      } catch {}// Ensure UI room id matches server presence room
         if (rid && !activeRoomId) setActiveRoomId(rid);
 const list = Array.isArray(msg.users) ? msg.users : [];
         setUsersByRoom((prev) => ({ ...prev, [rid]: list }));
@@ -328,7 +363,8 @@ const list = Array.isArray(msg.users) ? msg.users : [];
         setAdminByRoom((prev) => {
           const cur = prev[rid] || { knocks: [], banned: [], audit: [] };
           const nextAudit = [...(cur.audit || []), item].slice(-80);
-          return { ...prev, [rid]: { ...cur, audit: nextAudit } };
+          return {
+          ...prev, [rid]: { ...cur, audit: nextAudit } };
         });
         return;
       }
@@ -348,7 +384,8 @@ const list = Array.isArray(msg.users) ? msg.users : [];
         setMsgsByRoom((prev) => {
           const cur = Array.isArray(prev[rid]) ? prev[rid] : [];
           const next = [...cur, m].slice(-200);
-          return { ...prev, [rid]: next };
+          return {
+          ...prev, [rid]: next };
         });
         return;
       }
@@ -376,9 +413,9 @@ const list = Array.isArray(msg.users) ? msg.users : [];
       try { ws.close(); } catch {}
       wsRef.current = null;
     };
-  }, [token, activeRoomId]);
+  }, [token]);
 
-  useEffect(() => {
+useEffect(() => {
     if (!wsReady) return;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -401,7 +438,9 @@ const list = Array.isArray(msg.users) ? msg.users : [];
 
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: "chat:send", roomId: activeRoomId, body: b }));
+    let rid = activeRoomId;
+    try { rid = decodeURIComponent(activeRoomId); } catch {}
+    ws.send(JSON.stringify({ type: "chat:send", roomId: rid, body: b }));
   }
 
   function sendAdmin(type: string, payload: any = {}) {
@@ -472,6 +511,20 @@ export function useWeered() {
   if (!ctx) throw new Error("useWeered must be used within WeeredProvider");
   return ctx;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

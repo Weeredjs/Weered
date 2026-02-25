@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
@@ -654,7 +654,9 @@ app.post("/dev-login", async (req, reply) => {
           const uid = ws.user.id;
 
           // locked gate for non-mod => knock + pending
-          if (room.locked && !isModOrOwner(room, uid)) {
+          const isLobby = String(roomId || "").startsWith("lobby:");
+          if (isLobby) room.locked = false;
+          if (room.locked && !isLobby && !isModOrOwner(room, uid)) {
             if (!room.knocks.some((k) => k.userId === uid)) {
               room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
               if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
@@ -1021,4 +1023,6 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+
 

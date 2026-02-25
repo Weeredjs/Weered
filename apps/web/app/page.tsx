@@ -1,40 +1,52 @@
-﻿"use client";
+"use client";
 
-import React from "react";
-import { useRouter } from "next/navigation";
-
-const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+import React, { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();
-  const [username, setUsername] = React.useState("Weered");
-  const [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState<string>("");
+  const sp = useSearchParams();
+
+  const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const nextPath = useMemo(() => {
+    const n = sp?.get("next") || "";
+    return n.startsWith("/") ? n : "/lobby";
+  }, [sp]);
 
   React.useEffect(() => {
-    // If already logged in, go straight to lobby
+    // If already logged in, go straight to lobby/next
     try {
       const tok = localStorage.getItem("weered_token") || "";
-      if (tok) router.replace("/lobby");
+      if (tok) router.replace(nextPath);
     } catch {}
-  }, [router]);
+  }, [router, nextPath]);
 
-  async function login() {
+  async function submit() {
+    const u = (username || "").trim();
+    const p = (password || "").trim();
     setErr("");
+    if (!u || !p) return setErr("Enter username + password.");
+
     setBusy(true);
     try {
-      const r = await fetch(`${API}/auth/dev-login`, {
+      const url = mode === "register" ? `${API}/auth/register` : `${API}/auth/login`;
+      const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username: u, password: p }),
       });
 
+      const j = await r.json().catch(() => ({} as any));
       if (!r.ok) {
-        const txt = await r.text().catch(() => "");
-        throw new Error(`Login failed (${r.status}) ${txt}`.slice(0, 240));
+        throw new Error(j?.error || `Request failed (${r.status})`);
       }
-
-      const j: any = await r.json();
       if (!j?.token) throw new Error("No token returned");
 
       try {
@@ -42,107 +54,140 @@ export default function Page() {
         localStorage.setItem("weered_user", JSON.stringify(j.user || null));
       } catch {}
 
-      router.replace("/lobby");
+      router.replace(nextPath);
     } catch (e: any) {
-      setErr(e?.message || "Failed to login");
+      setErr(String(e?.message || e || "Login failed"));
     } finally {
       setBusy(false);
     }
   }
 
+  const bg = "#0B0F1A";
+  const panel = "#121826";
+  const border = "rgba(31,41,55,.9)";
+  const text = "#E5E7EB";
+
   return (
-    <div className="min-h-screen bg-[#0B0F1A] text-[#E5E7EB]">
-      {/* soft ambient glow */}
-      <div className="pointer-events-none fixed inset-0">
-        <div
-          className="absolute -top-24 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-3xl opacity-40"
-          style={{ background: "linear-gradient(135deg,#7C3AED,#D946EF)" }}
-        />
-        <div
-          className="absolute -bottom-32 right-[-120px] h-[420px] w-[420px] rounded-full blur-3xl opacity-20"
-          style={{ background: "linear-gradient(135deg,#7C3AED,#D946EF)" }}
-        />
-      </div>
-
-      <main className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-6">
-        <div className="grid w-full grid-cols-1 gap-10 lg:grid-cols-2">
-          {/* left: brand */}
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-4">
-              <img
-                src="/brand/weered_badge_512.png"
-                alt="weered"
-                className="h-14 w-14 rounded-2xl"
-              />
-              <div>
-                <div className="text-3xl font-semibold tracking-tight">weered</div>
-                <div className="mt-1 text-sm opacity-70">
-                  Portal-first chat + presence, built for lobbies.
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 rounded-2xl border border-[#1F2937] bg-[#121826] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
-              <div className="text-sm font-medium opacity-80">What you&apos;re entering</div>
-              <ul className="mt-3 space-y-2 text-sm opacity-70">
-                <li>• Real-time lobby presence + chat</li>
-                <li>• Docked controls, fast navigation</li>
-                <li>• Reddit browser temporarily disabled (placeholder mode)</li>
-              </ul>
-              <div className="mt-4 text-xs opacity-50">
-                Tip: This is dev login (JWT). We’ll harden auth once the UI is locked.
-              </div>
+    <div style={{ minHeight: "100vh", background: bg, color: text, display: "grid", placeItems: "center", padding: 18 }}>
+      <div style={{ width: "min(980px, 96vw)", display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
+        {/* Left brand */}
+        <div style={{ border: `1px solid ${border}`, borderRadius: 20, background: panel, padding: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
+                boxShadow: "0 10px 30px rgba(124,58,237,.22)",
+              }}
+            />
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: -0.4 }}>weered</div>
+              <div style={{ opacity: 0.75, fontSize: 13 }}>Spaces, rooms, presence — fast + stable.</div>
             </div>
           </div>
 
-          {/* right: login card */}
-          <div className="flex items-center justify-center">
-            <div className="w-full max-w-md rounded-2xl border border-[#1F2937] bg-[#121826] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-lg font-semibold">Sign in</div>
-                  <div className="text-sm opacity-70">Enter a username to continue.</div>
-                </div>
-                <img
-                  src="/brand/weered_badge_512.png"
-                  alt="badge"
-                  className="h-10 w-10 rounded-xl opacity-90"
-                />
+          <div style={{ marginTop: 14, opacity: 0.85, lineHeight: 1.55 }}>
+            <div style={{ fontWeight: 900, marginBottom: 6 }}>Tonight’s build</div>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <li>Lobby chat in the center</li>
+              <li>Moderator tools + room admin state</li>
+              <li>Global staff controls (kick/ban)</li>
+            </ul>
+          </div>
+
+          <div style={{ marginTop: 14, borderTop: "1px solid rgba(148,163,184,.14)", paddingTop: 12, opacity: 0.7, fontSize: 12 }}>
+            Tip: use a simple username (no spaces). Passwords are stored hashed.
+          </div>
+        </div>
+
+        {/* Right auth */}
+        <div style={{ border: `1px solid ${border}`, borderRadius: 20, background: panel, padding: 18 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button
+              onClick={() => setMode("login")}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 14,
+                fontWeight: 950,
+                border: "1px solid rgba(148,163,184,.18)",
+                background: mode === "login" ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.03)",
+                color: text,
+              }}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setMode("register")}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 14,
+                fontWeight: 950,
+                border: "1px solid rgba(148,163,184,.18)",
+                background: mode === "register" ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.03)",
+                color: text,
+              }}
+            >
+              Register
+            </button>
+          </div>
+
+          <div style={{ opacity: 0.8, fontSize: 13, marginBottom: 10 }}>
+            {mode === "login" ? "Sign in to your account." : "Create a new account."}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              style={{ padding: "10px 12px", borderRadius: 14 }}
+            />
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              type="password"
+              style={{ padding: "10px 12px", borderRadius: 14 }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+            />
+
+            {err ? (
+              <div style={{ border: "1px solid rgba(239,68,68,.35)", background: "rgba(239,68,68,.08)", padding: "10px 12px", borderRadius: 14, color: "rgba(254,226,226,.95)" }}>
+                {err}
               </div>
+            ) : null}
 
-              <label className="mt-6 block text-sm opacity-80">Username</label>
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-[#1F2937] bg-[#0B0F1A] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#7C3AED]"
-                placeholder="Weered"
-                autoComplete="off"
-              />
+            <button
+              disabled={busy}
+              onClick={submit}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 14,
+                fontWeight: 950,
+                border: "1px solid rgba(148,163,184,.18)",
+                background: "linear-gradient(135deg, rgba(124,58,237,.95) 0%, rgba(217,70,239,.95) 100%)",
+                color: "#0B0F1A",
+                boxShadow: "0 10px 30px rgba(217,70,239,.16)",
+              }}
+            >
+              {busy ? "Working…" : mode === "login" ? "Login" : "Create account"}
+            </button>
 
-              {err ? (
-                <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                  {err}
-                </div>
-              ) : null}
-
-              <button
-                onClick={login}
-                disabled={busy || !username.trim()}
-                className="mt-6 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg,#7C3AED,#D946EF)" }}
-              >
-                {busy ? "Signing in..." : "Login"}
-              </button>
-
-              <div className="mt-4 text-center text-xs opacity-60">
-                By continuing you agree this is dev mode.
-              </div>
+            <div style={{ opacity: 0.65, fontSize: 12, lineHeight: 1.5 }}>
+              This uses token auth (localStorage) to keep WS stable while we build.
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
-
-

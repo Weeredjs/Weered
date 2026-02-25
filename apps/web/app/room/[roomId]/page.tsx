@@ -10,7 +10,9 @@ import RoomVoicePanel from "../../../components/RoomVoicePanel";
 import WeeredBrand from "../../../components/WeeredBrand";
 
 export default function RoomPage({ params }: { params: { roomId: string } }) {
-  const roomId = String(params?.roomId || "");
+    const roomIdRaw = String(params?.roomId || "");
+  let roomId = roomIdRaw;
+  try { roomId = decodeURIComponent(roomIdRaw); } catch {}
   const { setActiveRoomId, users, msgs, sendChat, joinStatus, joinedRoomId } = useWeered();
   const [text, setText] = useState("");
 
@@ -109,4 +111,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 </main>
   );
 }
+
+
 
