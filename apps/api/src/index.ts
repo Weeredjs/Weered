@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
@@ -95,7 +95,23 @@ function makeEmptyRoom(roomId: string): RoomState {
   };
 }
 
+function normalizeRoomId(input: string): string {
+  let s = String(input || "").trim();
+  // decode up to 3 times to undo %40 / %2525... drift
+  for (let i = 0; i < 3; i++) {
+    if (s.indexOf("%") === -1) break;
+    try {
+      const d = decodeURIComponent(s);
+      if (d === s) break;
+      s = d;
+    } catch {
+      break;
+    }
+  }
+  return s;
+}
 async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
+  roomId = normalizeRoomId(roomId);
   const cached = rooms.get(roomId);
   if (cached) return cached;
 
@@ -371,6 +387,7 @@ async function persistRoomBasics(room: RoomState) {
 }
 
 async function doJoin(ws: Sock, roomId: string) {
+  roomId = normalizeRoomId(roomId);
   const room = await ensureRoomLoaded(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
@@ -553,7 +570,7 @@ app.post("/dev-login", async (req, reply) => {
     });
 
     const roomsOut = list
-      .filter((r) => r.id !== "lobby")
+      .filter((r) => r.id !== "lobby" && !r.id.includes("%"))
       .map((r) => ({
         id: r.id,
         roomId: r.id,
@@ -641,7 +658,7 @@ app.post("/dev-login", async (req, reply) => {
         }
 
         if (msg.type === "presence:join") {
-          const roomId = String(msg.roomId || "");
+          const roomId = normalizeRoomId(String(msg.roomId || ""));
           if (!roomId) return;
 
           const room = await ensureRoomLoaded(roomId);
@@ -705,7 +722,7 @@ app.post("/dev-login", async (req, reply) => {
         }
 
         if (msg.type === "chat:send") {
-          const roomId = String(msg.roomId || "");
+          const roomId = normalizeRoomId(String(msg.roomId || ""));
           const body = String(msg.body || "").trim();
           if (!roomId || !body) return;
 
@@ -744,7 +761,7 @@ app.post("/dev-login", async (req, reply) => {
           return;
         }
 
-        const roomId = String(msg.roomId || ws.roomId || ws.pendingRoomId || "");
+        const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ws.pendingRoomId || ""));
         if (!roomId) return;
         const room = await ensureRoomLoaded(roomId);
 

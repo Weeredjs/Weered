@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -87,7 +87,8 @@ function normalizeInbound(msg: any) {
 }
 
 export function WeeredProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const router = useRouter();
+  const pathname = usePathname();
   const [token, setToken] = useState("");
   const [me, setMe] = useState<any>(null);
 
@@ -111,7 +112,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (lastJoinedRidRef.current === rid) return;
     lastJoinedRidRef.current = rid;
     try {
-      console.log("[weered] sending presence:join", rid, "wsReady=", wsReady, "me=", me?.name || me);
 ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
       try { ws.send(JSON.stringify({ type: "chat:history", roomId: rid, limit: 50 })); } catch {}
       /* joinedOnceRef removed */
@@ -179,6 +179,7 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     setAdminByRoom({});
     setStatusByRoom({});
     setActiveRoomId("");
+    setJoinedRoomId("");
     /* keep joinedRoomId on ws close */
     try { wsRef.current?.close(); } catch {}
     wsRef.current = null;
@@ -193,12 +194,48 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
         try { setMe(JSON.parse(uRaw)); } catch {}
       }
     } catch {}
-  }, []);  // Re-join presence when activeRoomId changes (only after WS is ready)
+  }, []);
+
+  // Sync auth from localStorage on navigation (fix: no refresh after login redirect)
+  useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      const uRaw = localStorage.getItem("weered_user") || "";
+      if (tok && tok !== token) {
+        setToken(tok);
+        try { setMe(uRaw ? JSON.parse(uRaw) : null); } catch { setMe(null); }
+      }
+      if (!tok && token) {
+        // If storage cleared (logout elsewhere), mirror it
+        setToken("");
+        setMe(null);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);  // Re-join presence when activeRoomId changes (only after WS is ready)
   useEffect(() => {
     if (!wsReady) return;
     lastJoinedRidRef.current = "";
     sendJoinDefaultRoom();
   }, [wsReady, activeRoomId, joinedRoomId]);
+
+  // Sync auth from localStorage on navigation (fix: no refresh after login redirect)
+  useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      const uRaw = localStorage.getItem("weered_user") || "";
+      if (tok && tok !== token) {
+        setToken(tok);
+        try { setMe(uRaw ? JSON.parse(uRaw) : null); } catch { setMe(null); }
+      }
+      if (!tok && token) {
+        // If storage cleared (logout elsewhere), mirror it
+        setToken("");
+        setMe(null);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useEffect(() => {
     if (!token) return;
@@ -225,12 +262,9 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     ws.addEventListener("message", (ev: MessageEvent) => {
       try {
         const raw = typeof ev.data === "string" ? ev.data : "";
-        console.log("[weered] ws raw", raw.slice(0, 500));
         const parsed = raw ? JSON.parse(raw) : null;
         const msg = normalizeInbound(parsed);
-        console.log("[weered] ws in", msg?.type, msg);
       } catch (err) {
-        console.log("[weered] ws in parse error", err);
       }
     });
     // --- /debug ---
@@ -415,6 +449,24 @@ const list = Array.isArray(msg.users) ? msg.users : [];
     };
   }, [token]);
 
+  // Sync auth from localStorage on navigation (fix: no refresh after login redirect)
+  useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      const uRaw = localStorage.getItem("weered_user") || "";
+      if (tok && tok !== token) {
+        setToken(tok);
+        try { setMe(uRaw ? JSON.parse(uRaw) : null); } catch { setMe(null); }
+      }
+      if (!tok && token) {
+        // If storage cleared (logout elsewhere), mirror it
+        setToken("");
+        setMe(null);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
 useEffect(() => {
     if (!wsReady) return;
     const ws = wsRef.current;
@@ -426,6 +478,24 @@ useEffect(() => {
     setStatusByRoom((prev) => ({ ...prev, [next]: "joining" }));
     try { ws.send(JSON.stringify({ type: "presence:join", roomId: next })); } catch {}
   }, [activeRoomId, wsReady]);
+
+  // Sync auth from localStorage on navigation (fix: no refresh after login redirect)
+  useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      const uRaw = localStorage.getItem("weered_user") || "";
+      if (tok && tok !== token) {
+        setToken(tok);
+        try { setMe(uRaw ? JSON.parse(uRaw) : null); } catch { setMe(null); }
+      }
+      if (!tok && token) {
+        // If storage cleared (logout elsewhere), mirror it
+        setToken("");
+        setMe(null);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   function canChatInActive() {
     return Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && (statusByRoom[activeRoomId] || "idle") === "joined");
