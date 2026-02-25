@@ -53,12 +53,12 @@ model RoomBan {
 }
 
 model RoomMessage {
-  id        String   @id
-  roomId    String
-  userId    String
-  userName  String   @default("")
-  body      String
-  ts        DateTime @default(now())
+  id       String   @id
+  roomId   String
+  userId   String
+  userName String   @default("")
+  body     String
+  ts       DateTime @default(now())
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
@@ -79,10 +79,22 @@ model RoomAudit {
 
   @@index([roomId, ts])
 }
+
 model User {
-  id          String   @id @default(cuid())
-  usernameKey String   @unique
-  name        String   @default("")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          String     @id @default(cuid())
+  usernameKey String     @unique
+  name        String     @default("")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  LocalAuth   LocalAuth?
+}
+
+model LocalAuth {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

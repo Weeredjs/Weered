@@ -1,9 +1,12 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import SubredditBrowser from "../../components/SubredditBrowser";
+import LobbyChatPanel from "../../components/LobbyChatPanel";
+import { useWeered } from "../../components/WeeredProvider";
+import ModeratorToolsPanel from "../../components/ModeratorToolsPanel";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -20,7 +23,21 @@ export default function LobbyPage() {
   const subParam = useMemo(() => sp.get("sub") || "r/all", [sp]);
   const sub = useMemo(() => subParam.replace(/^r\//i, ""), [subParam]);
 
-  async function loadRooms() {
+  
+  const { setActiveRoomId, activeRoomId } = useWeered();
+
+  const lobbyRoomId = useMemo(() => {
+    // We use "lobby:r/all" etc (matches your Dock / presence mapping)
+    const sp = (subParam || "r/all").trim();
+    const normalized = sp.startsWith("r/") ? sp : ("r/" + sp.replace(/^\/+/, ""));
+    return "lobby:" + normalized;
+  }, [subParam]);
+
+  // Keep provider pointed at the correct lobby room (drives presence + chat feed)
+  useEffect(() => {
+    try { setActiveRoomId(lobbyRoomId); } catch {}
+  }, [lobbyRoomId, setActiveRoomId]);
+async function loadRooms() {
     try {
       const r = await fetch(`${API}/rooms`, { cache: "no-store" });
       const j = await r.json();
@@ -60,10 +77,10 @@ export default function LobbyPage() {
         <div>
           <div style={{ opacity: 0.7, fontSize: 12, fontWeight: 900 }}>lobby</div>
           <div style={{ fontSize: 18, fontWeight: 1000 }}>
-            Weered Lobby — {subParam}
+            The Lobby | {subParam}
           </div>
           <div style={{ opacity: 0.7, fontSize: 12 }}>
-            Subreddit = lobby • Rooms list lives under this lobby
+            Subreddit = lobby | Rooms list lives under this lobby
           </div>
         </div>
 
@@ -77,7 +94,7 @@ export default function LobbyPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.7fr 1.1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 2.3fr", gap: 14 }}>
         {/* Rooms */}
         <section style={panel}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -105,29 +122,34 @@ export default function LobbyPage() {
                     {pickFirstString(r.name, r.id)}
                   </div>
                   <div style={{ opacity: 0.7, fontSize: 12 }}>
-                    id: {r.id} • users: {r.users ?? r.userCount ?? "—"}
+                    id: {r.id} users: {r.users ?? r.userCount ?? "â€”"}
                   </div>
                 </div>
-                <Link href={`/room/${r.id}`} style={{ padding: "6px 10px", borderRadius: 12, border: "1px solid rgba(148,163,184,.20)", background: "rgba(255,255,255,.05)", fontWeight: 950, textDecoration: "none", color: "rgba(243,244,246,.98)", height: 32 }}>
+                <Link href={
+  (() => {
+    const rid = String(r.id ?? "");
+    if (!rid) return "/lobby";
+    if (rid.startsWith("lobby:")) {
+      const sub = rid.slice("lobby:".length);
+      return `/lobby?sub=${encodeURIComponent(sub)}`;
+    }
+    return `/room/${encodeURIComponent(rid)}`;
+  })()
+} style={{ padding: "6px 10px", borderRadius: 12, border: "1px solid rgba(148,163,184,.20)", background: "rgba(255,255,255,.05)", fontWeight: 950, textDecoration: "none", color: "rgba(243,244,246,.98)", height: 32 }}>
                   Open
                 </Link>
               </div>
             ))}
             {!rooms.length ? <div style={{ opacity: 0.7 }}>No rooms found.</div> : null}
           </div>
+          <div style={{ marginTop: 12 }}>
+        <ModeratorToolsPanel roomId={lobbyRoomId} />
+</div>
         </section>
 
         {/* Subreddit Browser */}
         <SubredditBrowser subreddit={sub} />
-
-        {/* Lobby chat placeholder */}
-        <section style={panel}>
-          <div style={{ fontWeight: 950, marginBottom: 10 }}>Lobby Chat</div>
-          <div style={{ opacity: 0.7 }}>
-            v1: Chat remains in the Dock. Next patch wires lobby chat to render here too.
-          </div>
-        </section>
-      </div>
+</div>
     </div>
   );
 }
