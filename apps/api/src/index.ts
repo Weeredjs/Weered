@@ -1,8 +1,9 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
@@ -14,6 +15,24 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
 const HTTP_PORT = Number(process.env.PORT || 4000);
 const WS_PORT = Number(process.env.WS_PORT || 4001);
+
+const GOD_IDS = new Set(
+  String(process.env.WEERED_GOD_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
+
+const STAFF_IDS = new Set(
+  String(process.env.WEERED_STAFF_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
+
+function isStaffOrGod(userId: string) {
+  return GOD_IDS.has(userId) || STAFF_IDS.has(userId);
+}
 
 const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws://127.0.0.1:7880";
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
@@ -102,7 +121,12 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
 
   if (!dbRoom) {
     // Create a stub room record (ownerId assigned on first join)
-    await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
+        try {
+        await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
+      } catch (e: any) {
+        // Ignore race: room was created concurrently
+        if (e?.code !== "P2002") throw e;
+      }
   } else {
     r.name = dbRoom.name || "";
     r.locked = Boolean(dbRoom.locked);
@@ -428,7 +452,56 @@ async function main() {
   const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
 
   return reply.send({ token, user });
-});  app.post("/dev-login", async (req, reply) => {
+});  
+  // --- Local auth: register/login (password-based) ---
+  app.post("/auth/register", async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const rawU = typeof body.username === "string" ? body.username : "";
+    const rawP = typeof body.password === "string" ? body.password : "";
+
+    const username = (rawU || "").trim().toLowerCase().slice(0, 32);
+    const password = (rawP || "").trim();
+
+    if (!username || !password) return reply.code(400).send({ error: "Missing username/password" });
+    if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
+
+    const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
+    if (existing) return reply.code(409).send({ error: "Username already exists" });
+
+    const user = await prisma.user.create({ data: { name: username, usernameKey: username } });
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await prisma.localAuth.create({
+      data: { username, passwordHash, userId: user.id },
+    });
+
+    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user });
+  });
+
+  app.post("/auth/login", async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const rawU = typeof body.username === "string" ? body.username : "";
+    const rawP = typeof body.password === "string" ? body.password : "";
+
+    const username = (rawU || "").trim().toLowerCase().slice(0, 32);
+    const password = (rawP || "").trim();
+
+    if (!username || !password) return reply.code(400).send({ error: "Missing username/password" });
+
+    const la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
+    if (!la) return reply.code(401).send({ error: "Invalid credentials" });
+
+    const ok = await bcrypt.compare(password, la.passwordHash);
+    if (!ok) return reply.code(401).send({ error: "Invalid credentials" });
+
+    const user = await prisma.user.findUnique({ where: { id: la.userId } });
+    if (!user) return reply.code(401).send({ error: "Invalid credentials" });
+
+    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user });
+  });
+app.post("/dev-login", async (req, reply) => {
     const r = await (app as any).inject({
       method: "POST",
       url: "/auth/dev-login",
@@ -759,7 +832,54 @@ async function main() {
           return;
         }
 
-        if (msg.type === "mod:kick") {
+                if (msg.type === "staff:kick") {
+          const actorId = ws.user?.id || "";
+          const actorName = ws.user?.name || "staff";
+          if (!actorId) return;
+          if (!isStaffOrGod(actorId)) return;
+
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+          if (targetId === actorId) return;
+
+          // Collect all rooms where target is present
+          const touched: any[] = [];
+          for (const room of rooms.values()) {
+            if (room.users.has(targetId) || room.mods.has(targetId)) {
+              room.users.delete(targetId);
+              room.mods.delete(targetId);
+
+              // Notify any sockets we can find for that user in this room
+              try {
+                for (const s of findSocketsByUser(room, targetId)) {
+                  send(s, { type: "staff:kicked", roomId: room.roomId });
+                  try { (s as any).roomId = undefined; } catch {}
+                  try { (s as any).pendingRoomId = undefined; } catch {}
+                  try { (s as any).close(4001, "staff:kick"); } catch {}
+                }
+              } catch {}
+
+              broadcast(room, { type: "presence:leave", roomId: room.roomId, userId: targetId });
+              audit(room, { type: "staff:kick", actorId, actorName, targetId });
+              publishState(room);
+              touched.push(room.roomId);
+            }
+          }
+
+          // If target has sockets but isn't in a known room, close them via wss.clients as a fallback
+          try {
+            for (const c of wss.clients) {
+              const s = c as any;
+              if (s?.user?.id && String(s.user.id) === targetId) {
+                send(s, { type: "staff:kicked" });
+                try { s.close(4001, "staff:kick"); } catch {}
+              }
+            }
+          } catch {}
+
+          return;
+        }
+if (msg.type === "mod:kick") {
           if (!actorIsMod) return;
           const targetId = String(msg.userId || "");
           if (!targetId) return;
