@@ -1,3 +1,5 @@
+"use client";
+
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -118,8 +120,8 @@ return ( <div className="mt-3 rounded-2xl border border-black/10 bg-white p-3 sh
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-semibold">Room Tools</div>
         <div className="text-xs opacity-70">
-          {status === 'loading' && 'Loading…'}
-          {status === 'saving' && 'Saving…'}
+          {status === 'loading' && 'Loadingâ€¦'}
+          {status === 'saving' && 'Savingâ€¦'}
           {status === 'ok' && 'OK'}
           {status === 'error' && 'Error'}
         </div>
@@ -149,7 +151,7 @@ return ( <div className="mt-3 rounded-2xl border border-black/10 bg-white p-3 sh
           className="mt-1 h-24 w-full resize-none rounded-xl border border-black/10 bg-white p-2 text-sm"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Shared notes for this room…"
+          placeholder="Shared notes for this roomâ€¦"
         />
         <div className="mt-2 flex gap-2">
           <button
