@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,9 @@ function getRoomCount(room: AnyRoom): number | null {
 }
 
 export default function LobbyRoomsList() {
-  const w = useWeered() as any;
+  
+  const clamp1: React.CSSProperties = { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+const w = useWeered() as any;
   const router = useRouter();
 
   const [q, setQ] = useState("");
@@ -57,7 +59,7 @@ export default function LobbyRoomsList() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search rooms…"
+          placeholder="Search rooms..."
           style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", minWidth: 240 }}
         />
         <div style={{ fontSize: 12, opacity: 0.7 }}>{rooms.length} shown</div>
@@ -74,7 +76,7 @@ export default function LobbyRoomsList() {
             <div
               key={id || name}
               style={{
-                border: "1px solid var(--weered-border)",
+                minWidth: 0, border: "1px solid var(--weered-border)",
                 borderRadius: 12,
                 padding: 10,
                 display: "flex",
@@ -101,10 +103,7 @@ export default function LobbyRoomsList() {
                     </span>
                   ) : null}
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.7, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {id}
-                </div>
-              </div>
+</div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
@@ -7,6 +7,80 @@ type DmMsg = { id: string; at: number; from: "me" | "them"; body: string };
 type DmThread = { id: string; peer: string; peerId?: string; msgs: DmMsg[] };
 
 const DM_KEY = "weered_dm_threads_v0";
+
+const WEERED_THEME_KEY = "weered_theme_v1";
+
+type WeeredThemeName = "slate" | "zinc" | "stone" | "gray";
+const WEERED_THEMES: Record<WeeredThemeName, any> = {
+  slate: {
+    bg: "rgb(2,6,23)",
+    panel: "rgba(15,23,42,.92)",
+    panel2: "rgba(17,24,39,.94)",
+    bd: "rgba(148,163,184,.14)",
+    bd2: "rgba(148,163,184,.26)",
+    text: "rgba(229,231,235,.96)",
+    muted: "rgba(148,163,184,.75)",
+    accentBg: "rgba(14,165,233,.18)",     // sky
+    accentRing: "rgba(14,165,233,.35)",
+    accentText: "rgba(56,189,248,.95)",
+  },
+  zinc: {
+    bg: "rgb(9,9,11)",
+    panel: "rgba(24,24,27,.92)",
+    panel2: "rgba(24,24,27,.94)",
+    bd: "rgba(161,161,170,.18)",
+    bd2: "rgba(161,161,170,.28)",
+    text: "rgba(244,244,245,.96)",
+    muted: "rgba(161,161,170,.78)",
+    accentBg: "rgba(34,197,94,.16)",      // green
+    accentRing: "rgba(34,197,94,.34)",
+    accentText: "rgba(74,222,128,.95)",
+  },
+  stone: {
+    bg: "rgb(12,10,9)",
+    panel: "rgba(28,25,23,.92)",
+    panel2: "rgba(28,25,23,.94)",
+    bd: "rgba(168,162,158,.18)",
+    bd2: "rgba(168,162,158,.28)",
+    text: "rgba(245,245,244,.96)",
+    muted: "rgba(168,162,158,.78)",
+    accentBg: "rgba(245,158,11,.16)",     // amber
+    accentRing: "rgba(245,158,11,.34)",
+    accentText: "rgba(251,191,36,.95)",
+  },
+  gray: {
+    bg: "rgb(3,7,18)",
+    panel: "rgba(17,24,39,.92)",
+    panel2: "rgba(17,24,39,.94)",
+    bd: "rgba(156,163,175,.18)",
+    bd2: "rgba(156,163,175,.28)",
+    text: "rgba(243,244,246,.96)",
+    muted: "rgba(156,163,175,.78)",
+    accentBg: "rgba(20,184,166,.16)",     // teal
+    accentRing: "rgba(20,184,166,.34)",
+    accentText: "rgba(45,212,191,.95)",
+  },
+};
+
+function applyWeeredTheme(name: WeeredThemeName) {
+  if (typeof document === "undefined") return;
+  const t = WEERED_THEMES[name] || WEERED_THEMES.slate;
+  const root = document.documentElement;
+
+  root.style.setProperty("--weered-bg", t.bg);
+  root.style.setProperty("--weered-panel", t.panel);
+  root.style.setProperty("--weered-panel2", t.panel2);
+  root.style.setProperty("--weered-bd", t.bd);
+  root.style.setProperty("--weered-bd2", t.bd2);
+  root.style.setProperty("--weered-text", t.text);
+  root.style.setProperty("--weered-muted", t.muted);
+
+  root.style.setProperty("--weered-accent-bg", t.accentBg);
+  root.style.setProperty("--weered-accent-ring", t.accentRing);
+  root.style.setProperty("--weered-accent-text", t.accentText);
+
+  root.setAttribute("data-weered-theme", name);
+}
 
 function __id() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -56,19 +130,19 @@ function normRole(v: any): string {
 
 function globalIcon(role: string): string {
   const r = normRole(role);
-  if (r === "GOD") return "👑";
-  if (r === "ADMIN") return "🛡️";
-  if (r === "STAFF") return "🧰";
-  if (r === "MOD") return "🔧";
-  if (r === "VIP") return "⭐";
-  return "🏷️";
+  if (r === "GOD") return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ¢â‚¬Ëœ";
+  if (r === "ADMIN") return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â";
+  if (r === "STAFF") return "ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â°";
+  if (r === "MOD") return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§";
+  if (r === "VIP") return "ÃƒÂ¢Ã‚Â­Ã‚Â";
+  return "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â·ÃƒÂ¯Ã‚Â¸Ã‚Â";
 }
 
 function Pill(props: { label: string; title?: string; tone?: "violet" | "slate" | "green" | "amber" | "red" }) {
   const tone = props.tone || "slate";
   const bg =
     tone === "violet"
-      ? "rgba(124,58,237,.18)"
+      ? "var(--weered-accent-bg, rgba(14,165,233,.18))"
       : tone === "green"
       ? "rgba(16,185,129,.16)"
       : tone === "amber"
@@ -78,7 +152,7 @@ function Pill(props: { label: string; title?: string; tone?: "violet" | "slate" 
       : "rgba(148,163,184,.14)";
   const bd =
     tone === "violet"
-      ? "rgba(217,70,239,.35)"
+      ? "var(--weered-accent-ring, rgba(14,165,233,.35))"
       : tone === "green"
       ? "rgba(16,185,129,.35)"
       : tone === "amber"
@@ -140,6 +214,21 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
   const [text, setText] = useState("");
 
   const [dockMode, setDockMode] = useState<"rail" | "floating">(props.forceMode || "floating");
+
+  const [theme, setTheme] = useState<WeeredThemeName>(() => {
+    try {
+      const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
+      if (v === "slate" || v === "zinc" || v === "stone" || v === "gray") return v;
+    } catch {}
+    return "slate";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(WEERED_THEME_KEY, theme);
+    } catch {}
+    applyWeeredTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     if (props.forceMode) {
@@ -216,7 +305,7 @@ const viewId = String(activeRoomId || "");
   }, [me, claims]);
 
   const meName = pickFirstString(me?.name, me?.username, "Guest");
-  const roomTitle = pickFirstString(meta?.name, viewId, "—");
+  const roomTitle = pickFirstString(meta?.name, viewId, "Ã¢â‚¬Â");
   const roomRole = normRole(pickFirstString(role, joinStatus?.role));
 
   // ---- DM state (local-only v0)
@@ -335,12 +424,12 @@ const viewId = String(activeRoomId || "");
 
   const btnActive: React.CSSProperties = {
     ...btn,
-    border: "1px solid rgba(217,70,239,.35)",
-    background: "rgba(124,58,237,.18)",
+    border: "1px solid var(--weered-accent-ring, rgba(14,165,233,.35))",
+    background: "var(--weered-accent-bg, rgba(14,165,233,.18))",
   };
 
   if (!open) {
-    return (
+    return props.forceMode ? null : (
       <button
         onClick={() => setOpen(true)}
         style={{
@@ -350,8 +439,8 @@ const viewId = String(activeRoomId || "");
           zIndex: 9999,
           padding: "8px 12px",
           borderRadius: 999,
-          border: "1px solid rgba(217,70,239,.35)",
-          background: "rgba(124,58,237,.18)",
+          border: "1px solid var(--weered-accent-ring, rgba(14,165,233,.35))",
+          background: "var(--weered-accent-bg, rgba(14,165,233,.18))",
           color: "rgba(229,231,235,.95)",
           fontWeight: 950,
           cursor: "pointer",
@@ -369,13 +458,13 @@ const viewId = String(activeRoomId || "");
     <div style={panel}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: "1px solid rgba(148,163,184,.12)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <div style={{ fontWeight: 950, letterSpacing: ".2px" }}>Dock</div>
+          <div style={{ fontWeight: 950, letterSpacing: ".2px", display: "none" }}>Dock</div>
           {globalRole ? <Pill tone="violet" label={`global: ${globalIcon(globalRole)} ${globalRole}`} /> : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button style={tab === "room" ? btnActive : btn} onClick={() => setTab("room")}>Room</button>
           <button style={tab === "dms" ? btnActive : btn} onClick={() => setTab("dms")}>DMs</button>
-          <button style={btn} onClick={() => setOpen(false)}>Close</button>
+          <button style={btn} onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:close")); } catch {} }}>Close</button>
         </div>
       </div>
 
@@ -385,6 +474,28 @@ const viewId = String(activeRoomId || "");
           <Pill tone="slate" label={`me: ${meName}`} />
           <Pill tone="slate" label={`role: ${roomRole || "none"}`} />
           <Pill tone="slate" label={`room: ${roomTitle}`} />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 6 }}>
+            <span style={{ fontSize: 11, opacity: 0.75 }}>Theme:</span>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as any)}
+              style={{
+                background: "rgba(255,255,255,.06)",
+                color: "rgba(229,231,235,.95)",
+                border: "1px solid rgba(148,163,184,.18)",
+                borderRadius: 10,
+                padding: "4px 8px",
+                fontSize: 12,
+                outline: "none",
+              }}
+            >
+              <option value="slate">Slate</option>
+              <option value="zinc">Zinc</option>
+              <option value="stone">Stone</option>
+              <option value="gray">Gray</option>
+            </select>
+          </span>
+
           {typeof logout === "function" ? <button style={btn} onClick={() => call(logout)}>Logout</button> : null}
         </div>
 
@@ -405,7 +516,7 @@ const viewId = String(activeRoomId || "");
               <div style={{ padding: 10, height: 190, overflow: "auto" }}>
                 {msgArr.length ? (
                   msgArr.slice(-80).map((m: any, i: number) => {
-                    const who = pickFirstString(m?.user?.name, m?.name, m?.from, "—");
+                    const who = pickFirstString(m?.user?.name, m?.name, m?.from, "Ã¢â‚¬Â");
                     const body = pickFirstString(m?.body, m?.text, "");
                     return (
                       <div key={m?.id || i} style={{ marginBottom: 8 }}>
@@ -422,7 +533,7 @@ const viewId = String(activeRoomId || "");
                 <input
                   value={text}
                   onChange={(e) => setText((e.target as any).value || "")}
-                  placeholder="Message…"
+                  placeholder="Message"
                   style={{
                     flex: 1,
                     padding: "10px 12px",
@@ -458,7 +569,7 @@ const viewId = String(activeRoomId || "");
               <div style={{ maxHeight: 200, overflow: "auto" }}>
                 {userArr.length ? (
                   userArr.map((u: any) => {
-                    const uname = pickFirstString(u?.name, u?.username, "—");
+                    const uname = pickFirstString(u?.name, u?.username, "Ã¢â‚¬Â");
                     const ugr = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.user?.globalRole, u?.user?.global_role));
                     const ur = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
                     const isMe = !!me?.id && u?.id === me?.id;
@@ -495,7 +606,7 @@ const viewId = String(activeRoomId || "");
                           if (next) call(renameRoom, viewId, next);
                         }}
                       >
-                        Rename…
+                        Rename
                       </button>
                     ) : null}
                   </div>
@@ -515,7 +626,7 @@ const viewId = String(activeRoomId || "");
                   <input
                     value={dmPeer}
                     onChange={(e) => setDmPeer((e.target as any).value || "")}
-                    placeholder="Username…"
+                    placeholder="Username"
                     style={{
                       flex: 1,
                       padding: "8px 10px",
@@ -545,7 +656,7 @@ const viewId = String(activeRoomId || "");
                             padding: "10px 10px",
                             border: "0",
                             borderBottom: "1px solid rgba(148,163,184,.08)",
-                            background: active ? "rgba(124,58,237,.18)" : "transparent",
+                            background: active ? "var(--weered-accent-bg, rgba(14,165,233,.18))" : "transparent",
                             color: "rgba(229,231,235,.95)",
                             cursor: "pointer",
                             fontWeight: 900,
@@ -592,7 +703,7 @@ const viewId = String(activeRoomId || "");
                                 padding: "8px 10px",
                                 borderRadius: 12,
                                 border: "1px solid rgba(148,163,184,.14)",
-                                background: m.from === "me" ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.06)",
+                                background: m.from === "me" ? "var(--weered-accent-bg, rgba(14,165,233,.18))" : "rgba(255,255,255,.06)",
                               }}
                             >
                               <div style={{ fontSize: 13, lineHeight: "18px" }}>{m.body}</div>
@@ -612,7 +723,7 @@ const viewId = String(activeRoomId || "");
                       <input
                         value={dmDraft}
                         onChange={(e) => setDmDraft((e.target as any).value || "")}
-                        placeholder="Message…"
+                        placeholder="Messages:Ã‚Â¦"
                         style={{
                           flex: 1,
                           padding: "10px 12px",

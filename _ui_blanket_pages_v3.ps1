@@ -1,3 +1,80 @@
+$ErrorActionPreference="Stop"
+
+function Backup([string]$p, [string]$tag) {
+  if (!(Test-Path -LiteralPath $p)) { throw "Missing: $p" }
+  $ts = Get-Date -Format "yyyyMMdd_HHmmss"
+  $bak = "$p.bak_${tag}_$ts"
+  Copy-Item -LiteralPath $p -Destination $bak -Force
+  Write-Host "OK Backup:" $bak
+}
+
+function Write-File {
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [Parameter(Mandatory=$true)][string]$Content
+  )
+  # Strip control chars from path (just in case)
+  $clean = -join ($Path.ToCharArray() | Where-Object { -not [char]::IsControl($_) })
+  Set-Content -LiteralPath $clean -Value $Content -Force
+  Write-Host "OK Wrote:" $clean
+}
+
+$Repo="C:\Weered"
+$root  = Join-Path $Repo "apps\web\app\page.tsx"
+$login = Join-Path $Repo "apps\web\app\login\page.tsx"
+$lobby = Join-Path $Repo "apps\web\app\lobby\page.tsx"
+$room  = Join-Path $Repo "apps\web\app\room\[roomId]\page.tsx"
+$rsub  = Join-Path $Repo "apps\web\app\r\[sub]\page.tsx"
+
+Backup $root  "ui_blanket_v3"
+Backup $login "ui_blanket_v3"
+Backup $lobby "ui_blanket_v3"
+Backup $room  "ui_blanket_v3"
+Backup $rsub  "ui_blanket_v3"
+
+# ---------------- app/page.tsx ----------------
+$ROOT = @'
+"use client";
+
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+export default function Page() {
+  const router = useRouter();
+  const sp = useSearchParams();
+
+  const nextPath = React.useMemo(() => {
+    const n = sp?.get("next") || "";
+    return n && n.startsWith("/") ? n : "/lobby";
+  }, [sp]);
+
+  React.useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      if (tok) router.replace(nextPath);
+      else router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+    } catch {
+      router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+    }
+  }, [router, nextPath]);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "grid",
+      placeItems: "center",
+      background: "var(--weered-bg, #050816)",
+      color: "rgba(243,244,246,.92)",
+      fontWeight: 900
+    }}>
+      Loading…
+    </div>
+  );
+}
+'@
+
+# ---------------- app/login/page.tsx ----------------
+$LOGIN = @'
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -148,3 +225,15 @@ export default function LoginPage() {
     </div>
   );
 }
+'@
+
+# NOTE: Lobby/Room/rsub bodies are big. If this writes cleanly, I’ll paste the full lobby+room+rsub block next.
+# For now, we just verify writer works with named params.
+
+Write-File -Path $root  -Content $ROOT
+Write-File -Path $login -Content $LOGIN
+
+Write-Host ""
+Write-Host "NEXT:"
+Write-Host "  cd C:\Weered\apps\web ; pnpm dev"
+Write-Host "  Visit /login"

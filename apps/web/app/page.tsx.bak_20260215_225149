@@ -1,3 +1,5 @@
+"use client";
+
 'use client'
 
 "use client";
@@ -65,7 +67,7 @@ export default function Page() {
     <main style={{ padding: 24 }}>
       <h1>Weered</h1>
       <p title="Masthead easter egg">
-        🤣 I don’t sleep — I just sit in the lobby, staring at the “Join Room” button like it owes me money.
+        ðŸ¤£ I donâ€™t sleep â€” I just sit in the lobby, staring at the â€œJoin Roomâ€ button like it owes me money.
       </p>
       <div style={{ display: "flex", gap: 8 }}>
         <input value={name} onChange={e => setName(e.target.value)} />

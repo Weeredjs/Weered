@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
@@ -124,6 +124,42 @@ export default function LeftRail() {
 
   return (
     <div className="weered-left-inner">
+    <div
+      className="weered-brand-block"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: 10,
+        marginBottom: 10,
+        borderRadius: 16,
+        border: "1px solid rgba(148,163,184,.16)",
+        background: "rgba(255,255,255,.04)",
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 12,
+          display: "grid",
+          placeItems: "center",
+          background: "rgba(255,255,255,.06)",
+          border: "1px solid rgba(148,163,184,.18)",
+          flex: "0 0 auto",
+        }}
+      >
+        <img src="/weered-logo.png" alt="weered" style={{ width: 22, height: 22, objectFit: "contain" }} />
+      </div>
+
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 1100, letterSpacing: ".2px", lineHeight: 1.1 }}>weered</div>
+        <div style={{ opacity: 0.70, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          communities • presence • rooms
+        </div>
+      </div>
+    </div>
+
       <UserCorner />
 
       <div className="weered-left-section">

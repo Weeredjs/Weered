@@ -1,116 +1,112 @@
-﻿"use client";
+"use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useWeered } from "../../../components/WeeredProvider";
-import RoomTools from "./RoomTools";
-import VoicePanel from "./VoicePanel";
-import RoomAdminPanel from "../../../components/RoomAdminPanel";
-import RoomVoicePanel from "../../../components/RoomVoicePanel";
-import WeeredBrand from "../../../components/WeeredBrand";
+import LobbyChatPanel from "../../../components/LobbyChatPanel";
+import ModeratorToolsPanel from "../../../components/ModeratorToolsPanel";
 
-export default function RoomPage({ params }: { params: { roomId: string } }) {
-    const roomIdRaw = String(params?.roomId || "");
-  let roomId = roomIdRaw;
-  try { roomId = decodeURIComponent(roomIdRaw); } catch {}
-  const { setActiveRoomId, users, msgs, sendChat, joinStatus, joinedRoomId } = useWeered();
-  const [text, setText] = useState("");
-
-  useEffect(() => {
-    if (roomId) setActiveRoomId(roomId);
-  }, [roomId, setActiveRoomId]);
-
-  const canSend = useMemo(() => Boolean((text || "").trim()), [text]);
-  const canChat = useMemo(() => roomId && joinedRoomId === roomId && joinStatus === "joined", [roomId, joinedRoomId, joinStatus]);
-
-  function doSend() {
-    const body = (text || "").trim();
-    if (!body) return;
-    sendChat(body);
-    setText("");
+function safeDecode(s: string): string {
+  let out = String(s || "");
+  for (let i = 0; i < 3; i++) {
+    if (!out.includes("%")) break;
+    try {
+      const d = decodeURIComponent(out);
+      if (d === out) break;
+      out = d;
+    } catch { break; }
   }
+  return out;
+}
 
+function Avatar(props: { name: string; size?: number; ring?: boolean }) {
+  const s = props.size || 30;
+  const n = String(props.name || "?");
+  const parts = n.trim().split(/\s+/).filter(Boolean);
+  const initials = (parts[0]?.[0] || "?") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] || "") : (parts[0]?.[1] || ""));
+  const ring = props.ring ? "0 0 0 2px var(--weered-accent-ring, rgba(14,165,233,.34))" : "0 0 0 1px rgba(148,163,184,.16)";
   return (
-    <main style={{ padding: 18, fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <WeeredBrand />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Room</h2>
-          <div style={{ fontSize: 12, color: "#666" }}>id: {roomId}</div>
-        </div>
-        <Link href="/" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid var(--weered-border)", background: "rgba(15,23,42,.92)", textDecoration: "none" }}>
-          Home
-        </Link>
-      </div>
-
-      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <RoomTools roomId={roomId} />
-        <VoicePanel roomId={roomId} />
-      </div>
-
-      <div data-weered-room-centerrow="1" style={{ marginTop: 12, display: "grid", gridTemplateColumns: "260px 1fr", gap: 12 }}>
-        <aside style={{ border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, minHeight: 300 }}>
-          <div data-weered-center-presence="1" style={{ fontWeight: 900 }}>Presence</div>
-          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-            {users.length === 0 ? (
-              <div style={{ display: "none",  color: "#777" }}>No users yet.</div>
-            ) : (
-              users.map((u) => (
-                <div key={u.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8 }}>
-                  <div style={{ fontWeight: 800, fontSize: 13 }}>{u.name}</div>
-                  <div style={{ fontSize: 11, color: "#666", wordBreak: "break-all" }}>{u.id}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </aside>
-
-        <section style={{ border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, minHeight: 300, display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 1, overflow: "auto", padding: 8, border: "1px solid #f1f1f1", borderRadius: 12 }}>
-            {msgs.length === 0 ? (
-              <div style={{ color: "#777", textAlign: "center", marginTop: 50 }}>No messages yet.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {msgs.map((m) => (
-                  <div key={m.id} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 10 }}>
-                    <div style={{ fontWeight: 900, fontSize: 13 }}>{m.user?.name || "?"}</div>
-                    <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{m.body}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") doSend(); }}
-              placeholder={canChat ? "Message..." : "Chat disabled until joined/admitted"}
-              style={{ flex: 1, padding: 10, borderRadius: 12, border: "1px solid var(--weered-border)" }}
-              disabled={!canChat}
-            />
-            <button
-              onClick={doSend}
-              disabled={!canSend || !canChat}
-              style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-border)", background: "rgba(15,23,42,.92)", cursor: "pointer", opacity: canSend && canChat ? 1 : 0.5 }}
-            >
-              Send
-            </button>
-          </div>
-        </section>
-      </div>
-
-      <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
-        Room chat mirrors in the Dock. Voice is LiveKit.
-      </div>
-  <RoomAdminPanel roomId={roomId} />
-  <RoomVoicePanel roomId={roomId} />
-</main>
+    <div style={{ width: s, height: s, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,.07)", border: "1px solid rgba(148,163,184,.16)", color: "rgba(243,244,246,.95)", fontWeight: 1000, boxShadow: ring, flex: "0 0 auto" }}>
+      <span style={{ fontSize: Math.max(10, Math.round(s * 0.40)) }}>{initials.toUpperCase()}</span>
+    </div>
   );
 }
 
+export default function RoomPage({ params }: { params: { roomId: string } }) {
+  const ridRaw = String(params?.roomId || "");
+  const roomId = useMemo(() => safeDecode(ridRaw).trim(), [ridRaw]);
 
+  const { me, users, joinedRoomId, joinStatus, setActiveRoomId } = useWeered();
+  useEffect(() => { try { setActiveRoomId(roomId); } catch {} }, [roomId, setActiveRoomId]);
 
+  const canChat = joinedRoomId === roomId && joinStatus === "joined";
+  const page: React.CSSProperties = { padding: "14px", paddingRight: 420 };
+  const panel: React.CSSProperties = { background: "var(--weered-panel, rgba(15,23,42,.90))", border: "1px solid rgba(148,163,184,.14)", borderRadius: 18, padding: 12 };
+
+  return (
+    <div style={page}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <Avatar name={roomId} size={34} ring />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 900 }}>room</div>
+            <div style={{ fontSize: 20, fontWeight: 1100, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{roomId}</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>status: {canChat ? "joined · chat enabled" : "not joined"} · users: {Array.isArray(users) ? users.length : 0}</div>
+          </div>
+        </div>
+
+        <Link href="/lobby" style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(148,163,184,.20)", background: "rgba(255,255,255,.05)", fontWeight: 950, textDecoration: "none", color: "rgba(243,244,246,.98)" }}>
+          ← Lobby
+        </Link>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.5fr .9fr", gap: 14, alignItems: "start" }}>
+        <section style={panel}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontWeight: 1000 }}>Room chat</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{canChat ? "connected" : "disabled until joined/admitted"}</div>
+          </div>
+          <LobbyChatPanel title="Room chat" style={{ width: "100%" }} />
+        </section>
+
+        <section style={{ display: "grid", gap: 14 }}>
+          <div style={panel}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontWeight: 1000 }}>Participants</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{Array.isArray(users) ? users.length : 0}</div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(Array.isArray(users) ? users : []).map((u: any) => {
+                const uname = String(u?.name || u?.username || u?.id || "user");
+                const isMe = me?.id && (u?.id === me.id);
+                const role = String(u?.role || u?.roomRole || "").toUpperCase();
+                return (
+                  <div key={String(u?.id || uname)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 10px", borderRadius: 14, border: "1px solid rgba(148,163,184,.14)", background: "rgba(255,255,255,.03)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <Avatar name={uname} size={28} ring={isMe} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 1000, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{uname}{isMe ? " (you)" : ""}</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>{role ? `role: ${role}` : "role: member"}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "6px 10px", borderRadius: 999, border: "1px solid rgba(148,163,184,.18)", background: "rgba(255,255,255,.04)", fontWeight: 950, fontSize: 12, whiteSpace: "nowrap" }}>
+                      {role || "MEMBER"}
+                    </div>
+                  </div>
+                );
+              })}
+              {(!Array.isArray(users) || !users.length) ? <div style={{ opacity: 0.7 }}>No users yet.</div> : null}
+            </div>
+          </div>
+
+          <div style={panel}>
+            <div style={{ fontWeight: 1000, marginBottom: 8 }}>Room tools</div>
+            <ModeratorToolsPanel roomId={roomId} />
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

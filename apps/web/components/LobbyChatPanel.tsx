@@ -46,7 +46,7 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
     if (!view) return "No room selected.";
     if (!wsUp) return "WS down.";
     if (view !== joined) return "Chat disabled until joined/admitted.";
-    if (String(joinStatus || "") !== "joined") return "Joining…";
+    if (String(joinStatus || "") !== "joined") return "Joiningâ€¦";
     return "";
   }, [activeRoomId, joinedRoomId, joinStatus, wsUp]);
 
@@ -78,7 +78,7 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
         <div style={{ fontWeight: 950 }}>{props.title || "Lobby Chat"}</div>
         <div style={{ opacity: 0.7, fontSize: 12 }}>
-          {hint ? hint : `room: ${String(activeRoomId || "—")}`}
+          {hint ? hint : `room: ${String(activeRoomId || "â€”")}`}
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
               const isMe = Boolean(me?.id && m?.user?.id && String(me.id) === String(m.user.id));
               return (
                 <div key={m?.id || Math.random()} style={{ display: "flex", gap: 10 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 999, marginTop: 5, background: isMe ? "rgba(217,70,239,.95)" : "rgba(148,163,184,.55)" }} />
+                  <div style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,.07)", border: "1px solid rgba(148,163,184,.16)", boxShadow: isMe ? "0 0 0 2px var(--weered-accent-ring, rgba(14,165,233,.34))" : "none", fontWeight: 1000, flex: "0 0 auto" }}><span style={{ fontSize: 12 }}>{uname.slice(0,1).toUpperCase()}</span></div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.92 }}>
                       {uname}
@@ -130,7 +130,7 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
               onSend();
             }
           }}
-          placeholder={canChat ? "Message…" : "Join/admit required…"}
+          placeholder={canChat ? "Message..." : "Join/admit requiredâ€¦"}
           disabled={!canChat}
           style={{ flex: 1, padding: "10px 12px", borderRadius: 12 }}
         />

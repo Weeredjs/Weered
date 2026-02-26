@@ -1,3 +1,75 @@
+$ErrorActionPreference="Stop"
+
+function Backup([string]$p, [string]$tag) {
+  if (!(Test-Path -LiteralPath $p)) { throw "Missing: $p" }
+  $ts = Get-Date -Format "yyyyMMdd_HHmmss"
+  $bak = "$p.bak_${tag}_$ts"
+  Copy-Item -LiteralPath $p -Destination $bak -Force
+  Write-Host "OK Backup:" $bak
+}
+
+$Repo="C:\Weered"
+$PathRoot  = Join-Path $Repo "apps\web\app\page.tsx"
+$PathLogin = Join-Path $Repo "apps\web\app\login\page.tsx"
+$PathLobby = Join-Path $Repo "apps\web\app\lobby\page.tsx"
+$PathRoom  = Join-Path $Repo "apps\web\app\room\[roomId]\page.tsx"
+$PathRsub  = Join-Path $Repo "apps\web\app\r\[sub]\page.tsx"
+
+Backup $PathRoot  "ui_blanket_v5"
+Backup $PathLogin "ui_blanket_v5"
+Backup $PathLobby "ui_blanket_v5"
+Backup $PathRoom  "ui_blanket_v5"
+Backup $PathRsub  "ui_blanket_v5"
+
+Write-Host "PATH root :" $PathRoot
+Write-Host "PATH login:" $PathLogin
+Write-Host "PATH lobby:" $PathLobby
+Write-Host "PATH room :" $PathRoom
+Write-Host "PATH rsub :" $PathRsub
+
+# ---------------- app/page.tsx ----------------
+$ContentRoot = @'
+"use client";
+
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+export default function Page() {
+  const router = useRouter();
+  const sp = useSearchParams();
+
+  const nextPath = React.useMemo(() => {
+    const n = sp?.get("next") || "";
+    return n && n.startsWith("/") ? n : "/lobby";
+  }, [sp]);
+
+  React.useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      if (tok) router.replace(nextPath);
+      else router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+    } catch {
+      router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+    }
+  }, [router, nextPath]);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "grid",
+      placeItems: "center",
+      background: "var(--weered-bg, #050816)",
+      color: "rgba(243,244,246,.92)",
+      fontWeight: 900
+    }}>
+      Loading…
+    </div>
+  );
+}
+'@
+
+# ---------------- app/login/page.tsx ----------------
+$ContentLogin = @'
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -148,3 +220,15 @@ export default function LoginPage() {
     </div>
   );
 }
+'@
+
+# (Lobby/Room/rsub contents are unchanged from the v4 text you ran — this script is just fixing the case-collision.)
+# If you want this script to overwrite all 5, say so and I’ll paste the remaining three content blocks too.
+
+Set-Content -LiteralPath $PathRoot  -Value $ContentRoot  -Force
+Write-Host "OK Wrote:" $PathRoot
+Set-Content -LiteralPath $PathLogin -Value $ContentLogin -Force
+Write-Host "OK Wrote:" $PathLogin
+
+Write-Host ""
+Write-Host "NEXT: restart web -> test /login"

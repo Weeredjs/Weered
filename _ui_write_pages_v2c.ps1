@@ -1,3 +1,76 @@
+$ErrorActionPreference="Stop"
+
+function Write-Literal([string]$p, [string]$text) {
+  # Strip control chars just in case
+  $clean = -join ($p.ToCharArray() | Where-Object { -not [char]::IsControl($_) })
+  Set-Content -LiteralPath $clean -Value $text
+  return $clean
+}
+
+function Backup([string]$p, [string]$tag) {
+  if (!(Test-Path -LiteralPath $p)) { throw "Missing: $p" }
+  $ts = Get-Date -Format "yyyyMMdd_HHmmss"
+  $bak = "$p.bak_${tag}_$ts"
+  Copy-Item -LiteralPath $p -Destination $bak -Force
+  Write-Host "✅ Backup:" $bak
+}
+
+$Repo="C:\Weered"
+$root  = Join-Path $Repo "apps\web\app\page.tsx"
+$login = Join-Path $Repo "apps\web\app\login\page.tsx"
+$lobby = Join-Path $Repo "apps\web\app\lobby\page.tsx"
+$room  = Join-Path $Repo "apps\web\app\room\[roomId]\page.tsx"
+$rsub  = Join-Path $Repo "apps\web\app\r\[sub]\page.tsx"
+
+Backup $root  "ui_pages_v2c"
+Backup $login "ui_pages_v2c"
+Backup $lobby "ui_pages_v2c"
+Backup $room  "ui_pages_v2c"
+Backup $rsub  "ui_pages_v2c"
+
+# ------------ CONTENTS (full) ------------
+
+$ROOT = @'
+"use client";
+
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+export default function Page() {
+  const router = useRouter();
+  const sp = useSearchParams();
+
+  const nextPath = React.useMemo(() => {
+    const n = sp?.get("next") || "";
+    return n && n.startsWith("/") ? n : "/lobby";
+  }, [sp]);
+
+  React.useEffect(() => {
+    try {
+      const tok = localStorage.getItem("weered_token") || "";
+      if (tok) router.replace(nextPath);
+      else router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+    } catch {
+      router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+    }
+  }, [router, nextPath]);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "grid",
+      placeItems: "center",
+      background: "var(--weered-bg, #050816)",
+      color: "rgba(243,244,246,.92)",
+      fontWeight: 900
+    }}>
+      Loading…
+    </div>
+  );
+}
+'@
+
+$LOGIN = @'
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -148,3 +221,12 @@ export default function LoginPage() {
     </div>
   );
 }
+'@
+
+# For brevity here: we’ll reuse the lobby/room/rsub versions you already saw in v2.
+# If you want them embedded too, say “embed lobby/room too” and I’ll paste the full bodies again.
+
+Write-Host "✅ Wrote:" (Write-Literal $root  $ROOT)
+Write-Host "✅ Wrote:" (Write-Literal $login $LOGIN)
+Write-Host ""
+Write-Host "NEXT: restart web -> test /login + /" -ForegroundColor Cyan
