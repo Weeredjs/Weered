@@ -19,7 +19,20 @@ export default function DockDrawer() {
     };
   }, []);
 
-  return (
+  
+  // Close on ESC (feels like a real drawer)
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!open) return;
+
+    const onKeyDown = (e: any) => {
+      if (e?.key === "Escape") setOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown as any);
+    return () => window.removeEventListener("keydown", onKeyDown as any);
+  }, [open]);
+return (
     <>
       <div
         onClick={() => setOpen(false)}
@@ -30,7 +43,7 @@ export default function DockDrawer() {
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
           transition: "opacity 180ms ease",
-          zIndex: 60,
+          zIndex: 25000,
         }}
       />
 
@@ -46,7 +59,7 @@ export default function DockDrawer() {
           opacity: open ? 1 : 0,
           visibility: open ? "visible" : "hidden",
           transition: "transform 220ms ease, opacity 180ms ease",
-          zIndex: 75,
+          zIndex: 30000,
           pointerEvents: open ? "auto" : "none",
         }}
       >

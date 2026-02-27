@@ -135,15 +135,36 @@ function groupRank(u: any): number {
 }
 
 export default function LeftRail() {
-  
-  
-  
   const [presenceHoverOpen, setPresenceHoverOpen] = useState(false);
   const [presenceHoverXY, setPresenceHoverXY] = useState({ x: 0, y: 0 });
   const [presenceHoverName, setPresenceHoverName] = useState("");
+  const [presenceHoverUser, setPresenceHoverUser] = useState<any>(null);
   const presenceHoverTimer = useRef<any>(null);
-  const { replaceTop } = useOverlay();
-  const { openSheet } = useOverlay();
+
+  const HOVER_W = 260;
+  const HOVER_H = 118; // approx card height (keeps us onscreen)
+
+  const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
+
+  const computeHoverXY = (r: DOMRect) => {
+    const pad = 10;
+    const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+
+    // prefer to the right of the row; clamp in viewport
+    let x = r.right + 10;
+    x = clamp(x, pad, vw - HOVER_W - pad);
+
+    // align to row top; clamp vertically
+    let y = r.top;
+    y = clamp(y, pad, vh - HOVER_H - pad);
+
+    return { x, y };
+  };
+
+  const { openSheet, replaceTop } = useOverlay();// ---- compile-safe fallback (will be replaced with real hover user ref) ----
+  const hoverUser: any = null;
+  // ---- compile-safe fallback (will be replaced with real hover user ref) ----
 const pathname = usePathname() || "";
   const roomFromPath = pathname.startsWith("/room/") ? pathname.slice("/room/".length).split("/")[0] : "";
   const roomCtxLabel = (() => { try { return decodeURIComponent(roomFromPath || ""); } catch { return roomFromPath || "-"; } })();
@@ -207,75 +228,23 @@ const pathname = usePathname() || "";
     <div className="weered-left-inner">
 
   <div className="mt-3 flex gap-2">
-    <div style={{ position:"relative", width:"100%" }}><button onMouseEnter={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; const r=e.currentTarget.getBoundingClientRect(); h.style.left = (r.left) + "px"; h.style.top = (r.bottom + 8) + "px"; h.style.display="block";}} onMouseLeave={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; h.style.display="none";}}
-      type="button"
-      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-      onClick={() => openSheet("profile", { userId: profileUserId })}
-    >
-
-
-      Profile
-
-</button>  <div
-    className="weered-presence-hover"
-    style={{
-      position:"fixed",
-      left: 0,
-      top: 0,
-      width: 260,
-      borderRadius: 14,
-      border:"1px solid rgba(255,255,255,.10)",
-      background:"rgba(17,24,39,.92)",
-      padding: 10,
-      boxShadow:"0 14px 40px rgba(0,0,0,.45)",
-      display:"none",
-      zIndex: 50
-    ,
-      pointerEvents:"none"
-    }}
+  <button
+    type="button"
+    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+    onClick={() => openSheet("profile", { userId: profileUserId })}
   >
-    <div style={{ fontWeight: 950, marginBottom: 4 }}>User</div>
-    <div style={{ fontSize: 12, opacity: .78, marginBottom: 10 }}>Quick view ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ roles/badges later</div>
-    <div style={{ display:"flex", gap: 8 }}>
-      <button
-        style={{
-          borderRadius: 10,
-          border:"1px solid rgba(255,255,255,.10)",
-          background:"rgba(255,255,255,.04)",
-          padding:"6px 10px",
-          cursor:"pointer",
-          color:"rgba(229,231,235,.95)",
-          fontWeight: 900
-        }}
-      >
-        View profile
-      </button>
-      <button
-        style={{
-          borderRadius: 10,
-          border:"1px solid rgba(124,58,237,.35)",
-          background:"rgba(124,58,237,.18)",
-          padding:"6px 10px",
-          cursor:"pointer",
-          color:"rgba(229,231,235,.95)",
-          fontWeight: 900
-        }}
-      >
-        Message
-      </button>
-    </div>
-  </div>
-</div>
-    <button
-      type="button"
-      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-      onClick={() => openSheet("settings")}
-    >
-      Settings
-    </button>
-  </div>
+    Profile
+  </button>
 
-    <div
+  <button
+    type="button"
+    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+    onClick={() => openSheet("settings")}
+  >
+    Settings
+  </button>
+</div>
+<div
       className="weered-brand-block"
       style={{
         display: "flex",
@@ -358,76 +327,44 @@ const pathname = usePathname() || "";
             const f = flairFor(u);
 
             return (
-              <div key={rid} className="weered-presence-row" title={nm} onMouseEnter={(e) => {  const r = (e.currentTarget as any).getBoundingClientRect();  if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);  setPresenceHoverXY({ x: Math.max(10, r.left), y: r.bottom + 8 });  setPresenceHoverName(nm);  setPresenceHoverOpen(true); }} onMouseLeave={() => {  if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);  presenceHoverTimer.current = setTimeout(() => setPresenceHoverOpen(false), 140); }}>
+              <div
+  key={rid}
+  className="weered-presence-row"
+  title={nm}
+  onMouseEnter={(e) => {
+    const r = (e.currentTarget as any).getBoundingClientRect();
+    if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);
+
+    setPresenceHoverXY(computeHoverXY(r));
+    setPresenceHoverName(nm);
+    setPresenceHoverUser(u);
+    setPresenceHoverOpen(true);
+  }}
+  onMouseLeave={() => {
+    if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);
+    presenceHoverTimer.current = setTimeout(() => {
+      setPresenceHoverOpen(false);
+      setPresenceHoverUser(null);
+    }, 140);
+  }}
+>
                 <div className="weered-presence-left">
                   <span className={`weered-mark ${f.markClass}`} aria-hidden="true" />
-                  <div className="weered-presence-namewrap">
-                    <div className={`weered-presence-name ${f.nameClass || ""}`}>
-<div style={{ position:"relative", width:"100%" }}><button onMouseEnter={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; const r=e.currentTarget.getBoundingClientRect(); h.style.left = (r.left) + "px"; h.style.top = (r.bottom + 8) + "px"; h.style.display="block";}} onMouseLeave={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; h.style.display="none";}}
-                      type="button"
-                      style={{ all: "unset", cursor: "pointer" }}
-                      className="hover:underline"
-                      onClick={() => replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })}
-                    >
-
-
-                      {nm}
-
-</button>  <div
-    className="weered-presence-hover"
-    style={{
-      position:"fixed",
-      left: 0,
-      top: 0,
-      width: 260,
-      borderRadius: 14,
-      border:"1px solid rgba(255,255,255,.10)",
-      background:"rgba(17,24,39,.92)",
-      padding: 10,
-      boxShadow:"0 14px 40px rgba(0,0,0,.45)",
-      display:"none",
-      zIndex: 50
-    ,
-      pointerEvents:"none"
-    }}
-  >
-    <div style={{ fontWeight: 950, marginBottom: 4 }}>User</div>
-    <div style={{ fontSize: 12, opacity: .78, marginBottom: 10 }}>Quick view ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ roles/badges later</div>
-    <div style={{ display:"flex", gap: 8 }}>
+  <div className="weered-presence-namewrap">
+    <div className={`weered-presence-name ${f.nameClass || ""}`}>
       <button
-        style={{
-          borderRadius: 10,
-          border:"1px solid rgba(255,255,255,.10)",
-          background:"rgba(255,255,255,.04)",
-          padding:"6px 10px",
-          cursor:"pointer",
-          color:"rgba(229,231,235,.95)",
-          fontWeight: 900
-        }}
+        type="button"
+        style={{ all: "unset", cursor: "pointer" }}
+        className="hover:underline"
+        onClick={() => replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })}
       >
-        View profile
-      </button>
-      <button
-        style={{
-          borderRadius: 10,
-          border:"1px solid rgba(124,58,237,.35)",
-          background:"rgba(124,58,237,.18)",
-          padding:"6px 10px",
-          cursor:"pointer",
-          color:"rgba(229,231,235,.95)",
-          fontWeight: 900
-        }}
-      >
-        Message
+        {nm}
       </button>
     </div>
+    {you ? <span className="weered-you"></span> : null}
+    {f.icon ? <span className="weered-flairicon" aria-hidden="true">{f.icon}</span> : null}
   </div>
 </div>
-                      {you ? <span className="weered-you"></span> : null}
-                      {f.icon ? <span className="weered-flairicon" aria-hidden="true">{f.icon}</span> : null}
-                    </div>
-                  </div>
-                </div>
 
                 {f.badge ? (
                   <span className={`weered-badge ${f.badgeClass || ""}`}>{f.badge}</span>
@@ -454,7 +391,7 @@ const pathname = usePathname() || "";
           background: "rgba(17,24,39,.92)",
           padding: 10,
           boxShadow: "0 14px 40px rgba(0,0,0,.45)",
-          zIndex: 9999,
+          zIndex: 20000,
         }}
         onMouseEnter={() => {
           if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);
@@ -462,35 +399,55 @@ const pathname = usePathname() || "";
         }}
         onMouseLeave={() => setPresenceHoverOpen(false)}
       >
-        <div style={{ fontWeight: 950, marginBottom: 4 }}>{presenceHoverName || "User"}</div>
+        <div style={{ fontWeight: 950, marginBottom: 4 }}>{pickFirstString(presenceHoverUser?.name, presenceHoverUser?.username, presenceHoverName, "User")}</div>
         <div style={{ fontSize: 12, opacity: 0.78, marginBottom: 10 }}>Quick view (placeholder)</div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            style={{
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "rgba(255,255,255,.04)",
-              padding: "6px 10px",
-              cursor: "pointer",
-              color: "rgba(229,231,235,.95)",
-              fontWeight: 900,
-            }}
-          >
-            View profile
-          </button>
+  style={{
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(255,255,255,.04)",
+    padding: "6px 10px",
+    cursor: "pointer",
+    color: "rgba(229,231,235,.95)",
+    fontWeight: 900,
+  }}
+  onClick={() => {
+    const uid = String(presenceHoverUser?.id ?? presenceHoverUser?.userId ?? presenceHoverUser?.username ?? presenceHoverName ?? "");
+    if (!uid) return;
+    replaceTop("profile", { userId: uid });
+    setPresenceHoverOpen(false);
+    setPresenceHoverUser(null);
+  }}
+>
+  View profile
+</button>
           <button
-            style={{
-              borderRadius: 10,
-              border: "1px solid rgba(124,58,237,.35)",
-              background: "rgba(124,58,237,.18)",
-              padding: "6px 10px",
-              cursor: "pointer",
-              color: "rgba(229,231,235,.95)",
-              fontWeight: 900,
-            }}
-          >
-            Message
-          </button>
+  style={{
+    borderRadius: 10,
+    border: "1px solid rgba(124,58,237,.35)",
+    background: "rgba(124,58,237,.18)",
+    padding: "6px 10px",
+    cursor: "pointer",
+    color: "rgba(229,231,235,.95)",
+    fontWeight: 900,
+  }}
+  onClick={() => {
+    try {
+    const peerName = String(presenceHoverUser?.name ?? presenceHoverUser?.username ?? presenceHoverName ?? "").trim();
+    const peerId = String(presenceHoverUser?.id ?? presenceHoverUser?.userId ?? "").trim();
+    window.dispatchEvent(
+      new CustomEvent("weered:dock:open", {
+        detail: { mode: "dm", peer: { id: peerId, name: peerName } },
+      })
+    );
+  } catch {}
+    setPresenceHoverOpen(false);
+    setPresenceHoverUser(null);
+  }}
+>
+  Message
+</button>
         </div>
       </div>,
       document.body
