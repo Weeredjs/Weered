@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
+import { Crown, Shield, Wrench, Sparkles, Diamond } from "lucide-react";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -36,29 +37,80 @@ type Flair = {
   nameClass?: string;
   badge?: string;
   badgeClass?: string;
-  icon?: string; // small glyph next to name
+  icon?: React.ReactNode; // icon next to name
 };
-
 function flairFor(u: any): Flair {
   const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
   const rr = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
   const paid = isPaidUser(u);
 
   // Global roles (highest)
-  if (g === "GOD") return { markClass: "weered-mark-god", nameClass: "weered-name-god", badge: "GOD", badgeClass: "weered-badge-god", icon: "✦" };
-  if (g === "STAFF" || g === "SUPPORT") return { markClass: "weered-mark-staff", nameClass: "weered-name-staff", badge: g, badgeClass: "weered-badge-staff", icon: "🛡" };
-  if (g === "ADMIN") return { markClass: "weered-mark-admin", nameClass: "weered-name-admin", badge: "ADMIN", badgeClass: "weered-badge-admin", icon: "🔧" };
-  if (g === "MOD") return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: "🛡" };
+  if (g === "GOD")
+    return {
+      markClass: "weered-mark-god",
+      nameClass: "weered-name-god",
+      badge: "GOD",
+      badgeClass: "weered-badge-god",
+      icon: "✦",
+    };
+
+  if (g === "STAFF" || g === "SUPPORT")
+    return {
+      markClass: "weered-mark-staff",
+      nameClass: "weered-name-staff",
+      badge: g,
+      badgeClass: "weered-badge-staff",
+      icon: "🛡",
+    };
+
+  if (g === "ADMIN")
+    return {
+      markClass: "weered-mark-admin",
+      nameClass: "weered-name-admin",
+      badge: "ADMIN",
+      badgeClass: "weered-badge-admin",
+      icon: "🔧",
+    };
+
+  if (g === "MOD")
+    return {
+      markClass: "weered-mark-mod",
+      nameClass: "weered-name-mod",
+      badge: "MOD",
+      badgeClass: "weered-badge-mod",
+      icon: "🛡",
+    };
 
   // Room roles
-  if (rr === "OWNER") return { markClass: "weered-mark-owner", nameClass: "weered-name-owner", badge: "OWNER", badgeClass: "weered-badge-owner", icon: "👑" };
-  if (rr === "MOD") return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: "🛡" };
+  if (rr === "OWNER")
+    return {
+      markClass: "weered-mark-owner",
+      nameClass: "weered-name-owner",
+      badge: "OWNER",
+      badgeClass: "weered-badge-owner",
+      icon: "👑",
+    };
+
+  if (rr === "MOD")
+    return {
+      markClass: "weered-mark-mod",
+      nameClass: "weered-name-mod",
+      badge: "MOD",
+      badgeClass: "weered-badge-mod",
+      icon: "🛡",
+    };
 
   // Paid member (not bucketed separately)
-  if (paid) return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", icon: "◆" };
+  if (paid)
+    return {
+      markClass: "weered-mark-paid",
+      nameClass: "weered-name-paid",
+      icon: "◇",
+    };
 
   return { markClass: "weered-mark-none" };
 }
+
 
 /**
  * Hard-coded Presence ordering:
@@ -99,7 +151,19 @@ export default function LeftRail() {
   const roomLabel = pickFirstString(joinedRoomId, activeRoomId, "");
 
   const filtered = useMemo(() => {
-    const arr = Array.isArray(users) ? users : [];
+    const arr0 = Array.isArray(users) ? users : [];
+
+    // Ensure me is visible even if presence list hasn't populated yet
+    const arr = (() => {
+      const a = [...arr0];
+      try {
+        const meId = String(me?.id || "");
+        if (meId && !a.some((u: any) => String(u?.id || "") === meId)) {
+          a.unshift(me);
+        }
+      } catch {}
+      return a;
+    })();
     const qq = q.trim().toLowerCase();
     if (!qq) return arr;
     return arr.filter((u: any) => {
@@ -155,7 +219,7 @@ export default function LeftRail() {
       <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 1100, letterSpacing: ".2px", lineHeight: 1.1 }}>weered</div>
         <div style={{ opacity: 0.70, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          communities • presence • rooms
+          communities | presence | rooms
         </div>
       </div>
     </div>
@@ -188,7 +252,7 @@ export default function LeftRail() {
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
           <div className="weered-presence-sub">
-            {roomLabel ? `room: ${roomLabel}` : "room: —"} • {listed.length}
+            {roomLabel ? `room: ${roomLabel}` : "room: —"} | {listed.length}
           </div>
         </div>
 

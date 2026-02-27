@@ -130,12 +130,12 @@ function normRole(v: any): string {
 
 function globalIcon(role: string): string {
   const r = normRole(role);
-  if (r === "GOD") return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ¢â‚¬Ëœ";
-  if (r === "ADMIN") return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â";
-  if (r === "STAFF") return "ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â°";
-  if (r === "MOD") return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§";
-  if (r === "VIP") return "ÃƒÂ¢Ã‚Â­Ã‚Â";
-  return "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â·ÃƒÂ¯Ã‚Â¸Ã‚Â";
+  if (r === "GOD") return "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“";
+  if (r === "ADMIN") return "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â";
+  if (r === "STAFF") return "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â°";
+  if (r === "MOD") return "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â§";
+  if (r === "VIP") return "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚Â­Ãƒâ€šÃ‚Â";
+  return "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â·ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â";
 }
 
 function Pill(props: { label: string; title?: string; tone?: "violet" | "slate" | "green" | "amber" | "red" }) {
@@ -305,7 +305,7 @@ const viewId = String(activeRoomId || "");
   }, [me, claims]);
 
   const meName = pickFirstString(me?.name, me?.username, "Guest");
-  const roomTitle = pickFirstString(meta?.name, viewId, "Ã¢â‚¬Â");
+  const roomTitle = pickFirstString(meta?.name, viewId, "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â");
   const roomRole = normRole(pickFirstString(role, joinStatus?.role));
 
   // ---- DM state (local-only v0)
@@ -516,7 +516,7 @@ const viewId = String(activeRoomId || "");
               <div style={{ padding: 10, height: 190, overflow: "auto" }}>
                 {msgArr.length ? (
                   msgArr.slice(-80).map((m: any, i: number) => {
-                    const who = pickFirstString(m?.user?.name, m?.name, m?.from, "Ã¢â‚¬Â");
+                    const who = pickFirstString(m?.user?.name, m?.name, m?.from, "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â");
                     const body = pickFirstString(m?.body, m?.text, "");
                     return (
                       <div key={m?.id || i} style={{ marginBottom: 8 }}>
@@ -569,7 +569,7 @@ const viewId = String(activeRoomId || "");
               <div style={{ maxHeight: 200, overflow: "auto" }}>
                 {userArr.length ? (
                   userArr.map((u: any) => {
-                    const uname = pickFirstString(u?.name, u?.username, "Ã¢â‚¬Â");
+                    const uname = pickFirstString(u?.name, u?.username, "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â");
                     const ugr = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.user?.globalRole, u?.user?.global_role));
                     const ur = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
                     const isMe = !!me?.id && u?.id === me?.id;
@@ -723,7 +723,7 @@ const viewId = String(activeRoomId || "");
                       <input
                         value={dmDraft}
                         onChange={(e) => setDmDraft((e.target as any).value || "")}
-                        placeholder="Messages:Ã‚Â¦"
+                        placeholder="Messages:Ãƒâ€šÃ‚Â¦"
                         style={{
                           flex: 1,
                           padding: "10px 12px",

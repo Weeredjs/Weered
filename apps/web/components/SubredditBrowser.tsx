@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -96,9 +96,9 @@ export default function SubredditBrowser(props: { subreddit: string }) {
   }, [selected?.permalink]);
 
   const panel: React.CSSProperties = {
-    border: "1px solid rgba(148,163,184,.18)",
+    border: "1px solid var(--weered-border)",
     borderRadius: 16,
-    background: "rgba(15,23,42,.92)",
+    background: "var(--weered-panel)",
     padding: 12,
     minHeight: 520,
     overflow: "hidden",
@@ -124,8 +124,8 @@ export default function SubredditBrowser(props: { subreddit: string }) {
               style={{
                 padding: "7px 10px",
                 borderRadius: 12,
-                border: "1px solid rgba(148,163,184,.24)",
-                background: s === sort ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.06)",
+                border: "1px solid var(--weered-border2)",
+                background: s === sort ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
                 fontWeight: 950,
                 cursor: "pointer",
               }}
@@ -138,7 +138,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1.3fr", gap: 12, height: 470 }}>
         {/* Feed list */}
-        <div style={{ border: "1px solid rgba(148,163,184,.14)", borderRadius: 14, overflow: "auto", background: "rgba(255,255,255,.03)" }}>
+        <div style={{ border: "1px solid var(--weered-border2)", borderRadius: 14, overflow: "auto", background: "var(--weered-panel2)" }}>
           {posts.map((p) => {
             const active = selected?.id === p.id;
             return (
@@ -150,7 +150,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
                   textAlign: "left",
                   padding: "10px 10px",
                   border: "none",
-                  borderBottom: "1px solid rgba(148,163,184,.08)",
+                  borderBottom: "1px solid rgba(255,255,255,.06)",
                   background: active ? "rgba(124,58,237,.14)" : "transparent",
                   cursor: "pointer",
                   color: "rgba(243,244,246,.98)",
@@ -171,7 +171,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
         </div>
 
         {/* Post preview */}
-        <div style={{ border: "1px solid rgba(148,163,184,.14)", borderRadius: 14, overflow: "auto", background: "rgba(255,255,255,.03)", padding: 12 }}>
+        <div style={{ border: "1px solid var(--weered-border2)", borderRadius: 14, overflow: "auto", background: "var(--weered-panel2)", padding: 12 }}>
           {selected ? (
             <>
               <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 6 }}>{selected.title}</div>
@@ -202,7 +202,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
               <div style={{ marginTop: 8, fontWeight: 950, opacity: 0.9 }}>Top comments</div>
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
                 {comments.map((c, i) => (
-                  <div key={i} style={{ border: "1px solid rgba(148,163,184,.12)", borderRadius: 12, padding: 10, background: "rgba(0,0,0,.10)" }}>
+                  <div key={i} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, padding: 10, background: "rgba(255,255,255,.03)" }}>
                     <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.35, opacity: 0.95 }}>{c}</div>
                   </div>
                 ))}

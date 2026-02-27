@@ -1062,30 +1062,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <body className={ui.shell}>
   <WeeredProvider>
-    <div className="relative">
-      <div className="mx-auto max-w-[1600px] px-3 py-3">
-        <div className="flex gap-3 items-start">
-          {/* Left rail */}
-          <aside className="w-[320px] shrink-0 sticky top-3 hidden lg:block">
-            <LeftRail />
-          </aside>
+  <div className="weered-shell">
+    <aside className="weered-left">
+      <LeftRail />
+    </aside>
 
-          {/* Center */}
-          <main className="min-w-0 flex-1">
-            {children}
-          </main>
+    <main className="weered-center">
+      {children}
+    </main>
 
-          {/* Right rail */}
-          <aside className="w-[320px] shrink-0 sticky top-3 hidden xl:block">
-            <RightRail />
-          </aside>
-        </div>
-      </div>
+    <aside className="weered-right">
+      <RightRail />
+    </aside>
+  </div>
 
-      {/* Dock overlays everything (right-side drawer) */}
-      <DockDrawer />
-    </div>
-  </WeeredProvider>
+  <DockDrawer />
+</WeeredProvider>
 </body>
 
 

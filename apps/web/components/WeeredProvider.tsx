@@ -59,6 +59,13 @@ type Ctx = {
   role: Role;
   joinStatus: JoinStatus;
 
+  // Lobby rooms index (for /lobby list)
+  rooms: any[];
+
+  // Room navigation helpers
+  join: (roomId: string) => void;
+  knock: (roomId: string) => void;
+
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
 
@@ -89,6 +96,21 @@ function normalizeInbound(msg: any) {
 export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Auto-select a default roomId for lobby so presence works without extra clicks
+  useEffect(() => {
+    try {
+      if (!pathname) return;
+      if (pathname.startsWith("/lobby")) {
+        // keep it simple: lobby roomId
+        if (!activeRoomId) setActiveRoomId("lobby");
+      }
+      if (pathname.startsWith("/room/@me")) {
+        if (!activeRoomId) setActiveRoomId("@me");
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
   const [token, setToken] = useState("");
   const [me, setMe] = useState<any>(null);
 
@@ -128,6 +150,9 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
   const [metaByRoom, setMetaByRoom] = useState<Record<string, RoomMeta>>({});
   const [adminByRoom, setAdminByRoom] = useState<Record<string, AdminState>>({});
   const [statusByRoom, setStatusByRoom] = useState<Record<string, JoinStatus>>({});
+
+  // Rooms index for lobby UI (server-provided if available)
+  const [rooms, setRooms] = useState<any[]>([]);
 
   const authed = useMemo(() => Boolean(token), [token]);
 
@@ -217,6 +242,11 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     if (!wsReady) return;
     lastJoinedRidRef.current = "";
     sendJoinDefaultRoom();
+
+        // Ask server for a lobby rooms list (server may ignore unknown message types)
+        try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "lobby:rooms" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "room:list" })); } catch {}
   }, [wsReady, activeRoomId, joinedRoomId]);
 
   // Sync auth from localStorage on navigation (fix: no refresh after login redirect)
@@ -294,12 +324,25 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
       msg = normalizeInbound(msg);
       if (!msg || typeof msg.type !== "string") return;
 
+      // Generic rooms payload support (accept any message that contains rooms: [])
+      try {
+        const maybeRooms = (msg as any).rooms;
+        if (Array.isArray(maybeRooms)) {
+          setRooms(maybeRooms);
+        }
+      } catch {}
+
       if (msg.type === "auth:ok") {
         setWsReady(true);
         setWsState(WebSocket.OPEN);
 
         
         sendJoinDefaultRoom();
+
+        // Ask server for a lobby rooms list (server may ignore unknown message types)
+        try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "lobby:rooms" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "room:list" })); } catch {}
 // Prefer user from server payload; fallback to persisted dev-login user
         const u = (msg.user ?? msg.payload?.user) || null;
         if (u) {
@@ -501,6 +544,36 @@ useEffect(() => {
     return Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && (statusByRoom[activeRoomId] || "idle") === "joined");
   }
 
+  // Room helpers used by LobbyRoomsList
+  function join(roomId: string) {
+    const id = String(roomId || "").trim();
+    if (!id) return;
+    setActiveRoomId(id);
+    // effect on activeRoomId will trigger presence:join; also poke history once
+    try {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        let rid = id;
+        try { rid = decodeURIComponent(id); } catch {}
+        ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+        ws.send(JSON.stringify({ type: "chat:history", roomId: rid, limit: 50 }));
+      }
+    } catch {}
+  }
+
+  function knock(roomId: string) {
+    const id = String(roomId || "").trim();
+    if (!id) return;
+    setActiveRoomId(id);
+    try {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        let rid = id;
+        try { rid = decodeURIComponent(id); } catch {}
+        ws.send(JSON.stringify({ type: "room:knock", roomId: rid }));
+      }
+    } catch {}
+  }
   function sendChat(body: string) {
     const b = (body || "").trim();
     if (!b) return;
@@ -554,6 +627,10 @@ useEffect(() => {
     admin,
     role,
     joinStatus,
+
+    rooms,
+    join,
+    knock,
 
     devLogin,
     logout,

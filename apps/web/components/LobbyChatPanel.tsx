@@ -46,7 +46,7 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
     if (!view) return "No room selected.";
     if (!wsUp) return "WS down.";
     if (view !== joined) return "Chat disabled until joined/admitted.";
-    if (String(joinStatus || "") !== "joined") return "Joiningâ€¦";
+    if (String(joinStatus || "") !== "joined") return "Joining...";
     return "";
   }, [activeRoomId, joinedRoomId, joinStatus, wsUp]);
 
@@ -66,9 +66,9 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
   }, [msgs?.length]);
 
   const panel: React.CSSProperties = {
-    border: "1px solid rgba(148,163,184,.18)",
+    border: "1px solid var(--weered-border)",
     borderRadius: 16,
-    background: "rgba(15,23,42,.92)",
+    background: "var(--weered-panel)",
     padding: 12,
     ...props.style,
   };
@@ -78,19 +78,19 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
         <div style={{ fontWeight: 950 }}>{props.title || "Lobby Chat"}</div>
         <div style={{ opacity: 0.7, fontSize: 12 }}>
-          {hint ? hint : `room: ${String(activeRoomId || "â€”")}`}
+          {hint ? hint : `room: ${String(activeRoomId || "-")}`}
         </div>
       </div>
 
       <div
         ref={listRef}
         style={{
-          border: "1px solid rgba(148,163,184,.14)",
+          border: "1px solid var(--weered-border2)",
           borderRadius: 14,
           padding: 10,
           height: 260,
           overflow: "auto",
-          background: "rgba(2,6,23,.25)",
+          background: "var(--weered-panel2)",
           marginBottom: 10,
         }}
       >
@@ -102,7 +102,7 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
               const isMe = Boolean(me?.id && m?.user?.id && String(me.id) === String(m.user.id));
               return (
                 <div key={m?.id || Math.random()} style={{ display: "flex", gap: 10 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,.07)", border: "1px solid rgba(148,163,184,.16)", boxShadow: isMe ? "0 0 0 2px var(--weered-accent-ring, rgba(14,165,233,.34))" : "none", fontWeight: 1000, flex: "0 0 auto" }}><span style={{ fontSize: 12 }}>{uname.slice(0,1).toUpperCase()}</span></div>
+                  <div style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,.07)", border: "1px solid rgba(148,163,184,.16)", boxShadow: isMe ? "0 0 0 2px var(--weered-accent-ring, rgba(124,58,237,.28))" : "none", fontWeight: 1000, flex: "0 0 auto" }}><span style={{ fontSize: 12 }}>{uname.slice(0,1).toUpperCase()}</span></div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.92 }}>
                       {uname}
@@ -130,15 +130,13 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
               onSend();
             }
           }}
-          placeholder={canChat ? "Message..." : "Join/admit requiredâ€¦"}
+          placeholder={canChat ? "Message..." : "Join/admit required..."}
           disabled={!canChat}
           style={{ flex: 1, padding: "10px 12px", borderRadius: 12 }}
         />
-        <button
-          onClick={onSend}
+        <button onClick={onSend}
           disabled={!canChat}
-          style={{ padding: "10px 12px", borderRadius: 12, fontWeight: 950 }}
-        >
+           className="weered-btn">
           Send
         </button>
       </div>
