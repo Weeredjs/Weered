@@ -744,3 +744,8 @@ main, #__next {
   width: 100%;
   max-width: none;
 }
+
+/* --- Weered Shell Layout Modes (Phase 1 scaffolding) --- */
+.shell--A { }
+.shell--B { }
+.shell--C { }

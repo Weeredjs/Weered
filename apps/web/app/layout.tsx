@@ -1061,6 +1061,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 
       <body className={ui.shell}>
+      <OverlayProvider>
   <WeeredProvider>
   <div className="weered-shell">
     <aside className="weered-left">
@@ -1072,12 +1073,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </main>
 
     <aside className="weered-right">
-      <RightRail />
+      <RightRailSwitch />
     </aside>
   </div>
 
   <DockDrawer />
 </WeeredProvider>
+      <OverlayHost />
+      </OverlayProvider>
 </body>
 
 
@@ -2293,3 +2296,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 
 
+import OverlayProvider from "..\/components\/overlays\/OverlayProvider";
+import OverlayHost from "..\/components\/overlays\/OverlayHost";
+import RightRailSwitch from "../components/RightRailSwitch";
