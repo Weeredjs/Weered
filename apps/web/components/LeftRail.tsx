@@ -1,10 +1,11 @@
 "use client";
 import { useOverlay } from "./overlays/OverlayProvider";
-import React, { useMemo, useState } from "react";
+import React, {useMemo, useState, useRef} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
+import { createPortal } from "react-dom";
 
 
 function pickFirstString(...vals: any[]): string {
@@ -51,7 +52,7 @@ function flairFor(u: any): Flair {
       nameClass: "weered-name-god",
       badge: "GOD",
       badgeClass: "weered-badge-god",
-      icon: "•",
+      icon: "",
     };
 
   if (g === "STAFF" || g === "SUPPORT")
@@ -60,7 +61,7 @@ function flairFor(u: any): Flair {
       nameClass: "weered-name-staff",
       badge: g,
       badgeClass: "weered-badge-staff",
-      icon: "•",
+      icon: "",
     };
 
   if (g === "ADMIN")
@@ -69,7 +70,7 @@ function flairFor(u: any): Flair {
       nameClass: "weered-name-admin",
       badge: "ADMIN",
       badgeClass: "weered-badge-admin",
-      icon: "•",
+      icon: "",
     };
 
   if (g === "MOD")
@@ -78,7 +79,7 @@ function flairFor(u: any): Flair {
       nameClass: "weered-name-mod",
       badge: "MOD",
       badgeClass: "weered-badge-mod",
-      icon: "•",
+      icon: "",
     };
 
   // Room roles
@@ -88,7 +89,7 @@ function flairFor(u: any): Flair {
       nameClass: "weered-name-owner",
       badge: "OWNER",
       badgeClass: "weered-badge-owner",
-      icon: "•",
+      icon: "",
     };
 
   if (rr === "MOD")
@@ -97,7 +98,7 @@ function flairFor(u: any): Flair {
       nameClass: "weered-name-mod",
       badge: "MOD",
       badgeClass: "weered-badge-mod",
-      icon: "•",
+      icon: "",
     };
 
   // Paid member (not bucketed separately)
@@ -105,7 +106,7 @@ function flairFor(u: any): Flair {
     return {
       markClass: "weered-mark-paid",
       nameClass: "weered-name-paid",
-      icon: "•",
+      icon: "",
     };
 
   return { markClass: "weered-mark-none" };
@@ -136,6 +137,11 @@ function groupRank(u: any): number {
 export default function LeftRail() {
   
   
+  
+  const [presenceHoverOpen, setPresenceHoverOpen] = useState(false);
+  const [presenceHoverXY, setPresenceHoverXY] = useState({ x: 0, y: 0 });
+  const [presenceHoverName, setPresenceHoverName] = useState("");
+  const presenceHoverTimer = useRef<any>(null);
   const { replaceTop } = useOverlay();
   const { openSheet } = useOverlay();
 const pathname = usePathname() || "";
@@ -201,13 +207,65 @@ const pathname = usePathname() || "";
     <div className="weered-left-inner">
 
   <div className="mt-3 flex gap-2">
-    <button
+    <div style={{ position:"relative", width:"100%" }}><button onMouseEnter={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; const r=e.currentTarget.getBoundingClientRect(); h.style.left = (r.left) + "px"; h.style.top = (r.bottom + 8) + "px"; h.style.display="block";}} onMouseLeave={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; h.style.display="none";}}
       type="button"
       className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
       onClick={() => openSheet("profile", { userId: profileUserId })}
     >
+
+
       Profile
-    </button>
+
+</button>  <div
+    className="weered-presence-hover"
+    style={{
+      position:"fixed",
+      left: 0,
+      top: 0,
+      width: 260,
+      borderRadius: 14,
+      border:"1px solid rgba(255,255,255,.10)",
+      background:"rgba(17,24,39,.92)",
+      padding: 10,
+      boxShadow:"0 14px 40px rgba(0,0,0,.45)",
+      display:"none",
+      zIndex: 50
+    ,
+      pointerEvents:"none"
+    }}
+  >
+    <div style={{ fontWeight: 950, marginBottom: 4 }}>User</div>
+    <div style={{ fontSize: 12, opacity: .78, marginBottom: 10 }}>Quick view ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ roles/badges later</div>
+    <div style={{ display:"flex", gap: 8 }}>
+      <button
+        style={{
+          borderRadius: 10,
+          border:"1px solid rgba(255,255,255,.10)",
+          background:"rgba(255,255,255,.04)",
+          padding:"6px 10px",
+          cursor:"pointer",
+          color:"rgba(229,231,235,.95)",
+          fontWeight: 900
+        }}
+      >
+        View profile
+      </button>
+      <button
+        style={{
+          borderRadius: 10,
+          border:"1px solid rgba(124,58,237,.35)",
+          background:"rgba(124,58,237,.18)",
+          padding:"6px 10px",
+          cursor:"pointer",
+          color:"rgba(229,231,235,.95)",
+          fontWeight: 900
+        }}
+      >
+        Message
+      </button>
+    </div>
+  </div>
+</div>
     <button
       type="button"
       className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
@@ -300,20 +358,72 @@ const pathname = usePathname() || "";
             const f = flairFor(u);
 
             return (
-              <div key={rid} className="weered-presence-row" title={nm}>
+              <div key={rid} className="weered-presence-row" title={nm} onMouseEnter={(e) => {  const r = (e.currentTarget as any).getBoundingClientRect();  if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);  setPresenceHoverXY({ x: Math.max(10, r.left), y: r.bottom + 8 });  setPresenceHoverName(nm);  setPresenceHoverOpen(true); }} onMouseLeave={() => {  if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);  presenceHoverTimer.current = setTimeout(() => setPresenceHoverOpen(false), 140); }}>
                 <div className="weered-presence-left">
                   <span className={`weered-mark ${f.markClass}`} aria-hidden="true" />
                   <div className="weered-presence-namewrap">
                     <div className={`weered-presence-name ${f.nameClass || ""}`}>
-<button
+<div style={{ position:"relative", width:"100%" }}><button onMouseEnter={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; const r=e.currentTarget.getBoundingClientRect(); h.style.left = (r.left) + "px"; h.style.top = (r.bottom + 8) + "px"; h.style.display="block";}} onMouseLeave={(e)=>{const p=(e.currentTarget.parentElement as any); const h=p?.querySelector?.(".weered-presence-hover") as any; if(!h) return; h.style.display="none";}}
                       type="button"
                       style={{ all: "unset", cursor: "pointer" }}
                       className="hover:underline"
                       onClick={() => replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })}
                     >
+
+
                       {nm}
-                    </button>
-                      {you ? <span className="weered-you">(you)</span> : null}
+
+</button>  <div
+    className="weered-presence-hover"
+    style={{
+      position:"fixed",
+      left: 0,
+      top: 0,
+      width: 260,
+      borderRadius: 14,
+      border:"1px solid rgba(255,255,255,.10)",
+      background:"rgba(17,24,39,.92)",
+      padding: 10,
+      boxShadow:"0 14px 40px rgba(0,0,0,.45)",
+      display:"none",
+      zIndex: 50
+    ,
+      pointerEvents:"none"
+    }}
+  >
+    <div style={{ fontWeight: 950, marginBottom: 4 }}>User</div>
+    <div style={{ fontSize: 12, opacity: .78, marginBottom: 10 }}>Quick view ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ roles/badges later</div>
+    <div style={{ display:"flex", gap: 8 }}>
+      <button
+        style={{
+          borderRadius: 10,
+          border:"1px solid rgba(255,255,255,.10)",
+          background:"rgba(255,255,255,.04)",
+          padding:"6px 10px",
+          cursor:"pointer",
+          color:"rgba(229,231,235,.95)",
+          fontWeight: 900
+        }}
+      >
+        View profile
+      </button>
+      <button
+        style={{
+          borderRadius: 10,
+          border:"1px solid rgba(124,58,237,.35)",
+          background:"rgba(124,58,237,.18)",
+          padding:"6px 10px",
+          cursor:"pointer",
+          color:"rgba(229,231,235,.95)",
+          fontWeight: 900
+        }}
+      >
+        Message
+      </button>
+    </div>
+  </div>
+</div>
+                      {you ? <span className="weered-you"></span> : null}
                       {f.icon ? <span className="weered-flairicon" aria-hidden="true">{f.icon}</span> : null}
                     </div>
                   </div>
@@ -330,6 +440,63 @@ const pathname = usePathname() || "";
             <div className="weered-muted" style={{ padding: 10 }}>No users.</div>
           ) : null}
         </div>
+
+              {presenceHoverOpen
+  ? createPortal(
+      <div
+        style={{
+          position: "fixed",
+          left: presenceHoverXY.x,
+          top: presenceHoverXY.y,
+          width: 260,
+          borderRadius: 14,
+          border: "1px solid rgba(255,255,255,.10)",
+          background: "rgba(17,24,39,.92)",
+          padding: 10,
+          boxShadow: "0 14px 40px rgba(0,0,0,.45)",
+          zIndex: 9999,
+        }}
+        onMouseEnter={() => {
+          if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);
+          setPresenceHoverOpen(true);
+        }}
+        onMouseLeave={() => setPresenceHoverOpen(false)}
+      >
+        <div style={{ fontWeight: 950, marginBottom: 4 }}>{presenceHoverName || "User"}</div>
+        <div style={{ fontSize: 12, opacity: 0.78, marginBottom: 10 }}>Quick view (placeholder)</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            style={{
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,.10)",
+              background: "rgba(255,255,255,.04)",
+              padding: "6px 10px",
+              cursor: "pointer",
+              color: "rgba(229,231,235,.95)",
+              fontWeight: 900,
+            }}
+          >
+            View profile
+          </button>
+          <button
+            style={{
+              borderRadius: 10,
+              border: "1px solid rgba(124,58,237,.35)",
+              background: "rgba(124,58,237,.18)",
+              padding: "6px 10px",
+              cursor: "pointer",
+              color: "rgba(229,231,235,.95)",
+              fontWeight: 900,
+            }}
+          >
+            Message
+          </button>
+        </div>
+      </div>,
+      document.body
+    )
+  : null}
+
 
         <div className="weered-presence-foot">
           <span className="weered-muted">flair:</span>

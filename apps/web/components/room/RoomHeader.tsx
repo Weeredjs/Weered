@@ -72,16 +72,10 @@ export default function RoomHeader({
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
             type="button"
           >
-            ⋯
+            â‹¯
           </button>
         </div>
       </div>
-
-      <div className="mt-3 flex gap-2 text-sm">
-        {tabBtn("chat", "Chat")}
-        {tabBtn("media", "Media")}
-        {tabBtn("activity", "Activity")}
-      </div>
-    </div>
+</div>
   );
 }

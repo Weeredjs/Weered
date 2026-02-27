@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useOverlay } from "./OverlayProvider";
 
 import RoomDetailsSheet from "./sheets/RoomDetailsSheet";
+import DockSheet from "./sheets/DockSheet";
 import ProfileSheet from "./sheets/ProfileSheet";
 import SettingsSheet from "./sheets/SettingsSheet";
 
@@ -24,16 +25,7 @@ function SheetBody({ sheet }: { sheet: { type: string; payload?: any } }) {
       return <ProfileSheet userId={p.userId ?? "unknown"} />;
     case "settings":
       return <SettingsSheet />;
-    case "dock":
-      return (
-        <div className="p-4">
-          <div className="text-lg font-semibold">Dock</div>
-          <div className="text-sm opacity-70 mt-1">
-            Convert existing dock content into this sheet next.
-          </div>
-        </div>
-      );
-    default:
+    case "dock": return (<DockSheet payload={top.payload} onClose={closeSheet} />);default:
       return (
         <div className="p-4">
           <div className="text-lg font-semibold">Sheet</div>
