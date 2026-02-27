@@ -54,6 +54,9 @@ function extractParticipants(ctx: any, roomId: string): Person[] {
   }
 
   for (const v of tries) {
+    // normalize: arrays pass through; object-maps become Object.values(...)
+    const vv: any = Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v as any) : null);
+    if (Array.isArray(vv) && vv.length) return vv as any;
     if (!v) continue;
     if (Array.isArray(v)) return v.map(normUser).filter(Boolean);
     if (typeof v === "object") {
@@ -71,7 +74,8 @@ function extractParticipants(ctx: any, roomId: string): Person[] {
 export default function RightRailRoom({ roomId }: { roomId: string }) {
   const { replaceTop } = useOverlay();
   const ctx = useWeered() as any;
-
+
+  if (process.env.NODE_ENV !== "production") (globalThis as any).__weeredRoomCtx = ctx;
   const people = useMemo(() => {
     const arr = extractParticipants(ctx, roomId);
     // de-dupe by id/name
@@ -85,7 +89,9 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     });
   }, [ctx, roomId]);
 
-  const contextLabel = roomId || "unknown";
+  const contextLabel = (() => {
+    try { return decodeURIComponent(roomId || ""); } catch { return roomId || "unknown"; }
+  })();
 
   return (
     <div className="sticky top-4 rounded-2xl border border-white/10 bg-black/20 p-4">
