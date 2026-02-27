@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 
@@ -34,7 +34,20 @@ const w = useWeered() as any;
     });
   }, [q, w?.rooms]);
 
-  function go(roomId: string) {
+  
+  // Publish rooms list to header search (UI-only)
+  useEffect(() => {
+    try {
+      const payload = (rooms || []).map((r: any) => ({
+        id: String(r?.id || ""),
+        name: String(r?.name || r?.id || ""),
+        locked: Boolean(r?.locked),
+        count: getRoomCount(r),
+      }));
+      window.dispatchEvent(new CustomEvent("weered:rooms:updated", { detail: payload }));
+    } catch {}
+  }, [rooms]);
+function go(roomId: string) {
     if (!roomId) return;
     router.push(`/room/${roomId}`);
   }

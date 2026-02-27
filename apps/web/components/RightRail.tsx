@@ -35,7 +35,7 @@ function MicCamPill({ u }: { u: any }) {
 
   return (
     <span className={`${ui.muted} text-[11px]`}>
-      {mic ? "mic" : "mic-off"} Ã‚Â· {cam ? "cam" : "cam-off"}
+      {mic ? "mic" : "mic-off"} ÃƒÆ’Ã¢â‚¬Å¡ Â·  {cam ? "cam" : "cam-off"}
     </span>
   );
 }
@@ -149,7 +149,7 @@ function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
         {err ? (
           <div className={`${ui.muted} text-xs`}>Rooms error: {err}</div>
         ) : filtered.length === 0 ? (
-          <div className={`${ui.muted} text-xs`}>{loading ? "Loading roomsÃ¢â‚¬Â¦" : "No rooms found."}</div>
+          <div className={`${ui.muted} text-xs`}>{loading ? "Loading roomsÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "No rooms found."}</div>
         ) : (
           <div className="space-y-2 max-h-[420px] overflow-auto pr-1">
             {filtered.slice(0, 60).map((rm) => {
@@ -196,7 +196,7 @@ function CurrentRoomPanel({ currentRoomId }: { currentRoomId: string }) {
       <div className="weered-panel2 p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="min-w-0">
-            <div className="font-semibold truncate">{String(roomId || "â€")}</div>
+            <div className="font-semibold truncate">{String(roomId || "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â")}</div>
             <div className={`${ui.muted} text-xs`}>{users.length} online</div>
           </div>
           {me ? <span className="px-2 py-1 rounded-full text-[11px] border border-white/10 bg-white/5 opacity-80">you</span> : null}
@@ -243,6 +243,10 @@ export default function RightRail({ contextLabel = "lobby" }: Props) {
 
   const currentRoomId = pickRoomIdFromPath(pathname);
 
+  const w = useWeered() as any;
+  const me = w?.me;
+  const role = String(me?.role || me?.roomRole || "").toUpperCase();
+  const isAdmin = role === "OWNER" || role === "ADMIN" || role === "MOD";
   return (
     <aside className="hidden xl:block w-[340px] shrink-0">
       <div className={"weered-panel sticky top-3 max-h-[calc(100vh-24px)] overflow-hidden " + ui.panel}>
@@ -270,13 +274,19 @@ export default function RightRail({ contextLabel = "lobby" }: Props) {
             </div>
           </div>
 
-          <div>
-            <div className={`${ui.muted} text-xs mb-2`}>Moderator / Admin</div>
-            <div className="space-y-2">
-              <button className="weered-btn" type="button">Pin message (placeholder)</button>
-              <button className="weered-btn" type="button">Mute user (placeholder)</button>
+          {isAdmin ? (
+            <div>
+              <div className={`${ui.muted} text-xs mb-2`}>Moderator / Admin</div>
+              <div className="space-y-2">
+                <button className="weered-btn" type="button">Pin message (placeholder)</button>
+                <button className="weered-btn" type="button">Mute user (placeholder)</button>
+                <button className="weered-btn" type="button">Kick user (placeholder)</button>
+              </div>
+              <div className={`${ui.muted} text-[11px] mt-2`}>
+                Admin tools are UI-only for now. Next: wire actions to API + WS moderation events.
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </aside>

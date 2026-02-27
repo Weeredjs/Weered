@@ -35,6 +35,95 @@ input {
 ::placeholder { color: rgba(229,231,235,0.45); }
 
 /* WEERED_THEME_END */
+/* WEERED_THEME_SWITCH_V0_BEGIN
+   Driven by <html> attributes set by WeeredProvider:
+     data-weered-theme="stone|slate|zinc|neutral|gray"
+     data-weered-density="comfortable|compact"
+     data-weered-reduce-motion="0|1"
+   -------------------------------------------------- */
+
+/* Theme presets (override tokens only; keep component CSS intact) */
+html[data-weered-theme="stone"]{
+  --weered-bg: #0b0b0c;
+  --weered-panel: rgba(17,24,39,.90);
+  --weered-panel2: #0e0e10;
+  --weered-border: rgba(148,163,184,0.22);
+  --weered-text: rgba(243,244,246,.98);
+  --weered-muted: rgba(229,231,235,0.72);
+}
+
+html[data-weered-theme="slate"]{
+  --weered-bg: #070a12;
+  --weered-panel: rgba(15,23,42,.92);
+  --weered-panel2: rgba(2,6,23,.92);
+  --weered-border: rgba(148,163,184,0.20);
+  --weered-text: rgba(243,244,246,.98);
+  --weered-muted: rgba(226,232,240,0.70);
+}
+
+html[data-weered-theme="zinc"]{
+  --weered-bg: #0a0a0b;
+  --weered-panel: rgba(24,24,27,.92);
+  --weered-panel2: rgba(9,9,11,.90);
+  --weered-border: rgba(161,161,170,0.20);
+  --weered-text: rgba(244,244,245,.98);
+  --weered-muted: rgba(228,228,231,0.70);
+}
+
+html[data-weered-theme="neutral"]{
+  --weered-bg: #090909;
+  --weered-panel: rgba(23,23,23,.92);
+  --weered-panel2: rgba(10,10,10,.92);
+  --weered-border: rgba(163,163,163,0.18);
+  --weered-text: rgba(245,245,245,.98);
+  --weered-muted: rgba(229,229,229,0.68);
+}
+
+html[data-weered-theme="gray"]{
+  --weered-bg: #070a0f;
+  --weered-panel: rgba(17,24,39,.92);
+  --weered-panel2: rgba(3,7,18,.92);
+  --weered-border: rgba(156,163,175,0.20);
+  --weered-text: rgba(243,244,246,.98);
+  --weered-muted: rgba(229,231,235,0.70);
+}
+
+/* Density presets (use existing layout vars where possible) */
+html[data-weered-density="compact"]{
+  --weered-pad-x: 14px;
+  --weered-pad-y: 14px;
+  --weered-radius: 12px;
+}
+
+html[data-weered-density="compact"] .weered-shell{
+  gap: 12px;
+  padding: 12px;
+  grid-template-columns: 260px minmax(0,1fr) 340px;
+}
+
+html[data-weered-density="compact"] input,
+html[data-weered-density="compact"] textarea,
+html[data-weered-density="compact"] select{
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+html[data-weered-density="compact"] .weered-left-inner{
+  padding: 12px;
+  gap: 10px;
+}
+
+/* Reduce motion */
+html[data-weered-reduce-motion="1"] *,
+html[data-weered-reduce-motion="1"] *::before,
+html[data-weered-reduce-motion="1"] *::after{
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* WEERED_THEME_SWITCH_V0_END */
+
 @import "tailwindcss";
 
 /* ---- previous custom styles (preserved) ---- */
