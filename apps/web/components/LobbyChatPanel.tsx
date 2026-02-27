@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 
 function pickFirstString(...vals: any[]): string {
@@ -9,6 +10,7 @@ function pickFirstString(...vals: any[]): string {
 }
 
 export default function LobbyChatPanel(props: { title?: string; style?: React.CSSProperties } = {}) {
+  const { replaceTop } = useOverlay();
   const {
     me,
     wsReady,
@@ -105,7 +107,18 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
                   <div style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,.07)", border: "1px solid rgba(148,163,184,.16)", boxShadow: isMe ? "0 0 0 2px var(--weered-accent-ring, rgba(124,58,237,.28))" : "none", fontWeight: 1000, flex: "0 0 auto" }}><span style={{ fontSize: 12 }}>{uname.slice(0,1).toUpperCase()}</span></div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.92 }}>
-                      {uname}
+                      <button
+                        type="button"
+                        style={{ all: "unset", cursor: "pointer" }}
+                        className="hover:underline"
+                        onClick={() =>
+                          replaceTop("profile", {
+                            userId: pickFirstString(m?.user?.id, m?.userId, m?.user?.username, uname, "unknown"),
+                          })
+                        }
+                      >
+                        {uname}
+                      </button>
                     </div>
                     <div style={{ opacity: 0.92, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                       {body}

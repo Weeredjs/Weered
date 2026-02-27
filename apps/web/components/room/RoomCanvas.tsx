@@ -7,6 +7,9 @@ import RoomChatPanel from "../RoomChatPanel";
 import { useOverlay } from "../overlays/OverlayProvider";
 
 export default function RoomCanvas({ roomId }: { roomId: string }) {
+  const roomLabel = (() => {
+    try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
+  })();
   const { openSheet } = useOverlay();
   const [tab, setTab] = useState<RoomTab>("chat");
 
@@ -33,9 +36,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <div className="text-sm font-semibold mb-2">Activity</div>
           <div className="text-sm opacity-70">Placeholder feed for joins, pins, uploads, mod actions.</div>
           <div className="mt-3 space-y-2">
-            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ testuser2 joined</div>
-            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ room created</div>
-            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ message pinned (soon)</div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ testuser2 joined</div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ room created</div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ message pinned (soon)</div>
           </div>
         </div>
       );
@@ -80,7 +83,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     <div className="min-w-0">
       <RoomHeader
         onOpenDetails={() => openSheet("roomDetails", { roomId })}
-        title={`room: ${roomId}`}
+        title={`room: ${roomLabel}`}
         subtitle="Fancy room page prototype"
         memberCount={2}
         activeTab={tab}
