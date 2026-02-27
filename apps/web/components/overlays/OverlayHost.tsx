@@ -16,7 +16,13 @@ function sheetTitle(type: string | undefined) {
   return "Overlay";
 }
 
-function SheetBody({ sheet }: { sheet: { type: string; payload?: any } }) {
+function SheetBody({
+  sheet,
+  onClose,
+}: {
+  sheet: { type: string; payload?: any };
+  onClose: () => void;
+}) {
   const p = sheet.payload ?? {};
   switch (sheet.type) {
     case "roomDetails":
@@ -25,7 +31,9 @@ function SheetBody({ sheet }: { sheet: { type: string; payload?: any } }) {
       return <ProfileSheet userId={p.userId ?? "unknown"} />;
     case "settings":
       return <SettingsSheet />;
-    case "dock": return (<DockSheet payload={top.payload} onClose={closeSheet} />);default:
+    case "dock":
+      return <DockSheet payload={p} onClose={onClose} />;
+    default:
       return (
         <div className="p-4">
           <div className="text-lg font-semibold">Sheet</div>
@@ -78,7 +86,7 @@ export default function OverlayHost() {
         </div>
 
         <div className="h-[calc(100%-52px)] overflow-auto">
-          <SheetBody sheet={top as any} />
+          <SheetBody sheet={top as any} onClose={closeSheet} />
         </div>
       </div>
     </div>

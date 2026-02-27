@@ -3,6 +3,57 @@
 import { useRouter, usePathname } from "next/navigation";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
+
+/* =========================
+   Settings -> DOM attributes (v0)
+   Source: localStorage key "weered:settings:v0"
+   Emits: data-weered-theme / data-weered-density / data-weered-reduce-motion on <html>
+   ========================= */
+const __WEERED_SETTINGS_KEY = "weered:settings:v0";
+
+function __weeredReadSettings(): any {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(__WEERED_SETTINGS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function __weeredApplySettingsToDom(s: any) {
+  
+  // Apply settings to <html> on mount + when settings change
+  React.useEffect(() => {
+    try {
+      const s = __weeredReadSettings();
+      if (s) __weeredApplySettingsToDom(s);
+
+      const onChanged = (ev: any) => {
+        const next = ev?.detail ?? __weeredReadSettings();
+        if (next) __weeredApplySettingsToDom(next);
+      };
+
+      window.addEventListener("weered:settings:changed", onChanged as any);
+      return () => window.removeEventListener("weered:settings:changed", onChanged as any);
+    } catch {
+      return;
+    }
+  }, []);
+try {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+
+    const theme = String(s?.theme ?? "stone");
+    const density = String(s?.density ?? "comfortable");
+    const reduceMotion = s?.reduceMotion ? "1" : "0";
+
+    root.setAttribute("data-weered-theme", theme);
+    root.setAttribute("data-weered-density", density);
+    root.setAttribute("data-weered-reduce-motion", reduceMotion);
+  } catch {}
+}
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:4001";
 
@@ -485,7 +536,6 @@ const list = Array.isArray(msg.users) ? msg.users : [];
         return;
       }
     };
-
     return () => {
       try { ws.close(); } catch {}
       wsRef.current = null;
