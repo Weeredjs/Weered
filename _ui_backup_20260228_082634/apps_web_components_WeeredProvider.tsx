@@ -295,12 +295,9 @@ const [activeRoomId, setActiveRoomId] = useState<string>("");
     sendJoinDefaultRoom();
 
         // Ask server for a lobby rooms list (server may ignore unknown message types)
-const ws = wsRef.current;
-if (ws && ws.readyState === WebSocket.OPEN) {
-  try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
-  try { ws.send(JSON.stringify({ type: "lobby:rooms" })); } catch {}
-  try { ws.send(JSON.stringify({ type: "room:list" })); } catch {}
-}
+        try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "lobby:rooms" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "room:list" })); } catch {}
   }, [wsReady, activeRoomId, joinedRoomId]);
 
   // Sync auth from localStorage on navigation (fix: no refresh after login redirect)
@@ -394,12 +391,9 @@ if (ws && ws.readyState === WebSocket.OPEN) {
         sendJoinDefaultRoom();
 
         // Ask server for a lobby rooms list (server may ignore unknown message types)
-const ws = wsRef.current;
-if (ws && ws.readyState === WebSocket.OPEN) {
-  try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
-  try { ws.send(JSON.stringify({ type: "lobby:rooms" })); } catch {}
-  try { ws.send(JSON.stringify({ type: "room:list" })); } catch {}
-}
+        try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "lobby:rooms" })); } catch {}
+        try { ws.send(JSON.stringify({ type: "room:list" })); } catch {}
 // Prefer user from server payload; fallback to persisted dev-login user
         const u = (msg.user ?? msg.payload?.user) || null;
         if (u) {
@@ -433,7 +427,7 @@ if (msg.type === "presence:state") {
         const inRoom = !!meId && list.some((u: any) => String(u?.id || "") === meId);
         if (inRoom && rid) {
           setJoinedRoomId(rid);
-          setStatusByRoom((prev) => ({ ...prev, [rid]: "joined" }));
+          setJoinStatus("joined");
         }
       } catch {}// Treat presence:state membership as "joined" for that room
       try {
@@ -443,7 +437,7 @@ if (msg.type === "presence:state") {
         const inRoom = !!meId && list.some((u: any) => String(u?.id || "") === meId);
         if (inRoom && rid && viewRid && rid === viewRid) {
           setJoinedRoomId(rid);
-          setStatusByRoom((prev) => ({ ...prev, [rid]: "joined" }));
+          setJoinStatus("joined");
         }
       } catch {}// Ensure UI room id matches server presence room
         if (rid && !activeRoomId) setActiveRoomId(rid);
@@ -718,7 +712,6 @@ export function useWeered() {
     throw new Error("useWeered must be used within WeeredProvider");
   }return ctx;
 }
-
 
 
 

@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { ui } from "./weeredUi";
 
-import ModeratorToolsPanel from "./ModeratorToolsPanel";
 type Props = { contextLabel?: string };
 
 type RoomRow = {
@@ -36,7 +35,7 @@ function MicCamPill({ u }: { u: any }) {
 
   return (
     <span className={`${ui.muted} text-[11px]`}>
-      {mic ? "mic" : "mic-off"} · {cam ? "cam" : "cam-off"}
+      {mic ? "mic" : "mic-off"} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ Ã‚Â·  {cam ? "cam" : "cam-off"}
     </span>
   );
 }
@@ -150,7 +149,7 @@ function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
         {err ? (
           <div className={`${ui.muted} text-xs`}>Rooms error: {err}</div>
         ) : filtered.length === 0 ? (
-          <div className={`${ui.muted} text-xs`}>{loading ? "Loading rooms..." : "No rooms found."}</div>
+          <div className={`${ui.muted} text-xs`}>{loading ? "Loading roomsÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦" : "No rooms found."}</div>
         ) : (
           <div className="space-y-2 max-h-[420px] overflow-auto pr-1">
             {filtered.slice(0, 60).map((rm) => {
@@ -197,7 +196,7 @@ function CurrentRoomPanel({ currentRoomId }: { currentRoomId: string }) {
       <div className="weered-panel2 p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="min-w-0">
-            <div className="font-semibold truncate">{String(roomId || "unknown")}</div>
+            <div className="font-semibold truncate">{String(roomId || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â")}</div>
             <div className={`${ui.muted} text-xs`}>{users.length} online</div>
           </div>
           {me ? <span className="px-2 py-1 rounded-full text-[11px] border border-white/10 bg-white/5 opacity-80">you</span> : null}
@@ -275,15 +274,21 @@ export default function RightRail({ contextLabel = "lobby" }: Props) {
             </div>
           </div>
 
-          {isAdmin ? (<ModeratorToolsPanel roomId={currentRoomId} title="Moderator Tools" />) : null}
+          {isAdmin ? (
+            <div>
+              <div className={`${ui.muted} text-xs mb-2`}>Moderator / Admin</div>
+              <div className="space-y-2">
+                <button className="weered-btn" type="button">Pin message (placeholder)</button>
+                <button className="weered-btn" type="button">Mute user (placeholder)</button>
+                <button className="weered-btn" type="button">Kick user (placeholder)</button>
+              </div>
+              <div className={`${ui.muted} text-[11px] mt-2`}>
+                Admin tools are UI-only for now. Next: wire actions to API + WS moderation events.
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
-
-
-
-
-
-

@@ -21,11 +21,11 @@
   if (after) qs.set("after", after);
   if (sort === "top" && t) qs.set("t", t);
 
-  const url = `https://www.reddit.com/r/${sub}/${sort}.json?${qs.toString()}`;
+  const url = `https://api.reddit.com/r/${sub}/${sort}.json?${qs.toString()}`;
 
   const r = await fetch(url, {
     headers: {
-      "User-Agent": "weered-dev/0.1 (contact: local)",
+      "User-Agent": "Mozilla/5.0 (compatible; WeeredBot/1.0; +https://weered.ca)",
       "Accept": "application/json",
     },
     // Next route handler: ensure it doesn't cache forever during dev

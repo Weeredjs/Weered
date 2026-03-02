@@ -160,7 +160,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
                   {p.title}
                 </div>
                 <div style={{ opacity: 0.72, fontSize: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <span>▲ {p.score}</span>
+                  <span>↑ {p.score}</span>
                   <span>💬 {p.num_comments}</span>
                   <span>u/{p.author}</span>
                 </div>
@@ -178,7 +178,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
               <div style={{ opacity: 0.72, fontSize: 12, display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                 <span>u/{selected.author}</span>
                 <span>{fmtTime(selected.created_utc)}</span>
-                <span>▲ {selected.score}</span>
+                <span>↑ {selected.score}</span>
                 <span>💬 {selected.num_comments}</span>
               </div>
 
@@ -195,7 +195,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
                   rel="noreferrer"
                   style={{ display: "inline-block", marginBottom: 12, fontWeight: 900 }}
                 >
-                  Open link ↗
+                  Open link →
                 </a>
               ) : null}
 
