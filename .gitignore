@@ -8,3 +8,34 @@ apps/web/.next/
 # Local assets
 weered-brand-kit.zip
 
+# Next.js build
+apps/web/.next/
+apps/web/out/
+apps/web/dist/
+apps/web/build/
+
+# Node
+**/node_modules/
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+.env.*
+secrets/
+*.pem
+*.key
+
+# Local patch backups / archives
+_ui_backup_*/
+*_bak_*/
+*.tgz
+*.zip
+*.bak*
+*.LINED*.txt
+_patch_*.ps1
+_patch_*.txt
+
+# Local assets
+weered-brand-kit.zip
