@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import DockShell from "./DockShell";
@@ -55,11 +55,7 @@ return (
           bottom: 12,
           width: 420,
           maxWidth: "min(420px, calc(100vw - 24px))",
-          background: "var(--weered-panel2)",
-          border: "1px solid var(--weered-bd2)",
-          borderRadius: 16,
-          overflow: "hidden",
-          boxShadow: "0 18px 60px rgba(0,0,0,.55)",          transform: open ? "translateX(0)" : "translateX(110%)",
+          transform: open ? "translateX(0)" : "translateX(110%)",
           opacity: open ? 1 : 0,
           visibility: open ? "visible" : "hidden",
           transition: "transform 220ms ease, opacity 180ms ease",
@@ -72,5 +68,3 @@ return (
     </>
   );
 }
-
-

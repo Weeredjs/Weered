@@ -67,3 +67,4 @@ export default function RoomActionsPanel(props: Props) {
     </div>
   );
 }
+

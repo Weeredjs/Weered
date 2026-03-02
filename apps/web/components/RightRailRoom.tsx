@@ -1,8 +1,7 @@
 ﻿"use client";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
-import { useCallback, useMemo, useState } from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 type Person = {
   id?: string;
   name?: string;
@@ -131,12 +130,46 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
   const ws = useMemo(() => bestWsStatus(ctx), [ctx]);
 
-  const [query, setQuery] = useState("");
+  const wired = useMemo(() => {
+    return {
+      mute: typeof ctx?.mute === "function",
+      kick: typeof ctx?.kick === "function",
+      promote: typeof ctx?.promote === "function",
+      demote: typeof ctx?.demote === "function",
+      lock: typeof ctx?.lockRoom === "function",
+      unlock: typeof ctx?.unlockRoom === "function",
+    };
+  }, [ctx]);
+const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [note, setNote] = useState("");
   const [confirm, setConfirm] = useState<{ kind: "mute"|"kick"|""; userId: string; userName: string }>({ kind: "", userId: "", userName: "" });
-  const [slowMode, setSlowMode] = useState(false);
+  const [slowModeSec, setSlowModeSec] = useState<number>(0);
+  const slowMode = slowModeSec > 0;
   const [pinned, setPinned] = useState<string>("");
+  const [lockReason, setLockReason] = useState<string>("");
+  const [inspectOpen, setInspectOpen] = useState(false);
+  const [inspectUser, setInspectUser] = useState<Person | null>(null);
+  const inspectFirstBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!inspectOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setInspectOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    // best-effort focus after mount
+    setTimeout(() => {
+      try { inspectFirstBtnRef.current?.focus(); } catch {}
+    }, 0);
+
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [inspectOpen]);
   const [locked, setLocked] = useState(false);
   const [activity, setActivity] = useState<{ at: string; text: string }[]>([]);
   const log = useCallback((text: string) => {
@@ -190,7 +223,19 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     return filtered.find((p) => (p.id ?? p.name ?? "") === id) ?? null;
   }, [filtered, selectedId]);
 
-  const copySnapshot = useCallback(async () => {
+  
+
+  const openInspect = useCallback((p: Person) => {
+    setInspectUser(p);
+    setInspectOpen(true);
+    try {
+      log(`inspect → ${p.name ?? p.handle ?? p.id ?? "unknown"}`);
+    } catch {}
+  }, [log]);
+
+  const closeInspect = useCallback(() => {
+    setInspectOpen(false);
+  }, []);const copySnapshot = useCallback(async () => {
     const payload = {
       at: new Date().toISOString(),
       roomId,
@@ -226,28 +271,50 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
     // non-destructive: best-effort call if provider has it; otherwise UI-only
     try {
+      const isWired =
+        (kind === "promote" && wired.promote) ||
+        (kind === "demote" && wired.demote) ||
+        (kind === "lock" && wired.lock) ||
+        (kind === "unlock" && wired.unlock);
+
       if (kind === "promote") ctx?.promote?.(userId);
       if (kind === "demote") ctx?.demote?.(userId);
       if (kind === "lock") ctx?.lockRoom?.();
       if (kind === "unlock") ctx?.unlockRoom?.();
-      setNote(`${kind} (placeholder${typeof (kind === "lock" ? ctx?.lockRoom : kind === "unlock" ? ctx?.unlockRoom : ctx?.promote) === "function" ? "" : ", UI-only"})`);
-      log(`${kind}${u ? " " + userName : ""}`);
+
       if (kind === "lock") setLocked(true);
       if (kind === "unlock") setLocked(false);
-      } catch {
+
+      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (UI-only)`;
+      const extra = (kind === "lock" || kind === "unlock") && lockReason.trim() ? ` (reason: ${lockReason.trim()})` : "";
+      const msg = baseMsg + extra;
+      setNote(msg);
+      log(`${msg}${u ? " → " + userName : ""}`);
+    } catch {
       setNote(`${kind} failed`);
+      log(`${kind} failed${u ? " → " + userName : ""}`);
     }
-  }, [ctx, selected]);
+  }, [ctx, selected, lockReason, wired, log]);
 
   const confirmYes = useCallback(() => {
     const { kind, userId, userName } = confirm;
     if (!kind || !userId) return;
     try {
+      const isWired =
+        (kind === "kick" && wired.kick) ||
+        (kind === "mute" && wired.mute);
+
       if (kind === "kick") ctx?.kick?.(userId);
       if (kind === "mute") ctx?.mute?.(userId);
-      setNote(`${kind} ${userName} (placeholder${typeof (kind === "kick" ? ctx?.kick : ctx?.mute) === "function" ? "" : ", UI-only"})`);
+
+      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (UI-only)`;
+      const extra = (kind === "lock" || kind === "unlock") && lockReason.trim() ? ` (reason: ${lockReason.trim()})` : "";
+      const msg = baseMsg + extra;
+      setNote(`${msg} → ${userName}`);
+      log(`${msg} → ${userName}`);
     } catch {
       setNote(`${kind} failed`);
+      log(`${kind} failed → ${userName}`);
     } finally {
       setConfirm({ kind: "", userId: "", userName: "" });
     }
@@ -256,7 +323,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const confirmNo = useCallback(() => setConfirm({ kind: "", userId: "", userName: "" }), []);
 
   return (
-    <div className="sticky top-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+    <div className="sticky top-4 overflow-x-hidden rounded-2xl border border-white/10 bg-black/20 p-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm font-semibold">Room Panel</div>
@@ -273,7 +340,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
             LOCKED
           </span>
         ) : null}
-        {slowMode ? (
+        {(slowModeSec > 0) ? (
           <span className="text-[11px] rounded-full border border-sky-300/25 bg-sky-500/10 px-2 py-0.5 text-sky-200">
             SLOW MODE
           </span>
@@ -284,8 +351,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
           </span>
         ) : null}
         {!locked && !slowMode && !pinned.trim() ? (
-          <span className="text-[11px] rounded-full border border-white/10 bg-white/5 px-2 py-0.5 opacity-70">
-            OK
+          <span className="text-[11px] rounded-full border border-emerald-300/25 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
+            UNLOCKED
           </span>
         ) : null}
       </div>
@@ -397,7 +464,19 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   >
                     {p.name ?? "unknown"}
                   </button>
-                  <span className="text-xs opacity-70">{p.role ?? "member"}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs opacity-70">{p.role ?? "member"}</span>
+                    {allowed ? (
+                      <button
+                        type="button"
+                        className="text-[11px] rounded-md border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30 opacity-90"
+                        onClick={() => openInspect(p)}
+                        title="Open admin inspect"
+                      >
+                        Admin
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ))}
@@ -413,7 +492,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       {/* Admin Tools (gated) */}
       <div className="mt-4">
         <div className="text-xs font-semibold opacity-80 mb-2">Admin Tools</div>
-
         {!allowed ? (
           <div className="text-sm opacity-70">Visible to moderators/owners only.</div>
         ) : (
@@ -469,28 +547,28 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => doAction("mute")}
                 >
-                  Mute (placeholder)
+                  Mute
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => doAction("kick")}
                 >
-                  Kick (placeholder)
+                  Kick
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => doAction("promote")}
                 >
-                  Promote MOD (placeholder)
+                  Promote MOD
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => doAction("demote")}
                 >
-                  Demote (placeholder)
+                  Demote
                 </button>
               </div>
 
@@ -525,37 +603,84 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="text-xs font-semibold opacity-90 mb-2">Room controls</div>
 
-              <div className="grid grid-cols-2 gap-2">
+              
+              <div className="mb-2 rounded-lg border border-white/10 bg-black/10 p-2">
+                <div className="text-xs font-semibold opacity-80">Room settings</div>
+
+                <div className="mt-2">
+                  <div className="text-xs opacity-80 mb-1">Lock reason (UI-only)</div>
+                  <input
+                    value={lockReason}
+                    onChange={(e) => setLockReason(e.target.value)}
+                    placeholder="e.g. maintenance, spam wave, admin test…"
+                    className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="mt-2">
+                  <div className="text-xs opacity-80 mb-1">Pinned preview</div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm opacity-90">
+                    {pinned.trim() ? pinned : <span className="opacity-60">Nothing pinned.</span>}
+                  </div>
+                </div>
+              </div>
+<div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => doAction("lock")}
                 >
-                  Lock (placeholder)
+                  Lock
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => doAction("unlock")}
                 >
-                  Unlock (placeholder)
+                  UnLock
                 </button>
               </div>
 
-              <div className="mt-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                <div className="text-sm">Slow mode</div>
-                <button
-                  type="button"
-                  className="text-xs rounded-full border border-white/10 bg-black/10 px-2 py-1 hover:bg-black/20"
-                  onClick={() => { setSlowMode((v) => !v); setNote(`slow mode ${!slowMode ? "enabled" : "disabled"} (UI-only)`); }}
-                >
-                  {slowMode ? "on" : "off"}
-                </button>
-              </div>
+              <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">Slow mode</div>
+                  <div className="text-xs opacity-70">{slowModeSec > 0 ? `${slowModeSec}s` : "off"}</div>
+                </div>
 
-              <div className="mt-2">
+                <div className="mt-2 flex gap-2">
+                  <select
+                    value={String(slowModeSec)}
+                    onChange={(e) => {
+                      const next = parseInt(e.target.value || "0", 10);
+                      setSlowModeSec(next);
+                      setNote(`slow mode → ${next > 0 ? next + "s" : "off"} (UI-only)`);
+                      log(`slow mode → ${next > 0 ? next + "s" : "off"}`);
+                    }}
+                    className="flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                  >
+                    <option value="0">Off</option>
+                    <option value="5">5s</option>
+                    <option value="10">10s</option>
+                    <option value="30">30s</option>
+                    <option value="60">60s</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
+                    onClick={() => {
+                      setSlowModeSec(0);
+                      setNote("slow mode → off (UI-only)");
+                      log("slow mode → off");
+                    }}
+                  >
+                    Off
+                  </button>
+                </div>
+              </div>
+<div className="mt-2">
                 <div className="text-xs opacity-80 mb-1">Pin message (UI-only for now)</div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex flex-wrap gap-2 items-center flex flex-wrap gap-2 items-center flex flex-wrap gap-2 items-center">
                   <input
                     value={pinned}
                     onChange={(e) => setPinned(e.target.value)}
@@ -584,7 +709,177 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
           </div>
         )}
       </div>
-    </div>
+          {/* Inspect drawer (gated) */}
+      {allowed && inspectOpen && inspectUser ? (
+        <div
+          onClick={closeInspect}
+          style={{ position: "fixed", inset: 0, zIndex: 9999 }}
+          className="bg-black/50"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: "absolute", right: 16, top: 88, width: 360, maxWidth: "92vw" }}
+            className="rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">
+                  {inspectUser.name ?? inspectUser.handle ?? inspectUser.id ?? "unknown"}
+                </div>
+                <div className="text-xs opacity-70 truncate">
+                  {inspectUser.id ? `id: ${inspectUser.id}` : "id: (unknown)"}{inspectUser.role ? ` · ${inspectUser.role}` : ""}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                onClick={closeInspect}
+              >
+                Close
+              </button>
+            
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                  onClick={() => {
+                    const uid = (inspectUser.id ?? inspectUser.name ?? "unknown").toString();
+                    replaceTop("profile", { userId: uid });
+                    log(`profile → ${inspectUser.name ?? inspectUser.id ?? "unknown"}`);
+                  }}
+                >
+                  View profile
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                  onClick={() => {
+                    const uid = (inspectUser.id ?? inspectUser.name ?? "unknown").toString();
+                    const uname = (inspectUser.name ?? inspectUser.handle ?? uid).toString();
+                    try {
+                      window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", userId: uid, name: uname } }));
+                    } catch {}
+                    log(`dm → ${uname}`);
+                  }}
+                >
+                  Message
+                </button>
+              </div>
+</div>
+
+            <div className="p-4 space-y-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="text-xs font-semibold opacity-90">Quick actions</div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    ref={inspectFirstBtnRef}
+                    disabled={!wired.mute}
+                    className={"rounded-lg border border-white/10 px-3 py-2 text-sm " + (wired.mute ? "bg-black/20 hover:bg-black/30" : "bg-white/5 opacity-50 cursor-not-allowed")}
+                    onClick={() => { setSelectedId((inspectUser.id ?? inspectUser.name ?? "") as any); doAction("mute"); }}
+                    title={wired.mute ? "Send mute (if wired)" : "Not wired yet"}
+                  >
+                    {wired.mute ? "Mute" : "Mute (not wired)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!wired.kick}
+                    className={"rounded-lg border border-white/10 px-3 py-2 text-sm " + (wired.kick ? "bg-black/20 hover:bg-black/30" : "bg-white/5 opacity-50 cursor-not-allowed")}
+                    onClick={() => { setSelectedId((inspectUser.id ?? inspectUser.name ?? "") as any); doAction("kick"); }}
+                    title={wired.kick ? "Send kick (if wired)" : "Not wired yet"}
+                  >
+                    {wired.kick ? "Kick" : "Kick (not wired)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!wired.promote}
+                    className={"rounded-lg border border-white/10 px-3 py-2 text-sm " + (wired.promote ? "bg-black/20 hover:bg-black/30" : "bg-white/5 opacity-50 cursor-not-allowed")}
+                    onClick={() => { setSelectedId((inspectUser.id ?? inspectUser.name ?? "") as any); doAction("promote"); }}
+                    title={wired.promote ? "Promote (if wired)" : "Not wired yet"}
+                  >
+                    {wired.promote ? "Promote MOD" : "Promote (not wired)"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!wired.demote}
+                    className={"rounded-lg border border-white/10 px-3 py-2 text-sm " + (wired.demote ? "bg-black/20 hover:bg-black/30" : "bg-white/5 opacity-50 cursor-not-allowed")}
+                    onClick={() => { setSelectedId((inspectUser.id ?? inspectUser.name ?? "") as any); doAction("demote"); }}
+                    title={wired.demote ? "Demote (if wired)" : "Not wired yet"}
+                  >
+                    {wired.demote ? "Demote" : "Demote (not wired)"}
+                  </button>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    className="flex-1 text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-2 hover:bg-black/30"
+                    onClick={() => {
+                      const id = (inspectUser.id ?? inspectUser.name ?? "").toString();
+                      if (id) copyText("user id", id);
+                    }}
+                  >
+                    Copy user id
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-2 hover:bg-black/30"
+                    onClick={() => {
+                      const n = (inspectUser.name ?? inspectUser.handle ?? "").toString();
+                      if (n) copyText("user name", n);
+                    }}
+                  >
+                    Copy name
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="text-xs font-semibold opacity-90">Activity (filtered)</div>
+                <div className="mt-2 max-h-44 overflow-auto rounded-lg border border-white/10 bg-black/10 p-2">
+                  {activity.length ? (
+                    <div className="space-y-1 text-xs">
+                      {activity
+                        .filter((a) => {
+                          const k1 = (inspectUser.name ?? "").toString();
+                          const k2 = (inspectUser.id ?? "").toString();
+                          return (k1 && a.text.includes(k1)) || (k2 && a.text.includes(k2));
+                        })
+                        .slice(0, 20)
+                        .map((a, idx) => (
+                          <div key={idx} className="flex gap-2">
+                            <span className="opacity-60 shrink-0">{a.at}</span>
+                            <span className="opacity-90">{a.text}</span>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs opacity-60">No actions yet.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-[11px] opacity-60">
+                Tip: click outside the drawer to close.
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+</div>
   );
 }
+
+
+
+
+
+
+
+
+
 

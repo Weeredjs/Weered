@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
@@ -156,3 +156,4 @@ export default function LobbyChatPanel(props: { title?: string; style?: React.CS
     </section>
   );
 }
+

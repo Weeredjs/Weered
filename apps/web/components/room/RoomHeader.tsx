@@ -69,11 +69,7 @@ export default function RoomHeader({
             Invite
           </button>
           <button
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-            type="button"
-          >
-            â‹¯
-          </button>
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10" onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }} type="button">Dock</button>
         </div>
       </div>
 </div>
