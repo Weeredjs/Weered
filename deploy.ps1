@@ -1,7 +1,4 @@
-﻿cd C:\Weered
-
-@'
-# Weered deploy script (Windows -> Droplet)
+﻿# deploy.ps1 (safe: sends a bash script to server over stdin)
 $ErrorActionPreference = "Stop"
 
 $server = "root@weered.ca"
@@ -16,13 +13,16 @@ git push origin $branch
 
 Write-Host "== Deploying on server ($server) ==" -ForegroundColor Cyan
 
-$remote = @"
+# Create a bash script as a literal string (no interpolation surprises)
+$bash = @'
 set -euo pipefail
+
+BRANCH="__BRANCH__"
 
 echo "== Server: pulling code =="
 cd /opt/weered_repo
 git fetch origin --prune
-git switch $branch || git switch -c $branch --track origin/$branch
+git switch "$BRANCH" || git switch -c "$BRANCH" --track "origin/$BRANCH"
 git pull --ff-only
 
 echo "== Server: syncing code -> runtime (preserving server config) =="
@@ -42,12 +42,12 @@ weered-compose up -d --build
 
 echo "== Server: healthcheck =="
 i=0
-while [ "\$i" -lt 40 ]; do
+while [ "$i" -lt 40 ]; do
   if curl -fsS http://127.0.0.1:4000/health >/dev/null; then
     echo "OK: healthcheck"
     exit 0
   fi
-  i=\$((i+1))
+  i=$((i+1))
   sleep 2
 done
 
@@ -55,10 +55,10 @@ echo "ERROR: healthcheck never went green"
 docker compose ps || true
 docker logs --tail 120 weered-api-1 || true
 exit 1
-"@
+'@
 
-# Run the remote block under bash explicitly
-ssh -i $key -o IdentitiesOnly=yes $server "bash -lc '$($remote.Replace("`r","").Replace("`n","; ").Replace("'","'\''"))'"
-'@ | Set-Content -LiteralPath .\deploy.ps1 -Encoding UTF8
+# Inject branch safely
+$bash = $bash.Replace("__BRANCH__", $branch)
 
-Write-Host "Updated deploy.ps1 (forces bash on server)" -ForegroundColor Green
+# Send script via stdin; run on server with bash
+$bash | ssh -i $key -o IdentitiesOnly=yes $server "bash -s"
