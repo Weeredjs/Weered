@@ -12,6 +12,7 @@ git push origin $branch
 
 Write-Host "== Deploying on server ($server) ==" -ForegroundColor Cyan
 
+# --- the real deploy script (bash) ---
 $bash = @"
 set -euo pipefail
 
@@ -52,8 +53,10 @@ docker logs --tail 120 weered-api-1 || true
 exit 1
 "@
 
-# base64 encode the bash script as UTF8
+# base64 encode the bash script so PowerShell never tries to interpret bash syntax
 $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($bash))
+
+# wrapper that runs on the droplet: decode -> bash
 $wrapper = @"
 python3 - <<'PY' | bash
 import base64
