@@ -1,12 +1,9 @@
-﻿# Weered deploy script (Windows -> Droplet)
-# - Pushes your current branch to GitHub
-# - Server pulls into /opt/weered_repo
-# - Syncs code into /opt/weered while preserving server-only config
-# - Rebuilds containers and waits for /health
+﻿cd C:\Weered
 
+@'
+# Weered deploy script (Windows -> Droplet)
 $ErrorActionPreference = "Stop"
 
-# --- Config ---
 $server = "root@weered.ca"
 $key    = "$env:USERPROFILE\.ssh\weered_do"
 $branch = (git branch --show-current).Trim()
@@ -19,7 +16,7 @@ git push origin $branch
 
 Write-Host "== Deploying on server ($server) ==" -ForegroundColor Cyan
 
-ssh -i $key -o IdentitiesOnly=yes $server @"
+$remote = @"
 set -euo pipefail
 
 echo "== Server: pulling code =="
@@ -45,12 +42,12 @@ weered-compose up -d --build
 
 echo "== Server: healthcheck =="
 i=0
-while [ "$i" -lt 40 ]; do
+while [ "\$i" -lt 40 ]; do
   if curl -fsS http://127.0.0.1:4000/health >/dev/null; then
     echo "OK: healthcheck"
     exit 0
   fi
-  i=$((i+1))
+  i=\$((i+1))
   sleep 2
 done
 
@@ -59,3 +56,9 @@ docker compose ps || true
 docker logs --tail 120 weered-api-1 || true
 exit 1
 "@
+
+# Run the remote block under bash explicitly
+ssh -i $key -o IdentitiesOnly=yes $server "bash -lc '$($remote.Replace("`r","").Replace("`n","; ").Replace("'","'\''"))'"
+'@ | Set-Content -LiteralPath .\deploy.ps1 -Encoding UTF8
+
+Write-Host "Updated deploy.ps1 (forces bash on server)" -ForegroundColor Green
