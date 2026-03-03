@@ -44,11 +44,13 @@ cd /opt/weered
 weered-compose up -d --build
 
 echo "== Server: healthcheck =="
-for i in \$(seq 1 40); do
+i=0
+while [ "$i" -lt 40 ]; do
   if curl -fsS http://127.0.0.1:4000/health >/dev/null; then
     echo "OK: healthcheck"
     exit 0
   fi
+  i=$((i+1))
   sleep 2
 done
 
