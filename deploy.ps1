@@ -16,14 +16,13 @@ $bash = @"
 set -euo pipefail
 
 BRANCH='$branch'
+echo "Deploying branch: \$BRANCH"
 
-echo "== Server: pulling code =="
 cd /opt/weered_repo
 git fetch origin --prune
 git switch "\$BRANCH" || git switch -c "\$BRANCH" --track "origin/\$BRANCH"
 git pull --ff-only
 
-echo "== Server: syncing code -> runtime (preserving server config) =="
 rsync -a --delete \
   --exclude '.git' \
   --exclude '.env' --exclude '.env.*' \
@@ -34,18 +33,16 @@ rsync -a --delete \
   --exclude 'uploads/' \
   /opt/weered_repo/ /opt/weered/
 
-echo "== Server: rebuild/up =="
 cd /opt/weered
 weered-compose up -d --build
 
-echo "== Server: healthcheck =="
 tries=40
-while [ "$tries" -gt 0 ]; do
+while [ "\$tries" -gt 0 ]; do
   if curl -fsS http://127.0.0.1:4000/health >/dev/null; then
     echo "OK: healthcheck"
     exit 0
   fi
-  tries=$(expr "$tries" - 1)
+  tries=\$((tries-1))
   sleep 2
 done
 
@@ -55,5 +52,14 @@ docker logs --tail 120 weered-api-1 || true
 exit 1
 "@
 
+# base64 encode the bash script as UTF8
+$b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($bash))
+$wrapper = @"
+python3 - <<'PY' | bash
+import base64
+print(base64.b64decode('''$b64''').decode('utf-8'))
+PY
+"@
+
 $sshArgs = @("-i", $key, "-o", "IdentitiesOnly=yes", $server, "bash -s")
-$bash | & ssh @sshArgs
+$wrapper | & ssh @sshArgs
