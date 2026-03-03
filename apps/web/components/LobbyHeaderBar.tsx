@@ -19,7 +19,7 @@ function pickFirstString(...vals: any[]) {
  return "";
 }
 
-export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: string; subtitle?: string }) {
+export default function LobbyHeaderBar({ title = "Lobby1", subtitle }: { title?: string; subtitle?: string }) {
  const router = useRouter();
  const { openSheet } = useOverlay();
  const w = useWeered() as any;
