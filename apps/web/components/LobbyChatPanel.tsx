@@ -14,20 +14,36 @@ export default function LobbyChatPanel(
   const joinedRoomId = String(ctx?.joinedRoomId || "");
   const joinStatus = String(ctx?.joinStatus || "idle"); // NOTE: active-room scalar
   const msgs = Array.isArray(ctx?.msgs) ? ctx.msgs : [];
-    const meta = ctx?.meta || null;
-  const displayRoomName =
-    String(meta?.name || meta?.title || meta?.label || "").trim() || "";const admin = ctx?.admin || null;
+  const meta = ctx?.meta || null;
+  const admin = ctx?.admin || null;
+
+  const displayRoomName = String(
+    meta?.name || meta?.title || meta?.label || admin?.name || ""
+  ).trim();
 
   // Force active room when parent provides it (provider effect will presence:join + chat:history)
   useEffect(() => {
-    const forced = String(props.roomId || "").trim();
+    let forced = String(props.roomId || "").trim();
+    if (!forced) return;
+
+    // Normalize: strip "room:" prefix and decode
+    if (forced.startsWith("room:")) forced = forced.slice(5);
+    try { forced = decodeURIComponent(forced); } catch {}
+    forced = String(forced || "").trim();
     if (!forced) return;
     try { ctx?.setActiveRoomId?.(forced); } catch {}
   }, [props.roomId]);
 
   const roomLabel = useMemo(() => {
-    const forced = String(props.roomId || "").trim();
-    return forced || activeRoomId;
+    let forced = String(props.roomId || "").trim();
+    let active = String(activeRoomId || "").trim();
+
+    if (forced.startsWith("room:")) forced = forced.slice(5);
+    if (active.startsWith("room:")) active = active.slice(5);
+
+    // prefer forced if present
+    const pick = (forced || active || "").trim();
+    return pick;
   }, [props.roomId, activeRoomId]);
 
   const [text, setText] = useState("");
@@ -142,24 +158,27 @@ export default function LobbyChatPanel(
         </button>
       </div>
 
-      <div style={{ marginTop: 10 }}>
-        <button
-          onClick={() => replaceTop("dock")}
-          style={{
-            borderRadius: 12,
-            border: "1px solid var(--weered-border)",
-            background: "rgba(255,255,255,.04)",
-            color: "inherit",
-            fontWeight: 800,
-            padding: "8px 10px",
-          }}
-        >
-          Open Dock
-        </button>
-      </div>
+      {!props.embedded && (
+        <div style={{ marginTop: 10 }}>
+          <button
+            onClick={() => replaceTop("dock")}
+            style={{
+              borderRadius: 12,
+              border: "1px solid var(--weered-border)",
+              background: "rgba(255,255,255,.04)",
+              color: "inherit",
+              fontWeight: 800,
+              padding: "8px 10px",
+            }}
+          >
+            Open Dock
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+
 
 
 

@@ -18,6 +18,7 @@ export default function RoomChatPanel({ roomId }: { roomId: string }) {
   }
 
   // IMPORTANT: use raw room id so presence:join and presence:state match
-  return <LobbyChatPanel title="Room Chat" roomId={rid} embedded />;
+  return <LobbyChatPanel roomId={rid} embedded />;
 }
+
 
