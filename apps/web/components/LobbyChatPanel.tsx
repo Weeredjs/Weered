@@ -4,156 +4,162 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 
-function pickFirstString(...vals: any[]): string {
-  for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
-  return "";
-}
-
-export default function LobbyChatPanel(props: { title?: string; style?: React.CSSProperties } = {}) {
+export default function LobbyChatPanel(
+  props: { title?: string; style?: React.CSSProperties; roomId?: string; embedded?: boolean } = {}
+) {
   const { replaceTop } = useOverlay();
-  const {
-    me,
-    wsReady,
-    wsState,
-    activeRoomId,
-    joinedRoomId,
-    joinStatus,
-    msgs,
-    sendChat,
-  }: any = useWeered();
+  const ctx: any = useWeered();
+
+  const activeRoomId = String(ctx?.activeRoomId || "");
+  const joinedRoomId = String(ctx?.joinedRoomId || "");
+  const joinStatus = String(ctx?.joinStatus || "idle"); // NOTE: active-room scalar
+  const msgs = Array.isArray(ctx?.msgs) ? ctx.msgs : [];
+    const meta = ctx?.meta || null;
+  const displayRoomName =
+    String(meta?.name || meta?.title || meta?.label || "").trim() || "";const admin = ctx?.admin || null;
+
+  // Force active room when parent provides it (provider effect will presence:join + chat:history)
+  useEffect(() => {
+    const forced = String(props.roomId || "").trim();
+    if (!forced) return;
+    try { ctx?.setActiveRoomId?.(forced); } catch {}
+  }, [props.roomId]);
+
+  const roomLabel = useMemo(() => {
+    const forced = String(props.roomId || "").trim();
+    return forced || activeRoomId;
+  }, [props.roomId, activeRoomId]);
 
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const wsUp = useMemo(() => {
-    if (!!wsReady) return true;
-    if (wsState === 1) return true;
-    if (typeof wsState === "string" && wsState.toLowerCase() === "open") return true;
-    return false;
-  }, [wsReady, wsState]);
+  const joinedStrict = Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && joinStatus === "joined");
 
-  const canChat = useMemo(() => {
-    const view = String(activeRoomId || "");
-    const joined = String(joinedRoomId || "");
-    if (!view) return false;
-    if (!wsUp) return false;
-    if (view !== joined) return false;
-    if (String(joinStatus || "") !== "joined") return false;
-    return true;
-  }, [activeRoomId, joinedRoomId, wsUp, joinStatus]);
+  // If we have room meta/admin, we are effectively in the room (your WS is providing this)
+  const joinedByMeta = Boolean(meta || admin);
 
-  const hint = useMemo(() => {
-    const view = String(activeRoomId || "");
-    const joined = String(joinedRoomId || "");
-    if (!view) return "No room selected.";
-    if (!wsUp) return "WS down.";
-    if (view !== joined) return "Chat disabled until joined/admitted.";
-    if (String(joinStatus || "") !== "joined") return "Joining...";
-    return "";
-  }, [activeRoomId, joinedRoomId, joinStatus, wsUp]);
-
-  function onSend() {
-    const b = (text || "").trim();
-    if (!b) return;
-    if (!canChat) return;
-    try { sendChat(b); } catch {}
-    setText("");
-  }
+  const canType = joinedStrict || joinedByMeta;
 
   useEffect(() => {
-    // auto-scroll on new messages
-    const el = listRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [msgs?.length]);
+    try { listRef.current?.scrollTo({ top: listRef.current.scrollHeight }); } catch {}
+  }, [msgs.length, activeRoomId]);
 
-  const panel: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
-    borderRadius: 16,
-    background: "var(--weered-panel)",
-    padding: 12,
-    ...props.style,
+  const onSend = () => {
+    if (!canType) return;
+    const msg = String(text || "").trim();
+    if (!msg) return;
+    try { ctx?.sendChat?.(msg); } catch {}
+    setText("");
   };
 
   return (
-    <section style={panel}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-        <div style={{ fontWeight: 950 }}>{props.title || "Lobby Chat"}</div>
-        <div style={{ opacity: 0.7, fontSize: 12 }}>
-          {hint ? hint : `room: ${String(activeRoomId || "-")}`}
+    <div style={props.style}>
+      {!props.embedded && (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontWeight: 900 }}>{props.title || "Lobby Chat"}</div>
+        <div style={{ fontSize: 12, opacity: 0.75 }}>
+          room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}
         </div>
       </div>
+    )}
 
       <div
         ref={listRef}
         style={{
-          border: "1px solid var(--weered-border2)",
+          border: "1px solid var(--weered-border)",
           borderRadius: 14,
           padding: 10,
           height: 260,
           overflow: "auto",
-          background: "var(--weered-panel2)",
+          background: "rgba(255,255,255,.02)",
           marginBottom: 10,
         }}
       >
-        {Array.isArray(msgs) && msgs.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {msgs.map((m: any) => {
-              const uname = pickFirstString(m?.user?.name, m?.user?.username, "someone");
-              const body = String(m?.body ?? "");
-              const isMe = Boolean(me?.id && m?.user?.id && String(me.id) === String(m.user.id));
-              return (
-                <div key={m?.id || Math.random()} style={{ display: "flex", gap: 10 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,.07)", border: "1px solid rgba(148,163,184,.16)", boxShadow: isMe ? "0 0 0 2px var(--weered-accent-ring, rgba(124,58,237,.28))" : "none", fontWeight: 1000, flex: "0 0 auto" }}><span style={{ fontSize: 12 }}>{uname.slice(0,1).toUpperCase()}</span></div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.92 }}>
-                      <button
-                        type="button"
-                        style={{ all: "unset", cursor: "pointer" }}
-                        className="hover:underline"
-                        onClick={() =>
-                          replaceTop("profile", {
-                            userId: pickFirstString(m?.user?.id, m?.userId, m?.user?.username, uname, "unknown"),
-                          })
-                        }
-                      >
-                        {uname}
-                      </button>
-                    </div>
-                    <div style={{ opacity: 0.92, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                      {body}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
+        {msgs.length === 0 ? (
           <div style={{ opacity: 0.7 }}>No messages yet.</div>
+        ) : (
+          msgs.map((m: any, i: number) => (
+            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  border: "1px solid var(--weered-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  opacity: 0.9,
+                }}
+              >
+                {(m?.name || "?").slice(0, 1).toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 13 }}>{String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}</div>
+                <div style={{ opacity: 0.95 }}>{m?.body || m?.text || ""}</div>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8 }}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSend();
-            }
+          placeholder={canType ? "Message..." : "Join/admit required..."}
+          disabled={!canType}
+          style={{
+            flex: 1,
+            height: 44,
+            borderRadius: 12,
+            border: "1px solid var(--weered-border)",
+            background: "rgba(255,255,255,.03)",
+            padding: "0 12px",
+            color: "inherit",
           }}
-          placeholder={canChat ? "Message..." : "Join/admit required..."}
-          disabled={!canChat}
-          style={{ flex: 1, padding: "10px 12px", borderRadius: 12 }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSend();
+          }}
         />
-        <button onClick={onSend}
-          disabled={!canChat}
-           className="weered-btn">
+        <button
+          onClick={onSend}
+          disabled={!canType}
+          style={{
+            width: 80,
+            height: 44,
+            borderRadius: 12,
+            border: "1px solid var(--weered-border)",
+            background: "rgba(255,255,255,.05)",
+            color: "inherit",
+            fontWeight: 900,
+            cursor: canType ? "pointer" : "not-allowed",
+            opacity: canType ? 1 : 0.6,
+          }}
+        >
           Send
         </button>
       </div>
-    </section>
+
+      <div style={{ marginTop: 10 }}>
+        <button
+          onClick={() => replaceTop("dock")}
+          style={{
+            borderRadius: 12,
+            border: "1px solid var(--weered-border)",
+            background: "rgba(255,255,255,.04)",
+            color: "inherit",
+            fontWeight: 800,
+            padding: "8px 10px",
+          }}
+        >
+          Open Dock
+        </button>
+      </div>
+    </div>
   );
 }
+
+
 
