@@ -24,6 +24,9 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  const { openSheet } = useOverlay();
  const w = useWeered() as any;
 
+  // Build stamp (temporary hardcode to verify live deploy)
+  const buildId = "47f950b3";
+
  const [mode, setMode] = React.useState<Mode>("subreddits");
  const [q, setQ] = React.useState("");
  const [open, setOpen] = React.useState(false);
@@ -160,6 +163,9 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  <button type="button" className={ui.btn} onClick={openProfileMe}>Profile</button>
  <button type="button" className={ui.btn} onClick={openSettings}>Settings</button>
  <button type="button" className={ui.btn} onClick={toggleDock}>Dock</button>
+<span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-70 select-none">
+  build 47f950b3
+</span>
  </div>
  </div>
 
@@ -232,7 +238,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  >
  <div style={{ minWidth: 0 }}>
  <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nm}</div>
- <div style={{ fontSize: 12, opacity: 0.7 }}>room ƒ€š‚· {r.room.locked ? "locked" : "open"}</div>
+ <div style={{ fontSize: 12, opacity: 0.7 }}>room • {r.room.locked ? "locked" : "open"}</div>
  </div>
  {typeof r.room.count === "number" ? (
  <div style={{ fontSize: 12, opacity: 0.75, whiteSpace: "nowrap" }}>{r.room.count} online</div>
@@ -298,5 +304,6 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  </div>
  );
 }
+
 
 

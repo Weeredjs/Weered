@@ -43,7 +43,7 @@ while [ "\$tries" -gt 0 ]; do
     echo "OK: healthcheck"
     exit 0
   fi
-  tries=\$((tries-1))
+  $tries = $tries - 1
   sleep 2
 done
 
