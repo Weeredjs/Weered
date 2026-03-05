@@ -32,7 +32,7 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     const list: { id: string; name: string; isLocal: boolean }[] = [];
     if (r.localParticipant) list.push({ id: r.localParticipant.identity, name: r.localParticipant.name || "Me", isLocal: true });
 
-    (((r as any).participants ?? (r as any).remoteParticipants) ?? new Map()).forEach((p) => {
+    (((r as any).participants ?? (r as any).remoteParticipants) ?? new Map()).forEach((p: any) => {
       list.push({ id: p.identity, name: p.name || p.identity, isLocal: false });
     });
 
