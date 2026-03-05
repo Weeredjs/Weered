@@ -309,13 +309,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   return (
     <div className="min-w-0">
       <RoomHeader
-        onOpenDetails={() => openSheet("roomDetails", { roomId })}
-        title={roomLabel}
-        subtitle={`Lobby → ${roomLabel} • ${memberCount} members`}
-        memberCount={memberCount}
-        activeTab={tab}
-        onTabChange={setTab}
-      />
+      onOpenDetails={() => openSheet("roomDetails", { roomId })}
+      title={roomLabel}
+      subtitle={`Lobby → ${roomLabel} • ${memberCount} members`}
+      memberCount={memberCount}
+    />
 
       <div className="flex gap-2 px-3 py-2 border-b border-white/10">
         {[
