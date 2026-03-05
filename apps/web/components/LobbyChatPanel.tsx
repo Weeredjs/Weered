@@ -55,6 +55,8 @@ export default function LobbyChatPanel(
   const joinedByMeta = Boolean(meta || admin);
 
   const canType = joinedStrict || joinedByMeta;
+  const msgTrim = String(text || "").trim();
+  const canSend = !!canType && msgTrim.length > 0;
 
   useEffect(() => {
     try { listRef.current?.scrollTo({ top: listRef.current.scrollHeight }); } catch {}
@@ -125,7 +127,7 @@ export default function LobbyChatPanel(
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={canType ? "Message..." : "Join/admit required..."}
-          disabled={!canType}
+          disabled={!canSend}
           className={
             "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
             (canType
@@ -133,12 +135,12 @@ export default function LobbyChatPanel(
               : "border-white/10 bg-white/5 text-white/50 cursor-not-allowed")
           }
           onKeyDown={(e) => {
-            if (e.key === "Enter") onSend();
+            if (e.key === "Enter" && canSend) onSend();
           }}
         />
         <button
           onClick={onSend}
-          disabled={!canType}
+          disabled={!canSend}
           className={
             "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
             (canType
@@ -179,6 +181,9 @@ export default function LobbyChatPanel(
     </div>
   );
 }
+
+
+
 
 
 
