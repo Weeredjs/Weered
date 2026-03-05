@@ -155,7 +155,7 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
   }
 
   const canTarget = !!targetId;
-  const isSelf = canTarget && myId && targetId === myId;
+  const isSelf = canTarget && !!myId && targetId === myId;
 
   return (
     <section className="weered-panel2 p-3" style={{ borderRadius: 16 }}>
