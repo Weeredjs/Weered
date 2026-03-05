@@ -25,7 +25,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  const w = useWeered() as any;
 
   // Build stamp (temporary hardcode to verify live deploy)
-  const buildId = "47f950b3";
+  const buildId = "f2f6da8f";
 
  const [mode, setMode] = React.useState<Mode>("subreddits");
  const [q, setQ] = React.useState("");
@@ -165,7 +165,6 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  <button type="button" className={ui.btn} onClick={openSettings}>Settings</button>
  <button type="button" className={ui.btn} onClick={toggleDock}>Dock</button>
 <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-70 select-none">
-  build 47f950b3
 </span>
  </div>
  </div>
@@ -305,6 +304,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  </div>
  );
 }
+
 
 
 
