@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -146,5 +146,15 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--weered-bg, #050816)" }} />
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
