@@ -6,6 +6,7 @@ import OverlayHost from "../components/overlays/OverlayHost";
 import LeftRail from "../components/LeftRail";
 import RightRailSwitch from "../components/RightRailSwitch";
 import DockDrawer from "../components/DockDrawer";
+import ShellGate from "../components/ShellGate";
 
 export const metadata = {
   title: "Weered",
@@ -18,17 +19,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <OverlayProvider>
           <WeeredProvider>
-            <div className="weered-shell">
-              <aside className="weered-left">
-                <LeftRail />
-              </aside>
-              <main className="weered-center">
-                {children}
-              </main>
-              <aside className="weered-right">
-                <RightRailSwitch />
-              </aside>
-            </div>
+            <ShellGate
+              shell={
+                <div className="weered-shell">
+                  <aside className="weered-left">
+                    <LeftRail />
+                  </aside>
+                  <main className="weered-center">
+                    {children}
+                  </main>
+                  <aside className="weered-right">
+                    <RightRailSwitch />
+                  </aside>
+                </div>
+              }
+            >
+              {children}
+            </ShellGate>
             <DockDrawer />
           </WeeredProvider>
           <OverlayHost />
