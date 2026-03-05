@@ -30,7 +30,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   if (ok === null) {
     return (
       <div style={{ padding: 20, opacity: 0.7, fontSize: 13 }}>
-        Checking session€¦
+        Checking session...
       </div>
     );
   }
