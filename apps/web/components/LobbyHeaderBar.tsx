@@ -84,6 +84,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  }, [mode, q]);
 
  function toggleDock() {
+        <span className="ml-2 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">build {buildId}</span>
  window.dispatchEvent(new CustomEvent("weered:dock:toggle"));
  }
 
@@ -304,6 +305,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
  </div>
  );
 }
+
 
 
 
