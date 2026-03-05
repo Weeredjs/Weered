@@ -44,7 +44,7 @@ export default function RoomVoicePanel({ roomId }: { roomId: string }) {
 
   function snapshotPeers(r: Room) {
     const list: Peer[] = [];
-    (((r as any).participants ?? (r as any).remoteParticipants) ?? new Map()).forEach((p) => {
+    (((r as any).participants ?? (r as any).remoteParticipants) ?? new Map()).forEach((p: any) => {
       list.push({ sid: p.sid, identity: p.identity || p.name || p.sid });
     });
     // include self

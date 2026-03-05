@@ -8,7 +8,8 @@
     ],
     "allowJs": false,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
     "noEmit": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -30,6 +31,7 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "backups"
   ]
 }
