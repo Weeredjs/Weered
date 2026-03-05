@@ -92,7 +92,7 @@ export default function RoomTools({ roomId }: { roomId: string }) {
               <div style={{ fontWeight: 900, fontSize: 13 }}>Knocks</div>
               <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{admin?.knocks?.length ?? 0}</div>
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                {(admin?.knocks || []).slice(-10).reverse().map((k) => (
+                {(admin?.knocks || []).slice(-10).reverse().map((k: { userId: string; name: string; ts: number }) => (
                   <div key={k.userId} style={{ border: "1px solid var(--weered-border)", borderRadius: 12, padding: 8, display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 800, fontSize: 13 }}>{k.name}</div>
