@@ -1018,5 +1018,33 @@ textarea {
   scrollbar-width: thin;
 }
 .weered-scrollbar::-webkit-scrollbar{ width: 10px; height: 10px; }
+  /* === Weered chat: message hierarchy polish === */
+  [data-chat-message]{
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+  [data-chat-message]:hover{
+    background: rgba(255,255,255,.035);
+  }
+  [data-chat-username]{
+    font-size: 12px;
+    line-height: 1.2;
+    opacity: .85;
+    font-weight: 650;
+    letter-spacing: .01em;
+    margin-bottom: 2px;
+  }
+  [data-chat-body]{
+    font-size: 14px;
+    line-height: 1.35;
+    opacity: .95;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  /* === Weered chat: hierarchy tune === */
+  [data-chat-message]{ padding: 8px 10px; border-radius: 14px; }
+  [data-chat-message]:hover{ background: rgba(255,255,255,.035); }
+  [data-chat-username]{ opacity: .88; letter-spacing: .01em; }
+  [data-chat-body]{ line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
 
 

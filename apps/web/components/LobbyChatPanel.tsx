@@ -73,11 +73,9 @@ export default function LobbyChatPanel(
   return (
     <div style={props.style}>
       {!props.embedded && (
-      <div style={{ position: "relative", zIndex: 9999, pointerEvents: "auto",  display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontWeight: 900 }}>{props.title || "Lobby Chat"}</div>
-        <div style={{ fontSize: 12, opacity: 0.75 }}>
-          room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm font-semibold text-white/90">{props.title || "Lobby Chat"}</div>
+        <div className="text-xs text-white/60 truncate">room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}</div>
       </div>
     )}
 
@@ -178,6 +176,7 @@ export default function LobbyChatPanel(
     </div>
   );
 }
+
 
 
 
