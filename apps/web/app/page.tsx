@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function Page() {
+function RedirectLogic() {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -22,6 +22,10 @@ export default function Page() {
     }
   }, [router, nextPath]);
 
+  return null;
+}
+
+export default function Page() {
   return (
     <div style={{
       minHeight: "100vh",
@@ -31,6 +35,9 @@ export default function Page() {
       color: "rgba(243,244,246,.92)",
       fontWeight: 900
     }}>
+      <Suspense fallback={null}>
+        <RedirectLogic />
+      </Suspense>
       Loading…
     </div>
   );
