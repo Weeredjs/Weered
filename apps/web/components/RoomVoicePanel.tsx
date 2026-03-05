@@ -113,7 +113,6 @@ export default function RoomVoicePanel({ roomId }: { roomId: string }) {
 
       const el = document.createElement("audio");
       el.autoplay = true;
-      el.playsInline = true;
       el.controls = false;
       el.style.display = "none";
       document.body.appendChild(el);
