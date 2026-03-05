@@ -269,7 +269,7 @@ const [query, setQuery] = useState("");
       return;
     }
 
-    // non-destructive: best-effort call if provider has it; otherwise UI-only
+    // non-destructive: best-effort call if provider has it; otherwise local-only
     try {
       const isWired =
         (kind === "promote" && wired.promote) ||
@@ -285,7 +285,7 @@ const [query, setQuery] = useState("");
       if (kind === "lock") setLocked(true);
       if (kind === "unlock") setLocked(false);
 
-      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (UI-only)`;
+      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (local-only)`;
       const extra = "";
       const msg = baseMsg + extra;
       setNote(msg);
@@ -307,7 +307,7 @@ const [query, setQuery] = useState("");
       if (kind === "kick") ctx?.kick?.(userId);
       if (kind === "mute") ctx?.mute?.(userId);
 
-      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (UI-only)`;
+      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (local-only)`;
       const extra = "";
       const msg = baseMsg + extra;
       setNote(`${msg} → ${userName}`);
@@ -390,8 +390,8 @@ const [query, setQuery] = useState("");
         <div className="mt-3">
           <details className="rounded-xl border border-white/10 bg-white/5 p-3">
             <summary className="cursor-pointer list-none flex items-center justify-between">
-              <span className="text-xs font-semibold opacity-90">Advanced</span>
-              <span className="text-[11px] rounded-full border border-white/10 px-2 py-0.5 opacity-70">mods</span>
+              <span className="text-xs font-semibold opacity-90">Tools</span>
+              <span className="text-[11px] rounded-full border border-white/10 px-2 py-0.5 opacity-70">tools</span>
             </summary>
 
             <div className="mt-3 space-y-3">
@@ -563,7 +563,7 @@ const [query, setQuery] = useState("");
       <div className="mt-4">
         <div className="text-xs font-semibold opacity-80 mb-2">Moderation</div>
         {!allowed ? (
-          <div className="text-sm opacity-70">Moderator tools (mods/owners/staff only).</div>
+          <div className="text-sm opacity-70">Moderator tools (moderators/owners/staff only).</div>
         ) : (
           <div className="space-y-3">
             {/* User picker */}
@@ -688,12 +688,12 @@ const [query, setQuery] = useState("");
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="flex items-center justify-between mb-2">
   <div className="text-xs font-semibold opacity-90">Room settings</div>
-  <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-70">UI-only</span>
+  <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-70">local-only</span>
 </div>
 
               
               <div className="mb-2 rounded-lg border border-white/10 bg-black/10 p-2">
-                <div className="text-xs font-semibold opacity-80">Room settings (UI-only)</div>
+                <div className="text-xs font-semibold opacity-80">Room settings (local-only)</div>
 
               <div className="mt-2">
                   <div className="text-xs opacity-80 mb-1">Lock note</div>
@@ -742,7 +742,7 @@ const [query, setQuery] = useState("");
                     onChange={(e) => {
                       const next = parseInt(e.target.value || "0", 10);
                       setSlowModeSec(next);
-                      setNote(`slow mode → ${next > 0 ? next + "s" : "off"} (UI-only)`);
+                      setNote(`slow mode → ${next > 0 ? next + "s" : "off"} (local-only)`);
                       log(`slow mode → ${next > 0 ? next + "s" : "off"}`);
                     }}
                     className="flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm"
@@ -759,7 +759,7 @@ const [query, setQuery] = useState("");
                     className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                     onClick={() => {
                       setSlowModeSec(0);
-                      setNote("slow mode → off (UI-only)");
+                      setNote("slow mode → off (local-only)");
                       log("slow mode → off");
                     }}
                   >
@@ -769,7 +769,7 @@ const [query, setQuery] = useState("");
               </div>
 
               <div className="mt-2">
-                <div className="text-xs opacity-80 mb-1">Pin message (UI-only for now)</div>
+                <div className="text-xs opacity-80 mb-1">Pin message (local-only for now)</div>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     value={pinned}
@@ -780,14 +780,14 @@ const [query, setQuery] = useState("");
                   <button
                     type="button"
                     className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
-                    onClick={() => { if (pinned) { setNote("Pinned (UI-only)"); log("pinned message"); } else { setNote("Nothing to pin"); log("pin attempted (empty)"); } }}
+                    onClick={() => { if (pinned) { setNote("Pinned (local-only)"); log("pinned message"); } else { setNote("Nothing to pin"); log("pin attempted (empty)"); } }}
                   >
                     Pin
                   </button>
                   <button
                     type="button"
                     className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
-                    onClick={() => { setPinned(""); setNote("Cleared pin (UI-only)"); log("cleared pin"); }}
+                    onClick={() => { setPinned(""); setNote("Cleared pin (local-only)"); log("cleared pin"); }}
                   >Reset</button>
                 </div>
               </div>
@@ -963,6 +963,7 @@ const [query, setQuery] = useState("");
 </div>
   );
 }
+
 
 
 
