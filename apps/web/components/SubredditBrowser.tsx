@@ -16,12 +16,21 @@ type RedditPost = {
 };
 
 function fmtTime(utc: number) {
+  if (!utc) return "";
   try {
-    const d = new Date(utc * 1000);
-    return d.toLocaleString();
-  } catch {
-    return "";
-  }
+    const diff = Math.floor(Date.now() / 1000) - utc;
+    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  } catch { return ""; }
+}
+
+function isExternalUrl(url?: string, permalink?: string) {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return !u.hostname.includes("reddit.com");
+  } catch { return false; }
 }
 
 export default function SubredditBrowser(props: { subreddit: string }) {
@@ -30,8 +39,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState<RedditPost[]>([]);
   const [selected, setSelected] = useState<RedditPost | null>(null);
-  const [comments, setComments] = useState<string[]>([]);
-  const [err, setErr] = useState<string>("");
+  const [err, setErr] = useState("");
 
   const header = useMemo(() => `r/${subreddit}`, [subreddit]);
 
@@ -40,30 +48,22 @@ export default function SubredditBrowser(props: { subreddit: string }) {
     setLoading(true);
     setErr("");
     try {
-      const r = await fetch(`/api/reddit?sub=${encodeURIComponent(subreddit)}&sort=${sort}&limit=30`, { cache: "no-store" });
+      const r = await fetch(
+        `/api/reddit?sub=${encodeURIComponent(subreddit)}&sort=${sort}&limit=25`,
+        { cache: "no-store" }
+      );
       const j = await r.json();
+      if (!j?.ok && j?.error) throw new Error(j.error);
 
       const children = j?.data?.children || [];
       const mapped: RedditPost[] = children
         .map((c: any) => c?.data)
-        .filter(Boolean)
-        .map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          author: d.author,
-          score: d.score,
-          num_comments: d.num_comments,
-          created_utc: d.created_utc,
-          permalink: d.permalink,
-          selftext: d.selftext,
-          url: d.url,
-          subreddit: d.subreddit,
-        }));
+        .filter(Boolean);
 
       setPosts(mapped);
       setSelected(mapped[0] || null);
     } catch (e: any) {
-      setErr(String(e?.message || e || "Failed to load"));
+      setErr(String(e?.message || "Failed to load"));
       setPosts([]);
       setSelected(null);
     } finally {
@@ -71,29 +71,7 @@ export default function SubredditBrowser(props: { subreddit: string }) {
     }
   }
 
-  async function loadComments(permalink: string) {
-    setComments([]);
-    try {
-      const r = await fetch(`/api/reddit/post?permalink=${encodeURIComponent(permalink)}`, { cache: "no-store" });
-      const j = await r.json();
-      const listing = Array.isArray(j) ? j[1] : null;
-      const kids = listing?.data?.children || [];
-      const top = kids
-        .map((x: any) => x?.data?.body)
-        .filter((b: any) => typeof b === "string" && b.trim())
-        .slice(0, 12);
-      setComments(top);
-    } catch {
-      setComments([]);
-    }
-  }
-
   useEffect(() => { loadFeed(); /* eslint-disable-next-line */ }, [subreddit, sort]);
-
-  useEffect(() => {
-    if (selected?.permalink) loadComments(selected.permalink);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.permalink]);
 
   const panel: React.CSSProperties = {
     border: "1px solid var(--weered-border)",
@@ -106,13 +84,14 @@ export default function SubredditBrowser(props: { subreddit: string }) {
 
   return (
     <div style={panel}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 1000, fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {header}
           </div>
           <div style={{ opacity: 0.7, fontSize: 12 }}>
-            {loading ? "Loading…" : (err ? `Error: ${err}` : `${posts.length} posts • sort: ${sort}`)}
+            {loading ? "Loading…" : err ? `Error: ${err}` : `${posts.length} posts • sort: ${sort}`}
           </div>
         </div>
 
@@ -136,11 +115,14 @@ export default function SubredditBrowser(props: { subreddit: string }) {
         </div>
       </div>
 
+      {/* Two-pane layout */}
       <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1.3fr", gap: 12, height: 470 }}>
+
         {/* Feed list */}
         <div style={{ border: "1px solid var(--weered-border2)", borderRadius: 14, overflow: "auto", background: "var(--weered-panel2)" }}>
           {posts.map((p) => {
             const active = selected?.id === p.id;
+            const isExt  = isExternalUrl(p.url, p.permalink);
             return (
               <button
                 key={p.id}
@@ -156,58 +138,87 @@ export default function SubredditBrowser(props: { subreddit: string }) {
                   color: "rgba(243,244,246,.98)",
                 }}
               >
-                <div style={{ fontWeight: 950, marginBottom: 6, lineHeight: 1.2 }}>
+                <div style={{ fontWeight: 950, marginBottom: 4, lineHeight: 1.2 }}>
                   {p.title}
                 </div>
-                <div style={{ opacity: 0.72, fontSize: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <span>↑ {p.score}</span>
+                <div style={{ opacity: 0.65, fontSize: 11, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  {isExt && <span style={{ background: "rgba(124,58,237,.18)", borderRadius: 6, padding: "1px 6px", fontSize: 10 }}>link</span>}
                   <span>💬 {p.num_comments}</span>
                   <span>u/{p.author}</span>
+                  <span>{fmtTime(p.created_utc)}</span>
                 </div>
               </button>
             );
           })}
-          {!posts.length && !loading ? <div style={{ padding: 12, opacity: 0.7 }}>No posts.</div> : null}
+          {!posts.length && !loading && (
+            <div style={{ padding: 12, opacity: 0.7 }}>No posts.</div>
+          )}
+          {loading && (
+            <div style={{ padding: 12, opacity: 0.7 }}>Loading…</div>
+          )}
         </div>
 
         {/* Post preview */}
         <div style={{ border: "1px solid var(--weered-border2)", borderRadius: 14, overflow: "auto", background: "var(--weered-panel2)", padding: 12 }}>
           {selected ? (
             <>
-              <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 6 }}>{selected.title}</div>
-              <div style={{ opacity: 0.72, fontSize: 12, display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                <span>u/{selected.author}</span>
-                <span>{fmtTime(selected.created_utc)}</span>
-                <span>↑ {selected.score}</span>
-                <span>💬 {selected.num_comments}</span>
+              <div style={{ fontWeight: 1000, fontSize: 15, marginBottom: 6, lineHeight: 1.25 }}>
+                {selected.title}
               </div>
 
-              {selected.selftext ? (
-                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.35, marginBottom: 12, opacity: 0.95 }}>
-                  {selected.selftext}
-                </div>
-              ) : null}
+              <div style={{ opacity: 0.65, fontSize: 11, display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                <span>u/{selected.author}</span>
+                <span>{fmtTime(selected.created_utc)}</span>
+                <span>💬 {selected.num_comments} comments</span>
+              </div>
 
-              {selected.url && !selected.url.includes("reddit.com") ? (
+              {isExternalUrl(selected.url) && (
                 <a
                   href={selected.url}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: "inline-block", marginBottom: 12, fontWeight: 900 }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 12,
+                    padding: "8px 12px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(124,58,237,.30)",
+                    background: "rgba(124,58,237,.12)",
+                    fontWeight: 900,
+                    fontSize: 13,
+                    color: "rgba(216,180,254,.95)",
+                  }}
                 >
                   Open link →
                 </a>
-              ) : null}
+              )}
 
-              <div style={{ marginTop: 8, fontWeight: 950, opacity: 0.9 }}>Top comments</div>
-              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
-                {comments.map((c, i) => (
-                  <div key={i} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, padding: 10, background: "rgba(255,255,255,.03)" }}>
-                    <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.35, opacity: 0.95 }}>{c}</div>
-                  </div>
-                ))}
-                {!comments.length ? <div style={{ opacity: 0.65 }}>No comments loaded.</div> : null}
-              </div>
+              {selected.selftext && (
+                <div style={{
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.45,
+                  marginBottom: 12,
+                  opacity: 0.90,
+                  fontSize: 13,
+                  background: "rgba(255,255,255,.03)",
+                  border: "1px solid rgba(255,255,255,.06)",
+                  borderRadius: 12,
+                  padding: 10,
+                }}>
+                  {selected.selftext}
+                </div>
+              )}
+
+              <a
+                href={`https://reddit.com${selected.permalink}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ opacity: 0.55, fontSize: 11, display: "block", marginTop: 8 }}
+              >
+                View on Reddit →
+              </a>
             </>
           ) : (
             <div style={{ opacity: 0.7 }}>Select a post.</div>
@@ -215,8 +226,8 @@ export default function SubredditBrowser(props: { subreddit: string }) {
         </div>
       </div>
 
-      <div style={{ marginTop: 10, opacity: 0.7, fontSize: 12 }}>
-        v1 proxy viewer • no iframe • next: caching + auth + vote/comment actions (later)
+      <div style={{ marginTop: 10, opacity: 0.55, fontSize: 11 }}>
+        via RSS • no auth required • comments on reddit.com
       </div>
     </div>
   );
