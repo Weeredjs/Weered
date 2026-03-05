@@ -305,9 +305,23 @@ const [query, setQuery] = useState("");
         (kind === "mute" && wired.mute);
 
       if (kind === "kick") ctx?.kick?.(userId);
-      if (kind === "mute") ctx?.mute?.(userId);
+      if (kind === "mute") {
+        const key = `weered:room:${roomId}:muted`;
+        let muted: string[] = [];
+        try { muted = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+        const s = new Set((muted || []).filter(Boolean));
+        const isMuted = s.has(userId);
 
-      const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (local-only)`;
+        if (isMuted) {
+          ctx?.unmute?.(userId);
+          s.delete(userId);
+        } else {
+          ctx?.mute?.(userId);
+          s.add(userId);
+        }
+
+        try { localStorage.setItem(key, JSON.stringify(Array.from(s))); } catch {}
+      }const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (local-only)`;
       const extra = "";
       const msg = baseMsg + extra;
       setNote(`${msg} → ${userName}`);
@@ -963,6 +977,7 @@ const [query, setQuery] = useState("");
 </div>
   );
 }
+
 
 
 

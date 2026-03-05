@@ -1,68 +1,37 @@
-﻿$ErrorActionPreference = "Stop"
+# ─────────────────────────────────────────────────────────────
+#  weered deploy — Windows / PowerShell
+#
+#  Usage:
+#    .\deploy.ps1              # deploys current branch
+#    .\deploy.ps1 -Branch main # deploys specific branch
+#
+#  One-time setup:
+#    Set $SERVER and $KEY below to match your droplet.
+#    Make sure server-deploy.sh is at /opt/weered/server-deploy.sh
+# ─────────────────────────────────────────────────────────────
+param(
+  [string]$Branch = (git branch --show-current).Trim()
+)
 
-$server = "root@weered.ca"
-$key    = "$env:USERPROFILE\.ssh\weered_do"
-$branch = (git branch --show-current).Trim()
+$ErrorActionPreference = "Stop"
 
-Write-Host "== Local repo ==" -ForegroundColor Cyan
-git status
+# ── Config (edit these) ───────────────────────────────────────
+$SERVER = "root@weered.ca"
+$KEY    = "$env:USERPROFILE\.ssh\weered_do"
+# ─────────────────────────────────────────────────────────────
 
-Write-Host "== Pushing branch '$branch' to origin ==" -ForegroundColor Cyan
-git push origin $branch
+Write-Host "`n== Deploying branch '$Branch' to $SERVER ==" -ForegroundColor Cyan
 
-Write-Host "== Deploying on server ($server) ==" -ForegroundColor Cyan
+# Push local branch to origin
+git push origin $Branch
 
-# --- the real deploy script (bash) ---
-$bash = @"
-set -euo pipefail
+# Run server-deploy.sh on the droplet
+$sshArgs = @("-i", $KEY, "-o", "IdentitiesOnly=yes", "-o", "StrictHostKeyChecking=accept-new", $SERVER)
+& ssh @sshArgs "bash /opt/weered/server-deploy.sh '$Branch'"
 
-BRANCH='$branch'
-echo "Deploying branch: \$BRANCH"
-
-cd /opt/weered_repo
-git fetch origin --prune
-git switch "\$BRANCH" || git switch -c "\$BRANCH" --track "origin/\$BRANCH"
-git pull --ff-only
-
-rsync -a --delete \
-  --exclude '.git' \
-  --exclude '.env' --exclude '.env.*' \
-  --exclude 'apps/web/.env.local' \
-  --exclude 'docker-compose*.yml' --exclude 'docker-compose*.yaml' \
-  --exclude 'weered-compose' \
-  --exclude 'releases/' \
-  --exclude 'uploads/' \
-  /opt/weered_repo/ /opt/weered/
-
-cd /opt/weered
-weered-compose up -d --build
-
-tries=40
-while [ "\$tries" -gt 0 ]; do
-  if curl -fsS http://127.0.0.1:4000/health >/dev/null; then
-    echo "OK: healthcheck"
-    exit 0
-  fi
-  $tries = $tries - 1
-  sleep 2
-done
-
-echo "ERROR: healthcheck never went green"
-docker compose ps || true
-docker logs --tail 120 weered-api-1 || true
-exit 1
-"@
-
-# base64 encode the bash script so PowerShell never tries to interpret bash syntax
-$b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($bash))
-
-# wrapper that runs on the droplet: decode -> bash
-$wrapper = @"
-python3 - <<'PY' | bash
-import base64
-print(base64.b64decode('''$b64''').decode('utf-8'))
-PY
-"@
-
-$sshArgs = @("-i", $key, "-o", "IdentitiesOnly=yes", $server, "bash -s")
-$wrapper | & ssh @sshArgs
+if ($LASTEXITCODE -eq 0) {
+  Write-Host "`n== Done. https://weered.ca is live. ==" -ForegroundColor Green
+} else {
+  Write-Host "`n== Deploy failed. Run: ssh -i $KEY $SERVER pm2 logs weered-api ==" -ForegroundColor Red
+  exit 1
+}

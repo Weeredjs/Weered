@@ -1,41 +1,48 @@
-﻿
-# Next.js build
-apps/web/.next/
-# Local patch backups
-*.bak_*
-
-
-# Local assets
-weered-brand-kit.zip
-
-# Next.js build
+# ── Build outputs ─────────────────────────────────────────────
 apps/web/.next/
 apps/web/out/
 apps/web/dist/
 apps/web/build/
+apps/api/dist/
 
-# Node
+# ── Dependencies ──────────────────────────────────────────────
 **/node_modules/
 
-# Logs
-*.log
-
-# Env / secrets
+# ── Env / secrets ─────────────────────────────────────────────
 .env
 .env.*
+!.env.example
+!.env.local.example
+apps/web/.env.local
 secrets/
 *.pem
 *.key
 
-# Local patch backups / archives
-_ui_backup_*/
-*_bak_*/
-*.tgz
-*.zip
-*.bak*
-*.LINED*.txt
+# ── GPT patch debris (never commit these) ─────────────────────
+*.bak
+*.bak.*
+*.bak_*
+**/*.bak
+**/*.bak.*
+**/*.bak_*
 _patch_*.ps1
 _patch_*.txt
+*.ps1
+*.LINED*.txt
+_ui_backup_*/
+*_bak_*/
 
-# Local assets
+# ── Archives ──────────────────────────────────────────────────
+*.tgz
+*.zip
+weered-source.zip
 weered-brand-kit.zip
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

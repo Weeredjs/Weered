@@ -1,0 +1,483 @@
+﻿name: weered
+services:
+  livekit:
+    command:
+      - --config
+      - /etc/livekit.yaml
+    container_name: weered_livekit
+    depends_on:
+      redis:
+        condition: service_started
+        required: true
+    image: livekit/livekit-server:v1.9
+    networks:
+      weered_net: null
+    ports:
+      - mode: ingress
+        target: 7880
+        published: "7880"
+        protocol: tcp
+      - mode: ingress
+        target: 7881
+        published: "7881"
+        protocol: tcp
+      - mode: ingress
+        target: 50000
+        published: "50000"
+        protocol: udp
+      - mode: ingress
+        target: 50001
+        published: "50001"
+        protocol: udp
+      - mode: ingress
+        target: 50002
+        published: "50002"
+        protocol: udp
+      - mode: ingress
+        target: 50003
+        published: "50003"
+        protocol: udp
+      - mode: ingress
+        target: 50004
+        published: "50004"
+        protocol: udp
+      - mode: ingress
+        target: 50005
+        published: "50005"
+        protocol: udp
+      - mode: ingress
+        target: 50006
+        published: "50006"
+        protocol: udp
+      - mode: ingress
+        target: 50007
+        published: "50007"
+        protocol: udp
+      - mode: ingress
+        target: 50008
+        published: "50008"
+        protocol: udp
+      - mode: ingress
+        target: 50009
+        published: "50009"
+        protocol: udp
+      - mode: ingress
+        target: 50010
+        published: "50010"
+        protocol: udp
+      - mode: ingress
+        target: 50011
+        published: "50011"
+        protocol: udp
+      - mode: ingress
+        target: 50012
+        published: "50012"
+        protocol: udp
+      - mode: ingress
+        target: 50013
+        published: "50013"
+        protocol: udp
+      - mode: ingress
+        target: 50014
+        published: "50014"
+        protocol: udp
+      - mode: ingress
+        target: 50015
+        published: "50015"
+        protocol: udp
+      - mode: ingress
+        target: 50016
+        published: "50016"
+        protocol: udp
+      - mode: ingress
+        target: 50017
+        published: "50017"
+        protocol: udp
+      - mode: ingress
+        target: 50018
+        published: "50018"
+        protocol: udp
+      - mode: ingress
+        target: 50019
+        published: "50019"
+        protocol: udp
+      - mode: ingress
+        target: 50020
+        published: "50020"
+        protocol: udp
+      - mode: ingress
+        target: 50021
+        published: "50021"
+        protocol: udp
+      - mode: ingress
+        target: 50022
+        published: "50022"
+        protocol: udp
+      - mode: ingress
+        target: 50023
+        published: "50023"
+        protocol: udp
+      - mode: ingress
+        target: 50024
+        published: "50024"
+        protocol: udp
+      - mode: ingress
+        target: 50025
+        published: "50025"
+        protocol: udp
+      - mode: ingress
+        target: 50026
+        published: "50026"
+        protocol: udp
+      - mode: ingress
+        target: 50027
+        published: "50027"
+        protocol: udp
+      - mode: ingress
+        target: 50028
+        published: "50028"
+        protocol: udp
+      - mode: ingress
+        target: 50029
+        published: "50029"
+        protocol: udp
+      - mode: ingress
+        target: 50030
+        published: "50030"
+        protocol: udp
+      - mode: ingress
+        target: 50031
+        published: "50031"
+        protocol: udp
+      - mode: ingress
+        target: 50032
+        published: "50032"
+        protocol: udp
+      - mode: ingress
+        target: 50033
+        published: "50033"
+        protocol: udp
+      - mode: ingress
+        target: 50034
+        published: "50034"
+        protocol: udp
+      - mode: ingress
+        target: 50035
+        published: "50035"
+        protocol: udp
+      - mode: ingress
+        target: 50036
+        published: "50036"
+        protocol: udp
+      - mode: ingress
+        target: 50037
+        published: "50037"
+        protocol: udp
+      - mode: ingress
+        target: 50038
+        published: "50038"
+        protocol: udp
+      - mode: ingress
+        target: 50039
+        published: "50039"
+        protocol: udp
+      - mode: ingress
+        target: 50040
+        published: "50040"
+        protocol: udp
+      - mode: ingress
+        target: 50041
+        published: "50041"
+        protocol: udp
+      - mode: ingress
+        target: 50042
+        published: "50042"
+        protocol: udp
+      - mode: ingress
+        target: 50043
+        published: "50043"
+        protocol: udp
+      - mode: ingress
+        target: 50044
+        published: "50044"
+        protocol: udp
+      - mode: ingress
+        target: 50045
+        published: "50045"
+        protocol: udp
+      - mode: ingress
+        target: 50046
+        published: "50046"
+        protocol: udp
+      - mode: ingress
+        target: 50047
+        published: "50047"
+        protocol: udp
+      - mode: ingress
+        target: 50048
+        published: "50048"
+        protocol: udp
+      - mode: ingress
+        target: 50049
+        published: "50049"
+        protocol: udp
+      - mode: ingress
+        target: 50050
+        published: "50050"
+        protocol: udp
+      - mode: ingress
+        target: 50051
+        published: "50051"
+        protocol: udp
+      - mode: ingress
+        target: 50052
+        published: "50052"
+        protocol: udp
+      - mode: ingress
+        target: 50053
+        published: "50053"
+        protocol: udp
+      - mode: ingress
+        target: 50054
+        published: "50054"
+        protocol: udp
+      - mode: ingress
+        target: 50055
+        published: "50055"
+        protocol: udp
+      - mode: ingress
+        target: 50056
+        published: "50056"
+        protocol: udp
+      - mode: ingress
+        target: 50057
+        published: "50057"
+        protocol: udp
+      - mode: ingress
+        target: 50058
+        published: "50058"
+        protocol: udp
+      - mode: ingress
+        target: 50059
+        published: "50059"
+        protocol: udp
+      - mode: ingress
+        target: 50060
+        published: "50060"
+        protocol: udp
+      - mode: ingress
+        target: 50061
+        published: "50061"
+        protocol: udp
+      - mode: ingress
+        target: 50062
+        published: "50062"
+        protocol: udp
+      - mode: ingress
+        target: 50063
+        published: "50063"
+        protocol: udp
+      - mode: ingress
+        target: 50064
+        published: "50064"
+        protocol: udp
+      - mode: ingress
+        target: 50065
+        published: "50065"
+        protocol: udp
+      - mode: ingress
+        target: 50066
+        published: "50066"
+        protocol: udp
+      - mode: ingress
+        target: 50067
+        published: "50067"
+        protocol: udp
+      - mode: ingress
+        target: 50068
+        published: "50068"
+        protocol: udp
+      - mode: ingress
+        target: 50069
+        published: "50069"
+        protocol: udp
+      - mode: ingress
+        target: 50070
+        published: "50070"
+        protocol: udp
+      - mode: ingress
+        target: 50071
+        published: "50071"
+        protocol: udp
+      - mode: ingress
+        target: 50072
+        published: "50072"
+        protocol: udp
+      - mode: ingress
+        target: 50073
+        published: "50073"
+        protocol: udp
+      - mode: ingress
+        target: 50074
+        published: "50074"
+        protocol: udp
+      - mode: ingress
+        target: 50075
+        published: "50075"
+        protocol: udp
+      - mode: ingress
+        target: 50076
+        published: "50076"
+        protocol: udp
+      - mode: ingress
+        target: 50077
+        published: "50077"
+        protocol: udp
+      - mode: ingress
+        target: 50078
+        published: "50078"
+        protocol: udp
+      - mode: ingress
+        target: 50079
+        published: "50079"
+        protocol: udp
+      - mode: ingress
+        target: 50080
+        published: "50080"
+        protocol: udp
+      - mode: ingress
+        target: 50081
+        published: "50081"
+        protocol: udp
+      - mode: ingress
+        target: 50082
+        published: "50082"
+        protocol: udp
+      - mode: ingress
+        target: 50083
+        published: "50083"
+        protocol: udp
+      - mode: ingress
+        target: 50084
+        published: "50084"
+        protocol: udp
+      - mode: ingress
+        target: 50085
+        published: "50085"
+        protocol: udp
+      - mode: ingress
+        target: 50086
+        published: "50086"
+        protocol: udp
+      - mode: ingress
+        target: 50087
+        published: "50087"
+        protocol: udp
+      - mode: ingress
+        target: 50088
+        published: "50088"
+        protocol: udp
+      - mode: ingress
+        target: 50089
+        published: "50089"
+        protocol: udp
+      - mode: ingress
+        target: 50090
+        published: "50090"
+        protocol: udp
+      - mode: ingress
+        target: 50091
+        published: "50091"
+        protocol: udp
+      - mode: ingress
+        target: 50092
+        published: "50092"
+        protocol: udp
+      - mode: ingress
+        target: 50093
+        published: "50093"
+        protocol: udp
+      - mode: ingress
+        target: 50094
+        published: "50094"
+        protocol: udp
+      - mode: ingress
+        target: 50095
+        published: "50095"
+        protocol: udp
+      - mode: ingress
+        target: 50096
+        published: "50096"
+        protocol: udp
+      - mode: ingress
+        target: 50097
+        published: "50097"
+        protocol: udp
+      - mode: ingress
+        target: 50098
+        published: "50098"
+        protocol: udp
+      - mode: ingress
+        target: 50099
+        published: "50099"
+        protocol: udp
+      - mode: ingress
+        target: 50100
+        published: "50100"
+        protocol: udp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Weered\services\livekit\livekit.yaml
+        target: /etc/livekit.yaml
+        read_only: true
+        bind: {}
+  postgres:
+    container_name: weered_postgres
+    environment:
+      POSTGRES_DB: weered
+      POSTGRES_PASSWORD: REDACTED_DB_PASSWORD
+      POSTGRES_USER: weered
+    image: postgres:15-alpine
+    networks:
+      weered_net: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: pg_data
+        target: /var/lib/postgresql/data
+        volume: {}
+  redis:
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    container_name: weered_redis
+    image: redis:7-alpine
+    networks:
+      weered_net: null
+    ports:
+      - mode: ingress
+        target: 6379
+        published: "6379"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: redis_data
+        target: /data
+        volume: {}
+networks:
+  weered_net:
+    name: weered_weered_net
+    driver: bridge
+volumes:
+  pg_data:
+    name: weered_pg_data
+  redis_data:
+    name: weered_redis_data

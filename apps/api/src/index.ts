@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
@@ -68,6 +68,7 @@ type RoomState = {
   ownerId?: string;
   mods: Set<string>;
   banned: Set<string>;
+  muted: Set<string>;
   locked: boolean;
 
   knocks: Knock[];
@@ -88,6 +89,7 @@ function makeEmptyRoom(roomId: string): RoomState {
     ownerId: undefined,
     mods: new Set(),
     banned: new Set(),
+    muted: new Set(),
     locked: false,
     knocks: [],
     pending: new Map(),
@@ -729,8 +731,7 @@ app.post("/dev-login", async (req, reply) => {
           const room = await ensureRoomLoaded(roomId);
           if (!room.users.has(ws.user.id)) return;
           if (room.banned.has(ws.user.id)) return;
-
-          const u = room.users.get(ws.user.id)!;
+          if (room.muted.has(ws.user.id)) return;          const u = room.users.get(ws.user.id)!;
           const m: ChatMsg = {
             id: randomUUID(),
             user: { id: u.id, name: u.name, role: roleOf(room, u.id) },
@@ -898,7 +899,40 @@ app.post("/dev-login", async (req, reply) => {
 
           return;
         }
-if (msg.type === "mod:kick") {
+        if (msg.type === "mod:mute") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+          if (isOwner(room, targetId)) return;
+
+          room.muted.add(targetId);
+
+          for (const s of findSocketsByUser(room, targetId)) {
+            send(s, { type: "mod:muted", roomId });
+          }
+
+          audit(room, { type: "mod:mute", actorId, actorName, targetId });
+          publishState(room);
+          return;
+        }
+
+        if (msg.type === "mod:unmute") {
+          if (!actorIsMod) return;
+          const targetId = String(msg.userId || "");
+          if (!targetId) return;
+
+          room.muted.delete(targetId);
+
+          for (const s of findSocketsByUser(room, targetId)) {
+            send(s, { type: "mod:unmuted", roomId });
+          }
+
+          audit(room, { type: "mod:unmute", actorId, actorName, targetId });
+          publishState(room);
+          return;
+        }
+
+        if (msg.type === "mod:kick") {
           if (!actorIsMod) return;
           const targetId = String(msg.userId || "");
           if (!targetId) return;
@@ -1040,6 +1074,8 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+
 
 
 
