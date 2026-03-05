@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import SubredditBrowser from "../../components/SubredditBrowser";
@@ -20,8 +20,9 @@ export default function LobbyPage() {
       {/* Bottom: Main Lobby Chat */}
       <div style={{ border: "1px solid var(--weered-border)", borderRadius: 16, padding: 12 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>Main Lobby Chat</div>
-        <LobbyChatPanel />
+        <LobbyChatPanel roomId="room:lobby" />
       </div>
     </div>
   );
 }
+

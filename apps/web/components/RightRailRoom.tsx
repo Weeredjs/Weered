@@ -286,7 +286,7 @@ const [query, setQuery] = useState("");
       if (kind === "unlock") setLocked(false);
 
       const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (UI-only)`;
-      const extra = (kind === "lock" || kind === "unlock") && lockReason.trim() ? ` (reason: ${lockReason.trim()})` : "";
+      const extra = "";
       const msg = baseMsg + extra;
       setNote(msg);
       log(`${msg}${u ? " → " + userName : ""}`);
@@ -308,7 +308,7 @@ const [query, setQuery] = useState("");
       if (kind === "mute") ctx?.mute?.(userId);
 
       const baseMsg = isWired ? `${kind} sent` : `${kind} not wired (UI-only)`;
-      const extra = (kind === "lock" || kind === "unlock") && lockReason.trim() ? ` (reason: ${lockReason.trim()})` : "";
+      const extra = "";
       const msg = baseMsg + extra;
       setNote(`${msg} → ${userName}`);
       log(`${msg} → ${userName}`);
@@ -326,10 +326,10 @@ const [query, setQuery] = useState("");
     <div className="sticky top-4 overflow-x-hidden rounded-2xl border border-white/10 bg-black/20 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-semibold">Room Panel</div>
-          <div className="text-xs opacity-70 truncate">context: {contextLabel}</div>
+          <div className="text-sm font-semibold">Control Panel</div>
+          <div className="text-xs opacity-70 truncate">context: {String(ctx?.meta?.name || ctx?.meta?.title || ctx?.meta?.label || ctx?.admin?.name || "").trim() || contextLabel}</div>
         </div>
-        <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 opacity-80">tools</span>
+        <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 opacity-80">{allowed ? "moderator" : "member"}</span>
       </div>
 
 
@@ -356,132 +356,202 @@ const [query, setQuery] = useState("");
           </span>
         ) : null}
       </div>
-      {/* Diagnostics (gated) */}
-      {allowed ? (
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold opacity-90">Diagnostics</div>
-            <button
-              type="button"
-              onClick={copySnapshot}
-              className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
-              title="Copy JSON snapshot"
-            >
-              Copy debug snapshot
-            </button>
-          </div>
-
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={copyRoomId}
-              className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
-              title="Copy room id"
-            >
-              Copy room id
-            </button>
-            <button
-              type="button"
-              onClick={copyRoomLink}
-              className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
-              title="Copy room link"
-            >
-              Copy room link
-            </button>
-            <button
-              type="button"
-              onClick={copyParticipants}
-              className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
-              title="Copy participant list"
-            >
-              Copy participants
-            </button>
-          </div>
-          <div className="mt-2 space-y-1 text-xs opacity-80">
-            <div className="flex items-center justify-between gap-3">
-              <span>WS</span>
-              <span className={ws.ok ? "text-emerald-300" : "text-amber-300"}>{ws.label}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span>role</span>
-              <span className="opacity-90">{role || "unknown"}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span>participants</span>
-              <span className="opacity-90">{people.length}</span>
-            </div>
-          </div>
-
-          {note ? <div className="mt-2 text-xs opacity-70">{note}</div> : null}
+            {/* Room */}
+      <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold opacity-90">Room</div>
+          <span className="text-[11px] rounded-full border border-white/10 px-2 py-0.5 opacity-70">
+            {people.length} online
+          </span>
         </div>
-      ) : null}
 
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={copyRoomLink}
+            className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+            title="Copy room link"
+          >
+            Copy link
+          </button>
+          <button
+            type="button"
+            onClick={copyRoomId}
+            className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+            title="Copy room id"
+          >
+            Copy id
+          </button>
+        </div>
+      </div>
 
-      {/* Activity (gated) */}
+            {/* Advanced (mods only) */}
       {allowed ? (
-        <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold opacity-90">Admin activity</div>
-            <button
-              type="button"
-              onClick={() => { setActivity([]); setNote("Cleared activity."); }}
-              className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
-              title="Clear activity log"
-            >
-              Clear
-            </button>
-          </div>
+        <div className="mt-3">
+          <details className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <summary className="cursor-pointer list-none flex items-center justify-between">
+              <span className="text-xs font-semibold opacity-90">Advanced</span>
+              <span className="text-[11px] rounded-full border border-white/10 px-2 py-0.5 opacity-70">mods</span>
+            </summary>
 
-          <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-white/10 bg-black/10 p-2">
-            {activity.length ? (
-              <div className="space-y-1 text-xs">
-                {activity.map((a, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <span className="opacity-60 shrink-0">{a.at}</span>
-                    <span className="opacity-90">{a.text}</span>
+            <div className="mt-3 space-y-3">
+              {/* Diagnostics */}
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold opacity-90">Diagnostics</div>
+                  <button
+                    type="button"
+                    onClick={copySnapshot}
+                    className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                    title="Copy JSON snapshot"
+                  >
+                    Copy snapshot
+                  </button>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={copyRoomId}
+                    className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                    title="Copy room id"
+                  >
+                    Copy room id
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyRoomLink}
+                    className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                    title="Copy room link"
+                  >
+                    Copy room link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyParticipants}
+                    className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                    title="Copy participant list"
+                  >
+                    Copy participants
+                  </button>
+                </div>
+
+                <div className="mt-2 space-y-1 text-xs opacity-80">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>WS</span>
+                    <span className={ws.ok ? "text-emerald-300" : "text-amber-300"}>{ws.label}</span>
                   </div>
-                ))}
+                  <div className="flex items-center justify-between gap-3">
+                    <span>role</span>
+                    <span className="opacity-90">{role || "unknown"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>participants</span>
+                    <span className="opacity-90">{people.length}</span>
+                  </div>
+                </div>
+
+                {note ? <div className="mt-2 text-xs opacity-70">{note}</div> : null}
               </div>
-            ) : (
-              <div className="text-xs opacity-60">No actions yet.</div>
-            )}
-          </div>
+
+              {/* Activity */}
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold opacity-90">Activity</div>
+                  <button
+                    type="button"
+                    onClick={() => { setActivity([]); setNote("Cleared activity."); }}
+                    className="text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
+                    title="Clear activity log"
+                  >Reset</button>
+                </div>
+
+                <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-white/10 bg-black/10 p-2">
+                  {activity.length ? (
+                    <div className="space-y-1 text-xs">
+                      {activity.map((a, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <span className="opacity-60 shrink-0">{a.at}</span>
+                          <span className="opacity-90">{a.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs opacity-60">No actions yet.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       ) : null}
       {/* Participants */}
       <div className="mt-4">
-        <div className="text-xs font-semibold opacity-80 mb-2">Participants</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-semibold opacity-80">Participants</div>
+          <span className="text-[11px] rounded-full border border-white/10 px-2 py-0.5 opacity-70">
+            {people.length}
+          </span>
+        </div>
 
         {people.length ? (
-          <div className="space-y-2 text-sm">
-            {people.slice(0, 20).map((p, i) => (
-              <div key={(p.id ?? p.name ?? i).toString()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    className="truncate text-left hover:underline"
-                    onClick={() => replaceTop("profile", { userId: (p.id ?? p.name ?? "unknown").toString() })}
-                  >
-                    {p.name ?? "unknown"}
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-70">{p.role ?? "member"}</span>
-                    {allowed ? (
+          <div className="space-y-2">
+            {people.slice(0, 24).map((p, i) => {
+              const key = (p.id ?? p.name ?? i).toString();
+              const name = (p.name ?? p.handle ?? p.id ?? "unknown").toString();
+              const sub = (p.handle ? `@${p.handle}` : (p.id ? `id: ${p.id}` : "")).toString();
+
+              const r = normRole(p.role || "member");
+              const roleLabel =
+                r.includes("owner") ? "owner" :
+                (r.includes("admin") ? "admin" :
+                (r.includes("staff") || r.includes("god")) ? "staff" :
+                (r.includes("mod") ? "mod" : "member"));
+
+              const roleClass =
+                roleLabel === "owner" ? "border-emerald-300/25 bg-emerald-500/10 text-emerald-200" :
+                roleLabel === "admin" ? "border-emerald-300/25 bg-emerald-500/10 text-emerald-200" :
+                roleLabel === "staff" ? "border-amber-300/25 bg-amber-500/10 text-amber-200" :
+                roleLabel === "mod" ? "border-violet-300/25 bg-violet-500/10 text-violet-200" :
+                "border-white/10 bg-black/10 text-white/70";
+
+              return (
+                <div key={key} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <button
                         type="button"
-                        className="text-[11px] rounded-md border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30 opacity-90"
-                        onClick={() => openInspect(p)}
-                        title="Open admin inspect"
+                        className="truncate text-left hover:underline font-semibold text-sm"
+                        onClick={() => replaceTop("profile", { userId: (p.id ?? p.name ?? "unknown").toString() })}
                       >
-                        Admin
+                        {name}
                       </button>
-                    ) : null}
+                      {sub ? <div className="text-xs opacity-70 truncate mt-0.5">{sub}</div> : null}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={"text-[11px] rounded-full border px-2 py-0.5 " + roleClass}>
+                        {roleLabel}
+                      </span>
+
+                      {allowed ? (
+                        <button
+                          type="button"
+                          className="text-[11px] rounded-md border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30 opacity-90"
+                          onClick={() => openInspect(p)}
+                          title="Manage participant"
+                        >
+                          Manage
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            {people.length > 20 ? (
-              <div className="text-xs opacity-60">+ {people.length - 20} more</div>
+              );
+            })}
+
+            {people.length > 24 ? (
+              <div className="text-xs opacity-60">+ {people.length - 24} more</div>
             ) : null}
           </div>
         ) : (
@@ -491,14 +561,14 @@ const [query, setQuery] = useState("");
 
       {/* Admin Tools (gated) */}
       <div className="mt-4">
-        <div className="text-xs font-semibold opacity-80 mb-2">Admin Tools</div>
+        <div className="text-xs font-semibold opacity-80 mb-2">Moderation</div>
         {!allowed ? (
-          <div className="text-sm opacity-70">Visible to moderators/owners only.</div>
+          <div className="text-sm opacity-70">Moderator tools (mods/owners/staff only).</div>
         ) : (
           <div className="space-y-3">
             {/* User picker */}
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="text-xs font-semibold opacity-90 mb-2">User picker</div>
+              <div className="text-xs font-semibold opacity-90 mb-2">Select user</div>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -527,49 +597,64 @@ const [query, setQuery] = useState("");
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                   onClick={() => setQuery("")}
-                >
-                  Clear
-                </button>
+                >Reset</button>
               </div>
 
-              <div className="mt-2 text-xs opacity-75">
-                selected:{" "}
-                <span className="opacity-90">
+                            <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="opacity-70">Selected</span>
+                <span className="rounded-full border border-white/10 bg-black/10 px-2 py-0.5">
                   {selected ? (selected.name ?? selected.handle ?? selected.id ?? "unknown") : "none"}
                 </span>
-                {selected?.role ? <span className="opacity-70"> · {selected.role}</span> : null}
+                {selected?.role ? (
+                  <span className="rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-80">
+                    {selected.role}
+                  </span>
+                ) : null}
               </div>
 
-              {/* Quick actions */}
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
-                  onClick={() => doAction("mute")}
-                >
-                  Mute
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
-                  onClick={() => doAction("kick")}
-                >
-                  Kick
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
-                  onClick={() => doAction("promote")}
-                >
-                  Promote MOD
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
-                  onClick={() => doAction("demote")}
-                >
-                  Demote
-                </button>
+              {/* Actions */}
+                            <div className="mt-3 space-y-3">
+                <div>
+                  <div className="text-xs font-semibold opacity-80 mb-2">User actions</div>
+
+              <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
+                      onClick={() => doAction("mute")}
+                    >
+                      Mute
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
+                      onClick={() => doAction("kick")}
+                    >
+                      Kick
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold opacity-80 mb-2">Roles</div>
+
+              <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
+                      onClick={() => doAction("promote")}
+                    >
+                      Promote MOD
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
+                      onClick={() => doAction("demote")}
+                    >
+                      Demote
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Confirm row */}
@@ -599,16 +684,19 @@ const [query, setQuery] = useState("");
               ) : null}
             </div>
 
-            {/* Room controls */}
+            {/* Room settings */}
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="text-xs font-semibold opacity-90 mb-2">Room controls</div>
+              <div className="flex items-center justify-between mb-2">
+  <div className="text-xs font-semibold opacity-90">Room settings</div>
+  <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-70">UI-only</span>
+</div>
 
               
               <div className="mb-2 rounded-lg border border-white/10 bg-black/10 p-2">
-                <div className="text-xs font-semibold opacity-80">Room settings</div>
+                <div className="text-xs font-semibold opacity-80">Room settings (UI-only)</div>
 
-                <div className="mt-2">
-                  <div className="text-xs opacity-80 mb-1">Lock reason (UI-only)</div>
+              <div className="mt-2">
+                  <div className="text-xs opacity-80 mb-1">Lock note</div>
                   <input
                     value={lockReason}
                     onChange={(e) => setLockReason(e.target.value)}
@@ -617,14 +705,15 @@ const [query, setQuery] = useState("");
                   />
                 </div>
 
-                <div className="mt-2">
+              <div className="mt-2">
                   <div className="text-xs opacity-80 mb-1">Pinned preview</div>
                   <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm opacity-90">
                     {pinned.trim() ? pinned : <span className="opacity-60">Nothing pinned.</span>}
                   </div>
                 </div>
               </div>
-<div className="grid grid-cols-2 gap-2">
+
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
@@ -634,7 +723,7 @@ const [query, setQuery] = useState("");
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
+                  className="rounded-lg border border-violet-300/25 bg-violet-500/10 px-3 py-2 text-sm hover:bg-violet-500/15 text-violet-100 font-semibold"
                   onClick={() => doAction("unlock")}
                 >
                   UnLock
@@ -678,9 +767,10 @@ const [query, setQuery] = useState("");
                   </button>
                 </div>
               </div>
-<div className="mt-2">
+
+              <div className="mt-2">
                 <div className="text-xs opacity-80 mb-1">Pin message (UI-only for now)</div>
-                <div className="flex gap-2 flex flex-wrap gap-2 items-center flex flex-wrap gap-2 items-center flex flex-wrap gap-2 items-center">
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     value={pinned}
                     onChange={(e) => setPinned(e.target.value)}
@@ -698,9 +788,7 @@ const [query, setQuery] = useState("");
                     type="button"
                     className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-black/30"
                     onClick={() => { setPinned(""); setNote("Cleared pin (UI-only)"); log("cleared pin"); }}
-                  >
-                    Clear
-                  </button>
+                  >Reset</button>
                 </div>
               </div>
 
@@ -737,8 +825,10 @@ const [query, setQuery] = useState("");
               >
                 Close
               </button>
-            
-              <div className="mt-2 flex gap-2">
+            </div>
+
+            <div className="px-4 py-3">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   className="flex-1 text-xs rounded-lg border border-white/10 bg-black/20 px-2 py-1 hover:bg-black/30"
@@ -765,7 +855,7 @@ const [query, setQuery] = useState("");
                   Message
                 </button>
               </div>
-</div>
+            </div>
 
             <div className="p-4 space-y-3">
               <div className="rounded-xl border border-white/10 bg-white/5 p-3">
@@ -873,6 +963,15 @@ const [query, setQuery] = useState("");
 </div>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 

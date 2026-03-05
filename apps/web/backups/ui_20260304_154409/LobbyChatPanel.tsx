@@ -14,36 +14,20 @@ export default function LobbyChatPanel(
   const joinedRoomId = String(ctx?.joinedRoomId || "");
   const joinStatus = String(ctx?.joinStatus || "idle"); // NOTE: active-room scalar
   const msgs = Array.isArray(ctx?.msgs) ? ctx.msgs : [];
-  const meta = ctx?.meta || null;
-  const admin = ctx?.admin || null;
-
-  const displayRoomName = String(
-    meta?.name || meta?.title || meta?.label || admin?.name || ""
-  ).trim();
+    const meta = ctx?.meta || null;
+  const displayRoomName =
+    String(meta?.name || meta?.title || meta?.label || "").trim() || "";const admin = ctx?.admin || null;
 
   // Force active room when parent provides it (provider effect will presence:join + chat:history)
   useEffect(() => {
-    let forced = String(props.roomId || "").trim();
-    if (!forced) return;
-
-    // Normalize: strip "room:" prefix and decode
-    if (forced.startsWith("room:")) forced = forced.slice(5);
-    try { forced = decodeURIComponent(forced); } catch {}
-    forced = String(forced || "").trim();
+    const forced = String(props.roomId || "").trim();
     if (!forced) return;
     try { ctx?.setActiveRoomId?.(forced); } catch {}
   }, [props.roomId]);
 
   const roomLabel = useMemo(() => {
-    let forced = String(props.roomId || "").trim();
-    let active = String(activeRoomId || "").trim();
-
-    if (forced.startsWith("room:")) forced = forced.slice(5);
-    if (active.startsWith("room:")) active = active.slice(5);
-
-    // prefer forced if present
-    const pick = (forced || active || "").trim();
-    return pick;
+    const forced = String(props.roomId || "").trim();
+    return forced || activeRoomId;
   }, [props.roomId, activeRoomId]);
 
   const [text, setText] = useState("");
@@ -120,18 +104,21 @@ export default function LobbyChatPanel(
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div style={{ display: "flex", gap: 8 }}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={canType ? "Message..." : "Join/admit required..."}
           disabled={!canType}
-          className={
-            "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
-            (canType
-              ? "border-white/10 bg-black/10 text-white/90 focus:border-white/20"
-              : "border-white/10 bg-white/5 text-white/50 cursor-not-allowed")
-          }
+          style={{
+            flex: 1,
+            height: 44,
+            borderRadius: 12,
+            border: "1px solid var(--weered-border)",
+            background: "rgba(255,255,255,.03)",
+            padding: "0 12px",
+            color: "inherit",
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") onSend();
           }}
@@ -139,52 +126,40 @@ export default function LobbyChatPanel(
         <button
           onClick={onSend}
           disabled={!canType}
-          className={
-            "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
-            (canType
-              ? "border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100"
-              : "border-white/10 bg-white/5 text-white/60 cursor-not-allowed")
-          }
-        
-          style={
-            canType
-              ? {
-                  background: "rgba(124,58,237,.18)",
-                  borderColor: "rgba(124,58,237,.35)",
-                }
-              : undefined
-          }
+          style={{
+            width: 80,
+            height: 44,
+            borderRadius: 12,
+            border: "1px solid var(--weered-border)",
+            background: "rgba(255,255,255,.05)",
+            color: "inherit",
+            fontWeight: 900,
+            cursor: canType ? "pointer" : "not-allowed",
+            opacity: canType ? 1 : 0.6,
+          }}
         >
           Send
         </button>
       </div>
 
-      {!props.embedded && (
-        <div style={{ marginTop: 10 }}>
-          <button
-            onClick={() => replaceTop("dock")}
-            style={{
-              borderRadius: 12,
-              border: "1px solid var(--weered-border)",
-              background: "rgba(255,255,255,.04)",
-              color: "inherit",
-              fontWeight: 800,
-              padding: "8px 10px",
-            }}
-          >
-            Open Dock
-          </button>
-        </div>
-      )}
+      <div style={{ marginTop: 10 }}>
+        <button
+          onClick={() => replaceTop("dock")}
+          style={{
+            borderRadius: 12,
+            border: "1px solid var(--weered-border)",
+            background: "rgba(255,255,255,.04)",
+            color: "inherit",
+            fontWeight: 800,
+            padding: "8px 10px",
+          }}
+        >
+          Open Dock
+        </button>
+      </div>
     </div>
   );
 }
-
-
-
-
-
-
 
 
 
