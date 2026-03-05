@@ -73,7 +73,7 @@ export default function LobbyChatPanel(
   return (
     <div style={props.style}>
       {!props.embedded && (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+      <div style={{ position: "relative", zIndex: 9999, pointerEvents: "auto",  display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontWeight: 900 }}>{props.title || "Lobby Chat"}</div>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}
@@ -97,7 +97,7 @@ export default function LobbyChatPanel(
           <div style={{ opacity: 0.7 }}>No messages yet.</div>
         ) : (
           msgs.map((m: any, i: number) => (
-            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+            <div key={i} data-chat-message style={{ display: "flex", gap: 10, marginBottom: 8 }}>
               <div
                 style={{
                   width: 22,
@@ -114,8 +114,8 @@ export default function LobbyChatPanel(
                 {(m?.name || "?").slice(0, 1).toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 13 }}>{String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}</div>
-                <div style={{ opacity: 0.95 }}>{m?.body || m?.text || ""}</div>
+                <div data-chat-username style={{ fontWeight: 800, fontSize: 13 }}>{String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}</div>
+                <div data-chat-body style={{ opacity: 0.95 }}>{m?.body || m?.text || ""}</div>
               </div>
             </div>
           ))
@@ -123,11 +123,10 @@ export default function LobbyChatPanel(
       </div>
 
       <div className="flex gap-2">
-        <input
-          value={text}
+        <input value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={canType ? "Message..." : "Join/admit required..."}
-          disabled={!canSend}
+          disabled={!canType}
           className={
             "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
             (canType
@@ -143,14 +142,12 @@ export default function LobbyChatPanel(
           disabled={!canSend}
           className={
             "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
-            (canType
+            (canSend
               ? "border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100"
               : "border-white/10 bg-white/5 text-white/60 cursor-not-allowed")
           }
         
-          style={
-            canType
-              ? {
+          style={ canSend ? {
                   background: "rgba(124,58,237,.18)",
                   borderColor: "rgba(124,58,237,.35)",
                 }
@@ -181,6 +178,11 @@ export default function LobbyChatPanel(
     </div>
   );
 }
+
+
+
+
+
 
 
 
