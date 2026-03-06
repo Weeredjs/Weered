@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useWeered } from "../../components/WeeredProvider";
+import LobbyChatPanel from "../../components/LobbyChatPanel";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -44,11 +46,46 @@ async function apiFetch(path: string, opts?: RequestInit) {
 }
 
 const S = {
-  card:  { borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "12px 14px" } as React.CSSProperties,
-  btn:   { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.90)" } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  danger:{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.30)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
+  card:   { borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "12px 14px" } as React.CSSProperties,
+  btn:    { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.90)" } as React.CSSProperties,
+  input:  { width: "100%", padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  danger: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.30)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
+  label:  { fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".6px", textTransform: "uppercase" as const, marginBottom: 8 },
 };
+
+// ── Presence Sidebar ──────────────────────────────────────────────────────────
+
+function OpsPresence() {
+  const ctx = useWeered() as any;
+  const users: any[] = Array.isArray(ctx?.users) ? ctx.users : [];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div style={S.label}>Online in Ops</div>
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+        {users.length === 0 && <div style={{ fontSize: 12, opacity: 0.4 }}>No one else here.</div>}
+        {users.map((u: any, i: number) => {
+          const name = String(u?.name ?? u?.id ?? "?");
+          const role = String(u?.role ?? "member");
+          const rc   = roleColor((role.toUpperCase() as GlobalRole) || "USER");
+          return (
+            <div key={u?.id ?? i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)" }}>
+              <div style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(124,58,237,.20)", border: "1px solid rgba(124,58,237,.30)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                {name.slice(0, 1).toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 12, truncate: true }}>{name}</div>
+              </div>
+              <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.color, flexShrink: 0 }}>
+                {role}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Users Tab ─────────────────────────────────────────────────────────────────
 
@@ -158,8 +195,8 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
                 ))}
                 {!notes.length && <div style={{ fontSize: 12, opacity: 0.45 }}>No notes yet.</div>}
               </div>
-              <textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Add a staff note…" rows={3} style={{ ...S.input, resize: "none", marginBottom: 8 }} />
-              <button style={{ ...S.btn, width: "100%" }} onClick={addNote}>Save note</button>
+              <textarea style={{ ...S.input, resize: "vertical", minHeight: 70 }} placeholder="Add a staff note…" value={newNote} onChange={e => setNewNote(e.target.value)} />
+              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={addNote}>Save note</button>
             </div>
           </div>
         ) : (
@@ -234,7 +271,7 @@ function AuditTab() {
   }, []);
 
   const actionColor = (a: string) => {
-    if (a.includes("kick")   || a.includes("delete")) return "rgba(239,68,68,.80)";
+    if (a.includes("kick") || a.includes("delete")) return "rgba(239,68,68,.80)";
     if (a.includes("role"))  return "rgba(124,58,237,.90)";
     if (a.includes("note"))  return "rgba(14,165,233,.80)";
     return "rgba(148,163,184,.80)";
@@ -263,9 +300,17 @@ function AuditTab() {
 
 export default function StaffPage() {
   const router = useRouter();
+  const ctx    = useWeered() as any;
+
   const [myRole, setMyRole]   = useState<GlobalRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab]         = useState<"users" | "rooms" | "audit">("users");
+
+  // Join @ops room on mount
+  useEffect(() => {
+    try { ctx?.setActiveRoomId?.("@ops"); } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     apiFetch("/staff/me").then(j => {
@@ -289,11 +334,16 @@ export default function StaffPage() {
   const tabs = ["users", "rooms", ...(canSeeAudit ? ["audit"] : [])] as const;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.92)", fontFamily: "system-ui, sans-serif", padding: "0 0 60px" }}>
-      <div style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-.3px" }}>weered ops</div>
-          <div style={{ fontSize: 12, opacity: 0.5, marginTop: 2 }}>staff area · {myRole}</div>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.92)", fontFamily: "system-ui, sans-serif", overflow: "hidden" }}>
+
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.3px" }}>weered ops</div>
+            <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>staff area · {myRole}</div>
+          </div>
+          <div style={{ width: 8, height: 8, borderRadius: 999, background: "rgba(16,185,129,.85)", boxShadow: "0 0 6px rgba(16,185,129,.5)" }} title="@ops room live" />
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <RoleBadge role={myRole} />
@@ -301,19 +351,42 @@ export default function StaffPage() {
         </div>
       </div>
 
-      <div style={{ padding: "16px 24px 0", display: "flex", gap: 4 }}>
-        {tabs.map(t => (
-          <button key={t} onClick={() => setTab(t as any)}
-            style={{ padding: "8px 16px", borderRadius: 9, border: "none", background: tab === t ? "rgba(124,58,237,.20)" : "transparent", color: tab === t ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.70)", fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontSize: 13 }}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {/* Body: 3 columns */}
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "220px 1fr 300px" }}>
 
-      <div style={{ padding: "20px 24px" }}>
-        {tab === "users" && <UsersTab myRole={myRole} />}
-        {tab === "rooms" && <RoomsTab myRole={myRole} />}
-        {tab === "audit" && canSeeAudit && <AuditTab />}
+        {/* Left: presence */}
+        <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "16px 14px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
+          <OpsPresence />
+        </div>
+
+        {/* Center: tabs + content */}
+        <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+          <div style={{ padding: "12px 20px 0", display: "flex", gap: 4, borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
+            {tabs.map(t => (
+              <button key={t} onClick={() => setTab(t as any)}
+                style={{ padding: "8px 16px", borderRadius: "9px 9px 0 0", border: "none", background: tab === t ? "rgba(124,58,237,.20)" : "transparent", color: tab === t ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.70)", fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontSize: 13 }}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+            {tab === "users" && <UsersTab myRole={myRole} />}
+            {tab === "rooms" && <RoomsTab myRole={myRole} />}
+            {tab === "audit" && canSeeAudit && <AuditTab />}
+          </div>
+        </div>
+
+        {/* Right: ops chat */}
+        <div style={{ borderLeft: "1px solid rgba(255,255,255,.07)", display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Ops Chat</div>
+            <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>#ops · staff only</div>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, padding: "0 10px 10px" }}>
+            <LobbyChatPanel roomId="@ops" embedded style={{ height: "100%", display: "flex", flexDirection: "column" }} />
+          </div>
+        </div>
+
       </div>
     </div>
   );
