@@ -1,7 +1,7 @@
 ﻿import React, { useMemo } from "react";
 import LobbyChatPanel from "./LobbyChatPanel";
 
-export default function RoomChatPanel({ roomId }: { roomId: string }) {
+export default function RoomChatPanel({ roomId, style }: { roomId: string; style?: React.CSSProperties }) {
   const rid = useMemo(() => {
     let raw = String(roomId || "").trim();
     if (!raw) return "";
@@ -18,7 +18,7 @@ export default function RoomChatPanel({ roomId }: { roomId: string }) {
   }
 
   // IMPORTANT: use raw room id so presence:join and presence:state match
-  return <LobbyChatPanel roomId={rid} embedded />;
+  return <LobbyChatPanel roomId={rid} embedded style={style} />;
 }
 
 
