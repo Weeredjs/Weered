@@ -20,16 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OverlayProvider>
           <WeeredProvider>
             <ShellGate
-              shell={
-                <>
-                  <aside className="weered-left">
-                    <LeftRail />
-                  </aside>
-                  <aside className="weered-right">
-                    <RightRailSwitch />
-                  </aside>
-                </>
-              }
+              left={<LeftRail />}
+              right={<RightRailSwitch />}
             >
               {children}
             </ShellGate>
