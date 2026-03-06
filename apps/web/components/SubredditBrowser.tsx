@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type RedditPost = {
   id: string;
@@ -15,6 +15,8 @@ type RedditPost = {
   subreddit: string;
 };
 
+type View = "list" | "preview" | "both";
+
 function fmtTime(utc: number) {
   if (!utc) return "";
   try {
@@ -25,210 +27,198 @@ function fmtTime(utc: number) {
   } catch { return ""; }
 }
 
-function isExternalUrl(url?: string, permalink?: string) {
+function isExternalUrl(url?: string) {
   if (!url) return false;
-  try {
-    const u = new URL(url);
-    return !u.hostname.includes("reddit.com");
-  } catch { return false; }
+  try { return !new URL(url).hostname.includes("reddit.com"); } catch { return false; }
 }
 
-export default function SubredditBrowser(props: { subreddit: string }) {
-  const subreddit = (props.subreddit || "").replace(/^r\//i, "");
-  const [sort, setSort] = useState<"hot" | "new" | "top" | "rising">("hot");
+// Shared state across list+preview via a module-level store
+// (avoids prop drilling / context for this simple case)
+const listeners = new Set<(p: RedditPost | null) => void>();
+const sortListeners = new Set<(s: string) => void>();
+let sharedPosts: RedditPost[] = [];
+let sharedSelected: RedditPost | null = null;
+let sharedSort: "hot" | "new" | "top" | "rising" = "hot";
+let sharedSub = "all";
+
+function setSharedSelected(p: RedditPost | null) {
+  sharedSelected = p;
+  listeners.forEach(fn => fn(p));
+}
+
+function setSharedSort(s: "hot" | "new" | "top" | "rising") {
+  sharedSort = s;
+  sortListeners.forEach(fn => fn(s));
+}
+
+export default function SubredditBrowser({ subreddit, view = "both" }: { subreddit: string; view?: View }) {
+  const sub = (subreddit || "").replace(/^r\//i, "");
+
+  const [sort, setSort]       = useState<"hot" | "new" | "top" | "rising">(sharedSort);
+  const [posts, setPosts]     = useState<RedditPost[]>(sharedPosts);
+  const [selected, setSelected] = useState<RedditPost | null>(sharedSelected);
   const [loading, setLoading] = useState(false);
-  const [posts, setPosts] = useState<RedditPost[]>([]);
-  const [selected, setSelected] = useState<RedditPost | null>(null);
-  const [err, setErr] = useState("");
+  const [err, setErr]         = useState("");
+  const loadedFor             = useRef("");
 
-  const header = useMemo(() => `r/${subreddit}`, [subreddit]);
+  // Subscribe to shared selected
+  useEffect(() => {
+    const fn = (p: RedditPost | null) => setSelected(p);
+    listeners.add(fn);
+    return () => { listeners.delete(fn); };
+  }, []);
 
-  async function loadFeed() {
-    if (!subreddit) return;
+  // Subscribe to shared sort
+  useEffect(() => {
+    const fn = (s: any) => setSort(s);
+    sortListeners.add(fn);
+    return () => { sortListeners.delete(fn); };
+  }, []);
+
+  async function loadFeed(s = sort) {
+    const key = `${sub}:${s}`;
+    if (loadedFor.current === key) return;
+    loadedFor.current = key;
     setLoading(true);
     setErr("");
     try {
-      const r = await fetch(
-        `/api/reddit?sub=${encodeURIComponent(subreddit)}&sort=${sort}&limit=25`,
-        { cache: "no-store" }
-      );
+      const r = await fetch(`/api/reddit?sub=${encodeURIComponent(sub)}&sort=${s}&limit=25`, { cache: "no-store" });
       const j = await r.json();
       if (!j?.ok && j?.error) throw new Error(j.error);
-
-      const children = j?.data?.children || [];
-      const mapped: RedditPost[] = children
-        .map((c: any) => c?.data)
-        .filter(Boolean);
-
+      const mapped: RedditPost[] = (j?.data?.children || []).map((c: any) => c?.data).filter(Boolean);
+      sharedPosts = mapped;
       setPosts(mapped);
-      setSelected(mapped[0] || null);
+      const first = mapped[0] || null;
+      setSharedSelected(first);
     } catch (e: any) {
       setErr(String(e?.message || "Failed to load"));
-      setPosts([]);
-      setSelected(null);
-    } finally {
-      setLoading(false);
-    }
+      setPosts([]); setSharedSelected(null);
+    } finally { setLoading(false); }
   }
 
-  useEffect(() => { loadFeed(); /* eslint-disable-next-line */ }, [subreddit, sort]);
+  useEffect(() => { loadedFor.current = ""; loadFeed(); }, [sub, sort]);
 
-  const panel: React.CSSProperties = {
-    border: "1px solid var(--weered-border)",
-    borderRadius: 16,
-    background: "var(--weered-panel)",
-    padding: 12,
-    minHeight: 520,
-    overflow: "hidden",
-  };
+  function handleSort(s: "hot" | "new" | "top" | "rising") {
+    setSharedSort(s);
+    setSort(s);
+    loadedFor.current = "";
+    loadFeed(s);
+  }
 
-  return (
-    <div style={panel}>
+  // ── List view ──────────────────────────────────────────────────────────────
+  if (view === "list") return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 1000, fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {header}
-          </div>
-          <div style={{ opacity: 0.7, fontSize: 12 }}>
-            {loading ? "Loading…" : err ? `Error: ${err}` : `${posts.length} posts • sort: ${sort}`}
+      <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--weered-border)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+          <div>
+            <div style={{ fontWeight: 1000, fontSize: 15 }}>r/{sub}</div>
+            <div style={{ fontSize: 11, opacity: 0.6 }}>
+              {loading ? "Loading…" : err ? `Error: ${err}` : `${posts.length} posts · ${sort}`}
+            </div>
           </div>
         </div>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          {(["hot", "new", "top", "rising"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSort(s)}
-              style={{
-                padding: "7px 10px",
-                borderRadius: 12,
-                border: "1px solid var(--weered-border2)",
-                background: s === sort ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-                fontWeight: 950,
-                cursor: "pointer",
-              }}
-            >
-              {s}
-            </button>
+        <div style={{ display: "flex", gap: 4 }}>
+          {(["hot", "new", "top", "rising"] as const).map(s => (
+            <button key={s} onClick={() => handleSort(s)} style={{
+              padding: "5px 10px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer",
+              border: "1px solid var(--weered-border)",
+              background: s === sort ? "rgba(124,58,237,.20)" : "rgba(255,255,255,.04)",
+              color: s === sort ? "rgba(216,180,254,.95)" : "rgba(203,213,225,.80)",
+            }}>{s}</button>
           ))}
         </div>
       </div>
 
-      {/* Two-pane layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1.3fr", gap: 12, height: 470 }}>
-
-        {/* Feed list */}
-        <div style={{ border: "1px solid var(--weered-border2)", borderRadius: 14, overflow: "auto", background: "var(--weered-panel2)" }}>
-          {posts.map((p) => {
-            const active = selected?.id === p.id;
-            const isExt  = isExternalUrl(p.url, p.permalink);
-            return (
-              <button
-                key={p.id}
-                onClick={() => setSelected(p)}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "10px 10px",
-                  border: "none",
-                  borderBottom: "1px solid rgba(255,255,255,.06)",
-                  background: active ? "rgba(124,58,237,.14)" : "transparent",
-                  cursor: "pointer",
-                  color: "rgba(243,244,246,.98)",
-                }}
-              >
-                <div style={{ fontWeight: 950, marginBottom: 4, lineHeight: 1.2 }}>
-                  {p.title}
-                </div>
-                <div style={{ opacity: 0.65, fontSize: 11, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  {isExt && <span style={{ background: "rgba(124,58,237,.18)", borderRadius: 6, padding: "1px 6px", fontSize: 10 }}>link</span>}
-                  <span>💬 {p.num_comments}</span>
-                  <span>u/{p.author}</span>
-                  <span>{fmtTime(p.created_utc)}</span>
-                </div>
-              </button>
-            );
-          })}
-          {!posts.length && !loading && (
-            <div style={{ padding: 12, opacity: 0.7 }}>No posts.</div>
-          )}
-          {loading && (
-            <div style={{ padding: 12, opacity: 0.7 }}>Loading…</div>
-          )}
-        </div>
-
-        {/* Post preview */}
-        <div style={{ border: "1px solid var(--weered-border2)", borderRadius: 14, overflow: "auto", background: "var(--weered-panel2)", padding: 12 }}>
-          {selected ? (
-            <>
-              <div style={{ fontWeight: 1000, fontSize: 15, marginBottom: 6, lineHeight: 1.25 }}>
-                {selected.title}
+      {/* Feed */}
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        {loading && <div style={{ padding: 12, opacity: 0.6, fontSize: 13 }}>Loading…</div>}
+        {!loading && !posts.length && <div style={{ padding: 12, opacity: 0.6, fontSize: 13 }}>No posts.</div>}
+        {posts.map(p => {
+          const active  = selected?.id === p.id;
+          const isExt   = isExternalUrl(p.url);
+          return (
+            <button key={p.id} onClick={() => setSharedSelected(p)} style={{
+              width: "100%", textAlign: "left", padding: "10px 12px",
+              border: "none", borderBottom: "1px solid rgba(255,255,255,.05)",
+              background: active ? "rgba(124,58,237,.14)" : "transparent",
+              cursor: "pointer", color: "rgba(243,244,246,.98)",
+              borderLeft: active ? "3px solid rgba(124,58,237,.70)" : "3px solid transparent",
+            }}>
+              <div style={{ fontWeight: 850, lineHeight: 1.25, marginBottom: 4, fontSize: 13 }}>{p.title}</div>
+              <div style={{ opacity: 0.6, fontSize: 11, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                {isExt && <span style={{ background: "rgba(124,58,237,.18)", borderRadius: 5, padding: "1px 5px", fontSize: 10 }}>link</span>}
+                <span>💬 {p.num_comments}</span>
+                <span>u/{p.author}</span>
+                <span>{fmtTime(p.created_utc)}</span>
               </div>
+            </button>
+          );
+        })}
+      </div>
 
-              <div style={{ opacity: 0.65, fontSize: 11, display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-                <span>u/{selected.author}</span>
-                <span>{fmtTime(selected.created_utc)}</span>
-                <span>💬 {selected.num_comments} comments</span>
-              </div>
+      <div style={{ padding: "6px 12px", borderTop: "1px solid var(--weered-border)", fontSize: 10, opacity: 0.4 }}>
+        via RSS · no auth required
+      </div>
+    </div>
+  );
 
-              {isExternalUrl(selected.url) && (
-                <a
-                  href={selected.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    marginBottom: 12,
-                    padding: "8px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(124,58,237,.30)",
-                    background: "rgba(124,58,237,.12)",
-                    fontWeight: 900,
-                    fontSize: 13,
-                    color: "rgba(216,180,254,.95)",
-                  }}
-                >
-                  Open link →
-                </a>
-              )}
+  // ── Preview view ───────────────────────────────────────────────────────────
+  if (view === "preview") return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--weered-border)", flexShrink: 0, fontWeight: 800, fontSize: 13 }}>
+        Post Preview
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 14 }}>
+        {selected ? (
+          <>
+            <div style={{ fontWeight: 1000, fontSize: 16, lineHeight: 1.3, marginBottom: 8 }}>{selected.title}</div>
+            <div style={{ opacity: 0.6, fontSize: 11, display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+              <span>u/{selected.author}</span>
+              <span>{fmtTime(selected.created_utc)}</span>
+              <span>💬 {selected.num_comments} comments</span>
+              <span>r/{selected.subreddit}</span>
+            </div>
 
-              {selected.selftext && (
-                <div style={{
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.45,
-                  marginBottom: 12,
-                  opacity: 0.90,
-                  fontSize: 13,
-                  background: "rgba(255,255,255,.03)",
-                  border: "1px solid rgba(255,255,255,.06)",
-                  borderRadius: 12,
-                  padding: 10,
-                }}>
-                  {selected.selftext}
-                </div>
-              )}
-
-              <a
-                href={`https://reddit.com${selected.permalink}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ opacity: 0.55, fontSize: 11, display: "block", marginTop: 8 }}
-              >
-                View on Reddit →
+            {isExternalUrl(selected.url) && (
+              <a href={selected.url} target="_blank" rel="noreferrer" style={{
+                display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14,
+                padding: "8px 14px", borderRadius: 12,
+                border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.12)",
+                fontWeight: 900, fontSize: 13, color: "rgba(216,180,254,.95)",
+              }}>
+                Open link →
               </a>
-            </>
-          ) : (
-            <div style={{ opacity: 0.7 }}>Select a post.</div>
-          )}
-        </div>
-      </div>
+            )}
 
-      <div style={{ marginTop: 10, opacity: 0.55, fontSize: 11 }}>
-        via RSS • no auth required • comments on reddit.com
+            {selected.selftext && (
+              <div style={{
+                whiteSpace: "pre-wrap", lineHeight: 1.5, marginBottom: 14,
+                fontSize: 13, opacity: 0.9,
+                background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)",
+                borderRadius: 12, padding: 12,
+              }}>
+                {selected.selftext.slice(0, 1200)}{selected.selftext.length > 1200 ? "…" : ""}
+              </div>
+            )}
+
+            <a href={`https://reddit.com${selected.permalink}`} target="_blank" rel="noreferrer"
+              style={{ opacity: 0.5, fontSize: 11, display: "block" }}>
+              View on Reddit →
+            </a>
+          </>
+        ) : (
+          <div style={{ opacity: 0.5, fontSize: 13 }}>Select a post from the feed.</div>
+        )}
       </div>
+    </div>
+  );
+
+  // ── Both (fallback, original layout) ──────────────────────────────────────
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 12, height: "100%" }}>
+      <SubredditBrowser subreddit={subreddit} view="list" />
+      <SubredditBrowser subreddit={subreddit} view="preview" />
     </div>
   );
 }
