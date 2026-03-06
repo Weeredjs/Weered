@@ -714,7 +714,7 @@ const body = pickFirstString(m?.body, m?.text, "");
  </div>
  ) : null}
  </>
- ) : (
+ ) : tab === "dms" ? (
  <div style={{ border: "1px solid var(--weered-bd)", borderRadius: 14, overflow: "hidden" }}>
  <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--weered-bd)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
  Private messages (local-only v0)
@@ -870,16 +870,14 @@ const body = pickFirstString(m?.body, m?.text, "");
    />
  ) : null}
  </div>
+ </div>
  );
 }
 
-// ── Friends Tab ───────────────────────────────────────────────────────────────
 
+// ── Friends Tab ───────────────────────────────────────────────────────────────
 function FriendsTab({
-  dmThreads,
-  rooms,
-  onMessage,
-  onJoin,
+  dmThreads, rooms, onMessage, onJoin,
 }: {
   dmThreads: DmThread[];
   rooms: any[];
@@ -915,19 +913,13 @@ function FriendsTab({
           {thread.peer.slice(0, 1).toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            @{thread.peer}
-          </div>
-          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 1 }}>
-            {online ? (roomName ? `in ${roomName}` : "online") : "offline"}
-          </div>
+          <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{thread.peer}</div>
+          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 1 }}>{online ? (roomName ? `in ${roomName}` : "online") : "offline"}</div>
         </div>
         <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
           <button style={friendBtn} onClick={() => onMessage(thread.peer, thread.peerId ?? "")}>DM</button>
           {online && roomId && (
-            <button style={{ ...friendBtn, borderColor: "rgba(124,58,237,.30)", background: "rgba(124,58,237,.12)", color: "rgb(216,180,254)" }} onClick={() => onJoin(roomId)}>
-              Join
-            </button>
+            <button style={{ ...friendBtn, borderColor: "rgba(124,58,237,.30)", background: "rgba(124,58,237,.12)", color: "rgb(216,180,254)" }} onClick={() => onJoin(roomId)}>Join</button>
           )}
         </div>
       </div>
@@ -935,11 +927,7 @@ function FriendsTab({
   };
 
   if (friends.length === 0) {
-    return (
-      <div style={{ padding: "20px 10px", fontSize: 13, opacity: 0.5, textAlign: "center" }}>
-        No friends yet. Message someone from the Presence panel to start a thread.
-      </div>
-    );
+    return <div style={{ padding: "20px 10px", fontSize: 13, opacity: 0.5, textAlign: "center" }}>No friends yet. Message someone from the Presence panel to start a thread.</div>;
   }
 
   return (
@@ -959,5 +947,4 @@ function FriendsTab({
     </div>
   );
 }
-
 
