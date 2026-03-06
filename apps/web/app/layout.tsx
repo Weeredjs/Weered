@@ -7,6 +7,7 @@ import LeftRail from "../components/LeftRail";
 import RightRailSwitch from "../components/RightRailSwitch";
 import DockDrawer from "../components/DockDrawer";
 import ShellGate from "../components/ShellGate";
+import LobbyBrowser from "../components/LobbyBrowser";
 
 export const metadata = {
   title: "Weered",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </ShellGate>
             <DockDrawer />
+            <LobbyBrowser />
           </WeeredProvider>
           <OverlayHost />
         </OverlayProvider>
