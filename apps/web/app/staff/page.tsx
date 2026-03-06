@@ -74,7 +74,7 @@ function OpsPresence() {
                 {name.slice(0, 1).toUpperCase()}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 12, truncate: true }}>{name}</div>
+                <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
               </div>
               <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.color, flexShrink: 0 }}>
                 {role}
