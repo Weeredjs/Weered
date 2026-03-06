@@ -144,6 +144,13 @@ function LoginForm() {
           flex-shrink: 0;
           box-shadow: 0 0 24px rgba(124,58,237,0.35);
         }
+         .wl-input:-webkit-autofill,
+        .wl-input:-webkit-autofill:hover,
+        .wl-input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px rgba(20,20,35,0.95) inset !important;
+          -webkit-text-fill-color: rgba(243,244,246,0.98) !important;
+          caret-color: rgba(243,244,246,0.98);
+        } 
         .wl-brand-name {
           font-family: 'Syne', sans-serif;
           font-weight: 800;
