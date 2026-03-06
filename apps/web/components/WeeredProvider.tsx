@@ -280,6 +280,25 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+
+      if (msg.type === "room:locked") {
+        const rid = String(msg.roomId || "");
+        setMetaByRoom(prev => prev[rid] ? { ...prev, [rid]: { ...prev[rid], locked: true } } : prev);
+        return;
+      }
+
+      if (msg.type === "room:unlocked") {
+        const rid = String(msg.roomId || "");
+        setMetaByRoom(prev => prev[rid] ? { ...prev, [rid]: { ...prev[rid], locked: false } } : prev);
+        return;
+      }
+
+      if (msg.type === "chat:cleared") {
+        const rid = String(msg.roomId || "");
+        setMsgsByRoom(prev => ({ ...prev, [rid]: [] }));
+        return;
+      }
+
       if (msg.type === "room:knock:queued") { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "knocking" })); return; }
       if (msg.type === "room:banned")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "banned"   })); return; }
       if (msg.type === "room:denied")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "denied"   })); return; }
