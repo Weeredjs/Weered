@@ -210,7 +210,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  } = ctx || {};
 
  const [open, setOpen] = useState(true);
- const [tab, setTab] = useState<"room" | "dms">("room");
+ const [tab, setTab] = useState<"room" | "dms" | "friends">("room");
  const [text, setText] = useState("");
 
  const [dockMode, setDockMode] = useState<"rail" | "floating">(props.forceMode || "floating");
@@ -544,6 +544,7 @@ const panel: React.CSSProperties =
  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
  <button style={tab === "room" ? btnActive : btn} onClick={() => setTab("room")}>Room</button>
  <button style={tab === "dms" ? btnActive : btn} onClick={() => setTab("dms")}>DMs</button>
+ <button style={tab === "friends" ? btnActive : btn} onClick={() => setTab("friends")}>Friends</button>
  <button style={btn} onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:close")); } catch {} }}>Close</button>
  </div>
  </div>
@@ -848,10 +849,116 @@ const body = pickFirstString(m?.body, m?.text, "");
  v0 = localStorage only. Next: wire DMs to API + WS routing.
  </div>
  </div>
- )}
+ ) : tab === "friends" ? (
+   <FriendsTab
+     dmThreads={dmThreads}
+     rooms={userArr}
+     onMessage={(peerName: string, peerId: string) => {
+       setTab("dms");
+       setDmThreads((cur) => {
+         const arr = Array.isArray(cur) ? cur : [];
+         const existing = arr.find((t) => String(t.peer || "").toLowerCase() === peerName.toLowerCase());
+         if (existing) { setDmActiveId(existing.id); return arr; }
+         const th: DmThread = { id: __id(), peer: peerName, peerId: peerId || undefined, msgs: [] };
+         setDmActiveId(th.id);
+         return [th, ...arr];
+       });
+     }}
+     onJoin={(roomId: string) => {
+       try { (ctx as any)?.join?.(roomId); } catch {}
+     }}
+   />
+ ) : null}
  </div>
  </div>
  );
+}
+
+// ── Friends Tab ───────────────────────────────────────────────────────────────
+
+function FriendsTab({
+  dmThreads,
+  rooms,
+  onMessage,
+  onJoin,
+}: {
+  dmThreads: DmThread[];
+  rooms: any[];
+  onMessage: (peerName: string, peerId: string) => void;
+  onJoin: (roomId: string) => void;
+}) {
+  const friends = dmThreads.map((t) => {
+    const online = rooms.find((u: any) =>
+      String(u?.name ?? u?.username ?? "").toLowerCase() === t.peer.toLowerCase() ||
+      (t.peerId && String(u?.id ?? "") === t.peerId)
+    );
+    return { thread: t, online: online ?? null };
+  });
+
+  const onlineFriends  = friends.filter((f) => f.online);
+  const offlineFriends = friends.filter((f) => !f.online);
+
+  const friendBtn: React.CSSProperties = {
+    padding: "6px 10px", borderRadius: 9,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(255,255,255,.05)",
+    fontSize: 11, cursor: "pointer",
+    color: "rgba(243,244,246,.85)", fontWeight: 700,
+  };
+
+  const renderFriend = (f: { thread: DmThread; online: any }) => {
+    const { thread, online } = f;
+    const roomId = String(online?.roomId ?? online?.activeRoom ?? online?.room ?? "");
+    const roomName = String(online?.roomName ?? online?.room ?? roomId ?? "");
+    return (
+      <div key={thread.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 11, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)", marginBottom: 5 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 999, background: online ? "rgba(16,185,129,.18)" : "rgba(255,255,255,.06)", border: `1px solid ${online ? "rgba(16,185,129,.30)" : "rgba(255,255,255,.10)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+          {thread.peer.slice(0, 1).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            @{thread.peer}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 1 }}>
+            {online ? (roomName ? `in ${roomName}` : "online") : "offline"}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+          <button style={friendBtn} onClick={() => onMessage(thread.peer, thread.peerId ?? "")}>DM</button>
+          {online && roomId && (
+            <button style={{ ...friendBtn, borderColor: "rgba(124,58,237,.30)", background: "rgba(124,58,237,.12)", color: "rgb(216,180,254)" }} onClick={() => onJoin(roomId)}>
+              Join
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  if (friends.length === 0) {
+    return (
+      <div style={{ padding: "20px 10px", fontSize: 13, opacity: 0.5, textAlign: "center" }}>
+        No friends yet. Message someone from the Presence panel to start a thread.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {onlineFriends.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".6px", textTransform: "uppercase" as const, marginBottom: 4 }}>Online · {onlineFriends.length}</div>
+          {onlineFriends.map(renderFriend)}
+        </>
+      )}
+      {offlineFriends.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".6px", textTransform: "uppercase" as const, margin: "10px 0 4px" }}>Offline · {offlineFriends.length}</div>
+          {offlineFriends.map(renderFriend)}
+        </>
+      )}
+    </div>
+  );
 }
 
 
