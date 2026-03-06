@@ -20,13 +20,13 @@ export default function LobbyPage() {
         </div>
       </div>
 
-      {/* Chat: full width strip at bottom */}
-      <div style={{ border: "1px solid var(--weered-border)", borderRadius: 16, background: "var(--weered-panel)", overflow: "hidden", display: "flex", flexDirection: "column", height: 220, flexShrink: 0 }}>
+            {/* Chat: full width strip at bottom */}
+      <div style={{ border: "1px solid var(--weered-border)", borderRadius: 16, background: "var(--weered-panel)", overflow: "hidden", display: "flex", flexDirection: "column", height: 280, flexShrink: 0 }}>
         <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--weered-border)", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
           Lobby Chat
         </div>
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-          <LobbyChatPanel roomId="room:lobby" />
+          <LobbyChatPanel roomId="room:lobby" embedded={true} />
         </div>
       </div>
     </div>
