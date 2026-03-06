@@ -21,17 +21,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <WeeredProvider>
             <ShellGate
               shell={
-                <div className="weered-shell">
+                <>
                   <aside className="weered-left">
                     <LeftRail />
                   </aside>
-                  <main className="weered-center">
-                    {children}
-                  </main>
                   <aside className="weered-right">
                     <RightRailSwitch />
                   </aside>
-                </div>
+                </>
               }
             >
               {children}
