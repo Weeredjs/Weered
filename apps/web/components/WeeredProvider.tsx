@@ -26,7 +26,7 @@ type AdminState = { knocks: Knock[]; banned: string[]; audit: AuditItem[] };
 
 type Ctx = {
   apiBase: string; wsUrl: string;
-  token: string; me: any; authed: boolean;
+  token: string; me: any; authed: boolean; globalRole: string;
   wsReady: boolean; wsState: number;
   activeRoomId: string; joinedRoomId: string;
   setActiveRoomId: (id: string) => void;
@@ -78,6 +78,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   // ── Auth state ──
   const [token, setToken] = useState("");
   const [me,    setMe   ] = useState<any>(null);
+  const [globalRole, setGlobalRole] = useState("");
 
   // ── WS state ──
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
@@ -110,6 +111,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (Array.isArray(meta.mods) && meta.mods.includes(me.id)) return "mod";
     return "member";
   }, [meta, me]);
+
+  // ── Fetch globalRole when token changes ──
+  useEffect(() => {
+    if (!token) { setGlobalRole(""); return; }
+    fetch(`${API}/staff/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(j => { if (j?.globalRole) setGlobalRole(j.globalRole); })
+      .catch(() => {});
+  }, [token]);
 
   // ── Settings: apply on mount and when changed ──
   useEffect(() => {
@@ -406,7 +416,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
   const value: Ctx = {
     apiBase: API, wsUrl: WS_URL,
-    token, me, authed,
+    token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus,
