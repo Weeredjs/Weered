@@ -7,31 +7,130 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
 enum RoomRole {
   OWNER
   MOD
   MEMBER
 }
 
+enum LobbyRole {
+  OWNER    // Created / claimed the lobby
+  MOD      // Lobby-scoped moderator (verified lobbies only)
+  MEMBER   // Regular member
+}
+
 enum GlobalRole {
   USER
-  SUPPORT
-  STAFF
-  GOD
+  SUPPORT  // Can view staff tools, limited actions
+  STAFF    // Full mod tools across all lobbies/rooms
+  ADMIN    // Platform admin (between STAFF and GOD)
+  GOD      // Superuser
 }
+
+enum ModuleType {
+  REDDIT   // Default — subreddit browser
+  BUNGIE   // Destiny 2 / Bungie API
+  TWITCH   // Twitch stream embed
+  YOUTUBE  // YouTube embed
+  CUSTOM   // Custom iframe / integration
+  NONE     // No module, chat only
+}
+
+// ─── Lobby ────────────────────────────────────────────────────────────────────
+
+model Lobby {
+  id          String     @id                    // e.g. "r/gaming", "destiny2", "weered.ca"
+  name        String     @default("")           // Display name e.g. "r/gaming"
+  description String     @default("")
+  verified    Boolean    @default(false)        // Verified/claimed lobby
+  pinned      Boolean    @default(false)        // Always show on Home
+  moduleType  ModuleType @default(REDDIT)       // Which module to render
+  moduleConfig Json?                            // Module-specific config (subreddit, channel id, etc.)
+  ownerId     String?                           // User who claimed/created this lobby
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  rooms       Room[]
+  members     LobbyMember[]
+  bans        LobbyBan[]
+  messages    LobbyMessage[]
+  audit       LobbyAudit[]
+}
+
+model LobbyMember {
+  id        String    @id @default(cuid())
+  lobbyId   String
+  userId    String
+  name      String    @default("")
+  role      LobbyRole @default(MEMBER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, userId])
+}
+
+model LobbyBan {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  userId    String
+  reason    String   @default("")
+  createdAt DateTime @default(now())
+
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, userId])
+}
+
+model LobbyMessage {
+  id        String   @id
+  lobbyId   String
+  userId    String
+  userName  String   @default("")
+  body      String
+  ts        DateTime @default(now())
+
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@index([lobbyId, ts])
+}
+
+model LobbyAudit {
+  id        String   @id
+  lobbyId   String
+  type      String
+  actorId   String
+  actorName String
+  targetId  String?
+  note      String?
+  ts        DateTime @default(now())
+
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@index([lobbyId, ts])
+}
+
+// ─── Room ─────────────────────────────────────────────────────────────────────
 
 model Room {
   id        String   @id
   name      String   @default("")
   locked    Boolean  @default(false)
   ownerId   String?
+  lobbyId   String?                             // Which lobby this room belongs to (null = orphan/legacy)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  lobby    Lobby?       @relation(fields: [lobbyId], references: [id], onDelete: SetNull)
   members  RoomMember[]
   bans     RoomBan[]
   messages RoomMessage[]
   audit    RoomAudit[]
+
+  @@unique([lobbyId, name])                     // No duplicate room names within a lobby
 }
 
 model RoomMember {
@@ -87,6 +186,8 @@ model RoomAudit {
   @@index([roomId, ts])
 }
 
+// ─── User ─────────────────────────────────────────────────────────────────────
+
 model User {
   id          String     @id @default(cuid())
   usernameKey String     @unique
@@ -94,8 +195,9 @@ model User {
   globalRole  GlobalRole @default(USER)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
   LocalAuth   LocalAuth?
-  staffNotes  StaffNote[] @relation("StaffNoteTarget")
+  staffNotes  StaffNote[]   @relation("StaffNoteTarget")
   auditLogs   GlobalAudit[] @relation("GlobalAuditTarget")
 }
 
@@ -110,12 +212,12 @@ model LocalAuth {
 }
 
 model StaffNote {
-  id        String   @id @default(cuid())
-  targetId  String
-  authorId  String
-  authorName String  @default("")
-  body      String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  targetId   String
+  authorId   String
+  authorName String   @default("")
+  body       String
+  createdAt  DateTime @default(now())
 
   target User @relation("StaffNoteTarget", fields: [targetId], references: [id], onDelete: Cascade)
 }
