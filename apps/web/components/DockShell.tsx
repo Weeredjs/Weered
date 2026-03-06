@@ -870,7 +870,6 @@ const body = pickFirstString(m?.body, m?.text, "");
    />
  ) : null}
  </div>
- </div>
  );
 }
 
