@@ -57,6 +57,17 @@ type RoomState = {
 
 const rooms = new Map<string, RoomState>();
 
+// ── Pinned / static lobbies (always visible on Home even when empty) ──────────
+const PINNED_ROOMS: Array<{ id: string; name: string; description: string; tags: string[] }> = [
+  { id: "lobby",        name: "The Lobby",       description: "General hangout. Everyone starts here.", tags: ["general"] },
+  { id: "r/all",        name: "r/all",            description: "Reddit firehose. All topics welcome.",   tags: ["reddit", "general"] },
+  { id: "r/gaming",     name: "r/gaming",         description: "Gamers of all kinds.",                   tags: ["reddit", "gaming"] },
+  { id: "r/technology", name: "r/technology",     description: "Tech news, discussion, builds.",         tags: ["reddit", "tech"] },
+  { id: "r/worldnews",  name: "r/worldnews",      description: "Global news and current events.",        tags: ["reddit", "news"] },
+  { id: "weered.ca",    name: "Weered HQ",        description: "Meta, announcements, beta feedback.",    tags: ["meta", "official"] },
+];
+
+
 // ── Global role helpers ───────────────────────────────────────────────────────
 
 async function getGlobalRole(userId: string): Promise<GlobalRole> {
@@ -451,10 +462,35 @@ async function main() {
       orderBy: { updatedAt: "desc" },
       select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
     });
-    const roomsOut = list
-      .filter((r) => r.id !== "lobby" && !r.id.includes("%"))
-      .map((r) => ({ id: r.id, roomId: r.id, name: r.name || r.id, users: r._count.members, locked: Boolean(r.locked) }));
-    return { ok: true, rooms: roomsOut };
+
+    // Live rooms from DB
+    const liveRooms = list
+      .filter((r) => !r.id.includes("%"))
+      .map((r) => ({
+        id: r.id, roomId: r.id, name: r.name || r.id,
+        onlineCount: (rooms.get(r.id)?.users.size ?? 0) + r._count.members,
+        locked: Boolean(r.locked),
+        pinned: false,
+      }));
+
+    // Merge pinned rooms — enrich with live count if active, skip duplicates
+    const liveIds = new Set(liveRooms.map(r => r.id));
+    const pinnedOut = PINNED_ROOMS
+      .filter(p => !liveIds.has(p.id))
+      .map(p => ({
+        id: p.id, roomId: p.id, name: p.name,
+        description: p.description, tags: p.tags,
+        onlineCount: rooms.get(p.id)?.users.size ?? 0,
+        locked: false, pinned: true,
+      }));
+
+    // Enrich live rooms that are also pinned
+    const enriched = liveRooms.map(r => {
+      const pin = PINNED_ROOMS.find(p => p.id === r.id);
+      return pin ? { ...r, description: pin.description, tags: pin.tags, pinned: true } : r;
+    });
+
+    return { ok: true, rooms: [...enriched, ...pinnedOut] };
   });
 
   app.post("/rooms", async (req, reply) => {
@@ -713,6 +749,37 @@ async function main() {
         }
 
         if (!ws.user) { send(ws, { type: "auth:fail", reason: "Not authenticated" }); return; }
+
+
+        // ── rooms:list — return full lobby directory ──────────────────────
+        if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
+          const list = await prisma.room.findMany({
+            orderBy: { updatedAt: "desc" },
+            select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
+          });
+          const liveRooms = list
+            .filter((r) => !r.id.includes("%"))
+            .map((r) => ({
+              id: r.id, roomId: r.id, name: r.name || r.id,
+              onlineCount: (rooms.get(r.id)?.users.size ?? 0) + r._count.members,
+              locked: Boolean(r.locked), pinned: false,
+            }));
+          const liveIds = new Set(liveRooms.map(r => r.id));
+          const pinnedOut = PINNED_ROOMS
+            .filter(p => !liveIds.has(p.id))
+            .map(p => ({
+              id: p.id, roomId: p.id, name: p.name,
+              description: p.description, tags: p.tags,
+              onlineCount: rooms.get(p.id)?.users.size ?? 0,
+              locked: false, pinned: true,
+            }));
+          const enriched = liveRooms.map(r => {
+            const pin = PINNED_ROOMS.find(p => p.id === r.id);
+            return pin ? { ...r, description: pin.description, tags: pin.tags, pinned: true } : r;
+          });
+          send(ws, { type: "rooms", rooms: [...enriched, ...pinnedOut] });
+          return;
+        }
 
         if (msg.type === "presence:join") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
