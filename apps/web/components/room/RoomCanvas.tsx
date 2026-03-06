@@ -256,14 +256,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
 
     return (
-      <div className="min-w-0">
+      <div className="min-w-0" style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="text-xs font-semibold text-white/75 tracking-wide">Room Chat</div>
           <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 opacity-80">{roomId}</span>
         </div>
 
-        <div className="rounded-xl bg-black/20 p-3" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
-          <RoomChatPanel roomId={roomId} style={{flex:1,minHeight:0}} />
+        <div style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+          <RoomChatPanel roomId={roomId} style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}} />
 
 <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
   <div className="flex items-center justify-between">
