@@ -102,7 +102,7 @@ function groupRank(u: any): number {
 export default function LeftRail() {
   const { openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
-  const { users, joinedRoomId, activeRoomId, me } = useWeered();
+  const { users, joinedRoomId, activeRoomId, me, globalRole } = useWeered();
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
@@ -312,7 +312,18 @@ export default function LeftRail() {
           <span>Home</span>
           {isHomeActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
         </Link>
-
+          {(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT") && (
+        <Link
+          className={
+            "weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " +
+            (pathname.startsWith("/staff") ? " weered-left-link-active" : "")
+          }
+          href="/staff"
+        >
+          <span>Ops</span>
+          {pathname.startsWith("/staff") ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
+        </Link>
+      )}
         <div className="weered-left-hint mt-2">
           {sub ? (
             <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-80">context: {sub}</span>
