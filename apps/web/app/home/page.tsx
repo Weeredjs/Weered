@@ -172,9 +172,23 @@ export default function HomePage() {
   const router = useRouter();
   const { rooms, users, me, join } = useWeered() as any;
   const [search, setSearch] = useState("");
+  const [fetchedRooms, setFetchedRooms] = useState<any[]>([]);
+
+  // Fetch rooms via REST on mount as fallback (WS rooms:list may not respond if no active rooms)
+  React.useEffect(() => {
+    const base = (typeof window !== "undefined" && (window as any).__WEERED_API__) || process.env.NEXT_PUBLIC_API_URL || "https://api.weered.ca";
+    fetch(`${base}/rooms`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.rooms)) setFetchedRooms(d.rooms); })
+      .catch(() => {});
+  }, []);
 
   const myName   = pickFirst(me?.name, me?.username, "there");
-  const allRooms: any[] = useMemo(() => (Array.isArray(rooms) ? rooms : []), [rooms]);
+  // Prefer live WS rooms, fall back to REST fetch
+  const allRooms: any[] = useMemo(() => {
+    const ws = Array.isArray(rooms) ? rooms : [];
+    return ws.length > 0 ? ws : fetchedRooms;
+  }, [rooms, fetchedRooms]);
   const allUsers: any[] = useMemo(() => (Array.isArray(users) ? users : []), [users]);
 
   const filteredRooms = useMemo(() => {
