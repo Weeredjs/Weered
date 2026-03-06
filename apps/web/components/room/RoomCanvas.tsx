@@ -37,8 +37,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
 
-  // TODO: wire real member count from room state
-  const memberCount = 2;
+  const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
 
   // ---- UI-only “Room Details” persistence (per room) ----
   const aboutKey = `weered.room.about.${roomId}`;
@@ -263,8 +262,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 opacity-80">{roomId}</span>
         </div>
 
-        <div className="rounded-xl bg-black/20 p-3">
-          <RoomChatPanel roomId={roomId} />
+        <div className="rounded-xl bg-black/20 p-3" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+          <RoomChatPanel roomId={roomId} style={{flex:1,minHeight:0}} />
 
 <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
   <div className="flex items-center justify-between">
@@ -273,31 +272,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   </div>
   <div className="mt-2 flex flex-wrap gap-2">
     {["Audio", "Video", "Games", "URL", "Tools"].map((x) => (
-      <span
-        key={x}
-        className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-1 opacity-70"
-        title="Reserved for room modules"
-      >
-        {x}
-      </span>
-    ))}
-  </div>
-</div>
-<div className="mt-3 rounded-2xl border border-dashed border-white/15 bg-black/10 p-4">
-  <div className="flex items-center justify-between">
-    <div className="text-xs font-semibold opacity-80">Stage</div>
-    <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-70">reserved</span>
-  </div>
-
-  <div className="mt-2 text-sm opacity-70">
-    This is where room modules will live (audio controls, video/stage, games, URL previews, tools).
-  </div>
-
-  <div className="mt-3 flex flex-wrap gap-2">
-    {["Audio", "Video", "Games", "URL", "Tools"].map((x) => (
-      <span key={x} className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-1 opacity-70">
-        {x}
-      </span>
+      <span key={x} className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-1 opacity-70">{x}</span>
     ))}
   </div>
 </div>
@@ -311,7 +286,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       <RoomHeader
       onOpenDetails={() => openSheet("roomDetails", { roomId })}
       title={roomLabel}
-      subtitle={`Lobby → ${roomLabel} • ${memberCount} members`}
+      subtitle={`${roomLabel} • ${memberCount} online`}
       memberCount={memberCount}
     />
 
