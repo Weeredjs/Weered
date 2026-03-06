@@ -78,6 +78,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [note,        setNote]        = useState("");
   const [renameVal,   setRenameVal]   = useState("");
   const [renaming,    setRenaming]    = useState(false);
+  const [chatDisabled, setChatDisabled] = useState(false);
 
   const selected = useMemo(() => {
     const id = selectedId || people[0]?.id || people[0]?.name || "";
@@ -127,6 +128,13 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
+  const doToggleChat = useCallback(() => {
+    const next = !chatDisabled;
+    setChatDisabled(next);
+    try { ctx?.sendAdmin?.("room:chat:" + (next ? "disable" : "enable"), {}); setNote(next ? "Chat disabled." : "Chat enabled."); }
+    catch { setNote("Toggle failed."); }
+  }, [ctx, chatDisabled]);
+
   const s = { // shared styles
     section: { marginTop: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
     label:   { fontSize: 11, fontWeight: 700, opacity: 0.6, letterSpacing: ".6px", textTransform: "uppercase" as const, marginBottom: 8 },
@@ -140,7 +148,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const statusLabel = locked ? "LOCKED" : slowSec > 0 ? `SLOW ${slowSec}s` : "UNLOCKED";
 
   return (
-    <div style={{ fontSize: 13, color: "rgba(243,244,246,.92)" }}>
+    <div style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
@@ -202,7 +210,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       {/* Moderation — mods only */}
       {allowed && (
         <details style={{ marginTop: 10 }}>
-          <summary style={{ ...s.label, cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)" }}>
+          <summary style={{ ...s.label, cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 13px", borderRadius: 10, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", marginBottom: 0 }}>
             <span>Moderation</span>
             <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: "rgba(124,58,237,.12)", border: "1px solid rgba(124,58,237,.25)", color: "rgb(216,180,254)" }}>mod</span>
           </summary>
@@ -256,6 +264,12 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <button style={s.btn} onClick={() => doAction("lock")}>Lock</button>
                 <button style={s.btnPrimary} onClick={() => doAction("unlock")}>Unlock</button>
+                <button
+                  style={{ ...s.btn, gridColumn: "span 2", borderColor: chatDisabled ? "rgba(16,185,129,.30)" : "rgba(239,68,68,.25)", background: chatDisabled ? "rgba(16,185,129,.08)" : "rgba(239,68,68,.08)", color: chatDisabled ? "rgb(167,243,208)" : "rgba(252,165,165,.90)" }}
+                  onClick={doToggleChat}
+                >
+                  {chatDisabled ? "Enable Chat" : "Disable Chat"}
+                </button>
               </div>
               <div style={{ marginTop: 8 }}>
                 <div style={{ ...s.label, marginBottom: 4 }}>Rename room</div>
