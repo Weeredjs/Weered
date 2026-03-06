@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -116,7 +116,7 @@ export default function LeftRail() {
   const lobbyHref = sub ? `/lobby?sub=${encodeURIComponent(sub)}` : "/lobby";
 
   const isLobbyActive = pathname.startsWith("/lobby");
-  const isHomeActive = pathname.startsWith("/room/@me") || pathname === "/";
+  const isHomeActive = pathname.startsWith("/home") || pathname === "/";
 
   const rawRoomKey = pickFirstString(joinedRoomId, activeRoomId, "");
   const roomLabel = useMemo(() => normRoomKey(rawRoomKey), [rawRoomKey]);
@@ -307,7 +307,7 @@ export default function LeftRail() {
             "weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " +
             (isHomeActive ? " weered-left-link-active" : "")
           }
-          href="/room/@me"
+          href="/home"
         >
           <span>Home</span>
           {isHomeActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
