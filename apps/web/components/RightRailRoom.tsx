@@ -76,6 +76,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [selectedId,  setSelectedId]  = useState("");
   const [confirm,     setConfirm]     = useState<{ kind: string; userId: string; name: string } | null>(null);
   const [note,        setNote]        = useState("");
+  const [renameVal,   setRenameVal]   = useState("");
+  const [renaming,    setRenaming]    = useState(false);
 
   const selected = useMemo(() => {
     const id = selectedId || people[0]?.id || people[0]?.name || "";
@@ -114,6 +116,16 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     } catch { setNote(`${confirm.kind} failed`); }
     setConfirm(null);
   }, [ctx, confirm]);
+
+
+  const doRename = useCallback(async () => {
+    const name = renameVal.trim();
+    if (!name) return;
+    setRenaming(true);
+    try { ctx?.renameRoom?.(name); setNote(`Renamed to "${name}"`); setRenameVal(""); }
+    catch { setNote("Rename failed."); }
+    finally { setRenaming(false); }
+  }, [ctx, renameVal]);
 
   const s = { // shared styles
     section: { marginTop: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
@@ -244,6 +256,13 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <button style={s.btn} onClick={() => doAction("lock")}>Lock</button>
                 <button style={s.btnPrimary} onClick={() => doAction("unlock")}>Unlock</button>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <div style={{ ...s.label, marginBottom: 4 }}>Rename room</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input style={s.input} placeholder="New room name…" value={renameVal} onChange={e => setRenameVal(e.target.value)} onKeyDown={e => e.key === "Enter" && doRename()} />
+                  <button style={s.btn} onClick={doRename} disabled={renaming || !renameVal.trim()}>{renaming ? "…" : "Rename"}</button>
+                </div>
               </div>
               <div style={{ marginTop: 8 }}>
                 <div style={{ ...s.label, marginBottom: 4 }}>Slow mode</div>

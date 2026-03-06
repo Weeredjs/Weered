@@ -573,7 +573,44 @@ async function main() {
     const logs = await prisma.globalAudit.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
     return reply.send({ ok: true, logs });
   });
+// POST /staff/lobby/lock — lock lobby chat (SUPPORT+)
+  app.post("/staff/lobby/lock", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const room = rooms.get("lobby");
+    if (room) room.locked = true;
+    await globalAudit(u.id, u.name, "lobby_lock");
+    if (room) broadcast(room, { type: "room:locked", roomId: "lobby" });
+    return reply.send({ ok: true });
+  });
 
+  // POST /staff/lobby/unlock — unlock lobby chat (SUPPORT+)
+  app.post("/staff/lobby/unlock", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const room = rooms.get("lobby");
+    if (room) room.locked = false;
+    await globalAudit(u.id, u.name, "lobby_unlock");
+    if (room) broadcast(room, { type: "room:unlocked", roomId: "lobby" });
+    return reply.send({ ok: true });
+  });
+
+  // POST /staff/lobby/clear-chat — clear lobby messages (STAFF+)
+  app.post("/staff/lobby/clear-chat", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const room = rooms.get("lobby");
+    await prisma.roomMessage.deleteMany({ where: { roomId: "lobby" } });
+    await globalAudit(u.id, u.name, "lobby_clear_chat");
+    if (room) broadcast(room, { type: "chat:cleared", roomId: "lobby" });
+    return reply.send({ ok: true });
+  });
   // POST /staff/users/:userId/kick
   app.post("/staff/users/:userId/kick", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);

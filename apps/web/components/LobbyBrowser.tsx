@@ -70,7 +70,7 @@ export default function LobbyBrowser() {
         name:   String(r.name || r.id || ""),
         locked: Boolean(r.locked),
         users:  Number(r.users ?? r.memberCount ?? 0),
-      })).filter((r: RoomRow) => r.id);
+      })).filter((r: RoomRow) => r.id && r.id !== "@me" && r.id !== "lobby");
       setRooms(list);
     } catch {}
     finally { setLoading(false); }
