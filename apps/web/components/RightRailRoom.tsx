@@ -210,9 +210,9 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       {/* Moderation — mods only */}
       {allowed && (
         <details style={{ marginTop: 10 }}>
-          <summary style={{ ...s.label, cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 13px", borderRadius: 10, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", marginBottom: 0 }}>
-            <span>Moderation</span>
-            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: "rgba(124,58,237,.12)", border: "1px solid rgba(124,58,237,.25)", color: "rgb(216,180,254)" }}>mod</span>
+          <summary style={{ ...s.label, cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 13px", borderRadius: 10, border: "1px solid rgba(167,139,250,.55)", background: "rgba(124,58,237,.22)", marginBottom: 0, userSelect: "none" }}>
+            <span style={{ color: "rgb(233,220,255)", fontWeight: 800 }}>Moderation</span>
+            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: "rgba(167,139,250,.25)", border: "1px solid rgba(167,139,250,.50)", color: "rgb(233,220,255)", fontWeight: 700 }}>mod tools</span>
           </summary>
 
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
