@@ -13,6 +13,13 @@ enum RoomRole {
   MEMBER
 }
 
+enum GlobalRole {
+  USER
+  SUPPORT
+  STAFF
+  GOD
+}
+
 model Room {
   id        String   @id
   name      String   @default("")
@@ -84,9 +91,12 @@ model User {
   id          String     @id @default(cuid())
   usernameKey String     @unique
   name        String     @default("")
+  globalRole  GlobalRole @default(USER)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   LocalAuth   LocalAuth?
+  staffNotes  StaffNote[] @relation("StaffNoteTarget")
+  auditLogs   GlobalAudit[] @relation("GlobalAuditTarget")
 }
 
 model LocalAuth {
@@ -97,4 +107,30 @@ model LocalAuth {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model StaffNote {
+  id        String   @id @default(cuid())
+  targetId  String
+  authorId  String
+  authorName String  @default("")
+  body      String
+  createdAt DateTime @default(now())
+
+  target User @relation("StaffNoteTarget", fields: [targetId], references: [id], onDelete: Cascade)
+}
+
+model GlobalAudit {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorName  String   @default("")
+  action     String
+  targetId   String?
+  targetName String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  target User? @relation("GlobalAuditTarget", fields: [targetId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
