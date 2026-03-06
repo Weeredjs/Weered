@@ -71,7 +71,7 @@ export default function LobbyChatPanel(
   };
 
   return (
-    <div style={props.style}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...props.style }}>
       {!props.embedded && (
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-semibold text-white/90">{props.title || "Lobby Chat"}</div>
@@ -85,7 +85,8 @@ export default function LobbyChatPanel(
           border: "1px solid var(--weered-border)",
           borderRadius: 14,
           padding: 10,
-          height: 260,
+          flex: 1,
+          minHeight: 0,
           overflow: "auto",
           background: "rgba(255,255,255,.02)",
           marginBottom: 10,
