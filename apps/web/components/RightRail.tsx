@@ -125,7 +125,7 @@ function LobbyModPanel({ globalRole }: { globalRole: string }) {
   async function action(type: string) {
     setLoading(true); setNote("");
     try {
-      const j = await apiFetch("/staff/lobby/" + type, { method: "POST" });
+      const j = await apiFetch("/staff/lobby/" + type, { method: "POST", body: JSON.stringify({}) });
       setNote(j.ok ? `Done: ${type}` : j.error || "Failed.");
     } catch { setNote("Request failed."); }
     finally { setLoading(false); }
