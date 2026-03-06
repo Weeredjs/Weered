@@ -603,7 +603,55 @@ async function main() {
 
   // ── Start HTTP ────────────────────────────────────────────────────────────────
 
-  await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
+  await 
+    app.get("/staff/rooms", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const list = await prisma.room.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, locked: true, createdAt: true, _count: { select: { members: true } } },
+    });
+
+    const rooms = list.map(r => ({
+      id: r.id, name: r.name || "", locked: Boolean(r.locked),
+      members: r._count.members, createdAt: r.createdAt.toISOString(),
+    }));
+
+    return reply.send({ ok: true, rooms });
+  });
+
+  // DELETE /staff/rooms/:roomId — STAFF+ can delete rooms
+  app.delete("/staff/rooms/:roomId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const roomId = String((req as any).params?.roomId || "");
+    if (!roomId || roomId === "lobby") return reply.code(400).send({ ok: false, error: "invalid_room" });
+
+    const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true } });
+    if (!room) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    // Kick anyone currently in the room
+    const liveRoom = rooms.get(roomId);
+    if (liveRoom) {
+      for (const s of liveRoom.sockets) {
+        send(s, { type: "room:deleted", roomId });
+        try { (s as any).close(4000, "room:deleted"); } catch {}
+      }
+      rooms.delete(roomId);
+    }
+
+    await prisma.room.delete({ where: { id: roomId } });
+    await globalAudit(u.id, u.name, "room_delete", roomId, room.name || roomId);
+
+    return reply.send({ ok: true });
+  });
+  app.listen({ host: "0.0.0.0", port: HTTP_PORT });
   app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
 
   // ── WebSocket server ──────────────────────────────────────────────────────────

@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 type GlobalRole = "USER" | "SUPPORT" | "STAFF" | "GOD";
-type StaffUser = { id: string; name: string; usernameKey: string; globalRole: GlobalRole; createdAt: string };
-type AuditLog  = { id: string; actorName: string; action: string; targetName?: string; meta?: any; createdAt: string };
-type StaffNote = { id: string; authorName: string; body: string; createdAt: string };
+type StaffUser  = { id: string; name: string; usernameKey: string; globalRole: GlobalRole; createdAt: string };
+type AuditLog   = { id: string; actorName: string; action: string; targetName?: string; meta?: any; createdAt: string };
+type StaffNote  = { id: string; authorName: string; body: string; createdAt: string };
+type StaffRoom  = { id: string; name: string; locked: boolean; members: number; createdAt: string };
 
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
@@ -42,16 +43,23 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────────────────
+const S = {
+  card:  { borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "12px 14px" } as React.CSSProperties,
+  btn:   { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.90)" } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  danger:{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.30)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
+};
+
+// ── Users Tab ─────────────────────────────────────────────────────────────────
 
 function UsersTab({ myRole }: { myRole: GlobalRole }) {
-  const [q, setQ]             = useState("");
-  const [users, setUsers]     = useState<StaffUser[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [q, setQ]               = useState("");
+  const [users, setUsers]       = useState<StaffUser[]>([]);
+  const [loading, setLoading]   = useState(false);
   const [selected, setSelected] = useState<StaffUser | null>(null);
-  const [notes, setNotes]     = useState<StaffNote[]>([]);
-  const [newNote, setNewNote] = useState("");
-  const [note, setNote]       = useState("");
+  const [notes, setNotes]       = useState<StaffNote[]>([]);
+  const [newNote, setNewNote]   = useState("");
+  const [note, setNote]         = useState("");
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -64,8 +72,7 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
   useEffect(() => { void search(); }, []);
 
   async function loadNotes(u: StaffUser) {
-    setSelected(u);
-    setNotes([]);
+    setSelected(u); setNotes([]);
     const j = await apiFetch(`/staff/users/${u.id}/notes`);
     setNotes(j.notes || []);
   }
@@ -89,29 +96,19 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
     setNote(j.ok ? `Kicked ${name}` : j.error || "Failed.");
   }
 
-  const canAssign = myRole === "STAFF" || myRole === "GOD";
+  const canAssign    = myRole === "STAFF" || myRole === "GOD";
   const canAssignGod = myRole === "GOD";
-
-  const s = {
-    card:  { borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "12px 14px" } as React.CSSProperties,
-    btn:   { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.90)" } as React.CSSProperties,
-    input: { width: "100%", padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  };
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start" }}>
-      {/* Left: user list */}
       <div>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <input style={{ ...s.input, flex: 1 }} placeholder="Search users…" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} />
-          <button style={s.btn} onClick={search}>{loading ? "…" : "Search"}</button>
+          <input style={{ ...S.input, flex: 1 }} placeholder="Search users…" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} />
+          <button style={S.btn} onClick={search}>{loading ? "…" : "Search"}</button>
         </div>
-
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {users.map(u => (
-            <div key={u.id}
-              onClick={() => loadNotes(u)}
-              style={{ ...s.card, cursor: "pointer", border: selected?.id === u.id ? "1px solid rgba(124,58,237,.40)" : "1px solid rgba(255,255,255,.08)", background: selected?.id === u.id ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.03)" }}>
+            <div key={u.id} onClick={() => loadNotes(u)} style={{ ...S.card, cursor: "pointer", border: selected?.id === u.id ? "1px solid rgba(124,58,237,.40)" : "1px solid rgba(255,255,255,.08)", background: selected?.id === u.id ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.03)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name}</div>
@@ -125,12 +122,10 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
         </div>
       </div>
 
-      {/* Right: user detail */}
       <div>
         {selected ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Header */}
-            <div style={s.card}>
+            <div style={S.card}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{selected.name}</div>
@@ -138,24 +133,21 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
                 </div>
                 <RoleBadge role={selected.globalRole} />
               </div>
-
-              {/* Actions */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                <button style={s.btn} onClick={() => kickUser(selected.id, selected.name)}>Global Kick</button>
+                <button style={S.danger} onClick={() => kickUser(selected.id, selected.name)}>Global Kick</button>
                 {canAssign && (
                   <>
-                    {selected.globalRole !== "SUPPORT" && <button style={s.btn} onClick={() => setRole(selected.id, "SUPPORT")}>→ SUPPORT</button>}
-                    {selected.globalRole !== "USER"    && <button style={s.btn} onClick={() => setRole(selected.id, "USER")}>→ USER</button>}
-                    {canAssignGod && selected.globalRole !== "STAFF" && <button style={s.btn} onClick={() => setRole(selected.id, "STAFF")}>→ STAFF</button>}
-                    {canAssignGod && selected.globalRole !== "GOD"   && <button style={{ ...s.btn, borderColor: "rgba(245,158,11,.35)", color: "rgb(253,230,138)" }} onClick={() => setRole(selected.id, "GOD")}>→ GOD</button>}
+                    {selected.globalRole !== "SUPPORT" && <button style={S.btn} onClick={() => setRole(selected.id, "SUPPORT")}>→ SUPPORT</button>}
+                    {selected.globalRole !== "USER"    && <button style={S.btn} onClick={() => setRole(selected.id, "USER")}>→ USER</button>}
+                    {canAssignGod && selected.globalRole !== "STAFF" && <button style={S.btn} onClick={() => setRole(selected.id, "STAFF")}>→ STAFF</button>}
+                    {canAssignGod && selected.globalRole !== "GOD"   && <button style={{ ...S.btn, borderColor: "rgba(245,158,11,.35)", color: "rgb(253,230,138)" }} onClick={() => setRole(selected.id, "GOD")}>→ GOD</button>}
                   </>
                 )}
               </div>
               {note && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.65 }}>{note}</div>}
             </div>
 
-            {/* Notes */}
-            <div style={s.card}>
+            <div style={S.card}>
               <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.65, letterSpacing: ".6px", textTransform: "uppercase", marginBottom: 10 }}>Staff Notes</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
                 {notes.map(n => (
@@ -166,14 +158,8 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
                 ))}
                 {!notes.length && <div style={{ fontSize: 12, opacity: 0.45 }}>No notes yet.</div>}
               </div>
-              <textarea
-                value={newNote}
-                onChange={e => setNewNote(e.target.value)}
-                placeholder="Add a staff note…"
-                rows={3}
-                style={{ ...s.input, resize: "none", marginBottom: 8 }}
-              />
-              <button style={{ ...s.btn, width: "100%" }} onClick={addNote}>Save note</button>
+              <textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Add a staff note…" rows={3} style={{ ...S.input, resize: "none", marginBottom: 8 }} />
+              <button style={{ ...S.btn, width: "100%" }} onClick={addNote}>Save note</button>
             </div>
           </div>
         ) : (
@@ -183,6 +169,60 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
     </div>
   );
 }
+
+// ── Rooms Tab ─────────────────────────────────────────────────────────────────
+
+function RoomsTab({ myRole }: { myRole: GlobalRole }) {
+  const [rooms, setRooms]     = useState<StaffRoom[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg]         = useState("");
+  const canDelete             = myRole === "GOD" || myRole === "STAFF";
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const j = await apiFetch("/staff/rooms");
+      setRooms(j.rooms || []);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { void load(); }, []);
+
+  async function deleteRoom(id: string, name: string) {
+    if (!confirm(`Delete room "${name || id}"? This cannot be undone.`)) return;
+    const j = await apiFetch(`/staff/rooms/${id}`, { method: "DELETE" });
+    if (j.ok) { setMsg(`Deleted ${name || id}`); load(); }
+    else setMsg(j.error || "Failed.");
+  }
+
+  return (
+    <div>
+      {msg && <div style={{ marginBottom: 12, fontSize: 12, opacity: 0.65 }}>{msg}</div>}
+      {loading && <div style={{ opacity: 0.5, fontSize: 13 }}>Loading…</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {rooms.map(r => (
+          <div key={r.id} style={{ ...S.card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                {r.name || <span style={{ opacity: 0.4 }}>(unnamed)</span>}
+                {r.locked && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(239,68,68,.30)", color: "rgba(252,165,165,.80)", background: "rgba(239,68,68,.08)" }}>LOCKED</span>}
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>
+                {r.id} · {r.members} members · {fmtDate(r.createdAt)}
+              </div>
+            </div>
+            {canDelete && (
+              <button style={{ ...S.danger, flexShrink: 0 }} onClick={() => deleteRoom(r.id, r.name)}>Delete</button>
+            )}
+          </div>
+        ))}
+        {!rooms.length && !loading && <div style={{ opacity: 0.45, fontSize: 13 }}>No rooms found.</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Audit Tab ─────────────────────────────────────────────────────────────────
 
 function AuditTab() {
   const [logs, setLogs]       = useState<AuditLog[]>([]);
@@ -194,9 +234,9 @@ function AuditTab() {
   }, []);
 
   const actionColor = (a: string) => {
-    if (a.includes("kick"))    return "rgba(239,68,68,.80)";
-    if (a.includes("role"))    return "rgba(124,58,237,.90)";
-    if (a.includes("note"))    return "rgba(14,165,233,.80)";
+    if (a.includes("kick")   || a.includes("delete")) return "rgba(239,68,68,.80)";
+    if (a.includes("role"))  return "rgba(124,58,237,.90)";
+    if (a.includes("note"))  return "rgba(14,165,233,.80)";
     return "rgba(148,163,184,.80)";
   };
 
@@ -225,13 +265,12 @@ export default function StaffPage() {
   const router = useRouter();
   const [myRole, setMyRole]   = useState<GlobalRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab]         = useState<"users" | "audit">("users");
+  const [tab, setTab]         = useState<"users" | "rooms" | "audit">("users");
 
   useEffect(() => {
     apiFetch("/staff/me").then(j => {
       if (!j.ok || !["SUPPORT","STAFF","GOD"].includes(j.globalRole)) {
-        router.replace("/lobby");
-        return;
+        router.replace("/lobby"); return;
       }
       setMyRole(j.globalRole);
       setLoading(false);
@@ -247,10 +286,10 @@ export default function StaffPage() {
   if (!myRole) return null;
 
   const canSeeAudit = myRole === "STAFF" || myRole === "GOD";
+  const tabs = ["users", "rooms", ...(canSeeAudit ? ["audit"] : [])] as const;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.92)", fontFamily: "system-ui, sans-serif", padding: "0 0 60px" }}>
-      {/* Header */}
       <div style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-.3px" }}>weered ops</div>
@@ -262,9 +301,8 @@ export default function StaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ padding: "16px 24px 0", display: "flex", gap: 4 }}>
-        {(["users", ...(canSeeAudit ? ["audit"] : [])] as const).map(t => (
+        {tabs.map(t => (
           <button key={t} onClick={() => setTab(t as any)}
             style={{ padding: "8px 16px", borderRadius: 9, border: "none", background: tab === t ? "rgba(124,58,237,.20)" : "transparent", color: tab === t ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.70)", fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontSize: 13 }}>
             {t}
@@ -272,10 +310,10 @@ export default function StaffPage() {
         ))}
       </div>
 
-      {/* Content */}
       <div style={{ padding: "20px 24px" }}>
-        {tab === "users"  && <UsersTab myRole={myRole} />}
-        {tab === "audit"  && canSeeAudit && <AuditTab />}
+        {tab === "users" && <UsersTab myRole={myRole} />}
+        {tab === "rooms" && <RoomsTab myRole={myRole} />}
+        {tab === "audit" && canSeeAudit && <AuditTab />}
       </div>
     </div>
   );
