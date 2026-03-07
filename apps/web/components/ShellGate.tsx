@@ -2,8 +2,9 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
+import SiteFooter from "./SiteFooter";
 
-const NO_SHELL_ROUTES = ["/login", "/register", "/staff"];
+const NO_SHELL_ROUTES = ["/login", "/register", "/staff", "/about", "/premium", "/contact"];
 
 export default function ShellGate({
   left,
@@ -19,13 +20,21 @@ export default function ShellGate({
     r => pathname === r || pathname.startsWith(r + "/") || pathname.startsWith(r + "?")
   );
 
-  if (bare) return <>{children}</>;
+  if (bare) return (
+    <>
+      {children}
+      <SiteFooter />
+    </>
+  );
 
   return (
-    <div className="weered-shell">
-      <aside className="weered-left">{left}</aside>
-      <main className="weered-center">{children}</main>
-      <aside className="weered-right">{right}</aside>
-    </div>
+    <>
+      <div className="weered-shell">
+        <aside className="weered-left">{left}</aside>
+        <main className="weered-center">{children}</main>
+        <aside className="weered-right">{right}</aside>
+      </div>
+      <SiteFooter />
+    </>
   );
 }
