@@ -20,7 +20,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
-type AuthedUser = { id: string; name: string; globalRole?: string };
+type AuthedUser = { id: string; name: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
@@ -231,8 +231,12 @@ function isOwner(room: RoomState, userId?: string) {
 function isMod(room: RoomState, userId?: string) {
   return Boolean(userId && room.mods.has(userId));
 }
-function isModOrOwner(room: RoomState, userId?: string) {
-  return isOwner(room, userId) || isMod(room, userId);
+function isElevatedGlobal(globalRole?: string) {
+  const r = String(globalRole || "").toUpperCase();
+  return r === "GOD" || r === "STAFF" || r === "SUPPORT" || r === "ADMIN";
+}
+function isModOrOwner(room: RoomState, userId?: string, globalRole?: string) {
+  return isElevatedGlobal(globalRole) || isOwner(room, userId) || isMod(room, userId);
 }
 function roleOf(room: RoomState, userId: string): Role {
   if (isOwner(room, userId)) return "owner";
@@ -275,7 +279,7 @@ function publishState(room: RoomState) {
 
   for (const s of room.sockets) {
     const uid = s.user?.id;
-    if (!uid || !isModOrOwner(room, uid)) continue;
+    if (!uid || !isModOrOwner(room, uid, s.user?.globalRole)) continue;
     send(s, {
       type: "room:adminState", roomId: room.roomId, name: room.name || room.roomId,
       locked: Boolean(room.locked), ownerId: room.ownerId || "",
@@ -323,14 +327,6 @@ function verifyToken(token?: string): AuthedUser | null {
     if (!id || !name) return null;
     return { id, name };
   } catch { return null; }
-}
-
-// Hydrate globalRole onto an AuthedUser from DB (called once per WS connection)
-async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
-  try {
-    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true } });
-    return { ...user, globalRole: u?.globalRole ?? "USER" };
-  } catch { return user; }
 }
 
 function authFromHeader(authHeader?: string): AuthedUser | null {
@@ -398,9 +394,8 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER" };
-    room.users.set(ws.user.id, userEntry);
-    broadcast(room, { type: "presence:join", roomId, user: userEntry });
+    room.users.set(ws.user.id, { id: ws.user.id, name: ws.user.name });
+    broadcast(room, { type: "presence:join", roomId, user: { id: ws.user.id, name: ws.user.name } });
   }
 
   if (ws.user) { try { await persistMember(room, ws.user); } catch {} }
@@ -861,8 +856,8 @@ async function main() {
         if (msg.type === "auth:hello") {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
-          ws.user = await hydrateGlobalRole(u);
-          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole } });
+          ws.user = u;
+          send(ws, { type: "auth:ok", user: { id: u.id, name: u.name } });
           return;
         }
 
@@ -907,7 +902,7 @@ async function main() {
           const uid = ws.user.id;
           const isLobby = String(roomId || "").startsWith("lobby:");
           if (isLobby) room.locked = false;
-          if (room.locked && !isLobby && !isModOrOwner(room, uid)) {
+          if (room.locked && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
             if (!room.knocks.some((k) => k.userId === uid)) {
               room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
               if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
@@ -973,8 +968,15 @@ async function main() {
 
         const actorId = ws.user.id;
         const actorName = ws.user.name;
-        const actorIsMod = isModOrOwner(room, actorId);
-        const actorIsOwner = isOwner(room, actorId);
+        const actorGlobalRole = ws.user.globalRole || "USER";
+        const actorIsMod = isModOrOwner(room, actorId, actorGlobalRole);
+        const actorIsOwner = isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole);
+
+        if (msg.type === "room:getAdminState") {
+          // Allow any user to request presence state; admin state only goes to mods
+          publishState(room);
+          return;
+        }
 
         if (msg.type === "room:rename") {
           if (!actorIsMod) return;

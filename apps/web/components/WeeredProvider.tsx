@@ -242,6 +242,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           }
           return rid;
         });
+        // Immediately request fresh admin state if mod
+        try { ws.send(JSON.stringify({ type: "room:getAdminState", roomId: rid })); } catch {}
         return;
       }
 
@@ -448,8 +450,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
   function sendAdmin(type: string, payload: any = {}) {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !activeRoomId) return;
-    ws.send(JSON.stringify({ type, roomId: activeRoomId, ...payload }));
+    const rid = activeRoomId || joinedRoomId;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !rid) return;
+    ws.send(JSON.stringify({ type, roomId: rid, ...payload }));
   }
 
   const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
