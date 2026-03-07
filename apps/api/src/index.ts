@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import Fastify from "fastify";
-import cors from "@fastify/cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer } from "ws";
@@ -266,8 +265,7 @@ function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: numb
   }
 }
 
-function publishState(room: RoomState) {
-  // Build a map of globalRole from connected sockets for this room
+function buildStatePayload(room: RoomState) {
   const roleMap = new Map<string, string>();
   for (const s of room.sockets) {
     if (s.user?.id && s.user?.globalRole) roleMap.set(s.user.id, s.user.globalRole);
@@ -277,12 +275,30 @@ function publishState(room: RoomState) {
     role: u.id ? roleOf(room, u.id) : "member",
     globalRole: (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
   }));
-
-  broadcast(room, {
+  return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
     users, count: users.length, locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
-  });
+  };
+}
+
+// Send full state to a single socket only (used on join — don't overwrite others' incremental state)
+function publishStateToSocket(ws: Sock, room: RoomState) {
+  send(ws, buildStatePayload(room));
+  const uid = ws.user?.id;
+  if (uid && isModOrOwner(room, uid, ws.user?.globalRole)) {
+    send(ws, {
+      type: "room:adminState", roomId: room.roomId, name: room.name || room.roomId,
+      locked: Boolean(room.locked), ownerId: room.ownerId || "",
+      mods: Array.from(room.mods.values()), knocks: room.knocks.slice(-50),
+      banned: Array.from(room.banned.values()), audit: room.audit.slice(-50),
+    });
+  }
+}
+
+function publishState(room: RoomState) {
+  const payload = buildStatePayload(room);
+  broadcast(room, payload);
 
   for (const s of room.sockets) {
     const uid = s.user?.id;
@@ -418,7 +434,8 @@ async function doJoin(ws: Sock, roomId: string) {
 
   if (ws.user) { try { await persistMember(room, ws.user); } catch {} }
 
-  publishState(room);
+  // Only send full state to the joining socket — everyone else already got presence:join
+  publishStateToSocket(ws, room);
 
   if (room.msgs.length) {
     send(ws, { type: "chat:history", roomId, msgs: room.msgs.slice(-80) });
@@ -431,7 +448,6 @@ async function doJoin(ws: Sock, roomId: string) {
 
 async function main() {
   const app = Fastify({ logger: true });
-  await app.register(cors, { origin: true, credentials: true });
 
   // Health
   app.get("/health", async () => {
