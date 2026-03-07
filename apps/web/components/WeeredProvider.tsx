@@ -31,6 +31,7 @@ type Ctx = {
   activeRoomId: string; joinedRoomId: string;
   setActiveRoomId: (id: string) => void;
   users: RoomUser[]; msgs: ChatMsg[];
+  usersByRoom: Record<string, RoomUser[]>;
   meta: RoomMeta | null; admin: AdminState | null;
   role: Role; joinStatus: JoinStatus;
   rooms: any[];
@@ -206,17 +207,14 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "auth:ok") {
         setWsReady(true);
         setWsState(WebSocket.OPEN);
-        // Grab user from server payload
         const u = msg.user ?? msg.payload?.user ?? null;
         if (u) {
           setMe(u);
           try { localStorage.setItem("weered_user", JSON.stringify(u)); } catch {}
-          // Use globalRole from WS payload immediately — no need to wait for REST
           if (u.globalRole) setGlobalRole(String(u.globalRole));
         } else {
           try { const raw = localStorage.getItem("weered_user"); if (raw) setMe(JSON.parse(raw)); } catch {}
         }
-        // Join pending room
         sendJoin(ws);
         requestRoomsList(ws);
         return;
@@ -243,6 +241,32 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
           }
           return rid;
+        });
+        return;
+      }
+
+      // Another user joined this room
+      if (msg.type === "presence:join") {
+        const rid  = String(msg.roomId || "");
+        const user = msg.user as RoomUser | null;
+        if (!rid || !user?.id) return;
+        setUsersByRoom(prev => {
+          const cur = prev[rid] || [];
+          if (cur.find((u: RoomUser) => u.id === user.id)) return prev;
+          return { ...prev, [rid]: [...cur, user] };
+        });
+        return;
+      }
+
+      // Another user left this room
+      if (msg.type === "presence:leave") {
+        const rid    = String(msg.roomId || "");
+        const userId = String(msg.userId || "");
+        if (!rid || !userId) return;
+        setUsersByRoom(prev => {
+          const cur = prev[rid];
+          if (!cur) return prev;
+          return { ...prev, [rid]: cur.filter((u: RoomUser) => u.id !== userId) };
         });
         return;
       }
@@ -445,6 +469,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     wsReady, wsState,
     activeRoomId, joinedRoomId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus,
+    usersByRoom,
     rooms, join, knock,
     devLogin, logout,
     sendChat, renameRoom,
