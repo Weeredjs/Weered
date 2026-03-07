@@ -21,11 +21,18 @@ function canMod(role: string) {
   return ["owner", "admin", "mod", "moderator", "staff", "god"].includes(normRole(role));
 }
 function bestMyRole(ctx: any) {
-  return String(ctx?.role ?? ctx?.me?.role ?? ctx?.me?.globalRole ?? ctx?.auth?.user?.role ?? ctx?.user?.role ?? "");
+  // ctx.role is the room role; globalRole is the platform-wide role
+  const roomRole   = String(ctx?.role ?? "").toLowerCase();
+  const globalRole = String(ctx?.globalRole ?? ctx?.me?.globalRole ?? "").toLowerCase();
+  // Elevated global roles always win
+  if (["god","staff","support","admin"].includes(globalRole)) return globalRole;
+  if (roomRole) return roomRole;
+  return globalRole || "";
 }
 
 function extractParticipants(ctx: any, roomId: string): Person[] {
   const tries = [
+    ctx?.usersByRoom?.[roomId],           // ← WeeredProvider primary source
     ctx?.presence?.rooms?.[roomId]?.users,
     ctx?.presence?.rooms?.[roomId]?.members,
     ctx?.presence?.byRoom?.[roomId]?.users,
