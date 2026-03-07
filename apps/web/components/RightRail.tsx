@@ -7,7 +7,7 @@ import { useWeered } from "./WeeredProvider";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-type RoomRow = { id: string; name: string; locked: boolean; users: number };
+type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string };
 
 function authHeaders() {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
@@ -18,39 +18,60 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
-  const [q, setQ]           = React.useState("");
-  const [newRoom, setNewRoom] = React.useState("");
+// ── RoomsPanel ─────────────────────────────────────────────────────────────────
+// lobbyId = which lobby we're in (e.g. "r/gaming", "lobby", "weered.ca")
+// Shows only rooms belonging to this lobby. Create room also scoped to lobby.
+
+function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId: string }) {
+  const [q,        setQ]        = React.useState("");
+  const [newRoom,  setNewRoom]  = React.useState("");
   const [creating, setCreating] = React.useState(false);
-  const [rows, setRows]     = React.useState<RoomRow[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [err, setErr]       = React.useState("");
+  const [rows,     setRows]     = React.useState<RoomRow[]>([]);
+  const [loading,  setLoading]  = React.useState(false);
+  const [err,      setErr]      = React.useState("");
 
   async function load() {
     setLoading(true); setErr("");
     try {
-      const r = await fetch(API_BASE + "/rooms", { cache: "no-store" });
+      // Fetch rooms scoped to this lobby
+      const url = lobbyId
+        ? `${API_BASE}/lobbies/${encodeURIComponent(lobbyId)}/rooms`
+        : `${API_BASE}/rooms`;
+      const r = await fetch(url, { cache: "no-store" });
       const j = await r.json();
-      setRows((Array.isArray(j?.rooms) ? j.rooms : []).map((r: any) => ({
-        id: String(r.id || ""), name: String(r.name || r.id || ""),
-        locked: Boolean(r.locked), users: Number(r.users ?? r.memberCount ?? 0),
+      const raw = Array.isArray(j?.rooms) ? j.rooms : [];
+      setRows(raw.map((r: any) => ({
+        id:      String(r.id || ""),
+        name:    String(r.name || r.id || ""),
+        locked:  Boolean(r.locked),
+        users:   Number(r.onlineCount ?? r.users ?? r.memberCount ?? 0),
+        lobbyId: r.lobbyId ?? lobbyId,
       })).filter((r: RoomRow) => r.id));
     } catch (e: any) { setErr(String(e?.message || e)); }
     finally { setLoading(false); }
   }
 
   async function createRoom() {
-    const id = newRoom.trim(); if (!id) return;
+    const name = newRoom.trim();
+    if (!name) return;
+    if (!lobbyId) { setErr("No lobby context — can't create room."); return; }
     setCreating(true); setErr("");
     try {
-      const j = await fetch(API_BASE + "/rooms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: id }) }).then(r => r.json());
-      if (!j?.ok) throw new Error(j?.error || "create failed");
+      const j = await fetch(`${API_BASE}/rooms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ name, lobbyId }),
+      }).then(r => r.json());
+      if (!j?.ok) throw new Error(j?.message || j?.error || "create failed");
       setNewRoom(""); await load();
     } catch (e: any) { setErr(String(e?.message || e)); }
     finally { setCreating(false); }
   }
 
-  React.useEffect(() => { void load(); const t = setInterval(load, 6000); return () => clearInterval(t); }, []);
+  // Reload when lobbyId changes (switching lobbies)
+  React.useEffect(() => { void load(); }, [lobbyId]);
+  // Poll every 6s
+  React.useEffect(() => { const t = setInterval(load, 6000); return () => clearInterval(t); }, [lobbyId]);
 
   const filtered = rows
     .filter(r => !q.trim() || (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase()))
@@ -63,7 +84,14 @@ function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>Rooms</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Rooms</div>
+        {lobbyId && (
+          <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(167,139,250,.70)", background: "rgba(124,58,237,.10)", border: "1px solid rgba(124,58,237,.20)", borderRadius: 6, padding: "2px 7px" }}>
+            {lobbyId}
+          </div>
+        )}
+      </div>
 
       {/* Create */}
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -83,9 +111,13 @@ function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
       {/* List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 360, overflowY: "auto" }}>
         {loading && !rows.length && <div style={{ fontSize: 12, opacity: 0.5 }}>Loading…</div>}
-        {!loading && !filtered.length && <div style={{ fontSize: 12, opacity: 0.5 }}>No rooms.</div>}
+        {!loading && !filtered.length && (
+          <div style={{ fontSize: 12, opacity: 0.4, padding: "8px 0" }}>
+            {lobbyId ? `No rooms in ${lobbyId} yet.` : "No rooms."}
+          </div>
+        )}
         {filtered.slice(0, 40).map(rm => {
-          const active = rm.id === currentRoomId;
+          const active   = rm.id === currentRoomId;
           const hasUsers = rm.users > 0;
           return (
             <Link key={rm.id} href={"/room/" + encodeURIComponent(rm.id)} style={{
@@ -104,7 +136,7 @@ function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
               </div>
               {hasUsers && (
                 <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", flexShrink: 0 }}>
-                  open
+                  live
                 </span>
               )}
             </Link>
@@ -115,17 +147,20 @@ function RoomsPanel({ currentRoomId }: { currentRoomId: string }) {
   );
 }
 
-function LobbyModPanel({ globalRole }: { globalRole: string }) {
-  const canMod = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT";
+// ── LobbyModPanel ──────────────────────────────────────────────────────────────
+
+function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: string }) {
+  const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
 
-  const [note, setNote]   = React.useState("");
+  const [note,    setNote]    = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
   async function action(type: string) {
     setLoading(true); setNote("");
     try {
-      const j = await apiFetch("/staff/lobby/" + type, { method: "POST", body: JSON.stringify({}) });
+      const path = lobbyId ? `/staff/lobby/${encodeURIComponent(lobbyId)}/${type}` : `/staff/lobby/${type}`;
+      const j = await apiFetch(path, { method: "POST", body: JSON.stringify({}) });
       setNote(j.ok ? `Done: ${type}` : j.error || "Failed.");
     } catch { setNote("Request failed."); }
     finally { setLoading(false); }
@@ -155,21 +190,27 @@ function LobbyModPanel({ globalRole }: { globalRole: string }) {
   );
 }
 
-export default function RightRail() {
-  const pathname     = usePathname() || "";
+// ── RightRail ──────────────────────────────────────────────────────────────────
+
+export default function RightRail({ lobbyId }: { lobbyId?: string }) {
+  const pathname       = usePathname() || "";
   const { globalRole } = useWeered() as any;
 
-  const currentRoomId = (() => {
-    if (pathname === "/lobby") return "lobby";
-    if (pathname.startsWith("/room/")) return decodeURIComponent(pathname.replace("/room/", ""));
+  // Resolve lobby from prop (passed by RightRailSwitch) or fall back to pathname
+  const resolvedLobbyId = lobbyId ?? (() => {
+    if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
+      const seg = pathname.replace("/lobby/", "").replace("/lobby", "");
+      return seg ? decodeURIComponent(seg) : "lobby";
+    }
     return "lobby";
   })();
 
-  const ctxLabel = (() => {
-    if (pathname === "/lobby") return "lobby";
-    if (pathname.startsWith("/room/")) return "room: " + decodeURIComponent(pathname.replace("/room/", ""));
-    return pathname;
+  const currentRoomId = (() => {
+    if (pathname.startsWith("/room/")) return decodeURIComponent(pathname.replace("/room/", ""));
+    return resolvedLobbyId;
   })();
+
+  const ctxLabel = resolvedLobbyId || pathname;
 
   return (
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
@@ -182,8 +223,8 @@ export default function RightRail() {
         <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)", opacity: 0.7 }}>tools</span>
       </div>
 
-      <LobbyModPanel globalRole={globalRole || ""} />
-      <RoomsPanel currentRoomId={currentRoomId} />
+      <LobbyModPanel globalRole={globalRole || ""} lobbyId={resolvedLobbyId} />
+      <RoomsPanel currentRoomId={currentRoomId} lobbyId={resolvedLobbyId} />
     </div>
   );
 }
