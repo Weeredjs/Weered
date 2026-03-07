@@ -52,30 +52,66 @@ type Flair = {
   icon?: React.ReactNode;
 };
 
+// Inline SVG icons — no emoji, no mojibake
+const ICON_GOD = (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M6 1L7.5 4.5H11L8.5 6.8L9.5 10L6 8L2.5 10L3.5 6.8L1 4.5H4.5L6 1Z" fill="#fcd34d" stroke="#f59e0b" strokeWidth="0.5"/>
+  </svg>
+);
+const ICON_STAFF = (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <circle cx="6" cy="6" r="5" stroke="#60a5fa" strokeWidth="1.2"/>
+    <path d="M6 3v3.5L8 8" stroke="#60a5fa" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+);
+const ICON_ADMIN = (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M6 1.5L10 4V8L6 10.5L2 8V4L6 1.5Z" stroke="#a78bfa" strokeWidth="1.2" fill="rgba(124,58,237,0.15)"/>
+  </svg>
+);
+const ICON_MOD = (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M6 1.5L10 4V8L6 10.5L2 8V4L6 1.5Z" stroke="#34d399" strokeWidth="1.2" fill="rgba(16,185,129,0.12)"/>
+    <path d="M4 6l1.5 1.5L8 4.5" stroke="#34d399" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const ICON_OWNER = (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <rect x="2" y="5" width="8" height="5" rx="1" stroke="#f97316" strokeWidth="1.1" fill="rgba(249,115,22,0.1)"/>
+    <path d="M4 5V4a2 2 0 014 0v1" stroke="#f97316" strokeWidth="1.1"/>
+  </svg>
+);
+const ICON_PAID = (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <circle cx="6" cy="6" r="4.5" stroke="#a78bfa" strokeWidth="1.1" fill="rgba(124,58,237,0.1)"/>
+    <path d="M6 3.5v5M4.5 5h2.2a.8.8 0 010 1.6H4.5" stroke="#a78bfa" strokeWidth="1" strokeLinecap="round"/>
+  </svg>
+);
+
 function flairFor(u: any): Flair {
   const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
   const rr = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
   const paid = isPaidUser(u);
 
   if (g === "GOD")
-    return { markClass: "weered-mark-god", nameClass: "weered-name-god", badge: "GOD", badgeClass: "weered-badge-god", icon: "" };
+    return { markClass: "weered-mark-god", nameClass: "weered-name-god", badge: "GOD", badgeClass: "weered-badge-god", icon: ICON_GOD };
 
   if (g === "STAFF" || g === "SUPPORT")
-    return { markClass: "weered-mark-staff", nameClass: "weered-name-staff", badge: g, badgeClass: "weered-badge-staff", icon: "" };
+    return { markClass: "weered-mark-staff", nameClass: "weered-name-staff", badge: g, badgeClass: "weered-badge-staff", icon: ICON_STAFF };
 
   if (g === "ADMIN")
-    return { markClass: "weered-mark-admin", nameClass: "weered-name-admin", badge: "ADMIN", badgeClass: "weered-badge-admin", icon: "" };
+    return { markClass: "weered-mark-admin", nameClass: "weered-name-admin", badge: "ADMIN", badgeClass: "weered-badge-admin", icon: ICON_ADMIN };
 
   if (g === "MOD")
-    return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: "" };
+    return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: ICON_MOD };
 
   if (rr === "OWNER")
-    return { markClass: "weered-mark-owner", nameClass: "weered-name-owner", badge: "OWNER", badgeClass: "weered-badge-owner", icon: "" };
+    return { markClass: "weered-mark-owner", nameClass: "weered-name-owner", badge: "OWNER", badgeClass: "weered-badge-owner", icon: ICON_OWNER };
 
   if (rr === "MOD")
-    return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: "" };
+    return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: ICON_MOD };
 
-  if (paid) return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", icon: "" };
+  if (paid) return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", icon: ICON_PAID };
 
   return { markClass: "weered-mark-none" };
 }
@@ -361,7 +397,14 @@ export default function LeftRail() {
             return (
               <div
                 key={rid}
-                className="weered-presence-row rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-colors flex items-center justify-between gap-3"
+                className="weered-presence-row"
+                style={{
+                  display: "flex", alignItems: "center", gap: 9,
+                  padding: "7px 9px", borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  background: you ? "rgba(124,58,237,0.07)" : "rgba(255,255,255,0.03)",
+                  cursor: "pointer", transition: "background 0.12s, border-color 0.12s",
+                }}
                 title={nm}
                 role="button"
                 tabIndex={0}
@@ -373,41 +416,80 @@ export default function LeftRail() {
                   }
                 }}
                 onMouseEnter={(e) => {
-                  const r = (e.currentTarget as any).getBoundingClientRect();
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.background = you ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.06)";
+                  el.style.borderColor = "rgba(255,255,255,0.14)";
+                  const r = el.getBoundingClientRect();
                   cancelClose();
-                  presenceAnchorRef.current = e.currentTarget as any;
-
+                  presenceAnchorRef.current = el as any;
                   setPresenceHoverXY(computeHoverXY(r));
                   setPresenceHoverName(nm);
                   setPresenceHoverUser(u);
                   setPresenceHoverOpen(true);
                 }}
-                onMouseLeave={() => scheduleClose(160)}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.background = you ? "rgba(124,58,237,0.07)" : "rgba(255,255,255,0.03)";
+                  el.style.borderColor = "rgba(255,255,255,0.07)";
+                  scheduleClose(160);
+                }}
               >
-                <div className="weered-presence-left">
-                  <span className={`weered-mark ${f.markClass}`} aria-hidden="true" />
-                  <div className="weered-presence-namewrap">
-                    <div className={`weered-presence-name ${f.nameClass || ""}`}>
-                      <button
-                        type="button"
-                        style={{ all: "unset", cursor: "pointer" }}
-                        className="hover:underline"
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") });
-                        }}
-                      >
-                        {nm}
-                      </button>
+                {/* Avatar */}
+                {(() => {
+                  const avatarColors: Record<string,string> = {
+                    god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa",
+                    admin: "#a78bfa", mod: "#34d399", owner: "#f97316",
+                    paid: "#a78bfa", member: "#6b7280",
+                  };
+                  const roleKey = label === "you" ? "member" : label;
+                  const aColor = avatarColors[roleKey] || "#6b7280";
+                  return (
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                      background: `linear-gradient(135deg, ${aColor}33, ${aColor}66)`,
+                      border: `1.5px solid ${aColor}44`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontWeight: 700, fontSize: 11, color: aColor,
+                      position: "relative",
+                    }}>
+                      {nm[0]?.toUpperCase() ?? "?"}
+                      {/* Online dot */}
+                      <div style={{
+                        position: "absolute", bottom: 0, right: 0,
+                        width: 7, height: 7, borderRadius: "50%",
+                        background: "#22c55e", border: "1.5px solid var(--weered-bg, #0f1117)",
+                        boxShadow: "0 0 4px #22c55e",
+                      }} />
                     </div>
+                  );
+                })()}
 
-                    <div className="weered-presence-subline">{you ? "you" : label}</div>
-                    {you ? <span className="weered-you" /> : null}
-                    {f.icon ? <span className="weered-flairicon" aria-hidden="true">{f.icon}</span> : null}
+                {/* Name + role */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontWeight: 600, fontSize: 12,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    color: you ? "rgba(167,139,250,0.95)" : "rgba(232,232,236,0.9)",
+                    display: "flex", alignItems: "center", gap: 4,
+                  }}>
+                    {nm}
+                    {f.icon && <span style={{ opacity: 0.85, lineHeight: 1 }}>{f.icon}</span>}
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", marginTop: 1, fontFamily: "monospace" }}>
+                    {you ? "you" : label}
                   </div>
                 </div>
 
-                <span className={"text-[11px] rounded-full border px-2 py-0.5 " + cls}>{label}</span>
+                {/* Badge pill — only for elevated roles */}
+                {f.badge && (
+                  <span style={{
+                    fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
+                    padding: "2px 6px", borderRadius: 999, flexShrink: 0,
+                    border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("violet") ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.1)"}`,
+                    background: cls.includes("emerald") ? "rgba(16,185,129,0.1)" : cls.includes("amber") ? "rgba(245,158,11,0.1)" : cls.includes("violet") ? "rgba(124,58,237,0.1)" : "rgba(255,255,255,0.05)",
+                    color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("violet") ? "#c4b5fd" : "rgba(255,255,255,0.5)",
+                  }}>{label}</span>
+                )}
               </div>
             );
           })}
