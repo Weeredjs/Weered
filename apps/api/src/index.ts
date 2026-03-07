@@ -20,7 +20,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
-type AuthedUser = { id: string; name: string };
+type AuthedUser = { id: string; name: string; globalRole?: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
@@ -318,6 +318,14 @@ function removeKnock(room: RoomState, userId: string) {
   room.knocks = room.knocks.filter((k) => k.userId !== userId);
 }
 
+// Hydrate globalRole onto AuthedUser from DB (called once per WS connection)
+async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
+  try {
+    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true } });
+    return { ...user, globalRole: String(u?.globalRole ?? "USER") };
+  } catch { return user; }
+}
+
 function verifyToken(token?: string): AuthedUser | null {
   if (!token) return null;
   try {
@@ -394,8 +402,9 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    room.users.set(ws.user.id, { id: ws.user.id, name: ws.user.name });
-    broadcast(room, { type: "presence:join", roomId, user: { id: ws.user.id, name: ws.user.name } });
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER" };
+    room.users.set(ws.user.id, userEntry);
+    broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
 
   if (ws.user) { try { await persistMember(room, ws.user); } catch {} }
@@ -856,8 +865,8 @@ async function main() {
         if (msg.type === "auth:hello") {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
-          ws.user = u;
-          send(ws, { type: "auth:ok", user: { id: u.id, name: u.name } });
+          ws.user = await hydrateGlobalRole(u);
+          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole } });
           return;
         }
 
