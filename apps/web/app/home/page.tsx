@@ -274,9 +274,13 @@ export default function HomePage() {
   function handleJoin(id: string, pinned?: boolean) {
     if (!id) return;
     const clean = id.replace("room:", "");
-    // Lobbies (pinned) route to /lobby/<id>, rooms to /room/<id>
+    // Lobbies (pinned) route to /lobby or /lobby/<id>
     if (pinned) {
-      router.push(`/lobby/${encodeURIComponent(clean)}`);
+      if (clean === "lobby") {
+        router.push("/lobby");
+      } else {
+        router.push(`/lobby/${encodeURIComponent(clean)}`);
+      }
       return;
     }
     const normalized = id.startsWith("room:") ? id : `room:${id}`;
