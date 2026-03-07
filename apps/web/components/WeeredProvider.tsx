@@ -354,14 +354,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
   }, [activeRoomId, wsReady]);
 
-  // ── Re-join + room list after WS auth ──
+  // ── Request rooms list after WS auth ──
   useEffect(() => {
     if (!wsReady) return;
-    lastJoinedRidRef.current = "";
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    sendJoin(ws);
     requestRoomsList(ws);
+    // Re-trigger the join effect by clearing the last joined ref
+    lastJoinedRidRef.current = "";
+    // If we already have an activeRoomId, join immediately
+    const rid = activeRoomId.trim();
+    if (rid) {
+      try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsReady]);
 
