@@ -9,7 +9,7 @@ function RedirectLogic() {
 
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
-    return n && n.startsWith("/") ? n : "/lobby";
+    return n && n.startsWith("/") ? n : "/home";
   }, [sp]);
 
   React.useEffect(() => {
