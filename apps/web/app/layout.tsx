@@ -12,6 +12,7 @@ import LobbyBrowser from "../components/LobbyBrowser";
 export const metadata = {
   title: "Weered",
   description: "communities | presence | rooms",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
