@@ -240,7 +240,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
-        // Don't override — path effect handles activeRoomId
+        // activeRoomId managed by path effect — no override needed here
         setJoinedRoomId(prev => {
           if (prev && prev !== rid) {
             try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
@@ -354,7 +354,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
   }, [activeRoomId, wsReady]);
 
-  // ── Re-join + room list after auth ──
+  // ── Re-join + room list after WS auth ──
   useEffect(() => {
     if (!wsReady) return;
     lastJoinedRidRef.current = "";
@@ -363,7 +363,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     sendJoin(ws);
     requestRoomsList(ws);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wsReady, activeRoomId, joinedRoomId]);
+  }, [wsReady]);
 
   // ─── Internal helpers ─────────────────────────────────────────────────────
   function sendJoin(ws: WebSocket) {
