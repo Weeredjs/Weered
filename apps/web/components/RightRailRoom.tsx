@@ -21,18 +21,16 @@ function canMod(role: string) {
   return ["owner", "admin", "mod", "moderator", "staff", "god"].includes(normRole(role));
 }
 function bestMyRole(ctx: any) {
-  // ctx.role is the room role; globalRole is the platform-wide role
-  const roomRole   = String(ctx?.role ?? "").toLowerCase();
-  const globalRole = String(ctx?.globalRole ?? ctx?.me?.globalRole ?? "").toLowerCase();
-  // Elevated global roles always win
-  if (["god","staff","support","admin"].includes(globalRole)) return globalRole;
-  if (roomRole) return roomRole;
-  return globalRole || "";
+  // globalRole from provider takes priority — GOD/STAFF/ADMIN/SUPPORT beat room roles
+  return String(ctx?.globalRole ?? ctx?.role ?? ctx?.me?.role ?? ctx?.me?.globalRole ?? ctx?.auth?.user?.role ?? ctx?.user?.role ?? "");
 }
 
 function extractParticipants(ctx: any, roomId: string): Person[] {
+  // Primary: usersByRoom is the canonical source from WeeredProvider
+  const primary = ctx?.usersByRoom?.[roomId];
+  if (Array.isArray(primary) && primary.length) return primary.map(normUser).filter(Boolean);
+  // Fallbacks for other possible shapes
   const tries = [
-    ctx?.usersByRoom?.[roomId],           // ← WeeredProvider primary source
     ctx?.presence?.rooms?.[roomId]?.users,
     ctx?.presence?.rooms?.[roomId]?.members,
     ctx?.presence?.byRoom?.[roomId]?.users,
@@ -78,7 +76,10 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   })();
 
   // Mod state
-  const [locked,      setLocked]      = useState(false);
+  // locked derived from ctx.meta so it stays in sync with server broadcasts
+  const metaLocked = Boolean(ctx?.meta?.locked ?? ctx?.metaByRoom?.[roomId]?.locked ?? false);
+  const [lockedOverride, setLockedOverride] = useState<boolean | null>(null);
+  const locked = lockedOverride ?? metaLocked;
   const [slowSec,     setSlowSec]     = useState(0);
   const [selectedId,  setSelectedId]  = useState("");
   const [confirm,     setConfirm]     = useState<{ kind: string; userId: string; name: string } | null>(null);
@@ -109,8 +110,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     try {
       if (kind === "promote") ctx?.promote?.(userId);
       if (kind === "demote")  ctx?.demote?.(userId);
-      if (kind === "lock")   { ctx?.lockRoom?.();   setLocked(true); }
-      if (kind === "unlock") { ctx?.unlockRoom?.(); setLocked(false); }
+      if (kind === "lock")   { ctx?.lockRoom?.();   setLockedOverride(true); }
+      if (kind === "unlock") { ctx?.unlockRoom?.(); setLockedOverride(false); }
       setNote(`${kind} → ${userId ? userName : "room"}`);
     } catch { setNote(`${kind} failed`); }
   }, [ctx, selected]);

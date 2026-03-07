@@ -158,12 +158,17 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // ── Auto-set default roomId from path ──
+  // ── Auto-set activeRoomId from path ──
   useEffect(() => {
     try {
       if (!pathname) return;
-      if (pathname.startsWith("/lobby")    && !activeRoomId) setActiveRoomId("lobby");
-      if (pathname.startsWith("/room/@me") && !activeRoomId) setActiveRoomId("@me");
+      // Room path: /room/ROOMID or /room/ROOMID/...
+      const roomMatch = pathname.match(/^\/room\/([^/]+)/);
+      if (roomMatch) {
+        const rid = decodeURIComponent(roomMatch[1]);
+        if (rid && rid !== "@me") { setActiveRoomId(rid); return; }
+      }
+      if (pathname.startsWith("/lobby")) { setActiveRoomId("lobby"); return; }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
@@ -235,15 +240,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
-        if (rid && !activeRoomId) setActiveRoomId(rid);
+        // Don't override — path effect handles activeRoomId
         setJoinedRoomId(prev => {
           if (prev && prev !== rid) {
             try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
           }
           return rid;
         });
-        // Immediately request fresh admin state if mod
-        try { ws.send(JSON.stringify({ type: "room:getAdminState", roomId: rid })); } catch {}
         return;
       }
 
