@@ -305,6 +305,15 @@ function LoginForm() {
             </span>
             {isDev && <button className="wl-dev" onClick={devLogin} disabled={busy}>dev_login()</button>}
           </div>
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "center", gap: 20 }}>
+            {[["about", "/about"], ["premium", "/premium"], ["contact", "/contact"]].map(([label, href]) => (
+              <a key={href} href={href} style={{ fontSize: 10, color: "rgba(167,139,250,0.35)", textDecoration: "none", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace", transition: "color 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "rgba(167,139,250,0.75)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(167,139,250,0.35)")}>
+                {label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </>
