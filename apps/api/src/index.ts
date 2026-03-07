@@ -8,7 +8,7 @@ import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
-import { PrismaClient, RoomRole, GlobalRole } from "@prisma/client";
+import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -57,15 +57,7 @@ type RoomState = {
 
 const rooms = new Map<string, RoomState>();
 
-// ── Pinned / static lobbies (always visible on Home even when empty) ──────────
-const PINNED_ROOMS: Array<{ id: string; name: string; description: string; tags: string[] }> = [
-  { id: "lobby",        name: "The Lobby",       description: "General hangout. Everyone starts here.", tags: ["general"] },
-  { id: "r/all",        name: "r/all",            description: "Reddit firehose. All topics welcome.",   tags: ["reddit", "general"] },
-  { id: "r/gaming",     name: "r/gaming",         description: "Gamers of all kinds.",                   tags: ["reddit", "gaming"] },
-  { id: "r/technology", name: "r/technology",     description: "Tech news, discussion, builds.",         tags: ["reddit", "tech"] },
-  { id: "r/worldnews",  name: "r/worldnews",      description: "Global news and current events.",        tags: ["reddit", "news"] },
-  { id: "weered.ca",    name: "Weered HQ",        description: "Meta, announcements, beta feedback.",    tags: ["meta", "official"] },
-];
+// ── Pinned lobbies now seeded from DB via seedLobbies() on startup ────────────
 
 
 // ── Global role helpers ───────────────────────────────────────────────────────
@@ -78,11 +70,50 @@ async function getGlobalRole(userId: string): Promise<GlobalRole> {
 }
 
 function canAccessStaff(role: GlobalRole) {
-  return role === GlobalRole.SUPPORT || role === GlobalRole.STAFF || role === GlobalRole.GOD;
+  return role === GlobalRole.SUPPORT || role === GlobalRole.STAFF || role === GlobalRole.ADMIN || role === GlobalRole.GOD;
 }
 
 function canAssignRoles(role: GlobalRole) {
-  return role === GlobalRole.STAFF || role === GlobalRole.GOD;
+  return role === GlobalRole.STAFF || role === GlobalRole.ADMIN || role === GlobalRole.GOD;
+}
+
+// ── Lobby role helpers ────────────────────────────────────────────────────────
+
+async function getLobbyRole(userId: string, lobbyId: string): Promise<LobbyRole | null> {
+  try {
+    const m = await prisma.lobbyMember.findUnique({ where: { lobbyId_userId: { lobbyId, userId } }, select: { role: true } });
+    return m?.role ?? null;
+  } catch { return null; }
+}
+
+async function canModLobby(userId: string, lobbyId: string, globalRole: GlobalRole): Promise<boolean> {
+  if (canAccessStaff(globalRole)) return true;
+  const lr = await getLobbyRole(userId, lobbyId);
+  return lr === LobbyRole.OWNER || lr === LobbyRole.MOD;
+}
+
+// ── Seed pinned lobbies into DB on startup ────────────────────────────────────
+
+const SEED_LOBBIES = [
+  { id: "lobby",        name: "The Lobby",    description: "General hangout. Everyone starts here.", tags: ["general"],          moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
+  { id: "r/all",        name: "r/all",        description: "Reddit firehose. All topics welcome.",   tags: ["reddit","general"],  moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
+  { id: "r/gaming",     name: "r/gaming",     description: "Gamers of all kinds.",                   tags: ["reddit","gaming"],   moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/gaming" } },
+  { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         tags: ["reddit","tech"],     moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/technology" } },
+  { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        tags: ["reddit","news"],     moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/worldnews" } },
+  { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    tags: ["meta","official"],   moduleType: ModuleType.NONE,    moduleConfig: null },
+];
+
+async function seedLobbies() {
+  for (const l of SEED_LOBBIES) {
+    try {
+      await prisma.lobby.upsert({
+        where: { id: l.id },
+        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
+        create: { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
+      });
+    } catch (e) { console.warn("seedLobbies:", l.id, e); }
+  }
+  console.log("[weered] lobbies seeded");
 }
 
 async function globalAudit(actorId: string, actorName: string, action: string, targetId?: string, targetName?: string, meta?: any) {
@@ -457,45 +488,108 @@ async function main() {
   });
 
   // Rooms
-  app.get("/rooms", async () => {
+  // GET /lobbies — all lobbies with live counts
+  app.get("/lobbies", async () => {
+    const lobbyList = await prisma.lobby.findMany({
+      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+      select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
+    });
+    const out = lobbyList.map(l => ({
+      id: l.id, lobbyId: l.id, name: l.name, description: l.description,
+      verified: l.verified, pinned: l.pinned, moduleType: l.moduleType,
+      onlineCount: rooms.get(l.id)?.users.size ?? 0,
+    }));
+    return { ok: true, lobbies: out };
+  });
+
+  // GET /lobbies/:lobbyId/rooms — rooms scoped to a lobby
+  app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
+    const lobbyId = String((req as any).params?.lobbyId || "");
+    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
     const list = await prisma.room.findMany({
+      where: { lobbyId },
       orderBy: { updatedAt: "desc" },
       select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
     });
+    const out = list.map(r => ({
+      id: r.id, roomId: r.id, name: r.name || r.id,
+      onlineCount: rooms.get(r.id)?.users.size ?? 0,
+      locked: Boolean(r.locked), lobbyId,
+    }));
+    return { ok: true, rooms: out };
+  });
 
-    // Live rooms from DB
-    const liveRooms = list
-      .filter((r) => !r.id.includes("%"))
-      .map((r) => ({
-        id: r.id, roomId: r.id, name: r.name || r.id,
-        onlineCount: (rooms.get(r.id)?.users.size ?? 0) + r._count.members,
-        locked: Boolean(r.locked),
-        pinned: false,
-      }));
-
-    // Merge pinned rooms — enrich with live count if active, skip duplicates
-    const liveIds = new Set(liveRooms.map(r => r.id));
-    const pinnedOut = PINNED_ROOMS
-      .filter(p => !liveIds.has(p.id))
-      .map(p => ({
-        id: p.id, roomId: p.id, name: p.name,
-        description: p.description, tags: p.tags,
-        onlineCount: rooms.get(p.id)?.users.size ?? 0,
-        locked: false, pinned: true,
-      }));
-
-    // Enrich live rooms that are also pinned
-    const enriched = liveRooms.map(r => {
-      const pin = PINNED_ROOMS.find(p => p.id === r.id);
-      return pin ? { ...r, description: pin.description, tags: pin.tags, pinned: true } : r;
+  // POST /lobbies/:lobbyId/claim — lobby owner claim (verified users)
+  app.post("/lobbies/:lobbyId/claim", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const lobbyId = String((req as any).params?.lobbyId || "");
+    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+    if (lobby.ownerId && lobby.ownerId !== u.id) {
+      const actorRole = await getGlobalRole(u.id);
+      if (!canAccessStaff(actorRole)) return reply.code(403).send({ ok: false, error: "already_claimed" });
+    }
+    await prisma.lobby.update({ where: { id: lobbyId }, data: { ownerId: u.id, verified: true } });
+    await prisma.lobbyMember.upsert({
+      where: { lobbyId_userId: { lobbyId, userId: u.id } },
+      update: { role: LobbyRole.OWNER },
+      create: { lobbyId, userId: u.id, name: u.name, role: LobbyRole.OWNER },
     });
+    return reply.send({ ok: true, lobbyId, claimed: true });
+  });
 
-    return { ok: true, rooms: [...enriched, ...pinnedOut] };
+  // GET /rooms — all rooms (lobbies + active user rooms) for Home page
+  app.get("/rooms", async () => {
+    // Lobbies from DB
+    const lobbyList = await prisma.lobby.findMany({
+      where: { pinned: true },
+      select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
+    });
+    const lobbyOut = lobbyList.map(l => ({
+      id: l.id, roomId: l.id, name: l.name, description: l.description,
+      verified: l.verified, pinned: true, moduleType: l.moduleType,
+      onlineCount: rooms.get(l.id)?.users.size ?? 0,
+      locked: false,
+    }));
+
+    // Active user-created rooms (non-lobby)
+    const lobbyIds = new Set(lobbyList.map(l => l.id));
+    const roomList = await prisma.room.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, name: true, locked: true, lobbyId: true, _count: { select: { members: true } } },
+      take: 100,
+    });
+    const roomOut = roomList
+      .filter(r => !r.id.includes("%") && !lobbyIds.has(r.id))
+      .map(r => ({
+        id: r.id, roomId: r.id, name: r.name || r.id,
+        onlineCount: rooms.get(r.id)?.users.size ?? 0,
+        locked: Boolean(r.locked), pinned: false,
+        lobbyId: r.lobbyId ?? null,
+      }));
+
+    return { ok: true, rooms: [...lobbyOut, ...roomOut] };
   });
 
   app.post("/rooms", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
     const body: any = (req as any).body || {};
     const name = (typeof body.name === "string" ? body.name : "").trim().slice(0, 64);
+    const lobbyId = typeof body.lobbyId === "string" ? body.lobbyId.trim() : null;
+
+    if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
+    if (!lobbyId) return reply.code(400).send({ ok: false, error: "lobbyId_required" });
+
+    // Verify lobby exists
+    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+
+    // Enforce unique name within lobby
+    const existing = await prisma.room.findFirst({ where: { lobbyId, name: { equals: name, mode: "insensitive" } } });
+    if (existing) return reply.code(409).send({ ok: false, error: "room_name_taken", message: `A room named "${name}" already exists in this lobby.` });
+
     let wanted = (typeof body.roomId === "string" ? body.roomId : "").trim();
     if (wanted) wanted = wanted.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
     let id = wanted || shortRoomId(6);
@@ -505,11 +599,24 @@ async function main() {
       if (!exists) break;
       id = shortRoomId(6); tries++;
     }
-    await prisma.room.create({ data: { id, name: name || "", locked: false, ownerId: null } });
+
+    const ownerId = u?.id ?? null;
+    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId } });
+
+    // Make creator the owner in RoomMember
+    if (ownerId) {
+      await prisma.roomMember.upsert({
+        where: { roomId_userId: { roomId: id, userId: ownerId } },
+        update: { role: RoomRole.OWNER },
+        create: { roomId: id, userId: ownerId, name: u?.name ?? "", role: RoomRole.OWNER },
+      });
+    }
+
     const r = await ensureRoomLoaded(id);
-    r.name = name || r.name || "";
+    r.name = name;
+    if (ownerId) r.ownerId = ownerId;
     rooms.set(id, r);
-    return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name: r.name || id, locked: Boolean(r.locked) } });
+    return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId } });
   });
 
   app.get("/rooms/:roomId", async (req, reply) => {
@@ -724,6 +831,8 @@ async function main() {
 
     return reply.send({ ok: true });
   });
+  await seedLobbies();
+
   app.listen({ host: "0.0.0.0", port: HTTP_PORT });
   app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
 
@@ -751,33 +860,33 @@ async function main() {
         if (!ws.user) { send(ws, { type: "auth:fail", reason: "Not authenticated" }); return; }
 
 
-        // ── rooms:list — return full lobby directory ──────────────────────
+        // ── rooms:list — return lobby directory from DB ───────────────────
         if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
-          const list = await prisma.room.findMany({
-            orderBy: { updatedAt: "desc" },
-            select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
-          });
-          const liveRooms = list
-            .filter((r) => !r.id.includes("%"))
-            .map((r) => ({
+          const [lobbyList, roomList] = await Promise.all([
+            prisma.lobby.findMany({
+              where: { pinned: true },
+              select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
+            }),
+            prisma.room.findMany({
+              orderBy: { updatedAt: "desc" },
+              select: { id: true, name: true, locked: true, lobbyId: true, _count: { select: { members: true } } },
+              take: 100,
+            }),
+          ]);
+          const lobbyIds = new Set(lobbyList.map(l => l.id));
+          const lobbyOut = lobbyList.map(l => ({
+            id: l.id, roomId: l.id, name: l.name, description: l.description,
+            verified: l.verified, pinned: true, moduleType: l.moduleType,
+            onlineCount: rooms.get(l.id)?.users.size ?? 0, locked: false,
+          }));
+          const roomOut = roomList
+            .filter(r => !r.id.includes("%") && !lobbyIds.has(r.id))
+            .map(r => ({
               id: r.id, roomId: r.id, name: r.name || r.id,
-              onlineCount: (rooms.get(r.id)?.users.size ?? 0) + r._count.members,
-              locked: Boolean(r.locked), pinned: false,
+              onlineCount: rooms.get(r.id)?.users.size ?? 0,
+              locked: Boolean(r.locked), pinned: false, lobbyId: r.lobbyId ?? null,
             }));
-          const liveIds = new Set(liveRooms.map(r => r.id));
-          const pinnedOut = PINNED_ROOMS
-            .filter(p => !liveIds.has(p.id))
-            .map(p => ({
-              id: p.id, roomId: p.id, name: p.name,
-              description: p.description, tags: p.tags,
-              onlineCount: rooms.get(p.id)?.users.size ?? 0,
-              locked: false, pinned: true,
-            }));
-          const enriched = liveRooms.map(r => {
-            const pin = PINNED_ROOMS.find(p => p.id === r.id);
-            return pin ? { ...r, description: pin.description, tags: pin.tags, pinned: true } : r;
-          });
-          send(ws, { type: "rooms", rooms: [...enriched, ...pinnedOut] });
+          send(ws, { type: "rooms", rooms: [...lobbyOut, ...roomOut] });
           return;
         }
 
