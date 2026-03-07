@@ -16,7 +16,7 @@ function LoginForm() {
 
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
-    return n.startsWith("/") ? n : "/lobby";
+    return n.startsWith("/") ? n : "/home";
   }, [sp]);
 
   React.useEffect(() => {
