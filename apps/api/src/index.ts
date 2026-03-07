@@ -401,7 +401,9 @@ async function doJoin(ws: Sock, roomId: string) {
     return false;
   }
 
-  if (ws.roomId && ws.roomId !== roomId) leaveRoom(ws);
+  // Already in this room on this socket — just republish state, no leave/rejoin
+  if (ws.roomId === roomId) { publishState(room); return true; }
+  if (ws.roomId) leaveRoom(ws);
 
   ws.roomId = roomId;
   ws.pendingRoomId = undefined;
