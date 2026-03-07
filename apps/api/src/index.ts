@@ -2,8 +2,10 @@ import "dotenv/config";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
 import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
@@ -19,6 +21,57 @@ const WS_PORT = Number(process.env.WS_PORT || 4001);
 const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws://127.0.0.1:7880";
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
+
+// ─── Mail ─────────────────────────────────────────────────────────────────────
+const SMTP_HOST = process.env.SMTP_HOST || "";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER || "james@weered.ca";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const SMTP_FROM = process.env.SMTP_FROM || "Weered <james@weered.ca>";
+const APP_URL   = process.env.APP_URL   || "https://weered.ca";
+
+const mailer = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465,
+  auth: { user: SMTP_USER, pass: SMTP_PASS },
+  tls: { rejectUnauthorized: false },
+});
+
+async function sendVerificationEmail(toEmail: string, token: string) {
+  const link = `${APP_URL}/verify-email?token=${token}`;
+  await mailer.sendMail({
+    from: SMTP_FROM,
+    to: toEmail,
+    subject: "Verify your Weered account",
+    html: `
+      <div style="font-family:monospace;background:#0c0b0a;color:#e8e8f0;padding:40px;max-width:480px;margin:0 auto;border-radius:16px;">
+        <div style="font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:8px;">weered</div>
+        <div style="font-size:12px;color:#7c3aed;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:32px;">communities · presence · rooms</div>
+        <p style="font-size:14px;line-height:1.8;color:rgba(232,232,240,0.8);">Someone registered with this email.<br>If that was you, verify below.</p>
+        <a href="${link}" style="display:inline-block;margin:24px 0;padding:14px 28px;background:linear-gradient(135deg,#7c3aed,#d946ef);border-radius:10px;color:#fff;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.5px;">verify_account()</a>
+        <p style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:24px;">Link expires in 24 hours.<br>If you didn't register, ignore this.</p>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.07);margin:24px 0;" />
+        <p style="font-size:10px;color:rgba(255,255,255,0.15);">© weered.ca</p>
+      </div>
+    `,
+    text: `Verify your Weered account: ${link}`,
+  });
+}
+
+// ─── IP Rate Limiting for registration ────────────────────────────────────────
+const registrationAttempts = new Map<string, { count: number; resetAt: number }>();
+function checkRegRate(ip: string): boolean {
+  const now = Date.now();
+  const entry = registrationAttempts.get(ip);
+  if (!entry || entry.resetAt < now) {
+    registrationAttempts.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return true;
+  }
+  if (entry.count >= 3) return false;
+  entry.count++;
+  return true;
+}
 
 type AuthedUser = { id: string; name: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
@@ -442,17 +495,41 @@ async function main() {
     const body: any = (req as any).body || {};
     const rawU = typeof body.username === "string" ? body.username : "";
     const rawP = typeof body.password === "string" ? body.password : "";
+    const rawE = typeof body.email    === "string" ? body.email    : "";
     const username = (rawU || "").trim().toLowerCase().slice(0, 32);
     const password = (rawP || "").trim();
-    if (!username || !password) return reply.code(400).send({ error: "Missing username/password" });
-    if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
-    const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
-    if (existing) return reply.code(409).send({ error: "Username already exists" });
+    const email    = (rawE || "").trim().toLowerCase();
+
+    if (!username || !password) return reply.code(400).send({ error: "Username and password required." });
+    if (password.length < 6)    return reply.code(400).send({ error: "Password must be at least 6 characters." });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return reply.code(400).send({ error: "Valid email address required." });
+
+    // IP rate limit — 3 registrations per IP per hour
+    const ip = String((req as any).headers?.["x-forwarded-for"] || (req as any).socket?.remoteAddress || "unknown").split(",")[0].trim();
+    if (!checkRegRate(ip)) return reply.code(429).send({ error: "Too many registrations from this address. Try again later." });
+
+    const existingUser = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
+    if (existingUser) return reply.code(409).send({ error: "Username already taken." });
+
+    const existingEmail = await prisma.localAuth.findUnique({ where: { email } }).catch(() => null);
+    if (existingEmail) return reply.code(409).send({ error: "An account with that email already exists." });
+
     const user = await prisma.user.create({ data: { name: username, usernameKey: username } });
     const passwordHash = await bcrypt.hash(password, 10);
-    await prisma.localAuth.create({ data: { username, passwordHash, userId: user.id } });
-    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
-    return reply.send({ token, user });
+    const verifyToken  = randomBytes(32).toString("hex");
+    const verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.localAuth.create({
+      data: { username, passwordHash, userId: user.id, email, emailVerified: false, verifyToken, verifyTokenExp },
+    });
+
+    // Send verification email (non-blocking — don't fail registration if mail fails)
+    sendVerificationEmail(email, verifyToken).catch(err => console.error("Mail error:", err));
+
+    // Return token but flag unverified — client shows "check your email" state
+    const token = jwt.sign({ sub: user.id, name: user.name, unverified: true }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user, pendingVerification: true });
   });
 
   // Auth: login
@@ -471,6 +548,45 @@ async function main() {
     if (!user) return reply.code(401).send({ error: "Invalid credentials" });
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
     return reply.send({ token, user });
+  });
+
+  // Auth: verify email
+  app.get("/auth/verify-email", async (req, reply) => {
+    const token = String((req as any).query?.token || "").trim();
+    if (!token) return reply.code(400).send({ ok: false, error: "Missing token." });
+
+    const la = await prisma.localAuth.findUnique({ where: { verifyToken: token } }).catch(() => null);
+    if (!la) return reply.code(400).send({ ok: false, error: "Invalid or expired link." });
+    if (la.emailVerified) return reply.send({ ok: true, already: true });
+    if (la.verifyTokenExp && la.verifyTokenExp < new Date())
+      return reply.code(400).send({ ok: false, error: "Link expired. Please request a new one." });
+
+    await prisma.localAuth.update({
+      where: { id: la.id },
+      data: { emailVerified: true, verifyToken: null, verifyTokenExp: null },
+    });
+
+    // Issue a fresh non-unverified token
+    const user = await prisma.user.findUnique({ where: { id: la.userId } });
+    if (!user) return reply.code(500).send({ ok: false, error: "User not found." });
+    const newToken = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ ok: true, token: newToken, user });
+  });
+
+  // Auth: resend verification email
+  app.post("/auth/resend-verification", async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!email) return reply.code(400).send({ ok: false, error: "Email required." });
+
+    const la = await prisma.localAuth.findUnique({ where: { email } }).catch(() => null);
+    if (!la || la.emailVerified) return reply.send({ ok: true }); // silent — don't leak account existence
+
+    const verifyToken    = randomBytes(32).toString("hex");
+    const verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await prisma.localAuth.update({ where: { id: la.id }, data: { verifyToken, verifyTokenExp } });
+    sendVerificationEmail(email, verifyToken).catch(err => console.error("Mail error:", err));
+    return reply.send({ ok: true });
   });
 
   // Voice token (LiveKit)

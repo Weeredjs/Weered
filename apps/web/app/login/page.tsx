@@ -10,9 +10,11 @@ function LoginForm() {
 
   const [mode, setMode]         = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy]         = useState(false);
   const [err, setErr]           = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
 
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
@@ -28,15 +30,19 @@ function LoginForm() {
   async function submit() {
     const u = username.trim();
     const p = password.trim();
+    const e = email.trim();
     setErr("");
     if (!u || !p) return setErr("Username and password required.");
+    if (mode === "register" && !e) return setErr("Email address required.");
     setBusy(true);
     try {
       const url = mode === "register" ? `${API}/auth/register` : `${API}/auth/login`;
+      const body: any = { username: u, password: p };
+      if (mode === "register") body.email = e;
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: u, password: p }),
+        body: JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({} as any));
       if (!r.ok) throw new Error(j?.error || j?.message || `Error ${r.status}`);
@@ -44,6 +50,10 @@ function LoginForm() {
       if (!tok) throw new Error("No token returned.");
       localStorage.setItem("weered_token", tok);
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
+      if (j?.pendingVerification) {
+        setPendingEmail(e);
+        return;
+      }
       router.replace(nextPath);
     } catch (e: any) {
       setErr(String(e?.message || "Something went wrong."));
@@ -281,9 +291,46 @@ function LoginForm() {
             <button className={`wl-tab${mode === "register" ? " active" : ""}`} onClick={() => { setMode("register"); setErr(""); }}>register</button>
           </div>
 
+          {pendingEmail ? (
+            <div style={{ textAlign: "center", padding: "12px 0 8px" }}>
+              <div style={{ fontSize: 32, marginBottom: 16, opacity: 0.9 }}>
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{margin:"0 auto",display:"block"}}>
+                  <rect width="40" height="40" rx="10" fill="rgba(124,58,237,0.15)" stroke="rgba(124,58,237,0.3)" strokeWidth="1"/>
+                  <path d="M8 14l12 9 12-9" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round"/>
+                  <rect x="8" y="12" width="24" height="17" rx="2" stroke="#a78bfa" strokeWidth="1.5"/>
+                </svg>
+              </div>
+              <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: "rgba(232,232,240,0.95)", marginBottom: 8 }}>
+                Check your email.
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(148,163,184,0.6)", lineHeight: 1.8, marginBottom: 20 }}>
+                We sent a verification link to<br/>
+                <span style={{ color: "rgba(167,139,250,0.8)" }}>{pendingEmail}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(100,116,139,0.5)", lineHeight: 1.7 }}>
+                Click the link in the email to activate your account.<br/>
+                You can browse in the meantime.
+              </div>
+              <button
+                style={{ marginTop: 20, background: "none", border: "none", color: "rgba(167,139,250,0.45)", fontSize: 11, cursor: "pointer", fontFamily: "'DM Mono', monospace", textDecoration: "underline", textUnderlineOffset: 3 }}
+                onClick={() => router.replace(nextPath)}
+              >
+                continue to weered →
+              </button>
+            </div>
+          ) : (
+            <>
           <label className="wl-label">username</label>
           <input className="wl-input" value={username} onChange={e => setUsername(e.target.value)}
             placeholder="your_handle" autoComplete="username" autoFocus />
+
+          {mode === "register" && (
+            <>
+              <label className="wl-label">email</label>
+              <input className="wl-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com" autoComplete="email" />
+            </>
+          )}
 
           <label className="wl-label">password</label>
           <input className="wl-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
@@ -295,8 +342,10 @@ function LoginForm() {
           <button className="wl-btn" disabled={busy} onClick={submit}>
             {busy ? "working..." : mode === "login" ? "sign_in()" : "create_account()"}
           </button>
+            </>
+          )}
 
-          <div className="wl-footer">
+          {!pendingEmail && <div className="wl-footer">
             <span className="wl-footer-text">
               {mode === "login" ? "no account? " : "have an account? "}
               <span className="wl-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setErr(""); }}>
@@ -304,7 +353,7 @@ function LoginForm() {
               </span>
             </span>
             {isDev && <button className="wl-dev" onClick={devLogin} disabled={busy}>dev_login()</button>}
-          </div>
+          </div>}
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "center", gap: 20 }}>
             {[["about", "/about"], ["premium", "/premium"], ["contact", "/contact"]].map(([label, href]) => (
               <a key={href} href={href} style={{ fontSize: 10, color: "rgba(167,139,250,0.35)", textDecoration: "none", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace", transition: "color 0.15s" }}
