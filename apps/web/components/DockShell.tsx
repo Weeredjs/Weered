@@ -220,7 +220,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
  if (v === "slate" || v === "zinc" || v === "stone" || v === "gray") return v;
  } catch {}
- return "slate";
+ return "stone";
  });
 
  useEffect(() => {
