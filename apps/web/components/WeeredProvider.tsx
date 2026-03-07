@@ -177,15 +177,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token) return;
 
-    // Re-auth on token change if WS already open
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    // If already open, just re-auth in-band — never spawn a new connection
+    const existing = wsRef.current;
+    if (existing?.readyState === WebSocket.OPEN) {
       if (token !== lastAuthTokenRef.current) {
         lastAuthTokenRef.current = token;
-        try { wsRef.current.send(JSON.stringify({ type: "auth:hello", token })); } catch {}
+        try { existing.send(JSON.stringify({ type: "auth:hello", token })); } catch {}
       }
       return;
     }
-    if (wsRef.current?.readyState === WebSocket.CONNECTING) return;
+    // If already connecting, don't create another
+    if (existing?.readyState === WebSocket.CONNECTING) return;
+    // Close any dead socket before creating new one
+    if (existing) { try { existing.close(); } catch {} wsRef.current = null; }
 
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
@@ -197,7 +201,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       ws.send(JSON.stringify({ type: "auth:hello", token: tok }));
     };
 
-    ws.onclose = () => { setWsState(WebSocket.CLOSED); setWsReady(false); };
+    ws.onclose = () => {
+      setWsState(WebSocket.CLOSED);
+      setWsReady(false);
+      // Only clear ref if this is still the current socket
+      if (wsRef.current === ws) wsRef.current = null;
+    };
     ws.onerror = () => { setWsState(ws.readyState); };
 
     ws.onmessage = (ev) => {
