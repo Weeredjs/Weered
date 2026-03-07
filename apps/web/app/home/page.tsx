@@ -262,7 +262,7 @@ export default function HomePage() {
     catch { return []; }
   }, []);
   const recentRooms = useMemo(() =>
-    recentIds.map(id => allRooms.find(r => roomId(r) === id || roomName(r) === id)).filter(Boolean).slice(0, 4),
+    recentIds.map(id => allRooms.find(r => roomId(r) === id || roomName(r) === id)).filter(Boolean).filter((r: any) => !isPrivateRoom(r)).slice(0, 4),
     [recentIds, allRooms]
   );
 
@@ -271,15 +271,24 @@ export default function HomePage() {
     [allUsers, me]
   );
 
-  function handleJoin(id: string) {
+  function handleJoin(id: string, pinned?: boolean) {
     if (!id) return;
+    const clean = id.replace("room:", "");
+    // Lobbies (pinned) route to /lobby/<id>, rooms to /room/<id>
+    if (pinned) {
+      router.push(`/lobby/${encodeURIComponent(clean)}`);
+      return;
+    }
     const normalized = id.startsWith("room:") ? id : `room:${id}`;
     try {
       const prev: string[] = JSON.parse(localStorage.getItem("weered:recentRooms") || "[]");
-      localStorage.setItem("weered:recentRooms", JSON.stringify([normalized, ...prev.filter(x => x !== normalized)].slice(0, 10)));
+      // Filter out private rooms from recent history
+      if (!clean.startsWith("@") && !/^[a-z0-9]{4,7}$/i.test(clean)) {
+        localStorage.setItem("weered:recentRooms", JSON.stringify([normalized, ...prev.filter(x => x !== normalized)].slice(0, 10)));
+      }
     } catch {}
     try { join?.(normalized); } catch {}
-    router.push(`/room/${encodeURIComponent(id.replace("room:", ""))}`);
+    router.push(`/room/${encodeURIComponent(clean)}`);
   }
 
   function handleDm(user: any) {
@@ -316,7 +325,7 @@ export default function HomePage() {
           <div style={{ paddingTop: 16 }}>
             <div style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 10 }}>✦ Featured right now</div>
             <div
-              onClick={() => handleJoin(roomId(featured))}
+              onClick={() => handleJoin(roomId(featured), Boolean(featured?.pinned))}
               style={{ position: "relative", borderRadius: 14, overflow: "hidden", height: 180, cursor: "pointer", border: "1px solid rgba(255,255,255,0.08)", background: "linear-gradient(135deg, #1a103a 0%, #0d0d1a 50%, #0d1a1a 100%)", transition: "transform .2s, border-color .2s" }}
               onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = "translateY(-1px)"; el.style.borderColor = "rgba(255,255,255,0.16)"; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = "translateY(0)"; el.style.borderColor = "rgba(255,255,255,0.08)"; }}
@@ -334,7 +343,7 @@ export default function HomePage() {
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 22px", zIndex: 2 }}>
                 <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1.1, marginBottom: featured.description ? 6 : 14 }}>{roomName(featured)}</div>
                 {featured.description && <div style={{ fontSize: 12, color: "rgba(232,232,236,0.5)", marginBottom: 12, maxWidth: 400 }}>{featured.description}</div>}
-                <button type="button" onClick={e => { e.stopPropagation(); handleJoin(roomId(featured)); }}
+                <button type="button" onClick={e => { e.stopPropagation(); handleJoin(roomId(featured), Boolean(featured?.pinned)); }}
                   style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#7c6af7", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   ↗ Join {featured.pinned ? "Lobby" : "Room"}
                 </button>
@@ -348,7 +357,7 @@ export default function HomePage() {
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="✦" label="Lobbies" count={lobbies.length} sub="verified & pinned" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {lobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={handleJoin} />)}
+              {lobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
             </div>
           </div>
         )}
