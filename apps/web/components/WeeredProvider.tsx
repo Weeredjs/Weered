@@ -241,6 +241,32 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Incremental presence — another user joined this room
+      if (msg.type === "presence:join") {
+        const rid  = String(msg.roomId || "");
+        const user = msg.user as RoomUser | null;
+        if (!rid || !user?.id) return;
+        setUsersByRoom(prev => {
+          const cur = prev[rid] || [];
+          if (cur.find(u => u.id === user.id)) return prev; // already listed
+          return { ...prev, [rid]: [...cur, user] };
+        });
+        return;
+      }
+
+      // Incremental presence — another user left this room
+      if (msg.type === "presence:leave") {
+        const rid    = String(msg.roomId || "");
+        const userId = String(msg.userId || "");
+        if (!rid || !userId) return;
+        setUsersByRoom(prev => {
+          const cur = prev[rid];
+          if (!cur) return prev;
+          return { ...prev, [rid]: cur.filter(u => u.id !== userId) };
+        });
+        return;
+      }
+
       if (msg.type === "room:adminState") {
         const rid = String(msg.roomId || "");
         setAdminByRoom(prev => ({
@@ -439,6 +465,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     wsReady, wsState,
     activeRoomId, joinedRoomId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus,
+    usersByRoom,
     rooms, join, knock,
     devLogin, logout,
     sendChat, renameRoom,
