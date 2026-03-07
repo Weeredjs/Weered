@@ -267,8 +267,15 @@ function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: numb
 }
 
 function publishState(room: RoomState) {
+  // Build a map of globalRole from connected sockets for this room
+  const roleMap = new Map<string, string>();
+  for (const s of room.sockets) {
+    if (s.user?.id && s.user?.globalRole) roleMap.set(s.user.id, s.user.globalRole);
+  }
   const users = Array.from(room.users.values()).map((u) => ({
-    ...u, role: u.id ? roleOf(room, u.id) : "member",
+    ...u,
+    role: u.id ? roleOf(room, u.id) : "member",
+    globalRole: (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
   }));
 
   broadcast(room, {
