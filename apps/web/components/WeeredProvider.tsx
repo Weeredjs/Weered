@@ -348,7 +348,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "room:denied")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "denied"   })); return; }
     };
 
-    return () => { try { ws.close(); } catch {} wsRef.current = null; };
+    return () => { /* do not close — guards at effect top handle re-auth in-band */ };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
