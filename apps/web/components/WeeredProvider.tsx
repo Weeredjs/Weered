@@ -215,7 +215,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       try { msg = JSON.parse(String(ev.data || "")); } catch { return; }
       msg = normalizeInbound(msg);
       if (!msg || typeof msg.type !== "string") return;
-
+      // Forward DM messages to DockShell via window event
+      if (msg.type === "dm:message") {
+        try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
+      }
       // Generic rooms list payload
       if (Array.isArray(msg.rooms)) setRooms(msg.rooms);
 

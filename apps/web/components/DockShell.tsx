@@ -348,8 +348,8 @@ const roomRole = normRole(pickFirstString(role, joinStatus?.role));
 
  // WS listener for incoming DMs
  useEffect(() => {
-   if (!ctx?.on) return;
-   const unsub = ctx.on?.("dm:message", (payload: any) => {
+   const handler = (ev: any) => {
+     const payload = ev?.detail;
      const msg: DmMsg = payload?.message;
      if (!msg) return;
      const meId = String(me?.id || "");
@@ -364,9 +364,10 @@ const roomRole = normRole(pickFirstString(role, joinStatus?.role));
        }
        return [{ peerId, peerName: peerId, msgs: [msg], unread: dmActivePeerId === peerId ? 0 : 1 }, ...cur];
      });
-   });
-   return () => { try { unsub?.(); } catch {} };
- }, [ctx, me, dmActivePeerId]);
+   };
+   window.addEventListener("weered:dm:message", handler as any);
+   return () => window.removeEventListener("weered:dm:message", handler as any);
+ }, [me, dmActivePeerId]);
 
  useEffect(() => {
    try { dmEndRef.current?.scrollIntoView({ behavior: "smooth" }); } catch {}
