@@ -495,6 +495,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     sendChat, renameRoom,
     lockRoom, unlockRoom,
     promote, demote, kick, ban, unban, admit, deny,
+    sendRaw: (msg: object) => {
+      try {
+        const ws = (wsRef as any)?.current;
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      } catch {}
+    },
   };
 
   return <WeeredContext.Provider value={value}>{children}</WeeredContext.Provider>;
