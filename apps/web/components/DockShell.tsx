@@ -348,8 +348,8 @@ const roomRole = normRole(pickFirstString(role, joinStatus?.role));
 
  // WS listener for incoming DMs
  useEffect(() => {
-   const handler = (ev: any) => {
-     const payload = ev?.detail;
+   if (!ctx?.on) return;
+   const unsub = ctx.on?.("dm:message", (payload: any) => {
      const msg: DmMsg = payload?.message;
      if (!msg) return;
      const meId = String(me?.id || "");
@@ -362,12 +362,16 @@ const roomRole = normRole(pickFirstString(role, joinStatus?.role));
            : t
          );
        }
-       return [{ peerId, peerName: peerId, msgs: [msg], unread: dmActivePeerId === peerId ? 0 : 1 }, ...cur];
+       // New thread — show ID for now, resolve name async
+      fetch(`${apiBase}/profile/${encodeURIComponent(peerId)}`, { headers: tokenMaybe ? { Authorization: `Bearer ${tokenMaybe}` } : {} })
+        .then(r => r.json()).then(j => {
+          if (j?.name) setDmThreads(ts => ts.map(t => t.peerId === peerId ? { ...t, peerName: j.name } : t));
+        }).catch(() => {});
+      return [{ peerId, peerName: peerId, msgs: [msg], unread: dmActivePeerId === peerId ? 0 : 1 }, ...cur];
      });
-   };
-   window.addEventListener("weered:dm:message", handler as any);
-   return () => window.removeEventListener("weered:dm:message", handler as any);
- }, [me, dmActivePeerId]);
+   });
+   return () => { try { unsub?.(); } catch {} };
+ }, [ctx, me, dmActivePeerId]);
 
  useEffect(() => {
    try { dmEndRef.current?.scrollIntoView({ behavior: "smooth" }); } catch {}
@@ -430,13 +434,12 @@ const totalUnread = useMemo(() => dmThreads.reduce((s, t) => s + t.unread, 0), [
  try { if (typeof sendChat === "function") { sendChat({ roomId: viewId || joinedId, body: b }); return; } } catch {}
  }
 
-async function dmCreateThread() {
+ async function dmCreateThread() {
    const peer = dmPeer.trim();
    if (!peer) return;
    const existing = dmThreads.find(t => t.peerName.toLowerCase() === peer.toLowerCase() || t.peerId === peer);
    if (existing) { setDmActivePeerId(existing.peerId); setDmPeer(""); return; }
    setDmPeer("");
-   // Resolve via API to get real ID + name
    try {
      const r = await fetch(`${apiBase}/profile/${encodeURIComponent(peer)}`, {
        headers: tokenMaybe ? { Authorization: `Bearer ${tokenMaybe}` } : {},
@@ -445,7 +448,11 @@ async function dmCreateThread() {
      const resolvedId   = j?.id   || peer;
      const resolvedName = j?.name || peer;
      const th: DmThread = { peerId: resolvedId, peerName: resolvedName, msgs: [], unread: 0 };
-     setDmThreads(cur => [th, ...cur]);
+     setDmThreads(cur => {
+       const dup = cur.find(t => t.peerId === resolvedId);
+       if (dup) { setDmActivePeerId(resolvedId); return cur; }
+       return [th, ...cur];
+     });
      setDmActivePeerId(resolvedId);
    } catch {
      const th: DmThread = { peerId: peer, peerName: peer, msgs: [], unread: 0 };
@@ -773,9 +780,9 @@ const body = pickFirstString(m?.body, m?.text, "");
          onChange={(e) => setDmPeer((e.target as any).value || "")}
          placeholder="Username or ID..."
          style={{ flex: 1, padding: "8px 10px", borderRadius: 12, border: "1px solid var(--weered-bd2)", background: "rgba(255,255,255,.06)", color: "var(--weered-text)", outline: "none", fontSize: 12 }}
-         onKeyDown={(e) => { if ((e as any).key === "Enter") dmCreateThread(); }}
+         onKeyDown={(e) => { if ((e as any).key === "Enter") void dmCreateThread(); }}
        />
-       <button style={btn} onClick={dmCreateThread}>+</button>
+       <button style={btn} onClick={() => void dmCreateThread()}>+</button>
      </div>
 
      {/* Thread list */}
