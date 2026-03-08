@@ -355,6 +355,7 @@ async function awardNotoriety(userId: string, action: string): Promise<void> {
       const existing = await prisma.notorietyEvent.findFirst({
         where: { userId, action },
       });
+      
       if (existing) return;
     }
 
