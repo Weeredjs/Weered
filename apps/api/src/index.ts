@@ -322,7 +322,9 @@ function leaveRoom(ws: Sock) {
   if (ws.user) {
     const existed = room.users.delete(ws.user.id);
     if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
-    publishState(room);
+    // Do NOT call publishState here — presence:leave is the correct incremental update.
+    // Broadcasting a full presence:state snapshot here overwrites other clients' local state
+    // and causes the presence flicker bug when users navigate between rooms.
   }
   ws.roomId = undefined;
 
@@ -417,8 +419,8 @@ async function doJoin(ws: Sock, roomId: string) {
     return false;
   }
 
-  // Already in this room on this socket — just republish state, no leave/rejoin
-  if (ws.roomId === roomId) { publishState(room); return true; }
+  // Already in this room on this socket — just republish state to this socket only, not everyone
+  if (ws.roomId === roomId) { publishStateToSocket(ws, room); return true; }
   if (ws.roomId) leaveRoom(ws);
 
   ws.roomId = roomId;
