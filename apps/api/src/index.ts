@@ -944,13 +944,13 @@ async function main() {
 
     const body: any = (req as any).body || {};
     const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 280) : undefined;
-
-    if (bio === undefined) return reply.code(400).send({ error: "Nothing to update" });
+    const avatarColor = typeof body.avatarColor === "string" ? body.avatarColor.slice(0, 20) : undefined;
+    if (bio === undefined && avatarColor === undefined) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
       const u = await prisma.user.update({
         where: { id: viewer.id },
-        data: { bio },
+        data: { ...(bio !== undefined && { bio }), ...(avatarColor !== undefined && { avatarColor }) },
         select: { id: true, bio: true },
       });
 

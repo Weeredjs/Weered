@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useWeered } from "../../WeeredProvider";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// Types
 type Profile = {
   id: string;
   name: string;
@@ -12,10 +12,12 @@ type Profile = {
   tier: "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
   globalRole: string;
   joinedAt: string;
+  lastSeen: string;
   roomsHosted: number;
+  avatarColor?: string;
 };
 
-// ── Tier config ───────────────────────────────────────────────────────────────
+// Tier config
 const TIERS = {
   INNOCENT: { label: "Innocent", color: "#94a3b8", glow: "rgba(148,163,184,.20)" },
   INDICTED: { label: "Indicted", color: "#a78bfa", glow: "rgba(167,139,250,.25)" },
@@ -30,6 +32,11 @@ const ROLE_COLORS: Record<string, string> = {
   SUPPORT: "#34d399",
 };
 
+const AVATAR_COLORS = [
+  "#7c3aed", "#db2777", "#ea580c", "#16a34a",
+  "#0284c7", "#9333ea", "#e11d48", "#0d9488",
+];
+
 function notorietyRank(n: number): string {
   if (n >= 10000) return "Legend";
   if (n >= 5000)  return "Crime Boss";
@@ -41,21 +48,24 @@ function notorietyRank(n: number): string {
 }
 
 function nameToColor(name: string): string {
-  const colors = ["#7c3aed","#db2777","#ea580c","#16a34a","#0284c7","#9333ea","#e11d48","#d97706"];
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length;
-  return colors[h];
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[h];
 }
 
-function pickFirstString(...vals: any[]): string {
-  for (const v of vals) {
-    const s = String(v ?? "").trim();
-    if (s) return s;
-  }
-  return "";
+function formatLastSeen(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 2)   return "Active now";
+  if (m < 60)  return `Active ${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `Active ${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)   return `Active ${d}d ago`;
+  return `Active ${new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}`;
 }
 
-// ── Notoriety bar ─────────────────────────────────────────────────────────────
+// Notoriety progress bar
 function NotorietyBar({ value, color }: { value: number; color: string }) {
   const thresholds = [0, 100, 500, 1000, 2000, 5000, 10000];
   const next = thresholds.find(t => t > value) ?? 10000;
@@ -79,7 +89,29 @@ function NotorietyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// Avatar color picker
+function ColorPicker({ current, onChange }: { current: string; onChange: (c: string) => void }) {
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+      {AVATAR_COLORS.map(c => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(c)}
+          style={{
+            width: 22, height: 22, borderRadius: "50%",
+            background: c, border: `2px solid ${c === current ? "#fff" : "transparent"}`,
+            cursor: "pointer", padding: 0,
+            boxShadow: c === current ? `0 0 0 1px ${c}` : "none",
+            transition: "border 0.1s",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Main component
 export default function ProfileSheet({ userId }: { userId: string }) {
   const w       = useWeered() as any;
   const me      = w?.me;
@@ -89,14 +121,16 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const isMe = !!me && (String(me?.id || "") === String(userId) || userId === "@me");
   const resolvedId = isMe ? me?.id : userId;
 
-  const [profile,  setProfile ] = useState<Profile | null>(null);
-  const [loading,  setLoading ] = useState(true);
-  const [error,    setError   ] = useState("");
-  const [editing,  setEditing ] = useState(false);
-  const [bio,      setBio     ] = useState("");
-  const [saving,   setSaving  ] = useState(false);
+  const [profile,     setProfile    ] = useState<Profile | null>(null);
+  const [loading,     setLoading    ] = useState(true);
+  const [error,       setError      ] = useState("");
+  const [editing,     setEditing    ] = useState(false);
+  const [bio,         setBio        ] = useState("");
+  const [saving,      setSaving     ] = useState(false);
+  const [avatarColor, setAvatarColor] = useState("");
+  const [savingColor, setSavingColor] = useState(false);
 
-  // ── Fetch ──
+  // Fetch profile
   useEffect(() => {
     if (!resolvedId) return;
     setLoading(true);
@@ -109,12 +143,13 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         if (j?.error) { setError(j.error); return; }
         setProfile(j);
         setBio(j.bio || "");
+        setAvatarColor(j.avatarColor || nameToColor(j.name));
       })
       .catch(() => setError("Could not load profile."))
       .finally(() => setLoading(false));
   }, [resolvedId, token, apiBase]);
 
-  // ── Save bio ──
+  // Save bio
   async function saveBio() {
     if (!token) return;
     setSaving(true);
@@ -132,6 +167,22 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     finally { setSaving(false); }
   }
 
+  // Save avatar color
+  async function saveColor(color: string) {
+    setAvatarColor(color);
+    if (!token) return;
+    setSavingColor(true);
+    try {
+      await fetch(`${apiBase}/profile/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avatarColor: color }),
+      });
+      setProfile(prev => prev ? { ...prev, avatarColor: color } : prev);
+    } catch {}
+    finally { setSavingColor(false); }
+  }
+
   function openDM() {
     try {
       window.dispatchEvent(new CustomEvent("weered:dock:open", {
@@ -140,12 +191,12 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     } catch {}
   }
 
-  // ── Loading / error states ──
+  // Loading state
   if (loading) return (
     <div style={wrap}>
-      <div style={shimmer} />
-      <div style={shimmer} />
-      <div style={{ ...shimmer, width: "60%" }} />
+      {[100, 75, 60].map(w => (
+        <div key={w} style={{ height: 14, borderRadius: 6, background: "rgba(255,255,255,.06)", marginBottom: 8, width: `${w}%` }} />
+      ))}
     </div>
   );
 
@@ -155,17 +206,18 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     </div>
   );
 
-  const tier        = TIERS[profile.tier] || TIERS.INNOCENT;
-  const roleColor   = ROLE_COLORS[profile.globalRole] || null;
-  const avatarColor = nameToColor(profile.name);
-  const initial     = profile.name.slice(0, 1).toUpperCase();
-  const joinDate    = new Date(profile.joinedAt).toLocaleDateString("en-CA", { year: "numeric", month: "short" });
-  const rank        = notorietyRank(profile.notoriety);
+  const tier      = TIERS[profile.tier] || TIERS.INNOCENT;
+  const roleColor = ROLE_COLORS[profile.globalRole] || null;
+  const aColor    = avatarColor || nameToColor(profile.name);
+  const initial   = profile.name.slice(0, 1).toUpperCase();
+  const joinDate  = new Date(profile.joinedAt).toLocaleDateString("en-CA", { year: "numeric", month: "short" });
+  const lastSeen  = profile.lastSeen ? formatLastSeen(profile.lastSeen) : null;
+  const rank      = notorietyRank(profile.notoriety);
 
   return (
     <div style={wrap}>
 
-      {/* ── Tier header strip ── */}
+      {/* Tier header strip */}
       <div style={{
         margin: "-16px -16px 0",
         height: 56,
@@ -179,15 +231,16 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         </span>
       </div>
 
-      {/* ── Avatar + name row ── */}
+      {/* Avatar + name row */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginTop: -24, marginBottom: 12 }}>
         <div style={{
           width: 56, height: 56, borderRadius: "50%", flexShrink: 0,
-          background: avatarColor,
+          background: aColor,
           border: `2.5px solid ${tier.color}`,
           boxShadow: `0 0 14px ${tier.glow}`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 22, fontWeight: 900, color: "#fff",
+          transition: "background 0.2s",
         }}>
           {initial}
         </div>
@@ -195,14 +248,10 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: "-0.3px" }}>{profile.name}</span>
-
-            {/* Tier pill */}
             <span style={{
               padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900,
               background: `${tier.color}15`, border: `1px solid ${tier.color}40`, color: tier.color,
             }}>{tier.label}</span>
-
-            {/* Global role pill */}
             {roleColor && (
               <span style={{
                 padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900,
@@ -210,11 +259,22 @@ export default function ProfileSheet({ userId }: { userId: string }) {
               }}>{profile.globalRole}</span>
             )}
           </div>
-          <div style={{ fontSize: 11, opacity: 0.35, marginTop: 2 }}>Member since {joinDate}</div>
+          <div style={{ fontSize: 11, opacity: 0.35, marginTop: 2 }}>
+            Member since {joinDate}
+            {lastSeen && <span style={{ marginLeft: 8 }}>{lastSeen}</span>}
+          </div>
         </div>
       </div>
 
-      {/* ── Bio ── */}
+      {/* Avatar color picker — own profile only */}
+      {isMe && (
+        <div style={section}>
+          <div style={sectionLabel}>Avatar Color {savingColor && <span style={{ opacity: 0.4 }}>saving...</span>}</div>
+          <ColorPicker current={aColor} onChange={saveColor} />
+        </div>
+      )}
+
+      {/* Bio */}
       <div style={section}>
         <div style={sectionLabel}>Bio</div>
         {editing ? (
@@ -237,7 +297,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
             />
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
               <button onClick={saveBio} disabled={saving} style={{ ...btn, background: `${tier.color}18`, borderColor: `${tier.color}44`, color: tier.color }}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Saving..." : "Save"}
               </button>
               <button onClick={() => { setEditing(false); setBio(profile.bio || ""); }} style={btn}>Cancel</button>
             </div>
@@ -247,14 +307,12 @@ export default function ProfileSheet({ userId }: { userId: string }) {
             <p style={{ fontSize: 12, lineHeight: 1.6, opacity: profile.bio ? 0.8 : 0.3, margin: 0, fontStyle: profile.bio ? "normal" : "italic", flex: 1 }}>
               {profile.bio || (isMe ? "No bio yet." : "No bio.")}
             </p>
-            {isMe && (
-              <button onClick={() => setEditing(true)} style={{ ...btn, flexShrink: 0, fontSize: 11 }}>Edit</button>
-            )}
+            {isMe && <button onClick={() => setEditing(true)} style={{ ...btn, flexShrink: 0, fontSize: 11 }}>Edit</button>}
           </div>
         )}
       </div>
 
-      {/* ── Notoriety ── */}
+      {/* Notoriety */}
       <div style={section}>
         <div style={sectionLabel}>Notoriety</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -272,7 +330,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         <NotorietyBar value={profile.notoriety} color={tier.color} />
       </div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div style={section}>
         <div style={sectionLabel}>Stats</div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -293,7 +351,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* ── Actions ── */}
+      {/* Actions — other users only */}
       {!isMe && (
         <div style={section}>
           <div style={sectionLabel}>Actions</div>
@@ -308,7 +366,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// Styles
 const wrap: React.CSSProperties = {
   padding: 16,
   display: "flex",
@@ -336,10 +394,4 @@ const btn: React.CSSProperties = {
   background: "rgba(255,255,255,.06)",
   color: "inherit", fontSize: 12, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
-};
-
-const shimmer: React.CSSProperties = {
-  height: 14, borderRadius: 6,
-  background: "rgba(255,255,255,.06)",
-  marginBottom: 8, width: "100%",
 };
