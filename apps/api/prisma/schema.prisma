@@ -198,7 +198,8 @@ model User {
   globalRole  GlobalRole @default(USER)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-
+  dmSent     DirectMessage[] @relation("DMSent")
+  dmReceived DirectMessage[] @relation("DMReceived")
   LocalAuth        LocalAuth?
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
@@ -264,3 +265,19 @@ model NotorietyEvent {
 
   @@index([userId, action])
 }
+
+model DirectMessage {
+  id        String    @id @default(cuid())
+  fromId    String
+  toId      String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  from User @relation("DMSent",     fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("DMReceived", fields: [toId],   references: [id], onDelete: Cascade)
+
+  @@index([fromId, toId, createdAt])
+  @@index([toId, readAt])
+}
+

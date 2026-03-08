@@ -3,10 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 
-type DmMsg = { id: string; at: number; from: "me" | "them"; body: string };
-type DmThread = { id: string; peer: string; peerId?: string; msgs: DmMsg[] };
-
-const DM_KEY = "weered_dm_threads_v0";
+type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
+type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
 
 const WEERED_THEME_KEY = "weered_theme_v1";
 
@@ -308,58 +306,87 @@ const viewId = String(activeRoomId || "");
  const roomTitle = pickFirstString(meta?.name, viewId, "Room");
 const roomRole = normRole(pickFirstString(role, joinStatus?.role));
 
- // ---- DM state (local-only v0)
+ // ---- DM state (API-backed)
  const [dmThreads, setDmThreads] = useState<DmThread[]>([]);
- const [dmActiveId, setDmActiveId] = useState<string>("");
+ const [dmActivePeerId, setDmActivePeerId] = useState<string>("");
  const [dmPeer, setDmPeer] = useState("");
  const [dmDraft, setDmDraft] = useState("");
+ const [dmLoading, setDmLoading] = useState(false);
  const dmEndRef = useRef<HTMLDivElement | null>(null);
-
-
  const dmInputRef = useRef<HTMLInputElement | null>(null);
  const roomInputRef = useRef<HTMLInputElement | null>(null);
+
+ const apiBase = pickFirstString(ctx?.apiBase, (ctx as any)?.api, "") || "";
+
+ // Fetch unread counts on mount and when tab changes to dms
  useEffect(() => {
- if (typeof window === "undefined") return;
- try {
- const raw = localStorage.getItem(DM_KEY) || "[]";
- const arr = JSON.parse(raw);
- if (Array.isArray(arr)) setDmThreads(arr);
- } catch {}
- }, []);
+   if (!tokenMaybe || !apiBase) return;
+   fetch(`${apiBase}/dm/unread`, { headers: { Authorization: `Bearer ${tokenMaybe}` } })
+     .then(r => r.json())
+     .then(j => {
+       if (!j?.counts) return;
+       setDmThreads(cur => cur.map(t => ({ ...t, unread: j.counts[t.peerId] ?? 0 })));
+     })
+     .catch(() => {});
+ }, [tokenMaybe, apiBase]);
+
+ // Load thread history when active peer changes
+ useEffect(() => {
+   if (!dmActivePeerId || !tokenMaybe || !apiBase) return;
+   setDmLoading(true);
+   fetch(`${apiBase}/dm/${dmActivePeerId}`, { headers: { Authorization: `Bearer ${tokenMaybe}` } })
+     .then(r => r.json())
+     .then(j => {
+       if (!Array.isArray(j?.messages)) return;
+       setDmThreads(cur => cur.map(t =>
+         t.peerId === dmActivePeerId ? { ...t, msgs: j.messages, unread: 0 } : t
+       ));
+     })
+     .catch(() => {})
+     .finally(() => setDmLoading(false));
+ }, [dmActivePeerId, tokenMaybe, apiBase]);
+
+ // WS listener for incoming DMs
+ useEffect(() => {
+   if (!ctx?.on) return;
+   const unsub = ctx.on?.("dm:message", (payload: any) => {
+     const msg: DmMsg = payload?.message;
+     if (!msg) return;
+     const meId = String(me?.id || "");
+     const peerId = msg.fromId === meId ? msg.toId : msg.fromId;
+     setDmThreads(cur => {
+       const existing = cur.find(t => t.peerId === peerId);
+       if (existing) {
+         return cur.map(t => t.peerId === peerId
+           ? { ...t, msgs: [...t.msgs, msg], unread: dmActivePeerId === peerId ? 0 : t.unread + 1 }
+           : t
+         );
+       }
+       return [{ peerId, peerName: peerId, msgs: [msg], unread: dmActivePeerId === peerId ? 0 : 1 }, ...cur];
+     });
+   });
+   return () => { try { unsub?.(); } catch {} };
+ }, [ctx, me, dmActivePeerId]);
 
  useEffect(() => {
- if (typeof window === "undefined") return;
- try {
- localStorage.setItem(DM_KEY, JSON.stringify(dmThreads || []));
- } catch {}
- }, [dmThreads]);
+   try { dmEndRef.current?.scrollIntoView({ behavior: "smooth" }); } catch {}
+ }, [dmActivePeerId, dmThreads]);
 
  useEffect(() => {
- try { dmEndRef.current?.scrollIntoView({ behavior: "smooth" }); } catch {}
- }, [dmActiveId, dmThreads]);
-
- 
- // Focus after the dock finishes opening (most reliable post-mount)
- useEffect(() => {
- if (typeof window === "undefined") return;
-
- const focusNow = () => {
- try {
- // Next tick to ensure the drawer + inputs are mounted
- setTimeout(() => {
- try {
- if (tab === "dms") dmInputRef.current?.focus();
- else roomInputRef.current?.focus();
- } catch {}
- }, 0);
- } catch {}
- };
-
- const onOpened = () => focusNow();
- window.addEventListener("weered:dock:opened", onOpened as any);
- return () => window.removeEventListener("weered:dock:opened", onOpened as any);
- }, [tab, dmActiveId]);
-const dmActive = useMemo(() => dmThreads.find((t) => t.id === dmActiveId) || null, [dmThreads, dmActiveId]);
+   if (typeof window === "undefined") return;
+   const focusNow = () => {
+     setTimeout(() => {
+       try {
+         if (tab === "dms") dmInputRef.current?.focus();
+         else roomInputRef.current?.focus();
+       } catch {}
+     }, 0);
+   };
+   window.addEventListener("weered:dock:opened", focusNow as any);
+   return () => window.removeEventListener("weered:dock:opened", focusNow as any);
+ }, [tab, dmActivePeerId]);
+const dmActive = useMemo(() => dmThreads.find(t => t.peerId === dmActivePeerId) || null, [dmThreads, dmActivePeerId]);
+const totalUnread = useMemo(() => dmThreads.reduce((s, t) => s + t.unread, 0), [dmThreads]);
 
  // ---- DM intent from UI (Presence "Message" button / other callers)
  useEffect(() => {
@@ -372,25 +399,16 @@ const dmActive = useMemo(() => dmThreads.find((t) => t.id === dmActiveId) || nul
  const peerName = pickFirstString(detail?.peer?.name, detail?.peerName, detail?.peer, "");
  const peerId = pickFirstString(detail?.peer?.id, detail?.peerId, "");
 
- if (!peerName) return;
+ if (!peerName && !peerId) return;
 
- // switch to DM tab
  setTab("dms");
 
- // create/select thread
  setDmThreads((cur) => {
- const arr = Array.isArray(cur) ? cur : [];
- const existing = arr.find((t) => String(t.peer || "").toLowerCase() === String(peerName).toLowerCase());
-
- if (existing) {
- setDmActiveId(existing.id);
- return arr;
- }
-
- const th: DmThread = { id: __id(), peer: peerName, peerId: peerId || undefined, msgs: [] };
- const next = [th, ...arr];
- setDmActiveId(th.id);
- return next;
+   const existing = cur.find(t => t.peerId === peerId || t.peerName.toLowerCase() === peerName.toLowerCase());
+   if (existing) { setDmActivePeerId(existing.peerId); return cur; }
+   const th: DmThread = { peerId, peerName, msgs: [], unread: 0 };
+   setDmActivePeerId(peerId);
+   return [th, ...cur];
  });
  };
 
@@ -412,25 +430,37 @@ const dmActive = useMemo(() => dmThreads.find((t) => t.id === dmActiveId) || nul
  }
 
  function dmCreateThread() {
- const peer = dmPeer.trim();
- if (!peer) return;
- const existing = dmThreads.find((t) => t.peer.toLowerCase() === peer.toLowerCase());
- if (existing) { setDmActiveId(existing.id); setDmPeer(""); return; }
- const t: DmThread = { id: __id(), peer, msgs: [] };
- const next = [t, ...(dmThreads || [])];
- setDmThreads(next);
- setDmActiveId(t.id);
- setDmPeer("");
+   const peer = dmPeer.trim();
+   if (!peer) return;
+   const existing = dmThreads.find(t => t.peerName.toLowerCase() === peer.toLowerCase());
+   if (existing) { setDmActivePeerId(existing.peerId); setDmPeer(""); return; }
+   // Need peerId — for now use name as placeholder, resolved on first message
+   const th: DmThread = { peerId: peer, peerName: peer, msgs: [], unread: 0 };
+   setDmThreads(cur => [th, ...cur]);
+   setDmActivePeerId(peer);
+   setDmPeer("");
  }
 
- function dmSend() {
- if (!dmActive) return;
- const b = dmDraft.trim();
- if (!b) return;
- const m: DmMsg = { id: __id(), at: Date.now(), from: "me", body: b };
- const next = dmThreads.map((t) => (t.id === dmActive.id ? { ...t, msgs: [...(t.msgs || []), m] } : t));
- setDmThreads(next);
- setDmDraft("");
+ async function dmSend() {
+   if (!dmActive || !dmDraft.trim() || !tokenMaybe || !apiBase) return;
+   const body = dmDraft.trim();
+   setDmDraft("");
+   const meId = String(me?.id || "");
+   // Optimistic add
+   const optimistic: DmMsg = { id: __id(), fromId: meId, toId: dmActive.peerId, body, createdAt: new Date().toISOString(), readAt: null };
+   setDmThreads(cur => cur.map(t => t.peerId === dmActive.peerId ? { ...t, msgs: [...t.msgs, optimistic] } : t));
+   try {
+     // Try WS first via ctx.sendRaw, fall back to REST
+     if (typeof (ctx as any)?.sendRaw === "function") {
+       (ctx as any).sendRaw({ type: "dm:send", toId: dmActive.peerId, body });
+     } else {
+       await fetch(`${apiBase}/dm/${dmActive.peerId}`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenMaybe}` },
+         body: JSON.stringify({ body }),
+       });
+     }
+   } catch {}
  }
 
  const embedded = !!props.forceMode;
@@ -543,7 +573,9 @@ const panel: React.CSSProperties =
  </div>
  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
  <button style={tab === "room" ? btnActive : btn} onClick={() => setTab("room")}>Room</button>
- <button style={tab === "dms" ? btnActive : btn} onClick={() => setTab("dms")}>DMs</button>
+ <button style={tab === "dms" ? btnActive : btn} onClick={() => setTab("dms")}>
+   DMs{totalUnread > 0 ? ` (${totalUnread})` : ""}
+ </button>
  <button style={tab === "friends" ? btnActive : btn} onClick={() => setTab("friends")}>Friends</button>
  <button style={btn} onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:close")); } catch {} }}>Close</button>
  </div>
@@ -716,138 +748,94 @@ const body = pickFirstString(m?.body, m?.text, "");
  </>
  ) : tab === "dms" ? (
  <div style={{ border: "1px solid var(--weered-bd)", borderRadius: 14, overflow: "hidden" }}>
- <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--weered-bd)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
- Private messages (local-only v0)
- </div>
+   <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--weered-bd)", fontWeight: 900, fontSize: 12, opacity: 0.9 }}>
+     Messages {totalUnread > 0 && <span style={{ marginLeft: 4, padding: "1px 7px", borderRadius: 999, background: "rgba(239,68,68,.18)", border: "1px solid rgba(239,68,68,.3)", color: "#fca5a5", fontSize: 10 }}>{totalUnread}</span>}
+   </div>
 
- <div style={{ padding: 10, display: "grid", gap: 10, gridTemplateColumns: "1fr" }}>
- <div style={{ width: "100%" }}>
- <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
- <input
- value={dmPeer}
- onChange={(e) => setDmPeer((e.target as any).value || "")}
- placeholder="Username"
- style={{
- flex: 1,
- padding: "8px 10px",
- borderRadius: 12,
- border: "1px solid var(--weered-bd2)",
- background: "rgba(255,255,255,.06)",
- color: "var(--weered-text)",
- outline: "none",
- fontSize: 12,
- }}
- onKeyDown={(e) => { if ((e as any).key === "Enter") dmCreateThread(); }}
- />
- <button style={btn} onClick={dmCreateThread}>+</button>
- </div>
+   <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+     {/* New thread input */}
+     <div style={{ display: "flex", gap: 6 }}>
+       <input
+         value={dmPeer}
+         onChange={(e) => setDmPeer((e.target as any).value || "")}
+         placeholder="Username or ID..."
+         style={{ flex: 1, padding: "8px 10px", borderRadius: 12, border: "1px solid var(--weered-bd2)", background: "rgba(255,255,255,.06)", color: "var(--weered-text)", outline: "none", fontSize: 12 }}
+         onKeyDown={(e) => { if ((e as any).key === "Enter") dmCreateThread(); }}
+       />
+       <button style={btn} onClick={dmCreateThread}>+</button>
+     </div>
 
- <div style={{ border: "1px solid rgba(148,163,184,.12)", borderRadius: 12, overflow: "hidden" }}>
- {(dmThreads || []).length ? (
- (dmThreads || []).map((t) => {
- const active = t.id === dmActiveId;
- return (
- <button
- key={t.id}
- onClick={() => setDmActiveId(t.id)}
- style={{
- width: "100%",
- textAlign: "left",
- padding: "10px 10px",
- border: "0",
- borderBottom: "1px solid rgba(148,163,184,.08)",
- background: active ? "var(--weered-accent-bg, rgba(14,165,233,.18))" : "transparent",
- color: "var(--weered-text)",
- cursor: "pointer",
- fontWeight: 900,
- fontSize: 12,
- }}
- >
- @{t.peer}
- <div style={{ opacity: 0.6, fontWeight: 700, fontSize: 11, marginTop: 2 }}>
- {(t.msgs || []).length} msg
- </div>
- </button>
- );
- })
- ) : (
- <div style={{ padding: 10, opacity: 0.6, fontSize: 12 }}>No threads yet.</div>
- )}
- </div>
- </div>
+     {/* Thread list */}
+     <div style={{ border: "1px solid rgba(148,163,184,.12)", borderRadius: 12, overflow: "hidden" }}>
+       {dmThreads.length ? dmThreads.map((t) => {
+         const active = t.peerId === dmActivePeerId;
+         return (
+           <button key={t.peerId} onClick={() => setDmActivePeerId(t.peerId)} style={{
+             width: "100%", textAlign: "left", padding: "10px 10px",
+             border: "0", borderBottom: "1px solid rgba(148,163,184,.08)",
+             background: active ? "var(--weered-accent-bg)" : "transparent",
+             color: "var(--weered-text)", cursor: "pointer", fontWeight: 900, fontSize: 12,
+             display: "flex", alignItems: "center", justifyContent: "space-between",
+           }}>
+             <div>
+               <div>@{t.peerName}</div>
+               <div style={{ opacity: 0.5, fontWeight: 700, fontSize: 11, marginTop: 2 }}>{t.msgs.length} msg</div>
+             </div>
+             {t.unread > 0 && (
+               <span style={{ padding: "1px 7px", borderRadius: 999, background: "rgba(239,68,68,.2)", border: "1px solid rgba(239,68,68,.35)", color: "#fca5a5", fontSize: 10, fontWeight: 900 }}>{t.unread}</span>
+             )}
+           </button>
+         );
+       }) : (
+         <div style={{ padding: 10, opacity: 0.6, fontSize: 12 }}>No threads yet.</div>
+       )}
+     </div>
 
- <div style={{ flex: 1, minWidth: 0 }}>
- {dmActive ? (
- <>
- <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
- <div style={{ fontWeight: 950 }}>@{dmActive.peer}</div>
- <button
- style={btn}
- onClick={() => {
- const next = (dmThreads || []).filter((t) => t.id !== dmActive.id);
- setDmThreads(next);
- setDmActiveId(next[0]?.id || "");
- }}
- >
- Delete
- </button>
- </div>
+     {/* Active thread */}
+     {dmActive ? (
+       <>
+         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+           <div style={{ fontWeight: 950 }}>@{dmActive.peerName}</div>
+           <button style={btn} onClick={() => { setDmThreads(cur => cur.filter(t => t.peerId !== dmActive.peerId)); setDmActivePeerId(""); }}>Delete</button>
+         </div>
 
- <div style={{ height: 230, overflow: "auto", padding: 10, borderRadius: 12, border: "1px solid rgba(148,163,184,.12)" }}>
- {(dmActive.msgs || []).length ? (
- dmActive.msgs.map((m) => (
- <div key={m.id} style={{ marginBottom: 10, display: "flex", justifyContent: m.from === "me" ? "flex-end" : "flex-start" }}>
- <div
- style={{
- maxWidth: "85%",
- padding: "8px 10px",
- borderRadius: 12,
- border: "1px solid var(--weered-bd)",
- background: m.from === "me" ? "var(--weered-accent-bg, rgba(14,165,233,.18))" : "rgba(255,255,255,.06)",
- }}
- >
- <div style={{ fontSize: 13, lineHeight: "18px" }}>{m.body}</div>
- <div style={{ opacity: 0.6, fontSize: 11, marginTop: 4 }}>
- {new Date(m.at).toLocaleTimeString()}
- </div>
- </div>
- </div>
- ))
- ) : (
- <div style={{ opacity: 0.6, fontSize: 12 }}>No messages yet.</div>
- )}
- <div ref={dmEndRef} />
- </div>
+         <div style={{ height: 230, overflow: "auto", padding: 10, borderRadius: 12, border: "1px solid rgba(148,163,184,.12)" }}>
+           {dmLoading ? (
+             <div style={{ opacity: 0.5, fontSize: 12 }}>Loading...</div>
+           ) : dmActive.msgs.length ? (
+             dmActive.msgs.map((m) => {
+               const isMe = m.fromId === String(me?.id || "");
+               return (
+                 <div key={m.id} style={{ marginBottom: 10, display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                   <div style={{ maxWidth: "85%", padding: "8px 10px", borderRadius: 12, border: "1px solid var(--weered-bd)", background: isMe ? "var(--weered-accent-bg)" : "rgba(255,255,255,.06)" }}>
+                     <div style={{ fontSize: 13, lineHeight: "18px" }}>{m.body}</div>
+                     <div style={{ opacity: 0.5, fontSize: 11, marginTop: 4 }}>{new Date(m.createdAt).toLocaleTimeString()}</div>
+                   </div>
+                 </div>
+               );
+             })
+           ) : (
+             <div style={{ opacity: 0.6, fontSize: 12 }}>No messages yet.</div>
+           )}
+           <div ref={dmEndRef} />
+         </div>
 
- <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
- <input
- ref={dmInputRef}
- value={dmDraft}
- onChange={(e) => setDmDraft((e.target as any).value || "")}
- placeholder="Message..."
- style={{
- flex: 1,
- padding: "10px 12px",
- borderRadius: 12,
- border: "1px solid var(--weered-bd2)",
- background: "rgba(255,255,255,.06)",
- color: "var(--weered-text)",
- outline: "none",
- }}
- onKeyDown={(e) => { if ((e as any).key === "Enter") dmSend(); }}
- />
- <button style={btn} onClick={dmSend}>Send</button>
- </div>
- </>
- ) : (
- <div style={{ opacity: 0.7, fontSize: 12, padding: "10px 0", lineHeight: 1.35 }}>Select a thread or create one.</div>
- )}
- </div>
- </div>
-
- <div style={{ padding: "8px 10px", borderTop: "1px solid rgba(148,163,184,.12)", opacity: 0.65, fontSize: 12 }}>
- v0 = localStorage only. Next: wire DMs to API + WS routing.
- </div>
+         <div style={{ display: "flex", gap: 8 }}>
+           <input
+             ref={dmInputRef}
+             value={dmDraft}
+             onChange={(e) => setDmDraft((e.target as any).value || "")}
+             placeholder="Message..."
+             style={{ flex: 1, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--weered-bd2)", background: "rgba(255,255,255,.06)", color: "var(--weered-text)", outline: "none" }}
+             onKeyDown={(e) => { if ((e as any).key === "Enter") { e.preventDefault(); void dmSend(); } }}
+           />
+           <button style={btn} onClick={() => void dmSend()}>Send</button>
+         </div>
+       </>
+     ) : (
+       <div style={{ opacity: 0.7, fontSize: 12, lineHeight: 1.35 }}>Select a thread or start a new one above.</div>
+     )}
+   </div>
  </div>
  ) : tab === "friends" ? (
    <FriendsTab
@@ -856,12 +844,11 @@ const body = pickFirstString(m?.body, m?.text, "");
      onMessage={(peerName: string, peerId: string) => {
        setTab("dms");
        setDmThreads((cur) => {
-         const arr = Array.isArray(cur) ? cur : [];
-         const existing = arr.find((t) => String(t.peer || "").toLowerCase() === peerName.toLowerCase());
-         if (existing) { setDmActiveId(existing.id); return arr; }
-         const th: DmThread = { id: __id(), peer: peerName, peerId: peerId || undefined, msgs: [] };
-         setDmActiveId(th.id);
-         return [th, ...arr];
+         const existing = cur.find(t => t.peerId === peerId || t.peerName.toLowerCase() === peerName.toLowerCase());
+         if (existing) { setDmActivePeerId(existing.peerId); return cur; }
+         const th: DmThread = { peerId, peerName, msgs: [], unread: 0 };
+         setDmActivePeerId(peerId);
+         return [th, ...cur];
        });
      }}
      onJoin={(roomId: string) => {
@@ -886,7 +873,7 @@ function FriendsTab({
 }) {
   const friends = dmThreads.map((t) => {
     const online = rooms.find((u: any) =>
-      String(u?.name ?? u?.username ?? "").toLowerCase() === t.peer.toLowerCase() ||
+      String(u?.name ?? u?.username ?? "").toLowerCase() === t.peerName.toLowerCase() ||
       (t.peerId && String(u?.id ?? "") === t.peerId)
     );
     return { thread: t, online: online ?? null };
@@ -910,14 +897,14 @@ function FriendsTab({
     return (
       <div key={thread.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 11, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)", marginBottom: 5 }}>
         <div style={{ width: 32, height: 32, borderRadius: 999, background: online ? "rgba(16,185,129,.18)" : "rgba(255,255,255,.06)", border: `1px solid ${online ? "rgba(16,185,129,.30)" : "rgba(255,255,255,.10)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
-          {thread.peer.slice(0, 1).toUpperCase()}
+          {thread.peerName.slice(0, 1).toUpperCase()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{thread.peer}</div>
+          <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{thread.peerName}</div>
           <div style={{ fontSize: 11, opacity: 0.55, marginTop: 1 }}>{online ? (roomName ? `in ${roomName}` : "online") : "offline"}</div>
         </div>
         <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-          <button style={friendBtn} onClick={() => onMessage(thread.peer, thread.peerId ?? "")}>DM</button>
+          <button style={friendBtn} onClick={() => onMessage(thread.peerName, thread.peerId ?? "")}>DM</button>
           {online && roomId && (
             <button style={{ ...friendBtn, borderColor: "rgba(124,58,237,.30)", background: "rgba(124,58,237,.12)", color: "rgb(216,180,254)" }} onClick={() => onJoin(roomId)}>Join</button>
           )}
