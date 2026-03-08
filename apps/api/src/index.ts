@@ -433,6 +433,16 @@ function authFromHeader(authHeader?: string): AuthedUser | null {
   return verifyToken(m[1]);
 }
 
+async function resolveUserId(raw: string): Promise<string> {
+  // If it looks like a cuid already, use it directly
+  if (raw.length > 20 && !raw.includes(" ")) return raw;
+  const found = await prisma.user.findFirst({
+    where: { OR: [{ usernameKey: raw.toLowerCase() }, { name: raw }] },
+    select: { id: true },
+  });
+  return found?.id ?? raw;
+}
+
 const ROOM_ALPH = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 function shortRoomId(len = 6): string {
   const b = randomBytes(len);
@@ -1029,19 +1039,15 @@ async function main() {
   });
 
   // GET /dm/:peerId — fetch thread history (last 50, oldest first)
-  app.get("/dm/:peerId", async (req, reply) => {
+app.get("/dm/:peerId", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
-    const { peerId } = req.params as any;
-    if (!peerId) return reply.code(400).send({ error: "Missing peerId" });
+    const { peerId: rawPeerId } = req.params as any;
+    if (!rawPeerId) return reply.code(400).send({ error: "Missing peerId" });
+    const peerId = await resolveUserId(rawPeerId);
     try {
       const messages = await prisma.directMessage.findMany({
-        where: {
-          OR: [
-            { fromId: viewer.id, toId: peerId },
-            { fromId: peerId,    toId: viewer.id },
-          ],
-        },
+        where: { OR: [{ fromId: viewer.id, toId: peerId }, { fromId: peerId, toId: viewer.id }] },
         orderBy: { createdAt: "asc" },
         take: 50,
         select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true },
@@ -1058,10 +1064,11 @@ async function main() {
   });
 
   // POST /dm/:peerId — send a DM (REST fallback)
-  app.post("/dm/:peerId", async (req, reply) => {
+app.post("/dm/:peerId", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
-    const { peerId } = req.params as any;
+    const { peerId: rawPeerId } = req.params as any;
+    const peerId = await resolveUserId(rawPeerId);
     const body: any = (req as any).body || {};
     const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
     if (!text) return reply.code(400).send({ error: "Empty message" });
