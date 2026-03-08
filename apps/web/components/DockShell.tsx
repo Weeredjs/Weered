@@ -430,16 +430,28 @@ const totalUnread = useMemo(() => dmThreads.reduce((s, t) => s + t.unread, 0), [
  try { if (typeof sendChat === "function") { sendChat({ roomId: viewId || joinedId, body: b }); return; } } catch {}
  }
 
- function dmCreateThread() {
+async function dmCreateThread() {
    const peer = dmPeer.trim();
    if (!peer) return;
-   const existing = dmThreads.find(t => t.peerName.toLowerCase() === peer.toLowerCase());
+   const existing = dmThreads.find(t => t.peerName.toLowerCase() === peer.toLowerCase() || t.peerId === peer);
    if (existing) { setDmActivePeerId(existing.peerId); setDmPeer(""); return; }
-   // Need peerId — for now use name as placeholder, resolved on first message
-   const th: DmThread = { peerId: peer, peerName: peer, msgs: [], unread: 0 };
-   setDmThreads(cur => [th, ...cur]);
-   setDmActivePeerId(peer);
    setDmPeer("");
+   // Resolve via API to get real ID + name
+   try {
+     const r = await fetch(`${apiBase}/profile/${encodeURIComponent(peer)}`, {
+       headers: tokenMaybe ? { Authorization: `Bearer ${tokenMaybe}` } : {},
+     });
+     const j = await r.json();
+     const resolvedId   = j?.id   || peer;
+     const resolvedName = j?.name || peer;
+     const th: DmThread = { peerId: resolvedId, peerName: resolvedName, msgs: [], unread: 0 };
+     setDmThreads(cur => [th, ...cur]);
+     setDmActivePeerId(resolvedId);
+   } catch {
+     const th: DmThread = { peerId: peer, peerName: peer, msgs: [], unread: 0 };
+     setDmThreads(cur => [th, ...cur]);
+     setDmActivePeerId(peer);
+   }
  }
 
  async function dmSend() {
