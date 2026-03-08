@@ -258,7 +258,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
     padding:"10px 14px", borderRadius:12, border:"none",
     background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)",
     fontWeight:700, fontSize:13, cursor:"pointer",
-    border2:"1px solid var(--weered-accent-ring)" as any,
+    border:"1px solid var(--weered-accent-ring)",
   };
 
   return (
