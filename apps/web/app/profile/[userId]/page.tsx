@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useWeered } from "../../components/WeeredProvider";
+import { useWeered } from "../../../components/WeeredProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Profile = {
