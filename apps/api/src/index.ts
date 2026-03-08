@@ -910,6 +910,7 @@ async function main() {
           tier: true,
           globalRole: true,
           createdAt: true,
+          updatedAt: true,
         },
       });
 
@@ -926,6 +927,7 @@ async function main() {
         tier: u.tier ?? "INNOCENT",
         globalRole: String(u.globalRole ?? "USER"),
         joinedAt: u.createdAt.toISOString(),
+        lastSeen: u.updatedAt.toISOString(),
         roomsHosted,
       });
     } catch (e) {
