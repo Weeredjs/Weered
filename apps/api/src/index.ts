@@ -332,6 +332,56 @@ function leaveRoom(ws: Sock) {
     rooms.delete(roomId);
   }
 }
+// ── Notoriety system ──────────────────────────────────────────────────────────
+// Point values per action (idempotent where flagged)
+const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean }> = {
+  BIO_COMPLETE:        { points: 50,   once: true  },
+  FIRST_ROOM_HOSTED:   { points: 100,  once: true  },
+  ROOM_25_USERS:       { points: 250,  once: false },  // per occurrence
+  SUBREDDIT_LINKED:    { points: 75,   once: true  },
+  DAILY_ACTIVE:        { points: 10,   once: false },
+};
+
+// Track one-time awards in a simple DB table — for now use a JSON field on User
+// or a separate NotorietyEvent table. Using NotorietyEvent for auditability.
+async function awardNotoriety(userId: string, action: string): Promise<void> {
+  const cfg = NOTORIETY_ACTIONS[action];
+  if (!cfg) return;
+
+  try {
+    if (cfg.once) {
+      // Check if already awarded
+      const existing = await prisma.notorietyEvent.findFirst({
+        where: { userId, action },
+      });
+      if (existing) return;
+    }
+
+    await prisma.$transaction([
+      prisma.notorietyEvent.create({ data: { userId, action, points: cfg.points } }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { notoriety: { increment: cfg.points } },
+      }),
+    ]);
+
+    // Recalculate tier after award
+    await recalcTier(userId);
+  } catch (e) {
+    console.error("[notoriety] award failed", action, userId, e);
+  }
+}
+
+async function recalcTier(userId: string): Promise<void> {
+  try {
+    const u = await prisma.user.findUnique({ where: { id: userId }, select: { notoriety: true } });
+    if (!u) return;
+    const n = u.notoriety ?? 0;
+    // Tier thresholds — Kingpin is staff-granted only (not earned by score)
+    const tier = n >= 2000 ? "FELON" : n >= 500 ? "INDICTED" : "INNOCENT";
+    await prisma.user.update({ where: { id: userId }, data: { tier } });
+  } catch {}
+}
 
 function removePending(room: RoomState, userId: string) {
   const set = room.pending.get(userId);
@@ -842,7 +892,77 @@ async function main() {
 
     return reply.send({ ok: true, rooms });
   });
+  app.get("/profile/:userId", async (req, reply) => {
+    const { userId } = req.params as any;
+    if (!userId) return reply.code(400).send({ error: "Missing userId" });
 
+    const authHeader = (req.headers as any).authorization;
+    const viewer = authFromHeader(authHeader);
+
+    try {
+      const u = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          bio: true,
+          notoriety: true,
+          tier: true,
+          globalRole: true,
+          createdAt: true,
+        },
+      });
+
+      if (!u) return reply.code(404).send({ error: "User not found" });
+
+      // Count rooms hosted (owned)
+      const roomsHosted = await prisma.room.count({ where: { ownerId: u.id } });
+
+      return reply.send({
+        id: u.id,
+        name: u.name,
+        bio: u.bio || "",
+        notoriety: u.notoriety ?? 0,
+        tier: u.tier ?? "INNOCENT",
+        globalRole: String(u.globalRole ?? "USER"),
+        joinedAt: u.createdAt.toISOString(),
+        roomsHosted,
+      });
+    } catch (e) {
+      console.error("[profile GET]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
+  // PATCH /profile/me  — update own bio
+  app.patch("/profile/me", async (req, reply) => {
+    const authHeader = (req.headers as any).authorization;
+    const viewer = authFromHeader(authHeader);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+
+    const body: any = (req as any).body || {};
+    const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 280) : undefined;
+
+    if (bio === undefined) return reply.code(400).send({ error: "Nothing to update" });
+
+    try {
+      const u = await prisma.user.update({
+        where: { id: viewer.id },
+        data: { bio },
+        select: { id: true, bio: true },
+      });
+
+      // Award notoriety for completing bio (one-time)
+      if (bio.length >= 10) {
+        await awardNotoriety(viewer.id, "BIO_COMPLETE");
+      }
+
+      return reply.send({ ok: true, bio: u.bio });
+    } catch (e) {
+      console.error("[profile PATCH]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
   // DELETE /staff/rooms/:roomId — STAFF+ can delete rooms
   app.delete("/staff/rooms/:roomId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
