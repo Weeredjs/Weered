@@ -1084,7 +1084,6 @@ app.post("/dm/:peerId", async (req, reply) => {
         select: { id: true, fromId: true, toId: true, body: true, createdAt: true },
       });
       const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
-      send_to_user(viewer.id, payload);
       dmDeliver(peerId, payload);
       return reply.send({ ok: true, message: { ...dm, createdAt: dm.createdAt.toISOString() } });
     } catch (e) {
@@ -1480,9 +1479,8 @@ app.post("/dm/:peerId", async (req, reply) => {
               data: { fromId, toId, body },
               select: { id: true, fromId: true, toId: true, body: true, createdAt: true },
             });
-            const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
-            send(ws, payload);
-            dmDeliver(toId, payload);
+          const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
+          dmDeliver(toId, payload);
           } catch (e) { console.error("[dm:send]", e); }
           return;
         }
