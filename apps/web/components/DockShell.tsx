@@ -255,10 +255,9 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   };
 
   const sendBtn: React.CSSProperties = {
-    padding:"10px 14px", borderRadius:12, border:"none",
+    padding:"10px 14px", borderRadius:12, border:"1px solid var(--weered-accent-ring)",
     background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)",
     fontWeight:700, fontSize:13, cursor:"pointer",
-    border:"1px solid var(--weered-accent-ring)",
   };
 
   return (
