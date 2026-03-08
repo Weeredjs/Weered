@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -265,64 +265,7 @@ export default function LeftRail() {
 
   return (
     <div className="weered-left-inner">
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-          onClick={() => openSheet("profile", { userId: profileUserId })}
-        >
-          Profile
-        </button>
-
-        <button
-          type="button"
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-          onClick={() => openSheet("settings")}
-        >
-          Settings
-        </button>
-
-        <button
-          type="button"
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-          onClick={() => {
-            try {
-              window.dispatchEvent(new CustomEvent("weered:dock:toggle"));
-            } catch {}
-          }}
-          title="Open Dock"
-        >
-          Dock
-        </button>
-      </div>
-
-      <div
-        className="weered-brand-block"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: 10,
-          marginBottom: 10,
-          borderRadius: 16,
-          border: "1px solid rgba(148,163,184,.16)",
-          background: "rgba(255,255,255,.04)",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <img src="/brand/weered-mark.png" alt="Weered" width={72} height={72} style={{ display: "block" }} />
-          <div className="min-w-0">
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 1100, letterSpacing: ".2px", lineHeight: 1.1 }}>weered</div>
-              <div style={{ opacity: 0.7, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                communities | presence | rooms
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <UserCorner />
+            <UserCorner />
 
       <div className="weered-left-section">
         <div className="weered-left-title">Communities</div>
