@@ -348,8 +348,8 @@ const roomRole = normRole(pickFirstString(role, joinStatus?.role));
 
  // WS listener for incoming DMs
  useEffect(() => {
-   if (!ctx?.on) return;
-   const unsub = ctx.on?.("dm:message", (payload: any) => {
+   const handler = (ev: any) => {
+     const payload = ev?.detail;
      const msg: DmMsg = payload?.message;
      if (!msg) return;
      const meId = String(me?.id || "");
@@ -362,16 +362,17 @@ const roomRole = normRole(pickFirstString(role, joinStatus?.role));
            : t
          );
        }
-       // New thread — show ID for now, resolve name async
-      fetch(`${apiBase}/profile/${encodeURIComponent(peerId)}`, { headers: tokenMaybe ? { Authorization: `Bearer ${tokenMaybe}` } : {} })
-        .then(r => r.json()).then(j => {
-          if (j?.name) setDmThreads(ts => ts.map(t => t.peerId === peerId ? { ...t, peerName: j.name } : t));
-        }).catch(() => {});
-      return [{ peerId, peerName: peerId, msgs: [msg], unread: dmActivePeerId === peerId ? 0 : 1 }, ...cur];
+       // New thread — resolve name async
+       fetch(`${apiBase}/profile/${encodeURIComponent(peerId)}`, { headers: tokenMaybe ? { Authorization: `Bearer ${tokenMaybe}` } : {} })
+         .then(r => r.json()).then(j => {
+           if (j?.name) setDmThreads(ts => ts.map(t => t.peerId === peerId ? { ...t, peerName: j.name } : t));
+         }).catch(() => {});
+       return [{ peerId, peerName: peerId, msgs: [msg], unread: dmActivePeerId === peerId ? 0 : 1 }, ...cur];
      });
-   });
-   return () => { try { unsub?.(); } catch {} };
- }, [ctx, me, dmActivePeerId]);
+   };
+   window.addEventListener("weered:dm:message", handler as any);
+   return () => window.removeEventListener("weered:dm:message", handler as any);
+ }, [me, dmActivePeerId, apiBase, tokenMaybe]);
 
  useEffect(() => {
    try { dmEndRef.current?.scrollIntoView({ behavior: "smooth" }); } catch {}
