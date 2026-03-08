@@ -126,21 +126,21 @@ function militaryTime(iso: string): string {
 
 // ── Underground design tokens ────────────────────────────────────────────────
 const C = {
- bg:       "#0a0a0a",
- panel:    "#111111",
- panel2:   "#161616",
- border:   "rgba(0,255,65,.12)",
- border2:  "rgba(0,255,65,.22)",
- green:    "#00ff41",
- greenDim: "rgba(0,255,65,.7)",
- greenBg:  "rgba(0,255,65,.08)",
- greenGlow:"rgba(0,255,65,.15)",
- amber:    "#ffb300",
- amberDim: "rgba(255,179,0,.7)",
- amberBg:  "rgba(255,179,0,.08)",
- red:      "#ff3131",
- redBg:    "rgba(255,49,49,.10)",
- muted:    "rgba(0,255,65,.35)",
+ bg:       "var(--weered-bg)",
+ panel:    "var(--weered-panel)",
+ panel2:   "var(--weered-panel2)",
+ border:   "var(--weered-bd)",
+ border2:  "var(--weered-bd2)",
+ green:    "rgba(34,197,94,.95)",
+ greenDim: "rgba(34,197,94,.6)",
+ greenBg:  "rgba(34,197,94,.08)",
+ greenGlow:"rgba(34,197,94,.12)",
+ amber:    "var(--weered-accent-text)",
+ amberDim: "var(--weered-accent-text)",
+ amberBg:  "var(--weered-accent-bg)",
+ red:      "rgba(239,68,68,.9)",
+ redBg:    "rgba(239,68,68,.10)",
+ muted:    "var(--weered-muted)",
  font:     "'Courier New', 'JetBrains Mono', 'Consolas', monospace",
 };
 
@@ -150,7 +150,7 @@ function BlinkCursor() {
  const t = setInterval(() => setOn(v => !v), 530);
  return () => clearInterval(t);
  }, []);
- return <span style={{ color: C.green, opacity: on ? 1 : 0 }}>_</span>;
+ return <span style={{ color: "var(--weered-accent-text)", opacity: on ? 1 : 0 }}>_</span>;
 }
 
 function ScanlineOverlay() {
@@ -454,7 +454,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  position: "relative", width: "100%", height: "100%",
  background: C.bg, border: "none", borderRadius: 0,
  boxShadow: "none", overflow: "hidden", zIndex: 1,
- color: C.green, fontFamily: C.font,
+ color: "var(--weered-text)", fontFamily: C.font,
  }
  : dockMode === "rail"
  ? {
@@ -465,7 +465,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  borderRadius: 4,
  boxShadow: `0 0 30px rgba(0,255,65,.06), inset 0 0 60px rgba(0,0,0,.4)`,
  overflow: "hidden", zIndex: 40,
- color: C.green, fontFamily: C.font,
+ color: "var(--weered-text)", fontFamily: C.font,
  maxHeight: "calc(100vh - 32px)",
  }
  : {
@@ -477,7 +477,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  borderRadius: 4,
  boxShadow: `0 0 40px rgba(0,255,65,.08), inset 0 0 60px rgba(0,0,0,.5)`,
  overflow: "hidden", zIndex: 9999,
- color: C.green, fontFamily: C.font,
+ color: "var(--weered-text)", fontFamily: C.font,
  maxHeight: "calc(100vh - 24px)",
  };
 
@@ -510,7 +510,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  background: "transparent",
  border: "none", borderBottom: `1px solid ${C.border}`,
  color: C.green, fontFamily: C.font, fontSize: 12,
- outline: "none", caretColor: C.green,
+ outline: "none", caretColor: "var(--weered-accent-text)",
  };
 
  const termBtn: React.CSSProperties = {
@@ -564,7 +564,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  {/* User identity line */}
  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
  <TierBadge role={globalRole || roomRole} />
- <span style={{ fontSize: 13, fontWeight: 700, color: C.green, letterSpacing: .5 }}>
+ <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text)", letterSpacing: .5 }}>
  {meName}
  </span>
  <BlinkCursor />
@@ -666,7 +666,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  )}
  </div>
  <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${C.border}`, background: "rgba(0,0,0,.2)", alignItems: "center", padding: "6px 10px" }}>
- <span style={{ color: C.green, fontSize: 12, marginRight: 4 }}>{">"}</span>
+ <span style={{ color: "var(--weered-accent-text)", fontSize: 12, marginRight: 4 }}>{">"}</span>
  <input
  ref={roomInputRef}
  value={text}
@@ -696,7 +696,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  return (
  <div key={u?.id || uname} style={{ padding: "7px 10px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
  <span style={{ color: C.green, fontSize: 10 }}>▸</span>
- <span style={{ fontWeight: 700, fontSize: 12, color: isMe ? C.amber : C.green }}>
+ <span style={{ fontWeight: 700, fontSize: 12, color: isMe ? "var(--weered-accent-text)" : "var(--weered-text)" }}>
  {uname}{isMe ? " [YOU]" : ""}
  </span>
  {ugr ? <span style={{ fontSize: 9, color: C.muted, border: `1px solid ${C.border}`, padding: "1px 5px", borderRadius: 1 }}>{ugr}</span> : null}
@@ -735,7 +735,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  <div style={{ border: `1px solid ${C.border}`, borderRadius: 2, overflow: "hidden" }}>
  <div style={sectionHead}>// OPEN CHANNEL</div>
  <div style={{ display: "flex", alignItems: "center", padding: "6px 10px", gap: 6, background: "rgba(0,0,0,.2)" }}>
- <span style={{ color: C.green, fontSize: 12 }}>{">"}</span>
+ <span style={{ color: "var(--weered-accent-text)", fontSize: 12 }}>{">"}</span>
  <input
  value={dmPeer}
  onChange={(e) => setDmPeer((e.target as any).value || "")}
@@ -786,7 +786,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  {dmActive ? (
  <div style={{ border: `1px solid ${C.border}`, borderRadius: 2, overflow: "hidden", display: "flex", flexDirection: "column" }}>
  <div style={{ ...sectionHead, justifyContent: "space-between" }}>
- <span>// CHANNEL: @{dmActive.peerName}</span>
+ <span style={{ color: "var(--weered-accent-text)" }}>// @{dmActive.peerName}</span>
  <button
  onClick={() => { setDmThreads(cur => cur.filter(t => t.peerId !== dmActive.peerId)); setDmActivePeerId(""); }}
  style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontFamily: C.font, fontSize: 10, padding: 0 }}
@@ -806,11 +806,11 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  <div style={{
  display: "inline-block", maxWidth: "88%",
  padding: "5px 8px",
- border: `1px solid ${isMe ? C.border2 : "rgba(255,179,0,.2)"}`,
+ border: `1px solid ${isMe ? "var(--weered-bd2)" : "var(--weered-bd)"}`,
  borderRadius: 2,
  background: isMe ? C.greenBg : C.amberBg,
  }}>
- <div style={{ fontFamily: C.font, fontSize: 12, color: isMe ? C.green : C.amber, lineHeight: "18px" }}>
+ <div style={{ fontFamily: C.font, fontSize: 12, color: isMe ? "var(--weered-accent-text)" : "var(--weered-text)", lineHeight: "18px" }}>
  {m.body}
  </div>
  <div style={{ fontFamily: C.font, fontSize: 10, color: C.muted, marginTop: 2 }}>
@@ -827,7 +827,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
  </div>
 
  <div style={{ display: "flex", alignItems: "center", borderTop: `1px solid ${C.border}`, background: "rgba(0,0,0,.2)", padding: "6px 10px", gap: 6 }}>
- <span style={{ color: C.green, fontSize: 12 }}>{">"}</span>
+ <span style={{ color: "var(--weered-accent-text)", fontSize: 12 }}>{">"}</span>
  <input
  ref={dmInputRef}
  value={dmDraft}
@@ -925,7 +925,7 @@ function FriendsTab({
  {thread.peerName.slice(0, 1).toUpperCase()}
  </div>
  <div style={{ flex: 1, minWidth: 0 }}>
- <div style={{ fontWeight: 800, fontSize: 12, fontFamily: C.font, color: online ? C.green : C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+ <div style={{ fontWeight: 800, fontSize: 12, fontFamily: C.font, color: online ? "var(--weered-text)" : C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
  @{thread.peerName}
  </div>
  <div style={{ fontSize: 10, color: C.muted, fontFamily: C.font, marginTop: 1 }}>
