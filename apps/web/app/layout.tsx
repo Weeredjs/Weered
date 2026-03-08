@@ -29,8 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </ShellGate>
             <DockDrawer />
             <LobbyBrowser />
+            <OverlayHost />
           </WeeredProvider>
-          <OverlayHost />
         </OverlayProvider>
       </body>
     </html>
