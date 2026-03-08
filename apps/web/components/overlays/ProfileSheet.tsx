@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useWeered } from "../../WeeredProvider";
+import { useWeered } from "../WeeredProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Profile = {
