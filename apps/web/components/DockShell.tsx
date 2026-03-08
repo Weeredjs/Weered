@@ -895,7 +895,7 @@ function FriendsTab({
     const roomId = String(online?.roomId ?? online?.activeRoom ?? online?.room ?? "");
     const roomName = String(online?.roomName ?? online?.room ?? roomId ?? "");
     return (
-      <div key={thread.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 11, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)", marginBottom: 5 }}>
+      <div key={thread.peerId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 11, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)", marginBottom: 5 }}>
         <div style={{ width: 32, height: 32, borderRadius: 999, background: online ? "rgba(16,185,129,.18)" : "rgba(255,255,255,.06)", border: `1px solid ${online ? "rgba(16,185,129,.30)" : "rgba(255,255,255,.10)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
           {thread.peerName.slice(0, 1).toUpperCase()}
         </div>
