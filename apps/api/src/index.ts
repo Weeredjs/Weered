@@ -1464,10 +1464,11 @@ app.post("/dm/:peerId", async (req, reply) => {
 
         // ── DM via WebSocket ──────────────────────────────────────────────────
         if (msg.type === "dm:send") {
-          const toId   = String(msg.toId  || "").trim();
-          const body   = String(msg.body  || "").trim().slice(0, 2000);
-          const fromId = ws.user?.id;
-          if (!fromId || !toId || !body) return;
+          const rawToId = String(msg.toId  || "").trim();
+          const body    = String(msg.body  || "").trim().slice(0, 2000);
+          const fromId  = ws.user?.id;
+          if (!fromId || !rawToId || !body) return;
+          const toId = await resolveUserId(rawToId);
           try {
             const dm = await prisma.directMessage.create({
               data: { fromId, toId, body },
