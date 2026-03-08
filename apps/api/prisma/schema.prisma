@@ -192,13 +192,17 @@ model User {
   id          String     @id @default(cuid())
   usernameKey String     @unique
   name        String     @default("")
+  bio         String?
+  notoriety   Int        @default(0)
+  tier        UserTier   @default(INNOCENT)
   globalRole  GlobalRole @default(USER)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  LocalAuth   LocalAuth?
-  staffNotes  StaffNote[]   @relation("StaffNoteTarget")
-  auditLogs   GlobalAudit[] @relation("GlobalAuditTarget")
+  LocalAuth        LocalAuth?
+  staffNotes       StaffNote[]      @relation("StaffNoteTarget")
+  auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
+  notorietyEvents  NotorietyEvent[]
 }
 
 model LocalAuth {
@@ -239,4 +243,24 @@ model GlobalAudit {
   target User? @relation("GlobalAuditTarget", fields: [targetId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+}
+enum UserTier {
+  INNOCENT
+  INDICTED
+  FELON
+  KINGPIN
+}
+
+// ── ADD THIS MODEL ────────────────────────────────────────────────────────────
+
+model NotorietyEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  points    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, action])
 }
