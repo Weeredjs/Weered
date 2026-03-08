@@ -321,10 +321,7 @@ function leaveRoom(ws: Sock) {
   room.sockets.delete(ws);
   if (ws.user) {
     const existed = room.users.delete(ws.user.id);
-    if (existed) {
-      console.log(`[leaveRoom] user=${ws.user.id} room=${roomId} remaining=${room.users.size}`);
-      broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
-    }
+    if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
     // Do NOT call publishState here — presence:leave is the correct incremental update.
     // Broadcasting a full presence:state snapshot here overwrites other clients' local state
     // and causes the presence flicker bug when users navigate between rooms.
@@ -980,11 +977,7 @@ async function main() {
           // Stale presence:leave messages (sent by client after navigating away) must not
           // kick the socket out of the room it has already joined.
           const leaveRid = normalizeRoomId(String(msg.roomId || ""));
-          console.log(`[presence:leave] user=${ws.user.id} msgRoom=${leaveRid} wsRoom=${ws.roomId}`);
-          if (leaveRid && ws.roomId && leaveRid !== ws.roomId) {
-            console.log(`[presence:leave] IGNORED stale leave`);
-            return;
-          }
+          if (leaveRid && ws.roomId && leaveRid !== ws.roomId) return;
           leaveRoom(ws);
           return;
         }
