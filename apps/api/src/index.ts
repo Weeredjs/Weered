@@ -926,8 +926,11 @@ async function main() {
     const viewer = authFromHeader(authHeader);
 
     try {
-      const u = await prisma.user.findUnique({
-        where: { id: userId },
+      const isId = userId.length > 20 && !userId.includes(" ");
+      const u = await prisma.user.findFirst({
+        where: isId
+          ? { id: userId }
+          : { OR: [{ usernameKey: userId.toLowerCase() }, { name: userId }] },
         select: {
           id: true,
           name: true,
