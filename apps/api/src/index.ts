@@ -434,6 +434,7 @@ function authFromHeader(authHeader?: string): AuthedUser | null {
 }
 
 async function resolveUserId(raw: string): Promise<string> {
+  console.log("[resolveUserId] raw=", JSON.stringify(raw));
   // If it looks like a cuid already, use it directly
   if (raw.length > 20 && !raw.includes(" ")) return raw;
   const found = await prisma.user.findFirst({
