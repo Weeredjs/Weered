@@ -46,6 +46,7 @@ type Ctx = {
   kick: (userId: string) => void; ban: (userId: string) => void;
   unban: (userId: string) => void;
   admit: (userId: string) => void; deny: (userId: string) => void;
+  sendRaw: (msg: object) => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
