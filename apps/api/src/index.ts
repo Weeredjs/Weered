@@ -441,6 +441,7 @@ async function resolveUserId(raw: string): Promise<string> {
     where: { OR: [{ usernameKey: raw.toLowerCase() }, { name: raw }] },
     select: { id: true },
   });
+  console.log("[resolveUserId] found=", JSON.stringify(found));
   return found?.id ?? raw;
 }
 
