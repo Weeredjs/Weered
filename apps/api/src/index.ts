@@ -55,6 +55,7 @@ type RoomState = {
 };
 
 const rooms = new Map<string, RoomState>();
+let wss: WebSocketServer;
 
 // ── Pinned lobbies now seeded from DB via seedLobbies() on startup ────────────
 
@@ -381,6 +382,19 @@ async function recalcTier(userId: string): Promise<void> {
     const tier = n >= 2000 ? "FELON" : n >= 500 ? "INDICTED" : "INNOCENT";
     await prisma.user.update({ where: { id: userId }, data: { tier } });
   } catch {}
+}
+
+// DM delivery — push to all sockets belonging to a user
+function dmDeliver(toUserId: string, payload: object) {
+  for (const sock of wss.clients) {
+    if ((sock as any).user?.id === toUserId) {
+      send(sock as any, payload);
+    }
+  }
+}
+
+function send_to_user(userId: string, payload: object) {
+  dmDeliver(userId, payload);
 }
 
 function removePending(room: RoomState, userId: string) {
@@ -993,6 +1007,96 @@ async function main() {
 
     return reply.send({ ok: true });
   });
+  // ── DM Routes ──────────────────────────────────────────────────────────────
+
+  // GET /dm/unread — unread counts per peer
+  app.get("/dm/unread", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    try {
+      const unread = await prisma.directMessage.groupBy({
+        by: ["fromId"],
+        where: { toId: viewer.id, readAt: null },
+        _count: { id: true },
+      });
+      const counts: Record<string, number> = {};
+      for (const row of unread) counts[row.fromId] = row._count.id;
+      return reply.send({ counts });
+    } catch (e) {
+      console.error("[dm/unread]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
+  // GET /dm/:peerId — fetch thread history (last 50, oldest first)
+  app.get("/dm/:peerId", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const { peerId } = req.params as any;
+    if (!peerId) return reply.code(400).send({ error: "Missing peerId" });
+    try {
+      const messages = await prisma.directMessage.findMany({
+        where: {
+          OR: [
+            { fromId: viewer.id, toId: peerId },
+            { fromId: peerId,    toId: viewer.id },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+        take: 50,
+        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true },
+      });
+      await prisma.directMessage.updateMany({
+        where: { fromId: peerId, toId: viewer.id, readAt: null },
+        data: { readAt: new Date() },
+      });
+      return reply.send({ messages: messages.map(m => ({ ...m, createdAt: m.createdAt.toISOString(), readAt: m.readAt?.toISOString() ?? null })) });
+    } catch (e) {
+      console.error("[dm GET]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
+  // POST /dm/:peerId — send a DM (REST fallback)
+  app.post("/dm/:peerId", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const { peerId } = req.params as any;
+    const body: any = (req as any).body || {};
+    const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
+    if (!text) return reply.code(400).send({ error: "Empty message" });
+    try {
+      const dm = await prisma.directMessage.create({
+        data: { fromId: viewer.id, toId: peerId, body: text },
+        select: { id: true, fromId: true, toId: true, body: true, createdAt: true },
+      });
+      const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
+      send_to_user(viewer.id, payload);
+      dmDeliver(peerId, payload);
+      return reply.send({ ok: true, message: { ...dm, createdAt: dm.createdAt.toISOString() } });
+    } catch (e) {
+      console.error("[dm POST]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
+  // PATCH /dm/:peerId/read — mark thread as read
+  app.patch("/dm/:peerId/read", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const { peerId } = req.params as any;
+    try {
+      await prisma.directMessage.updateMany({
+        where: { fromId: peerId, toId: viewer.id, readAt: null },
+        data: { readAt: new Date() },
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      console.error("[dm/read PATCH]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
   await seedLobbies();
 
   app.listen({ host: "0.0.0.0", port: HTTP_PORT });
@@ -1000,7 +1104,7 @@ async function main() {
 
   // ── WebSocket server ──────────────────────────────────────────────────────────
 
-  const wss = new WebSocketServer({ port: WS_PORT });
+  wss = new WebSocketServer({ port: WS_PORT });
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
 
   wss.on("connection", (rawWs) => {
@@ -1348,6 +1452,38 @@ async function main() {
           }
           audit(room, { type: "mod:demote", actorId, actorName, targetId });
           publishState(room);
+          return;
+        }
+
+        // ── DM via WebSocket ──────────────────────────────────────────────────
+        if (msg.type === "dm:send") {
+          const toId   = String(msg.toId  || "").trim();
+          const body   = String(msg.body  || "").trim().slice(0, 2000);
+          const fromId = ws.user?.id;
+          if (!fromId || !toId || !body) return;
+          try {
+            const dm = await prisma.directMessage.create({
+              data: { fromId, toId, body },
+              select: { id: true, fromId: true, toId: true, body: true, createdAt: true },
+            });
+            const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
+            send(ws, payload);
+            dmDeliver(toId, payload);
+          } catch (e) { console.error("[dm:send]", e); }
+          return;
+        }
+
+        if (msg.type === "dm:read") {
+          const fromId = String(msg.fromId || "").trim();
+          const toId   = ws.user?.id;
+          if (!fromId || !toId) return;
+          try {
+            await prisma.directMessage.updateMany({
+              where: { fromId, toId, readAt: null },
+              data: { readAt: new Date() },
+            });
+            send(ws, { type: "dm:read:ack", fromId });
+          } catch (e) { console.error("[dm:read]", e); }
           return;
         }
       })();
