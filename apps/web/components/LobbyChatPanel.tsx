@@ -4,10 +4,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 
-function avatarBg(name: string): string {
+function avatarBg(name: string, isMe?: boolean): string {
   const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
   let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
+  const hash = colors[h % colors.length];
+  if (!isMe) return hash;
+  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
 }
 
 export default function LobbyChatPanel(
@@ -105,10 +107,11 @@ export default function LobbyChatPanel(
             <div key={i} data-chat-message style={{ display: "flex", gap: 10, marginBottom: 8 }}>
               {(() => {
                 const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
+                const isMine = !!(ctx?.me && (String(ctx.me.name) === uname || String(ctx.me.id) === String(m?.user?.id || m?.userId || "")));
                 return (
                   <div style={{
                     width: 28, height: 28, borderRadius: 999, flexShrink: 0,
-                    background: avatarBg(uname),
+                    background: avatarBg(uname, isMine),
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 12, fontWeight: 700, color: "#fff",
                   }}>

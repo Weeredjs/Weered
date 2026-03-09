@@ -9,10 +9,12 @@ function pickFirstString(...vals: any[]): string {
   return "";
 }
 
-function avatarBg(name: string): string {
+function avatarBg(name: string, isMe?: boolean): string {
   const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
   let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
+  const hash = colors[h % colors.length];
+  if (!isMe) return hash;
+  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
 }
 
 function normRole(x: string) {
@@ -57,6 +59,13 @@ export default function UserCorner() {
   const { openSheet } = useOverlay();
 
   const name     = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
+  // Re-render when avatar color changes
+  const [, forceUpdate] = React.useState(0);
+  React.useEffect(() => {
+    const handler = () => forceUpdate(n => n + 1);
+    window.addEventListener("weered:avatarColor", handler);
+    return () => window.removeEventListener("weered:avatarColor", handler);
+  }, []);
   const gRole    = useMemo(() => normRole(globalRole || ""), [globalRole]);
   const roomRole = useMemo(() => normRole(pickFirstString(role)), [role]);
   const initial  = (name || "G").trim().slice(0, 1).toUpperCase();
@@ -108,8 +117,8 @@ export default function UserCorner() {
         {/* Avatar */}
         <div style={{
           width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-          background: avatarBg(name),
-          boxShadow: `0 0 18px ${avatarBg(name)}55`,
+          background: avatarBg(name, true),
+          boxShadow: `0 0 18px ${avatarBg(name, true)}55`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, fontWeight: 950, color: "#fff",
         }}>
