@@ -24,7 +24,6 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
   { id: "youtube", icon: "▶",  label: "YouTube", live: false },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
   { id: "video",   icon: "📹", label: "Video",   live: false },
-  { id: "games",   icon: "🎮", label: "Games",   live: false },
 ];
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
