@@ -8,8 +8,8 @@ import {
   LocalParticipant,
   RemoteParticipant,
   Participant,
-  ConnectionState,
 } from "livekit-client";
+import { useWeered } from "../WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -30,6 +30,8 @@ interface ParticipantTile {
   isLocal: boolean;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function getToken(): string {
   try {
     return (
@@ -48,49 +50,257 @@ function avatarColor(name: string): string {
   return palette[h % palette.length];
 }
 
-export default function RoomStage({ roomId, mode, onClose }: Props) {
-  const roomRef = useRef<Room | null>(null);
+function extractVideoId(input: string): string | null {
+  const s = String(input || "").trim();
+  // Already a bare ID (11 chars, no slashes)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+  try {
+    const url = new URL(s.startsWith("http") ? s : `https://${s}`);
+    if (url.hostname.includes("youtu.be")) return url.pathname.slice(1).split("?")[0];
+    if (url.hostname.includes("youtube.com")) return url.searchParams.get("v");
+  } catch {}
+  return null;
+}
+
+// ─── YouTube Stage ────────────────────────────────────────────────────────────
+
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: (() => void) | undefined;
+  }
+}
+
+function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
+  const { sendRaw } = useWeered() as any;
+  const playerRef    = useRef<any>(null);
+  const playerDivRef = useRef<HTMLDivElement>(null);
+  const isSyncing    = useRef(false); // prevent echo when applying remote events
+
+  const [videoId,   setVideoId  ] = useState<string | null>(null);
+  const [inputVal,  setInputVal ] = useState("");
+  const [inputErr,  setInputErr ] = useState("");
+  const [ytReady,   setYtReady  ] = useState(false);
+  const [playing,   setPlaying  ] = useState(false);
+
+  // ── Load YouTube IFrame API once ──
+  useEffect(() => {
+    if (window.YT?.Player) { setYtReady(true); return; }
+    const existing = document.getElementById("yt-iframe-api");
+    if (!existing) {
+      const s = document.createElement("script");
+      s.id  = "yt-iframe-api";
+      s.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(s);
+    }
+    const poll = setInterval(() => {
+      if (window.YT?.Player) { setYtReady(true); clearInterval(poll); }
+    }, 200);
+    return () => clearInterval(poll);
+  }, []);
+
+  // ── Create player when videoId + API ready ──
+  useEffect(() => {
+    if (!videoId || !ytReady || !playerDivRef.current) return;
+    if (playerRef.current) {
+      playerRef.current.loadVideoById(videoId);
+      return;
+    }
+    playerRef.current = new window.YT.Player(playerDivRef.current, {
+      videoId,
+      playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
+      events: {
+        onStateChange: (e: any) => {
+          if (isSyncing.current) return;
+          const YT = window.YT;
+          const pos = playerRef.current?.getCurrentTime?.() ?? 0;
+          if (e.data === YT.PlayerState.PLAYING) {
+            sendRaw?.({ type: "youtube:play",  roomId, position: pos });
+            setPlaying(true);
+          } else if (e.data === YT.PlayerState.PAUSED) {
+            sendRaw?.({ type: "youtube:pause", roomId, position: pos });
+            setPlaying(false);
+          }
+        },
+        onReady: () => {
+          // If joining late with a playing state, autoplay handled by youtube:state handler
+        },
+      },
+    });
+    return () => {
+      try { playerRef.current?.destroy?.(); playerRef.current = null; } catch {}
+    };
+  }, [videoId, ytReady]);
+
+  // ── Listen for WS youtube:state events ──
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const d = ev.detail;
+      if (!d || d.roomId !== roomId) return;
+      if (d.type === "youtube:stopped") {
+        setVideoId(null);
+        setPlaying(false);
+        return;
+      }
+      if (d.type !== "youtube:state") return;
+
+      // Load new video if needed
+      if (d.videoId && d.videoId !== videoId) {
+        setVideoId(d.videoId);
+      }
+
+      const player = playerRef.current;
+      if (!player?.seekTo) return;
+
+      isSyncing.current = true;
+      try {
+        // Compute drift-adjusted position
+        const drift = (Date.now() - d.updatedAt) / 1000;
+        const targetPos = d.position + (d.playing ? drift : 0);
+
+        const currentPos = player.getCurrentTime?.() ?? 0;
+        // Only seek if > 2s off to avoid constant micro-seeks
+        if (Math.abs(currentPos - targetPos) > 2) {
+          player.seekTo(targetPos, true);
+        }
+
+        if (d.playing) {
+          player.playVideo?.();
+          setPlaying(true);
+        } else {
+          player.pauseVideo?.();
+          setPlaying(false);
+        }
+      } finally {
+        setTimeout(() => { isSyncing.current = false; }, 500);
+      }
+    };
+
+    window.addEventListener("weered:youtube", handler as any);
+    return () => window.removeEventListener("weered:youtube", handler as any);
+  }, [roomId, videoId]);
+
+  const loadVideo = () => {
+    const id = extractVideoId(inputVal);
+    if (!id) { setInputErr("Couldn't find a YouTube video ID in that URL."); return; }
+    setInputErr("");
+    setVideoId(id);
+    sendRaw?.({ type: "youtube:load", roomId, videoId: id });
+    setInputVal("");
+  };
+
+  const stopVideo = () => {
+    sendRaw?.({ type: "youtube:stop", roomId });
+    setVideoId(null);
+    setPlaying(false);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,.4)" }}>
+      {/* Top bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: videoId ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: videoId ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
+          YouTube Sync
+        </div>
+        {videoId && (
+          <button onClick={stopVideo} style={{ marginLeft: "auto", fontSize: 11, padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,.3)", background: "rgba(239,68,68,.1)", color: "#fca5a5", cursor: "pointer" }}>
+            Stop
+          </button>
+        )}
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, color: "#fff", padding: "2px 4px", marginLeft: videoId ? 0 : "auto" }}>✕</button>
+      </div>
+
+      {/* Player or load prompt */}
+      {videoId ? (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 0, overflow: "hidden" }}>
+          {/* Player */}
+          <div style={{ flex: 1, background: "#000", position: "relative" }}>
+            <div ref={playerDivRef} style={{ width: "100%", height: "100%" }} />
+            {!ytReady && (
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, opacity: 0.5 }}>
+                Loading player…
+              </div>
+            )}
+          </div>
+          {/* Queue sidebar */}
+          <div style={{ width: 160, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginBottom: 2 }}>Queue</div>
+            <div style={{ fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "#c4bef8" }}>
+              ▶ {videoId}
+            </div>
+            <div style={{ marginTop: "auto" }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginBottom: 6 }}>Load another</div>
+              <input
+                value={inputVal}
+                onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
+                onKeyDown={e => e.key === "Enter" && loadVideo()}
+                placeholder="YouTube URL…"
+                style={{ width: "100%", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 6, padding: "5px 8px", fontSize: 11, color: "#fff", outline: "none" }}
+              />
+              <button onClick={loadVideo} style={{ marginTop: 5, width: "100%", padding: "5px 0", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.12)", color: "#c4bef8", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                Load
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, padding: 24 }}>
+          <div style={{ fontSize: 13, opacity: 0.5 }}>Paste a YouTube URL to sync for everyone in the room</div>
+          <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 400 }}>
+            <input
+              value={inputVal}
+              onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
+              onKeyDown={e => e.key === "Enter" && loadVideo()}
+              placeholder="https://youtube.com/watch?v=…"
+              style={{ flex: 1, background: "rgba(255,255,255,.05)", border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: "#fff", outline: "none" }}
+            />
+            <button onClick={loadVideo} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(124,106,245,.35)", background: "rgba(124,106,245,.15)", color: "#c4bef8", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              Load
+            </button>
+          </div>
+          {inputErr && <div style={{ fontSize: 12, color: "#fca5a5" }}>{inputErr}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Voice Stage (unchanged) ──────────────────────────────────────────────────
+
+function VoiceStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
+  const roomRef  = useRef<Room | null>(null);
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   const [connState, setConnState] = useState<"idle"|"connecting"|"connected"|"error">("idle");
-  const [errorMsg, setErrorMsg]   = useState("");
-  const [muted, setMuted]         = useState(false);
-  const [tiles, setTiles]         = useState<ParticipantTile[]>([]);
+  const [errorMsg,  setErrorMsg ] = useState("");
+  const [muted,     setMuted    ] = useState(false);
+  const [tiles,     setTiles    ] = useState<ParticipantTile[]>([]);
 
-  // ── Build tiles from current room state ──────────────────────────────────
   const rebuildTiles = useCallback((room: Room) => {
     const next: ParticipantTile[] = [];
-
-    const addParticipant = (p: Participant, isLocal: boolean) => {
+    const addP = (p: Participant, isLocal: boolean) => {
       next.push({
-        sid:        p.sid,
-        identity:   p.identity,
-        name:       p.name || p.identity,
-        isSpeaking: p.isSpeaking,
-        isMuted:    isLocal
+        sid: p.sid, identity: p.identity, name: p.name || p.identity,
+        isSpeaking: p.isSpeaking, isLocal,
+        isMuted: isLocal
           ? !(p as LocalParticipant).isMicrophoneEnabled
           : Array.from((p as RemoteParticipant).trackPublications.values())
               .filter(pub => pub.kind === Track.Kind.Audio)
               .every(pub => pub.isMuted),
-        isLocal,
       });
     };
-
-    addParticipant(room.localParticipant, true);
-    room.remoteParticipants.forEach(p => addParticipant(p, false));
+    addP(room.localParticipant, true);
+    room.remoteParticipants.forEach(p => addP(p, false));
     setTiles(next);
   }, []);
 
-  // ── Connect to LiveKit ────────────────────────────────────────────────────
   const connect = useCallback(async () => {
     if (connState === "connecting" || connState === "connected") return;
-    setConnState("connecting");
-    setErrorMsg("");
-
+    setConnState("connecting"); setErrorMsg("");
     try {
       const jwt = getToken();
       if (!jwt) throw new Error("Not authenticated");
-
       const res = await fetch(`${API}/voice/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
@@ -103,203 +313,106 @@ export default function RoomStage({ roomId, mode, onClose }: Props) {
       const room = new Room({ adaptiveStream: true, dynacast: true });
       roomRef.current = room;
 
-      // ── Attach remote audio tracks ──
-      room.on(RoomEvent.TrackSubscribed, (track, _pub, _participant) => {
+      room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind === Track.Kind.Audio) {
-          const el = track.attach();
-          el.autoplay = true;
-          (el as HTMLAudioElement).volume = 1;
+          const el = track.attach() as HTMLAudioElement;
+          el.autoplay = true; el.volume = 1;
           document.body.appendChild(el);
-          audioRefs.current.set(track.sid, el as HTMLAudioElement);
+          audioRefs.current.set(track.sid, el);
         }
         rebuildTiles(room);
       });
-
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         const el = audioRefs.current.get(track.sid);
         if (el) { el.remove(); audioRefs.current.delete(track.sid); }
         rebuildTiles(room);
       });
-
       room.on(RoomEvent.ParticipantConnected,    () => rebuildTiles(room));
       room.on(RoomEvent.ParticipantDisconnected, () => rebuildTiles(room));
       room.on(RoomEvent.ActiveSpeakersChanged,   () => rebuildTiles(room));
       room.on(RoomEvent.TrackMuted,              () => rebuildTiles(room));
       room.on(RoomEvent.TrackUnmuted,            () => rebuildTiles(room));
-      room.on(RoomEvent.Disconnected,            () => {
-        setConnState("idle");
-        rebuildTiles(room);
-      });
+      room.on(RoomEvent.Disconnected,            () => { setConnState("idle"); rebuildTiles(room); });
 
       await room.connect(url, token);
-      try {
-        await room.localParticipant.setMicrophoneEnabled(true);
-      } catch (micErr: any) {
-        // No mic or permission denied — connect as listener
-        console.warn("Mic unavailable, joining as listener:", micErr?.message);
-        setMuted(true);
-      }
-
-      setConnState("connected");
-      rebuildTiles(room);
-    } catch (e: any) {
-      setConnState("error");
-      setErrorMsg(String(e?.message || e));
-    }
+      try { await room.localParticipant.setMicrophoneEnabled(true); }
+      catch (e: any) { console.warn("Mic unavailable:", e?.message); setMuted(true); }
+      setConnState("connected"); rebuildTiles(room);
+    } catch (e: any) { setConnState("error"); setErrorMsg(String(e?.message || e)); }
   }, [roomId, connState, rebuildTiles]);
 
-  // ── Disconnect ────────────────────────────────────────────────────────────
   const disconnect = useCallback(() => {
-    const room = roomRef.current;
-    if (room) {
-      room.disconnect();
-      roomRef.current = null;
-    }
-    audioRefs.current.forEach(el => el.remove());
-    audioRefs.current.clear();
-    setTiles([]);
-    setConnState("idle");
-    onClose();
+    roomRef.current?.disconnect(); roomRef.current = null;
+    audioRefs.current.forEach(el => el.remove()); audioRefs.current.clear();
+    setTiles([]); setConnState("idle"); onClose();
   }, [onClose]);
 
-  // ── Toggle mute ──────────────────────────────────────────────────────────
   const toggleMute = useCallback(() => {
-    const room = roomRef.current;
-    if (!room) return;
+    const room = roomRef.current; if (!room) return;
     const next = !muted;
     room.localParticipant.setMicrophoneEnabled(!next);
-    setMuted(next);
-    rebuildTiles(room);
+    setMuted(next); rebuildTiles(room);
   }, [muted, rebuildTiles]);
 
-  // ── Auto-connect on mount ─────────────────────────────────────────────────
   useEffect(() => {
-    if (mode === "voice") connect();
+    if (connState === "idle") connect();
     return () => {
-      const room = roomRef.current;
-      if (room) { room.disconnect(); roomRef.current = null; }
-      audioRefs.current.forEach(el => el.remove());
-      audioRefs.current.clear();
+      roomRef.current?.disconnect(); roomRef.current = null;
+      audioRefs.current.forEach(el => el.remove()); audioRefs.current.clear();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Styles ────────────────────────────────────────────────────────────────
-  const s = {
-    stage: {
-      background: "rgba(0,0,0,.35)",
-      borderBottom: "1px solid rgba(148,163,184,.12)",
-      padding: "12px 16px",
-      display: "flex",
-      flexDirection: "column" as const,
-      gap: 10,
-    } as React.CSSProperties,
-    bar: {
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-    },
-    modeLabel: {
-      fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const,
-      opacity: 0.5, display: "flex", alignItems: "center", gap: 6,
-    },
-    dot: (live: boolean): React.CSSProperties => ({
-      width: 7, height: 7, borderRadius: "50%",
-      background: live ? "#22c55e" : "rgba(255,255,255,.2)",
-      boxShadow: live ? "0 0 6px #22c55e" : "none",
-    }),
-    controls: { display: "flex", alignItems: "center", gap: 6 },
-    btn: (danger?: boolean): React.CSSProperties => ({
-      padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-      fontSize: 12, fontWeight: 700,
-      background: danger ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)",
-      color: danger ? "#fca5a5" : "rgba(255,255,255,.8)",
-    }),
-    tilesRow: {
-      display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center",
-    },
-    tile: (speaking: boolean, isLocal: boolean): React.CSSProperties => ({
-      display: "flex", alignItems: "center", gap: 7,
-      padding: "6px 10px", borderRadius: 10,
-      border: speaking
-        ? "1.5px solid rgba(34,197,94,.5)"
-        : isLocal
-          ? "1.5px solid rgba(124,58,237,.35)"
-          : "1.5px solid rgba(255,255,255,.08)",
-      background: speaking
-        ? "rgba(34,197,94,.08)"
-        : isLocal
-          ? "rgba(124,58,237,.08)"
-          : "rgba(255,255,255,.03)",
-      transition: "border-color .15s, background .15s",
-    }),
-    avatar: (name: string): React.CSSProperties => ({
-      width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
-      background: avatarColor(name),
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 11, fontWeight: 800, color: "#fff",
-    }),
-    tileName: {
-      fontSize: 12, fontWeight: 600, maxWidth: 90,
-      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const,
-    },
-    mutedIcon: {
-      fontSize: 10, opacity: 0.5,
-    },
-  };
-
   const live = connState === "connected";
 
   return (
-    <div style={s.stage}>
-      {/* ── Top bar ── */}
-      <div style={s.bar}>
-        <div style={s.modeLabel}>
-          <span style={s.dot(live)} />
-          {mode === "voice" ? "Voice" : mode === "video" ? "Video" : "Stage"}
-          {connState === "connecting" && <span style={{ opacity: 0.5 }}>  connecting…</span>}
-          {connState === "error"      && <span style={{ color: "#fca5a5" }}>  {errorMsg}</span>}
+    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: live ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
+          Voice
+          {connState === "connecting" && <span style={{ opacity: 0.5 }}> connecting…</span>}
+          {connState === "error"      && <span style={{ color: "#fca5a5" }}> {errorMsg}</span>}
         </div>
-
-        <div style={s.controls}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {live && (
             <>
-              <button style={s.btn()} onClick={toggleMute}>
+              <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
                 {muted ? "🔇 Unmute" : "🎙 Mute"}
               </button>
-              <button style={s.btn(true)} onClick={disconnect}>Leave</button>
+              <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>
+                Leave
+              </button>
             </>
           )}
-          {connState === "error" && (
-            <button style={s.btn()} onClick={connect}>Retry</button>
-          )}
-          {connState === "idle" && (
-            <button style={s.btn()} onClick={connect}>Join</button>
-          )}
-          <button
-            onClick={disconnect}
-            style={{ background:"none", border:"none", cursor:"pointer", opacity:0.4, fontSize:16, padding:"2px 4px", color:"#fff" }}
-            title="Close stage"
-          >✕</button>
+          {connState === "error" && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>Retry</button>}
+          {connState === "idle"  && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>Join</button>}
+          <button onClick={disconnect} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, padding: "2px 4px", color: "#fff" }} title="Close">✕</button>
         </div>
       </div>
 
-      {/* ── Participant tiles ── */}
       {tiles.length > 0 && (
-        <div style={s.tilesRow}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
           {tiles.map(t => (
-            <div key={t.sid} style={s.tile(t.isSpeaking, t.isLocal)}>
-              <div style={s.avatar(t.name)}>{t.name[0]?.toUpperCase() ?? "?"}</div>
+            <div key={t.sid} style={{
+              display: "flex", alignItems: "center", gap: 7, padding: "6px 10px", borderRadius: 10,
+              border: t.isSpeaking ? "1.5px solid rgba(34,197,94,.5)" : t.isLocal ? "1.5px solid rgba(124,58,237,.35)" : "1.5px solid rgba(255,255,255,.08)",
+              background: t.isSpeaking ? "rgba(34,197,94,.08)" : t.isLocal ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.03)",
+              transition: "border-color .15s, background .15s",
+            }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: avatarColor(t.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>
+                {t.name[0]?.toUpperCase() ?? "?"}
+              </div>
               <div>
-                <div style={s.tileName}>{t.name}{t.isLocal ? " (you)" : ""}</div>
-                {t.isMuted && <div style={s.mutedIcon}>muted</div>}
+                <div style={{ fontSize: 12, fontWeight: 600, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                  {t.name}{t.isLocal ? " (you)" : ""}
+                </div>
+                {t.isMuted && <div style={{ fontSize: 10, opacity: 0.5 }}>muted</div>}
               </div>
               {t.isSpeaking && (
-                <div style={{ display:"flex", gap:2, alignItems:"flex-end", height:14, marginLeft:2 }}>
-                  {[4,7,5].map((h,i) => (
-                    <div key={i} style={{
-                      width:3, height:h, borderRadius:2,
-                      background:"#22c55e", opacity:0.8,
-                      animation: `waveBar .8s ease-in-out ${i*0.15}s infinite alternate`,
-                    }} />
+                <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 14, marginLeft: 2 }}>
+                  {[4,7,5].map((h, i) => (
+                    <div key={i} style={{ width: 3, height: h, borderRadius: 2, background: "#22c55e", opacity: 0.8, animation: `waveBar .8s ease-in-out ${i*0.15}s infinite alternate` }} />
                   ))}
                 </div>
               )}
@@ -307,13 +420,22 @@ export default function RoomStage({ roomId, mode, onClose }: Props) {
           ))}
         </div>
       )}
+      <style>{`@keyframes waveBar { from { transform: scaleY(0.4); } to { transform: scaleY(1.2); } }`}</style>
+    </div>
+  );
+}
 
-      <style>{`
-        @keyframes waveBar {
-          from { transform: scaleY(0.4); }
-          to   { transform: scaleY(1.2); }
-        }
-      `}</style>
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+export default function RoomStage({ roomId, mode, onClose }: Props) {
+  if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} />;
+  if (mode === "voice")   return <VoiceStage   roomId={roomId} onClose={onClose} />;
+
+  // Placeholder for future modes
+  return (
+    <div style={{ padding: 16, opacity: 0.5, fontSize: 13 }}>
+      {mode} — coming soon
+      <button onClick={onClose} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#fff", opacity: 0.5 }}>✕</button>
     </div>
   );
 }
