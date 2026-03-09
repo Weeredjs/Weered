@@ -124,6 +124,12 @@ function flairFor(u: any): Flair {
  * 3 MOD (global or room)
  * 4 everyone else
  */
+function avatarBg(name: string): string {
+  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+
 function groupRank(u: any): number {
   const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
   const rr = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
@@ -427,13 +433,13 @@ export default function LeftRail() {
               >
                 {/* Avatar */}
                 {(() => {
-                  const avatarColors: Record<string,string> = {
+                  const roleColors: Record<string,string> = {
                     god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa",
                     admin: "#a78bfa", mod: "#34d399", owner: "#f97316",
-                    paid: "#a78bfa", member: "#6b7280",
+                    paid: "#a78bfa",
                   };
-                  const roleKey = label === "you" ? "member" : label;
-                  const aColor = avatarColors[roleKey] || "#6b7280";
+                  // Elevated roles get role color, everyone else gets name-hash color
+                  const aColor = roleColors[label] || avatarBg(nm);
                   return (
                     <div style={{
                       width: 28, height: 28, borderRadius: "50%", flexShrink: 0,

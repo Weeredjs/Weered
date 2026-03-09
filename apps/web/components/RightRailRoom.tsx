@@ -72,6 +72,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   }, [ctx, roomId]);
 
   const roomLabel = (() => {
+    const metaName = ctx?.meta?.name || ctx?.metaByRoom?.[roomId]?.name;
+    if (metaName && metaName !== roomId) return metaName;
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || "unknown"; }
   })();
 
@@ -175,45 +177,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         <button style={s.btn} onClick={() => copyText("id", roomId)}>Copy id</button>
       </div>
 
-      {/* Participants */}
-      <div style={s.section}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <div style={s.label}>Participants</div>
-          <span style={{ fontSize: 11, opacity: 0.55 }}>{people.length} online</span>
-        </div>
 
-        {people.length === 0 && <div style={{ fontSize: 12, opacity: 0.55 }}>No participants yet.</div>}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {people.slice(0, 20).map((p, i) => {
-            const key  = String(p.id ?? p.name ?? i);
-            const name = String(p.name ?? p.handle ?? p.id ?? "?");
-            const r    = normRole(p.role || "member");
-            const rl   = r.includes("owner") ? "owner" : r.includes("admin") ? "admin" : r.includes("staff") || r.includes("god") ? "staff" : r.includes("mod") ? "mod" : "member";
-            const rs   = roleStyle(rl);
-            return (
-              <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, padding: "6px 8px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" }}>
-                <button
-                  style={{ fontWeight: 600, fontSize: 12, background: "none", border: "none", color: "rgba(243,244,246,.92)", cursor: "pointer", textAlign: "left", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                  onClick={() => replaceTop("profile", { userId: key })}
-                >
-                  {name}
-                </button>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}>{rl}</span>
-                  {allowed && (
-                    <button style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", cursor: "pointer", color: "rgba(243,244,246,.70)" }}
-                      onClick={() => setSelectedId(key)}>
-                      sel
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {people.length > 20 && <div style={{ fontSize: 11, opacity: 0.5, padding: "4px 0" }}>+{people.length - 20} more</div>}
-        </div>
-      </div>
 
       {/* Moderation — mods only */}
       {allowed && (

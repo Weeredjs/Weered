@@ -9,6 +9,12 @@ function pickFirstString(...vals: any[]): string {
   return "";
 }
 
+function avatarBg(name: string): string {
+  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+
 function normRole(x: string) {
   const s = String(x || "").trim().toUpperCase();
   if (!s) return "";
@@ -102,8 +108,8 @@ export default function UserCorner() {
         {/* Avatar */}
         <div style={{
           width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-          background: "var(--weered-accent-grad)",
-          boxShadow: "0 0 18px rgba(217,70,239,.2)",
+          background: avatarBg(name),
+          boxShadow: `0 0 18px ${avatarBg(name)}55`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, fontWeight: 950, color: "#fff",
         }}>
