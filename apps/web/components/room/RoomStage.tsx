@@ -132,7 +132,13 @@ export default function RoomStage({ roomId, mode, onClose }: Props) {
       });
 
       await room.connect(url, token);
-      await room.localParticipant.setMicrophoneEnabled(true);
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true);
+      } catch (micErr: any) {
+        // No mic or permission denied — connect as listener
+        console.warn("Mic unavailable, joining as listener:", micErr?.message);
+        setMuted(true);
+      }
 
       setConnState("connected");
       rebuildTiles(room);
