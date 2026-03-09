@@ -367,7 +367,7 @@ export default function LeftRail() {
       <div className="weered-presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
-          <div className="weered-presence-sub">{`context: ${roomLabel || (isLobbyActive ? "lobby" : "—")}`} • {listed.length}</div>
+          <div className="weered-presence-sub">{`context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`} • {listed.length}</div>
         </div>
 
         <input className="weered-presence-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users..." />
