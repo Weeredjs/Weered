@@ -65,7 +65,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [links,   setLinks  ] = useState<string[]>([]);
   const [newLink, setNewLink] = useState("");
   const [showDetails, setShowDetails] = useState(false);
-
   useEffect(() => {
     try {
       setAbout(String(localStorage.getItem(aboutKey) || ""));
@@ -210,35 +209,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         ].join(" ")}
         style={{ height: stageActive ? "clamp(180px, 35vh, 320px)" : "40px" }}
       >
-        {/* Idle bar — always rendered, hidden when stage is active */}
-        <div
-          className={[
-            "flex items-center gap-2 px-4 h-10 transition-opacity duration-200",
-            stageActive ? "opacity-0 pointer-events-none" : "opacity-100",
-          ].join(" ")}
-        >
-          <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-white/25 mr-1">Stage</span>
-          {MODULES.map((m) => {
-            const isLive = m.live;
-            return (
-              <button
-                key={m.id}
-                type="button"
-                disabled={!isLive}
-                onClick={() => isLive && handleModuleClick(m.id)}
-                className={[
-                  "text-[10px] font-semibold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150",
-                  isLive
-                    ? "border-green-500/30 bg-green-500/[0.08] text-green-300/70 hover:bg-green-500/15 hover:text-green-200 cursor-pointer"
-                    : "border-white/[0.06] text-white/20 cursor-default",
-                ].join(" ")}
-              >
-                {m.icon} {m.label}
-                {!isLive && <span className="ml-1 text-[8px] opacity-50">soon</span>}
-              </button>
-            );
-          })}
-        </div>
+        {/* Idle label — only shown when no stage active */}
+        {!stageActive && (
+          <div className="flex items-center px-4 h-10">
+            <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/20">
+              Stage — activate a module below ↓
+            </span>
+          </div>
+        )}
 
         {/* Stage content — rendered when active */}
         {stageActive && (
@@ -262,6 +240,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <div ref={chatRef} className="flex-1 min-h-0 overflow-hidden">
             <RoomChatPanel
               roomId={roomId}
+              hideInput
               style={{ height: "100%", display: "flex", flexDirection: "column" }}
             />
           </div>
