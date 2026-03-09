@@ -4,6 +4,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 
+function avatarBg(name: string): string {
+  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+
 export default function LobbyChatPanel(
   props: { title?: string; style?: React.CSSProperties; roomId?: string; embedded?: boolean } = {}
 ) {
@@ -97,21 +103,19 @@ export default function LobbyChatPanel(
         ) : (
           msgs.map((m: any, i: number) => (
             <div key={i} data-chat-message style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-              <div
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 999,
-                  border: "1px solid var(--weered-border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  opacity: 0.9,
-                }}
-              >
-                {(m?.name || "?").slice(0, 1).toUpperCase()}
-              </div>
+              {(() => {
+                const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
+                return (
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 999, flexShrink: 0,
+                    background: avatarBg(uname),
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 12, fontWeight: 700, color: "#fff",
+                  }}>
+                    {uname.slice(0, 1).toUpperCase()}
+                  </div>
+                );
+              })()}
               <div style={{ minWidth: 0 }}>
                 <div data-chat-username style={{ fontWeight: 800, fontSize: 13 }}>{String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}</div>
                 <div data-chat-body style={{ opacity: 0.95 }}>{m?.body || m?.text || ""}</div>
