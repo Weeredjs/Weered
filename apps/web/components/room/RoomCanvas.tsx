@@ -21,7 +21,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
 
 const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
-  { id: "youtube", icon: "▶",  label: "YouTube", live: false },
+  { id: "youtube", icon: "▶",  label: "YouTube", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
   { id: "video",   icon: "📹", label: "Video",   live: false },
 ];
