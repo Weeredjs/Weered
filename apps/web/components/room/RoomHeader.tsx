@@ -46,14 +46,6 @@ export default function RoomHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            className={btnPrimary}
-            onClick={() => onOpenDetails?.()}
-            type="button"
-          >
-            Details
-          </button>
-
           <button className={btnSecondary} type="button">
             Invite
           </button>
