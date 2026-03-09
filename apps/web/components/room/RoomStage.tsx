@@ -11,6 +11,8 @@ import {
   ConnectionState,
 } from "livekit-client";
 
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
 export type StageMode = "voice" | "video" | "screen" | "youtube" | null;
 
 interface Props {
@@ -89,7 +91,7 @@ export default function RoomStage({ roomId, mode, onClose }: Props) {
       const jwt = getToken();
       if (!jwt) throw new Error("Not authenticated");
 
-      const res = await fetch("/api/voice/token", {
+      const res = await fetch(`${API}/voice/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
         body: JSON.stringify({ roomId }),
