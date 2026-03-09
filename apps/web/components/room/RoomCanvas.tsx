@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered } from "../WeeredProvider";
-import RoomHeader, { RoomTab } from "./RoomHeader";
-import RoomBody from "./RoomBody";
+import RoomHeader from "./RoomHeader";
+export type RoomTab = "chat" | "media" | "activity" | "details";
 import RoomChatPanel from "../RoomChatPanel";
 import { useOverlay } from "../overlays/OverlayProvider";
 
@@ -259,7 +259,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       <div className="min-w-0" style={{display:"flex",flexDirection:"column",flex:1,minHeight:0}}>
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="text-xs font-semibold text-white/75 tracking-wide">Room Chat</div>
-          <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 opacity-80">{roomId}</span>
+
         </div>
 
         <div style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
@@ -291,16 +291,17 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     />
 
       <div className="flex gap-2 px-3 py-2 border-b border-white/10">
-        {[
-          { id: "chat", label: "Chat" },
-          { id: "media", label: "Media" },
+        {([
+          { id: "chat",     label: "Chat"     },
+          { id: "media",    label: "Media"    },
           { id: "activity", label: "Activity" },
-        ].map((x) => {
-          const active = tab === (x.id as any);
+          { id: "details",  label: "Details"  },
+        ] as {id: RoomTab; label: string}[]).map((x) => {
+          const active = tab === x.id;
           return (
             <button
               key={x.id}
-              onClick={() => setTab(x.id as any)}
+              onClick={() => setTab(x.id)}
               className={
                 "rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors " +
                 (active
@@ -314,19 +315,31 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         })}
       </div>
 
-      {tab === "chat" ? (
-        <RoomBody left={leftPane} right={rightPane} />
-      ) : tab === "media" ? (
-        <div className="p-4 opacity-85">
-          <div className="font-extrabold mb-1">Media</div>
-          <div className="text-sm opacity-80">Placeholder panel. Next: attachments grid / voice / clips.</div>
-        </div>
-      ) : (
-        <div className="p-4 opacity-85">
-          <div className="font-extrabold mb-1">Activity</div>
-          <div className="text-sm opacity-80">Placeholder panel. Next: joins/leaves, mod actions, room events.</div>
-        </div>
-      )}
+      <div
+        className="mt-3 mx-3 mb-3 rounded-xl border border-white/10 bg-black/20 p-3"
+        style={{ height:"calc(100vh - 200px)", minHeight:0, display:"flex", flexDirection:"column", overflow:"hidden" }}
+      >
+        {tab === "chat"     && leftPane}
+        {tab === "media"    && (
+          <div className="opacity-80">
+            <div className="text-sm font-semibold mb-2">Media</div>
+            <div className="text-sm opacity-70">Attachments, embeds, voice, clips — coming soon.</div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-lg border border-white/10 bg-white/5" />)}
+            </div>
+          </div>
+        )}
+        {tab === "activity" && (
+          <div className="opacity-80">
+            <div className="text-sm font-semibold mb-2">Activity</div>
+            <div className="text-sm opacity-70">Joins, pins, uploads, mod actions — coming soon.</div>
+            <div className="mt-3 space-y-2">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">room created</div>
+            </div>
+          </div>
+        )}
+        {tab === "details"  && <div style={{overflowY:"auto", flex:1}}>{rightPane}</div>}
+      </div>
     </div>
   );
 }

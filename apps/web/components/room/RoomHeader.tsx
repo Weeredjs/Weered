@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export type RoomTab = "chat" | "media" | "activity";
+export type RoomTab = "chat" | "media" | "activity" | "details";
 
 export default function RoomHeader({
   title,
