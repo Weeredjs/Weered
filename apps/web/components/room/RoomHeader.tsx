@@ -1,67 +1,64 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 
+// RoomTab kept for any external imports that still reference it
 export type RoomTab = "chat" | "media" | "activity" | "details";
 
 export default function RoomHeader({
   title,
-  subtitle,
   memberCount,
-  onOpenDetails,
+  locked,
+  onInvite,
 }: {
   title: string;
-  subtitle?: string;
   memberCount?: number;
-  onOpenDetails?: () => void;
+  locked?: boolean;
+  onInvite?: () => void;
 }) {
-  const btnBase =
-    "rounded-lg border px-3 py-1.5 text-sm transition-colors";
-
-  const btnSecondary =
-    btnBase + " border-white/10 bg-white/5 hover:bg-white/10";
-
-  const btnPrimary =
-    btnBase + " border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100 font-semibold";
-
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-lg font-semibold">{title}</h1>
+    <div className="flex items-center gap-2.5 px-4 h-11 border-b border-white/[0.07] flex-shrink-0">
+      {/* Room name */}
+      <h1 className="font-semibold text-[14px] truncate leading-none">{title}</h1>
 
-            <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 opacity-80">
-              room
-            </span>
+      {/* Room badge */}
+      <span className="text-[10px] font-semibold tracking-wide uppercase rounded-full border border-white/10 px-2 py-0.5 text-white/40 flex-shrink-0">
+        room
+      </span>
 
-            {typeof memberCount === "number" ? (
-              <span className="text-xs opacity-70">{memberCount} members</span>
-            ) : null}
-          </div>
+      {/* Lock indicator */}
+      {locked && (
+        <span className="text-[10px] font-semibold tracking-wide uppercase rounded-full border border-amber-400/20 bg-amber-400/5 px-2 py-0.5 text-amber-300/60 flex-shrink-0">
+          locked
+        </span>
+      )}
 
-          {subtitle ? (
-            <div className="text-sm opacity-70 truncate">{subtitle}</div>
-          ) : null}
+      {/* Online count */}
+      {typeof memberCount === "number" && (
+        <div className="flex items-center gap-1.5 text-[11px] text-white/40 flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.6)]" />
+          {memberCount} online
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <button className={btnSecondary} type="button">
-            Invite
-          </button>
-
-          <button
-            className={btnSecondary}
-            onClick={() => {
-              try {
-                window.dispatchEvent(new CustomEvent("weered:dock:toggle"));
-              } catch {}
-            }}
-            type="button"
-          >
-            Dock
-          </button>
-        </div>
+      {/* Actions — pushed right */}
+      <div className="ml-auto flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onInvite}
+          className="text-[11px] font-semibold px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white/60 hover:text-white/90 transition-colors"
+        >
+          + Invite
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {}
+          }}
+          className="text-[11px] font-semibold px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white/60 hover:text-white/90 transition-colors"
+        >
+          Dock
+        </button>
       </div>
     </div>
   );
