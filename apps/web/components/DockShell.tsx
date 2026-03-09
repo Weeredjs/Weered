@@ -44,9 +44,13 @@ function fmtTime(iso: string): string {
   try { return new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); } catch { return ""; }
 }
 
-function Avatar({ name, size=32, color }: { name: string; size?: number; color?: string }) {
+function avatarBg(name: string): string {
   const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
-  const bg = color || colors[name.charCodeAt(0) % colors.length];
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+function Avatar({ name, size=32, color }: { name: string; size?: number; color?: string }) {
+  const bg = color || avatarBg(name);
   return (
     <div style={{ width:size, height:size, borderRadius:999, background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:size*0.38, fontWeight:700, color:"#fff", flexShrink:0, userSelect:"none" as const }}>
       {name.slice(0,1).toUpperCase()}
