@@ -586,19 +586,19 @@ export default function LeftRail() {
               const href = `/room/${encodeURIComponent(room)}`;
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:1 }}>
                   <Link
-                    className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between" + (isActive ? " weered-left-link-active" : "")}
-                    href={href} style={{ flex:1, minWidth:0 }}
+                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center justify-between text-[12px]" + (isActive ? " weered-left-link-active" : "")}
+                    href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(252,211,77,.18)", background:"rgba(252,211,77,.05)" }}
                   >
-                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      <span style={{ fontSize:11, opacity:0.45 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{room.replace(/^r[/]/i,"")}</span>
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6 }}>r/</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600 }}>{room.replace(/^r[/]/i,"")}</span>
                     </span>
-                    {isActive && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" />}
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full" style={{ background:"#fcd34d", flexShrink:0 }} />}
                   </Link>
                   <button onClick={() => toggleFav(room)} title="Unpin"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", fontSize:13, flexShrink:0, color:"#fcd34d" }}>★</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>★</button>
                 </div>
               );
             })}
@@ -615,19 +615,19 @@ export default function LeftRail() {
               const href = `/room/${encodeURIComponent(room)}`;
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:1 }}>
                   <Link
-                    className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between" + (isActive ? " weered-left-link-active" : "")}
-                    href={href} style={{ flex:1, minWidth:0 }}
+                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center justify-between text-[12px]" + (isActive ? " weered-left-link-active" : "")}
+                    href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(148,163,184,.14)", background:"rgba(148,163,184,.04)" }}
                   >
-                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      <span style={{ fontSize:11, opacity:0.3 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{room.replace(/^r[/]/i,"")}</span>
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:10, opacity:0.3 }}>r/</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500 }}>{room.replace(/^r[/]/i,"")}</span>
                     </span>
-                    {isActive && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" />}
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" style={{ flexShrink:0 }} />}
                   </Link>
                   <button onClick={() => toggleFav(room)} title="Pin to favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", fontSize:13, flexShrink:0, opacity:0.3, color:"var(--weered-text)" }}>☆</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>☆</button>
                 </div>
               );
             })}
