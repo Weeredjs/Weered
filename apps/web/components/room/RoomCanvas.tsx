@@ -2,10 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered } from "../WeeredProvider";
-import RoomHeader from "./RoomHeader";
+import RoomHeader, { RoomTab } from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
-
-export type RoomTab = "chat" | "media" | "activity" | "details";
+import RoomStage, { StageMode } from "./RoomStage";
 import { useOverlay } from "../overlays/OverlayProvider";
 
 function safeCopy(s: string) {
@@ -27,6 +26,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
   const { openSheet } = useOverlay();
   const [tab, setTab] = useState<RoomTab>("chat");
+  const [stageMode, setStageMode] = useState<StageMode>(null);
 
   const roomLabel = useMemo(() => {
     const name = String(w?.meta?.name || w?.meta?.title || w?.meta?.label || w?.admin?.name || "").trim();
@@ -280,14 +280,35 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <RoomChatPanel roomId={roomId} style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}} />
 
 <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-  <div className="flex items-center justify-between">
+  <div className="flex items-center justify-between mb-2">
     <div className="text-xs font-semibold text-white/75 tracking-wide">Modules</div>
-    <div className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/55">coming soon</div>
   </div>
-  <div className="mt-2 flex flex-wrap gap-2">
-    {["Audio", "Video", "Games", "URL", "Tools"].map((x) => (
-      <span key={x} className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-1 opacity-70">{x}</span>
-    ))}
+  <div className="flex flex-wrap gap-2">
+    {([
+      { id:"voice",   label:"🎙 Voice",  live: true  },
+      { id:"video",   label:"📹 Video",  live: false },
+      { id:"youtube", label:"▶ YouTube", live: false },
+      { id:"screen",  label:"🖥 Screen", live: false },
+      { id:"games",   label:"🎮 Games",  live: false },
+    ] as {id:StageMode, label:string, live:boolean}[]).map(m => {
+      const active = stageMode === m.id;
+      return (
+        <button
+          key={m.id}
+          onClick={() => m.live ? setStageMode(active ? null : m.id) : undefined}
+          style={{
+            fontSize:11, borderRadius:999, border:"1px solid",
+            padding:"4px 10px", cursor: m.live ? "pointer" : "default",
+            borderColor: active ? "rgba(34,197,94,.4)" : m.live ? "rgba(148,163,184,.25)" : "rgba(148,163,184,.12)",
+            background: active ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.04)",
+            color: active ? "#86efac" : m.live ? "rgba(255,255,255,.8)" : "rgba(255,255,255,.3)",
+            fontWeight: 600,
+          }}
+        >
+          {m.label}{!m.live && <span style={{marginLeft:4,fontSize:9,opacity:0.5}}>soon</span>}
+        </button>
+      );
+    })}
   </div>
 </div>
         </div>
@@ -329,9 +350,20 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         })}
       </div>
 
+      {/* ── Stage (voice/video/etc) ── */}
+      {stageMode && (
+        <div className="mx-3 mt-3 rounded-xl border border-white/10 overflow-hidden">
+          <RoomStage
+            roomId={roomId}
+            mode={stageMode}
+            onClose={() => setStageMode(null)}
+          />
+        </div>
+      )}
+
       <div
         className="mt-3 mx-3 mb-3 rounded-xl border border-white/10 bg-black/20 p-3"
-        style={{ height:"calc(100vh - 200px)", minHeight:0, display:"flex", flexDirection:"column", overflow:"hidden" }}
+        style={{ height: stageMode ? "calc(100vh - 340px)" : "calc(100vh - 200px)", minHeight:0, display:"flex", flexDirection:"column", overflow:"hidden" }}
       >
         {tab === "chat"     && leftPane}
         {tab === "media"    && (
