@@ -143,7 +143,12 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         if (j?.error) { setError(j.error); return; }
         setProfile(j);
         setBio(j.bio || "");
-        setAvatarColor(j.avatarColor || nameToColor(j.name));
+        const savedColor = j.avatarColor || nameToColor(j.name);
+        setAvatarColor(savedColor);
+        // Seed localStorage so other components use the right color immediately
+        if (j.avatarColor) {
+          try { localStorage.setItem("weered:avatarColor", j.avatarColor); } catch {}
+        }
       })
       .catch(() => setError("Could not load profile."))
       .finally(() => setLoading(false));
@@ -170,6 +175,10 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   // Save avatar color
   async function saveColor(color: string) {
     setAvatarColor(color);
+    // Write to localStorage immediately so all avatar components pick it up
+    try { localStorage.setItem("weered:avatarColor", color); } catch {}
+    // Broadcast so open components re-render
+    try { window.dispatchEvent(new CustomEvent("weered:avatarColor", { detail: color })); } catch {}
     if (!token) return;
     setSavingColor(true);
     try {

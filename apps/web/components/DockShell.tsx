@@ -44,13 +44,15 @@ function fmtTime(iso: string): string {
   try { return new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); } catch { return ""; }
 }
 
-function avatarBg(name: string): string {
+function avatarBg(name: string, isMe?: boolean): string {
   const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
   let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
+  const hash = colors[h % colors.length];
+  if (!isMe) return hash;
+  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
 }
-function Avatar({ name, size=32, color }: { name: string; size?: number; color?: string }) {
-  const bg = color || avatarBg(name);
+function Avatar({ name, size=32, color, isMe }: { name: string; size?: number; color?: string; isMe?: boolean }) {
+  const bg = color || avatarBg(name, isMe);
   return (
     <div style={{ width:size, height:size, borderRadius:999, background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:size*0.38, fontWeight:700, color:"#fff", flexShrink:0, userSelect:"none" as const }}>
       {name.slice(0,1).toUpperCase()}
@@ -271,7 +273,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
       <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
         {/* Top row */}
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-          <Avatar name={meName} size={34} />
+          <Avatar name={meName} size={34} isMe />
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontWeight:700, fontSize:14, lineHeight:1.2 }}>{meName}</div>
             <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
