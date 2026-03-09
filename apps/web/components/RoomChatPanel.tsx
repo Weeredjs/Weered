@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import LobbyChatPanel from "../LobbyChatPanel";
+import LobbyChatPanel from "./LobbyChatPanel";
 
 export default function RoomChatPanel({
   roomId,
