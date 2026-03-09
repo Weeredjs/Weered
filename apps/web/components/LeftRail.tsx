@@ -343,73 +343,6 @@ export default function LeftRail() {
       </div>
 
 
-      {/* ── Recents & Favorites ── */}
-      <div className="weered-left-section">
-        {favs.length > 0 && (
-          <>
-            <div className="weered-left-title" style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <span>Favorites</span>
-              <span style={{ fontSize:10, opacity:0.4 }}>{favs.length}</span>
-            </div>
-            {favs.map(room => {
-              const href = `/room/${encodeURIComponent(room)}`;
-              const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
-              return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
-                  <Link
-                    className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between" + (isActive ? " weered-left-link-active" : "")}
-                    href={href} style={{ flex:1, minWidth:0 }}
-                  >
-                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      <span style={{ fontSize:11, opacity:0.45 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{room.replace(/^r[/]/i,"")}</span>
-                    </span>
-                    {isActive && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" />}
-                  </Link>
-                  <button onClick={() => toggleFav(room)} title="Unpin"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", fontSize:13, flexShrink:0, color:"#fcd34d" }}>★</button>
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        {recentRooms.length > 0 && (
-          <>
-            <div className="weered-left-title" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop: favs.length ? 10 : 0 }}>
-              <span>Recent</span>
-              <span style={{ fontSize:10, opacity:0.4 }}>{recentRooms.length}</span>
-            </div>
-            {recentRooms.map(room => {
-              const href = `/room/${encodeURIComponent(room)}`;
-              const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
-              return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
-                  <Link
-                    className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between" + (isActive ? " weered-left-link-active" : "")}
-                    href={href} style={{ flex:1, minWidth:0 }}
-                  >
-                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      <span style={{ fontSize:11, opacity:0.3 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{room.replace(/^r[/]/i,"")}</span>
-                    </span>
-                    {isActive && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" />}
-                  </Link>
-                  <button onClick={() => toggleFav(room)} title="Pin to favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", fontSize:13, flexShrink:0, opacity:0.3, color:"var(--weered-text)" }}>☆</button>
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        {favs.length === 0 && recentRooms.length === 0 && (
-          <div style={{ fontSize:11, opacity:0.3, padding:"2px 0 4px", fontStyle:"italic" }}>
-            Join a room to build your history
-          </div>
-        )}
-      </div>
-
       <div className="weered-presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
@@ -418,7 +351,7 @@ export default function LeftRail() {
 
         <input className="weered-presence-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users..." />
 
-        <div className="weered-presence-list" style={{ maxHeight:276, overflowY:"auto", scrollbarWidth:"thin", scrollbarColor:"rgba(148,163,184,.2) transparent" }}>
+        <div className="weered-presence-list" style={{ maxHeight:"calc(100vh - 440px)", overflowY:"auto", scrollbarWidth:"thin", scrollbarColor:"rgba(148,163,184,.2) transparent" }}>
           {listed.map((u: any) => {
             const nm = pickFirstString(u?.name, u?.username, "Unknown");
             const rid = pickFirstString(u?.id, nm);
@@ -641,6 +574,73 @@ export default function LeftRail() {
           </details>
         </div>
       </div>
+      {/* ── Recents & Favorites ── */}
+      <div className="weered-left-section">
+        {favs.length > 0 && (
+          <>
+            <div className="weered-left-title" style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span>Favorites</span>
+              <span style={{ fontSize:10, opacity:0.4 }}>{favs.length}</span>
+            </div>
+            {favs.map(room => {
+              const href = `/room/${encodeURIComponent(room)}`;
+              const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
+              return (
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
+                  <Link
+                    className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between" + (isActive ? " weered-left-link-active" : "")}
+                    href={href} style={{ flex:1, minWidth:0 }}
+                  >
+                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <span style={{ fontSize:11, opacity:0.45 }}>r/</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{room.replace(/^r[/]/i,"")}</span>
+                    </span>
+                    {isActive && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" />}
+                  </Link>
+                  <button onClick={() => toggleFav(room)} title="Unpin"
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", fontSize:13, flexShrink:0, color:"#fcd34d" }}>★</button>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {recentRooms.length > 0 && (
+          <>
+            <div className="weered-left-title" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop: favs.length ? 10 : 0 }}>
+              <span>Recent</span>
+              <span style={{ fontSize:10, opacity:0.4 }}>{recentRooms.length}</span>
+            </div>
+            {recentRooms.map(room => {
+              const href = `/room/${encodeURIComponent(room)}`;
+              const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
+              return (
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:4, marginBottom:2 }}>
+                  <Link
+                    className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between" + (isActive ? " weered-left-link-active" : "")}
+                    href={href} style={{ flex:1, minWidth:0 }}
+                  >
+                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <span style={{ fontSize:11, opacity:0.3 }}>r/</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{room.replace(/^r[/]/i,"")}</span>
+                    </span>
+                    {isActive && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" />}
+                  </Link>
+                  <button onClick={() => toggleFav(room)} title="Pin to favorites"
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", fontSize:13, flexShrink:0, opacity:0.3, color:"var(--weered-text)" }}>☆</button>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {favs.length === 0 && recentRooms.length === 0 && (
+          <div style={{ fontSize:11, opacity:0.3, padding:"2px 0 4px", fontStyle:"italic" }}>
+            Join a room to build your history
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
