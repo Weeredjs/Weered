@@ -3,8 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered } from "../WeeredProvider";
 import RoomHeader from "./RoomHeader";
-export type RoomTab = "chat" | "media" | "activity" | "details";
 import RoomChatPanel from "../RoomChatPanel";
+
+export type RoomTab = "chat" | "media" | "activity" | "details";
 import { useOverlay } from "../overlays/OverlayProvider";
 
 function safeCopy(s: string) {
@@ -36,6 +37,19 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       return roomId || "";
     }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
+
+
+  // ── Room name cache: persist resolved name so recents/favorites show names ──
+  const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
+  useEffect(() => {
+    if (!roomId || !roomLabel || roomLabel === roomId) return;
+    try {
+      const cache = JSON.parse(localStorage.getItem(ROOM_NAME_CACHE_KEY) || "{}");
+      if (cache[roomId] === roomLabel) return;
+      cache[roomId] = roomLabel;
+      localStorage.setItem(ROOM_NAME_CACHE_KEY, JSON.stringify(cache));
+    } catch {}
+  }, [roomId, roomLabel]);
 
   const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
 

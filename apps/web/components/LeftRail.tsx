@@ -221,6 +221,21 @@ export default function LeftRail() {
 
   const recentRooms = recents.filter(r => !favs.includes(r));
 
+  // ── Room name cache ──────────────────────────────────────────────────────
+  const [roomNameCache, setRoomNameCache] = useState<Record<string,string>>(() => {
+    try { return JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}"); } catch { return {}; }
+  });
+  // Refresh cache on focus (in case another tab updated it)
+  useEffect(() => {
+    const onFocus = () => {
+      try { setRoomNameCache(JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}")); } catch {}
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+  const getRoomName = (id: string) => roomNameCache[id] || id;
+
+
 
   // Presence popover state
   const [presenceHoverOpen, setPresenceHoverOpen] = useState(false);
@@ -593,7 +608,7 @@ export default function LeftRail() {
                   >
                     <span style={{ display:"flex", alignItems:"center", gap:4 }}>
                       <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600 }}>{room.replace(/^r[/]/i,"")}</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600 }}>{getRoomName(room)}</span>
                     </span>
                     {isActive && <span className="h-1.5 w-1.5 rounded-full" style={{ background:"#fcd34d", flexShrink:0 }} />}
                   </Link>
@@ -622,7 +637,7 @@ export default function LeftRail() {
                   >
                     <span style={{ display:"flex", alignItems:"center", gap:4 }}>
                       <span style={{ fontSize:10, opacity:0.3 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500 }}>{room.replace(/^r[/]/i,"")}</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500 }}>{getRoomName(room)}</span>
                     </span>
                     {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" style={{ flexShrink:0 }} />}
                   </Link>
