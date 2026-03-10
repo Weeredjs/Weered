@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum RoomRole {
@@ -190,8 +189,9 @@ model User {
   avatar      String?                           // profile picture URL (Google or uploaded)
   notoriety   Int        @default(0)
   tier        UserTier   @default(INNOCENT)
-  globalRole  GlobalRole @default(USER)
-  createdAt   DateTime   @default(now())
+  globalRole        GlobalRole @default(USER)
+  onboardingComplete Boolean    @default(false)  // false for new Google SSO users until they pick a username
+  createdAt         DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   dmSent           DirectMessage[]  @relation("DMSent")
