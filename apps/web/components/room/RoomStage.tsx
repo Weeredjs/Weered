@@ -128,7 +128,13 @@ function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void
       },
     });
     return () => {
-      try { playerRef.current?.destroy?.(); playerRef.current = null; } catch {}
+      try {
+        const p = playerRef.current;
+        playerRef.current = null;
+        // Detach the iframe from DOM before destroying to prevent React removeChild error
+        try { const iframe = p?.getIframe?.(); iframe?.parentNode?.removeChild(iframe); } catch {}
+        p?.destroy?.();
+      } catch {}
     };
   }, [videoId, ytReady]);
 
