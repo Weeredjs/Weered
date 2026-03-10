@@ -534,24 +534,16 @@ async function main() {
     catch { return { ok: true, db: "down" }; }
   });
 
-  // Reddit proxy — fetches server-side to avoid CORS + browser blocks
+  // Reddit proxy — browser can't hit reddit.com directly (CORS), so we fetch server-side
   app.get("/proxy/reddit", async (req, reply) => {
     const qs = (req as any).query || {};
-    const sub  = String(qs.sub  || "gaming").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 64);
-    const sort = ["hot","new","top","rising"].includes(String(qs.sort)) ? String(qs.sort) : "hot";
+    const sub   = String(qs.sub   || "gaming").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 64);
+    const sort  = ["hot","new","top","rising"].includes(String(qs.sort)) ? String(qs.sort) : "hot";
     const limit = Math.min(Number(qs.limit) || 25, 50);
     try {
       const res = await fetch(
         `https://www.reddit.com/r/${sub}/${sort}.json?limit=${limit}&raw_json=1`,
-        {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-          }
-        }
+        { headers: { "User-Agent": "weered-proxy/1.0" } }
       );
       if (!res.ok) return reply.code(res.status).send({ error: "reddit_upstream_error", status: res.status });
       const data = await res.json();
