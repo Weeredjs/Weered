@@ -94,22 +94,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
-  // ── Auto-open YouTube stage when another user loads a video ──
-  useEffect(() => {
-    const handler = (ev: any) => {
-      const d = ev.detail;
-      if (!d || d.roomId !== roomId) return;
-      if (d.type === "youtube:state" && d.videoId) {
-        setStageMode(prev => prev === "youtube" ? prev : "youtube");
-      }
-      if (d.type === "youtube:stopped") {
-        setStageMode(prev => prev === "youtube" ? null : prev);
-      }
-    };
-    window.addEventListener("weered:youtube", handler as any);
-    return () => window.removeEventListener("weered:youtube", handler as any);
-  }, [roomId]);
-
   // ── Toggle stage mode (toggle off if already active) ──
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     setStageMode(prev => prev === id ? null : id);
@@ -223,7 +207,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? "clamp(180px, 35vh, 320px)" : "40px" }}
+        style={{ height: stageActive ? "clamp(280px, 50vh, 520px)" : "40px" }}
       >
         {/* Idle label — only shown when no stage active */}
         {!stageActive && (
@@ -253,7 +237,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
 
           {/* Messages */}
-          <div ref={chatRef} className="flex-1 min-h-0 overflow-hidden">
+          <div ref={chatRef} className="flex-1 min-h-0 overflow-y-auto">
             <RoomChatPanel
               roomId={roomId}
               hideInput
