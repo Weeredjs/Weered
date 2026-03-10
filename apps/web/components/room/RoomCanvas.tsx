@@ -207,7 +207,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden relative",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? "clamp(320px, 55vh, 580px)" : "40px" }}
+        style={{ height: stageActive ? "clamp(300px, 48vh, 540px)" : "40px" }}
       >
         {/* Idle label — only shown when no stage active */}
         {!stageActive && (
@@ -218,14 +218,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {/* Stage content — fills the stage zone absolutely */}
+        {/* Stage content — rendered when active */}
         {stageActive && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
             <RoomStage
               roomId={roomId}
               mode={stageMode}
               onClose={() => setStageMode(null)}
-              style={{ flex: 1, minHeight: 0 }}
             />
           </div>
         )}
