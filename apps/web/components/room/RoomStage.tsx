@@ -108,6 +108,8 @@ function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void
     }
     playerRef.current = new window.YT.Player(playerDivRef.current, {
       videoId,
+      width: "100%",
+      height: "100%",
       playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
       events: {
         onStateChange: (e: any) => {
@@ -221,8 +223,9 @@ function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void
       {videoId ? (
         <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 0, overflow: "hidden" }}>
           {/* Player */}
-          <div style={{ flex: 1, background: "#000", position: "relative" }}>
-            <div ref={playerDivRef} style={{ width: "100%", height: "100%" }} />
+          <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0 }}>
+            <style>{`.yt-stage-player iframe { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }`}</style>
+            <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
             {!ytReady && (
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, opacity: 0.5 }}>
                 Loading player…
