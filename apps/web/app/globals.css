@@ -161,12 +161,12 @@ button:hover, [role="button"]:hover {
 .weered-shell {
   display: flex;
   gap: 16px;
-  padding: 16px;
-  align-items: stretch;        /* was flex-start */
+  padding: 16px 16px 0 16px;
+  align-items: stretch;
   width: 100%;
-  height: 100vh;               /* was min-height: 100vh */
-  overflow: hidden;            /* add this */
-  box-sizing: border-box;      /* add this */
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
