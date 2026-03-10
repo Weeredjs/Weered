@@ -7,8 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
-
 enum RoomRole {
   OWNER
   MOD
@@ -16,39 +14,37 @@ enum RoomRole {
 }
 
 enum LobbyRole {
-  OWNER    // Created / claimed the lobby
-  MOD      // Lobby-scoped moderator (verified lobbies only)
-  MEMBER   // Regular member
+  OWNER
+  MOD
+  MEMBER
 }
 
 enum GlobalRole {
   USER
-  SUPPORT  // Can view staff tools, limited actions
-  STAFF    // Full mod tools across all lobbies/rooms
-  ADMIN    // Platform admin (between STAFF and GOD)
-  GOD      // Superuser
+  SUPPORT
+  STAFF
+  ADMIN
+  GOD
 }
 
 enum ModuleType {
-  REDDIT   // Default — subreddit browser
-  BUNGIE   // Destiny 2 / Bungie API
-  TWITCH   // Twitch stream embed
-  YOUTUBE  // YouTube embed
-  CUSTOM   // Custom iframe / integration
-  NONE     // No module, chat only
+  REDDIT
+  BUNGIE
+  TWITCH
+  YOUTUBE
+  CUSTOM
+  NONE
 }
 
-// ─── Lobby ────────────────────────────────────────────────────────────────────
-
 model Lobby {
-  id          String     @id                    // e.g. "r/gaming", "destiny2", "weered.ca"
-  name        String     @default("")           // Display name e.g. "r/gaming"
+  id          String     @id
+  name        String     @default("")
   description String     @default("")
-  verified    Boolean    @default(false)        // Verified/claimed lobby
-  pinned      Boolean    @default(false)        // Always show on Home
-  moduleType  ModuleType @default(REDDIT)       // Which module to render
-  moduleConfig Json?                            // Module-specific config (subreddit, channel id, etc.)
-  ownerId     String?                           // User who claimed/created this lobby
+  verified    Boolean    @default(false)
+  pinned      Boolean    @default(false)
+  moduleType  ModuleType @default(REDDIT)
+  moduleConfig Json?
+  ownerId     String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -113,14 +109,12 @@ model LobbyAudit {
   @@index([lobbyId, ts])
 }
 
-// ─── Room ─────────────────────────────────────────────────────────────────────
-
 model Room {
   id        String   @id
   name      String   @default("")
   locked    Boolean  @default(false)
   ownerId   String?
-  lobbyId   String?                             // Which lobby this room belongs to (null = orphan/legacy)
+  lobbyId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -130,7 +124,7 @@ model Room {
   messages RoomMessage[]
   audit    RoomAudit[]
 
-  @@unique([lobbyId, name])                     // No duplicate room names within a lobby
+  @@unique([lobbyId, name])
 }
 
 model RoomMember {
@@ -186,20 +180,22 @@ model RoomAudit {
   @@index([roomId, ts])
 }
 
-// ─── User ─────────────────────────────────────────────────────────────────────
-
 model User {
   id          String     @id @default(cuid())
   usernameKey String     @unique
   name        String     @default("")
   bio         String?
+  email       String?    @unique                // top-level email for Google/SSO users
+  googleId    String?    @unique                // Google OAuth subject ID
+  avatar      String?                           // profile picture URL (Google or uploaded)
   notoriety   Int        @default(0)
   tier        UserTier   @default(INNOCENT)
   globalRole  GlobalRole @default(USER)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  dmSent     DirectMessage[] @relation("DMSent")
-  dmReceived DirectMessage[] @relation("DMReceived")
+
+  dmSent           DirectMessage[]  @relation("DMSent")
+  dmReceived       DirectMessage[]  @relation("DMReceived")
   LocalAuth        LocalAuth?
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
@@ -245,14 +241,13 @@ model GlobalAudit {
 
   @@index([createdAt])
 }
+
 enum UserTier {
   INNOCENT
   INDICTED
   FELON
   KINGPIN
 }
-
-// ── ADD THIS MODEL ────────────────────────────────────────────────────────────
 
 model NotorietyEvent {
   id        String   @id @default(cuid())
@@ -280,4 +275,3 @@ model DirectMessage {
   @@index([fromId, toId, createdAt])
   @@index([toId, readAt])
 }
-
