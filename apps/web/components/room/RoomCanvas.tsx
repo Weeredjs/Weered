@@ -204,10 +204,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       */}
       <div
         className={[
-          "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden relative",
+          "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? "clamp(300px, 48vh, 540px)" : "40px" }}
+        style={{ height: stageActive ? "clamp(180px, 35vh, 320px)" : "40px" }}
       >
         {/* Idle label — only shown when no stage active */}
         {!stageActive && (
@@ -220,7 +220,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {/* Stage content — rendered when active */}
         {stageActive && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
+          <div className="absolute inset-0 flex flex-col" style={{ position: "relative" }}>
             <RoomStage
               roomId={roomId}
               mode={stageMode}
@@ -246,7 +246,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
 
           {/* Input zone */}
-          <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-3">
+          <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
             {/* Module pills row */}
             <div className="flex flex-wrap gap-1.5 mb-2.5">
               {MODULES.map((m) => {
