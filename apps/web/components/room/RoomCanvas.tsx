@@ -94,6 +94,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
+  // ── Auto-open YouTube stage when another user loads a video ──
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const d = ev.detail;
+      if (!d || d.roomId !== roomId) return;
+      if (d.type === "youtube:state" && d.videoId) {
+        setStageMode(prev => prev === "youtube" ? prev : "youtube");
+      }
+      if (d.type === "youtube:stopped") {
+        setStageMode(prev => prev === "youtube" ? null : prev);
+      }
+    };
+    window.addEventListener("weered:youtube", handler as any);
+    return () => window.removeEventListener("weered:youtube", handler as any);
+  }, [roomId]);
+
   // ── Toggle stage mode (toggle off if already active) ──
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     setStageMode(prev => prev === id ? null : id);
