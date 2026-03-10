@@ -204,7 +204,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       */}
       <div
         className={[
-          "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
+          "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden relative",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={{ height: stageActive ? "clamp(320px, 55vh, 580px)" : "40px" }}
@@ -218,13 +218,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {/* Stage content — rendered when active */}
+        {/* Stage content — fills the stage zone absolutely */}
         {stageActive && (
-          <div className="absolute inset-0 flex flex-col" style={{ position: "relative" }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
             <RoomStage
               roomId={roomId}
               mode={stageMode}
               onClose={() => setStageMode(null)}
+              style={{ flex: 1, minHeight: 0 }}
             />
           </div>
         )}

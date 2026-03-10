@@ -19,6 +19,7 @@ interface Props {
   roomId: string;
   mode: StageMode;
   onClose: () => void;
+  style?: React.CSSProperties;
 }
 
 interface ParticipantTile {
@@ -71,7 +72,7 @@ declare global {
   }
 }
 
-function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
+function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
   const { sendRaw } = useWeered() as any;
   const playerRef    = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
@@ -204,7 +205,7 @@ function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,.4)" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,.4)", ...style }}>
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
@@ -277,7 +278,7 @@ function YoutubeStage({ roomId, onClose }: { roomId: string; onClose: () => void
 
 // ─── Voice Stage (unchanged) ──────────────────────────────────────────────────
 
-function VoiceStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
+function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
   const roomRef  = useRef<Room | null>(null);
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
@@ -375,7 +376,7 @@ function VoiceStage({ roomId, onClose }: { roomId: string; onClose: () => void }
   const live = connState === "connected";
 
   return (
-    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
+    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, height: "100%", ...style }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: live ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
@@ -436,9 +437,9 @@ function VoiceStage({ roomId, onClose }: { roomId: string; onClose: () => void }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function RoomStage({ roomId, mode, onClose }: Props) {
-  if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} />;
-  if (mode === "voice")   return <VoiceStage   roomId={roomId} onClose={onClose} />;
+export default function RoomStage({ roomId, mode, onClose, style }: Props) {
+  if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
+  if (mode === "voice")   return <VoiceStage   roomId={roomId} onClose={onClose} style={style} />;
 
   // Placeholder for future modes
   return (
