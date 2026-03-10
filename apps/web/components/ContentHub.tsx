@@ -112,11 +112,10 @@ function formatScore(n: number): string {
   return String(n);
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+
 async function fetchReddit(sub: string): Promise<FeedItem[]> {
-  const res = await fetch(
-    `https://www.reddit.com/r/${sub}/hot.json?limit=15&raw_json=1`,
-    { headers: { Accept: "application/json" } }
-  );
+  const res = await fetch(`${API_BASE}/proxy/reddit?sub=${encodeURIComponent(sub)}&limit=25&raw_json=1`);
   if (!res.ok) return [];
   const data = await res.json();
   return (data?.data?.children ?? [])

@@ -534,6 +534,25 @@ async function main() {
     catch { return { ok: true, db: "down" }; }
   });
 
+  // Reddit proxy — browser can't hit reddit.com directly (CORS), so we fetch server-side
+  app.get("/proxy/reddit", async (req, reply) => {
+    const qs = (req as any).query || {};
+    const sub   = String(qs.sub   || "gaming").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 64);
+    const sort  = ["hot","new","top","rising"].includes(String(qs.sort)) ? String(qs.sort) : "hot";
+    const limit = Math.min(Number(qs.limit) || 25, 50);
+    try {
+      const res = await fetch(
+        `https://www.reddit.com/r/${sub}/${sort}.json?limit=${limit}&raw_json=1`,
+        { headers: { "User-Agent": "weered-proxy/1.0" } }
+      );
+      if (!res.ok) return reply.code(res.status).send({ error: "reddit_upstream_error", status: res.status });
+      const data = await res.json();
+      return reply.send(data);
+    } catch (e: any) {
+      return reply.code(502).send({ error: "proxy_fetch_failed", message: e?.message });
+    }
+  });
+
   // Auth: dev-login
   app.post("/auth/dev-login", async (req, reply) => {
     const body: any = (req as any).body || {};
