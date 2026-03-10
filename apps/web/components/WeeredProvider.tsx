@@ -88,6 +88,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const wsRef            = useRef<WebSocket | null>(null);
   const lastAuthTokenRef = useRef("");
   const lastJoinedRidRef = useRef("");
+  const activeRoomIdRef  = useRef(""); // always-current ref to escape stale closures
 
   // ── Room state ──
   const [activeRoomId,  setActiveRoomId ] = useState("");
@@ -167,9 +168,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       const roomMatch = pathname.match(/^\/room\/([^/]+)/);
       if (roomMatch) {
         const rid = decodeURIComponent(roomMatch[1]);
-        if (rid && rid !== "@me") { setActiveRoomId(rid); return; }
+        if (rid && rid !== "@me") { activeRoomIdRef.current = rid; setActiveRoomId(rid); return; }
       }
-      if (pathname.startsWith("/lobby")) { setActiveRoomId("lobby"); return; }
+      if (pathname.startsWith("/lobby")) { activeRoomIdRef.current = "lobby"; setActiveRoomId("lobby"); return; }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
@@ -389,7 +390,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Internal helpers ─────────────────────────────────────────────────────
   function sendJoin(ws: WebSocket) {
-    const ridRaw = joinedRoomId || activeRoomId;
+    // Use ref to get current roomId — avoids stale closure from WS effect
+    const ridRaw = activeRoomIdRef.current || joinedRoomId || activeRoomId;
     if (!ridRaw) return;
     let rid = ridRaw;
     try { rid = decodeURIComponent(ridRaw); } catch {}
