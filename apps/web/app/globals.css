@@ -104,6 +104,8 @@ html, body {
   margin: 0;
   padding: 0;
   width: 100%;
+    height: 100%;
+  overflow: hidden;
   overflow-x: hidden;
   background: var(--weered-bg);
   color: var(--weered-text);
@@ -160,14 +162,21 @@ button:hover, [role="button"]:hover {
   display: flex;
   gap: 16px;
   padding: 16px;
-  align-items: flex-start;
+  align-items: stretch;        /* was flex-start */
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;               /* was min-height: 100vh */
+  overflow: hidden;            /* add this */
+  box-sizing: border-box;      /* add this */
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
 .weered-right { width: 340px; flex: 0 0 340px; }
-.weered-center { flex: 1 1 auto; min-width: 0; }
+.weered-center { 
+  flex: 1 1 auto; 
+  min-width: 0; 
+  height: 100%;                /* add this */
+  overflow: hidden;            /* add this */
+}
 
 /* Rails: sticky, panel-styled */
 .weered-left,
