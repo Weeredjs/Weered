@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { ui } from "./weeredUi";
 
-type Mode = "subreddits" | "rooms" | "people";
+type Mode = "rooms" | "people";
 type RoomLite = { id: string; name: string; locked?: boolean; count?: number | null };
 type PersonLite = { id?: string; name?: string; username?: string; role?: string };
 
@@ -18,7 +18,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
   const router = useRouter();
   const w = useWeered() as any;
 
-  const [mode, setMode]   = React.useState<Mode>("subreddits");
+  const [mode, setMode]   = React.useState<Mode>("rooms");
   const [q, setQ]         = React.useState("");
   const [open, setOpen]   = React.useState(false);
   const [idx, setIdx]     = React.useState(0);
@@ -48,7 +48,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
         .slice(0, 10)
         .map(u => ({ kind: "person" as const, key: pickFirstString(u?.id, u?.username, u?.name), person: u }));
     }
-    return [{ kind: "sub" as const, key: query, sub: query }];
+    return [];
   }, [mode, query, rooms, people]);
 
   React.useEffect(() => { setIdx(0); }, [mode, q]);
@@ -76,6 +76,8 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
     window.dispatchEvent(new CustomEvent("weered:lobby:browse"));
   }
 
+  const placeholder = mode === "rooms" ? "Search rooms" : "Search people";
+
   return (
     <div className={ui.panel} style={{ position: "relative", flexShrink: 0 }}>
       <div className={ui.panelHeader}>
@@ -84,19 +86,19 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
             <div className={ui.panelTitle}>{title}</div>
             {subtitle && <div className={`${ui.muted} text-xs truncate`}>{subtitle}</div>}
           </div>
-          <div className={`${ui.muted} text-xs mt-0.5`}>Navigate, search, and manage the lobby.</div>
+          <div className={`${ui.muted} text-xs mt-0.5`}>Browse content, find rooms, and connect with people.</div>
         </div>
       </div>
 
       <div className="px-4 pb-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Mode tabs */}
+          {/* Mode tabs — Rooms + People only (subreddits replaced by ContentHub) */}
           <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
-            {(["subreddits", "rooms", "people"] as Mode[]).map(m => (
+            {(["rooms", "people"] as Mode[]).map(m => (
               <button key={m} type="button"
                 className={"rounded-lg px-2 py-1 text-xs font-semibold " + (mode === m ? "bg-white/15" : "opacity-70 hover:bg-white/10")}
                 onClick={() => setMode(m)}>
-                {m === "subreddits" ? "Subreddits" : m === "rooms" ? "Rooms" : "People"}
+                {m === "rooms" ? "Rooms" : "People"}
               </button>
             ))}
           </div>
@@ -105,7 +107,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
           <div style={{ position: "relative", flex: 1, minWidth: 260 }}>
             <input
               className="weered-input w-full"
-              placeholder={mode === "subreddits" ? "Search subreddits" : mode === "rooms" ? "Search rooms" : "Search people"}
+              placeholder={placeholder}
               value={q}
               onChange={e => { setQ(e.target.value); setOpen(true); }}
               onFocus={() => setOpen(true)}
@@ -135,7 +137,7 @@ export default function LobbyHeaderBar({ title = "Lobby", subtitle }: { title?: 
                       </div>
                     </button>
                   );
-                  return <div key={r.key} style={{ padding: "10px 12px", fontSize: 12, opacity: 0.7 }}>Search for r/{r.sub}</div>;
+                  return null;
                 })}
               </div>
             ) : null}
