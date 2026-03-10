@@ -207,7 +207,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? "clamp(180px, 35vh, 320px)" : "40px" }}
+        style={{ height: stageActive ? "clamp(320px, 55vh, 580px)" : "40px" }}
       >
         {/* Idle label — only shown when no stage active */}
         {!stageActive && (
@@ -236,15 +236,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         {/* Chat column */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
 
-          {/* Messages — relative container, panel fills absolutely */}
-          <div ref={chatRef} className="flex-1 min-h-0 relative">
-            <div className="absolute inset-0 overflow-hidden">
-              <RoomChatPanel
-                roomId={roomId}
-                hideInput
-                style={{ height: "100%", display: "flex", flexDirection: "column" }}
-              />
-            </div>
+          {/* Messages */}
+          <div ref={chatRef} className="flex-1 min-h-0 overflow-hidden">
+            <RoomChatPanel
+              roomId={roomId}
+              hideInput
+              style={{ height: "100%", display: "flex", flexDirection: "column" }}
+            />
           </div>
 
           {/* Input zone */}
