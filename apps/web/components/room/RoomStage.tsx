@@ -224,7 +224,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
       {videoId ? (
         <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 0, overflow: "hidden" }}>
           {/* Player */}
-          <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0 }}>
+          <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0, overflow: "hidden" }}>
             <style>{`.yt-stage-player iframe { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }`}</style>
             <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
             {!ytReady && (

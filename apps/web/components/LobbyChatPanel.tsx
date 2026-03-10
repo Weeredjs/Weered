@@ -64,7 +64,13 @@ export default function LobbyChatPanel(
   const canSend = !!canType && msgTrim.length > 0;
 
   useEffect(() => {
-    try { listRef.current?.scrollTo({ top: listRef.current.scrollHeight }); } catch {}
+    const el = listRef.current;
+    if (!el) return;
+    // rAF ensures DOM has painted the new message before we scroll
+    const id = requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(id);
   }, [msgs.length, activeRoomId]);
 
   const onSend = () => {
