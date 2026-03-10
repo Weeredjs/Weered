@@ -93,13 +93,13 @@ export default function LobbyChatPanel(
       <div
         ref={listRef}
         style={{
-          border: "1px solid var(--weered-border)",
-          borderRadius: 14,
-          padding: 10,
+          border: props.embedded ? "none" : "1px solid var(--weered-border)",
+          borderRadius: props.embedded ? 0 : 14,
+          padding: props.embedded ? "0 10px" : 10,
           flex: 1,
           minHeight: 0,
           overflow: "auto",
-          background: "rgba(255,255,255,.02)",
+          background: props.embedded ? "transparent" : "rgba(255,255,255,.02)",
           marginBottom: props.hideInput ? 0 : 10,
         }}
       >
