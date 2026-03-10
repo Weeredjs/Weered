@@ -27,6 +27,9 @@ export default function ShellGate({
     </>
   );
 
+  const NO_FOOTER_ROUTES = ["/room/"];
+  const hideFooter = NO_FOOTER_ROUTES.some(r => pathname.startsWith(r));
+
   return (
     <>
       <div className="weered-shell">
@@ -34,7 +37,7 @@ export default function ShellGate({
         <main className="weered-center">{children}</main>
         <aside className="weered-right">{right}</aside>
       </div>
-      <SiteFooter />
+      {!hideFooter && <SiteFooter />}
     </>
   );
 }
