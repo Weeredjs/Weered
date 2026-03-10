@@ -534,25 +534,141 @@ async function main() {
     catch { return { ok: true, db: "down" }; }
   });
 
-  // Reddit proxy — browser can't hit reddit.com directly (CORS), so we fetch server-side
-  app.get("/proxy/reddit", async (req, reply) => {
-    const qs = (req as any).query || {};
-    const sub   = String(qs.sub   || "gaming").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 64);
-    const sort  = ["hot","new","top","rising"].includes(String(qs.sort)) ? String(qs.sort) : "hot";
-    const limit = Math.min(Number(qs.limit) || 25, 50);
+  // ── Google OAuth ─────────────────────────────────────────────────────────────
+  // Step 1: redirect browser to Google's consent screen
+  app.get("/auth/google", async (req, reply) => {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+    const BASE_URL = process.env.BASE_URL || "https://weered.ca";
+    const qs = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: `${BASE_URL}/auth/google/callback`,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "select_account",
+    });
+    return reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${qs}`);
+  });
+
+  // Step 2: Google redirects back here with ?code=...
+  app.get("/auth/google/callback", async (req, reply) => {
+    const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || "";
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+    const BASE_URL             = process.env.BASE_URL             || "https://weered.ca";
+    const WEB_URL              = process.env.WEB_URL              || "https://weered.ca";
+
+    const code = String((req as any).query?.code || "").trim();
+    if (!code) return reply.redirect(`${WEB_URL}/login?error=no_code`);
+
     try {
-      const res = await fetch(
-        `https://www.reddit.com/r/${sub}/${sort}.json?limit=${limit}&raw_json=1`,
-        { headers: { "User-Agent": "weered-proxy/1.0" } }
-      );
-      if (!res.ok) return reply.code(res.status).send({ error: "reddit_upstream_error", status: res.status });
-      const data = await res.json();
-      return reply.send(data);
+      // Exchange code for tokens
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id:     GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          redirect_uri:  `${BASE_URL}/auth/google/callback`,
+          grant_type:    "authorization_code",
+        }),
+      });
+      const tokenData: any = await tokenRes.json();
+      if (!tokenRes.ok || !tokenData.access_token) {
+        console.error("[google/callback] token exchange failed", tokenData);
+        return reply.redirect(`${WEB_URL}/login?error=token_exchange`);
+      }
+
+      // Fetch user profile from Google
+      const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      const profile: any = await profileRes.json();
+      if (!profile.id) return reply.redirect(`${WEB_URL}/login?error=no_profile`);
+
+      const googleId    = String(profile.id);
+      const email       = String(profile.email       || "");
+      const displayName = String(profile.name        || profile.email || "User");
+      const avatar      = String(profile.picture     || "");
+
+      // Upsert user — find by googleId first, then email, then create fresh
+      // 1. Find by googleId
+      let user = await prisma.user.findFirst({ where: { googleId } }).catch(() => null);
+
+      // 2. Find by email and link
+      if (!user && email) {
+        user = await prisma.user.findFirst({ where: { email } }).catch(() => null);
+        if (user) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { googleId, avatar: avatar || undefined },
+          }).catch(() => {});
+        }
+      }
+
+      // 3. Create new user
+      if (!user) {
+        const baseKey = displayName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 24) || "user";
+        let usernameKey = baseKey;
+        let suffix = 1;
+        while (await prisma.user.findUnique({ where: { usernameKey } }).catch(() => null)) {
+          usernameKey = `${baseKey}${suffix++}`;
+        }
+        user = await prisma.user.create({
+          data: {
+            name: displayName,
+            usernameKey,
+            email: email || null,
+            googleId,
+            avatar: avatar || null,
+          },
+        });
+      }
+
+      // Issue Weered JWT
+      const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+      const userJson = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name, avatar }));
+      const isNewUser = !user.onboardingComplete;
+
+      // New users go to onboarding to pick a username, existing users go straight home
+      const dest = isNewUser
+        ? `${WEB_URL}/onboarding?token=${token}&user=${userJson}`
+        : `${WEB_URL}/auth/google/finish?token=${token}&user=${userJson}`;
+      return reply.redirect(dest);
     } catch (e: any) {
-      return reply.code(502).send({ error: "proxy_fetch_failed", message: e?.message });
+      console.error("[google/callback] error", e);
+      return reply.redirect(`${WEB_URL}/login?error=server_error`);
     }
   });
 
+  // Onboarding: check username availability
+  app.get("/auth/username-check", async (req, reply) => {
+    const username = String((req as any).query?.username || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (!username || username.length < 2) return reply.send({ available: false, reason: "too_short" });
+    if (username.length > 24) return reply.send({ available: false, reason: "too_long" });
+    const existing = await prisma.user.findUnique({ where: { usernameKey: username } }).catch(() => null);
+    return reply.send({ available: !existing, username });
+  });
+
+  // Onboarding: set username and mark complete
+  app.post("/auth/onboarding", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const raw = String(body.username || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (!raw || raw.length < 2) return reply.code(400).send({ error: "Username too short" });
+    if (raw.length > 24) return reply.code(400).send({ error: "Username too long" });
+    const existing = await prisma.user.findUnique({ where: { usernameKey: raw } }).catch(() => null);
+    if (existing && existing.id !== u.id) return reply.code(409).send({ error: "Username taken" });
+    const updated = await prisma.user.update({
+      where: { id: u.id },
+      data: { usernameKey: raw, name: raw, onboardingComplete: true },
+    });
+    const token = jwt.sign({ sub: updated.id, name: updated.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user: { id: updated.id, name: updated.name } });
+  });
+
+  // Reddit proxy — fetches server-side to avoid CORS + browser blocks
   // Auth: dev-login
   app.post("/auth/dev-login", async (req, reply) => {
     const body: any = (req as any).body || {};
