@@ -6,6 +6,7 @@ import RoomHeader from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
 import { useOverlay } from "../overlays/OverlayProvider";
+import { useVoice } from "../VoiceContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
   const { openSheet } = useOverlay();
+  const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   // Article URL from ?article= param — auto-activates browser module
@@ -232,6 +234,40 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         locked={locked}
         onInvite={() => {/* TODO: invite system */}}
       />
+
+      {/* ── Persistent voice bar — visible when in voice in THIS room from elsewhere ── */}
+      {voice.connState === "connected" && voice.activeRoomId === roomId && (
+        <div style={{
+          flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
+          padding: "6px 16px",
+          background: "rgba(34,197,94,0.08)",
+          borderBottom: "1px solid rgba(34,197,94,0.15)",
+        }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e", flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: "rgba(134,239,172,0.8)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Voice active</span>
+          <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
+            {voice.tiles.slice(0,5).map(t => (
+              <span key={t.sid} style={{ fontSize: 11, color: t.isMuted ? "rgba(148,163,184,0.5)" : "rgba(134,239,172,0.9)" }}>
+                {t.name}{t.isMuted ? " 🔇" : ""}
+              </span>
+            ))}
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+            <button
+              onClick={() => voice.toggleMute()}
+              style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "rgba(226,232,240,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >
+              {voice.muted ? "🔇 Unmute" : "🎙 Mute"}
+            </button>
+            <button
+              onClick={() => voice.disconnect()}
+              style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >
+              Leave
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Stage zone ── */}
       {/*
@@ -522,6 +558,40 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       </div>
 
       </div>
-    
+      {/* ── Floating voice pill — shows when in voice for a DIFFERENT room ── */}
+      {voice.connState === "connected" && voice.activeRoomId && voice.activeRoomId !== roomId && (
+        <div style={{
+          position: "fixed", bottom: 80, right: 16, zIndex: 9999,
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "10px 14px",
+          background: "rgba(8,8,16,0.92)",
+          border: "1px solid rgba(34,197,94,0.35)",
+          borderRadius: 12,
+          backdropFilter: "blur(16px)",
+          boxShadow: "0 0 20px rgba(34,197,94,0.15)",
+          minWidth: 220,
+        }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, color: "rgba(134,239,172,0.7)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Voice connected</div>
+            <div style={{ fontSize: 12, color: "rgba(226,232,240,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {voice.activeRoomId}
+            </div>
+          </div>
+          <button
+            onClick={() => voice.toggleMute()}
+            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "rgba(226,232,240,0.7)", fontSize: 11, cursor: "pointer" }}
+          >
+            {voice.muted ? "🔇" : "🎙"}
+          </button>
+          <button
+            onClick={() => voice.disconnect()}
+            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, cursor: "pointer" }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

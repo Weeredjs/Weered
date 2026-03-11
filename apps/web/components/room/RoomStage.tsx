@@ -10,6 +10,7 @@ import {
   Participant,
 } from "livekit-client";
 import { useWeered } from "../WeeredProvider";
+import { useVoice } from "../VoiceContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -284,94 +285,27 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
 
   const [connState, setConnState] = useState<"idle"|"connecting"|"connected"|"error">("idle");
   const [errorMsg,  setErrorMsg ] = useState("");
-  const [muted,     setMuted    ] = useState(false);
-  const [tiles,     setTiles    ] = useState<ParticipantTile[]>([]);
 
-  const rebuildTiles = useCallback((room: Room) => {
-    const next: ParticipantTile[] = [];
-    const addP = (p: Participant, isLocal: boolean) => {
-      next.push({
-        sid: p.sid, identity: p.identity, name: p.name || p.identity,
-        isSpeaking: p.isSpeaking, isLocal,
-        isMuted: isLocal
-          ? !(p as LocalParticipant).isMicrophoneEnabled
-          : Array.from((p as RemoteParticipant).trackPublications.values())
-              .filter(pub => pub.kind === Track.Kind.Audio)
-              .every(pub => pub.isMuted),
-      });
-    };
-    addP(room.localParticipant, true);
-    room.remoteParticipants.forEach(p => addP(p, false));
-    setTiles(next);
-  }, []);
 
   const connect = useCallback(async () => {
-    if (connState === "connecting" || connState === "connected") return;
-    setConnState("connecting"); setErrorMsg("");
-    try {
-      const jwt = getToken();
-      if (!jwt) throw new Error("Not authenticated");
-      const res = await fetch(`${API}/voice/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ roomId }),
-      });
-      if (!res.ok) throw new Error(`Token error ${res.status}`);
-      const { url, token } = await res.json();
-      if (!token) throw new Error("No token returned");
-
-      const room = new Room({ adaptiveStream: true, dynacast: true });
-      roomRef.current = room;
-
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === Track.Kind.Audio) {
-          const el = track.attach() as HTMLAudioElement;
-          el.autoplay = true; el.volume = 1;
-          document.body.appendChild(el);
-          audioRefs.current.set(track.sid, el);
-        }
-        rebuildTiles(room);
-      });
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
-        const el = audioRefs.current.get(track.sid);
-        if (el) { el.remove(); audioRefs.current.delete(track.sid); }
-        rebuildTiles(room);
-      });
-      room.on(RoomEvent.ParticipantConnected,    () => rebuildTiles(room));
-      room.on(RoomEvent.ParticipantDisconnected, () => rebuildTiles(room));
-      room.on(RoomEvent.ActiveSpeakersChanged,   () => rebuildTiles(room));
-      room.on(RoomEvent.TrackMuted,              () => rebuildTiles(room));
-      room.on(RoomEvent.TrackUnmuted,            () => rebuildTiles(room));
-      room.on(RoomEvent.Disconnected,            () => { setConnState("idle"); rebuildTiles(room); });
-
-      await room.connect(url, token);
-      try { await room.localParticipant.setMicrophoneEnabled(true); }
-      catch (e: any) { console.warn("Mic unavailable:", e?.message); setMuted(true); }
-      setConnState("connected"); rebuildTiles(room);
-    } catch (e: any) { setConnState("error"); setErrorMsg(String(e?.message || e)); }
-  }, [roomId, connState, rebuildTiles]);
+    await voice.connect(roomId);
+  }, [roomId, voice]);
 
   const disconnect = useCallback(() => {
-    roomRef.current?.disconnect(); roomRef.current = null;
-    audioRefs.current.forEach(el => el.remove()); audioRefs.current.clear();
-    setTiles([]); setConnState("idle"); onClose();
-  }, [onClose]);
+    voice.disconnect();
+    onClose();
+  }, [voice, onClose]);
 
   const toggleMute = useCallback(() => {
-    const room = roomRef.current; if (!room) return;
-    const next = !muted;
-    room.localParticipant.setMicrophoneEnabled(!next);
-    setMuted(next); rebuildTiles(room);
-  }, [muted, rebuildTiles]);
+    voice.toggleMute();
+  }, [voice]);
 
   useEffect(() => {
-    if (connState === "idle") connect();
-    return () => {
-      roomRef.current?.disconnect(); roomRef.current = null;
-      audioRefs.current.forEach(el => el.remove()); audioRefs.current.clear();
-    };
+    if (voice.connState === "idle" || voice.activeRoomId !== roomId) {
+      connect();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [roomId]);
 
   const live = connState === "connected";
 
