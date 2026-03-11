@@ -1268,9 +1268,13 @@ app.post("/dm/:peerId", async (req, reply) => {
   app.get("/feed/hot", async (req, reply) => {
     const qs       = (req as any).query as any;
     const category = qs?.category && qs.category !== "all" ? String(qs.category) : undefined;
+    const domain   = qs?.domain ? String(qs.domain) : undefined;
     const sort     = qs?.sort === "new" ? { postedAt: "desc" as const } : { heat: "desc" as const };
+    const where: any = {};
+    if (category) where.category = category;
+    if (domain)   where.domain   = domain;
     const items    = await prisma.feedItem.findMany({
-      where:   category ? { category } : undefined,
+      where:   Object.keys(where).length ? where : undefined,
       orderBy: sort,
       take:    50,
     });

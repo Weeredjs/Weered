@@ -21,7 +21,7 @@ export interface FeedItem {
 // ─── Live feed hook ───────────────────────────────────────────────────────────
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-function useLiveFeed(category: Category, sort: "hot" | "new") {
+function useLiveFeed(category: Category, sort: "hot" | "new", domain?: string) {
   const [items, setItems]       = useState<FeedItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -29,6 +29,7 @@ function useLiveFeed(category: Category, sort: "hot" | "new") {
   async function load() {
     try {
       const params = new URLSearchParams({ category, sort });
+      if (domain) params.set("domain", domain);
       const res    = await fetch(`${API_BASE}/feed/hot?${params}`);
       const data   = await res.json();
       const mapped = (data.items || []).map((i: any) => ({
@@ -274,12 +275,12 @@ function ColHeader({ children, align = "left" }: { children: React.ReactNode; al
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function HomeFeed() {
+export default function HomeFeed({ domain }: { domain?: string } = {}) {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [sort, setSort] = useState<"hot" | "new">("hot");
 
-  const { items, loading, updatedAt } = useLiveFeed(activeCategory, sort);
+  const { items, loading, updatedAt } = useLiveFeed(activeCategory, sort, domain);
   const filtered = items;
   const [interceptItem, setInterceptItem]   = useState<FeedItem | null>(null);
   const [interceptRect, setInterceptRect]   = useState<DOMRect | null>(null);

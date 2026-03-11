@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useParams } from "next/navigation";
-import HomeFeed from "../../../components/HomeFeed";
+import LobbyContent from "../../../components/LobbyContent";
 import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
@@ -39,9 +39,9 @@ export default function LobbyIdPage() {
           verified={isVerified}
         />
 
-        {/* Feed fills remaining space */}
+        {/* Content — feed for known domains, iframe for everything else */}
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <HomeFeed />
+          <LobbyContent lobbyId={lobbyId} />
         </div>
 
         <LobbyChatDrawer roomId={roomId} title={`${lobbyId} · Chat`} />

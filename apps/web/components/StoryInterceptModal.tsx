@@ -59,11 +59,10 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
 
   function goDiscussion() {
     if (!item) return;
-    const roomId  = roomIdFromUrl(item.url);
-    const lobbyId = domainLobbyId(item.domain);
+    const roomId = roomIdFromUrl(item.url);
     handleClose();
     setTimeout(() => {
-      router.push(`/lobby/${encodeURIComponent(lobbyId)}?room=${roomId}&article=${encodeURIComponent(item.url)}&autoJoin=true`);
+      router.push(`/room/article?room=${encodeURIComponent(roomId)}&article=${encodeURIComponent(item.url)}`);
     }, 270);
   }
 
