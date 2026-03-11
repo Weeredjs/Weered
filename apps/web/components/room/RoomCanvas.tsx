@@ -40,6 +40,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [articleUrl, setArticleUrl] = useState<string>("");
   const [browserUrl, setBrowserUrl] = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
+  const [iframeBlocked, setIframeBlocked] = useState(false);
 
   // Two independent chat drawers
   const [chatSide, setChatSide]     = useState(false); // right → slides left
@@ -52,6 +53,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       setArticleUrl(decoded);
       setBrowserUrl(decoded);
       setBrowserInput(decoded);
+      setIframeBlocked(false);
       setStageMode("browser");
     }
   }, []);
@@ -227,7 +229,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? "clamp(180px, 35vh, 320px)" : "40px" }}
+        style={{ height: stageActive ? (stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
       >
         {/* Idle label — only shown when no stage active */}
         {!stageActive && (
@@ -258,19 +260,42 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               <input
                 value={browserInput}
                 onChange={e => setBrowserInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { let u = browserInput.trim(); if (!u.startsWith("http")) u = "https://" + u; setBrowserUrl(u); setBrowserInput(u); }}}
+                onKeyDown={e => { if (e.key === "Enter") { let u = browserInput.trim(); if (!u.startsWith("http")) u = "https://" + u; setBrowserUrl(u); setBrowserInput(u); setIframeBlocked(false); }}}
                 style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
               <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>↗</button>
               <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>✕</button>
             </div>
-            <iframe
-              key={browserUrl}
-              src={browserUrl}
-              style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#fff" }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
-              title="Browser"
-            />
+            {(() => {
+              const BLOCKED = ["espn.com","nfl.com","nba.com","youtube.com","twitter.com","x.com","facebook.com","instagram.com","tiktok.com","reddit.com","linkedin.com","nytimes.com","wsj.com","bloomberg.com"];
+              const isBlocked = iframeBlocked || BLOCKED.some(d => browserUrl.includes(d));
+              if (isBlocked) return (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "rgba(0,0,0,0.3)", padding: 32 }}>
+                  <div style={{ fontSize: 40 }}>🚫</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>This site blocks embedding</div>
+                  <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>{browserUrl}</div>
+                  <button
+                    onClick={() => window.open(browserUrl, "_blank")}
+                    style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.5)", color: "rgba(167,139,250,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Open in new tab ↗
+                  </button>
+                  <div style={{ fontSize: 11, color: "rgba(100,116,139,0.4)", marginTop: 4 }}>
+                    The discussion room is still active — others can join and chat about this article
+                  </div>
+                </div>
+              );
+              return (
+                <iframe
+                  key={browserUrl}
+                  src={browserUrl}
+                  style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#fff" }}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+                  title="Browser"
+                  onError={() => setIframeBlocked(true)}
+                />
+              );
+            })()}
           </div>
         )}
       </div>
@@ -389,7 +414,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <div
             onClick={() => setChatBottom(o => !o)}
             style={{
-              position: "absolute", bottom: chatBottom ? "min(260px, 40%)" : 0, left: "50%",
+              position: "absolute", bottom: chatBottom ? "min(260px, 40%)" : 48, left: "50%",
               transform: "translateX(-50%)",
               padding: "7px 16px",
               background: "rgba(124,58,237,0.15)",
@@ -483,6 +508,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       </div>
 
       </div>
-    
+    </div>
   );
 }
