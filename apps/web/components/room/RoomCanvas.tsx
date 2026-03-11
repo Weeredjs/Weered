@@ -42,6 +42,20 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [browserInput, setBrowserInput] = useState<string>("");
   const [iframeBlocked, setIframeBlocked] = useState(false);
 
+  // Convert YouTube watch URLs to embeddable format
+  function toEmbedUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+        return `https://www.youtube.com/embed/${u.searchParams.get("v")}?autoplay=0`;
+      }
+      if (u.hostname.includes("youtu.be")) {
+        return `https://www.youtube.com/embed${u.pathname}?autoplay=0`;
+      }
+    } catch {}
+    return url;
+  }
+
   // Two independent chat drawers
   const [chatSide, setChatSide]     = useState(false); // right → slides left
   const [chatBottom, setChatBottom] = useState(false); // bottom → slides up
@@ -267,7 +281,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>✕</button>
             </div>
             {(() => {
-              const BLOCKED = ["espn.com","nfl.com","nba.com","youtube.com","twitter.com","x.com","facebook.com","instagram.com","tiktok.com","reddit.com","linkedin.com","nytimes.com","wsj.com","bloomberg.com"];
+              const BLOCKED = ["espn.com","nfl.com","nba.com","twitter.com","x.com","facebook.com","instagram.com","tiktok.com","reddit.com","linkedin.com","nytimes.com","wsj.com","bloomberg.com"];
               const isBlocked = iframeBlocked || BLOCKED.some(d => browserUrl.includes(d));
               if (isBlocked) return (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "rgba(0,0,0,0.3)", padding: 32 }}>
@@ -288,7 +302,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               return (
                 <iframe
                   key={browserUrl}
-                  src={browserUrl}
+                  src={toEmbedUrl(browserUrl)}
                   style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#fff" }}
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
                   title="Browser"
@@ -508,6 +522,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       </div>
 
       </div>
-    
+    </div>
   );
 }
