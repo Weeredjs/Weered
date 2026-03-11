@@ -75,6 +75,7 @@ declare global {
 
 function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
   const { sendRaw } = useWeered() as any;
+  const voice = useVoice();
   const playerRef    = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
   const isSyncing    = useRef(false); // prevent echo when applying remote events
