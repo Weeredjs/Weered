@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import StoryInterceptModal from "./StoryInterceptModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface FeedItem {
@@ -72,6 +73,13 @@ const CAT_COLORS: Record<string, string> = {
   podcasts:"#DB2777",
 };
 
+// Verified lobbies — will eventually be DB-driven
+const VERIFIED_DOMAINS = new Set([
+  "ign.com", "espn.com", "techcrunch.com", "bbc.com", "nba.com",
+  "nfl.com", "kotaku.com", "theverge.com", "wired.com", "reuters.com",
+  "theguardian.com", "spotify.com",
+]);
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(date: Date): string {
   const mins = Math.floor((Date.now() - date.getTime()) / 60000);
@@ -128,14 +136,14 @@ function HeatBar({ heat, color }: { heat: number; color: string }) {
 }
 
 // ─── Feed Row ─────────────────────────────────────────────────────────────────
-function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEnter: (item: FeedItem) => void }) {
+function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEnter: (item: FeedItem, rect: DOMRect) => void }) {
   const [hovered, setHovered] = useState(false);
   const color = CAT_COLORS[item.category] || "#7C3AED";
   const isHot = item.heat >= 80;
 
   return (
     <div
-      onClick={() => onEnter(item)}
+      onClick={(e) => { const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); onEnter(item, rect); }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -212,6 +220,16 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
           }}>
             {item.domain}
           </span>
+          {VERIFIED_DOMAINS.has(item.domain) && (
+            <span title="Verified Lobby" style={{
+              fontSize: 9, fontWeight: 800,
+              color: "#22C55E",
+              background: "rgba(34,197,94,0.10)",
+              border: "1px solid rgba(34,197,94,0.20)",
+              padding: "1px 5px", borderRadius: 4,
+              letterSpacing: "0.06em",
+            }}>✓ VERIFIED</span>
+          )}
           <span style={{ fontSize: 10, color: "rgba(100,116,139,0.45)" }}>
             {item.sourceName}
           </span>
@@ -263,12 +281,12 @@ export default function HomeFeed() {
 
   const { items, loading, updatedAt } = useLiveFeed(activeCategory, sort);
   const filtered = items;
+  const [interceptItem, setInterceptItem]   = useState<FeedItem | null>(null);
+  const [interceptRect, setInterceptRect]   = useState<DOMRect | null>(null);
 
-  function handleEnter(item: FeedItem) {
-    const roomId  = roomIdFromUrl(item.url);
-    const lobbyId = lobbyIdFromDomain(item.domain);
-    // Navigate to the domain lobby, carrying the article room to auto-open
-    router.push(`/lobby/${encodeURIComponent(lobbyId)}?room=${roomId}&article=${encodeURIComponent(item.url)}`);
+  function handleEnter(item: FeedItem, rect: DOMRect) {
+    setInterceptRect(rect);
+    setInterceptItem(item);
   }
 
   return (
@@ -383,6 +401,12 @@ export default function HomeFeed() {
           </div>
         </div>
       </div>
+
+      <StoryInterceptModal
+        item={interceptItem}
+        originRect={interceptRect}
+        onClose={() => { setInterceptItem(null); setInterceptRect(null); }}
+      />
     </>
   );
 }
