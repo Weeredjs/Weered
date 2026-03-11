@@ -13,7 +13,7 @@ import { useWeered } from "../WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | null;
 
 interface Props {
   roomId: string;

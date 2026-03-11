@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import RoomHeader from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
@@ -22,6 +23,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
 const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
   { id: "youtube", icon: "▶",  label: "YouTube", live: true  },
+  { id: "browser", icon: "🌐", label: "Browser", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
   { id: "video",   icon: "📹", label: "Video",   live: false },
 ];
@@ -35,6 +37,27 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const { openSheet } = useOverlay();
   const [stageMode, setStageMode] = useState<StageMode>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const sp = useSearchParams();
+
+  // Article URL from ?article= param — auto-activates browser module
+  const [articleUrl, setArticleUrl] = useState<string>("");
+  const [browserUrl, setBrowserUrl] = useState<string>("");
+  const [browserInput, setBrowserInput] = useState<string>("");
+
+  // Chat drawer: direction + open state
+  const [chatDir, setChatDir]   = useState<"vertical" | "horizontal">("vertical");
+  const [chatOpen, setChatOpen] = useState(true);
+
+  useEffect(() => {
+    const art = sp?.get("article");
+    if (art) {
+      const decoded = decodeURIComponent(art);
+      setArticleUrl(decoded);
+      setBrowserUrl(decoded);
+      setBrowserInput(decoded);
+      setStageMode("browser");
+    }
+  }, []);
 
   // ── Derived room label ──
   const roomLabel = useMemo(() => {
@@ -186,8 +209,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   );
 
   // ─── Render ────────────────────────────────────────────────────────────────
+  // Chat drawer button style
+  const dirBtnStyle: React.CSSProperties = {
+    width: 22, height: 22, borderRadius: 5,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.04)",
+    color: "rgba(148,163,184,0.5)",
+    fontSize: 11, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "all 0.12s",
+  };
   return (
     <div className="flex flex-col min-w-0 h-full overflow-hidden">
+      <style>{`
+        @keyframes chatVertIn  { from { opacity:0; transform:translateX(100%); } to { opacity:1; transform:translateX(0); } }
+        @keyframes chatHorizIn { from { opacity:0; transform:translateY(100%); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
 
       {/* ── Single header bar ── */}
       <RoomHeader
@@ -219,7 +256,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
 
         {/* Stage content — rendered when active */}
-        {stageActive && (
+        {stageActive && stageMode !== "browser" && (
           <div className="absolute inset-0 flex flex-col" style={{ position: "relative" }}>
             <RoomStage
               roomId={roomId}
@@ -228,22 +265,72 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             />
           </div>
         )}
-      </div>
 
-      {/* ── Main body: chat + optional details panel ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-
-        {/* Chat column */}
-        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-
-          {/* Messages */}
-          <div ref={chatRef} className="flex-1 min-h-0 overflow-hidden">
-            <RoomChatPanel
-              roomId={roomId}
-              hideInput
-              style={{ height: "100%", display: "flex", flexDirection: "column" }}
+        {/* Browser module */}
+        {stageActive && stageMode === "browser" && (
+          <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+            {/* Browser chrome */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: "rgba(100,116,139,0.4)" }}>🔒</span>
+              <input
+                value={browserInput}
+                onChange={e => setBrowserInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { let u = browserInput.trim(); if (!u.startsWith("http")) u = "https://" + u; setBrowserUrl(u); setBrowserInput(u); }}}
+                style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
+              />
+              <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>↗</button>
+              <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>✕</button>
+            </div>
+            <iframe
+              key={browserUrl}
+              src={browserUrl}
+              style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#fff" }}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+              title="Browser"
             />
           </div>
+        )}
+      </div>
+
+      {/* ── Main body ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
+
+        {/* Center column: module pills + input */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+
+          {/* Messages — only shown when chat is horizontal or closed */}
+          {(chatDir === "horizontal" || !chatOpen) && (
+            <div ref={chatRef} className="flex-1 min-h-0 overflow-hidden" style={chatDir === "horizontal" && chatOpen ? { display: "none" } : {}}>
+              <RoomChatPanel
+                roomId={roomId}
+                hideInput
+                style={{ height: "100%", display: "flex", flexDirection: "column" }}
+              />
+            </div>
+          )}
+
+          {/* Horizontal chat drawer — bottom half */}
+          {chatDir === "horizontal" && chatOpen && (
+            <div style={{
+              height: "45%", flexShrink: 0,
+              borderTop: "1px solid rgba(255,255,255,0.07)",
+              display: "flex", flexDirection: "column",
+              background: "rgba(10,10,18,0.85)",
+              backdropFilter: "blur(12px)",
+              animation: "chatHorizIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Chat</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setChatDir("vertical")} style={dirBtnStyle} title="Switch to side panel">⇥</button>
+                  <button onClick={() => setChatOpen(false)} style={dirBtnStyle}>✕</button>
+                </div>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
+              </div>
+            </div>
+          )}
 
           {/* Input zone */}
           <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
@@ -274,7 +361,33 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 );
               })}
 
-              {/* Details toggle — lives in the pill row */}
+              {/* Chat toggle pill */}
+              <button
+                type="button"
+                onClick={() => setChatOpen(o => !o)}
+                className={[
+                  "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
+                  chatOpen
+                    ? "border-violet-400/25 bg-violet-500/10 text-violet-300/70"
+                    : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
+                ].join(" ")}
+              >
+                💬 Chat {chatOpen ? "on" : ""}
+              </button>
+
+              {/* Chat direction toggle — only when open */}
+              {chatOpen && (
+                <button
+                  type="button"
+                  onClick={() => setChatDir(d => d === "vertical" ? "horizontal" : "vertical")}
+                  className="text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15 transition-all duration-150 font-mono"
+                  title={chatDir === "vertical" ? "Move chat to bottom" : "Move chat to side"}
+                >
+                  {chatDir === "vertical" ? "⇥ side" : "⇩ bottom"}
+                </button>
+              )}
+
+              {/* Details toggle */}
               <button
                 type="button"
                 onClick={() => setShowDetails(d => !d)}
@@ -324,11 +437,33 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         </div>
 
-        {/* Details side panel — slides in */}
+        {/* Vertical chat drawer — right side, slides in */}
+        {chatDir === "vertical" && chatOpen && (
+          <div style={{
+            width: 280, flexShrink: 0,
+            borderLeft: "1px solid rgba(255,255,255,0.07)",
+            display: "flex", flexDirection: "column",
+            background: "rgba(10,10,18,0.88)",
+            backdropFilter: "blur(16px) saturate(1.3)",
+            animation: "chatVertIn 0.34s cubic-bezier(0.22,1,0.36,1) forwards",
+            position: "relative",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px 6px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Chat</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => setChatDir("horizontal")} style={dirBtnStyle} title="Move to bottom">⇩</button>
+                <button onClick={() => setChatOpen(false)} style={dirBtnStyle}>✕</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+              <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
+            </div>
+          </div>
+        )}
+
+        {/* Details side panel — slides in from right (behind chat) */}
         <div
-          className={[
-            "flex-shrink-0 border-l border-white/[0.07] overflow-hidden transition-all duration-250 ease-in-out",
-          ].join(" ")}
+          className="flex-shrink-0 border-l border-white/[0.07] overflow-hidden transition-all duration-250 ease-in-out"
           style={{ width: showDetails ? 240 : 0 }}
         >
           <div className="w-[240px] h-full overflow-y-auto p-3 flex flex-col gap-0">

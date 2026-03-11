@@ -62,7 +62,7 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
     const roomId = roomIdFromUrl(item.url);
     handleClose();
     setTimeout(() => {
-      router.push(`/room/article?room=${encodeURIComponent(roomId)}&article=${encodeURIComponent(item.url)}`);
+      router.push(`/room/${encodeURIComponent(roomId)}?article=${encodeURIComponent(item.url)}`);
     }, 270);
   }
 
