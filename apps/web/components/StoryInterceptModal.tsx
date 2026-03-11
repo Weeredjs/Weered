@@ -28,14 +28,15 @@ const CAT_COLORS: Record<string, string> = {
 export default function StoryInterceptModal({ item, originRect, onClose }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<"idle" | "visible" | "exit">("idle");
-  const [user, setUser]   = useState<{ name: string } | null>(null);
+  const [user, setUser]   = useState<{ name: string; tier?: string; globalRole?: string; avatarColor?: string } | null>(null);
   const [hovered, setHovered] = useState<"discuss" | "lobby" | null>(null);
 
   useEffect(() => {
     if (item) {
       try {
         const u = JSON.parse(localStorage.getItem("weered_user") || "{}");
-        if (u?.name) setUser(u);
+        const avatarColor = localStorage.getItem("weered:avatarColor") || undefined;
+        if (u?.name) setUser({ ...u, avatarColor });
       } catch {}
       requestAnimationFrame(() => setTimeout(() => setPhase("visible"), 16));
     } else {
@@ -227,18 +228,97 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
           {/* ── Body ── */}
           <div style={{ padding: "22px 20px 24px" }}>
 
-            {/* Greeting */}
-            <div style={{ marginBottom: 18, textAlign: "center" }}>
-              <div style={{ fontSize: 12, color: "rgba(148,163,184,0.45)", marginBottom: 4, letterSpacing: "0.04em" }}>
-                Hey {user?.name || "there"} —
-              </div>
+            {/* User identity block */}
+            <div style={{ marginBottom: 18 }}>
               <div style={{
-                fontSize: 20, fontWeight: 800,
-                color: "rgba(243,244,246,0.97)",
-                letterSpacing: "-0.4px",
-                lineHeight: 1.2,
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "12px 14px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 14,
+                marginBottom: 16,
+                position: "relative",
+                overflow: "hidden",
               }}>
-                Where do you want to go?
+                {/* Subtle bg glow behind avatar */}
+                <div style={{
+                  position: "absolute", left: -10, top: -10,
+                  width: 70, height: 70, borderRadius: "50%",
+                  background: user?.avatarColor || color,
+                  opacity: 0.12, filter: "blur(20px)",
+                  pointerEvents: "none",
+                }} />
+
+                {/* Avatar */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                  background: user?.avatarColor || color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 18, fontWeight: 800, color: "white",
+                  boxShadow: `0 0 0 2px rgba(255,255,255,0.08), 0 4px 16px ${user?.avatarColor || color}55`,
+                  position: "relative",
+                }}>
+                  {(user?.name || "?")[0].toUpperCase()}
+                  {/* Online dot */}
+                  <div style={{
+                    position: "absolute", bottom: -2, right: -2,
+                    width: 12, height: 12, borderRadius: "50%",
+                    background: "#22C55E",
+                    border: "2px solid rgba(8,8,16,0.97)",
+                    boxShadow: "0 0 6px #22C55E88",
+                  }} />
+                </div>
+
+                {/* Name + badges */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: "rgba(243,244,246,0.97)", letterSpacing: "-0.2px" }}>
+                      {user?.name || "anon"}
+                    </span>
+                    {user?.globalRole && user.globalRole !== "USER" && (
+                      <span style={{
+                        padding: "2px 7px", borderRadius: 5,
+                        background: user.globalRole === "GOD" ? "rgba(234,179,8,0.15)" : "rgba(124,58,237,0.15)",
+                        border: `1px solid ${user.globalRole === "GOD" ? "rgba(234,179,8,0.35)" : "rgba(124,58,237,0.35)"}`,
+                        fontSize: 9, fontWeight: 800,
+                        color: user.globalRole === "GOD" ? "#EAB308" : "#A78BFA",
+                        letterSpacing: "0.10em", textTransform: "uppercase",
+                      }}>{user.globalRole}</span>
+                    )}
+                    {user?.tier && (
+                      <span style={{
+                        padding: "2px 7px", borderRadius: 5,
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.10)",
+                        fontSize: 9, fontWeight: 700,
+                        color: "rgba(148,163,184,0.6)",
+                        letterSpacing: "0.08em", textTransform: "uppercase",
+                      }}>{user.tier}</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(100,116,139,0.45)", letterSpacing: "0.04em" }}>
+                    choosing where to go...
+                  </div>
+                </div>
+
+                {/* Right: online indicator */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
+                    <span style={{ fontSize: 10, color: "rgba(34,197,94,0.7)", fontWeight: 600 }}>online</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Heading */}
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  fontSize: 20, fontWeight: 800,
+                  color: "rgba(243,244,246,0.97)",
+                  letterSpacing: "-0.4px", lineHeight: 1.2,
+                }}>
+                  Where do you want to go?
+                </div>
               </div>
             </div>
 
