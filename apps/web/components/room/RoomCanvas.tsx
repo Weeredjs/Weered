@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import RoomHeader from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
@@ -37,8 +36,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const { openSheet } = useOverlay();
   const [stageMode, setStageMode] = useState<StageMode>(null);
   const chatRef = useRef<HTMLDivElement>(null);
-  const sp = useSearchParams();
-
   // Article URL from ?article= param — auto-activates browser module
   const [articleUrl, setArticleUrl] = useState<string>("");
   const [browserUrl, setBrowserUrl] = useState<string>("");
@@ -49,7 +46,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [chatBottom, setChatBottom] = useState(false); // bottom → slides up
 
   useEffect(() => {
-    const art = sp?.get("article");
+    const art = new URLSearchParams(window.location.search).get("article");
     if (art) {
       const decoded = decodeURIComponent(art);
       setArticleUrl(decoded);
@@ -209,22 +206,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   );
 
   // ─── Render ────────────────────────────────────────────────────────────────
-  // Chat drawer button style
-  const dirBtnStyle: React.CSSProperties = {
-    width: 22, height: 22, borderRadius: 5,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "rgba(148,163,184,0.5)",
-    fontSize: 11, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    transition: "all 0.12s",
-  };
   return (
     <div className="flex flex-col min-w-0 h-full overflow-hidden">
-      <style>{`
-        @keyframes chatVertIn  { from { opacity:0; transform:translateX(100%); } to { opacity:1; transform:translateX(0); } }
-        @keyframes chatHorizIn { from { opacity:0; transform:translateY(100%); } to { opacity:1; transform:translateY(0); } }
-      `}</style>
 
       {/* ── Single header bar ── */}
       <RoomHeader
@@ -293,78 +276,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       </div>
 
       {/* ── Main body ── */}
-      <style>{`
-        @keyframes slideFromRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-        @keyframes slideFromBottom {
-          from { transform: translateY(100%); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
-        }
-        .chat-tab-side {
-          position: absolute;
-          right: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          writing-mode: vertical-rl;
-          text-orientation: mixed;
-          rotate: 180deg;
-          padding: 14px 7px;
-          background: rgba(124,58,237,0.15);
-          border: 1px solid rgba(124,58,237,0.28);
-          border-right: none;
-          border-radius: 10px 0 0 10px;
-          color: rgba(167,139,250,0.85);
-          font-size: 10px; font-weight: 800;
-          letter-spacing: 0.12em;
-          cursor: pointer; user-select: none;
-          backdrop-filter: blur(8px);
-          transition: right 0.36s cubic-bezier(0.22,1,0.36,1), background 0.15s;
-          z-index: 40;
-          display: flex; align-items: center; gap: 6px;
-        }
-        .chat-tab-side:hover { background: rgba(124,58,237,0.28); }
-        .chat-tab-bottom {
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          padding: 7px 16px;
-          background: rgba(124,58,237,0.15);
-          border: 1px solid rgba(124,58,237,0.28);
-          border-bottom: none;
-          border-radius: 10px 10px 0 0;
-          color: rgba(167,139,250,0.85);
-          font-size: 10px; font-weight: 800;
-          letter-spacing: 0.12em;
-          cursor: pointer; user-select: none;
-          backdrop-filter: blur(8px);
-          transition: bottom 0.36s cubic-bezier(0.22,1,0.36,1), background 0.15s;
-          z-index: 40;
-          display: flex; align-items: center; gap: 6px;
-          white-space: nowrap;
-        }
-        .chat-tab-bottom:hover { background: rgba(124,58,237,0.28); }
-        .chat-panel-glass {
-          background: rgba(8,8,16,0.82);
-          backdrop-filter: blur(20px) saturate(1.4);
-          -webkit-backdrop-filter: blur(20px) saturate(1.4);
-          border-color: rgba(124,58,237,0.18);
-        }
-        .chat-close-btn {
-          width: 20px; height: 20px; border-radius: 5px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.04);
-          color: rgba(148,163,184,0.5);
-          font-size: 10px; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          transition: all 0.12s; flex-shrink: 0;
-        }
-        .chat-close-btn:hover { background: rgba(255,255,255,0.10); color: rgba(226,232,240,0.8); }
-      `}</style>
-
-      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
+<div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
         {/* Center column: just the input zone at bottom, no static chat */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ position: "relative" }}>
@@ -452,9 +364,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
           {/* ── Side chat tab (right edge → slides left) ── */}
           <div
-            className="chat-tab-side"
-            style={{ right: chatSide ? "min(300px, 35%)" : 0 }}
             onClick={() => setChatSide(o => !o)}
+            style={{
+              position: "absolute", right: chatSide ? "min(300px, 35%)" : 0, top: "50%",
+              transform: "translateY(-50%) rotate(180deg)",
+              writingMode: "vertical-rl", textOrientation: "mixed",
+              padding: "14px 7px",
+              background: "rgba(124,58,237,0.15)",
+              border: "1px solid rgba(124,58,237,0.28)", borderRight: "none",
+              borderRadius: "10px 0 0 10px",
+              color: "rgba(167,139,250,0.85)",
+              fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+              cursor: "pointer", userSelect: "none",
+              backdropFilter: "blur(8px)",
+              transition: "right 0.36s cubic-bezier(0.22,1,0.36,1)",
+              zIndex: 40, display: "flex", alignItems: "center", gap: 6,
+            }}
           >
             <span>←</span>
             <span>CHAT</span>
@@ -462,9 +387,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
           {/* ── Bottom chat tab (bottom edge → slides up) ── */}
           <div
-            className="chat-tab-bottom"
-            style={{ bottom: chatBottom ? "min(260px, 40%)" : 0 }}
             onClick={() => setChatBottom(o => !o)}
+            style={{
+              position: "absolute", bottom: chatBottom ? "min(260px, 40%)" : 0, left: "50%",
+              transform: "translateX(-50%)",
+              padding: "7px 16px",
+              background: "rgba(124,58,237,0.15)",
+              border: "1px solid rgba(124,58,237,0.28)", borderBottom: "none",
+              borderRadius: "10px 10px 0 0",
+              color: "rgba(167,139,250,0.85)",
+              fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+              cursor: "pointer", userSelect: "none" as const,
+              backdropFilter: "blur(8px)",
+              transition: "bottom 0.36s cubic-bezier(0.22,1,0.36,1)",
+              zIndex: 40, display: "flex", alignItems: "center", gap: 6,
+              whiteSpace: "nowrap",
+            }}
           >
             <span>↑</span>
             <span>CHAT</span>
@@ -473,19 +411,26 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           {/* ── Side chat panel ── */}
           {chatSide && (
             <div
-              className="chat-panel-glass"
               style={{
                 position: "absolute", top: 0, right: 0, bottom: 0,
                 width: "min(300px, 35%)",
-                borderLeft: "1px solid",
+                borderLeft: "1px solid rgba(124,58,237,0.18)",
+                background: "rgba(8,8,16,0.82)",
+                backdropFilter: "blur(20px) saturate(1.4)",
                 display: "flex", flexDirection: "column",
-                animation: "slideFromRight 0.36s cubic-bezier(0.22,1,0.36,1) forwards",
                 zIndex: 39,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
-                <button className="chat-close-btn" onClick={() => setChatSide(false)}>✕</button>
+                <button style={{
+                  width: 20, height: 20, borderRadius: 5,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(148,163,184,0.5)",
+                  fontSize: 10, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }} onClick={() => setChatSide(false)}>✕</button>
               </div>
               <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
@@ -496,19 +441,26 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           {/* ── Bottom chat panel ── */}
           {chatBottom && (
             <div
-              className="chat-panel-glass"
               style={{
                 position: "absolute", left: 0, right: 0, bottom: 0,
                 height: "min(260px, 40%)",
-                borderTop: "1px solid",
+                borderTop: "1px solid rgba(124,58,237,0.18)",
+                background: "rgba(8,8,16,0.82)",
+                backdropFilter: "blur(20px) saturate(1.4)",
                 display: "flex", flexDirection: "column",
-                animation: "slideFromBottom 0.36s cubic-bezier(0.22,1,0.36,1) forwards",
                 zIndex: 38,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px 6px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
-                <button className="chat-close-btn" onClick={() => setChatBottom(false)}>✕</button>
+                <button style={{
+                  width: 20, height: 20, borderRadius: 5,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(148,163,184,0.5)",
+                  fontSize: 10, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }} onClick={() => setChatBottom(false)}>✕</button>
               </div>
               <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
