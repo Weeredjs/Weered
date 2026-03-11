@@ -276,3 +276,20 @@ model DirectMessage {
   @@index([fromId, toId, createdAt])
   @@index([toId, readAt])
 }
+
+model FeedItem {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  title       String
+  thumbnail   String?
+  domain      String
+  sourceName  String
+  category    String   // gaming | ufc | news | sports | tech | podcasts
+  heat        Int      @default(0)   // 0-100, recalculated each fetch
+  usersInRoom Int      @default(0)   // live count from WS presence
+  fetchedAt   DateTime @default(now())
+  postedAt    DateTime @default(now())
+
+  @@index([category, heat])
+  @@index([fetchedAt])
+}
