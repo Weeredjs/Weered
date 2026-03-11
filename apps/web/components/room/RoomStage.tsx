@@ -281,12 +281,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
 // ─── Voice Stage (unchanged) ──────────────────────────────────────────────────
 
 function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
-  const roomRef  = useRef<Room | null>(null);
-  const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
-
-  const [connState, setConnState] = useState<"idle"|"connecting"|"connected"|"error">("idle");
-  const [errorMsg,  setErrorMsg ] = useState("");
-
+  const voice = useVoice();
 
   const connect = useCallback(async () => {
     await voice.connect(roomId);
@@ -308,6 +303,7 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
+  const { connState, errorMsg, muted, tiles } = voice;
   const live = connState === "connected";
 
   return (
