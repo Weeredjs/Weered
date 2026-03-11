@@ -593,6 +593,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       )}
     </div>
 
-    </div>
+    
   );
 }
