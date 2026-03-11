@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { VoiceProvider } from "./VoiceContext";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -514,7 +513,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     },
   };
 
-  return <WeeredContext.Provider value={value}><VoiceProvider>{children}</VoiceProvider></WeeredContext.Provider>;
+  return <WeeredContext.Provider value={value}>{children}</WeeredContext.Provider>;
 }
 
 export function useWeered(): Ctx {
