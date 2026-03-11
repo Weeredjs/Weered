@@ -525,6 +525,158 @@ async function doJoin(ws: Sock, roomId: string) {
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
 
+
+// ── Content Ingestion Worker ──────────────────────────────────────────────────
+// Fetches from 6 sources every 20 min, normalises into FeedItem, stores in DB.
+// Heat = recency score (0-70) + room presence bonus (0-30)
+
+interface RawItem {
+  url: string;
+  title: string;
+  thumbnail?: string;
+  domain: string;
+  sourceName: string;
+  category: string;
+  postedAt: Date;
+}
+
+function domainOf(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
+}
+
+function roomIdFromUrl(url: string): string {
+  let h = 0;
+  for (let i = 0; i < url.length; i++) { h = ((h << 5) - h) + url.charCodeAt(i); h |= 0; }
+  return `article_${Math.abs(h).toString(36).slice(0, 10)}`;
+}
+
+function recencyScore(postedAt: Date): number {
+  const ageHours = (Date.now() - postedAt.getTime()) / 3600000;
+  if (ageHours < 1)  return 70;
+  if (ageHours < 3)  return 60;
+  if (ageHours < 6)  return 50;
+  if (ageHours < 12) return 38;
+  if (ageHours < 24) return 25;
+  if (ageHours < 48) return 12;
+  return 5;
+}
+
+async function fetchHackerNews(): Promise<RawItem[]> {
+  try {
+    const res  = await fetch("https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=15&numericFilters=points>50");
+    const data = await res.json() as any;
+    return (data.hits || []).filter((h: any) => h.url).map((h: any) => ({
+      url:        h.url,
+      title:      h.title,
+      domain:     domainOf(h.url),
+      sourceName: "Hacker News",
+      category:   "tech",
+      postedAt:   new Date(h.created_at),
+    }));
+  } catch (e) { console.warn("[feed] HN fetch failed:", e); return []; }
+}
+
+async function fetchESPNRss(feedUrl: string, category: string, sourceName: string): Promise<RawItem[]> {
+  try {
+    const res  = await fetch(feedUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0)" } });
+    const xml  = await res.text();
+    const items: RawItem[] = [];
+    const itemRx  = /<item>([\s\S]*?)<\/item>/g;
+    const titleRx = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/;
+    const linkRx  = /<link>(?:<!\[CDATA\[)?(https?[^<]+?)(?:\]\]>)?<\/link>/;
+    const dateRx  = /<pubDate>(.*?)<\/pubDate>/;
+    const imgRx   = /<media:thumbnail[^>]+url=\"([^"]+)\"/;
+    let m: RegExpExecArray | null;
+    while ((m = itemRx.exec(xml)) !== null) {
+      const block  = m[1];
+      const title  = titleRx.exec(block)?.[1]?.trim();
+      const link   = linkRx.exec(block)?.[1]?.trim();
+      const dateStr = dateRx.exec(block)?.[1];
+      const thumb  = imgRx.exec(block)?.[1];
+      if (!title || !link) continue;
+      items.push({ url: link, title, thumbnail: thumb, domain: domainOf(link), sourceName, category, postedAt: dateStr ? new Date(dateStr) : new Date() });
+    }
+    return items.slice(0, 12);
+  } catch (e) { console.warn(`[feed] ESPN RSS ${feedUrl} failed:`, e); return []; }
+}
+
+async function fetchItunesPodcasts(): Promise<RawItem[]> {
+  try {
+    const terms = ["true+crime", "comedy", "news", "sports", "technology"];
+    const term  = terms[Math.floor(Math.random() * terms.length)];
+    const res   = await fetch(`https://itunes.apple.com/search?media=podcast&entity=podcastEpisode&term=${term}&limit=10&sort=recent`);
+    const data  = await res.json() as any;
+    return (data.results || []).map((r: any) => ({
+      url:        r.trackViewUrl || r.collectionViewUrl,
+      title:      r.trackName || r.collectionName,
+      thumbnail:  r.artworkUrl100,
+      domain:     "podcasts.apple.com",
+      sourceName: r.collectionName || "Apple Podcasts",
+      category:   "podcasts",
+      postedAt:   r.releaseDate ? new Date(r.releaseDate) : new Date(),
+    })).filter((r: any) => r.url && r.title);
+  } catch (e) { console.warn("[feed] iTunes fetch failed:", e); return []; }
+}
+
+async function fetchYouTubeRss(channelId: string, sourceName: string, category: string): Promise<RawItem[]> {
+  try {
+    const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+    const xml = await res.text();
+    const items: RawItem[] = [];
+    const entryRx = /<entry>([\s\S]*?)<\/entry>/g;
+    const titleRx = /<title>(.*?)<\/title>/;
+    const linkRx  = /<link rel=\"alternate\" href=\"([^"]+)\"/;
+    const dateRx  = /<published>(.*?)<\/published>/;
+    const thumbRx = /<media:thumbnail url=\"([^"]+)\"/;
+    let m: RegExpExecArray | null;
+    while ((m = entryRx.exec(xml)) !== null) {
+      const block   = m[1];
+      const title   = titleRx.exec(block)?.[1]?.trim();
+      const link    = linkRx.exec(block)?.[1]?.trim();
+      const dateStr = dateRx.exec(block)?.[1];
+      const thumb   = thumbRx.exec(block)?.[1];
+      if (!title || !link) continue;
+      items.push({ url: link, title, thumbnail: thumb, domain: "youtube.com", sourceName, category, postedAt: dateStr ? new Date(dateStr) : new Date() });
+    }
+    return items.slice(0, 8);
+  } catch (e) { console.warn(`[feed] YouTube RSS ${channelId} failed:`, e); return []; }
+}
+
+async function runFeedWorker() {
+  console.log("[feed] worker starting fetch...");
+  try {
+    const [hn, espnUfc, espnNfl, espnNba, podcasts, ign, gamespot] = await Promise.all([
+      fetchHackerNews(),
+      fetchESPNRss("https://www.espn.com/espn/rss/mma/news",  "ufc",    "ESPN MMA"),
+      fetchESPNRss("https://www.espn.com/espn/rss/nfl/news",  "sports", "ESPN NFL"),
+      fetchESPNRss("https://www.espn.com/espn/rss/nba/news",  "sports", "ESPN NBA"),
+      fetchItunesPodcasts(),
+      fetchYouTubeRss("UCKy1dAqELo0zrOtPkf0eTMw", "IGN",      "gaming"),
+      fetchYouTubeRss("UCbu2SsF-Or3Rsn3NxqODImQ", "GameSpot", "gaming"),
+    ]);
+
+    const all: RawItem[] = [...hn, ...espnUfc, ...espnNfl, ...espnNba, ...podcasts, ...ign, ...gamespot];
+    const seen = new Set<string>();
+    const deduped = all.filter(i => { if (!i.url || seen.has(i.url)) return false; seen.add(i.url); return true; });
+
+    let upserted = 0;
+    for (const item of deduped) {
+      const roomId      = roomIdFromUrl(item.url);
+      const roomState   = rooms.get(roomId);
+      const usersInRoom = roomState ? roomState.users.size : 0;
+      const heat        = Math.min(100, recencyScore(item.postedAt) + Math.min(30, usersInRoom * 5));
+
+      await prisma.feedItem.upsert({
+        where: { url: item.url },
+        update: { heat, usersInRoom, fetchedAt: new Date(), title: item.title, thumbnail: item.thumbnail ?? null },
+        create: { url: item.url, title: item.title, thumbnail: item.thumbnail ?? null, domain: item.domain, sourceName: item.sourceName, category: item.category, heat, usersInRoom, postedAt: item.postedAt },
+      }).catch((e: any) => console.warn("[feed] upsert failed:", e?.message));
+      upserted++;
+    }
+    console.log(`[feed] worker done — ${upserted} items upserted`);
+  } catch (e) { console.error("[feed] worker error:", e); }
+}
+
 async function main() {
   const app = Fastify({ logger: true });
 
@@ -534,141 +686,6 @@ async function main() {
     catch { return { ok: true, db: "down" }; }
   });
 
-  // ── Google OAuth ─────────────────────────────────────────────────────────────
-  // Step 1: redirect browser to Google's consent screen
-  app.get("/auth/google", async (req, reply) => {
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-    const BASE_URL = process.env.BASE_URL || "https://weered.ca";
-    const qs = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: `${BASE_URL}/auth/google/callback`,
-      response_type: "code",
-      scope: "openid email profile",
-      access_type: "offline",
-      prompt: "select_account",
-    });
-    return reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${qs}`);
-  });
-
-  // Step 2: Google redirects back here with ?code=...
-  app.get("/auth/google/callback", async (req, reply) => {
-    const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || "";
-    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-    const BASE_URL             = process.env.BASE_URL             || "https://weered.ca";
-    const WEB_URL              = process.env.WEB_URL              || "https://weered.ca";
-
-    const code = String((req as any).query?.code || "").trim();
-    if (!code) return reply.redirect(`${WEB_URL}/login?error=no_code`);
-
-    try {
-      // Exchange code for tokens
-      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          code,
-          client_id:     GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri:  `${BASE_URL}/auth/google/callback`,
-          grant_type:    "authorization_code",
-        }),
-      });
-      const tokenData: any = await tokenRes.json();
-      if (!tokenRes.ok || !tokenData.access_token) {
-        console.error("[google/callback] token exchange failed", tokenData);
-        return reply.redirect(`${WEB_URL}/login?error=token_exchange`);
-      }
-
-      // Fetch user profile from Google
-      const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
-      });
-      const profile: any = await profileRes.json();
-      if (!profile.id) return reply.redirect(`${WEB_URL}/login?error=no_profile`);
-
-      const googleId    = String(profile.id);
-      const email       = String(profile.email       || "");
-      const displayName = String(profile.name        || profile.email || "User");
-      const avatar      = String(profile.picture     || "");
-
-      // Upsert user — find by googleId first, then email, then create fresh
-      // 1. Find by googleId
-      let user = await prisma.user.findFirst({ where: { googleId } }).catch(() => null);
-
-      // 2. Find by email and link
-      if (!user && email) {
-        user = await prisma.user.findFirst({ where: { email } }).catch(() => null);
-        if (user) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { googleId, avatar: avatar || undefined },
-          }).catch(() => {});
-        }
-      }
-
-      // 3. Create new user
-      if (!user) {
-        const baseKey = displayName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 24) || "user";
-        let usernameKey = baseKey;
-        let suffix = 1;
-        while (await prisma.user.findUnique({ where: { usernameKey } }).catch(() => null)) {
-          usernameKey = `${baseKey}${suffix++}`;
-        }
-        user = await prisma.user.create({
-          data: {
-            name: displayName,
-            usernameKey,
-            email: email || null,
-            googleId,
-            avatar: avatar || null,
-          },
-        });
-      }
-
-      // Issue Weered JWT
-      const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
-      const userJson = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name, avatar }));
-      const isNewUser = !user.onboardingComplete;
-
-      // New users go to onboarding to pick a username, existing users go straight home
-      const dest = isNewUser
-        ? `${WEB_URL}/onboarding?token=${token}&user=${userJson}`
-        : `${WEB_URL}/auth/google/finish?token=${token}&user=${userJson}`;
-      return reply.redirect(dest);
-    } catch (e: any) {
-      console.error("[google/callback] error", e);
-      return reply.redirect(`${WEB_URL}/login?error=server_error`);
-    }
-  });
-
-  // Onboarding: check username availability
-  app.get("/auth/username-check", async (req, reply) => {
-    const username = String((req as any).query?.username || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-    if (!username || username.length < 2) return reply.send({ available: false, reason: "too_short" });
-    if (username.length > 24) return reply.send({ available: false, reason: "too_long" });
-    const existing = await prisma.user.findUnique({ where: { usernameKey: username } }).catch(() => null);
-    return reply.send({ available: !existing, username });
-  });
-
-  // Onboarding: set username and mark complete
-  app.post("/auth/onboarding", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ error: "unauthorized" });
-    const body: any = (req as any).body || {};
-    const raw = String(body.username || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-    if (!raw || raw.length < 2) return reply.code(400).send({ error: "Username too short" });
-    if (raw.length > 24) return reply.code(400).send({ error: "Username too long" });
-    const existing = await prisma.user.findUnique({ where: { usernameKey: raw } }).catch(() => null);
-    if (existing && existing.id !== u.id) return reply.code(409).send({ error: "Username taken" });
-    const updated = await prisma.user.update({
-      where: { id: u.id },
-      data: { usernameKey: raw, name: raw, onboardingComplete: true },
-    });
-    const token = jwt.sign({ sub: updated.id, name: updated.name }, JWT_SECRET, { expiresIn: "7d" });
-    return reply.send({ token, user: { id: updated.id, name: updated.name } });
-  });
-
-  // Reddit proxy — fetches server-side to avoid CORS + browser blocks
   // Auth: dev-login
   app.post("/auth/dev-login", async (req, reply) => {
     const body: any = (req as any).body || {};
@@ -1243,6 +1260,26 @@ app.post("/dm/:peerId", async (req, reply) => {
       return reply.code(500).send({ error: "Server error" });
     }
   });
+
+
+  // ── Feed API ────────────────────────────────────────────────────────────────
+
+  // GET /feed/hot — returns top 50 items sorted by heat
+  app.get("/feed/hot", async (req, reply) => {
+    const qs       = (req as any).query as any;
+    const category = qs?.category && qs.category !== "all" ? String(qs.category) : undefined;
+    const sort     = qs?.sort === "new" ? { postedAt: "desc" as const } : { heat: "desc" as const };
+    const items    = await prisma.feedItem.findMany({
+      where:   category ? { category } : undefined,
+      orderBy: sort,
+      take:    50,
+    });
+    return reply.send({ items, updatedAt: new Date().toISOString() });
+  });
+
+  // Run worker on startup then every 20 minutes
+  runFeedWorker();
+  setInterval(runFeedWorker, 20 * 60 * 1000);
 
   await seedLobbies();
 

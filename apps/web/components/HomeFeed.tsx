@@ -17,24 +17,43 @@ export interface FeedItem {
   postedAt: Date;
 }
 
-// ─── Mock data (replace with API call to /feed/hot) ───────────────────────────
-const MOCK_ITEMS: FeedItem[] = [
-  { id: "1", url: "https://ign.com/articles/gta-6-release-date", title: "GTA 6 Release Date Officially Confirmed — Everything We Know About Rockstar's Biggest Game Yet", thumbnail: "https://picsum.photos/seed/gta6/120/80", domain: "ign.com", sourceName: "IGN", category: "gaming", heat: 97, usersInRoom: 34, postedAt: new Date(Date.now() - 12 * 60000) },
-  { id: "2", url: "https://espn.com/ufc/jones-vs-aspinall", title: "Jon Jones vs. Tom Aspinall: Full Fight Card, Odds, and Prediction Breakdown for UFC 309", thumbnail: "https://picsum.photos/seed/ufc309/120/80", domain: "espn.com", sourceName: "ESPN", category: "ufc", heat: 91, usersInRoom: 21, postedAt: new Date(Date.now() - 28 * 60000) },
-  { id: "3", url: "https://techcrunch.com/openai-gpt5", title: "OpenAI Quietly Begins Rolling Out GPT-5 to Select Enterprise Customers Ahead of Public Launch", thumbnail: "https://picsum.photos/seed/gpt5/120/80", domain: "techcrunch.com", sourceName: "TechCrunch", category: "tech", heat: 88, usersInRoom: 18, postedAt: new Date(Date.now() - 45 * 60000) },
-  { id: "4", url: "https://bbc.com/news/world", title: "Breaking: Major Ceasefire Agreement Reached After Months of Diplomatic Talks", thumbnail: "https://picsum.photos/seed/news1/120/80", domain: "bbc.com", sourceName: "BBC News", category: "news", heat: 85, usersInRoom: 12, postedAt: new Date(Date.now() - 55 * 60000) },
-  { id: "5", url: "https://nba.com/game/celtics-lakers", title: "Celtics vs. Lakers Live: Final Score, Box Score and Full Game Recap — Triple Overtime Classic", thumbnail: "https://picsum.photos/seed/nba1/120/80", domain: "nba.com", sourceName: "NBA", category: "sports", heat: 82, usersInRoom: 29, postedAt: new Date(Date.now() - 70 * 60000) },
-  { id: "6", url: "https://ign.com/ps5-pro-review", title: "PS5 Pro Review: Six Months Later — Is the Upgrade Worth It in 2026?", thumbnail: "https://picsum.photos/seed/ps5pro/120/80", domain: "ign.com", sourceName: "IGN", category: "gaming", heat: 78, usersInRoom: 9, postedAt: new Date(Date.now() - 95 * 60000) },
-  { id: "7", url: "https://theverge.com/apple-vision-pro-2", title: "Apple Vision Pro 2 Hands-On: Lighter, Faster, and Finally Has Games Worth Playing", thumbnail: "https://picsum.photos/seed/avp2/120/80", domain: "theverge.com", sourceName: "The Verge", category: "tech", heat: 74, usersInRoom: 7, postedAt: new Date(Date.now() - 110 * 60000) },
-  { id: "8", url: "https://mmamania.com/ufc-picks", title: "UFC Main Card Picks and Predictions: Who Wins When the Lights Come On Saturday Night", thumbnail: "https://picsum.photos/seed/ufc2/120/80", domain: "mmamania.com", sourceName: "MMA Mania", category: "ufc", heat: 69, usersInRoom: 5, postedAt: new Date(Date.now() - 130 * 60000) },
-  { id: "9", url: "https://theguardian.com/tech-regulation", title: "EU Votes to Impose New AI Transparency Rules — What It Means for Every Tech Company Operating in Europe", thumbnail: "https://picsum.photos/seed/eu1/120/80", domain: "theguardian.com", sourceName: "The Guardian", category: "news", heat: 65, usersInRoom: 4, postedAt: new Date(Date.now() - 155 * 60000) },
-  { id: "10", url: "https://spotify.com/podcast/lex-fridman", title: "Lex Fridman #451: Sam Altman on AGI, Power, and the Next Five Years of AI Development", thumbnail: "https://picsum.photos/seed/lex1/120/80", domain: "spotify.com", sourceName: "Spotify Podcasts", category: "podcasts", heat: 61, usersInRoom: 11, postedAt: new Date(Date.now() - 180 * 60000) },
-  { id: "11", url: "https://nfl.com/chiefs-ravens", title: "Chiefs vs. Ravens AFC Championship: Mahomes Leads Fourth-Quarter Comeback in Instant Classic", thumbnail: "https://picsum.photos/seed/nfl1/120/80", domain: "nfl.com", sourceName: "NFL", category: "sports", heat: 58, usersInRoom: 6, postedAt: new Date(Date.now() - 200 * 60000) },
-  { id: "12", url: "https://kotaku.com/nintendo-switch-2-launch", title: "Nintendo Switch 2 Launch Lineup Deep Dive: Every Game Confirmed, Every Date You Need to Know", thumbnail: "https://picsum.photos/seed/sw2/120/80", domain: "kotaku.com", sourceName: "Kotaku", category: "gaming", heat: 54, usersInRoom: 3, postedAt: new Date(Date.now() - 220 * 60000) },
-  { id: "13", url: "https://wired.com/spacex-starship", title: "SpaceX Starship Successfully Completes Its First Full Orbital Flight — What Comes Next", thumbnail: "https://picsum.photos/seed/spacex1/120/80", domain: "wired.com", sourceName: "Wired", category: "tech", heat: 49, usersInRoom: 2, postedAt: new Date(Date.now() - 260 * 60000) },
-  { id: "14", url: "https://joe.fm/jre-podcast", title: "JRE #2200: Elon Musk Returns — Mars, Twitter/X, and the Future of Everything", thumbnail: "https://picsum.photos/seed/jre1/120/80", domain: "joe.fm", sourceName: "JRE Podcast", category: "podcasts", heat: 44, usersInRoom: 8, postedAt: new Date(Date.now() - 300 * 60000) },
-  { id: "15", url: "https://reuters.com/markets-crash", title: "Markets in Freefall: Dow Drops 800 Points as Fed Signals Surprise Rate Hike on Inflation Data", thumbnail: "https://picsum.photos/seed/market1/120/80", domain: "reuters.com", sourceName: "Reuters", category: "news", heat: 39, usersInRoom: 1, postedAt: new Date(Date.now() - 340 * 60000) },
-];
+// ─── Live feed hook ───────────────────────────────────────────────────────────
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+
+function useLiveFeed(category: Category, sort: "hot" | "new") {
+  const [items, setItems]       = useState<FeedItem[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+
+  async function load() {
+    try {
+      const params = new URLSearchParams({ category, sort });
+      const res    = await fetch(`${API_BASE}/feed/hot?${params}`);
+      const data   = await res.json();
+      const mapped = (data.items || []).map((i: any) => ({
+        ...i,
+        postedAt:  new Date(i.postedAt),
+        fetchedAt: new Date(i.fetchedAt),
+      }));
+      setItems(mapped);
+      setUpdatedAt(new Date(data.updatedAt));
+    } catch (e) {
+      console.warn("[HomeFeed] fetch failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
+  }, [category, sort]);
+
+  return { items, loading, updatedAt };
+}
+
 
 const CATEGORIES = ["all", "gaming", "ufc", "news", "sports", "tech", "podcasts"] as const;
 type Category = typeof CATEGORIES[number];
@@ -242,9 +261,8 @@ export default function HomeFeed() {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [sort, setSort] = useState<"hot" | "new">("hot");
 
-  const filtered = MOCK_ITEMS
-    .filter(i => activeCategory === "all" || i.category === activeCategory)
-    .sort((a, b) => sort === "hot" ? b.heat - a.heat : b.postedAt.getTime() - a.postedAt.getTime());
+  const { items, loading, updatedAt } = useLiveFeed(activeCategory, sort);
+  const filtered = items;
 
   function handleEnter(item: FeedItem) {
     const roomId  = roomIdFromUrl(item.url);
@@ -343,19 +361,25 @@ export default function HomeFeed() {
 
         {/* Rows */}
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+          {loading && items.length === 0 && (
+            <div style={{ padding: "40px 20px", textAlign: "center", color: "rgba(100,116,139,0.35)", fontSize: 12, letterSpacing: "0.06em" }}>
+              Loading feed...
+            </div>
+          )}
           {filtered.map((item, i) => (
             <FeedRow key={item.id} item={item} index={i} onEnter={handleEnter} />
           ))}
 
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div style={{ padding: "40px 20px", textAlign: "center", color: "rgba(100,116,139,0.4)", fontSize: 13 }}>
               No content in this category yet.
             </div>
           )}
 
           {/* Footer hint */}
-          <div style={{ padding: "16px 12px", fontSize: 10, color: "rgba(100,116,139,0.3)", textAlign: "center", letterSpacing: "0.06em" }}>
-            CLICK ANY STORY TO ENTER ITS ROOM
+          <div style={{ padding: "16px 12px", fontSize: 10, color: "rgba(100,116,139,0.3)", textAlign: "center", letterSpacing: "0.06em", display: "flex", justifyContent: "center", gap: 16 }}>
+            <span>CLICK ANY STORY TO ENTER ITS ROOM</span>
+            {updatedAt && <span style={{ color: "rgba(100,116,139,0.2)" }}>UPDATED {timeAgo(updatedAt)}</span>}
           </div>
         </div>
       </div>
