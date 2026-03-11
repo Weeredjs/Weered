@@ -44,9 +44,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [browserUrl, setBrowserUrl] = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
 
-  // Chat drawer: direction + open state
-  const [chatDir, setChatDir]   = useState<"vertical" | "horizontal">("vertical");
-  const [chatOpen, setChatOpen] = useState(true);
+  // Two independent chat drawers
+  const [chatSide, setChatSide]     = useState(false); // right → slides left
+  const [chatBottom, setChatBottom] = useState(false); // bottom → slides up
 
   useEffect(() => {
     const art = sp?.get("article");
@@ -293,48 +293,88 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       </div>
 
       {/* ── Main body ── */}
+      <style>{`
+        @keyframes slideFromRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+        @keyframes slideFromBottom {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        .chat-tab-side {
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          writing-mode: vertical-rl;
+          text-orientation: mixed;
+          rotate: 180deg;
+          padding: 14px 7px;
+          background: rgba(124,58,237,0.15);
+          border: 1px solid rgba(124,58,237,0.28);
+          border-right: none;
+          border-radius: 10px 0 0 10px;
+          color: rgba(167,139,250,0.85);
+          font-size: 10px; font-weight: 800;
+          letter-spacing: 0.12em;
+          cursor: pointer; user-select: none;
+          backdrop-filter: blur(8px);
+          transition: right 0.36s cubic-bezier(0.22,1,0.36,1), background 0.15s;
+          z-index: 40;
+          display: flex; align-items: center; gap: 6px;
+        }
+        .chat-tab-side:hover { background: rgba(124,58,237,0.28); }
+        .chat-tab-bottom {
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 7px 16px;
+          background: rgba(124,58,237,0.15);
+          border: 1px solid rgba(124,58,237,0.28);
+          border-bottom: none;
+          border-radius: 10px 10px 0 0;
+          color: rgba(167,139,250,0.85);
+          font-size: 10px; font-weight: 800;
+          letter-spacing: 0.12em;
+          cursor: pointer; user-select: none;
+          backdrop-filter: blur(8px);
+          transition: bottom 0.36s cubic-bezier(0.22,1,0.36,1), background 0.15s;
+          z-index: 40;
+          display: flex; align-items: center; gap: 6px;
+          white-space: nowrap;
+        }
+        .chat-tab-bottom:hover { background: rgba(124,58,237,0.28); }
+        .chat-panel-glass {
+          background: rgba(8,8,16,0.82);
+          backdrop-filter: blur(20px) saturate(1.4);
+          -webkit-backdrop-filter: blur(20px) saturate(1.4);
+          border-color: rgba(124,58,237,0.18);
+        }
+        .chat-close-btn {
+          width: 20px; height: 20px; border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
+          color: rgba(148,163,184,0.5);
+          font-size: 10px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.12s; flex-shrink: 0;
+        }
+        .chat-close-btn:hover { background: rgba(255,255,255,0.10); color: rgba(226,232,240,0.8); }
+      `}</style>
+
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
-        {/* Center column: module pills + input */}
-        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+        {/* Center column: just the input zone at bottom, no static chat */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
-          {/* Messages — only shown when chat is horizontal or closed */}
-          {(chatDir === "horizontal" || !chatOpen) && (
-            <div ref={chatRef} className="flex-1 min-h-0 overflow-hidden" style={chatDir === "horizontal" && chatOpen ? { display: "none" } : {}}>
-              <RoomChatPanel
-                roomId={roomId}
-                hideInput
-                style={{ height: "100%", display: "flex", flexDirection: "column" }}
-              />
-            </div>
-          )}
-
-          {/* Horizontal chat drawer — bottom half */}
-          {chatDir === "horizontal" && chatOpen && (
-            <div style={{
-              height: "45%", flexShrink: 0,
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              display: "flex", flexDirection: "column",
-              background: "rgba(10,10,18,0.85)",
-              backdropFilter: "blur(12px)",
-              animation: "chatHorizIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Chat</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => setChatDir("vertical")} style={dirBtnStyle} title="Switch to side panel">⇥</button>
-                  <button onClick={() => setChatOpen(false)} style={dirBtnStyle}>✕</button>
-                </div>
-              </div>
-              <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-                <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
-              </div>
-            </div>
-          )}
+          {/* Spacer — fills the center when no static chat */}
+          <div className="flex-1 min-h-0" />
 
           {/* Input zone */}
           <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
-            {/* Module pills row */}
+            {/* Module pills */}
             <div className="flex flex-wrap gap-1.5 mb-2.5">
               {MODULES.map((m) => {
                 const isActive = stageMode === m.id;
@@ -360,32 +400,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   </button>
                 );
               })}
-
-              {/* Chat toggle pill */}
-              <button
-                type="button"
-                onClick={() => setChatOpen(o => !o)}
-                className={[
-                  "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
-                  chatOpen
-                    ? "border-violet-400/25 bg-violet-500/10 text-violet-300/70"
-                    : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
-                ].join(" ")}
-              >
-                💬 Chat {chatOpen ? "on" : ""}
-              </button>
-
-              {/* Chat direction toggle — only when open */}
-              {chatOpen && (
-                <button
-                  type="button"
-                  onClick={() => setChatDir(d => d === "vertical" ? "horizontal" : "vertical")}
-                  className="text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15 transition-all duration-150 font-mono"
-                  title={chatDir === "vertical" ? "Move chat to bottom" : "Move chat to side"}
-                >
-                  {chatDir === "vertical" ? "⇥ side" : "⇩ bottom"}
-                </button>
-              )}
 
               {/* Details toggle */}
               <button
@@ -435,33 +449,75 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Vertical chat drawer — right side, slides in */}
-        {chatDir === "vertical" && chatOpen && (
-          <div style={{
-            width: 280, flexShrink: 0,
-            borderLeft: "1px solid rgba(255,255,255,0.07)",
-            display: "flex", flexDirection: "column",
-            background: "rgba(10,10,18,0.88)",
-            backdropFilter: "blur(16px) saturate(1.3)",
-            animation: "chatVertIn 0.34s cubic-bezier(0.22,1,0.36,1) forwards",
-            position: "relative",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px 6px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Chat</span>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => setChatDir("horizontal")} style={dirBtnStyle} title="Move to bottom">⇩</button>
-                <button onClick={() => setChatOpen(false)} style={dirBtnStyle}>✕</button>
+          {/* ── Side chat tab (right edge → slides left) ── */}
+          <div
+            className="chat-tab-side"
+            style={{ right: chatSide ? "min(300px, 35%)" : 0 }}
+            onClick={() => setChatSide(o => !o)}
+          >
+            <span>←</span>
+            <span>CHAT</span>
+          </div>
+
+          {/* ── Bottom chat tab (bottom edge → slides up) ── */}
+          <div
+            className="chat-tab-bottom"
+            style={{ bottom: chatBottom ? "min(260px, 40%)" : 0 }}
+            onClick={() => setChatBottom(o => !o)}
+          >
+            <span>↑</span>
+            <span>CHAT</span>
+          </div>
+
+          {/* ── Side chat panel ── */}
+          {chatSide && (
+            <div
+              className="chat-panel-glass"
+              style={{
+                position: "absolute", top: 0, right: 0, bottom: 0,
+                width: "min(300px, 35%)",
+                borderLeft: "1px solid",
+                display: "flex", flexDirection: "column",
+                animation: "slideFromRight 0.36s cubic-bezier(0.22,1,0.36,1) forwards",
+                zIndex: 39,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
+                <button className="chat-close-btn" onClick={() => setChatSide(false)}>✕</button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
               </div>
             </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-              <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Details side panel — slides in from right (behind chat) */}
+          {/* ── Bottom chat panel ── */}
+          {chatBottom && (
+            <div
+              className="chat-panel-glass"
+              style={{
+                position: "absolute", left: 0, right: 0, bottom: 0,
+                height: "min(260px, 40%)",
+                borderTop: "1px solid",
+                display: "flex", flexDirection: "column",
+                animation: "slideFromBottom 0.36s cubic-bezier(0.22,1,0.36,1) forwards",
+                zIndex: 38,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px 6px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
+                <button className="chat-close-btn" onClick={() => setChatBottom(false)}>✕</button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Details side panel */}
         <div
           className="flex-shrink-0 border-l border-white/[0.07] overflow-hidden transition-all duration-250 ease-in-out"
           style={{ width: showDetails ? 240 : 0 }}
@@ -473,6 +529,3 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
 
       </div>
-    </div>
-  );
-}
