@@ -11,7 +11,7 @@ const SETTINGS_KEY = "weered:settings:v0";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role       = "owner" | "mod" | "member" | "none";
-type RoomUser   = { id: string; name: string; role?: Role };
+type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
 type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number };
 type Knock      = { userId: string; name: string; ts: number };
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";

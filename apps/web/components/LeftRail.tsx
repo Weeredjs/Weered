@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
+import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -124,13 +125,6 @@ function flairFor(u: any): Flair {
  * 3 MOD (global or room)
  * 4 everyone else
  */
-function avatarBg(name: string, isMe?: boolean): string {
-  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
-  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  const hash = colors[h % colors.length];
-  if (!isMe) return hash;
-  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
-}
 
 function groupRank(u: any): number {
   const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
@@ -230,48 +224,18 @@ export default function LeftRail() {
   const recentRooms = recents.filter(r => !favs.includes(r));
 
   // ── Room name cache ──────────────────────────────────────────────────────
-  const PINNED_KEY = "weered:pinned:v1";
-
-  const readCache = () => {
+  const [roomNameCache, setRoomNameCache] = useState<Record<string,string>>(() => {
     try { return JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}"); } catch { return {}; }
-  };
-
-  const [roomNameCache, setRoomNameCache] = useState<Record<string, any>>(readCache);
-  const [pinned, setPinned] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem(PINNED_KEY) || "[]"); } catch { return []; }
   });
-
-  // Refresh on focus or when RoomCanvas fires an update
+  // Refresh cache on focus (in case another tab updated it)
   useEffect(() => {
-    const refresh = () => setRoomNameCache(readCache());
-    window.addEventListener("focus", refresh);
-    window.addEventListener("weered:roomnames:update", refresh);
-    return () => {
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("weered:roomnames:update", refresh);
+    const onFocus = () => {
+      try { setRoomNameCache(JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}")); } catch {}
     };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
-
-  const getRoomName = (id: string) => {
-    const entry = roomNameCache[id];
-    if (!entry) return id;
-    if (typeof entry === "string") return entry;
-    return entry.name || id;
-  };
-
-  const getRoomCount = (id: string): number | null => {
-    const entry = roomNameCache[id];
-    if (!entry || typeof entry !== "object") return null;
-    return typeof entry.count === "number" ? entry.count : null;
-  };
-
-  function togglePinned(room: string) {
-    setPinned(prev => {
-      const next = prev.includes(room) ? prev.filter(r => r !== room) : [room, ...prev].slice(0, 20);
-      try { localStorage.setItem(PINNED_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }
+  const getRoomName = (id: string) => roomNameCache[id] || id;
 
 
 
@@ -470,8 +434,8 @@ export default function LeftRail() {
                     admin: "#a78bfa", mod: "#34d399", owner: "#f97316",
                     paid: "#a78bfa",
                   };
-                  // Elevated roles get role color, everyone else gets name-hash color
-                  const aColor = roleColors[label] || avatarBg(nm, label === "you");
+                  // Elevated roles get role color, everyone else gets name-hash color (or chosen color)
+                  const aColor = roleColors[label] || avatarBg(nm, label === "you", u?.avatarColor);
                   return (
                     <div style={{
                       width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
@@ -638,34 +602,20 @@ export default function LeftRail() {
             {favs.map(room => {
               const href = `/room/${encodeURIComponent(room)}`;
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
-              const name = getRoomName(room);
-              const count = getRoomCount(room);
-              const isPinned = pinned.includes(room);
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:3 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:1 }}>
                   <Link
-                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center gap-1.5 text-[12px]" + (isActive ? " weered-left-link-active" : "")}
+                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center justify-between text-[12px]" + (isActive ? " weered-left-link-active" : "")}
                     href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(252,211,77,.18)", background:"rgba(252,211,77,.05)" }}
                   >
-                    <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6, flexShrink:0 }}>r/</span>
-                    <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600, flex:1 }}>{name}</span>
-                    {count !== null && count > 0 && (
-                      <span style={{ display:"flex", alignItems:"center", gap:2, fontSize:10, color:"rgba(255,255,255,0.35)", flexShrink:0 }}>
-                        <span style={{ width:5, height:5, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 4px #22c55e", display:"inline-block" }} />
-                        {count}
-                      </span>
-                    )}
-                    {isPinned && (
-                      <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.05em", color:"rgba(167,139,250,0.6)", background:"rgba(124,58,237,0.15)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:3, padding:"1px 3px", flexShrink:0 }}>PIN</span>
-                    )}
-                    {isActive && <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background:"#fcd34d" }} />}
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6 }}>r/</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600 }}>{getRoomName(room)}</span>
+                    </span>
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full" style={{ background:"#fcd34d", flexShrink:0 }} />}
                   </Link>
-                  <button onClick={() => togglePinned(room)} title={isPinned ? "Unpin room" : "Pin room"}
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:10, flexShrink:0, color: isPinned ? "rgba(167,139,250,0.8)" : "rgba(255,255,255,0.18)", lineHeight:1 }}>
-                    &#x1F4CC;
-                  </button>
-                  <button onClick={() => toggleFav(room)} title="Unpin from favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>★</button>
+                  <button onClick={() => toggleFav(room)} title="Unpin"
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>★</button>
                 </div>
               );
             })}
@@ -681,34 +631,20 @@ export default function LeftRail() {
             {recentRooms.map(room => {
               const href = `/room/${encodeURIComponent(room)}`;
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
-              const name = getRoomName(room);
-              const count = getRoomCount(room);
-              const isPinned = pinned.includes(room);
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:3 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:1 }}>
                   <Link
-                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center gap-1.5 text-[12px]" + (isActive ? " weered-left-link-active" : "")}
+                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center justify-between text-[12px]" + (isActive ? " weered-left-link-active" : "")}
                     href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(148,163,184,.14)", background:"rgba(148,163,184,.04)" }}
                   >
-                    <span style={{ fontSize:10, opacity:0.3, flexShrink:0 }}>r/</span>
-                    <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500, flex:1 }}>{name}</span>
-                    {count !== null && count > 0 && (
-                      <span style={{ display:"flex", alignItems:"center", gap:2, fontSize:10, color:"rgba(255,255,255,0.35)", flexShrink:0 }}>
-                        <span style={{ width:5, height:5, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 4px #22c55e", display:"inline-block" }} />
-                        {count}
-                      </span>
-                    )}
-                    {isPinned && (
-                      <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.05em", color:"rgba(167,139,250,0.6)", background:"rgba(124,58,237,0.15)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:3, padding:"1px 3px", flexShrink:0 }}>PIN</span>
-                    )}
-                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90 flex-shrink-0" />}
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:10, opacity:0.3 }}>r/</span>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500 }}>{getRoomName(room)}</span>
+                    </span>
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" style={{ flexShrink:0 }} />}
                   </Link>
-                  <button onClick={() => togglePinned(room)} title={isPinned ? "Unpin room" : "Pin room"}
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:10, flexShrink:0, color: isPinned ? "rgba(167,139,250,0.8)" : "rgba(255,255,255,0.18)", lineHeight:1 }}>
-                    &#x1F4CC;
-                  </button>
                   <button onClick={() => toggleFav(room)} title="Pin to favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>☆</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>☆</button>
                 </div>
               );
             })}

@@ -19,7 +19,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
-type AuthedUser = { id: string; name: string; globalRole?: string };
+type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
@@ -267,14 +267,19 @@ function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: numb
 }
 
 function buildStatePayload(room: RoomState) {
-  const roleMap = new Map<string, string>();
+  const roleMap       = new Map<string, string>();
+  const colorMap      = new Map<string, string>();
   for (const s of room.sockets) {
-    if (s.user?.id && s.user?.globalRole) roleMap.set(s.user.id, s.user.globalRole);
+    if (s.user?.id) {
+      if (s.user.globalRole)  roleMap.set(s.user.id, s.user.globalRole);
+      if (s.user.avatarColor) colorMap.set(s.user.id, s.user.avatarColor);
+    }
   }
   const users = Array.from(room.users.values()).map((u) => ({
     ...u,
-    role: u.id ? roleOf(room, u.id) : "member",
-    globalRole: (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
+    role:        u.id ? roleOf(room, u.id) : "member",
+    globalRole:  (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
+    avatarColor: (u.id ? colorMap.get(u.id) : undefined) ?? (u as any).avatarColor ?? undefined,
   }));
   return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
@@ -414,8 +419,8 @@ function removeKnock(room: RoomState, userId: string) {
 // Hydrate globalRole onto AuthedUser from DB (called once per WS connection)
 async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
-    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true } });
-    return { ...user, globalRole: String(u?.globalRole ?? "USER") };
+    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true, avatarColor: true } });
+    return { ...user, globalRole: String(u?.globalRole ?? "USER"), avatarColor: u?.avatarColor ?? undefined };
   } catch { return user; }
 }
 
@@ -509,7 +514,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER" };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -1121,7 +1126,7 @@ async function main() {
     }
   });
 
-  // PATCH /profile/me  — update own bio
+  // PATCH /profile/me  — update own bio / avatarColor
   app.patch("/profile/me", async (req, reply) => {
     const authHeader = (req.headers as any).authorization;
     const viewer = authFromHeader(authHeader);
@@ -1140,8 +1145,28 @@ async function main() {
       });
 
       // Award notoriety for completing bio (one-time)
-      if (bio.length >= 10) {
+      if (bio !== undefined && bio.length >= 10) {
         await awardNotoriety(viewer.id, "BIO_COMPLETE");
+      }
+
+      // If avatarColor changed, update all live sockets for this user and re-broadcast
+      // presence in every room they're in so other clients see the new color instantly
+      if (avatarColor !== undefined) {
+        for (const sock of wss.clients) {
+          const s = sock as Sock;
+          if (s.user?.id === viewer.id) {
+            s.user.avatarColor = avatarColor;
+            if (s.roomId) {
+              const room = rooms.get(s.roomId);
+              if (room) {
+                // Patch the cached user entry too
+                const entry = room.users.get(viewer.id);
+                if (entry) (entry as any).avatarColor = avatarColor;
+                publishState(room);
+              }
+            }
+          }
+        }
       }
 
       return reply.send({ ok: true, bio: u.bio });
