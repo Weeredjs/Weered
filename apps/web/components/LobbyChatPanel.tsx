@@ -66,7 +66,6 @@ export default function LobbyChatPanel(
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    // rAF ensures DOM has painted the new message before we scroll
     const id = requestAnimationFrame(() => {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
@@ -82,29 +81,40 @@ export default function LobbyChatPanel(
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...props.style }}>
+    // Outer wrapper: full flex column filling whatever container gives it height
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+      minHeight: 0,
+      overflow: "hidden",
+      ...props.style,
+    }}>
+
+      {/* Header — only in non-embedded mode */}
       {!props.embedded && (
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <div className="text-sm font-semibold text-white/90">{props.title || "Lobby Chat"}</div>
           <div className="text-xs text-white/60 truncate">room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}</div>
         </div>
       )}
 
+      {/* Messages list — takes all available space, scrolls internally */}
       <div
         ref={listRef}
         style={{
-          border: props.embedded ? "none" : "1px solid var(--weered-border)",
-          borderRadius: props.embedded ? 0 : 14,
-          padding: props.embedded ? "0 10px" : 10,
           flex: 1,
           minHeight: 0,
-          overflow: "auto",
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: props.embedded ? "8px 10px" : 10,
           background: props.embedded ? "transparent" : "rgba(255,255,255,.02)",
-          marginBottom: props.hideInput ? 0 : 10,
+          border: props.embedded ? "none" : "1px solid var(--weered-border)",
+          borderRadius: props.embedded ? 0 : 14,
         }}
       >
         {msgs.length === 0 ? (
-          <div style={{ opacity: 0.7 }}>No messages yet.</div>
+          <div style={{ opacity: 0.7, fontSize: 13 }}>No messages yet.</div>
         ) : (
           msgs.map((m: any, i: number) => (
             <div key={i} data-chat-message style={{ display: "flex", gap: 10, marginBottom: 8 }}>
@@ -126,16 +136,18 @@ export default function LobbyChatPanel(
                 <div data-chat-username style={{ fontWeight: 800, fontSize: 13 }}>
                   {String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}
                 </div>
-                <div data-chat-body style={{ opacity: 0.95 }}>{m?.body || m?.text || ""}</div>
+                <div data-chat-body style={{ opacity: 0.95, fontSize: 13, wordBreak: "break-word" }}>
+                  {m?.body || m?.text || ""}
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Input — hidden when parent handles it */}
+      {/* Input — pinned to bottom, flex-shrink-0 so it never compresses */}
       {!props.hideInput && (
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0" style={{ padding: "8px 10px 10px" }}>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -153,7 +165,7 @@ export default function LobbyChatPanel(
             onClick={onSend}
             disabled={!canSend}
             className={
-              "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
+              "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors flex-shrink-0 " +
               (canSend
                 ? "border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100"
                 : "border-white/10 bg-white/5 text-white/60 cursor-not-allowed")
@@ -165,8 +177,9 @@ export default function LobbyChatPanel(
         </div>
       )}
 
+      {/* Open Dock button — non-embedded only */}
       {!props.embedded && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 10, flexShrink: 0 }}>
           <button
             onClick={() => replaceTop("dock")}
             style={{
