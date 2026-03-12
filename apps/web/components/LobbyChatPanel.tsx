@@ -85,7 +85,6 @@ export default function LobbyChatPanel(
     <div style={{
       display: "flex",
       flexDirection: "column",
-      height: "100%",
       minHeight: 0,
       overflow: "hidden",
       ...props.style,
