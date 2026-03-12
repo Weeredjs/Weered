@@ -644,37 +644,28 @@ export default function LeftRail() {
               return (
                 <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:3 }}>
                   <Link
-                    className={"weered-left-link rounded-lg border px-2.5 py-1.5 transition-colors flex flex-col gap-0.5 text-[12px]" + (isActive ? " weered-left-link-active" : "")}
+                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center gap-1.5 text-[12px]" + (isActive ? " weered-left-link-active" : "")}
                     href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(252,211,77,.18)", background:"rgba(252,211,77,.05)" }}
                   >
-                    {/* Name row */}
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600, flex:1 }}>{name}</span>
-                      {isActive && <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background:"#fcd34d" }} />}
-                    </span>
-                    {/* Meta row */}
-                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      {count !== null && count > 0 && (
-                        <span style={{ display:"flex", alignItems:"center", gap:3, fontSize:10, color:"rgba(255,255,255,0.35)" }}>
-                          <span style={{ width:5, height:5, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 4px #22c55e", display:"inline-block" }} />
-                          {count}
-                        </span>
-                      )}
-                      {isPinned && (
-                        <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", color:"rgba(167,139,250,0.6)", background:"rgba(124,58,237,0.12)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:4, padding:"0px 4px" }}>
-                          PINNED
-                        </span>
-                      )}
-                    </span>
+                    <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6, flexShrink:0 }}>r/</span>
+                    <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600, flex:1 }}>{name}</span>
+                    {count !== null && count > 0 && (
+                      <span style={{ display:"flex", alignItems:"center", gap:2, fontSize:10, color:"rgba(255,255,255,0.35)", flexShrink:0 }}>
+                        <span style={{ width:5, height:5, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 4px #22c55e", display:"inline-block" }} />
+                        {count}
+                      </span>
+                    )}
+                    {isPinned && (
+                      <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.05em", color:"rgba(167,139,250,0.6)", background:"rgba(124,58,237,0.15)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:3, padding:"1px 3px", flexShrink:0 }}>PIN</span>
+                    )}
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background:"#fcd34d" }} />}
                   </Link>
-                  {/* Pin toggle */}
-                  <button onClick={() => togglePinned(room)} title={isPinned ? "Unpin room" : "Pin room (keeps alive)"}
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 4px", fontSize:11, flexShrink:0, color: isPinned ? "rgba(167,139,250,0.8)" : "rgba(255,255,255,0.2)", lineHeight:1 }}>
-                    {isPinned ? "📌" : "📍"}
+                  <button onClick={() => togglePinned(room)} title={isPinned ? "Unpin room" : "Pin room"}
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:10, flexShrink:0, color: isPinned ? "rgba(167,139,250,0.8)" : "rgba(255,255,255,0.18)", lineHeight:1 }}>
+                    &#x1F4CC;
                   </button>
                   <button onClick={() => toggleFav(room)} title="Unpin from favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 4px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>★</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>★</button>
                 </div>
               );
             })}
@@ -696,37 +687,28 @@ export default function LeftRail() {
               return (
                 <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:3 }}>
                   <Link
-                    className={"weered-left-link rounded-lg border px-2.5 py-1.5 transition-colors flex flex-col gap-0.5 text-[12px]" + (isActive ? " weered-left-link-active" : "")}
+                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center gap-1.5 text-[12px]" + (isActive ? " weered-left-link-active" : "")}
                     href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(148,163,184,.14)", background:"rgba(148,163,184,.04)" }}
                   >
-                    {/* Name row */}
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:10, opacity:0.3 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500, flex:1 }}>{name}</span>
-                      {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90 flex-shrink-0" />}
-                    </span>
-                    {/* Meta row */}
-                    <span style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      {count !== null && count > 0 && (
-                        <span style={{ display:"flex", alignItems:"center", gap:3, fontSize:10, color:"rgba(255,255,255,0.35)" }}>
-                          <span style={{ width:5, height:5, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 4px #22c55e", display:"inline-block" }} />
-                          {count}
-                        </span>
-                      )}
-                      {isPinned && (
-                        <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", color:"rgba(167,139,250,0.6)", background:"rgba(124,58,237,0.12)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:4, padding:"0px 4px" }}>
-                          PINNED
-                        </span>
-                      )}
-                    </span>
+                    <span style={{ fontSize:10, opacity:0.3, flexShrink:0 }}>r/</span>
+                    <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500, flex:1 }}>{name}</span>
+                    {count !== null && count > 0 && (
+                      <span style={{ display:"flex", alignItems:"center", gap:2, fontSize:10, color:"rgba(255,255,255,0.35)", flexShrink:0 }}>
+                        <span style={{ width:5, height:5, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 4px #22c55e", display:"inline-block" }} />
+                        {count}
+                      </span>
+                    )}
+                    {isPinned && (
+                      <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.05em", color:"rgba(167,139,250,0.6)", background:"rgba(124,58,237,0.15)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:3, padding:"1px 3px", flexShrink:0 }}>PIN</span>
+                    )}
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90 flex-shrink-0" />}
                   </Link>
-                  {/* Pin toggle */}
-                  <button onClick={() => togglePinned(room)} title={isPinned ? "Unpin room" : "Pin room (keeps alive)"}
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 4px", fontSize:11, flexShrink:0, color: isPinned ? "rgba(167,139,250,0.8)" : "rgba(255,255,255,0.2)", lineHeight:1 }}>
-                    {isPinned ? "📌" : "📍"}
+                  <button onClick={() => togglePinned(room)} title={isPinned ? "Unpin room" : "Pin room"}
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:10, flexShrink:0, color: isPinned ? "rgba(167,139,250,0.8)" : "rgba(255,255,255,0.18)", lineHeight:1 }}>
+                    &#x1F4CC;
                   </button>
                   <button onClick={() => toggleFav(room)} title="Pin to favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 4px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>☆</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 3px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>☆</button>
                 </div>
               );
             })}
