@@ -69,6 +69,8 @@ export default function LobbyChatPanel(
     const id = requestAnimationFrame(() => {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
+    // Fire notification event so parent can show unread indicator
+    try { window.dispatchEvent(new CustomEvent("weered:chat:message")); } catch {}
     return () => cancelAnimationFrame(id);
   }, [msgs.length, activeRoomId]);
 
