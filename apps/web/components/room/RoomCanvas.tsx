@@ -103,6 +103,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
 
+  const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
+  const locked      = Boolean(w?.meta?.locked);
+
   useEffect(() => {
     if (!roomId || !roomLabel || roomLabel === roomId) return;
     try {
@@ -115,9 +118,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       try { window.dispatchEvent(new CustomEvent("weered:roomnames:update")); } catch {}
     } catch {}
   }, [roomId, roomLabel, memberCount]);
-
-  const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
-  const locked      = Boolean(w?.meta?.locked);
 
   const aboutKey = `weered.room.about.${roomId}`;
   const linksKey = `weered.room.links.${roomId}`;
