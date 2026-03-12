@@ -334,156 +334,107 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
       </div>
 
+      {/*
+        ── Module pills bar ──
+        Always visible at the bottom. When chat is open, a duplicate row
+        appears here at the top of the body so pills stay accessible.
+      */}
+      {chatOpen && (
+        <div className="flex-shrink-0 border-b border-white/[0.07] px-4 py-2" style={{ zIndex: 1 }}>
+          <div className="flex flex-wrap gap-1.5">
+            {MODULES.map((m) => {
+              const isActive = stageMode === m.id;
+              const isLive   = m.live;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  disabled={!isLive}
+                  onClick={() => isLive && handleModuleClick(m.id)}
+                  className={[
+                    "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
+                    isActive
+                      ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
+                      : isLive
+                        ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
+                        : "border-white/[0.06] text-white/20 cursor-default",
+                  ].join(" ")}
+                >
+                  {m.icon} {m.label}
+                  {isActive && <span className="ml-1 text-[9px]">on</span>}
+                  {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setShowDetails(d => !d)}
+              className={[
+                "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
+                showDetails ? "border-white/20 bg-white/[0.08] text-white/70" : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
+              ].join(" ")}
+            >
+              {showDetails ? "close details" : "... details"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Main body ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
+      {/*
+        Chat panel and tab live here at the outer level so they are never
+        clipped by the center column and always paint above the iframe.
+        position:relative on this wrapper is the stacking root.
+      */}
+      <div className="flex flex-1 min-h-0" style={{ position: "relative", overflow: "visible" }}>
 
-        {/* ── Center column ── */}
-        <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ position: "relative" }}>
+        {/* ── Center column — no overflow:hidden so chat can escape ── */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0" style={{ position: "relative" }}>
 
-          {/* Spacer fills the center behind the floating chat */}
+          {/* Spacer */}
           <div className="flex-1 min-h-0" />
 
-          {/* ── Module pills + input zone ── */}
-          <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
-            <div className="flex flex-wrap gap-1.5 mb-2.5">
-              {MODULES.map((m) => {
-                const isActive = stageMode === m.id;
-                const isLive   = m.live;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    disabled={!isLive}
-                    onClick={() => isLive && handleModuleClick(m.id)}
-                    className={[
-                      "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
-                      isActive
-                        ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
-                        : isLive
-                          ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
-                          : "border-white/[0.06] text-white/20 cursor-default",
-                    ].join(" ")}
-                  >
-                    {m.icon} {m.label}
-                    {isActive && <span className="ml-1 text-[9px]">on</span>}
-                    {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                onClick={() => setShowDetails(d => !d)}
-                className={[
-                  "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
-                  showDetails
-                    ? "border-white/20 bg-white/[0.08] text-white/70"
-                    : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
-                ].join(" ")}
-              >
-                {showDetails ? "close details" : "... details"}
-              </button>
+          {/* ── Bottom pills + details (hidden when chat open — top bar takes over) ── */}
+          {!chatOpen && (
+            <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
+              <div className="flex flex-wrap gap-1.5">
+                {MODULES.map((m) => {
+                  const isActive = stageMode === m.id;
+                  const isLive   = m.live;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      disabled={!isLive}
+                      onClick={() => isLive && handleModuleClick(m.id)}
+                      className={[
+                        "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
+                        isActive
+                          ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
+                          : isLive
+                            ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
+                            : "border-white/[0.06] text-white/20 cursor-default",
+                      ].join(" ")}
+                    >
+                      {m.icon} {m.label}
+                      {isActive && <span className="ml-1 text-[9px]">on</span>}
+                      {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setShowDetails(d => !d)}
+                  className={[
+                    "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
+                    showDetails ? "border-white/20 bg-white/[0.08] text-white/70" : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
+                  ].join(" ")}
+                >
+                  {showDetails ? "close details" : "... details"}
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/*
-            ── Chat slide-out panel ──
-            Absolutely positioned over the center column.
-            Tab sits on the right edge at 35% up from the bottom.
-            Panel slides in/out from the right.
-            RoomChatPanel owns its own input — no separate input bar needed.
-          */}
-
-          {/* Tab handle */}
-          <div
-            onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
-            style={{
-              position: "absolute",
-              right: chatOpen ? CHAT_WIDTH : 0,
-              bottom: CHAT_HEIGHT,
-              transform: "translateY(100%)",
-              writingMode: "vertical-rl",
-              textOrientation: "mixed",
-              padding: "14px 8px",
-              background: chatOpen ? "rgba(124,58,237,0.22)" : "rgba(124,58,237,0.12)",
-              border: "1px solid rgba(124,58,237,0.30)",
-              borderRight: "none",
-              borderRadius: "10px 0 0 10px",
-              color: chatOpen ? "rgba(167,139,250,0.95)" : "rgba(167,139,250,0.60)",
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: "0.13em",
-              cursor: "pointer",
-              userSelect: "none",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              transition: "right 0.34s cubic-bezier(0.22,1,0.36,1), background 0.2s ease, color 0.2s ease",
-              zIndex: 51,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 7,
-            }}
-          >
-            {chatUnread && !chatOpen && (
-              <span style={{
-                width: 7, height: 7, borderRadius: "50%",
-                background: "#a78bfa",
-                boxShadow: "0 0 7px rgba(167,139,250,0.9)",
-                flexShrink: 0,
-              }} />
-            )}
-            <span style={{ writingMode: "horizontal-tb", fontSize: 10, lineHeight: 1 }}>{chatOpen ? "›" : "‹"}</span>
-            <span>CHAT</span>
-          </div>
-
-          {/* Chat panel — fixed height, bottom-anchored, frosted glass */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
-              height: CHAT_HEIGHT,
-              width: chatOpen ? CHAT_WIDTH : 0,
-              overflow: "hidden",
-              borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.22)" : "none",
-              borderTop: chatOpen ? "1px solid rgba(124,58,237,0.15)" : "none",
-              borderRadius: chatOpen ? "10px 0 0 0" : 0,
-              background: "rgba(8,8,20,0.52)",
-              backdropFilter: "blur(28px) saturate(1.6)",
-              WebkitBackdropFilter: "blur(28px) saturate(1.6)",
-              display: "flex",
-              flexDirection: "column",
-              zIndex: 50,
-              transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
-            }}
-          >
-            {chatOpen && (
-              <>
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "9px 12px 8px",
-                  borderBottom: "1px solid rgba(124,58,237,0.12)",
-                  flexShrink: 0,
-                }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
-                  <button
-                    onClick={() => setChatOpen(false)}
-                    style={{ width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    &times;
-                  </button>
-                </div>
-                <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                  <RoomChatPanel
-                    roomId={roomId}
-                    style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
+          )}
         </div>
 
         {/* ── Details side panel ── */}
@@ -495,6 +446,92 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             <div className="text-[10px] font-bold tracking-[0.12em] uppercase text-white/30 mb-3">Details</div>
             {detailsPanel}
           </div>
+        </div>
+
+        {/*
+          ── Chat tab + panel ──
+          Hoisted to the outer body wrapper so they are never clipped and
+          always paint above iframes regardless of stacking context.
+        */}
+
+        {/* Tab handle */}
+        <div
+          onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
+          style={{
+            position: "absolute",
+            right: chatOpen ? CHAT_WIDTH : 0,
+            bottom: CHAT_HEIGHT,
+            transform: "translateY(100%)",
+            writingMode: "vertical-rl",
+            textOrientation: "mixed",
+            padding: "14px 8px",
+            background: chatOpen ? "rgba(124,58,237,0.22)" : "rgba(124,58,237,0.12)",
+            border: "1px solid rgba(124,58,237,0.30)",
+            borderRight: "none",
+            borderRadius: "10px 0 0 10px",
+            color: chatOpen ? "rgba(167,139,250,0.95)" : "rgba(167,139,250,0.60)",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.13em",
+            cursor: "pointer",
+            userSelect: "none",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            transition: "right 0.34s cubic-bezier(0.22,1,0.36,1), background 0.2s ease, color 0.2s ease",
+            zIndex: 100,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 7,
+          }}
+        >
+          {chatUnread && !chatOpen && (
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a78bfa", boxShadow: "0 0 7px rgba(167,139,250,0.9)", flexShrink: 0 }} />
+          )}
+          <span style={{ writingMode: "horizontal-tb", fontSize: 10, lineHeight: 1 }}>{chatOpen ? "›" : "‹"}</span>
+          <span>CHAT</span>
+        </div>
+
+        {/* Chat panel — fixed height, bottom-anchored, frosted glass, above everything */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            height: CHAT_HEIGHT,
+            width: chatOpen ? CHAT_WIDTH : 0,
+            overflow: "hidden",
+            borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.22)" : "none",
+            borderTop: chatOpen ? "1px solid rgba(124,58,237,0.15)" : "none",
+            borderRadius: chatOpen ? "10px 0 0 0" : 0,
+            background: "rgba(8,8,20,0.52)",
+            backdropFilter: "blur(28px) saturate(1.6)",
+            WebkitBackdropFilter: "blur(28px) saturate(1.6)",
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 99,
+            transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
+          }}
+        >
+          {chatOpen && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
+                <button
+                  onClick={() => setChatOpen(false)}
+                  style={{ width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  &times;
+                </button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <RoomChatPanel
+                  roomId={roomId}
+                  style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
       </div>
