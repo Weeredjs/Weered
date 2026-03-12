@@ -524,12 +524,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   &times;
                 </button>
               </div>
-              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <RoomChatPanel
-                  roomId={roomId}
-                  style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-                />
-              </div>
+              <RoomChatPanel
+                roomId={roomId}
+                style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
+              />
             </>
           )}
         </div>
