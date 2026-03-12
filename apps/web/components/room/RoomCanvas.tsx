@@ -436,63 +436,64 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             </div>
           </div>
 
-          {/* ── Chat toggle tab (right edge) ── */}
-          <div
-            onClick={() => setChatOpen(o => !o)}
-            style={{
-              position: "absolute", right: chatOpen ? "clamp(280px, 30%, 420px)" : 0, top: "50%",
-              transform: "translateY(-50%) rotate(180deg)",
-              writingMode: "vertical-rl", textOrientation: "mixed",
-              padding: "14px 7px",
-              background: "rgba(124,58,237,0.15)",
-              border: "1px solid rgba(124,58,237,0.28)", borderRight: "none",
-              borderRadius: "10px 0 0 10px",
-              color: "rgba(167,139,250,0.85)",
-              fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-              cursor: "pointer", userSelect: "none",
-              backdropFilter: "blur(8px)",
-              transition: "right 0.36s cubic-bezier(0.22,1,0.36,1)",
-              zIndex: 40, display: "flex", alignItems: "center", gap: 6,
-            }}
-          >
-            <span>{chatOpen ? "→" : "←"}</span>
-            <span>CHAT</span>
-          </div>
+        </div>
 
-          {/* ── Full-height chat overlay panel ── */}
-          <div
-            style={{
-              position: "absolute", top: 0, right: 0, bottom: 0,
-              width: chatOpen ? "clamp(280px, 30%, 420px)" : 0,
-              overflow: "hidden",
-              borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.18)" : "none",
-              background: "rgba(8,8,16,0.72)",
-              backdropFilter: "blur(24px) saturate(1.5)",
-              WebkitBackdropFilter: "blur(24px) saturate(1.5)",
-              display: "flex", flexDirection: "column",
-              zIndex: 39,
-              transition: "width 0.36s cubic-bezier(0.22,1,0.36,1)",
-            }}
-          >
-            {chatOpen && (
-              <>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
-                  <button style={{
-                    width: 20, height: 20, borderRadius: 5,
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    background: "rgba(255,255,255,0.04)",
-                    color: "rgba(148,163,184,0.5)",
-                    fontSize: 10, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }} onClick={() => setChatOpen(false)}>✕</button>
-                </div>
-                <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-                  <RoomChatPanel roomId={roomId} style={{ height: "100%", display: "flex", flexDirection: "column" }} />
-                </div>
-              </>
-            )}
-          </div>
+        {/* ── Chat toggle tab ── */}
+        <div
+          onClick={() => setChatOpen(o => !o)}
+          style={{
+            position: "absolute", right: chatOpen ? "clamp(280px, 30%, 420px)" : 0, top: "50%",
+            transform: "translateY(-50%) rotate(180deg)",
+            writingMode: "vertical-rl", textOrientation: "mixed",
+            padding: "14px 7px",
+            background: "rgba(124,58,237,0.15)",
+            border: "1px solid rgba(124,58,237,0.28)", borderRight: "none",
+            borderRadius: "10px 0 0 10px",
+            color: "rgba(167,139,250,0.85)",
+            fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+            cursor: "pointer", userSelect: "none",
+            backdropFilter: "blur(8px)",
+            transition: "right 0.36s cubic-bezier(0.22,1,0.36,1)",
+            zIndex: 40, display: "flex", alignItems: "center", gap: 6,
+          }}
+        >
+          <span>{chatOpen ? "→" : "←"}</span>
+          <span>CHAT</span>
+        </div>
+
+        {/* ── Full-width chat overlay panel ── */}
+        <div
+          style={{
+            position: "absolute", top: 0, right: 0, bottom: 0,
+            width: chatOpen ? "clamp(280px, 30%, 420px)" : 0,
+            overflow: "hidden",
+            borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.18)" : "none",
+            background: "rgba(8,8,16,0.72)",
+            backdropFilter: "blur(24px) saturate(1.5)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.5)",
+            display: "flex", flexDirection: "column",
+            zIndex: 39,
+            transition: "width 0.36s cubic-bezier(0.22,1,0.36,1)",
+          }}
+        >
+          {chatOpen && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
+                <button style={{
+                  width: 20, height: 20, borderRadius: 5,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(148,163,184,0.5)",
+                  fontSize: 10, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }} onClick={() => setChatOpen(false)}>✕</button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                <RoomChatPanel roomId={roomId} hideInput style={{ height: "100%", display: "flex", flexDirection: "column" }} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Details side panel */}
@@ -542,6 +543,5 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </button>
         </div>
       )}
-    </div>
   );
 }
