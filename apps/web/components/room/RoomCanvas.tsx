@@ -30,6 +30,9 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
+// Chat panel width when open
+const CHAT_WIDTH = 340;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function RoomCanvas({ roomId }: { roomId: string }) {
@@ -37,23 +40,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const { openSheet } = useOverlay();
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
-  const chatRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Article URL from ?article= param
-  const [articleUrl, setArticleUrl] = useState<string>("");
-  const [browserUrl, setBrowserUrl] = useState<string>("");
+  const [articleUrl, setArticleUrl]     = useState<string>("");
+  const [browserUrl, setBrowserUrl]     = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
   const [iframeBlocked, setIframeBlocked] = useState(false);
 
-  // Chat state
-  const [chatOpen, setChatOpen] = useState(true);
+  // Chat state — open by default
+  const [chatOpen, setChatOpen]     = useState(true);
   const [chatUnread, setChatUnread] = useState(false);
 
-  // Voice prompt
   const [voicePrompt, setVoicePrompt] = useState(true);
 
-  // Convert YouTube watch URLs to embeddable format
   function toEmbedUrl(url: string): string {
     try {
       const u = new URL(url);
@@ -79,26 +77,20 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // Mark unread when chat is closed and new messages arrive
+  // Mark unread when chat is closed and a new message fires
   useEffect(() => {
-    if (chatOpen) {
-      setChatUnread(false);
-      return;
-    }
-    // Listen for chat messages via weered provider
+    if (chatOpen) { setChatUnread(false); return; }
     const handler = () => setChatUnread(true);
     window.addEventListener("weered:chat:message", handler);
     return () => window.removeEventListener("weered:chat:message", handler);
   }, [chatOpen]);
 
-  // ── Derived room label ──
   const roomLabel = useMemo(() => {
     const name = String(w?.meta?.name || w?.meta?.title || w?.meta?.label || w?.admin?.name || "").trim();
     if (name) return name;
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
 
-  // ── Cache resolved room name ──
   useEffect(() => {
     if (!roomId || !roomLabel || roomLabel === roomId) return;
     try {
@@ -112,12 +104,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
   const locked      = Boolean(w?.meta?.locked);
 
-  // ── Details panel state ──
   const aboutKey = `weered.room.about.${roomId}`;
   const linksKey = `weered.room.links.${roomId}`;
-  const [about,      setAbout     ] = useState("");
-  const [links,      setLinks     ] = useState<string[]>([]);
-  const [newLink,    setNewLink   ] = useState("");
+  const [about,       setAbout      ] = useState("");
+  const [links,       setLinks      ] = useState<string[]>([]);
+  const [newLink,     setNewLink    ] = useState("");
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
@@ -149,54 +140,29 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
-  // ── Toggle stage mode ──
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     setStageMode(prev => prev === id ? null : id);
   };
 
   const stageActive = stageMode !== null;
 
-  // ── Send chat message ──
-  const sendMessage = useCallback((el: HTMLTextAreaElement) => {
-    const val = el.value.trim();
-    if (!val) return;
-    w?.sendChat?.(val);
-    el.value = "";
-    el.style.height = "auto";
-  }, [w]);
-
-  // ── Share URL ──
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/room/${encodeURIComponent(roomId)}`
     : "";
 
-  // ─── Details side panel ──────────────────────────────────────────────────────
+  // ─── Details panel ────────────────────────────────────────────────────────
   const detailsPanel = (
     <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0 pr-0.5">
-      {/* Room meta */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
         <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35 mb-1.5">Room</div>
         <div className="text-sm font-semibold truncate mb-0.5">{roomLabel}</div>
         <div className="text-[11px] text-white/35 truncate font-mono mb-2">{roomId}</div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => safeCopy(roomId)}
-            className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors"
-          >
-            Copy id
-          </button>
-          <button
-            type="button"
-            onClick={() => safeCopy(shareUrl)}
-            className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors"
-          >
-            Copy link
-          </button>
+          <button type="button" onClick={() => safeCopy(roomId)} className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors">Copy id</button>
+          <button type="button" onClick={() => safeCopy(shareUrl)} className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors">Copy link</button>
         </div>
       </div>
 
-      {/* About */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35">About</div>
@@ -206,12 +172,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           value={about}
           onChange={(e) => setAbout(e.target.value)}
           rows={3}
-          placeholder="Description, rules, context…"
+          placeholder="Description, rules, context..."
           className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-[12px] text-white/70 placeholder:text-white/25 outline-none focus:border-white/20 resize-none"
         />
       </div>
 
-      {/* Links */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35">Links</div>
@@ -222,16 +187,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             value={newLink}
             onChange={(e) => setNewLink(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addLink()}
-            placeholder="Paste a link…"
+            placeholder="Paste a link..."
             className="flex-1 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[12px] text-white/70 placeholder:text-white/25 outline-none focus:border-white/20"
           />
-          <button
-            type="button"
-            onClick={addLink}
-            className="rounded-lg border border-violet-300/20 bg-violet-500/10 px-3 py-1.5 text-[12px] text-violet-200/70 font-semibold hover:bg-violet-500/15 transition-colors"
-          >
-            Add
-          </button>
+          <button type="button" onClick={addLink} className="rounded-lg border border-violet-300/20 bg-violet-500/10 px-3 py-1.5 text-[12px] text-violet-200/70 font-semibold hover:bg-violet-500/15 transition-colors">Add</button>
         </div>
         {links.length > 0 ? (
           <div className="space-y-1.5">
@@ -259,7 +218,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         title={roomLabel}
         memberCount={memberCount}
         locked={locked}
-        onInvite={() => {/* TODO: invite system */}}
+        onInvite={() => {}}
       />
 
       {/* ── Voice available prompt ── */}
@@ -273,30 +232,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <button
-              onClick={() => setVoicePrompt(false)}
-              style={{ padding: "5px 13px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-            >
-              Not now
-            </button>
-            <button
-              onClick={() => { setVoicePrompt(false); voice.connect(roomId); }}
-              style={{ padding: "5px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-            >
-              Join voice
-            </button>
+            <button onClick={() => setVoicePrompt(false)} style={{ padding: "5px 13px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Not now</button>
+            <button onClick={() => { setVoicePrompt(false); voice.connect(roomId); }} style={{ padding: "5px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
           </div>
         </div>
       )}
 
-      {/* ── Voice active bar — in THIS room ── */}
+      {/* ── Voice active bar ── */}
       {voice.connState === "connected" && voice.activeRoomId === roomId && (
-        <div style={{
-          flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
-          padding: "6px 16px",
-          background: "rgba(34,197,94,0.08)",
-          borderBottom: "1px solid rgba(34,197,94,0.15)",
-        }}>
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "6px 16px", background: "rgba(34,197,94,0.08)", borderBottom: "1px solid rgba(34,197,94,0.15)" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e", flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: "rgba(134,239,172,0.8)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Voice active</span>
           <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
@@ -307,16 +251,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             ))}
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-            <button
-              onClick={() => voice.toggleMute()}
-              style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "rgba(226,232,240,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-            >
+            <button onClick={() => voice.toggleMute()} style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "rgba(226,232,240,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               {voice.muted ? "🔇 Unmute" : "🎙 Mute"}
             </button>
-            <button
-              onClick={() => voice.disconnect()}
-              style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-            >
+            <button onClick={() => voice.disconnect()} style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               Leave
             </button>
           </div>
@@ -331,7 +269,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         ].join(" ")}
         style={{ height: stageActive ? (stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
       >
-        {/* Idle label */}
         {!stageActive && (
           <div className="flex items-center px-4 h-10">
             <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/20">
@@ -340,18 +277,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {/* Stage content */}
         {stageActive && stageMode !== "browser" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
-            <RoomStage
-              roomId={roomId}
-              mode={stageMode}
-              onClose={() => setStageMode(null)}
-            />
+            <RoomStage roomId={roomId} mode={stageMode} onClose={() => setStageMode(null)} />
           </div>
         )}
 
-        {/* Browser module */}
         {stageActive && stageMode === "browser" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
@@ -363,19 +294,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   if (e.key === "Enter") {
                     let u = browserInput.trim();
                     if (!u.startsWith("http")) u = "https://" + u;
-                    setBrowserUrl(u);
-                    setBrowserInput(u);
-                    setIframeBlocked(false);
+                    setBrowserUrl(u); setBrowserInput(u); setIframeBlocked(false);
                   }
                 }}
                 style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
-              <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>
-                &uarr;&#8599;
-              </button>
-              <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>
-                &times;
-              </button>
+              <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&#8599;</button>
+              <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
             {(() => {
               const BLOCKED = ["espn.com","nfl.com","nba.com","twitter.com","x.com","facebook.com","instagram.com","tiktok.com","reddit.com","linkedin.com","nytimes.com","wsj.com","bloomberg.com"];
@@ -385,10 +310,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   <div style={{ fontSize: 40 }}>🚫</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>This site blocks embedding</div>
                   <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>{browserUrl}</div>
-                  <button
-                    onClick={() => window.open(browserUrl, "_blank")}
-                    style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.5)", color: "rgba(167,139,250,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-                  >
+                  <button onClick={() => window.open(browserUrl, "_blank")} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.5)", color: "rgba(167,139,250,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     Open in new tab
                   </button>
                   <div style={{ fontSize: 11, color: "rgba(100,116,139,0.4)", marginTop: 4 }}>
@@ -414,39 +336,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       {/* ── Main body ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
-        {/* Center column */}
+        {/* ── Center column ── */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
-          {/* ── Chat panel — full width, above input, collapsible ── */}
-          <div
-            style={{
-              flex: chatOpen ? "1 1 0" : "0 0 0",
-              minHeight: 0,
-              overflow: "hidden",
-              transition: "flex 0.32s cubic-bezier(0.22,1,0.36,1)",
-              background: "rgba(8,8,18,0.68)",
-              backdropFilter: chatOpen ? "blur(20px) saturate(1.4)" : "none",
-              WebkitBackdropFilter: chatOpen ? "blur(20px) saturate(1.4)" : "none",
-              borderBottom: chatOpen ? "1px solid rgba(124,58,237,0.14)" : "none",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {chatOpen && (
-              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <RoomChatPanel
-                  roomId={roomId}
-                  hideInput
-                  style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-                />
-              </div>
-            )}
-          </div>
+          {/* Spacer fills the center behind the floating chat */}
+          <div className="flex-1 min-h-0" />
 
-          {/* ── Input zone ── */}
+          {/* ── Module pills + input zone ── */}
           <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
-
-            {/* Module pills row */}
             <div className="flex flex-wrap gap-1.5 mb-2.5">
               {MODULES.map((m) => {
                 const isActive = stageMode === m.id;
@@ -473,7 +370,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 );
               })}
 
-              {/* Details toggle */}
               <button
                 type="button"
                 onClick={() => setShowDetails(d => !d)}
@@ -484,97 +380,112 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                     : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
                 ].join(" ")}
               >
-                {showDetails ? "&times; details" : "... details"}
-              </button>
-            </div>
-
-            {/* Text input row */}
-            <div className="flex gap-2 items-end">
-
-              {/* Chat toggle — left of input */}
-              <button
-                type="button"
-                onClick={() => {
-                  setChatOpen(o => !o);
-                  setChatUnread(false);
-                }}
-                style={{
-                  flexShrink: 0,
-                  position: "relative",
-                  padding: "7px 11px",
-                  borderRadius: 8,
-                  border: chatOpen
-                    ? "1px solid rgba(124,58,237,0.4)"
-                    : "1px solid rgba(255,255,255,0.1)",
-                  background: chatOpen
-                    ? "rgba(124,58,237,0.18)"
-                    : "rgba(255,255,255,0.04)",
-                  color: chatOpen
-                    ? "rgba(167,139,250,0.9)"
-                    : "rgba(148,163,184,0.5)",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  letterSpacing: "0.10em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  height: 38,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-              >
-                {/* Unread indicator dot */}
-                {chatUnread && !chatOpen && (
-                  <span style={{
-                    position: "absolute",
-                    top: 5,
-                    right: 5,
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "#a78bfa",
-                    boxShadow: "0 0 6px rgba(167,139,250,0.8)",
-                  }} />
-                )}
-                <span style={{ fontSize: 11 }}>{chatOpen ? "v" : "^"}</span>
-                <span>Chat</span>
-              </button>
-
-              <textarea
-                ref={inputRef}
-                rows={1}
-                placeholder={`Message ${roomLabel}...`}
-                className="flex-1 rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-2 text-[13px] text-white/80 placeholder:text-white/25 outline-none focus:border-violet-500/30 resize-none leading-snug transition-colors"
-                style={{ maxHeight: 100, height: 38 }}
-                onInput={(e) => {
-                  const el = e.currentTarget;
-                  el.style.height = "auto";
-                  el.style.height = Math.min(el.scrollHeight, 100) + "px";
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage(e.currentTarget);
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="flex-shrink-0 rounded-lg bg-violet-600 hover:bg-violet-500 px-4 py-2 text-[12px] font-bold text-white transition-colors h-[38px]"
-                onClick={() => {
-                  if (inputRef.current) sendMessage(inputRef.current);
-                }}
-              >
-                Send
+                {showDetails ? "close details" : "... details"}
               </button>
             </div>
           </div>
+
+          {/*
+            ── Chat slide-out panel ──
+            Absolutely positioned over the center column.
+            Tab sits on the right edge at 35% up from the bottom.
+            Panel slides in/out from the right.
+            RoomChatPanel owns its own input — no separate input bar needed.
+          */}
+
+          {/* Tab handle */}
+          <div
+            onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
+            style={{
+              position: "absolute",
+              right: chatOpen ? CHAT_WIDTH : 0,
+              bottom: "35%",
+              transform: "translateY(50%)",
+              writingMode: "vertical-rl",
+              textOrientation: "mixed",
+              padding: "14px 8px",
+              background: chatOpen ? "rgba(124,58,237,0.22)" : "rgba(124,58,237,0.12)",
+              border: "1px solid rgba(124,58,237,0.30)",
+              borderRight: "none",
+              borderRadius: "10px 0 0 10px",
+              color: chatOpen ? "rgba(167,139,250,0.95)" : "rgba(167,139,250,0.60)",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.13em",
+              cursor: "pointer",
+              userSelect: "none",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              transition: "right 0.34s cubic-bezier(0.22,1,0.36,1), background 0.2s ease, color 0.2s ease",
+              zIndex: 40,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 7,
+            }}
+          >
+            {chatUnread && !chatOpen && (
+              <span style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: "#a78bfa",
+                boxShadow: "0 0 7px rgba(167,139,250,0.9)",
+                flexShrink: 0,
+              }} />
+            )}
+            <span style={{ fontSize: 9 }}>{chatOpen ? ">" : "<"}</span>
+            <span>CHAT</span>
+          </div>
+
+          {/* Chat panel */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: chatOpen ? CHAT_WIDTH : 0,
+              overflow: "hidden",
+              borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.18)" : "none",
+              background: "rgba(8,8,18,0.78)",
+              backdropFilter: "blur(22px) saturate(1.5)",
+              WebkitBackdropFilter: "blur(22px) saturate(1.5)",
+              display: "flex",
+              flexDirection: "column",
+              zIndex: 39,
+              transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
+            }}
+          >
+            {chatOpen && (
+              <>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "9px 12px 8px",
+                  borderBottom: "1px solid rgba(124,58,237,0.12)",
+                  flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
+                  <button
+                    onClick={() => setChatOpen(false)}
+                    style={{ width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                  <RoomChatPanel
+                    roomId={roomId}
+                    style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
         </div>
 
-        {/* Details side panel */}
+        {/* ── Details side panel ── */}
         <div
-          className="flex-shrink-0 border-l border-white/[0.07] overflow-hidden transition-all duration-250 ease-in-out"
+          className="flex-shrink-0 border-l border-white/[0.07] overflow-hidden transition-all duration-300 ease-in-out"
           style={{ width: showDetails ? 240 : 0 }}
         >
           <div className="w-[240px] h-full overflow-y-auto p-3 flex flex-col gap-0">
@@ -585,7 +496,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       </div>
 
-      {/* ── Floating voice pill — in voice for a DIFFERENT room ── */}
+      {/* ── Floating voice pill — connected to a DIFFERENT room ── */}
       {voice.connState === "connected" && voice.activeRoomId && voice.activeRoomId !== roomId && (
         <div style={{
           position: "fixed", bottom: 80, right: 16, zIndex: 9999,
@@ -601,24 +512,17 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 10, color: "rgba(134,239,172,0.7)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Voice connected</div>
-            <div style={{ fontSize: 12, color: "rgba(226,232,240,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {voice.activeRoomId}
-            </div>
+            <div style={{ fontSize: 12, color: "rgba(226,232,240,0.8)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{voice.activeRoomId}</div>
           </div>
-          <button
-            onClick={() => voice.toggleMute()}
-            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "rgba(226,232,240,0.7)", fontSize: 11, cursor: "pointer" }}
-          >
+          <button onClick={() => voice.toggleMute()} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "rgba(226,232,240,0.7)", fontSize: 11, cursor: "pointer" }}>
             {voice.muted ? "🔇" : "🎙"}
           </button>
-          <button
-            onClick={() => voice.disconnect()}
-            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, cursor: "pointer" }}
-          >
+          <button onClick={() => voice.disconnect()} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, cursor: "pointer" }}>
             &times;
           </button>
         </div>
       )}
+
     </div>
   );
 }
