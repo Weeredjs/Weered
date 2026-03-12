@@ -449,7 +449,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               borderRadius: "10px 0 0 10px",
               color: "rgba(167,139,250,0.85)",
               fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-              cursor: "pointer", userSelect: "none" as const,
+              cursor: "pointer", userSelect: "none",
               backdropFilter: "blur(8px)",
               transition: "right 0.36s cubic-bezier(0.22,1,0.36,1)",
               zIndex: 40, display: "flex", alignItems: "center", gap: 6,
