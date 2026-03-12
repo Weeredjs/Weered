@@ -63,15 +63,21 @@ export default function LobbyChatPanel(
   const msgTrim = String(text || "").trim();
   const canSend = !!canType && msgTrim.length > 0;
 
+  const prevMsgCount = useRef(0);
+
   useEffect(() => {
     const el = listRef.current;
-    if (!el) return;
-    const id = requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    });
-    // Fire notification event so parent can show unread indicator
-    try { window.dispatchEvent(new CustomEvent("weered:chat:message")); } catch {}
-    return () => cancelAnimationFrame(id);
+    if (el) {
+      const id = requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      });
+      // Only fire for genuinely new messages, not initial population
+      if (msgs.length > prevMsgCount.current && prevMsgCount.current > 0) {
+        try { window.dispatchEvent(new CustomEvent("weered:chat:message")); } catch {}
+      }
+      prevMsgCount.current = msgs.length;
+      return () => cancelAnimationFrame(id);
+    }
   }, [msgs.length, activeRoomId]);
 
   const onSend = () => {

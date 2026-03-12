@@ -79,12 +79,21 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // Mark unread when chat is closed and a new message fires
+  // Unread indicator — always listen, only count when panel is closed
   useEffect(() => {
-    if (chatOpen) { setChatUnread(false); setChatUnreadCount(0); return; }
-    const handler = () => { setChatUnread(true); setChatUnreadCount(c => c + 1); };
+    const handler = () => {
+      if (!chatOpen) {
+        setChatUnread(true);
+        setChatUnreadCount(c => c + 1);
+      }
+    };
     window.addEventListener("weered:chat:message", handler);
     return () => window.removeEventListener("weered:chat:message", handler);
+  }, [chatOpen]);
+
+  // Clear on open
+  useEffect(() => {
+    if (chatOpen) { setChatUnread(false); setChatUnreadCount(0); }
   }, [chatOpen]);
 
   const roomLabel = useMemo(() => {
