@@ -45,11 +45,13 @@ function getToken(): string {
   } catch { return ""; }
 }
 
-function avatarColor(name: string): string {
-  const palette = ["#7c3aed","#2563eb","#059669","#d97706","#dc2626","#0891b2","#7c3aed","#db2777"];
+function avatarColor(name: string, isMe?: boolean): string {
+  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
+  const hash = colors[h % colors.length];
+  if (!isMe) return hash;
+  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
 }
 
 function extractVideoId(input: string): string | null {
@@ -285,6 +287,14 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
   const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
   const [prompted, setPrompted] = useState(alreadyInRoom); // skip prompt if already connected here
 
+  // Re-render when the user changes their avatar color
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const handler = () => forceUpdate(n => n + 1);
+    window.addEventListener("weered:avatarColor", handler);
+    return () => window.removeEventListener("weered:avatarColor", handler);
+  }, []);
+
   const connect = useCallback(async () => {
     await voice.connect(roomId);
   }, [roomId, voice]);
@@ -374,7 +384,7 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
               background: t.isSpeaking ? "rgba(34,197,94,.08)" : t.isLocal ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.03)",
               transition: "border-color .15s, background .15s",
             }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: avatarColor(t.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: avatarColor(t.name, t.isLocal), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>
                 {t.name[0]?.toUpperCase() ?? "?"}
               </div>
               <div>
