@@ -8,6 +8,7 @@ import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
 import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
+import { OAuth2Client } from "google-auth-library";
 
 const prisma = new PrismaClient();
 
@@ -748,6 +749,44 @@ async function main() {
     if (!user) return reply.code(401).send({ error: "Invalid credentials" });
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
     return reply.send({ token, user });
+  });
+
+
+  // Auth: Google OAuth
+  const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || "";
+  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+  const GOOGLE_CALLBACK_URL  = process.env.GOOGLE_CALLBACK_URL  || "https://api.weered.ca/auth/google/callback";
+  const WEB_URL              = process.env.APP_URL               || "https://weered.ca";
+
+  app.get("/auth/google", async (req, reply) => {
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL);
+    const url = client.generateAuthUrl({ access_type: "offline", scope: ["profile", "email"], prompt: "select_account" });
+    return reply.redirect(url);
+  });
+
+  app.get("/auth/google/callback", async (req, reply) => {
+    const { code } = (req as any).query as { code?: string };
+    if (!code) return reply.redirect(`${WEB_URL}/login?error=no_code`);
+    try {
+      const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL);
+      const { tokens } = await client.getToken(code);
+      client.setCredentials(tokens);
+      const ticket = await client.verifyIdToken({ idToken: tokens.id_token!, audience: GOOGLE_CLIENT_ID });
+      const payload = ticket.getPayload();
+      if (!payload) return reply.redirect(`${WEB_URL}/login?error=no_payload`);
+      const googleId = payload.sub;
+      const email = payload.email || "";
+      const displayName = payload.name || email.split("@")[0] || "User";
+      const usernameKey = (email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32)) || `g${googleId.slice(0, 8)}`;
+      let user = await prisma.user.findFirst({ where: { OR: [{ usernameKey }, { name: displayName }] } });
+      if (!user) { user = await prisma.user.create({ data: { name: displayName, usernameKey } }); }
+      const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+      const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
+      return reply.redirect(`${WEB_URL}/auth/google/finish?token=${token}&user=${userParam}`);
+    } catch (e) {
+      console.error("[google callback]", e);
+      return reply.redirect(`${WEB_URL}/login?error=oauth_failed`);
+    }
   });
 
   // Voice token (LiveKit)
