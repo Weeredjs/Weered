@@ -30,8 +30,9 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
-// Chat panel width when open
-const CHAT_WIDTH = 340;
+// Chat panel dimensions
+const CHAT_WIDTH  = 480;
+const CHAT_HEIGHT = 420;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -399,8 +400,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             style={{
               position: "absolute",
               right: chatOpen ? CHAT_WIDTH : 0,
-              bottom: "35%",
-              transform: "translateY(50%)",
+              bottom: CHAT_HEIGHT,
+              transform: "translateY(100%)",
               writingMode: "vertical-rl",
               textOrientation: "mixed",
               padding: "14px 8px",
@@ -436,19 +437,21 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             <span>CHAT</span>
           </div>
 
-          {/* Chat panel */}
+          {/* Chat panel — fixed height, bottom-anchored, frosted glass */}
           <div
             style={{
               position: "absolute",
-              top: 0,
-              right: 0,
               bottom: 0,
+              right: 0,
+              height: CHAT_HEIGHT,
               width: chatOpen ? CHAT_WIDTH : 0,
               overflow: "hidden",
-              borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.18)" : "none",
-              background: "rgba(8,8,18,0.78)",
-              backdropFilter: "blur(22px) saturate(1.5)",
-              WebkitBackdropFilter: "blur(22px) saturate(1.5)",
+              borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.22)" : "none",
+              borderTop: chatOpen ? "1px solid rgba(124,58,237,0.15)" : "none",
+              borderRadius: chatOpen ? "10px 0 0 0" : 0,
+              background: "rgba(8,8,20,0.52)",
+              backdropFilter: "blur(28px) saturate(1.6)",
+              WebkitBackdropFilter: "blur(28px) saturate(1.6)",
               display: "flex",
               flexDirection: "column",
               zIndex: 39,
