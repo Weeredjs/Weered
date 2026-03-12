@@ -297,7 +297,10 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
   }, [voice]);
 
   useEffect(() => {
-    if (voice.connState === "idle" || voice.activeRoomId !== roomId) {
+    // Only connect if not already connected/connecting to this exact room
+    const alreadyHere = voice.connState === "connected" && voice.activeRoomId === roomId;
+    const inProgress  = voice.connState === "connecting";
+    if (!alreadyHere && !inProgress) {
       connect();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
