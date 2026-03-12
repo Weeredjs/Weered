@@ -1,5 +1,6 @@
 "use client";
 
+import { AVATAR_PALETTE, avatarBg } from "../../lib/avatarColor";
 import React, { useEffect, useState } from "react";
 import { useWeered } from "../../WeeredProvider";
 
@@ -32,10 +33,7 @@ const ROLE_COLORS: Record<string, string> = {
   SUPPORT: "#34d399",
 };
 
-const AVATAR_COLORS = [
-  "#7c3aed", "#db2777", "#ea580c", "#16a34a",
-  "#0284c7", "#9333ea", "#e11d48", "#0d9488",
-];
+// AVATAR_PALETTE and avatarBg imported from lib/avatarColor
 
 function notorietyRank(n: number): string {
   if (n >= 10000) return "Legend";
@@ -45,12 +43,6 @@ function notorietyRank(n: number): string {
   if (n >= 500)   return "Hustler";
   if (n >= 100)   return "Small-Timer";
   return "Nobody";
-}
-
-function nameToColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[h];
 }
 
 function formatLastSeen(iso: string): string {
@@ -93,7 +85,7 @@ function NotorietyBar({ value, color }: { value: number; color: string }) {
 function ColorPicker({ current, onChange }: { current: string; onChange: (c: string) => void }) {
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-      {AVATAR_COLORS.map(c => (
+      {AVATAR_PALETTE.map(c => (
         <button
           key={c}
           type="button"
@@ -143,7 +135,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         if (j?.error) { setError(j.error); return; }
         setProfile(j);
         setBio(j.bio || "");
-        const savedColor = j.avatarColor || nameToColor(j.name);
+        const savedColor = j.avatarColor || avatarBg(j.name);
         setAvatarColor(savedColor);
         // Seed localStorage so other components use the right color immediately
         if (j.avatarColor) {
@@ -217,7 +209,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
   const tier      = TIERS[profile.tier] || TIERS.INNOCENT;
   const roleColor = ROLE_COLORS[profile.globalRole] || null;
-  const aColor    = avatarColor || nameToColor(profile.name);
+  const aColor    = avatarColor || avatarBg(profile.name);
   const initial   = profile.name.slice(0, 1).toUpperCase();
   const joinDate  = new Date(profile.joinedAt).toLocaleDateString("en-CA", { year: "numeric", month: "short" });
   const lastSeen  = profile.lastSeen ? formatLastSeen(profile.lastSeen) : null;

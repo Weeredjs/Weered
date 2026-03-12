@@ -3,18 +3,11 @@
 import React, { useMemo } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
+import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
   return "";
-}
-
-function avatarBg(name: string, isMe?: boolean): string {
-  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
-  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  const hash = colors[h % colors.length];
-  if (!isMe) return hash;
-  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
 }
 
 function normRole(x: string) {

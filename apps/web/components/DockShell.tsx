@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
+import { avatarBg } from "../lib/avatarColor";
 
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
@@ -44,15 +45,8 @@ function fmtTime(iso: string): string {
   try { return new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); } catch { return ""; }
 }
 
-function avatarBg(name: string, isMe?: boolean): string {
-  const colors = ["#6366f1","#8b5cf6","#ec4899","#f97316","#eab308","#22c55e","#14b8a6","#3b82f6"];
-  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  const hash = colors[h % colors.length];
-  if (!isMe) return hash;
-  try { return localStorage.getItem("weered:avatarColor") || hash; } catch { return hash; }
-}
-function Avatar({ name, size=32, color, isMe }: { name: string; size?: number; color?: string; isMe?: boolean }) {
-  const bg = color || avatarBg(name, isMe);
+function Avatar({ name, size=32, color, isMe, chosenColor }: { name: string; size?: number; color?: string; isMe?: boolean; chosenColor?: string }) {
+  const bg = color || avatarBg(name, isMe, chosenColor);
   return (
     <div style={{ width:size, height:size, borderRadius:999, background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:size*0.38, fontWeight:700, color:"#fff", flexShrink:0, userSelect:"none" as const }}>
       {name.slice(0,1).toUpperCase()}
@@ -361,7 +355,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     const isMe=!!me?.id&&u?.id===me?.id;
                     return (
                       <div key={u?.id||uname} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <Avatar name={uname} size={26} />
+                        <Avatar name={uname} size={26} isMe={isMe} chosenColor={u?.avatarColor} />
                         <span style={{ fontSize:12, fontWeight:600, color:isMe?"var(--weered-accent-text)":"var(--weered-text)" }}>{uname}{isMe?" (you)":""}</span>
                         {ugr && <span style={{ fontSize:10, color:"var(--weered-muted)", marginLeft:"auto" }}>{ugr}</span>}
                       </div>

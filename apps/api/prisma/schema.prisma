@@ -188,6 +188,7 @@ model User {
   email       String?    @unique                // top-level email for Google/SSO users
   googleId    String?    @unique                // Google OAuth subject ID
   avatar      String?                           // profile picture URL (Google or uploaded)
+  avatarColor String?                           // chosen hex color for letter avatar
   notoriety   Int        @default(0)
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
