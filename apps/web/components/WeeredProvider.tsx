@@ -318,7 +318,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const item = msg.item as AuditItem;
         if (!item?.id) return;
         setAdminByRoom(prev => {
-          const cur = prev[rid] || { knocks: [], banned: [], audit: [] };
+          const cur = prev[rid] || { knocks: [], banned: [], muted: [], audit: [] };
           return { ...prev, [rid]: { ...cur, audit: [...cur.audit, item].slice(-80) } };
         });
         return;
