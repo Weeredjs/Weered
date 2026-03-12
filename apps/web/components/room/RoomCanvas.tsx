@@ -521,7 +521,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           backdropFilter: "blur(16px)",
           boxShadow: "0 0 20px rgba(34,197,94,0.15)",
           minWidth: 220,
-        }}>)
+        }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 10, color: "rgba(134,239,172,0.7)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Voice connected</div>
