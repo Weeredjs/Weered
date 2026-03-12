@@ -31,7 +31,7 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
 // Chat panel dimensions
-const CHAT_WIDTH  = 480;
+const CHAT_WIDTH  = 580;
 const CHAT_HEIGHT = 420;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -418,7 +418,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               backdropFilter: "blur(8px)",
               WebkitBackdropFilter: "blur(8px)",
               transition: "right 0.34s cubic-bezier(0.22,1,0.36,1), background 0.2s ease, color 0.2s ease",
-              zIndex: 40,
+              zIndex: 51,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -433,7 +433,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 flexShrink: 0,
               }} />
             )}
-            <span style={{ fontSize: 9 }}>{chatOpen ? ">" : "<"}</span>
+            <span style={{ writingMode: "horizontal-tb", fontSize: 10, lineHeight: 1 }}>{chatOpen ? "›" : "‹"}</span>
             <span>CHAT</span>
           </div>
 
@@ -454,7 +454,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               WebkitBackdropFilter: "blur(28px) saturate(1.6)",
               display: "flex",
               flexDirection: "column",
-              zIndex: 39,
+              zIndex: 50,
               transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
             }}
           >
