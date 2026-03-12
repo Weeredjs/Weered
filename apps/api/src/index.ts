@@ -280,6 +280,7 @@ function buildStatePayload(room: RoomState) {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
     users, count: users.length, locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
+    muted: Array.from(room.muted.values()),
   };
 }
 
@@ -292,7 +293,8 @@ function publishStateToSocket(ws: Sock, room: RoomState) {
       type: "room:adminState", roomId: room.roomId, name: room.name || room.roomId,
       locked: Boolean(room.locked), ownerId: room.ownerId || "",
       mods: Array.from(room.mods.values()), knocks: room.knocks.slice(-50),
-      banned: Array.from(room.banned.values()), audit: room.audit.slice(-50),
+      banned: Array.from(room.banned.values()), muted: Array.from(room.muted.values()),
+      audit: room.audit.slice(-50),
     });
   }
 }
@@ -308,7 +310,8 @@ function publishState(room: RoomState) {
       type: "room:adminState", roomId: room.roomId, name: room.name || room.roomId,
       locked: Boolean(room.locked), ownerId: room.ownerId || "",
       mods: Array.from(room.mods.values()), knocks: room.knocks.slice(-50),
-      banned: Array.from(room.banned.values()), audit: room.audit.slice(-50),
+      banned: Array.from(room.banned.values()), muted: Array.from(room.muted.values()),
+      audit: room.audit.slice(-50),
     });
   }
 }

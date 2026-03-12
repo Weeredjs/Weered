@@ -23,7 +23,7 @@ type AuditItem = {
 };
 
 type RoomMeta   = { name: string; locked: boolean; ownerId: string; mods: string[] };
-type AdminState = { knocks: Knock[]; banned: string[]; audit: AuditItem[] };
+type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 
 type Ctx = {
   apiBase: string; wsUrl: string;
@@ -45,7 +45,7 @@ type Ctx = {
   lockRoom: () => void; unlockRoom: () => void;
   promote: (userId: string) => void; demote: (userId: string) => void;
   kick: (userId: string) => void; ban: (userId: string) => void;
-  unban: (userId: string) => void;
+  unban: (userId: string) => void; mute: (userId: string) => void; unmute: (userId: string) => void;
   admit: (userId: string) => void; deny: (userId: string) => void;
   sendRaw: (msg: object) => void;
 };
@@ -299,7 +299,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid = String(msg.roomId || "");
         setAdminByRoom(prev => ({
           ...prev,
-          [rid]: { knocks: Array.isArray(msg.knocks) ? msg.knocks : [], banned: Array.isArray(msg.banned) ? msg.banned.map(String) : [], audit: Array.isArray(msg.audit) ? msg.audit : [] },
+          [rid]: {
+            knocks:  Array.isArray(msg.knocks)  ? msg.knocks                  : [],
+            banned:  Array.isArray(msg.banned)  ? msg.banned.map(String)      : [],
+            muted:   Array.isArray(msg.muted)   ? msg.muted.map(String)       : [],
+            audit:   Array.isArray(msg.audit)   ? msg.audit                   : [],
+          },
         }));
         setMetaByRoom(prev => ({
           ...prev,
@@ -337,13 +342,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
       if (msg.type === "room:locked") {
         const rid = String(msg.roomId || "");
-        setMetaByRoom(prev => prev[rid] ? { ...prev, [rid]: { ...prev[rid], locked: true } } : prev);
-        return;
-      }
-
-      if (msg.type === "room:unlocked") {
-        const rid = String(msg.roomId || "");
-        setMetaByRoom(prev => prev[rid] ? { ...prev, [rid]: { ...prev[rid], locked: false } } : prev);
+        const isLocked = Boolean(msg.locked);
+        setMetaByRoom(prev => prev[rid] ? { ...prev, [rid]: { ...prev[rid], locked: isLocked } } : prev);
         return;
       }
 
@@ -491,6 +491,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const kick       = (userId: string) => sendAdmin("mod:kick",     { userId });
   const ban        = (userId: string) => sendAdmin("mod:ban",      { userId });
   const unban      = (userId: string) => sendAdmin("mod:unban",    { userId });
+  const mute       = (userId: string) => sendAdmin("mod:mute",     { userId });
+  const unmute     = (userId: string) => sendAdmin("mod:unmute",   { userId });
   const admit      = (userId: string) => sendAdmin("room:admit",   { userId });
   const deny       = (userId: string) => sendAdmin("room:deny",    { userId });
 
@@ -505,7 +507,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     devLogin, logout,
     sendChat, renameRoom,
     lockRoom, unlockRoom,
-    promote, demote, kick, ban, unban, admit, deny,
+    promote, demote, kick, ban, unban, mute, unmute, admit, deny,
     sendRaw: (msg: object) => {
       try {
         const ws = (wsRef as any)?.current;
