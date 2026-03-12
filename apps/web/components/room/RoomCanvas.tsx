@@ -508,7 +508,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       </div>
 
-      </div>
       {/* ── Floating voice pill — shows when in voice for a DIFFERENT room ── */}
       {voice.connState === "connected" && voice.activeRoomId && voice.activeRoomId !== roomId && (
         <div style={{
@@ -543,6 +542,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </button>
         </div>
       )}
+    </div>
+
     </div>
   );
 }
