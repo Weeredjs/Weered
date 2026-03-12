@@ -211,7 +211,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               <div key={v} className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/10 px-3 py-2">
                 <a className="text-[12px] text-white/60 truncate flex-1 hover:underline" href={v} target="_blank" rel="noreferrer">{v}</a>
                 <button type="button" onClick={() => safeCopy(v)} className="text-[10px] text-white/35 hover:text-white/60 flex-shrink-0">copy</button>
-                <button type="button" onClick={() => removeLink(v)} className="text-[10px] text-white/35 hover:text-red-400/70 flex-shrink-0">✕</button>
+                <button type="button" onClick={() => removeLink(v)} className="text-[10px] text-white/35 hover:text-red-400/70 flex-shrink-0">&times;</button>
               </div>
             ))}
           </div>
@@ -313,7 +313,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
               <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>↗</button>
-              <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
             {(() => {
               const BLOCKED = ["espn.com","nfl.com","nba.com","twitter.com","x.com","facebook.com","instagram.com","tiktok.com","reddit.com","linkedin.com","nytimes.com","wsj.com","bloomberg.com"];
@@ -487,7 +487,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   color: "rgba(148,163,184,0.5)",
                   fontSize: 10, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                }} onClick={() => setChatOpen(false)}>✕</button>
+                }} onClick={() => setChatOpen(false)}>&times;</button>
               </div>
               <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <RoomChatPanel roomId={roomId} hideInput style={{ height: "100%", display: "flex", flexDirection: "column" }} />
@@ -539,7 +539,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             onClick={() => voice.disconnect()}
             style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.1)", color: "#fca5a5", fontSize: 11, cursor: "pointer" }}
           >
-            ✕
+            &times;
           </button>
         </div>
       )}
