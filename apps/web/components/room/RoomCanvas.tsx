@@ -107,11 +107,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     if (!roomId || !roomLabel || roomLabel === roomId) return;
     try {
       const cache = JSON.parse(localStorage.getItem(ROOM_NAME_CACHE_KEY) || "{}");
-      if (cache[roomId] === roomLabel) return;
-      cache[roomId] = roomLabel;
+      const entry = typeof cache[roomId] === "object" ? cache[roomId] : { name: cache[roomId] || roomLabel };
+      const updated = { ...entry, name: roomLabel, count: memberCount };
+      if (JSON.stringify(cache[roomId]) === JSON.stringify(updated)) return;
+      cache[roomId] = updated;
       localStorage.setItem(ROOM_NAME_CACHE_KEY, JSON.stringify(cache));
+      try { window.dispatchEvent(new CustomEvent("weered:roomnames:update")); } catch {}
     } catch {}
-  }, [roomId, roomLabel]);
+  }, [roomId, roomLabel, memberCount]);
 
   const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
   const locked      = Boolean(w?.meta?.locked);
