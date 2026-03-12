@@ -79,17 +79,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // Unread indicator — always listen, only count when panel is closed
+  // Unread indicator — watch msgs directly from WeeredProvider, no event bus needed
+  const msgs = Array.isArray(w?.msgs) ? w.msgs : [];
+  const prevMsgCountRef = useRef(msgs.length);
   useEffect(() => {
-    const handler = () => {
+    if (msgs.length > prevMsgCountRef.current) {
       if (!chatOpen) {
         setChatUnread(true);
         setChatUnreadCount(c => c + 1);
       }
-    };
-    window.addEventListener("weered:chat:message", handler);
-    return () => window.removeEventListener("weered:chat:message", handler);
-  }, [chatOpen]);
+    }
+    prevMsgCountRef.current = msgs.length;
+  }, [msgs.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear on open
   useEffect(() => {
