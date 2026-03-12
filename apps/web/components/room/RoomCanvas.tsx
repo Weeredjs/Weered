@@ -8,7 +8,7 @@ import RoomStage, { StageMode } from "./RoomStage";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 function safeCopy(s: string) {
   try { navigator.clipboard?.writeText?.(s); } catch {}
@@ -18,7 +18,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
   try { if (!s) return fallback; return JSON.parse(s) as T; } catch { return fallback; }
 }
 
-// ─── Module pill definitions ──────────────────────────────────────────────────
+// --------- Module pill definitions ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
@@ -30,7 +30,7 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// --------- Component ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
@@ -38,7 +38,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
   const chatRef = useRef<HTMLDivElement>(null);
-  // Article URL from ?article= param — auto-activates browser module
+  // Article URL from ?article= param --- auto-activates browser module
   const [articleUrl, setArticleUrl] = useState<string>("");
   const [browserUrl, setBrowserUrl] = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
@@ -73,14 +73,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // ── Derived room label ──
+  // ------ Derived room label ------
   const roomLabel = useMemo(() => {
     const name = String(w?.meta?.name || w?.meta?.title || w?.meta?.label || w?.admin?.name || "").trim();
     if (name) return name;
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
 
-  // ── Cache resolved room name for recents/favorites ──
+  // ------ Cache resolved room name for recents/favorites ------
   useEffect(() => {
     if (!roomId || !roomLabel || roomLabel === roomId) return;
     try {
@@ -94,7 +94,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
   const locked      = Boolean(w?.meta?.locked);
 
-  // ── Details panel state (localStorage-backed, per room) ──
+  // ------ Details panel state (localStorage-backed, per room) ------
   const aboutKey = `weered.room.about.${roomId}`;
   const linksKey = `weered.room.links.${roomId}`;
 
@@ -131,14 +131,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
-  // ── Toggle stage mode (toggle off if already active) ──
+  // ------ Toggle stage mode (toggle off if already active) ------
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     setStageMode(prev => prev === id ? null : id);
   };
 
   const stageActive = stageMode !== null;
 
-  // ─── Details side panel ────────────────────────────────────────────────────
+  // --------- Details side panel ------------------------------------------------------------------------------------------------------------------------------------------------------------
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/room/${encodeURIComponent(roomId)}`
     : "";
@@ -222,11 +222,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     </div>
   );
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // --------- Render ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   return (
     <div className="flex flex-col min-w-0 h-full overflow-hidden">
 
-      {/* ── Single header bar ── */}
+      {/* -- Single header bar -- */}
       <RoomHeader
         title={roomLabel}
         memberCount={memberCount}
@@ -234,7 +234,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         onInvite={() => {/* TODO: invite system */}}
       />
 
-      {/* ── Persistent voice bar — visible when in voice in THIS room from elsewhere ── */}
+      {/* -- Persistent voice bar -- visible when in voice in THIS room from elsewhere -- */}
       {voice.connState === "connected" && voice.activeRoomId === roomId && (
         <div style={{
           flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
@@ -268,7 +268,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* ── Stage zone ── */}
+      {/* -- Stage zone -- */}
       {/*
         Passive: slim bar showing module pills — click to activate.
         Active:  expands to show RoomStage content; chat compresses below.
@@ -280,7 +280,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         ].join(" ")}
         style={{ height: stageActive ? (stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
       >
-        {/* Idle label — only shown when no stage active */}
+        {/* Idle label -- only shown when no stage active */}
         {!stageActive && (
           <div className="flex items-center px-4 h-10">
             <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/20">
@@ -289,7 +289,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {/* Stage content — rendered when active */}
+        {/* Stage content -- rendered when active */}
         {stageActive && stageMode !== "browser" && (
           <div className="absolute inset-0 flex flex-col" style={{ position: "relative" }}>
             <RoomStage
@@ -349,13 +349,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
       </div>
 
-      {/* ── Main body ── */}
+      {/* -- Main body -- */}
 <div className="flex flex-1 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
         {/* Center column: just the input zone at bottom, no static chat */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden" style={{ position: "relative" }}>
 
-          {/* Spacer — fills the center when no static chat */}
+          {/* Spacer -- fills the center when no static chat */}
           <div className="flex-1 min-h-0" />
 
           {/* Input zone */}
@@ -438,7 +438,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         </div>
 
-        {/* ── Chat toggle tab ── */}
+        {/* -- Chat toggle tab -- */}
         <div
           onClick={() => setChatOpen(o => !o)}
           style={{
@@ -461,7 +461,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <span>CHAT</span>
         </div>
 
-        {/* ── Full-width chat overlay panel ── */}
+        {/* -- Full-width chat overlay panel -- */}
         <div
           style={{
             position: "absolute", top: 0, right: 0, bottom: 0,
@@ -509,7 +509,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       </div>
 
-      {/* ── Floating voice pill — shows when in voice for a DIFFERENT room ── */}
+      {/* -- Floating voice pill -- shows when in voice for a DIFFERENT room -- */}
       {voice.connState === "connected" && voice.activeRoomId && voice.activeRoomId !== roomId && (
         <div style={{
           position: "fixed", bottom: 80, right: 16, zIndex: 9999,
