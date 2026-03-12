@@ -775,18 +775,49 @@ async function main() {
       const payload = ticket.getPayload();
       if (!payload) return reply.redirect(`${WEB_URL}/login?error=no_payload`);
       const googleId = payload.sub;
-      const email = payload.email || "";
-      const displayName = payload.name || email.split("@")[0] || "User";
-      const usernameKey = (email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32)) || `g${googleId.slice(0, 8)}`;
-      let user = await prisma.user.findFirst({ where: { OR: [{ usernameKey }, { name: displayName }] } });
-      if (!user) { user = await prisma.user.create({ data: { name: displayName, usernameKey } }); }
+      const tempName = `g_${googleId.slice(0, 12)}`;
+      let user = await prisma.user.findFirst({ where: { usernameKey: tempName } });
+      const isNew = !user;
+      if (!user) {
+        user = await prisma.user.create({ data: { name: tempName, usernameKey: tempName } });
+      }
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
+      if (isNew) {
+        return reply.redirect(`${WEB_URL}/onboarding?token=${token}&user=${userParam}`);
+      }
       return reply.redirect(`${WEB_URL}/auth/google/finish?token=${token}&user=${userParam}`);
     } catch (e) {
       console.error("[google callback]", e);
       return reply.redirect(`${WEB_URL}/login?error=oauth_failed`);
     }
+  });
+
+  // Auth: username availability check
+  app.get("/auth/username-check", async (req, reply) => {
+    const { username } = (req as any).query as { username?: string };
+    const clean = (username || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32);
+    if (clean.length < 2) return reply.send({ available: false, reason: "too_short" });
+    const existing = await prisma.user.findUnique({ where: { usernameKey: clean } }).catch(() => null);
+    return reply.send({ available: !existing });
+  });
+
+  // Auth: onboarding — set username after Google login
+  app.post("/auth/onboarding", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const body: any = (req as any).body || {};
+    const raw = typeof body.username === "string" ? body.username : "";
+    const usernameKey = raw.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32);
+    if (usernameKey.length < 2) return reply.code(400).send({ error: "Username too short" });
+    const existing = await prisma.user.findUnique({ where: { usernameKey } }).catch(() => null);
+    if (existing && existing.id !== u.id) return reply.code(409).send({ error: "Username taken" });
+    const updated = await prisma.user.update({
+      where: { id: u.id },
+      data: { name: usernameKey, usernameKey },
+    });
+    const token = jwt.sign({ sub: updated.id, name: updated.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ token, user: { id: updated.id, name: updated.name } });
   });
 
   // Voice token (LiveKit)
