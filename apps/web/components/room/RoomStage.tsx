@@ -282,6 +282,8 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
 
 function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
+  const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
+  const [prompted, setPrompted] = useState(alreadyInRoom); // skip prompt if already connected here
 
   const connect = useCallback(async () => {
     await voice.connect(roomId);
@@ -296,18 +298,46 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
     voice.toggleMute();
   }, [voice]);
 
+  // Only auto-connect if user confirmed OR was already in this room
   useEffect(() => {
-    // Only connect if not already connected/connecting to this exact room
+    if (!prompted) return;
     const alreadyHere = voice.connState === "connected" && voice.activeRoomId === roomId;
     const inProgress  = voice.connState === "connecting";
     if (!alreadyHere && !inProgress) {
       connect();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+  }, [prompted, roomId]);
 
   const { connState, errorMsg, muted, tiles } = voice;
   const live = connState === "connected";
+
+  // ── Join prompt ──
+  if (!prompted) return (
+    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, ...style }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0, display: "inline-block" }} />
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(226,232,240,0.9)" }}>Voice is active in this room</div>
+          <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", marginTop: 2 }}>Join to hear and speak with others</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <button
+          onClick={onClose}
+          style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+        >
+          Not now
+        </button>
+        <button
+          onClick={() => setPrompted(true)}
+          style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+        >
+          Join voice
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, height: "100%", ...style }}>
