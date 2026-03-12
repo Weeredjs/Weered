@@ -48,8 +48,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [iframeBlocked, setIframeBlocked] = useState(false);
 
   // Chat state — open by default
-  const [chatOpen, setChatOpen]     = useState(true);
-  const [chatUnread, setChatUnread] = useState(false);
+  const [chatOpen, setChatOpen]         = useState(true);
+  const [chatUnread, setChatUnread]     = useState(false);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   const [voicePrompt, setVoicePrompt] = useState(true);
 
@@ -80,8 +81,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // Mark unread when chat is closed and a new message fires
   useEffect(() => {
-    if (chatOpen) { setChatUnread(false); return; }
-    const handler = () => setChatUnread(true);
+    if (chatOpen) { setChatUnread(false); setChatUnreadCount(0); return; }
+    const handler = () => { setChatUnread(true); setChatUnreadCount(c => c + 1); };
     window.addEventListener("weered:chat:message", handler);
     return () => window.removeEventListener("weered:chat:message", handler);
   }, [chatOpen]);
@@ -220,6 +221,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         memberCount={memberCount}
         locked={locked}
         onInvite={() => {}}
+        pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
+        onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
+        onDetailsClick={() => setShowDetails(d => !d)}
+        showDetails={showDetails}
       />
 
       {/* ── Voice available prompt ── */}
@@ -268,7 +273,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? (stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
+        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
       >
         {!stageActive && (
           <div className="flex items-center px-4 h-10">
@@ -334,52 +339,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
       </div>
 
-      {/*
-        ── Module pills bar ──
-        Always visible at the bottom. When chat is open, a duplicate row
-        appears here at the top of the body so pills stay accessible.
-      */}
-      {chatOpen && (
-        <div className="flex-shrink-0 border-b border-white/[0.07] px-4 py-2" style={{ zIndex: 1 }}>
-          <div className="flex flex-wrap gap-1.5">
-            {MODULES.map((m) => {
-              const isActive = stageMode === m.id;
-              const isLive   = m.live;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  disabled={!isLive}
-                  onClick={() => isLive && handleModuleClick(m.id)}
-                  className={[
-                    "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
-                    isActive
-                      ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
-                      : isLive
-                        ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
-                        : "border-white/[0.06] text-white/20 cursor-default",
-                  ].join(" ")}
-                >
-                  {m.icon} {m.label}
-                  {isActive && <span className="ml-1 text-[9px]">on</span>}
-                  {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => setShowDetails(d => !d)}
-              className={[
-                "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
-                showDetails ? "border-white/20 bg-white/[0.08] text-white/70" : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
-              ].join(" ")}
-            >
-              {showDetails ? "close details" : "... details"}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Main body ── */}
       {/*
         Chat panel and tab live here at the outer level so they are never
@@ -394,47 +353,45 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           {/* Spacer */}
           <div className="flex-1 min-h-0" />
 
-          {/* ── Bottom pills + details (hidden when chat open — top bar takes over) ── */}
-          {!chatOpen && (
-            <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
-              <div className="flex flex-wrap gap-1.5">
-                {MODULES.map((m) => {
-                  const isActive = stageMode === m.id;
-                  const isLive   = m.live;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      disabled={!isLive}
-                      onClick={() => isLive && handleModuleClick(m.id)}
-                      className={[
-                        "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
-                        isActive
-                          ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
-                          : isLive
-                            ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
-                            : "border-white/[0.06] text-white/20 cursor-default",
-                      ].join(" ")}
-                    >
-                      {m.icon} {m.label}
-                      {isActive && <span className="ml-1 text-[9px]">on</span>}
-                      {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setShowDetails(d => !d)}
-                  className={[
-                    "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
-                    showDetails ? "border-white/20 bg-white/[0.08] text-white/70" : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
-                  ].join(" ")}
-                >
-                  {showDetails ? "close details" : "... details"}
-                </button>
-              </div>
+          {/* ── Bottom pills — always visible ── */}
+          <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
+            <div className="flex flex-wrap gap-1.5">
+              {MODULES.map((m) => {
+                const isActive = stageMode === m.id;
+                const isLive   = m.live;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    disabled={!isLive}
+                    onClick={() => isLive && handleModuleClick(m.id)}
+                    className={[
+                      "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
+                      isActive
+                        ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
+                        : isLive
+                          ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
+                          : "border-white/[0.06] text-white/20 cursor-default",
+                    ].join(" ")}
+                  >
+                    {m.icon} {m.label}
+                    {isActive && <span className="ml-1 text-[9px]">on</span>}
+                    {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setShowDetails(d => !d)}
+                className={[
+                  "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
+                  showDetails ? "border-white/20 bg-white/[0.08] text-white/70" : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
+                ].join(" ")}
+              >
+                {showDetails ? "close details" : "... details"}
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* ── Details side panel ── */}
@@ -487,6 +444,23 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         >
           {chatUnread && !chatOpen && (
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a78bfa", boxShadow: "0 0 7px rgba(167,139,250,0.9)", flexShrink: 0 }} />
+          )}
+          {chatUnreadCount > 0 && !chatOpen && (
+            <span style={{
+              background: "#7c3aed",
+              color: "#fff",
+              fontSize: 9,
+              fontWeight: 900,
+              borderRadius: 6,
+              padding: "1px 4px",
+              minWidth: 14,
+              textAlign: "center",
+              writingMode: "horizontal-tb",
+              letterSpacing: 0,
+              flexShrink: 0,
+            }}>
+              {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+            </span>
           )}
           <span style={{ writingMode: "horizontal-tb", fontSize: 10, lineHeight: 1 }}>{chatOpen ? "›" : "‹"}</span>
           <span>CHAT</span>
