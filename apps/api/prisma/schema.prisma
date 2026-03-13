@@ -278,6 +278,62 @@ model DirectMessage {
   @@index([toId, readAt])
 }
 
+// ── Crew / Dojo ───────────────────────────────────────────────────────────────
+
+enum CrewRole {
+  LEADER
+  OFFICER
+  MEMBER
+}
+
+model Crew {
+  id          String   @id @default(cuid())
+  name        String
+  tag         String   @default("")   // short tag e.g. [W8M]
+  description String   @default("")
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members CrewMember[]
+}
+
+model CrewMember {
+  id        String   @id @default(cuid())
+  crewId    String
+  userId    String
+  name      String   @default("")
+  role      CrewRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
+
+  @@unique([crewId, userId])
+  @@index([userId])
+}
+
+// ── Friends ───────────────────────────────────────────────────────────────────
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+model FriendRequest {
+  id         String       @id @default(cuid())
+  fromId     String
+  toId       String
+  status     FriendStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([fromId, toId])
+  @@index([toId, status])
+  @@index([fromId, status])
+}
+
 model FeedItem {
   id          String   @id @default(cuid())
   url         String   @unique
