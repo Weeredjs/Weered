@@ -7,7 +7,7 @@ import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
-import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType, CrewRole, FriendStatus } from "@prisma/client";
+import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
 
 const prisma = new PrismaClient();
@@ -1742,13 +1742,13 @@ app.post("/dm/:peerId", async (req, reply) => {
         }
 
         // ── YouTube / media sync ──────────────────────────────────────────────
-        // Any room member can send a youtube:load; server rebroadcasts to all others in the room.
-        // The payload mirrors what the client already sends: { type, roomId, url, ts?, playing? }
-        if (msg.type === "youtube:load" || msg.type === "youtube:sync" || msg.type === "youtube:play" || msg.type === "youtube:pause" || msg.type === "youtube:stop") {
+        // Relay any youtube: message to every OTHER socket in the same room.
+        // The client sends: { type: "youtube:load"|"youtube:sync"|"youtube:play"|"youtube:pause"|"youtube:stop", roomId, url?, ts?, playing? }
+        if (msg.type === "youtube:load" || msg.type === "youtube:sync" ||
+            msg.type === "youtube:play" || msg.type === "youtube:pause" || msg.type === "youtube:stop") {
           if (!room.users.has(ws.user.id)) return;
-          // Relay to everyone else in the room
           for (const s of room.sockets) {
-            if (s === ws) continue; // don't echo back to sender
+            if (s === ws) continue;
             send(s, { ...msg, roomId, _from: ws.user.id });
           }
           return;
@@ -1803,66 +1803,48 @@ app.post("/dm/:peerId", async (req, reply) => {
 
   // ── Friends ───────────────────────────────────────────────────────────────
 
-  // GET /friends — list accepted friends with live presence
   app.get("/friends", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
-
-    // All accepted friend links involving this user
-    const links = await prisma.friendRequest.findMany({
+    const db = prisma as any;
+    const links = await db.friendRequest.findMany({
       where: { status: "ACCEPTED", OR: [{ fromId: u.id }, { toId: u.id }] },
     });
-    const peerIds = links.map(l => l.fromId === u.id ? l.toId : l.fromId);
+    const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
       ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true } })
       : [];
-
-    // Attach live presence
     const out = profiles.map(p => {
-      let roomId: string | null = null;
-      let roomName: string | null = null;
-      for (const [rid, rs] of rooms) {
-        if (rs.users.has(p.id)) { roomId = rid; roomName = rs.name || rid; break; }
-      }
+      let roomId: string | null = null; let roomName: string | null = null;
+      for (const [rid, rs] of rooms) { if (rs.users.has(p.id)) { roomId = rid; roomName = rs.name || rid; break; } }
       return { ...p, online: roomId !== null, roomId, roomName };
     });
     return reply.send({ friends: out });
   });
 
-  // GET /friends/requests — incoming pending requests
   app.get("/friends/requests", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
-
-    const reqs = await prisma.friendRequest.findMany({
-      where: { toId: u.id, status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-    });
-    // Enrich with sender name
-    const fromIds = reqs.map(r => r.fromId);
-    const senders = fromIds.length
-      ? await prisma.user.findMany({ where: { id: { in: fromIds } }, select: { id: true, name: true } })
-      : [];
+    const db = prisma as any;
+    const reqs = await db.friendRequest.findMany({ where: { toId: u.id, status: "PENDING" }, orderBy: { createdAt: "desc" } });
+    const fromIds = (reqs as any[]).map((r: any) => r.fromId);
+    const senders = fromIds.length ? await prisma.user.findMany({ where: { id: { in: fromIds } }, select: { id: true, name: true } }) : [];
     const senderMap = new Map(senders.map(s => [s.id, s.name]));
-    return reply.send({ requests: reqs.map(r => ({ ...r, fromName: senderMap.get(r.fromId) ?? r.fromId })) });
+    return reply.send({ requests: (reqs as any[]).map((r: any) => ({ ...r, fromName: senderMap.get(r.fromId) ?? r.fromId })) });
   });
 
-  // POST /friends/request/:userId — send a friend request
   app.post("/friends/request/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const toId = String((req.params as any).userId || "").trim();
     if (!toId || toId === u.id) return reply.code(400).send({ error: "Invalid target" });
-
-    // Check user exists
     const target = await prisma.user.findUnique({ where: { id: toId }, select: { id: true } });
     if (!target) return reply.code(404).send({ error: "User not found" });
-
-    // Upsert (handles duplicate gracefully)
-    const fr = await prisma.friendRequest.upsert({
+    const db = prisma as any;
+    const fr = await db.friendRequest.upsert({
       where: { fromId_toId: { fromId: u.id, toId } },
       update: { status: "PENDING", updatedAt: new Date() },
       create: { fromId: u.id, toId, status: "PENDING" },
@@ -1870,19 +1852,16 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, request: fr });
   });
 
-  // POST /friends/accept/:requestId
   app.post("/friends/accept/:requestId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const id = String((req.params as any).requestId || "").trim();
-
-    const fr = await prisma.friendRequest.findUnique({ where: { id } });
+    const db = prisma as any;
+    const fr = await db.friendRequest.findUnique({ where: { id } });
     if (!fr || fr.toId !== u.id) return reply.code(403).send({ error: "Not your request" });
-
-    await prisma.friendRequest.update({ where: { id }, data: { status: "ACCEPTED" } });
-    // Create reciprocal so both sides can query easily
-    await prisma.friendRequest.upsert({
+    await db.friendRequest.update({ where: { id }, data: { status: "ACCEPTED" } });
+    await db.friendRequest.upsert({
       where: { fromId_toId: { fromId: u.id, toId: fr.fromId } },
       update: { status: "ACCEPTED" },
       create: { fromId: u.id, toId: fr.fromId, status: "ACCEPTED" },
@@ -1890,57 +1869,43 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true });
   });
 
-  // POST /friends/decline/:requestId
   app.post("/friends/decline/:requestId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const id = String((req.params as any).requestId || "").trim();
-
-    const fr = await prisma.friendRequest.findUnique({ where: { id } });
+    const db = prisma as any;
+    const fr = await db.friendRequest.findUnique({ where: { id } });
     if (!fr || fr.toId !== u.id) return reply.code(403).send({ error: "Not your request" });
-    await prisma.friendRequest.update({ where: { id }, data: { status: "DECLINED" } });
+    await db.friendRequest.update({ where: { id }, data: { status: "DECLINED" } });
     return reply.send({ ok: true });
   });
 
-  // DELETE /friends/:userId — remove friend (both directions)
   app.delete("/friends/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const peerId = String((req.params as any).userId || "").trim();
-    await prisma.friendRequest.deleteMany({
-      where: { OR: [{ fromId: u.id, toId: peerId }, { fromId: peerId, toId: u.id }] },
-    });
+    const db = prisma as any;
+    await db.friendRequest.deleteMany({ where: { OR: [{ fromId: u.id, toId: peerId }, { fromId: peerId, toId: u.id }] } });
     return reply.send({ ok: true });
   });
 
   // ── Crews / Dojo ──────────────────────────────────────────────────────────
 
-  // GET /crews/mine — my crew(s)
   app.get("/crews/mine", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
-
-    const memberships = await prisma.crewMember.findMany({
+    const db = prisma as any;
+    const memberships = await db.crewMember.findMany({
       where: { userId: u.id },
-      include: {
-        crew: {
-          include: {
-            members: { select: { userId: true, name: true, role: true } },
-          },
-        },
-      },
+      include: { crew: { include: { members: { select: { userId: true, name: true, role: true } } } } },
     });
-
-    const crews = memberships.map(m => {
-      const memberPresence = m.crew.members.map(cm => {
-        let roomId: string | null = null;
-        let roomName: string | null = null;
-        for (const [rid, rs] of rooms) {
-          if (rs.users.has(cm.userId)) { roomId = rid; roomName = rs.name || rid; break; }
-        }
+    const crews = (memberships as any[]).map((m: any) => {
+      const memberPresence = (m.crew.members || []).map((cm: any) => {
+        let roomId: string | null = null; let roomName: string | null = null;
+        for (const [rid, rs] of rooms) { if (rs.users.has(cm.userId)) { roomId = rid; roomName = rs.name || rid; break; } }
         return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName };
       });
       return { ...m.crew, myRole: m.role, members: memberPresence };
@@ -1948,15 +1913,14 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ crews });
   });
 
-  // POST /crews — create a crew (Dojo)
   app.post("/crews", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const { name, tag, description } = req.body as any;
     if (!name?.trim()) return reply.code(400).send({ error: "Name required" });
-
-    const crew = await prisma.crew.create({
+    const db = prisma as any;
+    const crew = await db.crew.create({
       data: {
         name: String(name).trim().slice(0, 40),
         tag: String(tag || "").trim().slice(0, 6).toUpperCase(),
@@ -1969,20 +1933,17 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, crew });
   });
 
-  // POST /crews/:crewId/invite/:userId — leader/officer invites a user
   app.post("/crews/:crewId/invite/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const { crewId, userId } = req.params as any;
-
-    const myMembership = await prisma.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
-    if (!myMembership || (myMembership.role === "MEMBER")) return reply.code(403).send({ error: "Not an officer" });
-
+    const db = prisma as any;
+    const myMembership = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    if (!myMembership || myMembership.role === "MEMBER") return reply.code(403).send({ error: "Not an officer" });
     const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true } });
     if (!target) return reply.code(404).send({ error: "User not found" });
-
-    await prisma.crewMember.upsert({
+    await db.crewMember.upsert({
       where: { crewId_userId: { crewId, userId } },
       update: {},
       create: { crewId, userId, name: target.name, role: "MEMBER" },
@@ -1990,35 +1951,31 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true });
   });
 
-  // DELETE /crews/:crewId/members/:userId — leave or kick
   app.delete("/crews/:crewId/members/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const { crewId, userId } = req.params as any;
-
-    const crew = await prisma.crew.findUnique({ where: { id: crewId } });
+    const db = prisma as any;
+    const crew = await db.crew.findUnique({ where: { id: crewId } });
     if (!crew) return reply.code(404).send({ error: "Crew not found" });
-
-    const myMembership = await prisma.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    const myMembership = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
     const isSelf = userId === u.id;
     const isLeader = myMembership?.role === "LEADER" || crew.ownerId === u.id;
     if (!isSelf && !isLeader) return reply.code(403).send({ error: "Forbidden" });
-
-    await prisma.crewMember.deleteMany({ where: { crewId, userId } });
+    await db.crewMember.deleteMany({ where: { crewId, userId } });
     return reply.send({ ok: true });
   });
 
-  // DELETE /crews/:crewId — disband (leader only)
   app.delete("/crews/:crewId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const { crewId } = req.params as any;
-
-    const crew = await prisma.crew.findUnique({ where: { id: crewId } });
+    const db = prisma as any;
+    const crew = await db.crew.findUnique({ where: { id: crewId } });
     if (!crew || crew.ownerId !== u.id) return reply.code(403).send({ error: "Leader only" });
-    await prisma.crew.delete({ where: { id: crewId } });
+    await db.crew.delete({ where: { id: crewId } });
     return reply.send({ ok: true });
   });
 
