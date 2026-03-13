@@ -88,13 +88,18 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const { me, wsReady, wsState, activeRoomId, joinedRoomId, users, msgs, meta, admin, role, joinStatus, sendChat, logout, renameRoom, lockRoom, unlockRoom, knock, admit } = ctx || {};
 
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("room");
+  const [tab, setTab] = useState<"room"|"dms"|"friends">("room");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
-  const [theme, setTheme] = useState<WeeredThemeName>(() => {
-    try { const v = String(localStorage.getItem(WEERED_THEME_KEY)||"").trim(); if(["slate","zinc","stone","gray"].includes(v)) return v as WeeredThemeName; } catch {}
-    return "stone";
-  });
+  const [theme, setTheme] = useState<WeeredThemeName>("stone");
+
+  // Hydrate theme from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => {
+    try {
+      const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
+      if (["slate","zinc","stone","gray"].includes(v)) setTheme(v as WeeredThemeName);
+    } catch {}
+  }, []);
 
   useEffect(() => { try { localStorage.setItem(WEERED_THEME_KEY,theme); } catch {} applyWeeredTheme(theme); }, [theme]);
 
@@ -294,9 +299,8 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
         <SegmentedControl
           tabs={[
             {id:"room",label:"Room"},
-            {id:"dms",label:"DMs",badge:totalUnread},
-            {id:"friends",label:"Friends"},
-            {id:"crew",label:"Crew"},
+            {id:"dms",label:"Messages",badge:totalUnread},
+            {id:"friends",label:"People"},
           ]}
           active={tab}
           onChange={id=>setTab(id as any)}
@@ -456,23 +460,11 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
           </div>
 
         ) : tab==="friends" ? (
-          <FriendsTab
-            apiBase={apiBase}
-            tokenMaybe={tokenMaybe}
-            myId={String(me?.id||"")}
-            rooms={userArr}
+          <FriendsTab dmThreads={dmThreads} rooms={userArr}
             onMessage={(peerName,peerId)=>{
               setTab("dms");
               setDmThreads(cur=>{const ex=cur.find(t=>t.peerId===peerId||t.peerName.toLowerCase()===peerName.toLowerCase()); if(ex){setDmActivePeerId(ex.peerId);return cur;} setDmActivePeerId(peerId); return [{peerId,peerName,msgs:[],unread:0},...cur];});
             }}
-            onJoin={roomId=>{try{(ctx as any)?.join?.(roomId);}catch{}}}
-          />
-        ) : tab==="crew" ? (
-          <CrewTab
-            apiBase={apiBase}
-            tokenMaybe={tokenMaybe}
-            myId={String(me?.id||"")}
-            myName={meName}
             onJoin={roomId=>{try{(ctx as any)?.join?.(roomId);}catch{}}}
           />
         ) : null}
@@ -481,282 +473,44 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   );
 }
 
-function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, onJoin }: {
-  apiBase: string; tokenMaybe: string; myId: string;
-  rooms: any[]; onMessage: (pn: string, pi: string) => void; onJoin: (r: string) => void;
-}) {
-  const [friends, setFriends] = React.useState<any[]>([]);
-  const [requests, setRequests] = React.useState<any[]>([]);
-  const [addInput, setAddInput] = React.useState("");
-  const [addNote, setAddNote] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const [tab, setTab] = React.useState<"friends"|"requests">("friends");
+function FriendsTab({ dmThreads, rooms, onMessage, onJoin }: { dmThreads:DmThread[]; rooms:any[]; onMessage:(pn:string,pi:string)=>void; onJoin:(r:string)=>void }) {
+  const friends = dmThreads.map(t=>({ thread:t, online:rooms.find((u:any)=>String(u?.name??u?.username??"").toLowerCase()===t.peerName.toLowerCase()||(t.peerId&&String(u?.id??"")===t.peerId))??null }));
+  const online = friends.filter(f=>f.online);
+  const offline = friends.filter(f=>!f.online);
 
-  async function load() {
-    if (!apiBase || !tokenMaybe) return;
-    setLoading(true);
-    try {
-      const [fr, rq] = await Promise.all([
-        fetch(`${apiBase}/friends`, { headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json()),
-        fetch(`${apiBase}/friends/requests`, { headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json()),
-      ]);
-      setFriends(Array.isArray(fr?.friends) ? fr.friends : []);
-      setRequests(Array.isArray(rq?.requests) ? rq.requests : []);
-    } catch {}
-    setLoading(false);
-  }
-
-  React.useEffect(() => { void load(); }, [apiBase, tokenMaybe]);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, [apiBase, tokenMaybe]);
-
-  async function sendRequest() {
-    const target = addInput.trim(); if (!target) return;
-    setAddNote("");
-    try {
-      // Resolve by username first
-      const profile = await fetch(`${apiBase}/profile/${encodeURIComponent(target)}`, { headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json());
-      if (!profile?.id) { setAddNote("User not found"); return; }
-      const res = await fetch(`${apiBase}/friends/request/${profile.id}`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json());
-      if (res.ok) { setAddInput(""); setAddNote("Request sent!"); void load(); }
-      else setAddNote(res.error || "Failed");
-    } catch { setAddNote("Error"); }
-  }
-
-  async function accept(id: string) {
-    await fetch(`${apiBase}/friends/accept/${id}`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } });
-    void load();
-  }
-
-  async function decline(id: string) {
-    await fetch(`${apiBase}/friends/decline/${id}`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } });
-    void load();
-  }
-
-  async function remove(userId: string) {
-    await fetch(`${apiBase}/friends/${userId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenMaybe}` } });
-    void load();
-  }
-
-  const online = friends.filter(f => f.online);
-  const offline = friends.filter(f => !f.online);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-      {/* Add friend */}
-      <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--weered-bd)", flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          <input value={addInput} onChange={e => setAddInput(e.target.value)} placeholder="Add by username…"
-            style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-bd2)", background: "rgba(255,255,255,.05)", color: "var(--weered-text)", outline: "none", fontSize: 12 }}
-            onKeyDown={e => e.key === "Enter" && sendRequest()} />
-          <button onClick={sendRequest} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid var(--weered-accent-ring)", background: "var(--weered-accent-bg)", color: "var(--weered-accent-text)", fontSize: 12, cursor: "pointer", fontWeight: 700 }}>+</button>
+  const render = (f:{thread:DmThread;online:any}) => {
+    const {thread,online:o}=f;
+    const roomId=String(o?.roomId??o?.activeRoom??o?.room??"");
+    const roomName=String(o?.roomName??o?.room??roomId??"");
+    return (
+      <div key={thread.peerId} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:"1px solid var(--weered-bd)" }}>
+        <div style={{ position:"relative" as const }}>
+          <Avatar name={thread.peerName} size={36} />
+          <span style={{ position:"absolute" as const, bottom:0, right:0, width:10, height:10, borderRadius:999, background:o?"#22c55e":"rgba(255,255,255,.2)", border:"2px solid var(--weered-panel2)" }} />
         </div>
-        {addNote && <div style={{ fontSize: 11, marginTop: 5, color: "var(--weered-muted)" }}>{addNote}</div>}
-      </div>
-
-      {/* Sub-tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--weered-bd)", flexShrink: 0 }}>
-        {(["friends", "requests"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "8px 0", border: "none", background: "transparent", color: tab === t ? "var(--weered-accent-text)" : "var(--weered-muted)", fontSize: 11, fontWeight: tab === t ? 700 : 500, cursor: "pointer", borderBottom: tab === t ? "2px solid var(--weered-accent-text)" : "2px solid transparent" }}>
-            {t === "friends" ? `Friends${friends.length ? ` · ${friends.length}` : ""}` : `Requests${requests.length ? ` · ${requests.length}` : ""}`}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {loading && !friends.length && !requests.length && (
-          <div style={{ padding: 20, textAlign: "center" as const, color: "var(--weered-muted)", fontSize: 13 }}>Loading…</div>
-        )}
-
-        {tab === "requests" && (
-          requests.length === 0
-            ? <div style={{ padding: 24, textAlign: "center" as const, color: "var(--weered-muted)", fontSize: 13 }}>No pending requests</div>
-            : requests.map(r => (
-              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid var(--weered-bd)" }}>
-                <Avatar name={r.fromName || "?"} size={34} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>@{r.fromName}</div>
-                  <div style={{ fontSize: 11, color: "var(--weered-muted)" }}>wants to connect</div>
-                </div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  <button onClick={() => accept(r.id)} style={{ padding: "5px 9px", borderRadius: 8, border: "1px solid rgba(34,197,94,.4)", background: "rgba(34,197,94,.12)", color: "rgb(134,239,172)", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>✓</button>
-                  <button onClick={() => decline(r.id)} style={{ padding: "5px 9px", borderRadius: 8, border: "1px solid var(--weered-bd)", background: "transparent", color: "var(--weered-muted)", fontSize: 11, cursor: "pointer" }}>✕</button>
-                </div>
-              </div>
-            ))
-        )}
-
-        {tab === "friends" && (
-          friends.length === 0
-            ? <div style={{ padding: 24, textAlign: "center" as const, color: "var(--weered-muted)", fontSize: 13 }}>No friends yet.<br />Search by username above.</div>
-            : <>
-              {online.length > 0 && <div style={{ padding: "10px 14px 4px", fontSize: 10, fontWeight: 700, color: "var(--weered-muted)", textTransform: "uppercase" as const, letterSpacing: .5 }}>Online · {online.length}</div>}
-              {online.map(f => <FriendRow key={f.id} f={f} onMessage={onMessage} onJoin={onJoin} onRemove={remove} />)}
-              {offline.length > 0 && <div style={{ padding: "10px 14px 4px", fontSize: 10, fontWeight: 700, color: "var(--weered-muted)", textTransform: "uppercase" as const, letterSpacing: .5, marginTop: 4 }}>Offline · {offline.length}</div>}
-              {offline.map(f => <FriendRow key={f.id} f={f} onMessage={onMessage} onJoin={onJoin} onRemove={remove} />)}
-            </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FriendRow({ f, onMessage, onJoin, onRemove }: { f: any; onMessage: (n: string, i: string) => void; onJoin: (r: string) => void; onRemove: (id: string) => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid var(--weered-bd)" }}>
-      <div style={{ position: "relative" as const }}>
-        <Avatar name={f.name || "?"} size={34} chosenColor={f.avatarColor} />
-        <span style={{ position: "absolute" as const, bottom: 0, right: 0, width: 9, height: 9, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.2)", border: "2px solid var(--weered-panel2)" }} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 13 }}>@{f.name}</div>
-        <div style={{ fontSize: 11, color: "var(--weered-muted)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-          {f.online ? (f.roomName ? `in ${f.roomName}` : "online") : "offline"}
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontWeight:600, fontSize:13 }}>@{thread.peerName}</div>
+          <div style={{ fontSize:11, color:"var(--weered-muted)", marginTop:1 }}>{o?(roomName?`in ${roomName}`:"online"):"offline"}</div>
+        </div>
+        <div style={{ display:"flex", gap:5 }}>
+          <button onClick={()=>onMessage(thread.peerName,thread.peerId??"")} style={{ padding:"5px 10px",borderRadius:8,border:"1px solid var(--weered-bd2)",background:"rgba(255,255,255,.05)",color:"var(--weered-text)",fontSize:11,cursor:"pointer",fontWeight:600 }}>DM</button>
+          {o&&roomId&&<button onClick={()=>onJoin(roomId)} style={{ padding:"5px 10px",borderRadius:8,border:"1px solid var(--weered-accent-ring)",background:"var(--weered-accent-bg)",color:"var(--weered-accent-text)",fontSize:11,cursor:"pointer",fontWeight:600 }}>Join</button>}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 4 }}>
-        <button onClick={() => onMessage(f.name, f.id)} style={{ padding: "5px 9px", borderRadius: 8, border: "1px solid var(--weered-bd2)", background: "rgba(255,255,255,.05)", color: "var(--weered-text)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>DM</button>
-        {f.online && f.roomId && <button onClick={() => onJoin(f.roomId)} style={{ padding: "5px 9px", borderRadius: 8, border: "1px solid var(--weered-accent-ring)", background: "var(--weered-accent-bg)", color: "var(--weered-accent-text)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Join</button>}
-      </div>
-    </div>
-  );
-}
+    );
+  };
 
-// ── Crew / Dojo Tab ────────────────────────────────────────────────────────────
-
-function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase: string; tokenMaybe: string; myId: string; myName: string; onJoin: (r: string) => void }) {
-  const [crews, setCrews] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [view, setView] = React.useState<"list"|"create">("list");
-  const [newName, setNewName] = React.useState("");
-  const [newTag, setNewTag] = React.useState("");
-  const [newDesc, setNewDesc] = React.useState("");
-  const [creating, setCreating] = React.useState(false);
-  const [note, setNote] = React.useState("");
-
-  async function load() {
-    if (!apiBase || !tokenMaybe) return;
-    setLoading(true);
-    try {
-      const j = await fetch(`${apiBase}/crews/mine`, { headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json());
-      setCrews(Array.isArray(j?.crews) ? j.crews : []);
-    } catch {}
-    setLoading(false);
-  }
-
-  React.useEffect(() => { void load(); }, [apiBase, tokenMaybe]);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, [apiBase, tokenMaybe]);
-
-  async function createCrew() {
-    if (!newName.trim()) return;
-    setCreating(true); setNote("");
-    try {
-      const j = await fetch(`${apiBase}/crews`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenMaybe}` }, body: JSON.stringify({ name: newName.trim(), tag: newTag.trim(), description: newDesc.trim() }) }).then(r => r.json());
-      if (j.ok) { setView("list"); setNewName(""); setNewTag(""); setNewDesc(""); void load(); }
-      else setNote(j.error || "Failed");
-    } catch { setNote("Error"); }
-    setCreating(false);
-  }
-
-  async function leaveCrew(crewId: string) {
-    if (!confirm("Leave this crew?")) return;
-    await fetch(`${apiBase}/crews/${crewId}/members/${myId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenMaybe}` } });
-    void load();
-  }
-
-  async function disbandCrew(crewId: string) {
-    if (!confirm("Disband this crew? This cannot be undone.")) return;
-    await fetch(`${apiBase}/crews/${crewId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenMaybe}` } });
-    void load();
-  }
-
-  if (view === "create") return (
-    <div style={{ padding: "14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <button onClick={() => setView("list")} style={{ background: "none", border: "none", color: "var(--weered-muted)", cursor: "pointer", fontSize: 18, padding: "0 4px", lineHeight: 1 }}>←</button>
-        <span style={{ fontWeight: 700, fontSize: 14 }}>Create Dojo</span>
-      </div>
-      {[
-        { label: "Name", val: newName, set: setNewName, ph: "The 8 Meter", max: 40 },
-        { label: "Tag [optional]", val: newTag, set: setNewTag, ph: "W8M", max: 6 },
-        { label: "Description", val: newDesc, set: setNewDesc, ph: "What's your crew about", max: 200 },
-      ].map(({ label, val, set, ph, max }) => (
-        <div key={label}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--weered-muted)", marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: .5 }}>{label}</div>
-          <input value={val} onChange={e => set(e.target.value.slice(0, max))} placeholder={ph}
-            style={{ width: "100%", padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-bd2)", background: "rgba(255,255,255,.05)", color: "var(--weered-text)", outline: "none", fontSize: 13, boxSizing: "border-box" as const }} />
-        </div>
-      ))}
-      {note && <div style={{ fontSize: 11, color: "rgba(252,165,165,.8)" }}>{note}</div>}
-      <button onClick={createCrew} disabled={creating || !newName.trim()}
-        style={{ padding: "10px", borderRadius: 12, border: "1px solid var(--weered-accent-ring)", background: "var(--weered-accent-bg)", color: "var(--weered-accent-text)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-        {creating ? "Creating…" : "Establish Dojo"}
-      </button>
+  if (!friends.length) return (
+    <div style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,padding:24 }}>
+      <span style={{ fontSize:28 }}>👥</span>
+      <span style={{ fontSize:13,color:"var(--weered-muted)",textAlign:"center" as const }}>No contacts yet.<br/>Message someone to add them.</span>
     </div>
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-      <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--weered-bd)", flexShrink: 0 }}>
-        <button onClick={() => setView("create")} style={{ width: "100%", padding: "9px", borderRadius: 10, border: "1px solid var(--weered-accent-ring)", background: "var(--weered-accent-bg)", color: "var(--weered-accent-text)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-          + Establish Dojo
-        </button>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {loading && !crews.length && <div style={{ padding: 20, textAlign: "center" as const, color: "var(--weered-muted)", fontSize: 13 }}>Loading…</div>}
-        {!loading && !crews.length && (
-          <div style={{ padding: 24, textAlign: "center" as const, color: "var(--weered-muted)", fontSize: 13 }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>⚔️</div>
-            No crew yet.<br />Establish your Dojo.
-          </div>
-        )}
-        {crews.map(crew => {
-          const isLeader = crew.myRole === "LEADER";
-          const onlineMembers = (crew.members || []).filter((m: any) => m.online);
-          return (
-            <div key={crew.id} style={{ borderBottom: "1px solid var(--weered-bd)", padding: "12px 14px" }}>
-              {/* Crew header */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 10 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-                    {crew.name}
-                    {crew.tag && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, border: "1px solid var(--weered-accent-ring)", color: "var(--weered-accent-text)", background: "var(--weered-accent-bg)", fontFamily: "monospace" }}>[{crew.tag}]</span>}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--weered-muted)", marginTop: 2 }}>{crew.members?.length ?? 0} members · {onlineMembers.length} online</div>
-                  {crew.description && <div style={{ fontSize: 11, color: "var(--weered-muted)", marginTop: 3 }}>{crew.description}</div>}
-                </div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {isLeader
-                    ? <button onClick={() => disbandCrew(crew.id)} style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(239,68,68,.3)", background: "transparent", color: "rgba(252,165,165,.8)", fontSize: 10, cursor: "pointer" }}>Disband</button>
-                    : <button onClick={() => leaveCrew(crew.id)} style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--weered-bd)", background: "transparent", color: "var(--weered-muted)", fontSize: 10, cursor: "pointer" }}>Leave</button>
-                  }
-                </div>
-              </div>
-              {/* Members */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {(crew.members || []).map((m: any) => (
-                  <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ position: "relative" as const }}>
-                      <Avatar name={m.name || "?"} size={26} />
-                      <span style={{ position: "absolute" as const, bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid var(--weered-panel2)" }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-                        {m.name}
-                        {m.role === "LEADER" && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 5, background: "rgba(245,158,11,.15)", color: "rgb(251,191,36)", border: "1px solid rgba(245,158,11,.3)" }}>LEADER</span>}
-                        {m.role === "OFFICER" && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 5, background: "rgba(139,92,246,.15)", color: "rgb(167,139,250)", border: "1px solid rgba(139,92,246,.3)" }}>OFFICER</span>}
-                      </div>
-                      {m.online && m.roomName && <div style={{ fontSize: 10, color: "var(--weered-muted)" }}>in {m.roomName}</div>}
-                    </div>
-                    {m.online && m.roomId && m.userId !== myId && (
-                      <button onClick={() => onJoin(m.roomId)} style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--weered-accent-ring)", background: "var(--weered-accent-bg)", color: "var(--weered-accent-text)", fontSize: 10, cursor: "pointer", fontWeight: 600 }}>Join</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div style={{ display:"flex", flexDirection:"column" }}>
+      {online.length>0&&<><div style={{ padding:"10px 14px 4px",fontSize:11,fontWeight:700,color:"var(--weered-muted)",textTransform:"uppercase" as const,letterSpacing:.5 }}>Online · {online.length}</div>{online.map(render)}</>}
+      {offline.length>0&&<><div style={{ padding:"10px 14px 4px",fontSize:11,fontWeight:700,color:"var(--weered-muted)",textTransform:"uppercase" as const,letterSpacing:.5,marginTop:4 }}>Offline · {offline.length}</div>{offline.map(render)}</>}
     </div>
   );
 }
