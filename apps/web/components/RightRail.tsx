@@ -340,6 +340,8 @@ function CrewPanel() {
 export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const pathname       = usePathname() || "";
   const { globalRole } = useWeered() as any;
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
 
   // Resolve lobby from prop (passed by RightRailSwitch) or fall back to pathname
   const resolvedLobbyId = lobbyId ?? (() => {
@@ -356,6 +358,13 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   })();
 
   const ctxLabel = resolvedLobbyId || pathname;
+
+  if (!mounted) return (
+    <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
+      <div style={{ fontWeight: 800, fontSize: 13 }}>Control Panel</div>
+      <div style={{ fontSize: 11, opacity: 0.4, marginTop: 4 }}>loading…</div>
+    </div>
+  );
 
   return (
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
