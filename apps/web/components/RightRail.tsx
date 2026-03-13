@@ -195,6 +195,9 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
 function FriendsPanel() {
   const [friends, setFriends] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => { setMounted(true); }, []);
 
   async function load() {
     try {
@@ -203,10 +206,13 @@ function FriendsPanel() {
     } catch {}
   }
 
-  React.useEffect(() => { void load(); }, []);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
+  React.useEffect(() => { if (mounted) void load(); }, [mounted]);
+  React.useEffect(() => {
+    if (!mounted) return;
+    const t = setInterval(load, 8000); return () => clearInterval(t);
+  }, [mounted]);
 
-  if (!friends.length) return null;
+  if (!mounted || !friends.length) return null;
 
   const online  = friends.filter(f => f.online);
   const offline = friends.filter(f => !f.online);
@@ -263,6 +269,9 @@ function FriendsPanel() {
 function CrewPanel() {
   const [crews, setCrews] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => { setMounted(true); }, []);
 
   async function load() {
     try {
@@ -271,10 +280,13 @@ function CrewPanel() {
     } catch {}
   }
 
-  React.useEffect(() => { void load(); }, []);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
+  React.useEffect(() => { if (mounted) void load(); }, [mounted]);
+  React.useEffect(() => {
+    if (!mounted) return;
+    const t = setInterval(load, 8000); return () => clearInterval(t);
+  }, [mounted]);
 
-  if (!crews.length) return null;
+  if (!mounted || !crews.length) return null;
 
   const allMembers = crews.flatMap((c: any) =>
     (c.members || []).map((m: any) => ({ ...m, crewName: c.name, crewTag: c.tag }))
