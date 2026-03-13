@@ -18,85 +18,9 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── CrewPanel ──────────────────────────────────────────────────────────────────
-// Shows in the right rail reserved space — crew presence at a glance
-
-function CrewPanel() {
-  const [crews, setCrews] = React.useState<any[]>([]);
-  const [open, setOpen] = React.useState(true);
-
-  async function load() {
-    try {
-      const j = await apiFetch("/crews/mine");
-      setCrews(Array.isArray(j?.crews) ? j.crews : []);
-    } catch {}
-  }
-
-  React.useEffect(() => { void load(); }, []);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
-
-  if (!crews.length) return null;
-
-  const allMembers = crews.flatMap((c: any) => (c.members || []).map((m: any) => ({ ...m, crewName: c.name, crewTag: c.tag })));
-  const online = allMembers.filter((m: any) => m.online);
-
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }}
-        onClick={() => setOpen(o => !o)}
-      >
-        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" as const }}>
-          Crew · {online.length} online
-        </div>
-        <span style={{ fontSize: 10, opacity: 0.4 }}>{open ? "▲" : "▼"}</span>
-      </div>
-
-      {open && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {allMembers.length === 0 && (
-            <div style={{ fontSize: 12, opacity: 0.4, padding: "6px 0" }}>No crew members yet.</div>
-          )}
-          {allMembers.map((m: any) => (
-            <div key={m.userId} style={{
-              display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)",
-            }}>
-              <div style={{ position: "relative" as const, flexShrink: 0 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 999, background: "rgba(124,58,237,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "rgba(216,180,254,.9)" }}>
-                  {(m.name || "?").slice(0, 1).toUpperCase()}
-                </div>
-                <span style={{ position: "absolute" as const, bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(15,15,20,1)" }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                  {m.name}
-                  {m.crewTag && <span style={{ marginLeft: 5, fontSize: 9, opacity: 0.5, fontFamily: "monospace" }}>[{m.crewTag}]</span>}
-                </div>
-                {m.online && m.roomName && (
-                  <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                    {m.roomName}
-                  </div>
-                )}
-              </div>
-              {m.online && m.roomId && (
-                <Link href={"/room/" + encodeURIComponent(m.roomId)} style={{
-                  fontSize: 10, padding: "2px 7px", borderRadius: 999,
-                  border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)",
-                  color: "rgba(216,180,254,.85)", textDecoration: "none", flexShrink: 0,
-                }}>
-                  join
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── RoomsPanel ─────────────────────────────────────────────────────────────────
+// lobbyId = which lobby we're in (e.g. "r/gaming", "lobby", "weered.ca")
+// Shows only rooms belonging to this lobby. Create room also scoped to lobby.
 
 function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId: string }) {
   const [q,        setQ]        = React.useState("");
@@ -109,6 +33,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   async function load() {
     setLoading(true); setErr("");
     try {
+      // Fetch rooms scoped to this lobby
       const url = lobbyId
         ? `${API_BASE}/lobbies/${encodeURIComponent(lobbyId)}/rooms`
         : `${API_BASE}/rooms`;
@@ -143,7 +68,9 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     finally { setCreating(false); }
   }
 
+  // Reload when lobbyId changes (switching lobbies)
   React.useEffect(() => { void load(); }, [lobbyId]);
+  // Poll every 6s
   React.useEffect(() => { const t = setInterval(load, 6000); return () => clearInterval(t); }, [lobbyId]);
 
   const filtered = rows
@@ -166,6 +93,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         )}
       </div>
 
+      {/* Create */}
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         <input style={s.input} placeholder="New room name…" value={newRoom}
           onChange={e => setNewRoom(e.target.value)}
@@ -175,11 +103,13 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         </button>
       </div>
 
+      {/* Search */}
       <input style={{ ...s.input, marginBottom: 8 }} placeholder="Search rooms…" value={q} onChange={e => setQ(e.target.value)} />
 
       {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginBottom: 6 }}>{err}</div>}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 300, overflowY: "auto" }}>
+      {/* List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 360, overflowY: "auto" }}>
         {loading && !rows.length && <div style={{ fontSize: 12, opacity: 0.5 }}>Loading…</div>}
         {!loading && !filtered.length && (
           <div style={{ fontSize: 12, opacity: 0.4, padding: "8px 0" }}>
@@ -260,12 +190,146 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   );
 }
 
+// ── FriendsPanel ───────────────────────────────────────────────────────────────
+
+function FriendsPanel() {
+  const [friends, setFriends] = React.useState<any[]>([]);
+  const [open, setOpen] = React.useState(true);
+
+  async function load() {
+    try {
+      const j = await apiFetch("/friends");
+      setFriends(Array.isArray(j?.friends) ? j.friends : []);
+    } catch {}
+  }
+
+  React.useEffect(() => { void load(); }, []);
+  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
+
+  if (!friends.length) return null;
+
+  const online  = friends.filter(f => f.online);
+  const offline = friends.filter(f => !f.online);
+
+  const rowStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 8,
+    padding: "7px 10px", borderRadius: 10,
+    border: "1px solid rgba(255,255,255,.07)",
+    background: "rgba(255,255,255,.02)",
+  };
+
+  const renderFriend = (f: any) => (
+    <div key={f.id} style={rowStyle}>
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatarColor || "rgba(124,58,237,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+          {(f.name || "?").slice(0, 1).toUpperCase()}
+        </div>
+        <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+        {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
+      </div>
+      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+        {f.online && f.roomId && (
+          <Link href={"/room/" + encodeURIComponent(f.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", textDecoration: "none" }}>
+            join
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
+        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>
+          Friends · {online.length} online
+        </div>
+        <span style={{ fontSize: 10, opacity: 0.4 }}>{open ? "▲" : "▼"}</span>
+      </div>
+      {open && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {online.map(renderFriend)}
+          {offline.map(renderFriend)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── CrewPanel ──────────────────────────────────────────────────────────────────
+
+function CrewPanel() {
+  const [crews, setCrews] = React.useState<any[]>([]);
+  const [open, setOpen] = React.useState(true);
+
+  async function load() {
+    try {
+      const j = await apiFetch("/crews/mine");
+      setCrews(Array.isArray(j?.crews) ? j.crews : []);
+    } catch {}
+  }
+
+  React.useEffect(() => { void load(); }, []);
+  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
+
+  if (!crews.length) return null;
+
+  const allMembers = crews.flatMap((c: any) =>
+    (c.members || []).map((m: any) => ({ ...m, crewName: c.name, crewTag: c.tag }))
+  );
+  const online = allMembers.filter((m: any) => m.online);
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
+        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>
+          Crew · {online.length} online
+        </div>
+        <span style={{ fontSize: 10, opacity: 0.4 }}>{open ? "▲" : "▼"}</span>
+      </div>
+      {open && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {allMembers.length === 0 && <div style={{ fontSize: 12, opacity: 0.4, padding: "6px 0" }}>No crew members yet.</div>}
+          {allMembers.map((m: any) => (
+            <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)" }}>
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 999, background: "rgba(245,158,11,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "rgb(251,191,36)" }}>
+                  {(m.name || "?").slice(0, 1).toUpperCase()}
+                </div>
+                <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                  {m.crewTag && <span style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace", flexShrink: 0 }}>[{m.crewTag}]</span>}
+                  {m.role === "LEADER" && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 5, background: "rgba(245,158,11,.15)", color: "rgb(251,191,36)", border: "1px solid rgba(245,158,11,.3)", flexShrink: 0 }}>★</span>}
+                </div>
+                {m.online && m.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.roomName}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                {m.online && m.roomId && (
+                  <Link href={"/room/" + encodeURIComponent(m.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none" }}>
+                    join
+                  </Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── RightRail ──────────────────────────────────────────────────────────────────
 
 export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const pathname       = usePathname() || "";
   const { globalRole } = useWeered() as any;
 
+  // Resolve lobby from prop (passed by RightRailSwitch) or fall back to pathname
   const resolvedLobbyId = lobbyId ?? (() => {
     if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
       const seg = pathname.replace("/lobby/", "").replace("/lobby", "");
@@ -293,9 +357,9 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
       </div>
 
       <LobbyModPanel globalRole={globalRole || ""} lobbyId={resolvedLobbyId} />
-      <CrewPanel />
       <RoomsPanel currentRoomId={currentRoomId} lobbyId={resolvedLobbyId} />
+      <FriendsPanel />
+      <CrewPanel />
     </div>
   );
 }
-
