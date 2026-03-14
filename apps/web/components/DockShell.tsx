@@ -630,6 +630,22 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
     setCreating(false);
   }
 
+  const [inviteInput, setInviteInput] = React.useState<Record<string,string>>({});
+  const [inviteNote, setInviteNote] = React.useState<Record<string,string>>({});
+
+  async function inviteMember(crewId: string) {
+    const username = (inviteInput[crewId] || "").trim();
+    if (!username) return;
+    try {
+      const profile = await fetch(`${apiBase}/profile/${encodeURIComponent(username)}`, { headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json());
+      if (!profile?.id) { setInviteNote(n => ({ ...n, [crewId]: "User not found" })); return; }
+      const res = await fetch(`${apiBase}/crews/${crewId}/invite/${profile.id}`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(r => r.json());
+      if (res.ok) { setInviteInput(v => ({ ...v, [crewId]: "" })); setInviteNote(n => ({ ...n, [crewId]: "Invited!" })); void load(); }
+      else setInviteNote(n => ({ ...n, [crewId]: res.error || "Failed" }));
+    } catch { setInviteNote(n => ({ ...n, [crewId]: "Error" })); }
+    setTimeout(() => setInviteNote(n => ({ ...n, [crewId]: "" })), 3000);
+  }
+
   async function leaveCrew(crewId:string){if(!confirm("Leave this crew?"))return;await fetch(`${apiBase}/crews/${crewId}/members/${myId}`,{method:"DELETE",headers:{Authorization:`Bearer ${tokenMaybe}`}});void load();}
   async function disbandCrew(crewId:string){if(!confirm("Disband? Cannot be undone."))return;await fetch(`${apiBase}/crews/${crewId}`,{method:"DELETE",headers:{Authorization:`Bearer ${tokenMaybe}`}});void load();}
 
@@ -699,6 +715,19 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                   </div>
                 ))}
               </div>
+              {(crew.myRole === "LEADER" || crew.myRole === "OFFICER") && (
+                <div style={{marginTop:8,display:"flex",gap:6}}>
+                  <input
+                    value={inviteInput[crew.id]||""}
+                    onChange={(e:any)=>setInviteInput(v=>({...v,[crew.id]:e.target.value}))}
+                    placeholder="Invite by username…"
+                    style={{flex:1,padding:"6px 9px",borderRadius:9,border:"1px solid var(--weered-bd2)",background:"rgba(255,255,255,.05)",color:"var(--weered-text)",outline:"none",fontSize:11}}
+                    onKeyDown={(e:any)=>{if(e.key==="Enter")inviteMember(crew.id);}}
+                  />
+                  <button onClick={()=>inviteMember(crew.id)} style={{padding:"6px 10px",borderRadius:9,border:"1px solid var(--weered-accent-ring)",background:"var(--weered-accent-bg)",color:"var(--weered-accent-text)",fontSize:11,cursor:"pointer",fontWeight:700}}>+</button>
+                </div>
+              )}
+              {inviteNote[crew.id]&&<div style={{fontSize:10,marginTop:4,color:"var(--weered-muted)"}}>{inviteNote[crew.id]}</div>}
             </div>
           );
         })}

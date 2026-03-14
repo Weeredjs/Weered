@@ -15,6 +15,12 @@ function pickFirstString(...vals: any[]): string {
   return "";
 }
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
+
+function authHeaders() {
+  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+}
+
 function normRoomKey(x: any): string {
   let s = String(x || "").trim();
   if (!s) return "";
@@ -244,6 +250,7 @@ export default function LeftRail() {
   const [presenceHoverXY, setPresenceHoverXY] = useState({ x: 0, y: 0 });
   const [presenceHoverName, setPresenceHoverName] = useState("");
   const [presenceHoverUser, setPresenceHoverUser] = useState<any>(null);
+  const [friendRequestNote, setFriendRequestNote] = useState("");
 
   const presenceHoverTimer = useRef<any>(null);
   const presencePopoverRef = useRef<HTMLDivElement | null>(null);
@@ -555,21 +562,42 @@ export default function LeftRail() {
                   </button>
                 </div>
 
-                <div className="mt-2">
+                <div className="mt-2 flex gap-2">
                   <button
                     type="button"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
                     onClick={() => {
-                      try {
-                        window.dispatchEvent(new CustomEvent("weered:dock:toggle"));
-                      } catch {}
+                      try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {}
                       setPresenceHoverOpen(false);
                       setPresenceHoverUser(null);
                     }}
                   >
                     Dock
                   </button>
+
+                  {presenceHoverUser?.id !== me?.id && (
+                    <button
+                      type="button"
+                      className="flex-1 rounded-xl border border-emerald-300/25 bg-emerald-500/10 px-3 py-2 text-sm hover:bg-emerald-500/15 font-semibold text-emerald-200"
+                      onClick={async () => {
+                        const uid = String(presenceHoverUser?.id ?? "").trim();
+                        if (!uid) return;
+                        try {
+                          const r = await fetch(`${API_BASE}/friends/request/${uid}`, { method: "POST", headers: { ...authHeaders() } });
+                          const j = await r.json();
+                          setFriendRequestNote(j.ok ? "Request sent!" : (j.error || "Failed"));
+                        } catch { setFriendRequestNote("Error"); }
+                        setTimeout(() => setFriendRequestNote(""), 3000);
+                      }}
+                    >
+                      + Friend
+                    </button>
+                  )}
                 </div>
+
+                {friendRequestNote && (
+                  <div className="mt-2 text-xs text-center opacity-70">{friendRequestNote}</div>
+                )}
               </div>,
               document.body
             )
