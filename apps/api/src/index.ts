@@ -836,18 +836,6 @@ async function main() {
 
   // Rooms
   // GET /lobbies — all lobbies with live counts
-  app.get("/lobbies", async () => {
-    const lobbyList = await prisma.lobby.findMany({
-      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
-      select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
-    });
-    const out = lobbyList.map(l => ({
-      id: l.id, lobbyId: l.id, name: l.name, description: l.description,
-      verified: l.verified, pinned: l.pinned, moduleType: l.moduleType,
-      onlineCount: rooms.get(l.id)?.users.size ?? 0,
-    }));
-    return { ok: true, lobbies: out };
-  });
 
   // GET /lobbies/:lobbyId/rooms — rooms scoped to a lobby
   app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
