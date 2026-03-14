@@ -64,7 +64,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat" }: Props)
           transform: translateY(-50%);
           writing-mode: vertical-rl;
           text-orientation: mixed;
-          rotate: 180deg;
           padding: 14px 7px;
           background: rgba(124,58,237,0.18);
           border: 1px solid rgba(124,58,237,0.30);
@@ -155,7 +154,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat" }: Props)
             <span className="drawer-title">{title}</span>
             <div className="drawer-close" onClick={() => setOpen(false)}>✕</div>
           </div>
-          <div style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1 }}>
+          <div style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1, paddingBottom: 12 }}>
             <LobbyChatPanel roomId={roomId} embedded={true} />
           </div>
         </div>
