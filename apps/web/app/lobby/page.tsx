@@ -7,7 +7,7 @@ import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 
 export default function LobbyPage() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "calc(100vh - 32px)", minHeight: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "calc(100vh - 32px)", minHeight: 0, paddingBottom: 32 }}>
       <LobbyHeaderBar />
 
       <div style={{
