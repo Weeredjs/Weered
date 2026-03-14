@@ -45,7 +45,7 @@ function getToken(): string {
   } catch { return ""; }
 }
 
-import { avatarBg as avatarColor } from "../lib/avatarColor";
+import { avatarBg as avatarColor } from "../../lib/avatarColor";
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
