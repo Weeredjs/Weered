@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -59,7 +59,7 @@ type Flair = {
   icon?: React.ReactNode;
 };
 
-// Inline SVG icons — no emoji, no mojibake
+// Inline SVG icons � no emoji, no mojibake
 const ICON_GOD = (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
     <path d="M6 1L7.5 4.5H11L8.5 6.8L9.5 10L6 8L2.5 10L3.5 6.8L1 4.5H4.5L6 1Z" fill="#fcd34d" stroke="#f59e0b" strokeWidth="0.5"/>
@@ -198,7 +198,7 @@ export default function LeftRail() {
     return arr;
   }, [filtered]);
 
-  // ── Recents + Favorites ─────────────────────────────────────────────────
+  // -- Recents + Favorites -------------------------------------------------
   const RECENTS_KEY = "weered:recents:v1";
   const FAVS_KEY    = "weered:favs:v1";
 
@@ -229,7 +229,7 @@ export default function LeftRail() {
 
   const recentRooms = recents.filter(r => !favs.includes(r));
 
-  // ── Room name cache ──────────────────────────────────────────────────────
+  // -- Room name cache ------------------------------------------------------
   const [roomNameCache, setRoomNameCache] = useState<Record<string,string>>(() => {
     try { return JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}"); } catch { return {}; }
   });
@@ -241,7 +241,7 @@ export default function LeftRail() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
-  const getRoomName = (id: string) => roomNameCache[id] || id;
+  const getRoomName = (id: string) => { const v = roomNameCache[id]; if (!v) return id; if (typeof v === "string") return v; if (typeof v === "object" && v !== null) return (v as any).name || id; return id; };
 
 
 
@@ -266,7 +266,7 @@ export default function LeftRail() {
     const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
     const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
-    // Anchor to row's right edge; center vertically on the row (feels “attached”)
+    // Anchor to row's right edge; center vertically on the row (feels �attached�)
     let x = r.right + 12;
     x = clamp(x, pad, vw - HOVER_W - pad);
 
@@ -370,7 +370,7 @@ export default function LeftRail() {
       <div className="weered-presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
-          <div className="weered-presence-sub">{`context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`} • {listed.length}</div>
+          <div className="weered-presence-sub">{`context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "�")}`} � {listed.length}</div>
         </div>
 
         <input className="weered-presence-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users..." />
@@ -480,7 +480,7 @@ export default function LeftRail() {
                   </div>
                 </div>
 
-                {/* Badge pill — only for elevated roles */}
+                {/* Badge pill � only for elevated roles */}
                 {f.badge && (
                   <span style={{
                     fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
@@ -619,7 +619,7 @@ export default function LeftRail() {
           </details>
         </div>
       </div>
-      {/* ── Recents & Favorites ── */}
+      {/* -- Recents & Favorites -- */}
       <div className="weered-left-section">
         {favs.length > 0 && (
           <>
@@ -643,7 +643,7 @@ export default function LeftRail() {
                     {isActive && <span className="h-1.5 w-1.5 rounded-full" style={{ background:"#fcd34d", flexShrink:0 }} />}
                   </Link>
                   <button onClick={() => toggleFav(room)} title="Unpin"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>★</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>?</button>
                 </div>
               );
             })}
@@ -672,7 +672,7 @@ export default function LeftRail() {
                     {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" style={{ flexShrink:0 }} />}
                   </Link>
                   <button onClick={() => toggleFav(room)} title="Pin to favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>☆</button>
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>?</button>
                 </div>
               );
             })}
