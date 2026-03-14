@@ -44,6 +44,17 @@ model Lobby {
   pinned      Boolean    @default(false)
   moduleType  ModuleType @default(REDDIT)
   moduleConfig Json?
+
+  // Search keywords — e.g. ["destiny", "destiny2", "bungie", "guardian"]
+  keywords    String[]   @default([])
+
+  // Branding — used for pinned lobby cards and lobby page theming
+  accentColor String?    // hex e.g. "#4F88C6"
+  logoUrl     String?    // square logo for search card / lobby header
+  bannerUrl   String?    // wide banner for lobby hero area
+  websiteUrl  String?    // embedded in Content tab
+  // linkedSubreddits stored in moduleConfig as { subreddits: string[] }
+
   ownerId     String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -185,14 +196,14 @@ model User {
   usernameKey String     @unique
   name        String     @default("")
   bio         String?
-  email       String?    @unique                // top-level email for Google/SSO users
-  googleId    String?    @unique                // Google OAuth subject ID
-  avatar      String?                           // profile picture URL (Google or uploaded)
-  avatarColor String?                           // chosen hex color for letter avatar
+  email       String?    @unique
+  googleId    String?    @unique
+  avatar      String?
+  avatarColor String?
   notoriety   Int        @default(0)
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
-  onboardingComplete Boolean    @default(false)  // false for new Google SSO users until they pick a username
+  onboardingComplete Boolean    @default(false)
   createdAt         DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -202,6 +213,7 @@ model User {
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
   notorietyEvents  NotorietyEvent[]
+  gameAccounts     UserGameAccount[]
 }
 
 model LocalAuth {
@@ -289,7 +301,7 @@ enum CrewRole {
 model Crew {
   id          String   @id @default(cuid())
   name        String
-  tag         String   @default("")   // short tag e.g. [W8M]
+  tag         String   @default("")
   description String   @default("")
   ownerId     String
   createdAt   DateTime @default(now())
@@ -341,12 +353,44 @@ model FeedItem {
   thumbnail   String?
   domain      String
   sourceName  String
-  category    String   // gaming | ufc | news | sports | tech | podcasts
-  heat        Int      @default(0)   // 0-100, recalculated each fetch
-  usersInRoom Int      @default(0)   // live count from WS presence
+  category    String
+  heat        Int      @default(0)
+  usersInRoom Int      @default(0)
   fetchedAt   DateTime @default(now())
   postedAt    DateTime @default(now())
 
   @@index([category, heat])
   @@index([fetchedAt])
+}
+
+// ── Game Accounts ─────────────────────────────────────────────────────────────
+// Stores per-user OAuth tokens and cached playcard data for each game integration.
+// gameType maps to ModuleType (BUNGIE = Destiny 2, etc.)
+
+model UserGameAccount {
+  id            String     @id @default(cuid())
+  userId        String
+  gameType      ModuleType
+
+  // OAuth
+  accessToken   String?
+  refreshToken  String?
+  tokenExpiry   DateTime?
+
+  // Game identity
+  externalId    String?    // e.g. Bungie membershipId
+  displayName   String     @default("")
+  platform      String     @default("")  // e.g. "pc", "xbox", "psn"
+
+  // Cached playcard — refreshed on hover if stale (5 min TTL)
+  cardData      Json?
+  cardCachedAt  DateTime?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameType])
+  @@index([userId])
 }
