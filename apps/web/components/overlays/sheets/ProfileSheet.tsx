@@ -1,6 +1,6 @@
 "use client";
 
-import { AVATAR_PALETTE, avatarBg } from "../../lib/avatarColor";
+import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
 import React, { useEffect, useState } from "react";
 import { useWeered } from "../../WeeredProvider";
 
