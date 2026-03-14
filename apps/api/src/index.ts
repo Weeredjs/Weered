@@ -96,21 +96,21 @@ async function canModLobby(userId: string, lobbyId: string, globalRole: GlobalRo
 // ── Seed pinned lobbies into DB on startup ────────────────────────────────────
 
 const SEED_LOBBIES = [
-  { id: "lobby",        name: "The Lobby",    description: "General hangout. Everyone starts here.", tags: ["general"],          moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
-  { id: "r/all",        name: "r/all",        description: "Reddit firehose. All topics welcome.",   tags: ["reddit","general"],  moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
-  { id: "r/gaming",     name: "r/gaming",     description: "Gamers of all kinds.",                   tags: ["reddit","gaming"],   moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/gaming" } },
-  { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         tags: ["reddit","tech"],     moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/technology" } },
-  { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        tags: ["reddit","news"],     moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/worldnews" } },
-  { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    tags: ["meta","official"],   moduleType: ModuleType.NONE,    moduleConfig: null },
+  { id: "lobby",        name: "The Lobby",    description: "General hangout. Everyone starts here.", keywords: ["lobby","general","home"],              moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
+  { id: "r/all",        name: "r/all",        description: "Reddit firehose. All topics welcome.",   keywords: ["reddit","all","general"],              moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
+  { id: "r/gaming",     name: "r/gaming",     description: "Gamers of all kinds.",                   keywords: ["reddit","gaming","games","gamer"],     moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/gaming" } },
+  { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         keywords: ["reddit","tech","technology","coding"],  moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/technology" } },
+  { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        keywords: ["reddit","news","world","worldnews"],   moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/worldnews" } },
+  { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    keywords: ["weered","meta","official","hq"],       moduleType: ModuleType.NONE,    moduleConfig: null },
 ];
 
 async function seedLobbies() {
   for (const l of SEED_LOBBIES) {
     try {
-      await prisma.lobby.upsert({
+      await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
-        create: { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
+        update:  { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
+        create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
       });
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
   }
@@ -1415,9 +1415,9 @@ app.post("/dm/:peerId", async (req, reply) => {
         // ── rooms:list — return lobby directory from DB ───────────────────
         if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
           const [lobbyList, roomList] = await Promise.all([
-            prisma.lobby.findMany({
-              where: { pinned: true },
-              select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
+            (prisma as any).lobby.findMany({
+            where: { pinned: true },
+            select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
             }),
             prisma.room.findMany({
               orderBy: { updatedAt: "desc" },
@@ -1425,8 +1425,8 @@ app.post("/dm/:peerId", async (req, reply) => {
               take: 100,
             }),
           ]);
-          const lobbyIds = new Set(lobbyList.map(l => l.id));
-          const lobbyOut = lobbyList.map(l => ({
+            const lobbyIds = new Set(lobbyList.map((l: any) => l.id));
+            const lobbyOut = lobbyList.map((l: any) => ({
             id: l.id, roomId: l.id, name: l.name, description: l.description,
             verified: l.verified, pinned: true, moduleType: l.moduleType,
             onlineCount: rooms.get(l.id)?.users.size ?? 0, locked: false,
@@ -1978,7 +1978,131 @@ app.post("/dm/:peerId", async (req, reply) => {
     await db.crew.delete({ where: { id: crewId } });
     return reply.send({ ok: true });
   });
+// ── Lobby search ──────────────────────────────────────────────────────────
 
+  app.get("/lobbies/search", async (req, reply) => {
+    const q = String((req.query as any).q ?? "").trim().toLowerCase();
+    if (!q || q.length < 2) return reply.send({ ok: true, pinned: [], rooms: [] });
+
+    const [allPinned, matchingRooms] = await Promise.all([
+      (prisma as any).lobby.findMany({
+        where: { pinned: true },
+        select: {
+          id: true, name: true, description: true, verified: true,
+          moduleType: true, moduleConfig: true, keywords: true,
+          accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
+          _count: { select: { rooms: true, members: true } },
+        },
+        take: 100,
+      }),
+      (prisma as any).room.findMany({
+        where: { name: { contains: q, mode: "insensitive" } },
+        select: {
+          id: true, name: true, locked: true, lobbyId: true,
+          lobby: { select: { id: true, name: true, accentColor: true, logoUrl: true } },
+          _count: { select: { members: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+      }),
+    ]);
+
+    const pinned = (allPinned as any[]).filter((l: any) => {
+      const kws: string[] = Array.isArray(l.keywords) ? l.keywords : [];
+      return l.name.toLowerCase().includes(q) ||
+        kws.some((kw: string) => kw.toLowerCase().includes(q) || q.includes(kw.toLowerCase()));
+    }); 
+
+    return reply.send({ ok: true, pinned, rooms: matchingRooms });
+  });
+
+ app.get("/lobbies", async (_req, reply) => {
+    const lobbies = await (prisma as any).lobby.findMany({
+      select: {
+        id: true, name: true, description: true, verified: true, pinned: true,
+        moduleType: true, accentColor: true, logoUrl: true,
+        _count: { select: { rooms: true, members: true } },
+      },
+      orderBy: [{ pinned: "desc" }, { name: "asc" }],
+    });
+    return reply.send({ ok: true, lobbies });
+  });
+
+  app.get("/lobbies/:id", async (req, reply) => {
+    const id = (req.params as any).id as string;
+    const lobby = await (prisma as any).lobby.findUnique({
+      where: { id },
+      select: {
+        id: true, name: true, description: true, verified: true, pinned: true,
+        moduleType: true, moduleConfig: true, keywords: true,
+        accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
+        rooms: {
+          select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
+          orderBy: { name: "asc" },
+        },
+        _count: { select: { rooms: true, members: true } },
+      },
+    });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
+    return reply.send({ ok: true, lobby });
+  });
+
+  app.post("/lobbies", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ error: "Staff only" });
+
+    const { id, name, description = "", pinned = false, moduleType = "NONE",
+            moduleConfig, keywords = [], accentColor, logoUrl, bannerUrl, websiteUrl } = req.body as any;
+    if (!id || !name) return reply.code(400).send({ ok: false, error: "id and name required" });
+
+    const lobby = await (prisma as any).lobby.upsert({
+      where: { id: String(id) },
+      update: { name: String(name), description: String(description), pinned: Boolean(pinned),
+        moduleType, moduleConfig: moduleConfig ?? undefined,
+        keywords: Array.isArray(keywords) ? keywords.map(String) : [],
+        accentColor: accentColor ?? null, logoUrl: logoUrl ?? null,
+        bannerUrl: bannerUrl ?? null, websiteUrl: websiteUrl ?? null },
+      create: { id: String(id), name: String(name), description: String(description),
+        pinned: Boolean(pinned), moduleType, moduleConfig: moduleConfig ?? undefined,
+        keywords: Array.isArray(keywords) ? keywords.map(String) : [],
+        accentColor: accentColor ?? null, logoUrl: logoUrl ?? null,
+        bannerUrl: bannerUrl ?? null, websiteUrl: websiteUrl ?? null },
+    });
+    return reply.send({ ok: true, lobby });
+  });
+
+  app.get("/lobbies/:lobbyId/presence/:userId/game-card", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+
+    const { lobbyId, userId: targetUserId } = req.params as any;
+    const lobby = await (prisma as any).lobby.findUnique({
+      where: { id: lobbyId }, select: { moduleType: true },
+    });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (lobby.moduleType === "NONE" || lobby.moduleType === "REDDIT") {
+      return reply.send({ ok: true, hasCard: false });
+    }
+
+    const account = await (prisma as any).userGameAccount.findUnique({
+      where: { userId_gameType: { userId: targetUserId, gameType: lobby.moduleType } },
+      select: { displayName: true, platform: true, cardData: true, cardCachedAt: true },
+    });
+    if (!account?.cardData) return reply.send({ ok: true, hasCard: false });
+
+    const isStale = !account.cardCachedAt ||
+      (Date.now() - new Date(account.cardCachedAt).getTime()) > 5 * 60 * 1000;
+
+    return reply.send({
+      ok: true, hasCard: true, gameType: lobby.moduleType,
+      displayName: account.displayName, platform: account.platform,
+      cardData: account.cardData, isStale,
+    });
+  });
   process.on("SIGINT", async () => {
     try { await prisma.$disconnect(); } catch {}
     process.exit(0);
