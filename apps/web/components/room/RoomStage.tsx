@@ -150,9 +150,18 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
       }
       if (d.type !== "youtube:state") return;
 
-      // Load new video if needed
+      // Load new video — use loadVideoById directly if player exists to avoid teardown
       if (d.videoId && d.videoId !== videoId) {
-        setVideoId(d.videoId);
+        if (playerRef.current?.loadVideoById) {
+          isSyncing.current = true;
+          playerRef.current.loadVideoById(d.videoId);
+          setVideoId(d.videoId);
+          setTimeout(() => { isSyncing.current = false; }, 800);
+          return;
+        } else {
+          setVideoId(d.videoId);
+          return;
+        }
       }
 
       const player = playerRef.current;
