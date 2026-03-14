@@ -59,7 +59,7 @@ type Flair = {
   icon?: React.ReactNode;
 };
 
-// Inline SVG icons ó no emoji, no mojibake
+// Inline SVG icons ‚Äî no emoji, no mojibake
 const ICON_GOD = (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
     <path d="M6 1L7.5 4.5H11L8.5 6.8L9.5 10L6 8L2.5 10L3.5 6.8L1 4.5H4.5L6 1Z" fill="#fcd34d" stroke="#f59e0b" strokeWidth="0.5"/>
@@ -266,7 +266,7 @@ export default function LeftRail() {
     const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
     const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
-    // Anchor to row's right edge; center vertically on the row (feels ìattachedî)
+    // Anchor to row's right edge; center vertically on the row (feels ‚Äúattached‚Äù)
     let x = r.right + 12;
     x = clamp(x, pad, vw - HOVER_W - pad);
 
@@ -370,7 +370,7 @@ export default function LeftRail() {
       <div className="weered-presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
-          <div className="weered-presence-sub">{`context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "ó")}`} ï {listed.length}</div>
+          <div className="weered-presence-sub">{`context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "‚Äî")}`} ‚Ä¢ {listed.length}</div>
         </div>
 
         <input className="weered-presence-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users..." />
@@ -480,7 +480,7 @@ export default function LeftRail() {
                   </div>
                 </div>
 
-                {/* Badge pill ó only for elevated roles */}
+                {/* Badge pill ‚Äî only for elevated roles */}
                 {f.badge && (
                   <span style={{
                     fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
