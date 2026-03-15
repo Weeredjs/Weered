@@ -38,8 +38,8 @@ const CHAT_HEIGHT = 420;
 
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
-  const roomId = (w?.activeRoomId || "").replace("room:", "");
-  const joinStatus = w?.statusByRoom?.[roomId] || w?.statusByRoom?.["room:" + roomId] || "idle";
+const activeRid = (w?.activeRoomId || "").replace("room:", "");
+const joinStatus = w?.statusByRoom?.[activeRid] || w?.statusByRoom?.["room:" + activeRid] || w?.statusByRoom?.[roomId] || "idle";
   const { openSheet } = useOverlay();
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
