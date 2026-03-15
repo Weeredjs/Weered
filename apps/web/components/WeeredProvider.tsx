@@ -171,7 +171,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid = decodeURIComponent(roomMatch[1]);
         if (rid && rid !== "@me") { activeRoomIdRef.current = rid; setActiveRoomId(rid); return; }
       }
-      if (pathname.startsWith("/lobby")) { activeRoomIdRef.current = "lobby"; setActiveRoomId("lobby"); return; }
+    if (pathname.startsWith("/lobby")) {
+      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim();
+      const rid = seg ? decodeURIComponent(seg) : "lobby";
+      activeRoomIdRef.current = rid;
+      setActiveRoomId(rid);
+      return;
+    }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
