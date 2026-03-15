@@ -356,6 +356,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "room:knock:queued") { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "knocking" })); return; }
       if (msg.type === "room:banned")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "banned"   })); return; }
       if (msg.type === "room:denied")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "denied"   })); return; }
+      if (msg.type === "staff:kicked") {
+        const rid = String(msg.roomId || "");
+        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
+        setActiveRoomId("");
+        setJoinedRoomId("");
+        try { router.replace("/lobby"); } catch {}
+        return;
+      }
+      if (msg.type === "room:admitted") {
+        const rid = String(msg.roomId || "");
+        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
+        return;
+      }
     };
 
     return () => { /* do not close — guards at effect top handle re-auth in-band */ };
