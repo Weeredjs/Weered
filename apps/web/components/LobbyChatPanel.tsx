@@ -51,7 +51,7 @@ export default function LobbyChatPanel(
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const joinedStrict = Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && joinStatus === "joined");
-  const joinedByMeta = Boolean((meta || admin) && !meta?.locked);
+  const joinedByMeta = Boolean((meta || admin) && !meta?.locked && !admin?.locked);
   const canType = joinedStrict || joinedByMeta;
   const msgTrim = String(text || "").trim();
   const canSend = !!canType && msgTrim.length > 0;
