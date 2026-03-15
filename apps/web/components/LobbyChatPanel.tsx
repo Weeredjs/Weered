@@ -51,7 +51,7 @@ export default function LobbyChatPanel(
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const joinedStrict = Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && joinStatus === "joined");
-  const joinedByMeta = Boolean(meta || admin);
+  const joinedByMeta = Boolean((meta || admin) && !meta?.locked);
   const canType = joinedStrict || joinedByMeta;
   const msgTrim = String(text || "").trim();
   const canSend = !!canType && msgTrim.length > 0;
@@ -132,7 +132,7 @@ export default function LobbyChatPanel(
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={canType ? "Message..." : "Join/admit required..."}
+            placeholder={canType ? "Message..." : meta?.locked ? "Chat is locked." : "Join/admit required..."}
             disabled={!canType}
             className={
               "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
