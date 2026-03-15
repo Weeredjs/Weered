@@ -31,6 +31,13 @@ function normRoomKey(x: any): string {
   return String(s || "").trim();
 }
 
+function lobbyHref(id: string): string {
+  // Room IDs are short random alphanumeric (e.g. zbZTrF)
+  // Lobby IDs are human-readable slugs (e.g. destiny2, espn.com, r/gaming)
+  const isRoom = /^[a-zA-Z0-9]{4,10}$/.test(id) && !/[./]/.test(id) && id !== "lobby";
+  return isRoom ? `/room/${encodeURIComponent(id)}` : `/lobby/${encodeURIComponent(id)}`;
+}
+
 function normRole(x: any) {
   const s = String(x || "").trim().toUpperCase();
   if (!s) return "";
