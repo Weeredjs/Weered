@@ -17,6 +17,12 @@ async function apiFetch(path: string, opts?: RequestInit) {
   const r = await fetch(`${API_BASE}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
   return r.json();
 }
+function lobbyHref(id: string): string {
+  // Room IDs are short random alphanumeric (e.g. zbZTrF)
+  // Lobby IDs are human-readable slugs (e.g. destiny2, espn.com, r/gaming)
+  const isRoom = /^[a-zA-Z0-9]{4,10}$/.test(id) && !/[./]/.test(id) && id !== "lobby";
+  return isRoom ? `/room/${encodeURIComponent(id)}` : `/lobby/${encodeURIComponent(id)}`;
+}
 
 // ── RoomsPanel ─────────────────────────────────────────────────────────────────
 // lobbyId = which lobby we're in (e.g. "r/gaming", "lobby", "weered.ca")
@@ -238,7 +244,7 @@ function FriendsPanel() {
       </div>
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
         {f.online && f.roomId && (
-          <Link href={"/room/" + encodeURIComponent(f.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", textDecoration: "none" }}>
+          <Link href={lobbyHref(f.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", textDecoration: "none" }}>
             join
           </Link>
         )}
@@ -322,7 +328,7 @@ function CrewPanel() {
               </div>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 {m.online && m.roomId && (
-                  <Link href={"/room/" + encodeURIComponent(m.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none" }}>
+                  <Link href={lobbyHref(m.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none" }}>
                     join
                   </Link>
                 )}
