@@ -80,16 +80,15 @@ export default function LobbyHeaderBar({
       return;
     }
 
-    if (searchRef.current) clearTimeout(searchRef.current);
+if (searchRef.current) clearTimeout(searchRef.current);
     searchRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
         const token = typeof window !== "undefined"
           ? localStorage.getItem("weered:token") ?? ""
           : "";
         const res = await fetch(
-          `${apiBase}/lobbies/search?q=${encodeURIComponent(query)}`,
+          `https://api.weered.ca/lobbies/search?q=${encodeURIComponent(query)}`,
           token ? { headers: { Authorization: `Bearer ${token}` } } : {}
         );
         if (res.ok) {
