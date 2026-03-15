@@ -349,7 +349,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "room:locked") {
         const rid = String(msg.roomId || "");
         const isLocked = Boolean(msg.locked);
-        setMetaByRoom(prev => prev[rid] ? { ...prev, [rid]: { ...prev[rid], locked: isLocked } } : prev);
+        setMetaByRoom(prev => ({
+        ...prev,
+        [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [] }), locked: isLocked }
+      }));
         return;
       }
 
