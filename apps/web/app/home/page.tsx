@@ -215,7 +215,7 @@ export default function HomePage() {
 
 React.useEffect(() => {
   const base = "https://api.weered.ca";
-  const token = localStorage.getItem("weered:token") ?? "";
+  const token = localStorage.getItem("weered_token") ?? "";
   const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
 
   Promise.all([
@@ -313,7 +313,7 @@ const allUsers: any[] = useMemo(() => {
   const [friendsList, setFriendsList] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    const token = localStorage.getItem("weered:token") ?? "";
+    const token = localStorage.getItem("weered_token") ?? "";
     if (!token) return;
     fetch("https://api.weered.ca/friends", {
       headers: { Authorization: `Bearer ${token}` }
