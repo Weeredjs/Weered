@@ -35,8 +35,9 @@ ok "git pull"
 pnpm install --frozen-lockfile
 ok "pnpm install"
 
-# ── 3. Prisma migrate ─────────────────────────────────────────
+# ── 3. Prisma migrate + generate ─────────────────────────────
 (cd apps/api && pnpm prisma migrate deploy)
+(cd apps/api && pnpm prisma generate)
 ok "prisma migrate"
 
 # ── 4. Build Next.js ─────────────────────────────────────────
