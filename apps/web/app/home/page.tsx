@@ -241,7 +241,12 @@ React.useEffect(() => {
 
   const allRooms: any[] = useMemo(() => {
     const ws = Array.isArray(rooms) ? rooms : [];
-    return ws.length > 0 ? ws : fetchedRooms;
+    if (fetchedRooms.length === 0) return ws;
+    // Merge live WS counts into fetched rooms/lobbies
+    return fetchedRooms.map(r => {
+      const live = ws.find((w: any) => w.id === r.id || w.roomId === r.id || w.id === `room:${r.id}`);
+      return live ? { ...r, onlineCount: live.count ?? live.onlineCount ?? live.memberCount ?? r.onlineCount ?? 0 } : r;
+    });
   }, [rooms, fetchedRooms]);
 
   const allUsers: any[] = useMemo(() => (Array.isArray(users) ? users : []), [users]);
