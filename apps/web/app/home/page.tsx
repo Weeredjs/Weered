@@ -209,7 +209,7 @@ function SectionHeader({ icon, label, count, sub }: { icon: string; label: strin
 /* ─── HomePage ───────────────────────────────────────────── */
 export default function HomePage() {
   const router = useRouter();
-  const { rooms, users, me, join } = useWeered() as any;
+  const { rooms, usersByRoom, me, join } = useWeered() as any;
   const [search, setSearch] = useState("");
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
@@ -252,7 +252,24 @@ const allRooms: any[] = useMemo(() => {
   return ws.length > 0 ? ws : fetchedRooms;
 }, [rooms, fetchedRooms]);
 
-  const allUsers: any[] = useMemo(() => (Array.isArray(users) ? users : []), [users]);
+const allUsers: any[] = useMemo(() => {
+  if (!usersByRoom || typeof usersByRoom !== "object") return [];
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const roomUsers of Object.values(usersByRoom) as any[][]) {
+    for (const u of roomUsers) {
+      const id = u?.id ?? u?.userId;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      // Find which room they're in
+      const roomId = Object.keys(usersByRoom).find(rid =>
+        (usersByRoom[rid] as any[]).some((ru: any) => ru.id === id)
+      );
+      out.push({ ...u, room: roomId });
+    }
+  }
+  return out;
+}, [usersByRoom]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allRooms;
