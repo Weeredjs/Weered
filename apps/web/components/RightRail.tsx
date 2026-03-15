@@ -159,8 +159,8 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   async function action(type: string) {
     setLoading(true); setNote("");
     try {
-      const path = lobbyId ? `/staff/lobby/${encodeURIComponent(lobbyId)}/${type}` : `/staff/lobby/${type}`;
-      const j = await apiFetch(path, { method: "POST", body: JSON.stringify({}) });
+      const path = `/staff/lobby/${type}`;
+      const j = await apiFetch(path, { method: "POST", body: JSON.stringify({ lobbyId }) });
       setNote(j.ok ? `Done: ${type}` : j.error || "Failed.");
     } catch { setNote("Request failed."); }
     finally { setLoading(false); }
