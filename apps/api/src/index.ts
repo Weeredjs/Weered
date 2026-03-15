@@ -776,11 +776,26 @@ async function main() {
       const payload = ticket.getPayload();
       if (!payload) return reply.redirect(`${WEB_URL}/login?error=no_payload`);
       const googleId = payload.sub;
-      const tempName = `g_${googleId.slice(0, 12)}`;
-      let user = await prisma.user.findFirst({ where: { usernameKey: tempName } });
+      const email = payload.email || null;
+      const avatar = payload.picture || null;
+      const displayName = payload.name || `g_${googleId.slice(0, 12)}`;
+
+      // 1. Find by googleId
+      let user = await prisma.user.findFirst({ where: { googleId } });
+
+      // 2. Find by email and link
+      if (!user && email) {
+        user = await prisma.user.findFirst({ where: { email } });
+        if (user) {
+          await prisma.user.update({ where: { id: user.id }, data: { googleId, avatar: avatar || undefined } });
+        }
+      }
+
+      // 3. Create new user
       const isNew = !user;
       if (!user) {
-        user = await prisma.user.create({ data: { name: tempName, usernameKey: tempName } });
+        const tempName = `g_${googleId.slice(0, 12)}`;
+        user = await prisma.user.create({ data: { name: displayName, usernameKey: tempName, googleId, email, avatar } });
       }
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
