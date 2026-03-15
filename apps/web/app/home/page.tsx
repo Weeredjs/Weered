@@ -239,15 +239,18 @@ React.useEffect(() => {
 
   const myName = pickFirst(me?.name, me?.username, "there");
 
-  const allRooms: any[] = useMemo(() => {
-    const ws = Array.isArray(rooms) ? rooms : [];
-    if (fetchedRooms.length === 0) return ws;
-    // Merge live WS counts into fetched rooms/lobbies
-    return fetchedRooms.map(r => {
-      const live = ws.find((w: any) => w.id === r.id || w.roomId === r.id || w.id === `room:${r.id}`);
-      return live ? { ...r, onlineCount: live.count ?? live.onlineCount ?? live.memberCount ?? r.onlineCount ?? 0 } : r;
+const allRooms: any[] = useMemo(() => {
+  const ws = Array.isArray(rooms) ? rooms : [];
+  if (ws.length > 0 && fetchedRooms.length > 0) {
+    // WS has live counts — enrich with branding from API fetch
+    const brandingMap = new Map(fetchedRooms.map((r: any) => [r.id, r]));
+    return ws.map((r: any) => {
+      const branding = brandingMap.get(r.id) ?? brandingMap.get(r.roomId) ?? {};
+      return { ...branding, ...r };
     });
-  }, [rooms, fetchedRooms]);
+  }
+  return ws.length > 0 ? ws : fetchedRooms;
+}, [rooms, fetchedRooms]);
 
   const allUsers: any[] = useMemo(() => (Array.isArray(users) ? users : []), [users]);
 
