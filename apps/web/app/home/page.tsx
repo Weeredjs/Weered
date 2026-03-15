@@ -216,37 +216,25 @@ export default function HomePage() {
 React.useEffect(() => {
   const base = "https://api.weered.ca";
   const token = localStorage.getItem("weered:token") ?? "";
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
 
-  // Fetch lobbies
-  fetch(`${base}/lobbies`, { headers })
-    .then(r => r.json())
-    .then(d => {
-      if (Array.isArray(d?.lobbies)) {
-        setFetchedRooms(prev => [
-          ...d.lobbies.map((l: any) => ({
-            ...l,
-            pinned: true,
-            onlineCount: l._count?.members ?? 0,
-          })),
-          ...prev.filter((r: any) => !r.pinned),
-        ]);
-      }
-    })
-    .catch(() => {});
-
-  // Fetch active rooms
-  fetch(`${base}/rooms`, { headers })
-    .then(r => r.json())
-    .then(d => {
-      if (Array.isArray(d?.rooms)) {
-        setFetchedRooms(prev => [
-          ...prev.filter((r: any) => r.pinned),
-          ...d.rooms,
-        ]);
-      }
-    })
-    .catch(() => {});
+  Promise.all([
+    fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
+    fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
+  ]).then(([lobbyData, roomData]) => {
+    const lobbies = Array.isArray(lobbyData?.lobbies)
+      ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
+      : [];
+    const rooms = Array.isArray(roomData?.rooms) ? roomData.rooms : [];
+    const seen = new Set<string>();
+    const merged = [...lobbies, ...rooms].filter(r => {
+      const id = r.id ?? r.roomId;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    setFetchedRooms(merged);
+  });
 }, []);
 
   const myName = pickFirst(me?.name, me?.username, "there");
