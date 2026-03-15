@@ -306,10 +306,26 @@ const allUsers: any[] = useMemo(() => {
     recentIds.map(id => allRooms.find(r => roomId(r) === id || roomName(r) === id)).filter(Boolean).filter((r: any) => !isPrivateRoom(r)).slice(0, 4),
     [recentIds, allRooms]
   );
-
   const friends = useMemo(() =>
     allUsers.filter(u => u?.id !== me?.id && u?.id !== me?.userId).slice(0, 8),
     [allUsers, me]
+  );
+  const [friendsList, setFriendsList] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const token = localStorage.getItem("weered:token") ?? "";
+    if (!token) return;
+    fetch("https://api.weered.ca/friends", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.friends)) setFriendsList(d.friends); })
+      .catch(() => {});
+  }, []);
+
+  const onlineFriends = useMemo(() =>
+    friendsList.filter(u => u?.online).slice(0, 8),
+    [friendsList]
   );
 
   function handleJoin(id: string, pinned?: boolean) {
@@ -428,11 +444,11 @@ const allUsers: any[] = useMemo(() => {
         )}
 
         {/* ACTIVE NOW */}
-        {friends.length > 0 && (
+        {onlineFriends.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="👥" label="Active Now" count={friends.length} />
+            <SectionHeader icon="👥" label="Active Now" count={onlineFriends.length} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-              {friends.map((u, i) => (
+              {onlineFriends.map((u, i) => (
                 <FriendCard key={u?.id || i} user={u} onDm={handleDm}
                   onJoin={u => { const rid = pickFirst(u?.room, u?.roomId, u?.activeRoom, ""); if (rid) handleJoin(rid); }} />
               ))}
