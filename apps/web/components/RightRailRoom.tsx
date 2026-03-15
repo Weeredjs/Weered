@@ -1,10 +1,10 @@
 "use client";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string };
-
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
 function normUser(u: any): Person {
   if (!u) return {};
   if (typeof u === "string") return { id: u, name: u };
@@ -47,7 +47,93 @@ function extractParticipants(ctx: any, roomId: string): Person[] {
   const me = ctx?.me ?? ctx?.user;
   return me ? [normUser(me)] : [];
 }
+function FriendsPanel() {
+  const [friends, setFriends] = React.useState<any[]>([]);
+  const [open, setOpen] = React.useState(true);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  async function load() {
+    try {
+      const t = localStorage.getItem("weered_token") || "";
+      const r = await fetch(`${API_BASE}/friends`, { headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" } });
+      const j = await r.json();
+      setFriends(Array.isArray(j?.friends) ? j.friends : []);
+    } catch {}
+  }
+  React.useEffect(() => { if (mounted) void load(); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+  if (!mounted || !friends.length) return null;
+  const online = friends.filter(f => f.online);
+  const offline = friends.filter(f => !f.online);
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        Friends · {online.length} Online
+        <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11 }}>{open ? "▲" : "▼"}</button>
+      </div>
+      {open && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {online.map(f => (
+            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e", flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+              {f.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{f.roomName}</span>}
+            </div>
+          ))}
+          {offline.map(f => (
+            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, opacity: 0.4 }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+              <span style={{ fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
+function CrewPanel() {
+  const [crews, setCrews] = React.useState<any[]>([]);
+  const [open, setOpen] = React.useState(true);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  async function load() {
+    try {
+      const t = localStorage.getItem("weered_token") || "";
+      const r = await fetch(`${API_BASE}/crews/mine`, { headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" } });
+      const j = await r.json();
+      setCrews(Array.isArray(j?.crews) ? j.crews : []);
+    } catch {}
+  }
+  React.useEffect(() => { if (mounted) void load(); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+  if (!mounted || !crews.length) return null;
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        Crew
+        <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11 }}>{open ? "▲" : "▼"}</button>
+      </div>
+      {open && crews.map(crew => {
+        const online = (crew.members || []).filter((m: any) => m.online);
+        return (
+          <div key={crew.id} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{crew.name} {crew.tag ? `[${crew.tag}]` : ""} · {online.length} online</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {(crew.members || []).map((m: any) => (
+                <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)", boxShadow: m.online ? "0 0 5px #a78bfa" : "none", flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                  {m.online && m.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{m.roomName}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 export default function RightRailRoom({ roomId }: { roomId: string }) {
   const { replaceTop } = useOverlay();
   const ctx = useWeered() as any;
@@ -389,6 +475,12 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
           </div>
         </details>
       )}
+
+      {/* ── Friends ── */}
+      <FriendsPanel />
+
+      {/* ── Crew ── */}
+      <CrewPanel />
     </div>
   );
 }
