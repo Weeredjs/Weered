@@ -38,8 +38,8 @@ const CHAT_HEIGHT = 420;
 
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
-  const roomId = (w?.activeRoomId || "").replace("room:", "");
-  const joinStatus = w?.statusByRoom?.[roomId] || w?.statusByRoom?.["room:" + roomId] || "idle";
+  const activeRid = (w?.activeRoomId || "").replace("room:", "");
+  const joinStatus = w?.statusByRoom?.[activeRid] || w?.statusByRoom?.["room:" + activeRid] || w?.statusByRoom?.[roomId] || "idle";
   const { openSheet } = useOverlay();
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
@@ -228,7 +228,32 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-w-0 h-full overflow-hidden">
+    <div className="flex flex-col min-w-0 h-full overflow-hidden" style={{ position: "relative" }}>
+
+      {/* ── Knock waiting overlay ── */}
+      {joinStatus === "knocking" && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.2)", border: "2px solid rgba(124,58,237,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, animation: "weered-pulse 2s ease-in-out infinite" }}>🚪</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Waiting for admittance</div>
+            <div style={{ fontSize: 13, opacity: 0.5 }}>A moderator will let you in shortly</div>
+          </div>
+          <button onClick={() => { try { w?.leave?.(); } catch {} try { window.history.back(); } catch {} }} style={{ marginTop: 8, padding: "8px 20px", borderRadius: 9, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+          <style>{`@keyframes weered-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.95)}}`}</style>
+        </div>
+      )}
+
+      {/* ── Denied overlay ── */}
+      {joinStatus === "denied" && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <div style={{ fontSize: 40 }}>🚫</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Entry denied</div>
+            <div style={{ fontSize: 13, opacity: 0.5 }}>A moderator declined your request</div>
+          </div>
+          <button onClick={() => { try { window.history.back(); } catch {} }} style={{ marginTop: 8, padding: "8px 20px", borderRadius: 9, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "rgba(252,165,165,0.9)", fontSize: 13, cursor: "pointer" }}>Go back</button>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <RoomHeader
