@@ -213,13 +213,41 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
-  React.useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "https://api.weered.ca";
-    fetch(`${base}/rooms`)
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d?.rooms)) setFetchedRooms(d.rooms); })
-      .catch(() => {});
-  }, []);
+React.useEffect(() => {
+  const base = "https://api.weered.ca";
+  const token = localStorage.getItem("weered:token") ?? "";
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  // Fetch lobbies
+  fetch(`${base}/lobbies`, { headers })
+    .then(r => r.json())
+    .then(d => {
+      if (Array.isArray(d?.lobbies)) {
+        setFetchedRooms(prev => [
+          ...d.lobbies.map((l: any) => ({
+            ...l,
+            pinned: true,
+            onlineCount: l._count?.members ?? 0,
+          })),
+          ...prev.filter((r: any) => !r.pinned),
+        ]);
+      }
+    })
+    .catch(() => {});
+
+  // Fetch active rooms
+  fetch(`${base}/rooms`, { headers })
+    .then(r => r.json())
+    .then(d => {
+      if (Array.isArray(d?.rooms)) {
+        setFetchedRooms(prev => [
+          ...prev.filter((r: any) => r.pinned),
+          ...d.rooms,
+        ]);
+      }
+    })
+    .catch(() => {});
+}, []);
 
   const myName = pickFirst(me?.name, me?.username, "there");
 
