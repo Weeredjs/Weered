@@ -1053,41 +1053,44 @@ async function main() {
     return reply.send({ ok: true, logs });
   });
 // POST /staff/lobby/lock — lock lobby chat (SUPPORT+)
-  app.post("/staff/lobby/lock", async (req, reply) => {
+app.post("/staff/lobby/lock", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const room = rooms.get("lobby");
+    const lid = String((req.body as any)?.lobbyId || "lobby");
+    const room = rooms.get(lid);
     if (room) room.locked = true;
-    await globalAudit(u.id, u.name, "lobby_lock");
-    if (room) broadcast(room, { type: "room:locked", roomId: "lobby" });
+    await globalAudit(u.id, u.name, "lobby_lock", lid);
+    if (room) broadcast(room, { type: "room:locked", roomId: lid });
     return reply.send({ ok: true });
   });
 
   // POST /staff/lobby/unlock — unlock lobby chat (SUPPORT+)
-  app.post("/staff/lobby/unlock", async (req, reply) => {
+app.post("/staff/lobby/unlock", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const room = rooms.get("lobby");
+    const lid = String((req.body as any)?.lobbyId || "lobby");
+    const room = rooms.get(lid);
     if (room) room.locked = false;
-    await globalAudit(u.id, u.name, "lobby_unlock");
-    if (room) broadcast(room, { type: "room:unlocked", roomId: "lobby" });
+    await globalAudit(u.id, u.name, "lobby_unlock", lid);
+    if (room) broadcast(room, { type: "room:unlocked", roomId: lid });
     return reply.send({ ok: true });
   });
 
   // POST /staff/lobby/clear-chat — clear lobby messages (STAFF+)
-  app.post("/staff/lobby/clear-chat", async (req, reply) => {
+app.post("/staff/lobby/clear-chat", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const room = rooms.get("lobby");
-    await prisma.roomMessage.deleteMany({ where: { roomId: "lobby" } });
-    await globalAudit(u.id, u.name, "lobby_clear_chat");
-    if (room) broadcast(room, { type: "chat:cleared", roomId: "lobby" });
+    const lid = String((req.body as any)?.lobbyId || "lobby");
+    const room = rooms.get(lid);
+    await prisma.lobbyMessage.deleteMany({ where: { lobbyId: lid } });
+    await globalAudit(u.id, u.name, "lobby_clear_chat", lid);
+    if (room) broadcast(room, { type: "chat:cleared", roomId: lid });
     return reply.send({ ok: true });
   });
   // POST /staff/users/:userId/kick
