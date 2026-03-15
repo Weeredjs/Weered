@@ -34,7 +34,7 @@ type Ctx = {
   users: RoomUser[]; msgs: ChatMsg[];
   usersByRoom: Record<string, RoomUser[]>;
   meta: RoomMeta | null; admin: AdminState | null;
-  role: Role; joinStatus: JoinStatus;
+  role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
   rooms: any[];
   join: (roomId: string) => void;
   knock: (roomId: string) => void;
@@ -514,7 +514,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, setActiveRoomId,
-    users, msgs, meta, admin, role, joinStatus,
+    users, msgs, meta, admin, role, joinStatus, statusByRoom,
     usersByRoom,
     rooms, join, knock,
     devLogin, logout,
