@@ -69,6 +69,7 @@ export default function InvitePage() {
     const r = await fetch(`${API}/invites/${token}/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({}),
     });
     const j = await r.json();
     if (j.ok) {
