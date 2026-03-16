@@ -151,38 +151,43 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
 
-  // FIX: track locked state optimistically so both buttons reflect reality
-  const [chatLocked, setChatLocked] = React.useState<boolean | null>(null);
-  const [note,       setNote]       = React.useState("");
-  const [loading,    setLoading]    = React.useState(false);
+  const LS_KEY = `weered:lobby:chatLocked:${lobbyId}`;
 
-  // Fetch current lobby chat-lock state on mount
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}`);
-        if (typeof j?.chatLocked === "boolean") setChatLocked(j.chatLocked);
-        else if (typeof j?.locked === "boolean") setChatLocked(j.locked);
-      } catch {}
-    })();
-  }, [lobbyId]);
+  // Seed from localStorage so state survives refresh without an API fetch.
+  // The API fetch was causing two bugs: (1) race with optimistic click overwrote
+  // the in-flight update, (2) j?.locked referred to entry-locking not chat-locking
+  // so buttons seeded backwards after refresh.
+  const [chatLocked, _setChatLocked] = React.useState<boolean | null>(() => {
+    try {
+      const v = localStorage.getItem(LS_KEY);
+      if (v === "true")  return true;
+      if (v === "false") return false;
+    } catch {}
+    return null; // unknown until first action
+  });
+  const [note,    setNote]    = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  // Wrap setter so localStorage always stays in sync
+  function setChatLocked(v: boolean) {
+    _setChatLocked(v);
+    try { localStorage.setItem(LS_KEY, String(v)); } catch {}
+  }
 
   async function action(type: "lock" | "unlock") {
     setLoading(true); setNote("");
     const willLock = type === "lock";
-    // Optimistically update UI immediately so the button state feels snappy
+    // Optimistic — update UI immediately
     setChatLocked(willLock);
     try {
-      // Primary path: /staff/lobby/lock or /staff/lobby/unlock
       let j = await apiFetch(`/staff/lobby/${type}`, {
         method: "POST",
         body: JSON.stringify({ lobbyId }),
       });
 
-      // FIX: if the dedicated unlock route doesn't exist (404 / not ok),
-      // fall back to POSTing to /staff/lobby/lock with locked:false
+      // Fallback: if /unlock route doesn't exist, POST /lock with locked:false
       if (!j?.ok && type === "unlock") {
-        j = await apiFetch(`/staff/lobby/lock`, {
+        j = await apiFetch("/staff/lobby/lock", {
           method: "POST",
           body: JSON.stringify({ lobbyId, locked: false }),
         });
@@ -191,7 +196,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
       if (j?.ok) {
         setNote(willLock ? "Chat locked." : "Chat unlocked.");
       } else {
-        // Revert optimistic update on failure
+        // Revert on confirmed failure
         setChatLocked(!willLock);
         setNote(j?.error || "Failed.");
       }
@@ -222,28 +227,26 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
       <div style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "10px 12px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <button
-            disabled={loading || isLocked}
+            disabled={loading}
             onClick={() => action("lock")}
             style={{
-              padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading || isLocked ? "default" : "pointer",
+              padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer",
               border: isLocked ? "1px solid rgba(245,158,11,.50)" : "1px solid rgba(245,158,11,.25)",
               background: isLocked ? "rgba(245,158,11,.18)" : "rgba(245,158,11,.08)",
               color: "rgb(253,230,138)",
               fontWeight: isLocked ? 700 : 400,
-              opacity: isLocked ? 1 : 0.8,
             }}>
             {isLocked ? "🔒 Locked" : "Lock Chat"}
           </button>
           <button
-            disabled={loading || !isLocked}
+            disabled={loading}
             onClick={() => action("unlock")}
             style={{
-              padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading || !isLocked ? "default" : "pointer",
+              padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer",
               border: !isLocked ? "1px solid rgba(16,185,129,.50)" : "1px solid rgba(16,185,129,.25)",
               background: !isLocked ? "rgba(16,185,129,.18)" : "rgba(16,185,129,.08)",
               color: "rgb(167,243,208)",
               fontWeight: !isLocked ? 700 : 400,
-              opacity: !isLocked ? 1 : 0.8,
             }}>
             {!isLocked ? "✓ Unlocked" : "Unlock Chat"}
           </button>

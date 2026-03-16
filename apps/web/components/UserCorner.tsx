@@ -60,25 +60,47 @@ export default function UserCorner() {
     return () => window.removeEventListener("weered:avatarColor", handler);
   }, []);
 
-  // FIX: dock unread count — listens for weered:dock:unread events
-  // Dock dispatches this whenever DM unread count changes: new CustomEvent("weered:dock:unread", { detail: { count: N } })
-  const [dockUnread, setDockUnread] = React.useState(0);
+  // Dock unread badge — two sources:
+  // 1. weered:dock:unread custom event (Dock fires this when count changes)
+  // 2. localStorage "weered:dock:unread" polled every 2s as fallback
+  //    (covers the case where the event fired before this component mounted)
+  // Dock should write: localStorage.setItem("weered:dock:unread", String(count))
+  const [dockUnread, setDockUnread] = React.useState(() => {
+    try { return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0); } catch { return 0; }
+  });
+
   React.useEffect(() => {
-    const handler = (e: Event) => {
-      const count = (e as CustomEvent)?.detail?.count ?? 0;
-      setDockUnread(Math.max(0, Number(count) || 0));
+    // Event listener — instant when Dock dispatches
+    const onUnread = (e: Event) => {
+      const count = Math.max(0, Number((e as CustomEvent)?.detail?.count) || 0);
+      setDockUnread(count);
+      try { localStorage.setItem("weered:dock:unread", String(count)); } catch {}
     };
-    window.addEventListener("weered:dock:unread", handler);
-    return () => window.removeEventListener("weered:dock:unread", handler);
+    // Poll localStorage every 2s as fallback for missed events
+    const poll = () => {
+      try {
+        const v = Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0);
+        setDockUnread(v);
+      } catch {}
+    };
+    const interval = setInterval(poll, 2000);
+    window.addEventListener("weered:dock:unread", onUnread);
+    return () => {
+      window.removeEventListener("weered:dock:unread", onUnread);
+      clearInterval(interval);
+    };
   }, []);
 
-  // Also clear the badge when the dock is opened
+  // Clear badge when dock opens
   React.useEffect(() => {
-    const handler = () => setDockUnread(0);
-    window.addEventListener("weered:dock:open", handler);
+    const handler = () => {
+      setDockUnread(0);
+      try { localStorage.setItem("weered:dock:unread", "0"); } catch {}
+    };
+    window.addEventListener("weered:dock:open",   handler);
     window.addEventListener("weered:dock:toggle", handler);
     return () => {
-      window.removeEventListener("weered:dock:open", handler);
+      window.removeEventListener("weered:dock:open",   handler);
       window.removeEventListener("weered:dock:toggle", handler);
     };
   }, []);
