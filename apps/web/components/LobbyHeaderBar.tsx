@@ -47,9 +47,11 @@ const MODULE_LABELS: Record<string, string> = {
 export default function LobbyHeaderBar({
   title = "Lobby",
   subtitle,
+  lobbyId,
 }: {
   title?: string;
   subtitle?: string;
+  lobbyId?: string;
 }) {
   const router = useRouter();
   const w = useWeered() as any;
