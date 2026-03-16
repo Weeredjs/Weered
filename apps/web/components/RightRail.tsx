@@ -288,6 +288,13 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
           </button>
         </div>
         {note && <div style={{ marginTop: 8, fontSize: 11, opacity: 0.65 }}>{note}</div>}
+        {/* DEBUG */}
+        <div style={{ marginTop: 6, fontSize: 9, opacity: 0.4, fontFamily: "monospace", wordBreak: "break-all", lineHeight: 1.6 }}>
+          <div>meta: {JSON.stringify({ locked: ctx?.meta?.locked, chatLocked: ctx?.meta?.chatLocked, chatDisabled: ctx?.meta?.chatDisabled })}</div>
+          <div>admin: {JSON.stringify({ locked: ctx?.admin?.locked, chatLocked: ctx?.admin?.chatLocked })}</div>
+          <div>direct: {JSON.stringify({ locked: ctx?.locked, chatLocked: ctx?.chatLocked, chatDisabled: ctx?.chatDisabled, isChatLocked: ctx?.isChatLocked })}</div>
+          <div>lobby: {JSON.stringify({ locked: ctx?.lobby?.locked, chatLocked: ctx?.lobbyState?.chatLocked, state: ctx?.lobbyState?.locked })}</div>
+        </div>
       </div>
     </div>
   );
