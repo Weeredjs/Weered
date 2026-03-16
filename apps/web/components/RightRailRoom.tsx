@@ -1,4 +1,5 @@
 "use client";
+import InviteModal from "../InviteModal";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import React, { useCallback, useMemo, useState } from "react";
@@ -177,6 +178,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [renaming,     setRenaming    ] = useState(false);
   const [chatDisabled, setChatDisabled] = useState(false);
   const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
+  const [showInvite,   setShowInvite  ] = useState(false);
 
   const selected = useMemo(() => {
     const id = selectedId || people[0]?.id || people[0]?.name || "";
@@ -275,6 +277,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
         <button style={s.btn} onClick={() => { const base = typeof window !== "undefined" ? window.location.origin : ""; copyText("link", `${base}/room/${encodeURIComponent(roomId)}`); }}>Copy link</button>
         <button style={s.btn} onClick={() => copyText("id", roomId)}>Copy id</button>
+        <button style={{ ...s.btn, gridColumn: "span 2", borderColor: "rgba(124,58,237,.30)", color: "rgb(216,180,254)", background: "rgba(124,58,237,.08)" }} onClick={() => setShowInvite(true)}>Invite</button>
       </div>
 
       {/* ── Mod panel ── */}
@@ -482,5 +485,13 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       {/* ── Crew ── */}
       <CrewPanel />
     </div>
+      {showInvite && (
+        <InviteModal
+          type="ROOM"
+          targetId={roomId}
+          targetName={roomName || roomId}
+          onClose={() => setShowInvite(false)}
+        />
+      )}
   );
 }
