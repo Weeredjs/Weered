@@ -1,4 +1,152 @@
-import "dotenv/config";
+import
+  // ── Invites ──────────────────────────────────────────────────────────────────
+
+  // POST /invites — create an invite link
+  app.post("/invites", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req.body as any) || {};
+    const type     = String(body.type || "PLATFORM").toUpperCase();
+    const targetId = body.targetId ? String(body.targetId) : null;
+    const maxUses  = Math.min(Math.max(Number(body.maxUses) || 1, 1), 100);
+    const note     = body.note ? String(body.note).slice(0, 200) : null;
+    const ttlHours = Number(body.ttlHours) || 0;
+    const expiresAt = ttlHours > 0 ? new Date(Date.now() + ttlHours * 3600 * 1000) : null;
+    const validTypes = ["PLATFORM", "ROOM", "LOBBY", "CREW"];
+    if (!validTypes.includes(type)) return reply.code(400).send({ ok: false, error: "invalid_type" });
+    const invite = await prisma.invite.create({
+      data: { type: type as any, targetId, createdBy: u.id, note, maxUses, expiresAt },
+    });
+    return reply.send({ ok: true, invite: { token: invite.token, type: invite.type, targetId: invite.targetId, maxUses, expiresAt, url: `${WEB_URL}/invite/${invite.token}` } });
+  });
+
+  // GET /invites/mine — list my created invites
+  app.get("/invites/mine", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const invites = await prisma.invite.findMany({
+      where: { createdBy: u.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return reply.send({ ok: true, invites: invites.map(i => ({ ...i, url: `${WEB_URL}/invite/${i.token}` })) });
+  });
+
+  // GET /invites/:token — resolve invite (public)
+  app.get("/invites/:token", async (req, reply) => {
+    const token = String((req as any).params?.token || "");
+    const invite = await prisma.invite.findUnique({ where: { token } });
+    if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (invite.expiresAt && invite.expiresAt < new Date()) return reply.code(410).send({ ok: false, error: "expired" });
+    if (invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
+    // Resolve target name
+    let targetName = "";
+    if (invite.targetId) {
+      if (invite.type === "ROOM") {
+        const r = await prisma.room.findUnique({ where: { id: invite.targetId }, select: { name: true } }).catch(() => null);
+        targetName = r?.name || invite.targetId;
+      } else if (invite.type === "LOBBY") {
+        const l = await prisma.lobby.findUnique({ where: { id: invite.targetId }, select: { name: true } }).catch(() => null);
+        targetName = l?.name || invite.targetId;
+      } else if (invite.type === "CREW") {
+        const c = await prisma.crew.findUnique({ where: { id: invite.targetId }, select: { name: true, tag: true } }).catch(() => null);
+        targetName = c ? `${c.name} [${c.tag}]` : invite.targetId;
+      }
+    }
+    const creator = await prisma.user.findUnique({ where: { id: invite.createdBy }, select: { name: true, usernameKey: true } }).catch(() => null);
+    return reply.send({ ok: true, invite: { ...invite, targetName, creatorName: creator?.name || creator?.usernameKey || "unknown" } });
+  });
+
+  // POST /invites/:token/accept — accept invite
+  app.post("/invites/:token/accept", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const token = String((req as any).params?.token || "");
+    const invite = await prisma.invite.findUnique({ where: { token } });
+    if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (invite.expiresAt && invite.expiresAt < new Date()) return reply.code(410).send({ ok: false, error: "expired" });
+    if (invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
+
+    // Increment uses
+    await prisma.invite.update({ where: { token }, data: { uses: { increment: 1 } } });
+
+    // Perform join action
+    let redirect = "/lobby";
+    if (invite.type === "ROOM" && invite.targetId) {
+      // Add as room member
+      await prisma.roomMember.upsert({
+        where: { roomId_userId: { roomId: invite.targetId, userId: u.id } },
+        create: { roomId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
+        update: {},
+      }).catch(() => {});
+      redirect = `/room/${encodeURIComponent(invite.targetId)}`;
+    } else if (invite.type === "LOBBY" && invite.targetId) {
+      await prisma.lobbyMember.upsert({
+        where: { lobbyId_userId: { lobbyId: invite.targetId, userId: u.id } },
+        create: { lobbyId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
+        update: {},
+      }).catch(() => {});
+      redirect = `/lobby/${encodeURIComponent(invite.targetId)}`;
+    } else if (invite.type === "CREW" && invite.targetId) {
+      await prisma.crewMember.upsert({
+        where: { crewId_userId: { crewId: invite.targetId, userId: u.id } },
+        create: { crewId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
+        update: {},
+      }).catch(() => {});
+      redirect = "/lobby";
+    }
+
+    // Send DM notification to invite creator
+    if (invite.createdBy !== u.id) {
+      const msg = invite.type === "PLATFORM"
+        ? `${u.name} joined Weered using your invite!`
+        : `${u.name} joined via your ${invite.type.toLowerCase()} invite${invite.targetId ? ` (${invite.targetId})` : ""}.`;
+      await prisma.directMessage.create({
+        data: { fromId: u.id, toId: invite.createdBy, body: msg },
+      }).catch(() => {});
+    }
+
+    return reply.send({ ok: true, redirect, type: invite.type, targetId: invite.targetId });
+  });
+
+  // POST /invites/send — send invite to a user by username (creates invite + DM)
+  app.post("/invites/send", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req.body as any) || {};
+    const username = String(body.username || "").toLowerCase().trim();
+    const type     = String(body.type || "PLATFORM").toUpperCase();
+    const targetId = body.targetId ? String(body.targetId) : null;
+    if (!username) return reply.code(400).send({ ok: false, error: "username_required" });
+    const target = await prisma.user.findFirst({ where: { OR: [{ usernameKey: username }, { name: { equals: username, mode: "insensitive" } }] }, select: { id: true, name: true } });
+    if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
+    if (target.id === u.id) return reply.code(400).send({ ok: false, error: "cannot_invite_self" });
+    // Create single-use invite
+    const invite = await prisma.invite.create({
+      data: { type: type as any, targetId, createdBy: u.id, maxUses: 1, expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000) },
+    });
+    const inviteUrl = `${WEB_URL}/invite/${invite.token}`;
+    const msg = type === "PLATFORM"
+      ? `${u.name} invited you to join Weered! ${inviteUrl}`
+      : `${u.name} invited you to join a ${type.toLowerCase()}. ${inviteUrl}`;
+    await prisma.directMessage.create({ data: { fromId: u.id, toId: target.id, body: msg } });
+    return reply.send({ ok: true, token: invite.token, url: inviteUrl, sentTo: target.name });
+  });
+
+  // DELETE /invites/:token — revoke invite
+  app.delete("/invites/:token", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const token = String((req as any).params?.token || "");
+    const invite = await prisma.invite.findUnique({ where: { token } });
+    if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
+    const role = await getGlobalRole(u.id);
+    if (invite.createdBy !== u.id && !canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    await prisma.invite.delete({ where: { token } });
+    return reply.send({ ok: true });
+  });
+
+ "dotenv/config";
 
 import Fastify from "fastify";
 import jwt from "jsonwebtoken";
@@ -996,7 +1144,7 @@ async function main() {
     const q = String((req as any).query?.q || "").trim().toLowerCase();
     const users = await prisma.user.findMany({
       where: q ? { OR: [{ usernameKey: { contains: q } }, { name: { contains: q, mode: "insensitive" } }] } : {},
-      select: { id: true, name: true, usernameKey: true, globalRole: true, tier: true, notoriety: true, email: true, createdAt: true },
+      select: { id: true, name: true, usernameKey: true, globalRole: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -1280,102 +1428,6 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
 
     return reply.send({ ok: true });
   });
-
-// ── NEW STAFF ROUTES — paste before the closing brace of the route registration block ──
-
-  // GET /staff/subscriptions — users with tier info (STAFF+)
-  app.get("/staff/subscriptions", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const users = await prisma.user.findMany({
-      select: { id: true, name: true, usernameKey: true, globalRole: true, tier: true, notoriety: true, createdAt: true, email: true },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    });
-    return reply.send({ ok: true, users });
-  });
-
-  // POST /staff/users/:userId/tier — change user tier (STAFF+)
-  app.post("/staff/users/:userId/tier", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const targetId = String((req as any).params?.userId || "");
-    const tier = String((req.body as any)?.tier || "");
-    const validTiers = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
-    if (!validTiers.includes(tier)) return reply.code(400).send({ ok: false, error: "invalid_tier" });
-    await prisma.user.update({ where: { id: targetId }, data: { tier: tier as any } });
-    await globalAudit(u.id, u.name, "user_tier_change", targetId, tier);
-    return reply.send({ ok: true });
-  });
-
-  // GET /staff/lobbies — all lobbies with stats (STAFF+)
-  app.get("/staff/lobbies", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const lobbies = await prisma.lobby.findMany({ orderBy: { createdAt: "asc" } });
-    return reply.send({
-      ok: true,
-      lobbies: lobbies.map(l => ({
-        id: l.id, name: l.name, description: l.description,
-        verified: l.verified, pinned: l.pinned,
-        moduleType: l.moduleType || "REDDIT",
-        onlineCount: rooms.get(l.id)?.users.size ?? 0,
-      })),
-    });
-  });
-
-  // POST /staff/lobbies/:lobbyId/pin — pin/unpin lobby (STAFF+)
-  app.post("/staff/lobbies/:lobbyId/pin", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const lobbyId = decodeURIComponent(String((req as any).params?.lobbyId || ""));
-    const pinned = Boolean((req.body as any)?.pinned);
-    await prisma.lobby.update({ where: { id: lobbyId }, data: { pinned } });
-    await globalAudit(u.id, u.name, pinned ? "lobby_pin" : "lobby_unpin", lobbyId);
-    return reply.send({ ok: true });
-  });
-
-  // In-memory site config (persists until restart — extend to DB/file as needed)
-  const siteConfig = {
-    registrationOpen: true,
-    maintenanceMode: false,
-    defaultTier: "INNOCENT" as string,
-    maxRoomsPerLobby: 20,
-    chatRateLimit: 30,
-  };
-
-  // GET /staff/config (GOD only)
-  app.get("/staff/config", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (role !== GlobalRole.GOD) return reply.code(403).send({ ok: false, error: "forbidden" });
-    return reply.send({ ok: true, config: { ...siteConfig } });
-  });
-
-  // POST /staff/config (GOD only)
-  app.post("/staff/config", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (role !== GlobalRole.GOD) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const body: any = (req.body as any) || {};
-    if (typeof body.registrationOpen === "boolean") siteConfig.registrationOpen = body.registrationOpen;
-    if (typeof body.maintenanceMode  === "boolean") siteConfig.maintenanceMode  = body.maintenanceMode;
-    if (typeof body.maxRoomsPerLobby === "number")  siteConfig.maxRoomsPerLobby = body.maxRoomsPerLobby;
-    if (typeof body.chatRateLimit    === "number")  siteConfig.chatRateLimit    = body.chatRateLimit;
-    await globalAudit(u.id, u.name, "config_update", undefined, body);
-    return reply.send({ ok: true });
-  });
-
   // ── DM Routes ──────────────────────────────────────────────────────────────
 
   // GET /dm/unread — unread counts per peer
