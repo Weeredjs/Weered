@@ -474,7 +474,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     return (
                       <div key={m.id} style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start" }}>
                         <div style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
-                          <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{m.body}</div>
+                          <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{linkify(String(m.body||""))}</div>
                         </div>
                         <span style={{ fontSize:10, color:"var(--weered-muted)", marginTop:3 }}>{fmtTime(m.createdAt)}</span>
                       </div>
