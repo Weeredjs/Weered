@@ -243,9 +243,18 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || "unknown"; }
   })();
 
-  const metaLocked = Boolean(ctx?.meta?.locked ?? ctx?.metaByRoom?.[roomId]?.locked ?? false);
+  // ctx.meta.locked updates in real-time from room:locked / room:unlocked / room:adminState WS events
+  const metaLocked = Boolean(ctx?.meta?.locked ?? false);
   const [lockedOverride, setLockedOverride] = useState<boolean | null>(null);
   const locked = lockedOverride ?? metaLocked;
+
+  // Clear optimistic override once WeeredProvider confirms the change (max 8s safety valve)
+  useEffect(() => {
+    if (lockedOverride === null) return;
+    if (metaLocked === lockedOverride) { setLockedOverride(null); return; }
+    const t = setTimeout(() => setLockedOverride(null), 8000);
+    return () => clearTimeout(t);
+  }, [metaLocked, lockedOverride]);
 
   const [slowSec,      setSlowSec     ] = useState(0);
   const [selectedId,   setSelectedId  ] = useState("");
@@ -253,7 +262,18 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [note,         setNote        ] = useState("");
   const [renameVal,    setRenameVal   ] = useState("");
   const [renaming,     setRenaming    ] = useState(false);
-  const [chatDisabled, setChatDisabled] = useState(false);
+  // chatDisabled now reads from ctx.meta.chatDisabled (driven by room:chat:disabled/enabled WS events)
+  const metaChatDisabled = Boolean(ctx?.meta?.chatDisabled ?? false);
+  const [chatDisabledOverride, setChatDisabledOverride] = useState<boolean | null>(null);
+  const chatDisabled = chatDisabledOverride ?? metaChatDisabled;
+
+  // Clear override once ctx confirms
+  useEffect(() => {
+    if (chatDisabledOverride === null) return;
+    if (metaChatDisabled === chatDisabledOverride) { setChatDisabledOverride(null); return; }
+    const t = setTimeout(() => setChatDisabledOverride(null), 8000);
+    return () => clearTimeout(t);
+  }, [metaChatDisabled, chatDisabledOverride]);
   const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
   const [showInvite,   setShowInvite  ] = useState(false);
 
@@ -319,10 +339,10 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
-  // FIX: chat toggle is isolated — only controls chat, never touches room lock state
+  // Chat toggle: optimistic override + WS sendAdmin. Override clears once ctx.meta.chatDisabled confirms.
   const doToggleChat = useCallback(() => {
     const next = !chatDisabled;
-    setChatDisabled(next);
+    setChatDisabledOverride(next);
     try {
       ctx?.sendAdmin?.("room:chat:" + (next ? "disable" : "enable"), {});
       setNote(next ? "Chat disabled." : "Chat enabled.");

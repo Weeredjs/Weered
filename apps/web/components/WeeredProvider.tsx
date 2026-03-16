@@ -22,7 +22,7 @@ type AuditItem = {
   targetId?: string; targetName?: string; note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; ownerId: string; mods: string[] };
+type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; ownerId: string; mods: string[] };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 
 type Ctx = {
@@ -262,7 +262,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         setUsersByRoom(prev => ({ ...prev, [rid]: list }));
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
+          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
         // activeRoomId managed by path effect — no override needed here
@@ -314,7 +314,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         }));
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
+          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         return;
       }
@@ -352,7 +352,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid = String(msg.roomId || "");
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [] }), locked: true }
+          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], chatDisabled: false }), locked: true }
         }));
         return;
       }
@@ -362,7 +362,25 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid = String(msg.roomId || "");
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [] }), locked: false }
+          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], chatDisabled: false }), locked: false }
+        }));
+        return;
+      }
+
+      if (msg.type === "room:chat:disabled") {
+        const rid = String(msg.roomId || "");
+        setMetaByRoom(prev => ({
+          ...prev,
+          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], locked: false, chatDisabled: false }), chatDisabled: true }
+        }));
+        return;
+      }
+
+      if (msg.type === "room:chat:enabled") {
+        const rid = String(msg.roomId || "");
+        setMetaByRoom(prev => ({
+          ...prev,
+          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], locked: false, chatDisabled: false }), chatDisabled: false }
         }));
         return;
       }
