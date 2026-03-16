@@ -32,7 +32,6 @@ const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }>
   MOD:     { border: "rgba(167,139,250,.34)", bg: "rgba(124,58,237,.18)",  color: "#c4b5fd" },
 };
 
-// Small SVG icons
 const IconSettings = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
     <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4"/>
@@ -51,7 +50,8 @@ export default function UserCorner() {
   const { me, role, globalRole } = useWeered() as any;
   const { openSheet } = useOverlay();
 
-  const name     = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
+  const name = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
+
   // Re-render when avatar color changes
   const [, forceUpdate] = React.useState(0);
   React.useEffect(() => {
@@ -59,16 +59,35 @@ export default function UserCorner() {
     window.addEventListener("weered:avatarColor", handler);
     return () => window.removeEventListener("weered:avatarColor", handler);
   }, []);
+
+  // FIX: dock unread count — listens for weered:dock:unread events
+  // Dock dispatches this whenever DM unread count changes: new CustomEvent("weered:dock:unread", { detail: { count: N } })
+  const [dockUnread, setDockUnread] = React.useState(0);
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const count = (e as CustomEvent)?.detail?.count ?? 0;
+      setDockUnread(Math.max(0, Number(count) || 0));
+    };
+    window.addEventListener("weered:dock:unread", handler);
+    return () => window.removeEventListener("weered:dock:unread", handler);
+  }, []);
+
+  // Also clear the badge when the dock is opened
+  React.useEffect(() => {
+    const handler = () => setDockUnread(0);
+    window.addEventListener("weered:dock:open", handler);
+    window.addEventListener("weered:dock:toggle", handler);
+    return () => {
+      window.removeEventListener("weered:dock:open", handler);
+      window.removeEventListener("weered:dock:toggle", handler);
+    };
+  }, []);
+
   const gRole    = useMemo(() => normRole(globalRole || ""), [globalRole]);
   const roomRole = useMemo(() => normRole(pickFirstString(role)), [role]);
   const initial  = (name || "G").trim().slice(0, 1).toUpperCase();
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
-
-  // Pick avatar color from localStorage if set (mirrors ProfileSheet logic)
-  const avatarColor = typeof window !== "undefined"
-    ? null // will be driven by profile API later; default to accent grad for now
-    : null;
 
   const chipStyle = (r: string) => {
     const c = ROLE_COLORS[r];
@@ -87,7 +106,7 @@ export default function UserCorner() {
         marginBottom: 4,
       }}
     >
-      {/* Ambient brand watermark — top right */}
+      {/* Ambient brand watermark */}
       <div style={{
         position: "absolute", top: 8, right: 10,
         opacity: 0.045, pointerEvents: "none", userSelect: "none",
@@ -96,7 +115,7 @@ export default function UserCorner() {
         WEERED
       </div>
 
-      {/* Main identity row — clickable to open profile */}
+      {/* Main identity row */}
       <button
         type="button"
         onClick={() => openSheet("profile", { userId: profileUserId })}
@@ -168,13 +187,34 @@ export default function UserCorner() {
 
         <div style={{ width: 1, background: "rgba(255,255,255,.05)", flexShrink: 0 }} />
 
+        {/* FIX: Dock button with unread badge */}
         <button
           type="button"
           onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
-          title="Dock"
-          style={actionBtn}
+          title={dockUnread > 0 ? `Dock · ${dockUnread} unread` : "Dock"}
+          style={{ ...actionBtn, color: dockUnread > 0 ? "rgba(251,191,36,.9)" : actionBtn.color }}
         >
-          <IconDock />
+          {/* Icon wrapper with badge */}
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <IconDock />
+            {dockUnread > 0 && (
+              <span style={{
+                position: "absolute",
+                top: -5, right: -6,
+                minWidth: 14, height: 14,
+                borderRadius: 999,
+                background: "#f59e0b",
+                border: "2px solid rgba(10,10,15,1)",
+                fontSize: 8, fontWeight: 900, color: "#000",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: dockUnread > 9 ? "0 2px" : "0",
+                lineHeight: 1,
+                pointerEvents: "none",
+              }}>
+                {dockUnread > 9 ? "9+" : dockUnread}
+              </span>
+            )}
+          </div>
           <span style={{ fontSize: 11 }}>Dock</span>
         </button>
       </div>

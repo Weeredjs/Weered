@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
+import { useOverlay } from "./overlays/OverlayProvider";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -17,16 +18,13 @@ async function apiFetch(path: string, opts?: RequestInit) {
   const r = await fetch(`${API_BASE}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
   return r.json();
 }
+
 function lobbyHref(id: string): string {
-  // Room IDs are short random alphanumeric (e.g. zbZTrF)
-  // Lobby IDs are human-readable slugs (e.g. destiny2, espn.com, r/gaming)
   const isRoom = /^[a-zA-Z0-9]{4,10}$/.test(id) && !/[./]/.test(id) && id !== "lobby";
   return isRoom ? `/room/${encodeURIComponent(id)}` : `/lobby/${encodeURIComponent(id)}`;
 }
 
 // ── RoomsPanel ─────────────────────────────────────────────────────────────────
-// lobbyId = which lobby we're in (e.g. "r/gaming", "lobby", "weered.ca")
-// Shows only rooms belonging to this lobby. Create room also scoped to lobby.
 
 function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId: string }) {
   const [q,        setQ]        = React.useState("");
@@ -39,7 +37,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   async function load() {
     setLoading(true); setErr("");
     try {
-      // Fetch rooms scoped to this lobby
       const url = lobbyId
         ? `${API_BASE}/lobbies/${encodeURIComponent(lobbyId)}/rooms`
         : `${API_BASE}/rooms`;
@@ -74,9 +71,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     finally { setCreating(false); }
   }
 
-  // Reload when lobbyId changes (switching lobbies)
   React.useEffect(() => { void load(); }, [lobbyId]);
-  // Poll every 6s
   React.useEffect(() => { const t = setInterval(load, 6000); return () => clearInterval(t); }, [lobbyId]);
 
   const filtered = rows
@@ -99,7 +94,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         )}
       </div>
 
-      {/* Create */}
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         <input style={s.input} placeholder="New room name…" value={newRoom}
           onChange={e => setNewRoom(e.target.value)}
@@ -109,12 +103,10 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         </button>
       </div>
 
-      {/* Search */}
       <input style={{ ...s.input, marginBottom: 8 }} placeholder="Search rooms…" value={q} onChange={e => setQ(e.target.value)} />
 
       {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginBottom: 6 }}>{err}</div>}
 
-      {/* List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 360, overflowY: "auto" }}>
         {loading && !rows.length && <div style={{ fontSize: 12, opacity: 0.5 }}>Loading…</div>}
         {!loading && !filtered.length && (
@@ -159,34 +151,114 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
 
-  const [note,    setNote]    = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+  // FIX: track locked state optimistically so both buttons reflect reality
+  const [chatLocked, setChatLocked] = React.useState<boolean | null>(null);
+  const [note,       setNote]       = React.useState("");
+  const [loading,    setLoading]    = React.useState(false);
 
-  async function action(type: string) {
+  // Fetch current lobby chat-lock state on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}`);
+        if (typeof j?.chatLocked === "boolean") setChatLocked(j.chatLocked);
+        else if (typeof j?.locked === "boolean") setChatLocked(j.locked);
+      } catch {}
+    })();
+  }, [lobbyId]);
+
+  async function action(type: "lock" | "unlock") {
     setLoading(true); setNote("");
+    const willLock = type === "lock";
+    // Optimistically update UI immediately so the button state feels snappy
+    setChatLocked(willLock);
     try {
-      const path = `/staff/lobby/${type}`;
-      const j = await apiFetch(path, { method: "POST", body: JSON.stringify({ lobbyId }) });
-      setNote(j.ok ? `Done: ${type}` : j.error || "Failed.");
-    } catch { setNote("Request failed."); }
+      // Primary path: /staff/lobby/lock or /staff/lobby/unlock
+      let j = await apiFetch(`/staff/lobby/${type}`, {
+        method: "POST",
+        body: JSON.stringify({ lobbyId }),
+      });
+
+      // FIX: if the dedicated unlock route doesn't exist (404 / not ok),
+      // fall back to POSTing to /staff/lobby/lock with locked:false
+      if (!j?.ok && type === "unlock") {
+        j = await apiFetch(`/staff/lobby/lock`, {
+          method: "POST",
+          body: JSON.stringify({ lobbyId, locked: false }),
+        });
+      }
+
+      if (j?.ok) {
+        setNote(willLock ? "Chat locked." : "Chat unlocked.");
+      } else {
+        // Revert optimistic update on failure
+        setChatLocked(!willLock);
+        setNote(j?.error || "Failed.");
+      }
+    } catch {
+      setChatLocked(!willLock);
+      setNote("Request failed.");
+    }
     finally { setLoading(false); }
   }
 
+  const isLocked = chatLocked === true;
+
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>Lobby Controls</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Lobby Controls</div>
+        {chatLocked !== null && (
+          <span style={{
+            fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, letterSpacing: ".4px",
+            background: isLocked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)",
+            border: `1px solid ${isLocked ? "rgba(245,158,11,.35)" : "rgba(16,185,129,.30)"}`,
+            color: isLocked ? "rgb(253,230,138)" : "rgb(167,243,208)",
+          }}>
+            {isLocked ? "CHAT LOCKED" : "CHAT OPEN"}
+          </span>
+        )}
+      </div>
       <div style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "10px 12px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          <button disabled={loading} onClick={() => action("lock")}
-            style={{ padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(245,158,11,.25)", background: "rgba(245,158,11,.08)", fontSize: 12, cursor: "pointer", color: "rgb(253,230,138)" }}>
-            Lock Chat
+          <button
+            disabled={loading || isLocked}
+            onClick={() => action("lock")}
+            style={{
+              padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading || isLocked ? "default" : "pointer",
+              border: isLocked ? "1px solid rgba(245,158,11,.50)" : "1px solid rgba(245,158,11,.25)",
+              background: isLocked ? "rgba(245,158,11,.18)" : "rgba(245,158,11,.08)",
+              color: "rgb(253,230,138)",
+              fontWeight: isLocked ? 700 : 400,
+              opacity: isLocked ? 1 : 0.8,
+            }}>
+            {isLocked ? "🔒 Locked" : "Lock Chat"}
           </button>
-          <button disabled={loading} onClick={() => action("unlock")}
-            style={{ padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(16,185,129,.25)", background: "rgba(16,185,129,.08)", fontSize: 12, cursor: "pointer", color: "rgb(167,243,208)" }}>
-            Unlock Chat
+          <button
+            disabled={loading || !isLocked}
+            onClick={() => action("unlock")}
+            style={{
+              padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading || !isLocked ? "default" : "pointer",
+              border: !isLocked ? "1px solid rgba(16,185,129,.50)" : "1px solid rgba(16,185,129,.25)",
+              background: !isLocked ? "rgba(16,185,129,.18)" : "rgba(16,185,129,.08)",
+              color: "rgb(167,243,208)",
+              fontWeight: !isLocked ? 700 : 400,
+              opacity: !isLocked ? 1 : 0.8,
+            }}>
+            {!isLocked ? "✓ Unlocked" : "Unlock Chat"}
           </button>
-          <button disabled={loading} onClick={() => { if (confirm("Clear all lobby chat messages?")) action("clear-chat"); }}
-            style={{ padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(239,68,68,.25)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)", gridColumn: "span 2" }}>
+          <button
+            disabled={loading}
+            style={{ padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(239,68,68,.25)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)", gridColumn: "span 2" }}
+            onClick={async () => {
+              if (!window.confirm("Clear all lobby chat messages?")) return;
+              setLoading(true);
+              try {
+                const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) });
+                setNote(j.ok ? "Chat cleared." : j.error || "Failed.");
+              } catch { setNote("Request failed."); }
+              finally { setLoading(false); }
+            }}>
             Clear Chat
           </button>
         </div>
@@ -199,6 +271,8 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
 // ── FriendsPanel ───────────────────────────────────────────────────────────────
 
 function FriendsPanel() {
+  // FIX: pull openSheet so friend rows are clickable to profiles
+  const { openSheet } = useOverlay();
   const [friends, setFriends] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
@@ -228,35 +302,80 @@ function FriendsPanel() {
     padding: "7px 10px", borderRadius: 10,
     border: "1px solid rgba(255,255,255,.07)",
     background: "rgba(255,255,255,.02)",
+    cursor: "pointer",
+    transition: "background 0.12s",
   };
 
-  const renderFriend = (f: any) => (
-    <div key={f.id} style={rowStyle}>
-      <div style={{ position: "relative", flexShrink: 0 }}>
-        <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatarColor || "rgba(124,58,237,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
-          {(f.name || "?").slice(0, 1).toUpperCase()}
+  const renderFriend = (f: any) => {
+    // FIX: unread indicator — check unreadCount or hasUnread from API response
+    const hasUnread = (f.unreadCount ?? 0) > 0 || Boolean(f.hasUnread ?? f.hasPendingDm);
+    const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
+    const userId = String(f.id ?? f.userId ?? f.username ?? "");
+
+    return (
+      <div
+        key={f.id}
+        style={rowStyle}
+        onClick={() => userId && openSheet("profile", { userId })}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
+      >
+        {/* Avatar with online dot + unread badge */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatarColor || "rgba(124,58,237,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+            {(f.name || "?").slice(0, 1).toUpperCase()}
+          </div>
+          {/* Online/offline dot */}
+          <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
+          {/* FIX: unread message badge — amber dot in top-right */}
+          {hasUnread && (
+            <span style={{
+              position: "absolute", top: -3, right: -3,
+              minWidth: 14, height: 14, borderRadius: 999,
+              background: "#f59e0b", border: "2px solid rgba(10,10,15,1)",
+              fontSize: 8, fontWeight: 900, color: "#000",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: unreadCount > 9 ? "0 2px" : "0",
+              lineHeight: 1,
+            }}>
+              {unreadCount > 9 ? "9+" : unreadCount > 1 ? unreadCount : ""}
+            </span>
+          )}
         </div>
-        <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, color: hasUnread ? "rgba(243,244,246,1)" : "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {f.name}
+          </div>
+          {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
+        </div>
+
+        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          {f.online && f.roomId && (
+            <Link
+              href={lobbyHref(f.roomId)}
+              onClick={e => e.stopPropagation()}
+              style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", textDecoration: "none" }}
+            >
+              join
+            </Link>
+          )}
+        </div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
-        {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
-      </div>
-      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        {f.online && f.roomId && (
-          <Link href={lobbyHref(f.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", textDecoration: "none" }}>
-            join
-          </Link>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
-        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>
-          Friends · {online.length} online
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>
+            Friends · {online.length} online
+          </div>
+          {/* FIX: section-level unread badge so you can see pending DMs even when collapsed */}
+          {friends.some(f => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: "#f59e0b", boxShadow: "0 0 5px #f59e0b88", flexShrink: 0 }} />
+          )}
         </div>
         <span style={{ fontSize: 10, opacity: 0.4 }}>{open ? "▲" : "▼"}</span>
       </div>
@@ -273,6 +392,8 @@ function FriendsPanel() {
 // ── CrewPanel ──────────────────────────────────────────────────────────────────
 
 function CrewPanel() {
+  // FIX: pull openSheet so crew rows are clickable to profiles
+  const { openSheet } = useOverlay();
   const [crews, setCrews] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
@@ -310,31 +431,44 @@ function CrewPanel() {
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {allMembers.length === 0 && <div style={{ fontSize: 12, opacity: 0.4, padding: "6px 0" }}>No crew members yet.</div>}
-          {allMembers.map((m: any) => (
-            <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)" }}>
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 999, background: "rgba(245,158,11,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "rgb(251,191,36)" }}>
-                  {(m.name || "?").slice(0, 1).toUpperCase()}
+          {allMembers.map((m: any) => {
+            const userId = String(m.userId ?? m.id ?? "");
+            return (
+              <div
+                key={m.userId}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", cursor: "pointer", transition: "background 0.12s" }}
+                onClick={() => userId && openSheet("profile", { userId })}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
+              >
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: 999, background: "rgba(245,158,11,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "rgb(251,191,36)" }}>
+                    {(m.name || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                  <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
                 </div>
-                <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
-                  {m.crewTag && <span style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace", flexShrink: 0 }}>[{m.crewTag}]</span>}
-                  {m.role === "LEADER" && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 5, background: "rgba(245,158,11,.15)", color: "rgb(251,191,36)", border: "1px solid rgba(245,158,11,.3)", flexShrink: 0 }}>★</span>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                    {m.crewTag && <span style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace", flexShrink: 0 }}>[{m.crewTag}]</span>}
+                    {m.role === "LEADER" && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 5, background: "rgba(245,158,11,.15)", color: "rgb(251,191,36)", border: "1px solid rgba(245,158,11,.3)", flexShrink: 0 }}>★</span>}
+                  </div>
+                  {m.online && m.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.roomName}</div>}
                 </div>
-                {m.online && m.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.roomName}</div>}
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {m.online && m.roomId && (
+                    <Link
+                      href={lobbyHref(m.roomId)}
+                      onClick={e => e.stopPropagation()}
+                      style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none" }}
+                    >
+                      join
+                    </Link>
+                  )}
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                {m.online && m.roomId && (
-                  <Link href={lobbyHref(m.roomId)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none" }}>
-                    join
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -349,7 +483,6 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
-  // Resolve lobby from prop (passed by RightRailSwitch) or fall back to pathname
   const resolvedLobbyId = lobbyId ?? (() => {
     if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
       const seg = pathname.replace("/lobby/", "").replace("/lobby", "");
@@ -374,7 +507,6 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
 
   return (
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 13 }}>Control Panel</div>

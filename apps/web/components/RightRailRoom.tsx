@@ -6,6 +6,7 @@ import React, { useCallback, useMemo, useState } from "react";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string };
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+
 function normUser(u: any): Person {
   if (!u) return {};
   if (typeof u === "string") return { id: u, name: u };
@@ -48,11 +49,18 @@ function extractParticipants(ctx: any, roomId: string): Person[] {
   const me = ctx?.me ?? ctx?.user;
   return me ? [normUser(me)] : [];
 }
+
+// ── FriendsPanel ──────────────────────────────────────────────────────────────
+
 function FriendsPanel() {
+  // FIX: pull openSheet so friend rows are clickable to profiles
+  const { openSheet } = useOverlay();
   const [friends, setFriends] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
+
   React.useEffect(() => { setMounted(true); }, []);
+
   async function load() {
     try {
       const t = localStorage.getItem("weered_token") || "";
@@ -61,43 +69,97 @@ function FriendsPanel() {
       setFriends(Array.isArray(j?.friends) ? j.friends : []);
     } catch {}
   }
+
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
   React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+
   if (!mounted || !friends.length) return null;
-  const online = friends.filter(f => f.online);
+
+  const online  = friends.filter(f => f.online);
   const offline = friends.filter(f => !f.online);
+
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        Friends · {online.length} Online
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          Friends · {online.length} Online
+          {/* FIX: section-level unread dot */}
+          {friends.some(f => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: "#f59e0b", boxShadow: "0 0 5px #f59e0b88" }} />
+          )}
+        </div>
         <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11 }}>{open ? "▲" : "▼"}</button>
       </div>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {online.map(f => (
-            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
-              {f.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{f.roomName}</span>}
-            </div>
-          ))}
-          {offline.map(f => (
-            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, opacity: 0.4 }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
-            </div>
-          ))}
+          {online.map(f => {
+            // FIX: unread indicator
+            const hasUnread = (f.unreadCount ?? 0) > 0 || Boolean(f.hasUnread ?? f.hasPendingDm);
+            const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
+            const userId = String(f.id ?? f.userId ?? f.username ?? "");
+            return (
+              <div
+                key={f.id}
+                onClick={() => userId && openSheet("profile", { userId })}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", cursor: "pointer", transition: "background 0.12s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
+              >
+                {/* Online dot + unread badge */}
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
+                  {hasUnread && (
+                    <span style={{
+                      position: "absolute", top: -5, right: -5,
+                      minWidth: 13, height: 13, borderRadius: 999,
+                      background: "#f59e0b", border: "2px solid rgba(10,10,15,1)",
+                      fontSize: 7, fontWeight: 900, color: "#000",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      padding: "0 1px", lineHeight: 1,
+                    }}>
+                      {unreadCount > 9 ? "9+" : unreadCount > 1 ? unreadCount : ""}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: hasUnread ? "rgba(243,244,246,1)" : "inherit" }}>
+                  {f.name}
+                </span>
+                {f.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{f.roomName}</span>}
+              </div>
+            );
+          })}
+          {offline.map(f => {
+            const userId = String(f.id ?? f.userId ?? f.username ?? "");
+            return (
+              <div
+                key={f.id}
+                onClick={() => userId && openSheet("profile", { userId })}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, opacity: 0.4, cursor: "pointer" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}
+              >
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
+// ── CrewPanel ─────────────────────────────────────────────────────────────────
+
 function CrewPanel() {
+  // FIX: pull openSheet so crew rows are clickable to profiles
+  const { openSheet } = useOverlay();
   const [crews, setCrews] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
+
   React.useEffect(() => { setMounted(true); }, []);
+
   async function load() {
     try {
       const t = localStorage.getItem("weered_token") || "";
@@ -106,9 +168,12 @@ function CrewPanel() {
       setCrews(Array.isArray(j?.crews) ? j.crews : []);
     } catch {}
   }
+
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
   React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+
   if (!mounted || !crews.length) return null;
+
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -121,13 +186,22 @@ function CrewPanel() {
           <div key={crew.id} style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{crew.name} {crew.tag ? `[${crew.tag}]` : ""} · {online.length} online</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {(crew.members || []).map((m: any) => (
-                <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)", boxShadow: m.online ? "0 0 5px #a78bfa" : "none", flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
-                  {m.online && m.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{m.roomName}</span>}
-                </div>
-              ))}
+              {(crew.members || []).map((m: any) => {
+                const userId = String(m.userId ?? m.id ?? "");
+                return (
+                  <div
+                    key={m.userId}
+                    onClick={() => userId && openSheet("profile", { userId })}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4, cursor: "pointer", transition: "background 0.12s" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)", boxShadow: m.online ? "0 0 5px #a78bfa" : "none", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                    {m.online && m.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{m.roomName}</span>}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -135,6 +209,9 @@ function CrewPanel() {
     </div>
   );
 }
+
+// ── RightRailRoom ─────────────────────────────────────────────────────────────
+
 export default function RightRailRoom({ roomId }: { roomId: string }) {
   const { replaceTop } = useOverlay();
   const ctx = useWeered() as any;
@@ -207,9 +284,19 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       if (kind === "unban")   ctx?.unban?.(targetId);
       if (kind === "admit")   ctx?.admit?.(targetId);
       if (kind === "deny")    ctx?.deny?.(targetId);
-      if (kind === "lock")    { ctx?.lockRoom?.();   setLockedOverride(true); }
-      if (kind === "unlock")  { ctx?.unlockRoom?.(); setLockedOverride(false); }
-      setNote(`${kind} \u2192 ${targetId ? targetName : "room"}`);
+
+      // FIX: use sendAdmin for lock/unlock instead of ctx.lockRoom()/unlockRoom()
+      // ctx.lockRoom() was bleeding into chat state — sendAdmin targets only entry-gating
+      if (kind === "lock") {
+        ctx?.sendAdmin?.("room:lock", {});
+        setLockedOverride(true);
+      }
+      if (kind === "unlock") {
+        ctx?.sendAdmin?.("room:unlock", {});
+        setLockedOverride(false);
+      }
+
+      setNote(`${kind} → ${targetId ? targetName : "room"}`);
     } catch { setNote(`${kind} failed`); }
   }, [ctx, selected, people, knocks]);
 
@@ -218,7 +305,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     try {
       if (confirm.kind === "kick") ctx?.kick?.(confirm.userId);
       if (confirm.kind === "ban")  ctx?.ban?.(confirm.userId);
-      setNote(`${confirm.kind} \u2192 ${confirm.name}`);
+      setNote(`${confirm.kind} → ${confirm.name}`);
     } catch { setNote(`${confirm.kind} failed`); }
     setConfirm(null);
   }, [ctx, confirm]);
@@ -232,10 +319,14 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
+  // FIX: chat toggle is isolated — only controls chat, never touches room lock state
   const doToggleChat = useCallback(() => {
     const next = !chatDisabled;
     setChatDisabled(next);
-    try { ctx?.sendAdmin?.("room:chat:" + (next ? "disable" : "enable"), {}); setNote(next ? "Chat disabled." : "Chat enabled."); }
+    try {
+      ctx?.sendAdmin?.("room:chat:" + (next ? "disable" : "enable"), {});
+      setNote(next ? "Chat disabled." : "Chat enabled.");
+    }
     catch { setNote("Toggle failed."); }
   }, [ctx, chatDisabled]);
 
@@ -362,8 +453,9 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={s.section}>
                 <div style={s.label}>Room</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                  <button style={locked ? s.btn : s.btnRed}   onClick={() => doAction("lock")}>Lock</button>
-                  <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>Unlock</button>
+                  {/* FIX: lock/unlock only gate entry — chat is controlled separately below */}
+                  <button style={locked ? s.btn : s.btnRed}   onClick={() => doAction("lock")}>🔒 Lock entry</button>
+                  <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>🔓 Unlock entry</button>
                   <button
                     style={{ ...s.btn, gridColumn: "span 2", borderColor: chatDisabled ? "rgba(16,185,129,.30)" : "rgba(239,68,68,.25)", background: chatDisabled ? "rgba(16,185,129,.08)" : "rgba(239,68,68,.08)", color: chatDisabled ? "rgb(167,243,208)" : "rgba(252,165,165,.90)" }}
                     onClick={doToggleChat}
@@ -445,7 +537,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                           <span style={{ fontWeight: 700, color: "rgba(167,139,250,.8)" }}>{a.type}</span>
                         </div>
                         <div style={{ opacity: 0.6, marginTop: 1 }}>
-                          {a.actorName}{a.targetId ? ` \u2192 ${String(a.targetId).slice(0,12)}\u2026` : ""}
+                          {a.actorName}{a.targetId ? ` → ${String(a.targetId).slice(0,12)}…` : ""}
                           {a.note ? ` "${a.note}"` : ""}
                         </div>
                       </div>
@@ -484,6 +576,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {/* ── Crew ── */}
       <CrewPanel />
+
       {showInvite && (
         <InviteModal
           type="ROOM"
