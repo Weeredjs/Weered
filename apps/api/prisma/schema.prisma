@@ -394,3 +394,28 @@ model UserGameAccount {
   @@unique([userId, gameType])
   @@index([userId])
 }
+
+// ── Invites ───────────────────────────────────────────────────────────────────
+
+enum InviteType {
+  PLATFORM
+  ROOM
+  LOBBY
+  CREW
+}
+
+model Invite {
+  id        String     @id @default(cuid())
+  token     String     @unique @default(cuid())
+  type      InviteType @default(PLATFORM)
+  targetId  String?    // roomId, lobbyId, or crewId — null for PLATFORM
+  createdBy String     // userId of creator
+  note      String?
+  maxUses   Int        @default(1)
+  uses      Int        @default(0)
+  expiresAt DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([token])
+  @@index([createdBy])
+}

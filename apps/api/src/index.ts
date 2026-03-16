@@ -1308,7 +1308,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     const validTiers = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
     if (!validTiers.includes(tier)) return reply.code(400).send({ ok: false, error: "invalid_tier" });
     await prisma.user.update({ where: { id: targetId }, data: { tier: tier as any } });
-    await globalAudit(u.id, u.name, "user_tier_change", targetId, { tier });
+    await globalAudit(u.id, u.name, "user_tier_change", targetId, tier);
     return reply.send({ ok: true });
   });
 
