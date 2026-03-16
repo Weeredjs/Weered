@@ -167,10 +167,27 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
 
   useEffect(()=>{
     if (!tokenMaybe||!apiBase) return;
-    fetch(`${apiBase}/dm/unread`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
-      if (!j?.counts) return;
-      setDmThreads(cur=>cur.map(t=>({...t,unread:j.counts[t.peerId]??0})));
-    }).catch(()=>{});
+    function pollUnread() {
+      fetch(`${apiBase}/dm/unread`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
+        if (!j?.counts) return;
+        // Also discover new conversations we don't have yet
+        const newPeerIds = Object.keys(j.counts).filter(pid=>!dmThreads.find(t=>t.peerId===pid));
+        if (newPeerIds.length) {
+          fetch(`${apiBase}/dm/conversations`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(conv=>{
+            if (!Array.isArray(conv?.conversations)) return;
+            setDmThreads(cur=>{
+              const existing=new Set(cur.map((t:DmThread)=>t.peerId));
+              const incoming=conv.conversations.filter((c:any)=>!existing.has(c.id||c.peerId)).map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.id,msgs:[],unread:c.unread||0}));
+              return [...cur,...incoming];
+            });
+          }).catch(()=>{});
+        }
+        setDmThreads(cur=>cur.map(t=>({...t,unread:j.counts[t.peerId]??0})));
+      }).catch(()=>{});
+    }
+    pollUnread();
+    const t = setInterval(pollUnread, 8000);
+    return () => clearInterval(t);
   },[tokenMaybe,apiBase]);
 
   useEffect(()=>{
