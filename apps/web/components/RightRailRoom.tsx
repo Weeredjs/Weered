@@ -484,7 +484,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {/* ── Crew ── */}
       <CrewPanel />
-    </div>
       {showInvite && (
         <InviteModal
           type="ROOM"
@@ -493,5 +492,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
           onClose={() => setShowInvite(false)}
         />
       )}
+    </div>
   );
 }
