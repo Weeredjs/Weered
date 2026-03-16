@@ -153,6 +153,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
 
   // ctx.admin is populated from room:adminState WS messages (updates in real-time).
   // ctx.meta.locked only updates on initial join — do NOT use it as primary source.
+  const ctx = useWeered() as any;
   const ctxLocked: boolean | null = (() => {
     const v =
       ctx?.admin?.locked ??        // room:adminState — real-time ✓
