@@ -996,7 +996,7 @@ async function main() {
     const q = String((req as any).query?.q || "").trim().toLowerCase();
     const users = await prisma.user.findMany({
       where: q ? { OR: [{ usernameKey: { contains: q } }, { name: { contains: q, mode: "insensitive" } }] } : {},
-      select: { id: true, name: true, usernameKey: true, globalRole: true, createdAt: true },
+      select: { id: true, name: true, usernameKey: true, globalRole: true, tier: true, notoriety: true, email: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -1280,6 +1280,102 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
 
     return reply.send({ ok: true });
   });
+
+// ── NEW STAFF ROUTES — paste before the closing brace of the route registration block ──
+
+  // GET /staff/subscriptions — users with tier info (STAFF+)
+  app.get("/staff/subscriptions", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, usernameKey: true, globalRole: true, tier: true, notoriety: true, createdAt: true, email: true },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+    return reply.send({ ok: true, users });
+  });
+
+  // POST /staff/users/:userId/tier — change user tier (STAFF+)
+  app.post("/staff/users/:userId/tier", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const targetId = String((req as any).params?.userId || "");
+    const tier = String((req.body as any)?.tier || "");
+    const validTiers = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
+    if (!validTiers.includes(tier)) return reply.code(400).send({ ok: false, error: "invalid_tier" });
+    await prisma.user.update({ where: { id: targetId }, data: { tier: tier as any } });
+    await globalAudit(u.id, u.name, "user_tier_change", targetId, { tier });
+    return reply.send({ ok: true });
+  });
+
+  // GET /staff/lobbies — all lobbies with stats (STAFF+)
+  app.get("/staff/lobbies", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const lobbies = await prisma.lobby.findMany({ orderBy: { createdAt: "asc" } });
+    return reply.send({
+      ok: true,
+      lobbies: lobbies.map(l => ({
+        id: l.id, name: l.name, description: l.description,
+        verified: l.verified, pinned: l.pinned,
+        moduleType: l.moduleType || "REDDIT",
+        onlineCount: rooms.get(l.id)?.users.size ?? 0,
+      })),
+    });
+  });
+
+  // POST /staff/lobbies/:lobbyId/pin — pin/unpin lobby (STAFF+)
+  app.post("/staff/lobbies/:lobbyId/pin", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const lobbyId = decodeURIComponent(String((req as any).params?.lobbyId || ""));
+    const pinned = Boolean((req.body as any)?.pinned);
+    await prisma.lobby.update({ where: { id: lobbyId }, data: { pinned } });
+    await globalAudit(u.id, u.name, pinned ? "lobby_pin" : "lobby_unpin", lobbyId);
+    return reply.send({ ok: true });
+  });
+
+  // In-memory site config (persists until restart — extend to DB/file as needed)
+  const siteConfig = {
+    registrationOpen: true,
+    maintenanceMode: false,
+    defaultTier: "INNOCENT" as string,
+    maxRoomsPerLobby: 20,
+    chatRateLimit: 30,
+  };
+
+  // GET /staff/config (GOD only)
+  app.get("/staff/config", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (role !== GlobalRole.GOD) return reply.code(403).send({ ok: false, error: "forbidden" });
+    return reply.send({ ok: true, config: { ...siteConfig } });
+  });
+
+  // POST /staff/config (GOD only)
+  app.post("/staff/config", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (role !== GlobalRole.GOD) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const body: any = (req.body as any) || {};
+    if (typeof body.registrationOpen === "boolean") siteConfig.registrationOpen = body.registrationOpen;
+    if (typeof body.maintenanceMode  === "boolean") siteConfig.maintenanceMode  = body.maintenanceMode;
+    if (typeof body.maxRoomsPerLobby === "number")  siteConfig.maxRoomsPerLobby = body.maxRoomsPerLobby;
+    if (typeof body.chatRateLimit    === "number")  siteConfig.chatRateLimit    = body.chatRateLimit;
+    await globalAudit(u.id, u.name, "config_update", undefined, body);
+    return reply.send({ ok: true });
+  });
+
   // ── DM Routes ──────────────────────────────────────────────────────────────
 
   // GET /dm/unread — unread counts per peer
