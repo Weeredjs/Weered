@@ -537,6 +537,14 @@ if (searchRef.current) clearTimeout(searchRef.current);
         </div>
       </div>
     </div>
+      {showLobbyInvite && (
+        <InviteModal
+          type="LOBBY"
+          targetId={lobbyId}
+          targetName={title}
+          onClose={() => setShowLobbyInvite(false)}
+        />
+      )}
   );
 }
 
@@ -553,13 +561,5 @@ function SectionLabel({ label }: { label: string }) {
     }}>
       {label}
     </div>
-      {showLobbyInvite && (
-        <InviteModal
-          type="LOBBY"
-          targetId={lobbyId}
-          targetName={title}
-          onClose={() => setShowLobbyInvite(false)}
-        />
-      )}
   );
 }
