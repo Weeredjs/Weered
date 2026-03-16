@@ -305,14 +305,13 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       if (kind === "admit")   ctx?.admit?.(targetId);
       if (kind === "deny")    ctx?.deny?.(targetId);
 
-      // FIX: use sendAdmin for lock/unlock instead of ctx.lockRoom()/unlockRoom()
-      // ctx.lockRoom() was bleeding into chat state — sendAdmin targets only entry-gating
+      // lockRoom/unlockRoom are exposed on ctx — sendAdmin is internal and not in context
       if (kind === "lock") {
-        ctx?.sendAdmin?.("room:lock", {});
+        ctx?.lockRoom?.();
         setLockedOverride(true);
       }
       if (kind === "unlock") {
-        ctx?.sendAdmin?.("room:unlock", {});
+        ctx?.unlockRoom?.();
         setLockedOverride(false);
       }
 
@@ -339,16 +338,16 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
-  // Chat toggle: optimistic override + WS sendAdmin. Override clears once ctx.meta.chatDisabled confirms.
+  // Chat toggle: sendRaw with explicit roomId since sendAdmin is internal (not in ctx)
   const doToggleChat = useCallback(() => {
     const next = !chatDisabled;
     setChatDisabledOverride(next);
     try {
-      ctx?.sendAdmin?.("room:chat:" + (next ? "disable" : "enable"), {});
+      ctx?.sendRaw?.({ type: "room:chat:" + (next ? "disable" : "enable"), roomId });
       setNote(next ? "Chat disabled." : "Chat enabled.");
     }
     catch { setNote("Toggle failed."); }
-  }, [ctx, chatDisabled]);
+  }, [ctx, chatDisabled, roomId]);
 
   const s = {
     section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
