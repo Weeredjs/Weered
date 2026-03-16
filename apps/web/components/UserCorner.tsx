@@ -214,7 +214,7 @@ export default function UserCorner() {
           type="button"
           onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
           title={dockUnread > 0 ? `Dock · ${dockUnread} unread` : "Dock"}
-          style={{ ...actionBtn, color: dockUnread > 0 ? "rgba(251,191,36,.9)" : actionBtn.color }}
+          style={{ ...actionBtn, color: dockUnread > 0 ? "rgb(255, 255, 255)" : actionBtn.color }}
         >
           {/* Icon wrapper with badge */}
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
