@@ -262,8 +262,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [note,         setNote        ] = useState("");
   const [renameVal,    setRenameVal   ] = useState("");
   const [renaming,     setRenaming    ] = useState(false);
-  // chatDisabled lives in WeeredProvider so it survives component remounts entirely
-  const chatDisabled = Boolean(ctx?.chatDisabledByRoom?.[roomId]);
   const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
   const [showInvite,   setShowInvite  ] = useState(false);
 
@@ -328,13 +326,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
-  const doToggleChat = useCallback(() => {
-    try {
-      ctx?.toggleChatDisabled?.(roomId);
-      setNote(chatDisabled ? "Chat enabled." : "Chat disabled.");
-    }
-    catch { setNote("Toggle failed."); }
-  }, [ctx, chatDisabled, roomId]);
+
 
   const s = {
     section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
@@ -459,13 +451,16 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={s.section}>
                 <div style={s.label}>Room</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                  {/* FIX: lock/unlock only gate entry — chat is controlled separately below */}
                   <button style={locked ? s.btn : s.btnRed}   onClick={() => doAction("lock")}>🔒 Lock entry</button>
                   <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>🔓 Unlock entry</button>
                   <button
-                    style={{ ...s.btn, gridColumn: "span 2", borderColor: chatDisabled ? "rgba(16,185,129,.30)" : "rgba(239,68,68,.25)", background: chatDisabled ? "rgba(16,185,129,.08)" : "rgba(239,68,68,.08)", color: chatDisabled ? "rgb(167,243,208)" : "rgba(252,165,165,.90)" }}
-                    onClick={doToggleChat}
-                  >{chatDisabled ? "Enable Chat" : "Disable Chat"}</button>
+                    style={{ ...s.btnRed, gridColumn: "span 2" }}
+                    onClick={() => {
+                      if (!window.confirm("Clear all chat messages in this room?")) return;
+                      ctx?.sendRaw?.({ type: "chat:clear", roomId });
+                      setNote("Chat cleared.");
+                    }}
+                  >Clear Chat</button>
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <div style={{ ...s.label, marginBottom: 4 }}>Rename</div>
