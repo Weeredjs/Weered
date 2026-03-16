@@ -488,7 +488,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         <InviteModal
           type="ROOM"
           targetId={roomId}
-          targetName={roomName || roomId}
+          targetName={ctx?.meta?.name || ctx?.metaByRoom?.[roomId]?.name || roomId}
           onClose={() => setShowInvite(false)}
         />
       )}
