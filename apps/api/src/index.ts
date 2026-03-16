@@ -1430,6 +1430,27 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
  "dotenv/config";
   // ── DM Routes ──────────────────────────────────────────────────────────────
 
+  // GET /dm/conversations — all peers with message history
+  app.get("/dm/conversations", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const msgs = await prisma.directMessage.findMany({
+      where: { OR: [{ fromId: viewer.id }, { toId: viewer.id }] },
+      orderBy: { createdAt: "desc" },
+      select: { fromId: true, toId: true, body: true, createdAt: true, readAt: true },
+    });
+    const peers = new Map<string, any>();
+    for (const m of msgs) {
+      const peerId = m.fromId === viewer.id ? m.toId : m.fromId;
+      if (!peers.has(peerId)) peers.set(peerId, { peerId, lastMessage: m.body, lastAt: m.createdAt, unread: 0 });
+      if (m.toId === viewer.id && !m.readAt) peers.get(peerId).unread++;
+    }
+    const peerIds = Array.from(peers.keys());
+    const users = await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, usernameKey: true } });
+    const result = users.map(u => ({ ...u, ...peers.get(u.id) }));
+    return reply.send({ ok: true, conversations: result });
+  });
+
   // GET /dm/unread — unread counts per peer
   app.get("/dm/unread", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
