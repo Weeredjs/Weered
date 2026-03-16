@@ -48,6 +48,8 @@ type Ctx = {
   unban: (userId: string) => void; mute: (userId: string) => void; unmute: (userId: string) => void;
   admit: (userId: string) => void; deny: (userId: string) => void;
   sendRaw: (msg: object) => void;
+  chatDisabledByRoom: Record<string, boolean>;
+  toggleChatDisabled: (roomId: string) => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -96,7 +98,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [joinedRoomId,  setJoinedRoomId ] = useState("");
   const [usersByRoom,   setUsersByRoom  ] = useState<Record<string, RoomUser[]>>({});
   const [msgsByRoom,    setMsgsByRoom   ] = useState<Record<string, ChatMsg[]>>({});
-  const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
+  const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({})
+  const [chatDisabledByRoom, setChatDisabledByRoom] = useState<Record<string, boolean>>({});
   const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
@@ -535,6 +538,16 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     ws.send(JSON.stringify({ type, roomId: rid, ...payload }));
   }
 
+  function toggleChatDisabled(roomId: string) {
+    const next = !chatDisabledByRoom[roomId];
+    setChatDisabledByRoom(prev => ({ ...prev, [roomId]: next }));
+    const ws = wsRef.current;
+    const rid = roomId || activeRoomId || joinedRoomId;
+    if (ws && ws.readyState === WebSocket.OPEN && rid) {
+      ws.send(JSON.stringify({ type: "room:chat:" + (next ? "disable" : "enable"), roomId: rid }));
+    }
+  }
+
   const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
   const lockRoom   = ()               => sendAdmin("room:lock");
   const unlockRoom = ()               => sendAdmin("room:unlock");
@@ -560,6 +573,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     sendChat, renameRoom,
     lockRoom, unlockRoom,
     promote, demote, kick, ban, unban, mute, unmute, admit, deny,
+    chatDisabledByRoom,
+    toggleChatDisabled,
     sendRaw: (msg: object) => {
       try {
         const ws = (wsRef as any)?.current;

@@ -262,16 +262,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [note,         setNote        ] = useState("");
   const [renameVal,    setRenameVal   ] = useState("");
   const [renaming,     setRenaming    ] = useState(false);
-  // chatDisabled persisted to localStorage so remounts don't wipe it.
-  // Component remounts on presence:state updates from parent layout — local state alone doesn't survive.
-  const CHAT_LS_KEY = `weered:room:chatDisabled:${roomId}`;
-  const [chatDisabled, setChatDisabled] = useState<boolean>(() => {
-    try { return localStorage.getItem(CHAT_LS_KEY) === "true"; } catch { return false; }
-  });
-  const setChatDisabledPersist = (v: boolean) => {
-    setChatDisabled(v);
-    try { localStorage.setItem(CHAT_LS_KEY, String(v)); } catch {}
-  };
+  // chatDisabled lives in WeeredProvider so it survives component remounts entirely
+  const chatDisabled = Boolean(ctx?.chatDisabledByRoom?.[roomId]);
   const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
   const [showInvite,   setShowInvite  ] = useState(false);
 
@@ -337,11 +329,9 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   }, [ctx, renameVal]);
 
   const doToggleChat = useCallback(() => {
-    const next = !chatDisabled;
-    setChatDisabledPersist(next);
     try {
-      ctx?.sendRaw?.({ type: "room:chat:" + (next ? "disable" : "enable"), roomId });
-      setNote(next ? "Chat disabled." : "Chat enabled.");
+      ctx?.toggleChatDisabled?.(roomId);
+      setNote(chatDisabled ? "Chat enabled." : "Chat disabled.");
     }
     catch { setNote("Toggle failed."); }
   }, [ctx, chatDisabled, roomId]);
