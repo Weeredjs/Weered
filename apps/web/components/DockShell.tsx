@@ -7,6 +7,16 @@ import { avatarBg } from "../lib/avatarColor";
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
 
+function linkify(text: string): React.ReactNode {
+  const urlRx = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRx);
+  return parts.map((p, i) =>
+    urlRx.test(p)
+      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "rgb(167,139,250)", textDecoration: "underline", wordBreak: "break-all" }}>{p}</a>
+      : p
+  );
+}
+
 const WEERED_THEME_KEY = "weered_theme_v1";
 type WeeredThemeName = "slate" | "zinc" | "stone" | "gray";
 
@@ -149,7 +159,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
         const existing=new Set(cur.map((t:DmThread)=>t.peerId));
         const incoming=j.conversations
           .filter((c:any)=>!existing.has(c.id))
-          .map((c:any)=>({peerId:c.id,peerName:c.name||c.usernameKey||c.id,msgs:[],unread:c.unread||0}));
+          .map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.peerId||c.id,msgs:[],unread:c.unread||0}));
         return [...cur,...incoming];
       });
     }).catch(()=>{});
@@ -346,7 +356,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                   <div key={m?.id||i} style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start" }}>
                     {!isMe && <span style={{ fontSize:11, color:"var(--weered-muted)", marginBottom:2, paddingLeft:4 }}>{who}</span>}
                     <div style={{ maxWidth:"82%", padding:"8px 12px", borderRadius:isMe?"16px 16px 4px 16px":"16px 16px 16px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
-                      <div style={{ fontSize:13, lineHeight:"18px", color:"var(--weered-text)" }}>{body}</div>
+                      <div style={{ fontSize:13, lineHeight:"18px", color:"var(--weered-text)" }}>{linkify(body)}</div>
                     </div>
                     <span style={{ fontSize:10, color:"var(--weered-muted)", marginTop:2, paddingLeft:4, paddingRight:4 }}>{fmtTime(m?.createdAt||new Date().toISOString())}</span>
                   </div>
