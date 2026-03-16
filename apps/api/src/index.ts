@@ -1106,6 +1106,25 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     if (room) broadcast(room, { type: "chat:cleared", roomId: lid });
     return reply.send({ ok: true });
   });
+
+  // POST /staff/room/clear-chat — clear room messages (room owner/mod or STAFF+)
+  app.post("/staff/room/clear-chat", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const rid = String((req.body as any)?.roomId || "");
+    if (!rid) return reply.code(400).send({ ok: false, error: "roomId required" });
+    const globalRole = await getGlobalRole(u.id);
+    const room = rooms.get(rid);
+    if (!room) return reply.code(404).send({ ok: false, error: "room not found" });
+    if (!isModOrOwner(room, u.id, globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    // Clear in-memory msgs
+    room.msgs = [];
+    // Clear persisted messages
+    await prisma.roomMessage.deleteMany({ where: { roomId: rid } });
+    audit(room, { type: "chat_clear", actorId: u.id, actorName: u.name });
+    broadcast(room, { type: "chat:cleared", roomId: rid });
+    return reply.send({ ok: true });
+  });
   // POST /staff/users/:userId/kick
   app.post("/staff/users/:userId/kick", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
