@@ -262,18 +262,16 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [note,         setNote        ] = useState("");
   const [renameVal,    setRenameVal   ] = useState("");
   const [renaming,     setRenaming    ] = useState(false);
-  // chatDisabled now reads from ctx.meta.chatDisabled (driven by room:chat:disabled/enabled WS events)
-  const metaChatDisabled = Boolean(ctx?.meta?.chatDisabled ?? false);
-  const [chatDisabledOverride, setChatDisabledOverride] = useState<boolean | null>(null);
-  const chatDisabled = chatDisabledOverride ?? metaChatDisabled;
-
-  // Clear override once ctx confirms
-  useEffect(() => {
-    if (chatDisabledOverride === null) return;
-    if (metaChatDisabled === chatDisabledOverride) { setChatDisabledOverride(null); return; }
-    const t = setTimeout(() => setChatDisabledOverride(null), 8000);
-    return () => clearTimeout(t);
-  }, [metaChatDisabled, chatDisabledOverride]);
+  // chatDisabled persisted to localStorage so remounts don't wipe it.
+  // Component remounts on presence:state updates from parent layout — local state alone doesn't survive.
+  const CHAT_LS_KEY = `weered:room:chatDisabled:${roomId}`;
+  const [chatDisabled, setChatDisabled] = useState<boolean>(() => {
+    try { return localStorage.getItem(CHAT_LS_KEY) === "true"; } catch { return false; }
+  });
+  const setChatDisabledPersist = (v: boolean) => {
+    setChatDisabled(v);
+    try { localStorage.setItem(CHAT_LS_KEY, String(v)); } catch {}
+  };
   const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
   const [showInvite,   setShowInvite  ] = useState(false);
 
@@ -338,10 +336,9 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
-  // Chat toggle: sendRaw with explicit roomId since sendAdmin is internal (not in ctx)
   const doToggleChat = useCallback(() => {
     const next = !chatDisabled;
-    setChatDisabledOverride(next);
+    setChatDisabledPersist(next);
     try {
       ctx?.sendRaw?.({ type: "room:chat:" + (next ? "disable" : "enable"), roomId });
       setNote(next ? "Chat disabled." : "Chat enabled.");
