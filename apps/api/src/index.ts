@@ -1310,7 +1310,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    return reply.send({ ok: true, invites: invites.map(i => ({ ...i, url: `${WEB_URL}/invite/${i.token}` })) });
+    return reply.send({ ok: true, invites: invites.map((i: { token: any; }) => ({ ...i, url: `${WEB_URL}/invite/${i.token}` })) });
   });
 
   // GET /invites/:token — resolve invite (public)

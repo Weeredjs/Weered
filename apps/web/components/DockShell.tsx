@@ -140,6 +140,21 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const dmInputRef = useRef<HTMLInputElement|null>(null);
   const roomInputRef = useRef<HTMLInputElement|null>(null);
 
+  // Load all conversations on mount so incoming DMs are visible
+  useEffect(()=>{
+    if (!tokenMaybe||!apiBase) return;
+    fetch(`${apiBase}/dm/conversations`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
+      if (!Array.isArray(j?.conversations)) return;
+      setDmThreads(cur=>{
+        const existing=new Set(cur.map((t:DmThread)=>t.peerId));
+        const incoming=j.conversations
+          .filter((c:any)=>!existing.has(c.id))
+          .map((c:any)=>({peerId:c.id,peerName:c.name||c.usernameKey||c.id,msgs:[],unread:c.unread||0}));
+        return [...cur,...incoming];
+      });
+    }).catch(()=>{});
+  },[tokenMaybe,apiBase]);
+
   useEffect(()=>{
     if (!tokenMaybe||!apiBase) return;
     fetch(`${apiBase}/dm/unread`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
