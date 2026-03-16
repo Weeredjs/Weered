@@ -368,7 +368,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (msg.type === "room:chat:disabled") {
+      if (msg.type === "room:chat:disable") {
         const rid = String(msg.roomId || "");
         setMetaByRoom(prev => ({
           ...prev,
@@ -377,7 +377,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (msg.type === "room:chat:enabled") {
+      if (msg.type === "room:chat:enable") {
         const rid = String(msg.roomId || "");
         setMetaByRoom(prev => ({
           ...prev,
