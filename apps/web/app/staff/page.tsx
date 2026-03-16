@@ -7,37 +7,48 @@ import LobbyChatPanel from "../../components/LobbyChatPanel";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-type GlobalRole = "USER" | "SUPPORT" | "STAFF" | "GOD";
-type StaffUser  = { id: string; name: string; usernameKey: string; globalRole: GlobalRole; createdAt: string };
+type GlobalRole = "USER" | "SUPPORT" | "STAFF" | "ADMIN" | "GOD";
+type UserTier   = "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
+type StaffUser  = { id: string; name: string; usernameKey: string; globalRole: GlobalRole; tier: UserTier; notoriety: number; createdAt: string; email?: string };
 type AuditLog   = { id: string; actorName: string; action: string; targetName?: string; meta?: any; createdAt: string };
 type StaffNote  = { id: string; authorName: string; body: string; createdAt: string };
-type StaffRoom  = { id: string; name: string; locked: boolean; members: number; createdAt: string };
+type StaffRoom  = { id: string; name: string; locked: boolean; members: number; lobbyId?: string; createdAt: string };
+type StaffLobby = { id: string; name: string; description?: string; verified: boolean; pinned: boolean; moduleType: string; onlineCount: number };
+type SiteConfig = { registrationOpen: boolean; maintenanceMode: boolean; defaultTier: UserTier; maxRoomsPerLobby: number; chatRateLimit: number };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
 }
 
-function roleColor(r: GlobalRole) {
+function roleColor(r: string) {
   if (r === "GOD")     return { bg: "rgba(245,158,11,.12)", border: "rgba(245,158,11,.30)", color: "rgb(253,230,138)" };
   if (r === "STAFF")   return { bg: "rgba(124,58,237,.12)", border: "rgba(124,58,237,.30)", color: "rgb(216,180,254)" };
+  if (r === "ADMIN")   return { bg: "rgba(167,139,250,.12)", border: "rgba(167,139,250,.30)", color: "rgb(196,181,253)" };
   if (r === "SUPPORT") return { bg: "rgba(14,165,233,.10)", border: "rgba(14,165,233,.28)", color: "rgb(186,230,253)" };
   return { bg: "rgba(255,255,255,.05)", border: "rgba(255,255,255,.10)", color: "rgba(255,255,255,.55)" };
 }
 
-function RoleBadge({ role }: { role: GlobalRole }) {
+function tierColor(t: string) {
+  if (t === "KINGPIN")  return { bg: "rgba(245,158,11,.12)", border: "rgba(245,158,11,.30)", color: "rgb(253,230,138)" };
+  if (t === "FELON")    return { bg: "rgba(239,68,68,.10)", border: "rgba(239,68,68,.28)", color: "rgb(252,165,165)" };
+  if (t === "INDICTED") return { bg: "rgba(124,58,237,.12)", border: "rgba(124,58,237,.30)", color: "rgb(216,180,254)" };
+  return { bg: "rgba(255,255,255,.05)", border: "rgba(255,255,255,.10)", color: "rgba(255,255,255,.45)" };
+}
+
+function RoleBadge({ role }: { role: string }) {
   const c = roleColor(role);
-  return (
-    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.color, fontWeight: 700, letterSpacing: ".4px" }}>
-      {role}
-    </span>
-  );
+  return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.color, fontWeight: 700, letterSpacing: ".4px", flexShrink: 0 }}>{role}</span>;
+}
+
+function TierBadge({ tier }: { tier: string }) {
+  const c = tierColor(tier);
+  return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.color, fontWeight: 700, letterSpacing: ".4px", flexShrink: 0 }}>{tier}</span>;
 }
 
 function authHeaders() {
-  try {
-    const tok = localStorage.getItem("weered_token") || "";
-    return tok ? { Authorization: `Bearer ${tok}` } : {};
-  } catch { return {}; }
+  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 
 async function apiFetch(path: string, opts?: RequestInit) {
@@ -45,40 +56,59 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
+// ── Style constants ───────────────────────────────────────────────────────────
+
 const S = {
-  card:   { borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "12px 14px" } as React.CSSProperties,
-  btn:    { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.90)" } as React.CSSProperties,
-  input:  { width: "100%", padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  danger: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.30)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
-  label:  { fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".6px", textTransform: "uppercase" as const, marginBottom: 8 },
+  card:    { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "11px 14px" } as React.CSSProperties,
+  cardHov: { borderRadius: 10, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.07)", padding: "11px 14px" } as React.CSSProperties,
+  btn:     { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri:  { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", fontSize: 12, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
+  danger:  { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.30)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
+  input:   { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  label:   { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 },
+  sectionTitle: { fontSize: 12, fontWeight: 700, opacity: 0.6, letterSpacing: ".5px", textTransform: "uppercase" as const, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.07)" },
 };
 
-// ── Presence Sidebar ──────────────────────────────────────────────────────────
+// ── Sidebar nav ───────────────────────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id: "users",    label: "Users",         icon: "👤", minRole: "SUPPORT" },
+  { id: "subs",     label: "Subscriptions", icon: "💳", minRole: "STAFF" },
+  { id: "rooms",    label: "Rooms",         icon: "🚪", minRole: "STAFF" },
+  { id: "lobbies",  label: "Lobbies",       icon: "🏛️", minRole: "STAFF" },
+  { id: "audit",    label: "Audit Log",     icon: "📋", minRole: "STAFF" },
+  { id: "files",    label: "Files",         icon: "🗂️", minRole: "GOD" },
+  { id: "config",   label: "Config",        icon: "⚙️", minRole: "GOD" },
+] as const;
+
+type NavId = typeof NAV_ITEMS[number]["id"];
+
+const ROLE_RANK: Record<string, number> = { SUPPORT: 1, STAFF: 2, ADMIN: 2, GOD: 3 };
+
+function canSeeNav(myRole: GlobalRole, minRole: string) {
+  return (ROLE_RANK[myRole] || 0) >= (ROLE_RANK[minRole] || 99);
+}
+
+// ── Presence sidebar ──────────────────────────────────────────────────────────
 
 function OpsPresence() {
-  const ctx = useWeered() as any;
+  const ctx   = useWeered() as any;
   const users: any[] = Array.isArray(ctx?.users) ? ctx.users : [];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+    <div>
       <div style={S.label}>Online in Ops</div>
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-        {users.length === 0 && <div style={{ fontSize: 12, opacity: 0.4 }}>No one else here.</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {users.length === 0 && <div style={{ fontSize: 11, opacity: 0.35 }}>No one else here.</div>}
         {users.map((u: any, i: number) => {
-          const name = String(u?.name ?? u?.id ?? "?");
-          const role = String(u?.role ?? "member");
-          const rc   = roleColor((role.toUpperCase() as GlobalRole) || "USER");
+          const name = String(u?.name ?? "?");
+          const rc = roleColor(String(u?.globalRole ?? u?.role ?? "USER").toUpperCase());
           return (
-            <div key={u?.id ?? i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)" }}>
-              <div style={{ width: 28, height: 28, borderRadius: 999, background: "rgba(124,58,237,.20)", border: "1px solid rgba(124,58,237,.30)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+            <div key={u?.id ?? i} style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" }}>
+              <div style={{ width: 24, height: 24, borderRadius: 999, background: "rgba(124,58,237,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                 {name.slice(0, 1).toUpperCase()}
               </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-              </div>
-              <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.color, flexShrink: 0 }}>
-                {role}
-              </span>
+              <div style={{ minWidth: 0, flex: 1, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+              <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, background: rc.bg, border: `1px solid ${rc.border}`, color: rc.color, flexShrink: 0 }}>{String(u?.globalRole ?? u?.role ?? "")}</span>
             </div>
           );
         })}
@@ -87,7 +117,7 @@ function OpsPresence() {
   );
 }
 
-// ── Users Tab ─────────────────────────────────────────────────────────────────
+// ── Users tab ─────────────────────────────────────────────────────────────────
 
 function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [q, setQ]               = useState("");
@@ -96,7 +126,10 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [selected, setSelected] = useState<StaffUser | null>(null);
   const [notes, setNotes]       = useState<StaffNote[]>([]);
   const [newNote, setNewNote]   = useState("");
-  const [note, setNote]         = useState("");
+  const [msg, setMsg]           = useState("");
+
+  const canEdit    = myRole !== "SUPPORT";
+  const canGod     = myRole === "GOD";
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -117,135 +150,226 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
   async function addNote() {
     if (!selected || !newNote.trim()) return;
     const j = await apiFetch(`/staff/users/${selected.id}/note`, { method: "POST", body: JSON.stringify({ body: newNote.trim() }) });
-    if (j.ok) { setNewNote(""); setNote("Note saved."); loadNotes(selected); }
-    else setNote(j.error || "Failed.");
+    if (j.ok) { setNewNote(""); setMsg("Note saved."); loadNotes(selected); }
+    else setMsg(j.error || "Failed.");
   }
 
-  async function setRole(userId: string, role: GlobalRole) {
+  async function setRole(userId: string, role: string) {
     const j = await apiFetch(`/staff/users/${userId}/role`, { method: "POST", body: JSON.stringify({ role }) });
-    if (j.ok) { setNote(`Role updated to ${role}`); search(); if (selected?.id === userId) setSelected(s => s ? { ...s, globalRole: role } : s); }
-    else setNote(j.error || "Failed.");
+    if (j.ok) { setMsg(`Role → ${role}`); search(); if (selected?.id === userId) setSelected(s => s ? { ...s, globalRole: role as GlobalRole } : s); }
+    else setMsg(j.error || "Failed.");
   }
 
   async function kickUser(userId: string, name: string) {
     if (!confirm(`Global kick ${name}?`)) return;
     const j = await apiFetch(`/staff/users/${userId}/kick`, { method: "POST" });
-    setNote(j.ok ? `Kicked ${name}` : j.error || "Failed.");
+    setMsg(j.ok ? `Kicked ${name}` : j.error || "Failed.");
   }
 
-  const canAssign    = myRole === "STAFF" || myRole === "GOD";
-  const canAssignGod = myRole === "GOD";
-
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start", height: "100%" }}>
+      {/* Left: list */}
       <div>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <input style={{ ...S.input, flex: 1 }} placeholder="Search users…" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} />
+          <input style={{ ...S.input, flex: 1 }} placeholder="Search by name or handle…" value={q}
+            onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} />
           <button style={S.btn} onClick={search}>{loading ? "…" : "Search"}</button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {users.map(u => (
-            <div key={u.id} onClick={() => loadNotes(u)} style={{ ...S.card, cursor: "pointer", border: selected?.id === u.id ? "1px solid rgba(124,58,237,.40)" : "1px solid rgba(255,255,255,.08)", background: selected?.id === u.id ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.03)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name}</div>
-                  <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{u.usernameKey} · {fmtDate(u.createdAt)}</div>
+            <div key={u.id} onClick={() => loadNotes(u)}
+              style={{ ...(selected?.id === u.id ? S.cardHov : S.card), cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name || u.usernameKey}</div>
+                  <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>@{u.usernameKey} · {fmtDate(u.createdAt)}</div>
                 </div>
                 <RoleBadge role={u.globalRole} />
               </div>
             </div>
           ))}
-          {!users.length && !loading && <div style={{ opacity: 0.5, fontSize: 13 }}>No users found.</div>}
+          {!users.length && !loading && <div style={{ opacity: 0.4, fontSize: 13 }}>No users found.</div>}
         </div>
       </div>
 
-      <div>
-        {selected ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={S.card}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 15 }}>{selected.name}</div>
-                  <div style={{ fontSize: 11, opacity: 0.5 }}>id: {selected.id}</div>
-                </div>
+      {/* Right: detail */}
+      {selected ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Identity */}
+          <div style={S.card}>
+            <div style={S.sectionTitle}>Identity</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(124,58,237,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
+                {(selected.name || selected.usernameKey).slice(0, 1).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>{selected.name || selected.usernameKey}</div>
+                <div style={{ fontSize: 11, opacity: 0.5 }}>@{selected.usernameKey}</div>
+                {selected.email && <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>{selected.email}</div>}
+              </div>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                 <RoleBadge role={selected.globalRole} />
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                <button style={S.danger} onClick={() => kickUser(selected.id, selected.name)}>Global Kick</button>
-                {canAssign && (
-                  <>
-                    {selected.globalRole !== "SUPPORT" && <button style={S.btn} onClick={() => setRole(selected.id, "SUPPORT")}>→ SUPPORT</button>}
-                    {selected.globalRole !== "USER"    && <button style={S.btn} onClick={() => setRole(selected.id, "USER")}>→ USER</button>}
-                    {canAssignGod && selected.globalRole !== "STAFF" && <button style={S.btn} onClick={() => setRole(selected.id, "STAFF")}>→ STAFF</button>}
-                    {canAssignGod && selected.globalRole !== "GOD"   && <button style={{ ...S.btn, borderColor: "rgba(245,158,11,.35)", color: "rgb(253,230,138)" }} onClick={() => setRole(selected.id, "GOD")}>→ GOD</button>}
-                  </>
-                )}
-              </div>
-              {note && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.65 }}>{note}</div>}
             </div>
+            <div style={{ fontSize: 11, opacity: 0.4 }}>ID: <span style={{ fontFamily: "monospace" }}>{selected.id}</span></div>
+            <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>Joined: {fmtDate(selected.createdAt)}</div>
+          </div>
 
+          {/* Role actions */}
+          {canEdit && (
             <div style={S.card}>
-              <div style={{ fontWeight: 700, fontSize: 12, opacity: 0.65, letterSpacing: ".6px", textTransform: "uppercase", marginBottom: 10 }}>Staff Notes</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
-                {notes.map(n => (
-                  <div key={n.id} style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(0,0,0,.25)", border: "1px solid rgba(255,255,255,.07)" }}>
-                    <div style={{ fontSize: 12, lineHeight: 1.5 }}>{n.body}</div>
-                    <div style={{ fontSize: 11, opacity: 0.45, marginTop: 4 }}>{n.authorName} · {fmtDate(n.createdAt)}</div>
-                  </div>
-                ))}
-                {!notes.length && <div style={{ fontSize: 12, opacity: 0.45 }}>No notes yet.</div>}
+              <div style={S.sectionTitle}>Role Actions</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button style={S.btn} onClick={() => setRole(selected.id, "SUPPORT")}>→ SUPPORT</button>
+                <button style={S.btn} onClick={() => setRole(selected.id, "STAFF")}>→ STAFF</button>
+                <button style={S.btn} onClick={() => setRole(selected.id, "USER")}>→ USER</button>
+                {canGod && <button style={{ ...S.btn, borderColor: "rgba(245,158,11,.30)", color: "rgb(253,230,138)" }} onClick={() => setRole(selected.id, "GOD")}>→ GOD</button>}
+                <button style={S.danger} onClick={() => kickUser(selected.id, selected.name)}>Global Kick</button>
               </div>
-              <textarea style={{ ...S.input, resize: "vertical", minHeight: 70 }} placeholder="Add a staff note…" value={newNote} onChange={e => setNewNote(e.target.value)} />
-              <button style={{ ...S.btn, width: "100%", marginTop: 8 }} onClick={addNote}>Save note</button>
+              {msg && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+            </div>
+          )}
+
+          {/* Staff notes */}
+          <div style={S.card}>
+            <div style={S.sectionTitle}>Staff Notes</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10, maxHeight: 180, overflowY: "auto" }}>
+              {notes.length === 0 && <div style={{ fontSize: 12, opacity: 0.4 }}>No notes yet.</div>}
+              {notes.map(n => (
+                <div key={n.id} style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.07)" }}>
+                  <div style={{ fontSize: 12 }}>{n.body}</div>
+                  <div style={{ fontSize: 10, opacity: 0.4, marginTop: 4 }}>{n.authorName} · {fmtDate(n.createdAt)}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <textarea style={{ ...S.input, resize: "vertical", minHeight: 60, flex: 1 }} placeholder="Add a staff note…"
+                value={newNote} onChange={e => setNewNote(e.target.value)} />
+              <button style={{ ...S.btnPri, alignSelf: "flex-end" }} onClick={addNote}>Save</button>
             </div>
           </div>
-        ) : (
-          <div style={{ opacity: 0.45, fontSize: 13, padding: "20px 0" }}>Select a user to view details.</div>
-        )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, opacity: 0.3, fontSize: 13 }}>
+          Select a user to view details
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Subscriptions tab ─────────────────────────────────────────────────────────
+
+function SubsTab() {
+  const [users, setUsers]     = useState<StaffUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg]         = useState("");
+  const [filter, setFilter]   = useState<UserTier | "ALL">("ALL");
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/staff/subscriptions").then(j => { setUsers(j.users || []); setLoading(false); });
+  }, []);
+
+  async function setTier(userId: string, tier: UserTier) {
+    const j = await apiFetch(`/staff/users/${userId}/tier`, { method: "POST", body: JSON.stringify({ tier }) });
+    if (j.ok) {
+      setMsg(`Tier updated to ${tier}`);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, tier } : u));
+    } else setMsg(j.error || "Failed.");
+  }
+
+  const TIERS: UserTier[] = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
+  const filtered = filter === "ALL" ? users : users.filter(u => u.tier === filter);
+
+  const counts = TIERS.reduce((acc, t) => ({ ...acc, [t]: users.filter(u => u.tier === t).length }), {} as Record<string, number>);
+
+  return (
+    <div>
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+        {TIERS.map(t => {
+          const c = tierColor(t);
+          return (
+            <div key={t} style={{ padding: "14px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.bg, textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{counts[t] || 0}</div>
+              <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{t}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Filter */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {(["ALL", ...TIERS] as const).map(t => (
+          <button key={t} onClick={() => setFilter(t)}
+            style={{ ...S.btn, background: filter === t ? "rgba(124,58,237,.15)" : "rgba(255,255,255,.04)", borderColor: filter === t ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.10)", color: filter === t ? "rgb(216,180,254)" : "rgba(243,244,246,.65)" }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {msg && <div style={{ marginBottom: 10, fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+
+      {loading && <div style={{ opacity: 0.4 }}>Loading…</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {filtered.map(u => (
+          <div key={u.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name || u.usernameKey}</div>
+              <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>@{u.usernameKey} · {u.notoriety} notoriety</div>
+            </div>
+            <TierBadge tier={u.tier} />
+            <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+              {TIERS.filter(t => t !== u.tier).map(t => (
+                <button key={t} style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }} onClick={() => setTier(u.id, t)}>→ {t}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {!filtered.length && !loading && <div style={{ opacity: 0.4, fontSize: 13 }}>No users.</div>}
       </div>
     </div>
   );
 }
 
-// ── Rooms Tab ─────────────────────────────────────────────────────────────────
+// ── Rooms tab ─────────────────────────────────────────────────────────────────
 
 function RoomsTab({ myRole }: { myRole: GlobalRole }) {
   const [rooms, setRooms]     = useState<StaffRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg]         = useState("");
-  const canDelete             = myRole === "GOD" || myRole === "STAFF";
+  const canDelete = myRole === "STAFF" || myRole === "ADMIN" || myRole === "GOD";
 
-  const load = useCallback(async () => {
+  useEffect(() => {
     setLoading(true);
-    try {
-      const j = await apiFetch("/staff/rooms");
-      setRooms(j.rooms || []);
-    } finally { setLoading(false); }
+    apiFetch("/staff/rooms").then(j => { setRooms(j.rooms || []); setLoading(false); });
   }, []);
 
-  useEffect(() => { void load(); }, []);
-
   async function deleteRoom(id: string, name: string) {
-    if (!confirm(`Delete room "${name || id}"? This cannot be undone.`)) return;
-    const j = await apiFetch(`/staff/rooms/${id}`, { method: "DELETE" });
-    if (j.ok) { setMsg(`Deleted ${name || id}`); load(); }
+    if (!confirm(`Delete room "${name || id}"?`)) return;
+    const j = await apiFetch(`/staff/rooms/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (j.ok) { setMsg(`Deleted ${name || id}`); setRooms(prev => prev.filter(r => r.id !== id)); }
     else setMsg(j.error || "Failed.");
   }
 
   return (
     <div>
-      {msg && <div style={{ marginBottom: 12, fontSize: 12, opacity: 0.65 }}>{msg}</div>}
-      {loading && <div style={{ opacity: 0.5, fontSize: 13 }}>Loading…</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>{rooms.length} rooms total</div>
+        {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+      </div>
+      {loading && <div style={{ opacity: 0.4 }}>Loading…</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {rooms.map(r => (
-          <div key={r.id} style={{ ...S.card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
+          <div key={r.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                 {r.name || <span style={{ opacity: 0.4 }}>(unnamed)</span>}
-                {r.locked && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(239,68,68,.30)", color: "rgba(252,165,165,.80)", background: "rgba(239,68,68,.08)" }}>LOCKED</span>}
+                {r.locked && <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(239,68,68,.30)", color: "rgba(252,165,165,.80)", background: "rgba(239,68,68,.08)" }}>LOCKED</span>}
               </div>
-              <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>
-                {r.id} · {r.members} members · {fmtDate(r.createdAt)}
+              <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2, fontFamily: "monospace" }}>
+                {r.id}{r.lobbyId ? ` · lobby: ${r.lobbyId}` : ""} · {r.members} members · {fmtDate(r.createdAt)}
               </div>
             </div>
             {canDelete && (
@@ -253,17 +377,91 @@ function RoomsTab({ myRole }: { myRole: GlobalRole }) {
             )}
           </div>
         ))}
-        {!rooms.length && !loading && <div style={{ opacity: 0.45, fontSize: 13 }}>No rooms found.</div>}
+        {!rooms.length && !loading && <div style={{ opacity: 0.4, fontSize: 13 }}>No rooms found.</div>}
       </div>
     </div>
   );
 }
 
-// ── Audit Tab ─────────────────────────────────────────────────────────────────
+// ── Lobbies tab ───────────────────────────────────────────────────────────────
+
+function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
+  const [lobbies, setLobbies] = useState<StaffLobby[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg]         = useState("");
+  const canEdit = myRole === "STAFF" || myRole === "ADMIN" || myRole === "GOD";
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/staff/lobbies").then(j => { setLobbies(j.lobbies || []); setLoading(false); });
+  }, []);
+
+  async function togglePin(id: string, pinned: boolean) {
+    const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(id)}/pin`, { method: "POST", body: JSON.stringify({ pinned: !pinned }) });
+    if (j.ok) { setMsg(`${!pinned ? "Pinned" : "Unpinned"} ${id}`); setLobbies(prev => prev.map(l => l.id === id ? { ...l, pinned: !pinned } : l)); }
+    else setMsg(j.error || "Failed.");
+  }
+
+  async function lockLobby(id: string) {
+    const j = await apiFetch("/staff/lobby/lock", { method: "POST", body: JSON.stringify({ lobbyId: id }) });
+    setMsg(j.ok ? `Locked ${id}` : j.error || "Failed.");
+  }
+
+  async function unlockLobby(id: string) {
+    const j = await apiFetch("/staff/lobby/unlock", { method: "POST", body: JSON.stringify({ lobbyId: id }) });
+    setMsg(j.ok ? `Unlocked ${id}` : j.error || "Failed.");
+  }
+
+  async function clearChat(id: string) {
+    if (!confirm(`Clear all chat in ${id}?`)) return;
+    const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId: id }) });
+    setMsg(j.ok ? `Chat cleared in ${id}` : j.error || "Failed.");
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>{lobbies.length} lobbies</div>
+        {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+      </div>
+      {loading && <div style={{ opacity: 0.4 }}>Loading…</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {lobbies.map(l => (
+          <div key={l.id} style={S.card}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: canEdit ? 8 : 0 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                  {l.name || l.id}
+                  {l.pinned && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", color: "rgba(216,180,254,.80)", background: "rgba(124,58,237,.08)" }}>PINNED</span>}
+                  {l.verified && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(16,185,129,.30)", color: "rgba(110,231,183,.80)", background: "rgba(16,185,129,.08)" }}>VERIFIED</span>}
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.4, marginTop: 1, fontFamily: "monospace" }}>{l.id} · {l.moduleType} · {l.onlineCount} online</div>
+              </div>
+            </div>
+            {canEdit && (
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }} onClick={() => togglePin(l.id, l.pinned)}>
+                  {l.pinned ? "Unpin" : "Pin"}
+                </button>
+                <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(245,158,11,.25)", color: "rgb(253,230,138)" }} onClick={() => lockLobby(l.id)}>Lock Chat</button>
+                <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(16,185,129,.25)", color: "rgb(110,231,183)" }} onClick={() => unlockLobby(l.id)}>Unlock Chat</button>
+                <button style={{ ...S.danger, fontSize: 11, padding: "4px 8px" }} onClick={() => clearChat(l.id)}>Clear Chat</button>
+              </div>
+            )}
+          </div>
+        ))}
+        {!lobbies.length && !loading && <div style={{ opacity: 0.4, fontSize: 13 }}>No lobbies found.</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Audit tab ─────────────────────────────────────────────────────────────────
 
 function AuditTab() {
   const [logs, setLogs]       = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter]   = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -271,26 +469,102 @@ function AuditTab() {
   }, []);
 
   const actionColor = (a: string) => {
-    if (a.includes("kick") || a.includes("delete")) return "rgba(239,68,68,.80)";
-    if (a.includes("role"))  return "rgba(124,58,237,.90)";
-    if (a.includes("note"))  return "rgba(14,165,233,.80)";
-    return "rgba(148,163,184,.80)";
+    if (a.includes("kick") || a.includes("delete") || a.includes("ban")) return "rgba(239,68,68,.85)";
+    if (a.includes("role") || a.includes("tier"))  return "rgba(124,58,237,.95)";
+    if (a.includes("note"))  return "rgba(14,165,233,.85)";
+    if (a.includes("lock"))  return "rgba(245,158,11,.85)";
+    if (a.includes("clear")) return "rgba(239,68,68,.65)";
+    return "rgba(148,163,184,.75)";
   };
+
+  const filtered = filter.trim() ? logs.filter(l => (l.action + l.actorName + (l.targetName || "")).toLowerCase().includes(filter.toLowerCase())) : logs;
 
   return (
     <div>
-      {loading && <div style={{ opacity: 0.5 }}>Loading…</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {logs.map(l => (
-          <div key={l.id} style={{ display: "flex", alignItems: "baseline", gap: 12, padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", fontSize: 12 }}>
-            <span style={{ color: actionColor(l.action), fontWeight: 700, minWidth: 120, flexShrink: 0 }}>{l.action}</span>
-            <span style={{ opacity: 0.8 }}>{l.actorName}</span>
-            {l.targetName && <><span style={{ opacity: 0.4 }}>→</span><span style={{ opacity: 0.8 }}>{l.targetName}</span></>}
-            {l.meta && <span style={{ opacity: 0.45, fontFamily: "monospace", fontSize: 11 }}>{JSON.stringify(l.meta)}</span>}
-            <span style={{ marginLeft: "auto", opacity: 0.40, whiteSpace: "nowrap" }}>{fmtDate(l.createdAt)}</span>
+      <input style={{ ...S.input, marginBottom: 14 }} placeholder="Filter by action, actor, target…" value={filter} onChange={e => setFilter(e.target.value)} />
+      {loading && <div style={{ opacity: 0.4 }}>Loading…</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {filtered.map(l => (
+          <div key={l.id} style={{ display: "flex", alignItems: "baseline", gap: 12, padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", fontSize: 12 }}>
+            <span style={{ color: actionColor(l.action), fontWeight: 700, minWidth: 130, flexShrink: 0 }}>{l.action}</span>
+            <span style={{ opacity: 0.8, flexShrink: 0 }}>{l.actorName}</span>
+            {l.targetName && <><span style={{ opacity: 0.35 }}>→</span><span style={{ opacity: 0.75 }}>{l.targetName}</span></>}
+            {l.meta && <span style={{ opacity: 0.4, fontFamily: "monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{JSON.stringify(l.meta)}</span>}
+            <span style={{ marginLeft: "auto", opacity: 0.35, whiteSpace: "nowrap", fontSize: 11 }}>{fmtDate(l.createdAt)}</span>
           </div>
         ))}
-        {!logs.length && !loading && <div style={{ opacity: 0.45 }}>No audit logs yet.</div>}
+        {!filtered.length && !loading && <div style={{ opacity: 0.4, fontSize: 13 }}>No audit logs.</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Files tab ─────────────────────────────────────────────────────────────────
+
+function FilesTab() {
+  return (
+    <div>
+      <div style={{ ...S.card, textAlign: "center", padding: "40px 20px" }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>🗂️</div>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>File Management</div>
+        <div style={{ fontSize: 13, opacity: 0.5 }}>Coming soon — user avatars, uploaded media, and asset management.</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Config tab ────────────────────────────────────────────────────────────────
+
+function ConfigTab() {
+  const [config, setConfig]   = useState<SiteConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [msg, setMsg]         = useState("");
+
+  useEffect(() => {
+    apiFetch("/staff/config").then(j => { if (j.ok) setConfig(j.config); setLoading(false); });
+  }, []);
+
+  async function save() {
+    if (!config) return;
+    setSaving(true); setMsg("");
+    const j = await apiFetch("/staff/config", { method: "POST", body: JSON.stringify(config) });
+    setSaving(false);
+    setMsg(j.ok ? "Saved." : j.error || "Failed.");
+  }
+
+  if (loading) return <div style={{ opacity: 0.4 }}>Loading…</div>;
+  if (!config) return <div style={{ opacity: 0.4 }}>Config unavailable.</div>;
+
+  const toggle = (key: keyof SiteConfig) => setConfig(c => c ? { ...c, [key]: !c[key as keyof SiteConfig] } : c);
+  const num    = (key: keyof SiteConfig, val: string) => setConfig(c => c ? { ...c, [key]: Number(val) } : c);
+
+  const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 9, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", marginBottom: 6 }}>
+      <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
+      {children}
+    </div>
+  );
+
+  const Toggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+    <button onClick={onClick} style={{ width: 44, height: 24, borderRadius: 999, border: "none", cursor: "pointer", background: on ? "rgba(16,185,129,.7)" : "rgba(255,255,255,.12)", position: "relative", transition: "background .15s" }}>
+      <span style={{ position: "absolute", top: 3, left: on ? 23 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" }} />
+    </button>
+  );
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <Row label="Registration Open"><Toggle on={config.registrationOpen} onClick={() => toggle("registrationOpen")} /></Row>
+      <Row label="Maintenance Mode"><Toggle on={config.maintenanceMode} onClick={() => toggle("maintenanceMode")} /></Row>
+      <Row label="Chat Rate Limit (msg/min)">
+        <input type="number" style={{ ...S.input, width: 80 }} value={config.chatRateLimit} onChange={e => num("chatRateLimit", e.target.value)} />
+      </Row>
+      <Row label="Max Rooms per Lobby">
+        <input type="number" style={{ ...S.input, width: 80 }} value={config.maxRoomsPerLobby} onChange={e => num("maxRoomsPerLobby", e.target.value)} />
+      </Row>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 16 }}>
+        <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Config"}</button>
+        {msg && <span style={{ fontSize: 12, opacity: 0.7 }}>{msg}</span>}
       </div>
     </div>
   );
@@ -304,9 +578,8 @@ export default function StaffPage() {
 
   const [myRole, setMyRole]   = useState<GlobalRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab]         = useState<"users" | "rooms" | "audit">("users");
+  const [nav, setNav]         = useState<NavId>("users");
 
-  // Join @ops room on mount
   useEffect(() => {
     try { ctx?.setActiveRoomId?.("@ops"); } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -314,7 +587,7 @@ export default function StaffPage() {
 
   useEffect(() => {
     apiFetch("/staff/me").then(j => {
-      if (!j.ok || !["SUPPORT","STAFF","GOD"].includes(j.globalRole)) {
+      if (!j.ok || !["SUPPORT","STAFF","ADMIN","GOD"].includes(j.globalRole)) {
         router.replace("/lobby"); return;
       }
       setMyRole(j.globalRole);
@@ -323,56 +596,69 @@ export default function StaffPage() {
   }, []);
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.5)", fontFamily: "monospace" }}>
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.4)", fontFamily: "monospace", fontSize: 13 }}>
       Checking access…
     </div>
   );
 
   if (!myRole) return null;
 
-  const canSeeAudit = myRole === "STAFF" || myRole === "GOD";
-  const tabs = ["users", "rooms", ...(canSeeAudit ? ["audit"] : [])] as const;
+  const visibleNav = NAV_ITEMS.filter(n => canSeeNav(myRole, n.minRole));
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.92)", fontFamily: "system-ui, sans-serif", overflow: "hidden" }}>
 
       {/* Header */}
-      <div style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 999, background: "rgba(16,185,129,.85)", boxShadow: "0 0 6px rgba(16,185,129,.5)" }} />
           <div>
-            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.3px" }}>weered ops</div>
-            <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>staff area · {myRole}</div>
+            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-.3px" }}>weered ops</span>
+            <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 10 }}>staff area · {myRole}</span>
           </div>
-          <div style={{ width: 8, height: 8, borderRadius: 999, background: "rgba(16,185,129,.85)", boxShadow: "0 0 6px rgba(16,185,129,.5)" }} title="@ops room live" />
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <RoleBadge role={myRole} />
-          <a href="/lobby" style={{ fontSize: 12, opacity: 0.55, textDecoration: "none", padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>← Lobby</a>
+          <a href="/lobby" style={{ fontSize: 12, opacity: 0.55, textDecoration: "none", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>← Lobby</a>
         </div>
       </div>
 
-      {/* Body: 3 columns */}
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "220px 1fr 300px" }}>
+      {/* Body */}
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}>
 
-        {/* Left: presence */}
-        <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "16px 14px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
-          <OpsPresence />
+        {/* Left: nav + presence */}
+        <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ ...S.label, marginBottom: 8 }}>Navigation</div>
+          {visibleNav.map(item => (
+            <button key={item.id} onClick={() => setNav(item.id)}
+              style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 9, border: "none", cursor: "pointer", textAlign: "left", width: "100%", background: nav === item.id ? "rgba(124,58,237,.15)" : "transparent", color: nav === item.id ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.75)", fontWeight: nav === item.id ? 700 : 400, fontSize: 13, transition: "background .1s" }}>
+              <span style={{ fontSize: 14 }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+
+          <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+            <OpsPresence />
+          </div>
         </div>
 
-        {/* Center: tabs + content */}
+        {/* Center: content */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-          <div style={{ padding: "12px 20px 0", display: "flex", gap: 4, borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
-            {tabs.map(t => (
-              <button key={t} onClick={() => setTab(t as any)}
-                style={{ padding: "8px 16px", borderRadius: "9px 9px 0 0", border: "none", background: tab === t ? "rgba(124,58,237,.20)" : "transparent", color: tab === t ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.70)", fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontSize: 13 }}>
-                {t}
-              </button>
-            ))}
+          {/* Section header */}
+          <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>
+              {visibleNav.find(n => n.id === nav)?.icon} {visibleNav.find(n => n.id === nav)?.label}
+            </div>
           </div>
+          {/* Content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-            {tab === "users" && <UsersTab myRole={myRole} />}
-            {tab === "rooms" && <RoomsTab myRole={myRole} />}
-            {tab === "audit" && canSeeAudit && <AuditTab />}
+            {nav === "users"   && <UsersTab myRole={myRole} />}
+            {nav === "subs"    && <SubsTab />}
+            {nav === "rooms"   && <RoomsTab myRole={myRole} />}
+            {nav === "lobbies" && <LobbiesTab myRole={myRole} />}
+            {nav === "audit"   && <AuditTab />}
+            {nav === "files"   && <FilesTab />}
+            {nav === "config"  && <ConfigTab />}
           </div>
         </div>
 
@@ -380,7 +666,7 @@ export default function StaffPage() {
         <div style={{ borderLeft: "1px solid rgba(255,255,255,.07)", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 13 }}>Ops Chat</div>
-            <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>#ops · staff only</div>
+            <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>#ops · staff only</div>
           </div>
           <div style={{ flex: 1, minHeight: 0, padding: "0 10px 10px" }}>
             <LobbyChatPanel roomId="@ops" embedded style={{ height: "100%", display: "flex", flexDirection: "column" }} />
