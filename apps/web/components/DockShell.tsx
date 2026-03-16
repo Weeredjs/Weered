@@ -248,6 +248,13 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const dmActive = useMemo(()=>dmThreads.find(t=>t.peerId===dmActivePeerId)||null,[dmThreads,dmActivePeerId]);
   const totalUnread = useMemo(()=>dmThreads.reduce((s,t)=>s+t.unread,0),[dmThreads]);
 
+  // Broadcast unread count to UserCorner badge whenever it changes.
+  // UserCorner listens for this event AND polls localStorage as a fallback.
+  useEffect(()=>{
+    try { localStorage.setItem("weered:dock:unread", String(totalUnread)); } catch {}
+    try { window.dispatchEvent(new CustomEvent("weered:dock:unread",{detail:{count:totalUnread}})); } catch {}
+  },[totalUnread]);
+
   function call(fn:any,...args:any[]){ try{if(typeof fn==="function")return fn(...args);}catch{} }
   function sendRoomChat(body:string){ const b=body.trim(); if(!b)return; try{if(typeof sendChat==="function"){sendChat(b);return;}}catch{} try{sendChat(viewId||joinedId,b);}catch{} }
 
