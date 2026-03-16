@@ -455,10 +455,18 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>🔓 Unlock entry</button>
                   <button
                     style={{ ...s.btnRed, gridColumn: "span 2" }}
-                    onClick={() => {
+                    onClick={async () => {
                       if (!window.confirm("Clear all chat messages in this room?")) return;
-                      ctx?.sendRaw?.({ type: "chat:clear", roomId });
-                      setNote("Chat cleared.");
+                      try {
+                        const t = localStorage.getItem("weered_token") || "";
+                        const r = await fetch(`${API_BASE}/staff/room/clear-chat`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+                          body: JSON.stringify({ roomId }),
+                        });
+                        const j = await r.json();
+                        setNote(j.ok ? "Chat cleared." : j.error || "Failed.");
+                      } catch { setNote("Request failed."); }
                     }}
                   >Clear Chat</button>
                 </div>
