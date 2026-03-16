@@ -151,21 +151,12 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
 
-  // Read lock state directly from WeeredProvider — this is the same source that
-  // drives the "Chat is locked." placeholder in the chat input, so it updates
-  // in real-time via WebSocket for ALL connected clients without polling or refresh.
-  const ctx = useWeered() as any;
-
-  // Try every field path WeeredProvider might expose for lobby chat lock state
+  // ctx.admin is populated from room:adminState WS messages (updates in real-time).
+  // ctx.meta.locked only updates on initial join — do NOT use it as primary source.
   const ctxLocked: boolean | null = (() => {
     const v =
-      ctx?.meta?.chatLocked ??
-      ctx?.meta?.chat_locked ??
-      ctx?.meta?.locked ??
-      ctx?.lobbyMeta?.chatLocked ??
-      ctx?.lobbyMeta?.locked ??
-      ctx?.lobby?.chatLocked ??
-      ctx?.lobby?.locked ??
+      ctx?.admin?.locked ??        // room:adminState — real-time ✓
+      ctx?.meta?.chatLocked ??     // future-proof field
       null;
     return typeof v === "boolean" ? v : null;
   })();
@@ -296,10 +287,6 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
           </button>
         </div>
         {note && <div style={{ marginTop: 8, fontSize: 11, opacity: 0.65 }}>{note}</div>}
-        {/* DEBUG — remove once field name confirmed */}
-        <div style={{ marginTop: 6, fontSize: 9, opacity: 0.35, fontFamily: "monospace", wordBreak: "break-all" }}>
-          ctx: {JSON.stringify({ ml: ctx?.meta?.locked, mcl: ctx?.meta?.chatLocked, ll: ctx?.lobby?.locked, lcl: ctx?.lobby?.chatLocked, lml: ctx?.lobbyMeta?.locked })}
-        </div>
       </div>
     </div>
   );
