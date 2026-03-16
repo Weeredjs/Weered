@@ -151,60 +151,71 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
 
-  const LS_KEY = `weered:lobby:chatLocked:${lobbyId}`;
+  // Read lock state directly from WeeredProvider — this is the same source that
+  // drives the "Chat is locked." placeholder in the chat input, so it updates
+  // in real-time via WebSocket for ALL connected clients without polling or refresh.
+  const ctx = useWeered() as any;
 
-  // Seed from localStorage so there's no flash on mount while the first poll lands
-  const [chatLocked, _setChatLocked] = React.useState<boolean | null>(() => {
+  // Try every field path WeeredProvider might expose for lobby chat lock state
+  const ctxLocked: boolean | null = (() => {
+    const v =
+      ctx?.meta?.chatLocked ??
+      ctx?.meta?.chat_locked ??
+      ctx?.meta?.locked ??
+      ctx?.lobbyMeta?.chatLocked ??
+      ctx?.lobbyMeta?.locked ??
+      ctx?.lobby?.chatLocked ??
+      ctx?.lobby?.locked ??
+      null;
+    return typeof v === "boolean" ? v : null;
+  })();
+
+  // Optimistic override: set immediately on click, cleared once ctx catches up
+  const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
+  const lastActionRef = React.useRef<number>(0);
+
+  // Clear optimistic override once WeeredProvider reflects our action
+  // (within 8s max so we don't get stuck if ctx never updates)
+  React.useEffect(() => {
+    if (optimistic === null) return;
+    if (ctxLocked === optimistic) { setOptimistic(null); return; }
+    const t = setTimeout(() => setOptimistic(null), 8000);
+    return () => clearTimeout(t);
+  }, [ctxLocked, optimistic]);
+
+  // Ground truth: prefer optimistic during the in-flight window, else ctx, else localStorage fallback
+  const LS_KEY = `weered:lobby:chatLocked:${lobbyId}`;
+  const chatLocked: boolean = (() => {
+    if (optimistic !== null) return optimistic;
+    if (ctxLocked !== null) return ctxLocked;
     try {
       const v = localStorage.getItem(LS_KEY);
       if (v === "true")  return true;
       if (v === "false") return false;
     } catch {}
-    return null;
-  });
+    return false;
+  })();
+
+  // Keep localStorage in sync for seed-on-mount across refreshes
+  React.useEffect(() => {
+    if (ctxLocked !== null) {
+      try { localStorage.setItem(LS_KEY, String(ctxLocked)); } catch {}
+    }
+  }, [ctxLocked]);
+
   const [note,    setNote]    = React.useState("");
   const [loading, setLoading] = React.useState(false);
-
-  // Track when the last local action fired so the background poll doesn't
-  // immediately overwrite an optimistic update mid-flight
-  const lastActionRef = React.useRef<number>(0);
-
-  function setChatLocked(v: boolean) {
-    _setChatLocked(v);
-    try { localStorage.setItem(LS_KEY, String(v)); } catch {}
-  }
-
-  // Poll the lobby API every 5s so ALL connected mods see changes in near-real-time
-  // without a refresh — regardless of who made the change
-  React.useEffect(() => {
-    async function poll() {
-      // Skip if a local action fired in the last 4s to avoid racing with optimistic UI
-      if (Date.now() - lastActionRef.current < 4000) return;
-      try {
-        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}`);
-        // Try both field names — API may return chatLocked or locked
-        const val = typeof j?.chatLocked === "boolean" ? j.chatLocked
-                  : typeof j?.chat_locked === "boolean" ? j.chat_locked
-                  : null;
-        if (val !== null) setChatLocked(val);
-      } catch {}
-    }
-    poll(); // immediate on mount / lobbyId change
-    const t = setInterval(poll, 5000);
-    return () => clearInterval(t);
-  }, [lobbyId]);
 
   async function action(type: "lock" | "unlock") {
     setLoading(true); setNote("");
     const willLock = type === "lock";
-    lastActionRef.current = Date.now(); // guard the poll for the next 4s
-    setChatLocked(willLock);            // optimistic
+    lastActionRef.current = Date.now();
+    setOptimistic(willLock); // instant UI feedback while API call flies
     try {
       let j = await apiFetch(`/staff/lobby/${type}`, {
         method: "POST",
         body: JSON.stringify({ lobbyId }),
       });
-
       // Fallback: if /unlock route doesn't exist, POST /lock with locked:false
       if (!j?.ok && type === "unlock") {
         j = await apiFetch("/staff/lobby/lock", {
@@ -212,15 +223,15 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
           body: JSON.stringify({ lobbyId, locked: false }),
         });
       }
-
       if (j?.ok) {
         setNote(willLock ? "Chat locked." : "Chat unlocked.");
+        try { localStorage.setItem(LS_KEY, String(willLock)); } catch {}
       } else {
-        setChatLocked(!willLock); // revert
+        setOptimistic(!willLock); // revert
         setNote(j?.error || "Failed.");
       }
     } catch {
-      setChatLocked(!willLock);
+      setOptimistic(null);
       setNote("Request failed.");
     }
     finally { setLoading(false); }
@@ -285,6 +296,10 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
           </button>
         </div>
         {note && <div style={{ marginTop: 8, fontSize: 11, opacity: 0.65 }}>{note}</div>}
+        {/* DEBUG — remove once field name confirmed */}
+        <div style={{ marginTop: 6, fontSize: 9, opacity: 0.35, fontFamily: "monospace", wordBreak: "break-all" }}>
+          ctx: {JSON.stringify({ ml: ctx?.meta?.locked, mcl: ctx?.meta?.chatLocked, ll: ctx?.lobby?.locked, lcl: ctx?.lobby?.chatLocked, lml: ctx?.lobbyMeta?.locked })}
+        </div>
       </div>
     </div>
   );
