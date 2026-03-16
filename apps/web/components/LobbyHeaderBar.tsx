@@ -1,4 +1,5 @@
 "use client";
+import InviteModal from "./InviteModal";
 
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -55,6 +56,7 @@ export default function LobbyHeaderBar({
 
   const [mode, setMode]         = React.useState<Mode>("rooms");
   const [q, setQ]               = React.useState("");
+  const [showLobbyInvite, setShowLobbyInvite] = React.useState(false);
   const [open, setOpen]         = React.useState(false);
   const [idx, setIdx]           = React.useState(0);
 
@@ -520,6 +522,9 @@ if (searchRef.current) clearTimeout(searchRef.current);
           <button type="button" className="weered-btn" onClick={openBrowse}>
             Browse Rooms
           </button>
+          <button type="button" className="weered-btn" onClick={() => setShowLobbyInvite(true)}>
+            Invite
+          </button>
 
           <button
             type="button"
@@ -548,5 +553,13 @@ function SectionLabel({ label }: { label: string }) {
     }}>
       {label}
     </div>
+      {showLobbyInvite && (
+        <InviteModal
+          type="LOBBY"
+          targetId={lobbyId}
+          targetName={title}
+          onClose={() => setShowLobbyInvite(false)}
+        />
+      )}
   );
 }
