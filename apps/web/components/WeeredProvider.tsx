@@ -346,13 +346,24 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
 
+      // room:locked fires when a room is locked — event name IS the signal.
+      // msg.locked is absent so Boolean(msg.locked) was always false (bug).
       if (msg.type === "room:locked") {
         const rid = String(msg.roomId || "");
-        const isLocked = Boolean(msg.locked);
         setMetaByRoom(prev => ({
-        ...prev,
-        [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [] }), locked: isLocked }
-      }));
+          ...prev,
+          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [] }), locked: true }
+        }));
+        return;
+      }
+
+      // room:unlocked fires when a room is unlocked
+      if (msg.type === "room:unlocked") {
+        const rid = String(msg.roomId || "");
+        setMetaByRoom(prev => ({
+          ...prev,
+          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [] }), locked: false }
+        }));
         return;
       }
 
