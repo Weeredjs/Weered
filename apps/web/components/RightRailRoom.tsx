@@ -1,5 +1,5 @@
 "use client";
-import InviteModal from "../InviteModal";
+import InviteModal from "./InviteModal";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import React, { useCallback, useMemo, useState } from "react";

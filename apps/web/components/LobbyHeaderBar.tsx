@@ -536,7 +536,6 @@ if (searchRef.current) clearTimeout(searchRef.current);
           </button>
         </div>
       </div>
-    </div>
       {showLobbyInvite && (
         <InviteModal
           type="LOBBY"
@@ -545,6 +544,7 @@ if (searchRef.current) clearTimeout(searchRef.current);
           onClose={() => setShowLobbyInvite(false)}
         />
       )}
+    </div>
   );
 }
 
