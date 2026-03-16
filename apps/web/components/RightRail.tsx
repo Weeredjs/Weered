@@ -153,32 +153,52 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
 
   const LS_KEY = `weered:lobby:chatLocked:${lobbyId}`;
 
-  // Seed from localStorage so state survives refresh without an API fetch.
-  // The API fetch was causing two bugs: (1) race with optimistic click overwrote
-  // the in-flight update, (2) j?.locked referred to entry-locking not chat-locking
-  // so buttons seeded backwards after refresh.
+  // Seed from localStorage so there's no flash on mount while the first poll lands
   const [chatLocked, _setChatLocked] = React.useState<boolean | null>(() => {
     try {
       const v = localStorage.getItem(LS_KEY);
       if (v === "true")  return true;
       if (v === "false") return false;
     } catch {}
-    return null; // unknown until first action
+    return null;
   });
   const [note,    setNote]    = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-  // Wrap setter so localStorage always stays in sync
+  // Track when the last local action fired so the background poll doesn't
+  // immediately overwrite an optimistic update mid-flight
+  const lastActionRef = React.useRef<number>(0);
+
   function setChatLocked(v: boolean) {
     _setChatLocked(v);
     try { localStorage.setItem(LS_KEY, String(v)); } catch {}
   }
 
+  // Poll the lobby API every 5s so ALL connected mods see changes in near-real-time
+  // without a refresh — regardless of who made the change
+  React.useEffect(() => {
+    async function poll() {
+      // Skip if a local action fired in the last 4s to avoid racing with optimistic UI
+      if (Date.now() - lastActionRef.current < 4000) return;
+      try {
+        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}`);
+        // Try both field names — API may return chatLocked or locked
+        const val = typeof j?.chatLocked === "boolean" ? j.chatLocked
+                  : typeof j?.chat_locked === "boolean" ? j.chat_locked
+                  : null;
+        if (val !== null) setChatLocked(val);
+      } catch {}
+    }
+    poll(); // immediate on mount / lobbyId change
+    const t = setInterval(poll, 5000);
+    return () => clearInterval(t);
+  }, [lobbyId]);
+
   async function action(type: "lock" | "unlock") {
     setLoading(true); setNote("");
     const willLock = type === "lock";
-    // Optimistic — update UI immediately
-    setChatLocked(willLock);
+    lastActionRef.current = Date.now(); // guard the poll for the next 4s
+    setChatLocked(willLock);            // optimistic
     try {
       let j = await apiFetch(`/staff/lobby/${type}`, {
         method: "POST",
@@ -196,8 +216,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
       if (j?.ok) {
         setNote(willLock ? "Chat locked." : "Chat unlocked.");
       } else {
-        // Revert on confirmed failure
-        setChatLocked(!willLock);
+        setChatLocked(!willLock); // revert
         setNote(j?.error || "Failed.");
       }
     } catch {
