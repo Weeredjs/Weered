@@ -2,7 +2,7 @@
 import InviteModal from "./InviteModal";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string };
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
