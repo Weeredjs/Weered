@@ -151,16 +151,13 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
 
-  // ctx.admin is populated from room:adminState WS messages (updates in real-time).
-  // ctx.meta.locked only updates on initial join — do NOT use it as primary source.
+  // ctx.meta.locked is now correctly updated in real-time from:
+  // - room:locked WS event (fixed: was Boolean(undefined)=false, now hardcoded true)
+  // - room:unlocked WS event (new handler)
+  // - room:adminState WS event (already correct)
+  // - presence:state on join (already correct)
   const ctx = useWeered() as any;
-  const ctxLocked: boolean | null = (() => {
-    const v =
-      ctx?.admin?.locked ??        // room:adminState — real-time ✓
-      ctx?.meta?.chatLocked ??     // future-proof field
-      null;
-    return typeof v === "boolean" ? v : null;
-  })();
+  const ctxLocked: boolean | null = typeof ctx?.meta?.locked === "boolean" ? ctx.meta.locked : null;
 
   // Optimistic override: set immediately on click, cleared once ctx catches up
   const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
