@@ -55,6 +55,12 @@ model Lobby {
   websiteUrl  String?    // embedded in Content tab
   // linkedSubreddits stored in moduleConfig as { subreddits: string[] }
 
+  // Lobby admin — custom role titles and module toggles
+  // roleNames: JSON map of level→title, e.g. {"5":"Boss","4":"Lieutenant","3":"Bouncer","2":"VIP","1":"Viewer"}
+  roleNames       Json?
+  // enabledModules: which modules lobby rooms can use, e.g. ["voice","youtube","reddit"]
+  enabledModules  String[]  @default(["voice", "youtube", "reddit"])
+
   ownerId     String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -63,6 +69,7 @@ model Lobby {
   members     LobbyMember[]
   bans        LobbyBan[]
   messages    LobbyMessage[]
+  adminMessages LobbyAdminMessage[]
   audit       LobbyAudit[]
 }
 
@@ -72,6 +79,7 @@ model LobbyMember {
   userId    String
   name      String    @default("")
   role      LobbyRole @default(MEMBER)
+  roleLevel Int       @default(1)   // 1=Member, 2=Trusted, 3=Moderator, 4=Admin, 5=Owner
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -113,6 +121,19 @@ model LobbyAudit {
   actorName String
   targetId  String?
   note      String?
+  ts        DateTime @default(now())
+
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@index([lobbyId, ts])
+}
+
+model LobbyAdminMessage {
+  id        String   @id
+  lobbyId   String
+  userId    String
+  userName  String   @default("")
+  body      String
   ts        DateTime @default(now())
 
   lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)

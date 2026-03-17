@@ -2334,6 +2334,317 @@ app.post("/dm/:peerId", async (req, reply) => {
       cardData: account.cardData, isStale,
     });
   });
+  // ── Lobby Admin API ──────────────────────────────────────────────────────────
+  // Access: lobby roleLevel >= 4, or GlobalRole STAFF/ADMIN/GOD
+
+  async function lobbyAdminAccess(req: any, reply: any, minLevel = 4): Promise<{ user: AuthedUser; lobby: any; member: any; globalRole: GlobalRole; overrideRole: string | null } | null> {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) { reply.code(401).send({ ok: false, error: "unauthorized" }); return null; }
+    const lobbyId = String((req as any).params?.id || (req as any).params?.lobbyId || "");
+    const lobby = await (prisma as any).lobby.findUnique({ where: { id: lobbyId } });
+    if (!lobby) { reply.code(404).send({ ok: false, error: "lobby_not_found" }); return null; }
+    const gr = await getGlobalRole(u.id);
+    // Staff+ always has access
+    if (canAccessStaff(gr)) return { user: u, lobby, member: null, globalRole: gr, overrideRole: gr };
+    // Check lobby membership level
+    const member = await (prisma as any).lobbyMember.findUnique({ where: { lobbyId_userId: { lobbyId, userId: u.id } } });
+    if (!member || (member.roleLevel ?? 1) < minLevel) { reply.code(403).send({ ok: false, error: "forbidden" }); return null; }
+    return { user: u, lobby, member, globalRole: gr, overrideRole: null };
+  }
+
+  // Role level permission map (which level can do what)
+  const LEVEL_PERMS: Record<number, string[]> = {
+    5: ["kick", "ban", "manage_rooms", "edit_branding", "manage_roles", "pin_rooms", "admin_chat"],
+    4: ["kick", "ban", "manage_rooms", "edit_branding", "pin_rooms", "admin_chat"],
+    3: ["kick", "ban", "manage_rooms", "pin_rooms", "admin_chat"],
+    2: ["kick", "admin_chat"],
+    1: [],
+  };
+
+  const DEFAULT_ROLE_NAMES: Record<string, string> = { "5": "Owner", "4": "Admin", "3": "Moderator", "2": "Trusted", "1": "Member" };
+
+  function hasLobbyPerm(level: number, perm: string, overrideRole: string | null): boolean {
+    if (overrideRole && ["STAFF", "ADMIN", "GOD"].includes(overrideRole)) return true;
+    return (LEVEL_PERMS[level] || []).includes(perm);
+  }
+
+  // GET /lobbies/:id/admin — full admin dashboard payload
+  app.get("/lobbies/:id/admin", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 2); // level 2+ can view
+    if (!ctx) return;
+    const { lobby, member, overrideRole, globalRole } = ctx;
+    const lobbyId = lobby.id;
+
+    const [members, roomList, auditList, banList] = await Promise.all([
+      (prisma as any).lobbyMember.findMany({
+        where: { lobbyId },
+        orderBy: [{ roleLevel: "desc" }, { name: "asc" }],
+        select: { id: true, userId: true, name: true, role: true, roleLevel: true, createdAt: true },
+      }),
+      (prisma as any).room.findMany({
+        where: { lobbyId },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, name: true, locked: true, ownerId: true, _count: { select: { members: true } } },
+      }),
+      (prisma as any).lobbyAudit.findMany({
+        where: { lobbyId },
+        orderBy: { ts: "desc" },
+        take: 100,
+      }),
+      (prisma as any).lobbyBan.findMany({
+        where: { lobbyId },
+        select: { id: true, userId: true, reason: true, createdAt: true },
+      }),
+    ]);
+
+    const roleNames = lobby.roleNames || DEFAULT_ROLE_NAMES;
+    const myLevel = overrideRole ? 5 : (member?.roleLevel ?? 1);
+
+    return reply.send({
+      ok: true,
+      lobby: {
+        id: lobby.id, name: lobby.name, description: lobby.description,
+        verified: lobby.verified, pinned: lobby.pinned,
+        moduleType: lobby.moduleType, moduleConfig: lobby.moduleConfig,
+        accentColor: lobby.accentColor, logoUrl: lobby.logoUrl,
+        bannerUrl: lobby.bannerUrl, websiteUrl: lobby.websiteUrl,
+        keywords: lobby.keywords, enabledModules: lobby.enabledModules,
+        roleNames,
+      },
+      members,
+      rooms: roomList.map((r: any) => ({
+        id: r.id, name: r.name || r.id, locked: Boolean(r.locked), ownerId: r.ownerId,
+        onlineCount: rooms.get(r.id)?.users.size ?? 0,
+        memberCount: r._count?.members ?? 0,
+      })),
+      audit: auditList,
+      bans: banList,
+      myLevel,
+      overrideRole,
+      globalRole: String(globalRole),
+      perms: LEVEL_PERMS[myLevel] || [],
+    });
+  });
+
+  // PATCH /lobbies/:id/admin/branding
+  app.patch("/lobbies/:id/admin/branding", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 4);
+    if (!ctx) return;
+    if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
+      return reply.code(403).send({ ok: false, error: "no_permission" });
+    }
+    const body: any = (req as any).body || {};
+    const data: any = {};
+    if (typeof body.name === "string")        data.name        = body.name.slice(0, 100);
+    if (typeof body.description === "string") data.description = body.description.slice(0, 500);
+    if (typeof body.accentColor === "string") data.accentColor = body.accentColor.slice(0, 20);
+    if (typeof body.logoUrl === "string")     data.logoUrl     = body.logoUrl.slice(0, 500);
+    if (typeof body.bannerUrl === "string")   data.bannerUrl   = body.bannerUrl.slice(0, 500);
+    if (typeof body.websiteUrl === "string")  data.websiteUrl  = body.websiteUrl.slice(0, 500);
+    if (Array.isArray(body.keywords))         data.keywords    = body.keywords.map(String).slice(0, 20);
+
+    if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "nothing_to_update" });
+
+    await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "branding_update", actorId: ctx.user.id, actorName: ctx.user.name, note: Object.keys(data).join(", ") },
+    });
+    return reply.send({ ok: true, updated: Object.keys(data) });
+  });
+
+  // PATCH /lobbies/:id/admin/modules
+  app.patch("/lobbies/:id/admin/modules", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 4);
+    if (!ctx) return;
+    if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
+      return reply.code(403).send({ ok: false, error: "no_permission" });
+    }
+    const body: any = (req as any).body || {};
+    const valid = ["voice", "youtube", "video", "screen", "twitch", "custom", "reddit"];
+    const enabledModules = Array.isArray(body.enabledModules)
+      ? body.enabledModules.filter((m: string) => valid.includes(m))
+      : null;
+    if (!enabledModules) return reply.code(400).send({ ok: false, error: "enabledModules required" });
+
+    await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data: { enabledModules } });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "modules_update", actorId: ctx.user.id, actorName: ctx.user.name, note: enabledModules.join(", ") },
+    });
+    return reply.send({ ok: true, enabledModules });
+  });
+
+  // PATCH /lobbies/:id/admin/roles
+  app.patch("/lobbies/:id/admin/roles", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 5); // only owner/GOD
+    if (!ctx) return;
+    if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "manage_roles", ctx.overrideRole)) {
+      return reply.code(403).send({ ok: false, error: "no_permission" });
+    }
+    const body: any = (req as any).body || {};
+    const roleNames = body.roleNames;
+    if (!roleNames || typeof roleNames !== "object") return reply.code(400).send({ ok: false, error: "roleNames required" });
+    // Validate: keys must be 1-5, values must be strings <= 24 chars
+    const clean: Record<string, string> = {};
+    for (const k of ["1","2","3","4","5"]) {
+      clean[k] = typeof roleNames[k] === "string" ? roleNames[k].slice(0, 24) : DEFAULT_ROLE_NAMES[k];
+    }
+
+    await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data: { roleNames: clean } });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "roles_renamed", actorId: ctx.user.id, actorName: ctx.user.name, note: JSON.stringify(clean) },
+    });
+    return reply.send({ ok: true, roleNames: clean });
+  });
+
+  // GET /lobbies/:id/admin/members
+  app.get("/lobbies/:id/admin/members", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 2);
+    if (!ctx) return;
+    const members = await (prisma as any).lobbyMember.findMany({
+      where: { lobbyId: ctx.lobby.id },
+      orderBy: [{ roleLevel: "desc" }, { name: "asc" }],
+      select: { id: true, userId: true, name: true, role: true, roleLevel: true, createdAt: true },
+    });
+    return reply.send({ ok: true, members });
+  });
+
+  // POST /lobbies/:id/admin/members/:userId/role
+  app.post("/lobbies/:id/admin/members/:userId/role", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 4);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "manage_roles", ctx.overrideRole)) {
+      return reply.code(403).send({ ok: false, error: "no_permission" });
+    }
+    const targetUserId = String((req as any).params?.userId || "");
+    const body: any = (req as any).body || {};
+    const newLevel = Math.min(Math.max(Number(body.roleLevel) || 1, 1), 5);
+    // Can't promote someone to your level or above (unless GOD)
+    if (newLevel >= myLevel && !ctx.overrideRole) return reply.code(403).send({ ok: false, error: "cannot_promote_to_own_level" });
+    // Can't change someone at or above your level
+    const target = await (prisma as any).lobbyMember.findUnique({
+      where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
+    });
+    if (!target) return reply.code(404).send({ ok: false, error: "member_not_found" });
+    if ((target.roleLevel ?? 1) >= myLevel && !ctx.overrideRole) return reply.code(403).send({ ok: false, error: "cannot_modify_peer_or_above" });
+
+    const lobbyRole = newLevel >= 4 ? LobbyRole.OWNER : newLevel >= 3 ? LobbyRole.MOD : LobbyRole.MEMBER;
+    await (prisma as any).lobbyMember.update({
+      where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
+      data: { roleLevel: newLevel, role: lobbyRole },
+    });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "member_role_change", actorId: ctx.user.id, actorName: ctx.user.name, targetId: targetUserId, note: `level ${newLevel}` },
+    });
+    return reply.send({ ok: true, userId: targetUserId, roleLevel: newLevel });
+  });
+
+  // POST /lobbies/:id/admin/members/:userId/kick
+  app.post("/lobbies/:id/admin/members/:userId/kick", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 2);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "kick", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
+    const targetUserId = String((req as any).params?.userId || "");
+    const target = await (prisma as any).lobbyMember.findUnique({
+      where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
+    });
+    if (!target) return reply.code(404).send({ ok: false, error: "member_not_found" });
+    if ((target.roleLevel ?? 1) >= myLevel && !ctx.overrideRole) return reply.code(403).send({ ok: false, error: "cannot_kick_peer_or_above" });
+    await (prisma as any).lobbyMember.delete({ where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } } });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "member_kicked", actorId: ctx.user.id, actorName: ctx.user.name, targetId: targetUserId, note: target.name },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // POST /lobbies/:id/admin/members/:userId/ban
+  app.post("/lobbies/:id/admin/members/:userId/ban", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "ban", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
+    const targetUserId = String((req as any).params?.userId || "");
+    const body: any = (req as any).body || {};
+    const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : "";
+    // Remove membership and add to ban list
+    await (prisma as any).lobbyMember.deleteMany({ where: { lobbyId: ctx.lobby.id, userId: targetUserId } });
+    await (prisma as any).lobbyBan.upsert({
+      where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
+      update: { reason },
+      create: { lobbyId: ctx.lobby.id, userId: targetUserId, reason },
+    });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "member_banned", actorId: ctx.user.id, actorName: ctx.user.name, targetId: targetUserId, note: reason || undefined },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // DELETE /lobbies/:id/admin/members/:userId/ban
+  app.delete("/lobbies/:id/admin/members/:userId/ban", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "ban", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
+    const targetUserId = String((req as any).params?.userId || "");
+    await (prisma as any).lobbyBan.deleteMany({ where: { lobbyId: ctx.lobby.id, userId: targetUserId } });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "member_unbanned", actorId: ctx.user.id, actorName: ctx.user.name, targetId: targetUserId },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // POST /lobbies/:id/admin/rooms/:roomId/pin
+  app.post("/lobbies/:id/admin/rooms/:roomId/pin", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "pin_rooms", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
+    const roomId = String((req as any).params?.roomId || "");
+    // Pin is stored as a special field — for now we just audit it; pinning logic will be added to room display
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "room_pinned", actorId: ctx.user.id, actorName: ctx.user.name, targetId: roomId },
+    });
+    return reply.send({ ok: true, roomId });
+  });
+
+  // DELETE /lobbies/:id/admin/rooms/:roomId
+  app.delete("/lobbies/:id/admin/rooms/:roomId", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "manage_rooms", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
+    const roomId = String((req as any).params?.roomId || "");
+    const room = await (prisma as any).room.findUnique({ where: { id: roomId }, select: { lobbyId: true, name: true } });
+    if (!room || room.lobbyId !== ctx.lobby.id) return reply.code(404).send({ ok: false, error: "room_not_found_in_lobby" });
+    // Kick live users
+    const liveRoom = rooms.get(roomId);
+    if (liveRoom) {
+      for (const s of liveRoom.sockets) {
+        send(s, { type: "room:deleted", roomId });
+        try { (s as any).close(4000, "room:deleted"); } catch {}
+      }
+      rooms.delete(roomId);
+    }
+    await (prisma as any).room.delete({ where: { id: roomId } });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "room_deleted", actorId: ctx.user.id, actorName: ctx.user.name, targetId: roomId, note: room.name },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // GET /lobbies/:id/admin/audit
+  app.get("/lobbies/:id/admin/audit", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const logs = await (prisma as any).lobbyAudit.findMany({
+      where: { lobbyId: ctx.lobby.id },
+      orderBy: { ts: "desc" },
+      take: 200,
+    });
+    return reply.send({ ok: true, logs });
+  });
+
   process.on("SIGINT", async () => {
     try { await prisma.$disconnect(); } catch {}
     process.exit(0);
