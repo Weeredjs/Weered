@@ -1762,7 +1762,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           if (room.banned.has(ws.user.id)) return;
           if (room.muted.has(ws.user.id)) return;
           const u = room.users.get(ws.user.id)!;
-          const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id) }, body, ts: Date.now() };
+          const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id), avatarColor: (u as any).avatarColor, avatar: (u as any).avatar }, body, ts: Date.now() };
           room.msgs.push(m);
           if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
           if (room.roomId !== "lobby") {
@@ -2072,7 +2072,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true } })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true } })
       : [];
     const out = profiles.map(p => {
       let roomId: string | null = null; let roomName: string | null = null;

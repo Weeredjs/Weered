@@ -104,14 +104,20 @@ export default function LobbyChatPanel(
               {(() => {
                 const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
                 const isMine = !!(ctx?.me && (String(ctx.me.name) === uname || String(ctx.me.id) === String(m?.user?.id || m?.userId || "")));
+                const msgAvatar = m?.user?.avatar || null;
                 return (
                   <div style={{
                     width: 28, height: 28, borderRadius: 999, flexShrink: 0,
-                    background: avatarBg(uname, isMine, m?.user?.avatarColor),
+                    background: msgAvatar ? "rgba(255,255,255,.08)" : avatarBg(uname, isMine, m?.user?.avatarColor),
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 12, fontWeight: 700, color: "#fff",
+                    overflow: "hidden",
                   }}>
-                    {uname.slice(0, 1).toUpperCase()}
+                    {msgAvatar ? (
+                      <img src={msgAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      uname.slice(0, 1).toUpperCase()
+                    )}
                   </div>
                 );
               })()}
