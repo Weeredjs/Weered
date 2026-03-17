@@ -440,3 +440,67 @@ model Invite {
   @@index([token])
   @@index([createdBy])
 }
+
+// ── Subscriptions (Stripe-backed) ────────────────────────────────────────────
+
+enum SubTier {
+  FREE       // Innocent — default
+  INDICTED   // $6/mo — colored username, video streaming, custom fonts
+  FELON      // $14/mo — above + own up to 3 lobbies
+  KINGPIN    // Staff-granted — unlimited lobbies, all modules
+}
+
+model Subscription {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  tier               SubTier  @default(FREE)
+  stripeCustomerId   String?  @unique
+  stripeSubId        String?  @unique  // Stripe subscription ID
+  stripePriceId      String?            // Which price they're on
+  status             String   @default("inactive")  // active, past_due, canceled, inactive
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}
+
+// ── LFG / Fireteam Board ─────────────────────────────────────────────────────
+
+enum LfgStatus {
+  OPEN
+  FULL
+  CLOSED
+}
+
+model LfgPost {
+  id          String    @id @default(cuid())
+  lobbyId     String
+  userId      String
+  userName    String    @default("")
+  activity    String    // e.g. "Raid: Crota's End", "Nightfall", "Trials of Osiris"
+  description String    @default("")
+  maxPlayers  Int       @default(6)
+  players     String[]  @default([])  // userId array of joined players
+  playerNames String[]  @default([])  // display names parallel array
+  status      LfgStatus @default(OPEN)
+  platform    String    @default("crossplay")  // pc, xbox, psn, crossplay
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([lobbyId, status])
+  @@index([lobbyId, createdAt])
+}
+
+// ── Bungie Manifest Cache ────────────────────────────────────────────────────
+// Caches Bungie API responses (Xur inventory, weekly reset, etc.) with TTL
+
+model BungieCache {
+  key       String   @id           // e.g. "xur_inventory", "weekly_reset", "nightfall"
+  data      Json
+  fetchedAt DateTime @default(now())
+  expiresAt DateTime
+}
+

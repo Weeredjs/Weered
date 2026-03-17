@@ -2645,6 +2645,716 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, logs });
   });
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── STRIPE SUBSCRIPTION SYSTEM ─────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const STRIPE_SK      = process.env.STRIPE_SECRET_KEY || "";
+  const STRIPE_PK      = process.env.STRIPE_PUBLISHABLE_KEY || "";
+  const STRIPE_WH_SEC  = process.env.STRIPE_WEBHOOK_SECRET || "";
+  const SITE_URL       = process.env.SITE_URL || "https://weered.ca";
+
+  // Price IDs — set these in env after creating products in Stripe dashboard
+  const STRIPE_PRICES: Record<string, string> = {
+    INDICTED: process.env.STRIPE_PRICE_INDICTED || "",
+    FELON:    process.env.STRIPE_PRICE_FELON    || "",
+  };
+
+  async function stripeReq(method: string, path: string, body?: any) {
+    const url = `https://api.stripe.com/v1${path}`;
+    const headers: Record<string, string> = {
+      "Authorization": `Bearer ${STRIPE_SK}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
+    const opts: any = { method, headers };
+    if (body) {
+      opts.body = new URLSearchParams(body).toString();
+    }
+    const res = await fetch(url, opts);
+    return res.json();
+  }
+
+  // GET /subscribe/config — publishable key + price IDs for frontend
+  app.get("/subscribe/config", async (_req, reply) => {
+    return reply.send({
+      ok: true,
+      publishableKey: STRIPE_PK,
+      prices: {
+        INDICTED: { id: STRIPE_PRICES.INDICTED, amount: 600, label: "Indicted — $6/mo" },
+        FELON:    { id: STRIPE_PRICES.FELON,    amount: 1400, label: "Felon — $14/mo" },
+      },
+    });
+  });
+
+  // GET /subscribe/status — current user subscription status
+  app.get("/subscribe/status", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+    if (!sub) return reply.send({ ok: true, tier: "FREE", status: "inactive" });
+    return reply.send({
+      ok: true,
+      tier: sub.tier,
+      status: sub.status,
+      currentPeriodEnd: sub.currentPeriodEnd?.toISOString() || null,
+      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+    });
+  });
+
+  // POST /subscribe/checkout — create Stripe checkout session
+  app.post("/subscribe/checkout", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!STRIPE_SK) return reply.code(500).send({ ok: false, error: "stripe_not_configured" });
+
+    const body: any = (req as any).body || {};
+    const tier = String(body.tier || "").toUpperCase();
+    const priceId = STRIPE_PRICES[tier];
+    if (!priceId) return reply.code(400).send({ ok: false, error: "invalid_tier" });
+
+    // Find or create Stripe customer
+    let sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+    let customerId = sub?.stripeCustomerId;
+
+    if (!customerId) {
+      const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true, email: true } });
+      const customer = await stripeReq("POST", "/customers", {
+        email: dbUser?.email || undefined,
+        name: dbUser?.name || u.name,
+        "metadata[weered_user_id]": u.id,
+      });
+      customerId = customer.id;
+      // Upsert subscription record
+      sub = await (prisma as any).subscription.upsert({
+        where: { userId: u.id },
+        update: { stripeCustomerId: customerId },
+        create: { userId: u.id, stripeCustomerId: customerId, tier: "FREE" },
+      });
+    }
+
+    // Create checkout session
+    const session = await stripeReq("POST", "/checkout/sessions", {
+      customer: customerId,
+      "line_items[0][price]": priceId,
+      "line_items[0][quantity]": "1",
+      mode: "subscription",
+      success_url: `${SITE_URL}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE_URL}/subscribe`,
+      "metadata[weered_user_id]": u.id,
+      "metadata[tier]": tier,
+    });
+
+    return reply.send({ ok: true, url: session.url, sessionId: session.id });
+  });
+
+  // POST /subscribe/portal — Stripe customer portal for managing sub
+  app.post("/subscribe/portal", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+    if (!sub?.stripeCustomerId) return reply.code(400).send({ ok: false, error: "no_subscription" });
+
+    const session = await stripeReq("POST", "/billing_portal/sessions", {
+      customer: sub.stripeCustomerId,
+      return_url: `${SITE_URL}/subscribe`,
+    });
+    return reply.send({ ok: true, url: session.url });
+  });
+
+  // POST /subscribe/webhook — Stripe webhook (raw body needed)
+  app.post("/subscribe/webhook", async (req, reply) => {
+    // In production, verify signature with STRIPE_WH_SEC
+    const event: any = (req as any).body;
+    if (!event?.type) return reply.code(400).send({ ok: false });
+
+    try {
+      if (event.type === "checkout.session.completed") {
+        const session = event.data?.object;
+        const userId = session?.metadata?.weered_user_id;
+        const tier = session?.metadata?.tier || "INDICTED";
+        const subId = session?.subscription;
+        if (userId && subId) {
+          // Fetch subscription details from Stripe
+          const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
+          await (prisma as any).subscription.upsert({
+            where: { userId },
+            update: {
+              tier, stripeSubId: subId, status: "active",
+              stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
+              currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+            },
+            create: {
+              userId, tier, stripeSubId: subId, status: "active",
+              stripeCustomerId: session.customer,
+              stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
+              currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+            },
+          });
+          // Update user tier to match
+          const userTier = tier === "FELON" ? "FELON" : "INDICTED";
+          await prisma.user.update({ where: { id: userId }, data: { tier: userTier } });
+          await globalAudit("system", "Stripe", "subscription_activated", userId, undefined, { tier, subId });
+        }
+      }
+
+      if (event.type === "customer.subscription.updated") {
+        const stripeSub = event.data?.object;
+        const subId = stripeSub?.id;
+        if (subId) {
+          const dbSub = await (prisma as any).subscription.findUnique({ where: { stripeSubId: subId } });
+          if (dbSub) {
+            await (prisma as any).subscription.update({
+              where: { stripeSubId: subId },
+              data: {
+                status: stripeSub.status,
+                cancelAtPeriodEnd: Boolean(stripeSub.cancel_at_period_end),
+                currentPeriodEnd: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+              },
+            });
+          }
+        }
+      }
+
+      if (event.type === "customer.subscription.deleted") {
+        const stripeSub = event.data?.object;
+        const subId = stripeSub?.id;
+        if (subId) {
+          const dbSub = await (prisma as any).subscription.findUnique({ where: { stripeSubId: subId } });
+          if (dbSub) {
+            await (prisma as any).subscription.update({
+              where: { stripeSubId: subId },
+              data: { status: "canceled", tier: "FREE" },
+            });
+            // Downgrade user tier
+            await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: "INNOCENT" } });
+            await globalAudit("system", "Stripe", "subscription_canceled", dbSub.userId);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[stripe webhook]", e);
+    }
+
+    return reply.send({ ok: true });
+  });
+
+  // POST /staff/subscriptions/grant — staff can manually grant tiers
+  app.post("/staff/subscriptions/grant", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const body: any = (req as any).body || {};
+    const targetId = String(body.userId || "");
+    const tier = String(body.tier || "").toUpperCase();
+    if (!targetId || !["FREE", "INDICTED", "FELON", "KINGPIN"].includes(tier)) {
+      return reply.code(400).send({ ok: false, error: "invalid" });
+    }
+    await (prisma as any).subscription.upsert({
+      where: { userId: targetId },
+      update: { tier, status: tier === "FREE" ? "inactive" : "active" },
+      create: { userId: targetId, tier, status: tier === "FREE" ? "inactive" : "active" },
+    });
+    const userTier = tier === "KINGPIN" ? "KINGPIN" : tier === "FELON" ? "FELON" : tier === "INDICTED" ? "INDICTED" : "INNOCENT";
+    await prisma.user.update({ where: { id: targetId }, data: { tier: userTier } });
+    await globalAudit(u.id, u.name, "subscription_grant", targetId, undefined, { tier });
+    return reply.send({ ok: true, tier });
+  });
+
+  // GET /staff/subscriptions — list all subscriptions (staff)
+  app.get("/staff/subscriptions", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const subs = await (prisma as any).subscription.findMany({
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+    });
+    // Enrich with user names
+    const userIds = subs.map((s: any) => s.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, usernameKey: true, tier: true, notoriety: true },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
+    const enriched = subs.map((s: any) => ({
+      ...s,
+      userName: userMap.get(s.userId)?.name || "",
+      usernameKey: userMap.get(s.userId)?.usernameKey || "",
+      userTier: userMap.get(s.userId)?.tier || "INNOCENT",
+      currentPeriodEnd: s.currentPeriodEnd?.toISOString() || null,
+      createdAt: s.createdAt?.toISOString() || null,
+      updatedAt: s.updatedAt?.toISOString() || null,
+    }));
+    return reply.send({ ok: true, subscriptions: enriched });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── TWITCH INTEGRATION ─────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const TWITCH_CLIENT_ID     = process.env.TWITCH_CLIENT_ID || "";
+  const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
+  let twitchAppToken = "";
+  let twitchTokenExp = 0;
+
+  async function getTwitchAppToken(): Promise<string> {
+    if (twitchAppToken && Date.now() < twitchTokenExp) return twitchAppToken;
+    if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return "";
+    try {
+      const res = await fetch("https://id.twitch.tv/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: TWITCH_CLIENT_ID,
+          client_secret: TWITCH_CLIENT_SECRET,
+          grant_type: "client_credentials",
+        }),
+      });
+      const data = await res.json();
+      twitchAppToken = data.access_token || "";
+      twitchTokenExp = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
+      console.log("[twitch] app token acquired");
+      return twitchAppToken;
+    } catch (e) {
+      console.error("[twitch] token error", e);
+      return "";
+    }
+  }
+
+  // GET /twitch/streams?game=Destiny+2 — top live streams for a game
+  app.get("/twitch/streams", async (req, reply) => {
+    const token = await getTwitchAppToken();
+    if (!token) return reply.send({ ok: true, streams: [], error: "twitch_not_configured" });
+
+    const gameName = String((req as any).query?.game || "Destiny 2");
+
+    try {
+      // First get game ID
+      const gameRes = await fetch(`https://api.twitch.tv/helix/games?name=${encodeURIComponent(gameName)}`, {
+        headers: { "Client-ID": TWITCH_CLIENT_ID, "Authorization": `Bearer ${token}` },
+      });
+      const gameData = await gameRes.json();
+      const gameId = gameData?.data?.[0]?.id;
+      if (!gameId) return reply.send({ ok: true, streams: [] });
+
+      // Get top streams
+      const streamRes = await fetch(`https://api.twitch.tv/helix/streams?game_id=${gameId}&first=12&sort=viewers`, {
+        headers: { "Client-ID": TWITCH_CLIENT_ID, "Authorization": `Bearer ${token}` },
+      });
+      const streamData = await streamRes.json();
+      const streams = (streamData?.data || []).map((s: any) => ({
+        id: s.id,
+        userName: s.user_name,
+        userLogin: s.user_login,
+        title: s.title,
+        viewerCount: s.viewer_count,
+        thumbnailUrl: (s.thumbnail_url || "").replace("{width}", "320").replace("{height}", "180"),
+        language: s.language,
+        startedAt: s.started_at,
+      }));
+
+      return reply.send({ ok: true, streams, gameId, gameName });
+    } catch (e) {
+      console.error("[twitch streams]", e);
+      return reply.send({ ok: true, streams: [], error: "fetch_failed" });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── BUNGIE API INTEGRATION ─────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const BUNGIE_API_KEY       = process.env.BUNGIE_API_KEY || "";
+  const BUNGIE_CLIENT_ID     = process.env.BUNGIE_CLIENT_ID || "";
+  const BUNGIE_CLIENT_SECRET = process.env.BUNGIE_CLIENT_SECRET || "";
+  const BUNGIE_ROOT          = "https://www.bungie.net/Platform";
+
+  async function bungieGet(path: string, accessToken?: string) {
+    const headers: Record<string, string> = { "X-API-Key": BUNGIE_API_KEY };
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    const res = await fetch(`${BUNGIE_ROOT}${path}`, { headers });
+    return res.json();
+  }
+
+  // Cache helper — reads from DB, fetches if stale
+  async function bungieGetCached(key: string, path: string, ttlMinutes: number) {
+    try {
+      const cached = await (prisma as any).bungieCache.findUnique({ where: { key } });
+      if (cached && new Date(cached.expiresAt) > new Date()) {
+        return cached.data;
+      }
+    } catch {}
+
+    if (!BUNGIE_API_KEY) return null;
+
+    try {
+      const data = await bungieGet(path);
+      const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+      await (prisma as any).bungieCache.upsert({
+        where: { key },
+        update: { data, fetchedAt: new Date(), expiresAt },
+        create: { key, data, fetchedAt: new Date(), expiresAt },
+      });
+      return data;
+    } catch (e) {
+      console.error(`[bungie cache] ${key}`, e);
+      return null;
+    }
+  }
+
+  // GET /bungie/xur — Xur's inventory (cached 30 min)
+  app.get("/bungie/xur", async (_req, reply) => {
+    const data = await bungieGetCached("xur_inventory", "/Destiny2/Milestones/", 30);
+    if (!data) return reply.send({ ok: true, available: false, error: "bungie_unavailable" });
+
+    // Xur appears Friday reset to Tuesday reset
+    // The milestones endpoint gives us active milestones — Xur is milestone hash 534869653
+    const xurMilestone = data?.Response?.["534869653"];
+    const isAvailable = !!xurMilestone;
+
+    return reply.send({ ok: true, available: isAvailable, milestone: xurMilestone || null, raw: data?.Response ? undefined : data });
+  });
+
+  // GET /bungie/weekly — Weekly reset info (cached 15 min)
+  app.get("/bungie/weekly", async (_req, reply) => {
+    const data = await bungieGetCached("weekly_reset", "/Destiny2/Milestones/", 15);
+    if (!data) return reply.send({ ok: true, milestones: null, error: "bungie_unavailable" });
+
+    // Extract key milestones
+    const milestones = data?.Response || {};
+    const summary: any[] = [];
+
+    // Known milestone hashes
+    const KNOWN: Record<string, string> = {
+      "2029743966": "Nightfall",
+      "3603098564": "Crucible Playlist",
+      "534869653":  "Xur",
+      "4253138191": "Raid",
+      "1437935813": "Vanguard Ops",
+    };
+
+    for (const [hash, ms] of Object.entries(milestones) as [string, any][]) {
+      if (KNOWN[hash]) {
+        summary.push({
+          hash,
+          name: KNOWN[hash],
+          activities: ms?.activities?.map((a: any) => ({
+            hash: a.activityHash,
+            challenges: a.challengeObjectiveHashes,
+            modifiers: a.modifierHashes,
+            phases: a.phaseHashes,
+          })) || [],
+          availableQuests: ms?.availableQuests?.length || 0,
+          startDate: ms?.startDate,
+          endDate: ms?.endDate,
+        });
+      }
+    }
+
+    return reply.send({ ok: true, milestones: summary, totalMilestones: Object.keys(milestones).length });
+  });
+
+  // GET /bungie/player/:name — Guardian stats lookup (platform search)
+  app.get("/bungie/player/:name", async (req, reply) => {
+    if (!BUNGIE_API_KEY) return reply.send({ ok: false, error: "bungie_not_configured" });
+
+    const displayName = String((req as any).params?.name || "");
+    if (!displayName) return reply.code(400).send({ ok: false, error: "name_required" });
+
+    try {
+      // Search for player across all platforms
+      // Format: BungieName#1234 or just BungieName
+      const parts = displayName.split("#");
+      const name = parts[0];
+      const code = parts[1] || "0";
+
+      const searchData = await bungieGet(`/Destiny2/SearchDestinyPlayerByBungieName/-1/`, undefined);
+      // Use the POST endpoint for global search
+      const searchRes = await fetch(`${BUNGIE_ROOT}/Destiny2/SearchDestinyPlayerByBungieName/-1/`, {
+        method: "POST",
+        headers: { "X-API-Key": BUNGIE_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: name, displayNameCode: Number(code) }),
+      });
+      const searchResult = await searchRes.json();
+      const players = searchResult?.Response || [];
+
+      if (players.length === 0) {
+        return reply.send({ ok: true, found: false, players: [] });
+      }
+
+      // Get profile for first result
+      const player = players[0];
+      const memberType = player.membershipType;
+      const memberId = player.membershipId;
+
+      // Fetch profile: characters, stats, equipment
+      const profile = await bungieGet(
+        `/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,205,800`
+      );
+
+      const characters = profile?.Response?.characters?.data || {};
+      const stats = profile?.Response?.profileRecords?.data || {};
+
+      const charSummary = Object.values(characters).map((c: any) => ({
+        characterId: c.characterId,
+        classType: c.classType, // 0=Titan, 1=Hunter, 2=Warlock
+        light: c.light,
+        raceType: c.raceType,
+        emblemPath: c.emblemPath ? `https://www.bungie.net${c.emblemPath}` : null,
+        emblemBackgroundPath: c.emblemBackgroundPath ? `https://www.bungie.net${c.emblemBackgroundPath}` : null,
+        dateLastPlayed: c.dateLastPlayed,
+        minutesPlayedTotal: c.minutesPlayedTotal,
+        titleRecordHash: c.titleRecordHash,
+      }));
+
+      return reply.send({
+        ok: true,
+        found: true,
+        player: {
+          membershipId: memberId,
+          membershipType: memberType,
+          displayName: player.bungieGlobalDisplayName || player.displayName,
+          displayNameCode: player.bungieGlobalDisplayNameCode,
+          iconPath: player.iconPath ? `https://www.bungie.net${player.iconPath}` : null,
+        },
+        characters: charSummary,
+        totalCharacters: charSummary.length,
+      });
+    } catch (e) {
+      console.error("[bungie player lookup]", e);
+      return reply.code(500).send({ ok: false, error: "lookup_failed" });
+    }
+  });
+
+  // GET /auth/bungie — redirect to Bungie OAuth
+  app.get("/auth/bungie", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization || (req as any).query?.token);
+    if (!u) return reply.code(401).send({ error: "Login first" });
+    if (!BUNGIE_CLIENT_ID) return reply.code(500).send({ error: "Bungie OAuth not configured" });
+
+    const state = Buffer.from(JSON.stringify({ userId: u.id })).toString("base64url");
+    const url = `https://www.bungie.net/en/OAuth/Authorize?client_id=${BUNGIE_CLIENT_ID}&response_type=code&state=${state}`;
+    return reply.redirect(url);
+  });
+
+  // GET /auth/bungie/callback — Bungie OAuth callback
+  app.get("/auth/bungie/callback", async (req, reply) => {
+    const code = String((req as any).query?.code || "");
+    const state = String((req as any).query?.state || "");
+    if (!code) return reply.code(400).send({ error: "Missing code" });
+
+    let userId = "";
+    try {
+      const parsed = JSON.parse(Buffer.from(state, "base64url").toString());
+      userId = parsed.userId;
+    } catch { return reply.code(400).send({ error: "Invalid state" }); }
+
+    try {
+      // Exchange code for tokens
+      const tokenBody: Record<string, string> = {
+        grant_type: "authorization_code",
+        code,
+        client_id: BUNGIE_CLIENT_ID,
+      };
+      if (BUNGIE_CLIENT_SECRET) {
+        tokenBody.client_secret = BUNGIE_CLIENT_SECRET;
+      }
+
+      const tokenRes = await fetch("https://www.bungie.net/Platform/App/OAuth/Token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-API-Key": BUNGIE_API_KEY },
+        body: new URLSearchParams(tokenBody),
+      });
+      const tokens = await tokenRes.json();
+
+      if (!tokens.access_token) {
+        console.error("[bungie oauth] token error", tokens);
+        return reply.redirect(`${SITE_URL}/settings?bungie=error`);
+      }
+
+      // Get membership info
+      const memberRes = await fetch("https://www.bungie.net/Platform/User/GetMembershipsForCurrentUser/", {
+        headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${tokens.access_token}` },
+      });
+      const memberData = await memberRes.json();
+      const memberships = memberData?.Response?.destinyMemberships || [];
+      const primary = memberships.find((m: any) => m.crossSaveOverride === m.membershipType) || memberships[0];
+
+      // Store in UserGameAccount
+      await (prisma as any).userGameAccount.upsert({
+        where: { userId_gameType: { userId, gameType: "BUNGIE" } },
+        update: {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || null,
+          tokenExpiry: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null,
+          externalId: primary?.membershipId || tokens.membership_id || null,
+          displayName: primary?.bungieGlobalDisplayName || primary?.displayName || "",
+          platform: String(primary?.membershipType || ""),
+        },
+        create: {
+          userId,
+          gameType: "BUNGIE",
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || null,
+          tokenExpiry: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null,
+          externalId: primary?.membershipId || tokens.membership_id || null,
+          displayName: primary?.bungieGlobalDisplayName || primary?.displayName || "",
+          platform: String(primary?.membershipType || ""),
+        },
+      });
+
+      return reply.redirect(`${SITE_URL}/settings?bungie=success`);
+    } catch (e) {
+      console.error("[bungie oauth callback]", e);
+      return reply.redirect(`${SITE_URL}/settings?bungie=error`);
+    }
+  });
+
+  // GET /bungie/me — get current user's Bungie profile (requires linked account)
+  app.get("/bungie/me", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const account = await (prisma as any).userGameAccount.findUnique({
+      where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
+    });
+    if (!account?.accessToken) return reply.send({ ok: true, linked: false });
+
+    try {
+      // Fetch full profile with inventory
+      const profile = await bungieGet(
+        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300,800`,
+        account.accessToken
+      );
+
+      return reply.send({
+        ok: true,
+        linked: true,
+        displayName: account.displayName,
+        platform: account.platform,
+        externalId: account.externalId,
+        characters: profile?.Response?.characters?.data || {},
+        profileInventory: profile?.Response?.profileInventory?.data?.items?.length || 0,
+        hasVaultAccess: true,
+      });
+    } catch (e) {
+      return reply.send({ ok: true, linked: true, displayName: account.displayName, error: "fetch_failed" });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── LFG / FIRETEAM BOARD ───────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // GET /lfg/:lobbyId — list open LFG posts
+  app.get("/lfg/:lobbyId", async (req, reply) => {
+    const lobbyId = String((req as any).params?.lobbyId || "");
+    const posts = await (prisma as any).lfgPost.findMany({
+      where: { lobbyId, status: { not: "CLOSED" } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return reply.send({
+      ok: true,
+      posts: posts.map((p: any) => ({
+        ...p,
+        createdAt: p.createdAt?.toISOString(),
+        updatedAt: p.updatedAt?.toISOString(),
+      })),
+    });
+  });
+
+  // POST /lfg/:lobbyId — create LFG post
+  app.post("/lfg/:lobbyId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const lobbyId = String((req as any).params?.lobbyId || "");
+    const body: any = (req as any).body || {};
+
+    const post = await (prisma as any).lfgPost.create({
+      data: {
+        lobbyId,
+        userId: u.id,
+        userName: u.name,
+        activity: String(body.activity || "").slice(0, 100),
+        description: String(body.description || "").slice(0, 300),
+        maxPlayers: Math.min(Math.max(Number(body.maxPlayers) || 6, 2), 12),
+        platform: String(body.platform || "crossplay").slice(0, 20),
+        players: [u.id],
+        playerNames: [u.name],
+        status: "OPEN",
+      },
+    });
+    return reply.send({ ok: true, post });
+  });
+
+  // POST /lfg/:postId/join — join an LFG post
+  app.post("/lfg/:postId/join", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const postId = String((req as any).params?.postId || "");
+
+    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (post.status !== "OPEN") return reply.code(400).send({ ok: false, error: "post_not_open" });
+    if (post.players.includes(u.id)) return reply.code(400).send({ ok: false, error: "already_joined" });
+    if (post.players.length >= post.maxPlayers) return reply.code(400).send({ ok: false, error: "full" });
+
+    const players = [...post.players, u.id];
+    const playerNames = [...post.playerNames, u.name];
+    const status = players.length >= post.maxPlayers ? "FULL" : "OPEN";
+
+    await (prisma as any).lfgPost.update({
+      where: { id: postId },
+      data: { players, playerNames, status },
+    });
+    return reply.send({ ok: true, players, playerNames, status });
+  });
+
+  // POST /lfg/:postId/leave — leave an LFG post
+  app.post("/lfg/:postId/leave", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const postId = String((req as any).params?.postId || "");
+
+    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    const idx = post.players.indexOf(u.id);
+    if (idx === -1) return reply.code(400).send({ ok: false, error: "not_in_post" });
+
+    const players = post.players.filter((p: string) => p !== u.id);
+    const playerNames = [...post.playerNames];
+    playerNames.splice(idx, 1);
+    const status = players.length === 0 ? "CLOSED" : "OPEN";
+
+    await (prisma as any).lfgPost.update({
+      where: { id: postId },
+      data: { players, playerNames, status },
+    });
+    return reply.send({ ok: true, status });
+  });
+
+  // DELETE /lfg/:postId — close/delete (owner or mod only)
+  app.delete("/lfg/:postId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const postId = String((req as any).params?.postId || "");
+
+    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    const gr = await getGlobalRole(u.id);
+    if (post.userId !== u.id && !canAccessStaff(gr)) {
+      return reply.code(403).send({ ok: false, error: "not_owner" });
+    }
+
+    await (prisma as any).lfgPost.update({ where: { id: postId }, data: { status: "CLOSED" } });
+    return reply.send({ ok: true });
+  });
+
   process.on("SIGINT", async () => {
     try { await prisma.$disconnect(); } catch {}
     process.exit(0);
