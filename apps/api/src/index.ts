@@ -194,15 +194,13 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }));
   }
 
-  // Apply article room meta — try in-memory map first (populated by feed worker),
-  // then fall back to a DB lookup so fresh deploys work before the first worker run.
+  // Apply article room meta — in-memory map first, then DB fallback for fresh deploys
   if (!r.name) {
     const meta = articleRoomMeta.get(roomId);
     if (meta) {
       r.name = meta.name;
       if (meta.thumbnail) r.thumbnail = meta.thumbnail;
     } else if (roomId.startsWith("article_")) {
-      // DB fallback: find the FeedItem whose URL hashes to this roomId
       try {
         const items = await prisma.feedItem.findMany({ orderBy: { fetchedAt: "desc" }, take: 500 });
         for (const item of items) {
@@ -212,7 +210,6 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
             const shortTitle = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
             r.name = shortTitle;
             if (item.thumbnail) r.thumbnail = item.thumbnail;
-            // Populate the in-memory map so subsequent joins skip the DB lookup
             articleRoomMeta.set(roomId, { name: shortTitle, thumbnail: item.thumbnail ?? undefined });
             break;
           }
@@ -710,11 +707,9 @@ async function runFeedWorker() {
         update: { heat, usersInRoom, fetchedAt: new Date(), title: item.title, thumbnail: item.thumbnail ?? null },
         create: { url: item.url, title: item.title, thumbnail: item.thumbnail ?? null, domain: item.domain, sourceName: item.sourceName, category: item.category, heat, usersInRoom, postedAt: item.postedAt },
       }).catch((e: any) => console.warn("[feed] upsert failed:", e?.message));
-
       // Seed in-memory article room meta — title + thumbnail for header display
       const shortTitle = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
       articleRoomMeta.set(roomId, { name: shortTitle, thumbnail: item.thumbnail || undefined });
-      // Update in-memory room state if already loaded
       if (roomState) {
         roomState.name = shortTitle;
         if (item.thumbnail) roomState.thumbnail = item.thumbnail;
@@ -1141,6 +1136,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const lid = String((req.body as any)?.lobbyId || "lobby");
     const room = rooms.get(lid);
+    if (room) room.msgs = []; // clear in-memory so rejoining clients get empty history
     await prisma.lobbyMessage.deleteMany({ where: { lobbyId: lid } });
     await globalAudit(u.id, u.name, "lobby_clear_chat", lid);
     if (room) broadcast(room, { type: "chat:cleared", roomId: lid });
