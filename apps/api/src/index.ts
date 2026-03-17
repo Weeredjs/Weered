@@ -3119,8 +3119,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       const name = parts[0];
       const code = parts[1] || "0";
 
-      const searchData = await bungieGet(`/Destiny2/SearchDestinyPlayerByBungieName/-1/`, undefined);
-      // Use the POST endpoint for global search
+      // POST endpoint for global search
       const searchRes = await fetch(`${BUNGIE_ROOT}/Destiny2/SearchDestinyPlayerByBungieName/-1/`, {
         method: "POST",
         headers: { "X-API-Key": BUNGIE_API_KEY, "Content-Type": "application/json" },
@@ -3347,9 +3346,9 @@ app.post("/dm/:peerId", async (req, reply) => {
 
     const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (post.status !== "OPEN") return reply.code(400).send({ ok: false, error: "post_not_open" });
-    if (post.players.includes(u.id)) return reply.code(400).send({ ok: false, error: "already_joined" });
-    if (post.players.length >= post.maxPlayers) return reply.code(400).send({ ok: false, error: "full" });
+    if (post.status !== "OPEN") return reply.code(400).send({ ok: false, error: "post_not_open", message: "This fireteam is no longer open." });
+    if (post.players.includes(u.id)) return reply.code(400).send({ ok: false, error: "already_joined", message: "You're already in this fireteam." });
+    if (post.players.length >= post.maxPlayers) return reply.code(400).send({ ok: false, error: "full", message: "This fireteam is full." });
 
     const players = [...post.players, u.id];
     const playerNames = [...post.playerNames, u.name];
