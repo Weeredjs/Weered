@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
-import { randomUUID, randomBytes } from "crypto";
+import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
 import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
@@ -722,6 +722,23 @@ async function runFeedWorker() {
 
 async function main() {
   const app = Fastify({ logger: true });
+
+  // Store raw body for Stripe webhook signature verification
+  app.addHook("preParsing", async (req, _reply, payload) => {
+    if (req.url === "/subscribe/webhook") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of payload as any) chunks.push(Buffer.from(chunk));
+      const raw = Buffer.concat(chunks);
+      (req as any).rawBody = raw;
+      // Return a new readable stream so Fastify can still parse it
+      const { Readable } = require("stream");
+      const copy = new Readable();
+      copy.push(raw);
+      copy.push(null);
+      return copy;
+    }
+    return payload;
+  });
 
   // Health
   app.get("/health", async () => {
@@ -2761,9 +2778,41 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, url: session.url });
   });
 
-  // POST /subscribe/webhook — Stripe webhook (raw body needed)
+  // POST /subscribe/webhook — Stripe webhook with signature verification
   app.post("/subscribe/webhook", async (req, reply) => {
-    // In production, verify signature with STRIPE_WH_SEC
+    const sigHeader = (req.headers as any)["stripe-signature"] || "";
+    const rawBody = (req as any).rawBody as Buffer | undefined;
+
+    if (STRIPE_WH_SEC && rawBody) {
+      // Parse Stripe signature header: t=timestamp,v1=signature
+      const parts: Record<string, string> = {};
+      for (const item of sigHeader.split(",")) {
+        const [k, v] = item.split("=");
+        if (k && v) parts[k.trim()] = v.trim();
+      }
+      const timestamp = parts["t"];
+      const sig = parts["v1"];
+      if (!timestamp || !sig) return reply.code(400).send({ ok: false, error: "missing_signature" });
+
+      // Verify: HMAC-SHA256 of "timestamp.rawBody" using webhook secret
+      const expected = createHmac("sha256", STRIPE_WH_SEC)
+        .update(`${timestamp}.${rawBody.toString("utf8")}`)
+        .digest("hex");
+      const sigBuf = Buffer.from(sig, "hex");
+      const expectedBuf = Buffer.from(expected, "hex");
+      if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+        console.error("[stripe webhook] signature mismatch");
+        return reply.code(400).send({ ok: false, error: "invalid_signature" });
+      }
+
+      // Optionally reject replays older than 5 minutes
+      const age = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
+      if (age > 300) {
+        console.error("[stripe webhook] timestamp too old:", age, "seconds");
+        return reply.code(400).send({ ok: false, error: "timestamp_expired" });
+      }
+    }
+
     const event: any = (req as any).body;
     if (!event?.type) return reply.code(400).send({ ok: false });
 
