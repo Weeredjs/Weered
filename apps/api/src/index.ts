@@ -194,12 +194,30 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }));
   }
 
-  // Apply article room meta (title/thumbnail from feed worker) if name is missing
+  // Apply article room meta — try in-memory map first (populated by feed worker),
+  // then fall back to a DB lookup so fresh deploys work before the first worker run.
   if (!r.name) {
     const meta = articleRoomMeta.get(roomId);
     if (meta) {
       r.name = meta.name;
       if (meta.thumbnail) r.thumbnail = meta.thumbnail;
+    } else if (roomId.startsWith("article_")) {
+      // DB fallback: find the FeedItem whose URL hashes to this roomId
+      try {
+        const items = await prisma.feedItem.findMany({ orderBy: { fetchedAt: "desc" }, take: 500 });
+        for (const item of items) {
+          let h = 0;
+          for (let i = 0; i < item.url.length; i++) { h = ((h << 5) - h) + item.url.charCodeAt(i); h |= 0; }
+          if (`article_${Math.abs(h).toString(36).slice(0, 10)}` === roomId) {
+            const shortTitle = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
+            r.name = shortTitle;
+            if (item.thumbnail) r.thumbnail = item.thumbnail;
+            // Populate the in-memory map so subsequent joins skip the DB lookup
+            articleRoomMeta.set(roomId, { name: shortTitle, thumbnail: item.thumbnail ?? undefined });
+            break;
+          }
+        }
+      } catch {}
     }
   }
 
