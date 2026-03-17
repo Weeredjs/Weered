@@ -37,7 +37,7 @@ const TIERS = [
   },
 ];
 
-export default function SubscribePage() {
+export default function SubscribeContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const [sub, setSub] = useState<any>(null);
