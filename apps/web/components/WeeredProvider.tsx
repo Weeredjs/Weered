@@ -227,9 +227,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:message") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
       }
-      // Forward youtube sync events to RoomStage
-      if (msg.type === "youtube:state" || msg.type === "youtube:stopped") {
-        try { window.dispatchEvent(new CustomEvent("weered:youtube", { detail: msg })); } catch {}
+      // Forward all youtube sync events to RoomStage via DOM event
+      if (msg.type?.startsWith("youtube:")) {
+        try { window.dispatchEvent(new CustomEvent("weered:youtube", { detail: { ...msg, updatedAt: Date.now() } })); } catch {}
       }
       // Generic rooms list payload
       if (Array.isArray(msg.rooms)) setRooms(msg.rooms);
