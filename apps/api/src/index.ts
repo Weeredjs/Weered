@@ -55,6 +55,8 @@ type RoomState = {
 };
 
 const rooms = new Map<string, RoomState>();
+// Title/thumbnail for article rooms — populated by feed worker, used in ensureRoomLoaded
+const articleRoomMeta = new Map<string, { name: string; thumbnail?: string }>();
 let wss: WebSocketServer;
 
 // ── Pinned lobbies now seeded from DB via seedLobbies() on startup ────────────
@@ -190,6 +192,15 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       actorId: a.actorId, actorName: a.actorName,
       targetId: a.targetId || undefined, note: a.note || undefined,
     }));
+  }
+
+  // Apply article room meta (title/thumbnail from feed worker) if name is missing
+  if (!r.name) {
+    const meta = articleRoomMeta.get(roomId);
+    if (meta) {
+      r.name = meta.name;
+      if (meta.thumbnail) r.thumbnail = meta.thumbnail;
+    }
   }
 
   rooms.set(roomId, r);
@@ -682,14 +693,10 @@ async function runFeedWorker() {
         create: { url: item.url, title: item.title, thumbnail: item.thumbnail ?? null, domain: item.domain, sourceName: item.sourceName, category: item.category, heat, usersInRoom, postedAt: item.postedAt },
       }).catch((e: any) => console.warn("[feed] upsert failed:", e?.message));
 
-      // Seed the room's name and thumbnail from article title so header shows real title
+      // Seed in-memory article room meta — title + thumbnail for header display
       const shortTitle = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
-      await prisma.room.upsert({
-        where: { id: roomId },
-        update: { name: shortTitle },
-        create: { id: roomId, name: shortTitle, locked: false, ownerId: null },
-      }).catch(() => {});
-      // Update in-memory state if room is already loaded
+      articleRoomMeta.set(roomId, { name: shortTitle, thumbnail: item.thumbnail || undefined });
+      // Update in-memory room state if already loaded
       if (roomState) {
         roomState.name = shortTitle;
         if (item.thumbnail) roomState.thumbnail = item.thumbnail;
