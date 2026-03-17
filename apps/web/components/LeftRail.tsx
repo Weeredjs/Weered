@@ -32,9 +32,12 @@ function normRoomKey(x: any): string {
 }
 
 function lobbyHref(id: string): string {
-  // Room IDs are short random alphanumeric (e.g. zbZTrF)
-  // Lobby IDs are human-readable slugs (e.g. destiny2, espn.com, r/gaming)
-  const isRoom = /^[a-zA-Z0-9]{4,10}$/.test(id) && !/[./]/.test(id) && id !== "lobby";
+  // article_ prefix = article room, always /room/
+  // Short pure-alphanumeric = user-created room (e.g. zbZTrF), always /room/
+  // Slugs with dots/slashes = lobbies (e.g. youtube.com, r/gaming)
+  const isRoom = id.startsWith("article_")
+    || (/^[a-zA-Z0-9]{4,10}$/.test(id) && id !== "lobby")
+    || (id.length > 10 && !/[./\s]/.test(id));
   return isRoom ? `/room/${encodeURIComponent(id)}` : `/lobby/${encodeURIComponent(id)}`;
 }
 
