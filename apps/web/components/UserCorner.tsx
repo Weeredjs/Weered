@@ -51,6 +51,7 @@ export default function UserCorner() {
   const { openSheet } = useOverlay();
 
   const name = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
+  const avatarUrl = me?.avatar || null;
 
   // Re-render when avatar color changes
   const [, forceUpdate] = React.useState(0);
@@ -151,12 +152,17 @@ export default function UserCorner() {
         {/* Avatar */}
         <div style={{
           width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-          background: avatarBg(name, true),
+          background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
           boxShadow: `0 0 18px ${avatarBg(name, true)}55`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, fontWeight: 950, color: "#fff",
+          overflow: "hidden",
         }}>
-          {initial}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            initial
+          )}
         </div>
 
         {/* Name + chips */}
