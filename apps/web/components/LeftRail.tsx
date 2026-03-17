@@ -637,20 +637,21 @@ export default function LeftRail() {
             {favs.map(room => {
               const href = `/room/${encodeURIComponent(room)}`;
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
+              const label = getRoomName(room);
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:1 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:2 }}>
                   <Link
-                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center justify-between text-[12px]" + (isActive ? " weered-left-link-active" : "")}
-                    href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(252,211,77,.18)", background:"rgba(252,211,77,.05)" }}
+                    href={href}
+                    className={"weered-left-link rounded-lg border transition-colors" + (isActive ? " weered-left-link-active" : "")}
+                    style={{ flex:1, minWidth:0, borderColor:"rgba(252,211,77,.18)", background: isActive ? "rgba(252,211,77,.10)" : "rgba(252,211,77,.04)", padding:"6px 10px", display:"block", textDecoration:"none" }}
                   >
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:10, color:"#fcd34d", opacity:0.6 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(252,211,77,.9)", fontWeight:600 }}>{getRoomName(room)}</span>
-                    </span>
-                    {isActive && <span className="h-1.5 w-1.5 rounded-full" style={{ background:"#fcd34d", flexShrink:0 }} />}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:4 }}>
+                      <span style={{ fontSize:12, fontWeight:700, color:"rgba(252,211,77,.92)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.3 }}>{label}</span>
+                      {isActive && <span style={{ width:6, height:6, borderRadius:"50%", background:"#fcd34d", flexShrink:0 }} />}
+                    </div>
+                    <div style={{ fontSize:10, opacity:0.45, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>{room}</div>
                   </Link>
-                  <button onClick={() => toggleFav(room)} title="Unpin"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, color:"#fcd34d" }}>?</button>
+                  <button onClick={() => toggleFav(room)} title="Unpin" style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", flexShrink:0, color:"rgba(252,211,77,.5)", fontSize:13, lineHeight:1 }}>★</button>
                 </div>
               );
             })}
@@ -666,20 +667,21 @@ export default function LeftRail() {
             {recentRooms.map(room => {
               const href = `/room/${encodeURIComponent(room)}`;
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
+              const label = getRoomName(room);
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:1 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:2 }}>
                   <Link
-                    className={"weered-left-link rounded-lg border px-2.5 py-1 transition-colors flex items-center justify-between text-[12px]" + (isActive ? " weered-left-link-active" : "")}
-                    href={href} style={{ flex:1, minWidth:0, borderColor:"rgba(148,163,184,.14)", background:"rgba(148,163,184,.04)" }}
+                    href={href}
+                    className={"weered-left-link rounded-lg border transition-colors" + (isActive ? " weered-left-link-active" : "")}
+                    style={{ flex:1, minWidth:0, borderColor: isActive ? "rgba(124,58,237,.30)" : "rgba(148,163,184,.10)", background: isActive ? "rgba(124,58,237,.10)" : "rgba(148,163,184,.03)", padding:"6px 10px", display:"block", textDecoration:"none" }}
                   >
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:10, opacity:0.3 }}>r/</span>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"rgba(203,213,225,.7)", fontWeight:500 }}>{getRoomName(room)}</span>
-                    </span>
-                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-violet-400/90" style={{ flexShrink:0 }} />}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:4 }}>
+                      <span style={{ fontSize:12, fontWeight: isActive ? 700 : 500, color: isActive ? "rgba(243,244,246,.95)" : "rgba(203,213,225,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.3 }}>{label}</span>
+                      {isActive && <span style={{ width:6, height:6, borderRadius:"50%", background:"rgba(167,139,250,.9)", flexShrink:0 }} />}
+                    </div>
+                    <div style={{ fontSize:10, opacity:0.35, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>{room}</div>
                   </Link>
-                  <button onClick={() => toggleFav(room)} title="Pin to favorites"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 5px", fontSize:12, flexShrink:0, opacity:0.28, color:"var(--weered-text)" }}>?</button>
+                  <button onClick={() => toggleFav(room)} title="Pin to favorites" style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", flexShrink:0, color:"rgba(255,255,255,.2)", fontSize:13, lineHeight:1 }}>☆</button>
                 </div>
               );
             })}
