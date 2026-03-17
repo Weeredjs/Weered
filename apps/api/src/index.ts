@@ -18,7 +18,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
-type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?: string };
+type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?: string; avatar?: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
@@ -296,10 +296,12 @@ function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: numb
 function buildStatePayload(room: RoomState) {
   const roleMap       = new Map<string, string>();
   const colorMap      = new Map<string, string>();
+  const avatarMap     = new Map<string, string>();
   for (const s of room.sockets) {
     if (s.user?.id) {
       if (s.user.globalRole)  roleMap.set(s.user.id, s.user.globalRole);
       if (s.user.avatarColor) colorMap.set(s.user.id, s.user.avatarColor);
+      if (s.user.avatar)      avatarMap.set(s.user.id, s.user.avatar);
     }
   }
   const users = Array.from(room.users.values()).map((u) => ({
@@ -307,6 +309,7 @@ function buildStatePayload(room: RoomState) {
     role:        u.id ? roleOf(room, u.id) : "member",
     globalRole:  (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
     avatarColor: (u.id ? colorMap.get(u.id) : undefined) ?? (u as any).avatarColor ?? undefined,
+    avatar:      (u.id ? avatarMap.get(u.id) : undefined) ?? (u as any).avatar ?? undefined,
   }));
   return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
@@ -447,8 +450,8 @@ function removeKnock(room: RoomState, userId: string) {
 // Hydrate globalRole onto AuthedUser from DB (called once per WS connection)
 async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
-    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true, avatarColor: true } });
-    return { ...user, globalRole: String(u?.globalRole ?? "USER"), avatarColor: u?.avatarColor ?? undefined };
+    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true, avatarColor: true, avatar: true } });
+    return { ...user, globalRole: String(u?.globalRole ?? "USER"), avatarColor: u?.avatarColor ?? undefined, avatar: u?.avatar ?? undefined };
   } catch { return user; }
 }
 
@@ -542,7 +545,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -1301,19 +1304,22 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
         await awardNotoriety(viewer.id, "BIO_COMPLETE");
       }
 
-      // If avatarColor changed, update all live sockets for this user and re-broadcast
-      // presence in every room they're in so other clients see the new color instantly
-      if (avatarColor !== undefined) {
+      // If avatarColor or avatar changed, update all live sockets for this user and re-broadcast
+      // presence in every room they're in so other clients see the change instantly
+      if (avatarColor !== undefined || avatar !== undefined) {
         for (const sock of wss.clients) {
           const s = sock as Sock;
           if (s.user?.id === viewer.id) {
-            s.user.avatarColor = avatarColor;
+            if (avatarColor !== undefined) s.user.avatarColor = avatarColor;
+            if (avatar !== undefined) s.user.avatar = avatar || undefined;
             if (s.roomId) {
               const room = rooms.get(s.roomId);
               if (room) {
-                // Patch the cached user entry too
                 const entry = room.users.get(viewer.id);
-                if (entry) (entry as any).avatarColor = avatarColor;
+                if (entry) {
+                  if (avatarColor !== undefined) (entry as any).avatarColor = avatarColor;
+                  if (avatar !== undefined) (entry as any).avatar = avatar || undefined;
+                }
                 publishState(room);
               }
             }

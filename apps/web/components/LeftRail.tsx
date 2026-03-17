@@ -453,16 +453,21 @@ export default function LeftRail() {
                   };
                   // Elevated roles get role color, everyone else gets name-hash color (or chosen color)
                   const aColor = roleColors[label] || avatarBg(nm, label === "you", u?.avatarColor);
+                  const userAvatar = u?.avatar || null;
                   return (
                     <div style={{
                       width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                      background: `linear-gradient(135deg, ${aColor}33, ${aColor}66)`,
+                      background: userAvatar ? "rgba(255,255,255,.08)" : `linear-gradient(135deg, ${aColor}33, ${aColor}66)`,
                       border: `1.5px solid ${aColor}44`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontWeight: 700, fontSize: 11, color: aColor,
-                      position: "relative",
+                      position: "relative", overflow: "hidden",
                     }}>
-                      {nm[0]?.toUpperCase() ?? "?"}
+                      {userAvatar ? (
+                        <img src={userAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        nm[0]?.toUpperCase() ?? "?"
+                      )}
                       {/* Online dot */}
                       <div style={{
                         position: "absolute", bottom: 0, right: 0,
