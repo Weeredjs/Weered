@@ -16,7 +16,7 @@ export default function RoomHeader({
   title,
   memberCount,
   locked,
-  onInvite,
+  thumbnail,
   pills,
   onPillClick,
   onDetailsClick,
@@ -25,17 +25,29 @@ export default function RoomHeader({
   title: string;
   memberCount?: number;
   locked?: boolean;
-  onInvite?: () => void;
+  thumbnail?: string | null;
   pills?: ModulePill[];
   onPillClick?: (id: string) => void;
   onDetailsClick?: () => void;
   showDetails?: boolean;
 }) {
   return (
-    <div className="flex-shrink-0 border-b border-white/[0.07]">
+    <div className="flex-shrink-0 border-b border-white/[0.07]" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Faded thumbnail background */}
+      {thumbnail && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          backgroundImage: `url(${thumbnail})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+          opacity: 0.12,
+          filter: "blur(8px) saturate(1.4)",
+          transform: "scale(1.08)",
+          pointerEvents: "none",
+        }} />
+      )}
       {/* ── Main header row ── */}
-      <div className="flex items-center gap-2.5 px-4 h-11">
-        <h1 className="font-semibold text-[14px] truncate leading-none">{title}</h1>
+      <div className="flex items-center gap-2.5 px-4 h-11" style={{ position: "relative", zIndex: 1 }}>
+        <h1 className="font-semibold text-[14px] truncate leading-none" style={{ maxWidth: "55%" }}>{title}</h1>
 
         <span className="text-[10px] font-semibold tracking-wide uppercase rounded-full border border-white/10 px-2 py-0.5 text-white/40 flex-shrink-0">
           room
@@ -57,13 +69,6 @@ export default function RoomHeader({
         <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
-            onClick={onInvite}
-            className="text-[11px] font-semibold px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white/60 hover:text-white/90 transition-colors"
-          >
-            + Invite
-          </button>
-          <button
-            type="button"
             onClick={() => {
               try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {}
             }}
@@ -76,7 +81,7 @@ export default function RoomHeader({
 
       {/* ── Module pills row — only rendered when pills are passed in ── */}
       {pills && pills.length > 0 && (
-        <div className="flex items-center gap-1.5 px-4 pb-2 flex-wrap">
+        <div className="flex items-center gap-1.5 px-4 pb-2 flex-wrap" style={{ position: "relative", zIndex: 1 }}>
           {pills.map((m) => (
             <button
               key={m.id}

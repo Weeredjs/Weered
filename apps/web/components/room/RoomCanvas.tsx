@@ -60,11 +60,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   function toEmbedUrl(url: string): string {
     try {
       const u = new URL(url);
+      // Standard watch URL: youtube.com/watch?v=ID
       if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
         return `https://www.youtube.com/embed/${u.searchParams.get("v")}?autoplay=0`;
       }
+      // Shorts: youtube.com/shorts/ID
+      if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
+        const id = u.pathname.replace("/shorts/", "").split("/")[0];
+        if (id) return `https://www.youtube.com/embed/${id}?autoplay=0`;
+      }
+      // Short URL: youtu.be/ID
       if (u.hostname.includes("youtu.be")) {
         return `https://www.youtube.com/embed${u.pathname}?autoplay=0`;
+      }
+      // Any other youtube.com URL — block it, YouTube sets X-Frame-Options: sameorigin
+      if (u.hostname.includes("youtube.com")) {
+        return "__youtube_blocked__";
       }
     } catch {}
     return url;
@@ -105,6 +116,27 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     if (name) return name;
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
+
+  // Thumbnail: from meta (seeded by feed worker) or derived from article/YouTube URL
+  const roomThumbnail = useMemo(() => {
+    if (w?.meta?.thumbnail) return w.meta.thumbnail;
+    if (!articleUrl) return null;
+    try {
+      const u = new URL(articleUrl);
+      if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+        return `https://img.youtube.com/vi/${u.searchParams.get("v")}/hqdefault.jpg`;
+      }
+      if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
+        const id = u.pathname.replace("/shorts/", "").split("/")[0];
+        if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+      }
+      if (u.hostname.includes("youtu.be")) {
+        const id = u.pathname.replace("/", "");
+        if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+      }
+    } catch {}
+    return null;
+  }, [w?.meta?.thumbnail, articleUrl]);
 
   const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
   const locked      = Boolean(w?.meta?.locked);
@@ -261,7 +293,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         title={roomLabel}
         memberCount={memberCount}
         locked={locked}
-        onInvite={() => {}}
+        thumbnail={roomThumbnail}
         pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
         onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
         onDetailsClick={() => setShowDetails(d => !d)}
@@ -365,10 +397,21 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   </div>
                 </div>
               );
+              const embedUrl = toEmbedUrl(browserUrl);
+              if (embedUrl === "__youtube_blocked__") return (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "rgba(0,0,0,0.3)", padding: 32 }}>
+                  <div style={{ fontSize: 40 }}>▶️</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>YouTube blocks direct embedding</div>
+                  <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>Use the YouTube tab above to sync playback for everyone</div>
+                  <button onClick={() => { handleModuleClick("youtube" as any); setStageMode("youtube"); }} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "rgba(252,165,165,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    Open YouTube tab
+                  </button>
+                </div>
+              );
               return (
                 <iframe
-                  key={browserUrl}
-                  src={toEmbedUrl(browserUrl)}
+                  key={embedUrl}
+                  src={embedUrl}
                   style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#fff" }}
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
                   title="Browser"
