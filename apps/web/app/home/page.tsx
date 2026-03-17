@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "../../components/WeeredProvider";
+import { avatarBg } from "../../lib/avatarColor";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -30,101 +31,325 @@ function isPinned(r: any): boolean {
   return Boolean(r?.pinned);
 }
 
-const ROOM_EMOJIS: Record<string, string> = {
-  lobby: "🏠", ops: "⚙️", gaming: "🎮", music: "🎵",
-  crypto: "💸", tech: "🤖", news: "🌎", food: "🍕",
-  art: "🎨", sports: "⚽", film: "🎬", books: "📚",
-  technology: "💻", worldnews: "🌐", all: "♾️", weered: "⚡",
-};
-function emojiFor(name: string): string {
-  const n = name.toLowerCase();
-  for (const [k, v] of Object.entries(ROOM_EMOJIS)) if (n.includes(k)) return v;
-  return "💬";
-}
-
-const ACCENTS = [
-  { bar: "#7c6af7", bg: "rgba(124,106,247,0.12)" },
-  { bar: "#22c55e", bg: "rgba(34,197,94,0.10)"   },
-  { bar: "#f97316", bg: "rgba(249,115,22,0.10)"  },
-  { bar: "#60a5fa", bg: "rgba(96,165,250,0.10)"  },
-  { bar: "#ef4444", bg: "rgba(239,68,68,0.10)"   },
-  { bar: "#eab308", bg: "rgba(234,179,8,0.10)"   },
-];
-
 function greeting(): string {
   const h = new Date().getHours();
+  if (h < 5)  return "Late night";
   if (h < 12) return "Good morning";
   if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 22) return "Good evening";
+  return "Late night";
 }
 
-const cardBase: React.CSSProperties = {
-  background: "var(--weered-panel, #141416)",
-  border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: 12, padding: "13px 14px",
-  cursor: "pointer", position: "relative", overflow: "hidden",
-  transition: "border-color .2s, transform .15s",
-};
+function timeAgo(ts: number | string): string {
+  const diff = Date.now() - (typeof ts === "string" ? new Date(ts).getTime() : ts);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
-/* ─── LobbyCard ──────────────────────────────────────────── */
-function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id: string) => void }) {
-  const name = roomName(room);
-  const cnt  = onlineCount(room);
-  const acc  = ACCENTS[idx % ACCENTS.length];
-  const em   = emojiFor(name);
-  const desc = room?.description as string | undefined;
+// Heat color based on online count
+function heatColor(count: number): string {
+  if (count >= 10) return "#ef4444";
+  if (count >= 5)  return "#f97316";
+  if (count >= 2)  return "#eab308";
+  if (count >= 1)  return "#22c55e";
+  return "rgba(255,255,255,.15)";
+}
+
+function heatLabel(count: number): string {
+  if (count >= 10) return "on fire";
+  if (count >= 5)  return "hot";
+  if (count >= 2)  return "warm";
+  if (count >= 1)  return "live";
+  return "quiet";
+}
+
+// Lobby accent or fallback
+function lobbyAccent(r: any, idx: number): string {
+  if (r?.accentColor) return r.accentColor;
+  const fallbacks = ["#7c6af7", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308", "#a78bfa", "#06b6d4"];
+  return fallbacks[idx % fallbacks.length];
+}
+
+/* ─── LivePulse dot ──────────────────────────────────────── */
+function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
+  return (
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: size, height: size }}>
+      <span style={{
+        position: "absolute", width: size * 2, height: size * 2, borderRadius: "50%",
+        background: color, opacity: 0.3,
+        animation: "weered-ripple 2s ease-out infinite",
+      }} />
+      <span style={{
+        width: size, height: size, borderRadius: "50%",
+        background: color, boxShadow: `0 0 6px ${color}`,
+        position: "relative", zIndex: 1,
+      }} />
+    </span>
+  );
+}
+
+/* ─── HeroBanner ─────────────────────────────────────────── */
+function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned: boolean) => void }) {
+  if (!lobby) return null;
+  const name = roomName(lobby);
+  const cnt = onlineCount(lobby);
+  const accent = lobby?.accentColor || "#7c6af7";
+  const logo = lobby?.logoUrl;
+  const desc = lobby?.description;
 
   return (
-    <div onClick={() => onJoin(roomId(room))} style={cardBase}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.18)"; el.style.transform = "translateY(-1px)"; }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.07)"; el.style.transform = "translateY(0)"; }}
+    <div
+      onClick={() => onJoin(roomId(lobby), Boolean(lobby?.pinned))}
+      style={{
+        position: "relative", borderRadius: 16, overflow: "hidden",
+        height: 200, cursor: "pointer",
+        border: `1px solid ${accent}22`,
+        background: `linear-gradient(135deg, ${accent}15 0%, rgba(10,10,15,.95) 40%, ${accent}08 100%)`,
+        transition: "transform .2s, border-color .2s",
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.borderColor = `${accent}44`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = `${accent}22`; }}
     >
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${acc.bar}66, ${acc.bar})`, borderRadius: "12px 12px 0 0" }} />
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: acc.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{em}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: cnt > 0 ? "#22c55e" : "rgba(255,255,255,0.25)" }}>
-          <div style={{ width: 5, height: 5, borderRadius: "50%", background: cnt > 0 ? "#22c55e" : "rgba(255,255,255,0.2)", boxShadow: cnt > 0 ? "0 0 5px #22c55e" : "none" }} />
-          {cnt}
+      {/* Ambient effects */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(ellipse at 25% 50%, ${accent}20 0%, transparent 55%), radial-gradient(ellipse at 85% 20%, ${accent}10 0%, transparent 40%)` }} />
+      <div style={{ position: "absolute", inset: 0, opacity: 0.04, pointerEvents: "none", backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+
+      {/* Top bar */}
+      <div style={{ position: "absolute", top: 14, left: 18, right: 18, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {logo && <img src={logo} alt="" style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />}
+          <span style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: `${accent}20`, border: `1px solid ${accent}35`,
+            borderRadius: 99, padding: "3px 11px",
+            fontSize: 10, fontWeight: 800, color: accent, letterSpacing: ".3px",
+          }}>
+            <PulseDot color={accent} />
+            {lobby.pinned ? "FEATURED LOBBY" : "POPULAR"}
+          </span>
+        </div>
+        <div style={{
+          background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,.08)", borderRadius: 8,
+          padding: "4px 10px", fontSize: 11, fontFamily: "monospace",
+          color: "rgba(255,255,255,.6)", display: "flex", alignItems: "center", gap: 5,
+        }}>
+          <PulseDot color="#22c55e" size={5} />
+          {cnt} online
         </div>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-      {desc && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 8, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as any}>{desc}</div>}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: desc ? 0 : 8 }}>
-        <div style={{ fontSize: 9, fontFamily: "monospace", background: "rgba(124,106,247,0.12)", border: "1px solid rgba(124,106,247,0.2)", borderRadius: 4, padding: "2px 7px", color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          ✦ lobby
-        </div>
-        {room?.tags?.length > 0 && (
-          <div style={{ fontSize: 9, fontFamily: "monospace", color: "rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "2px 6px" }}>{room.tags[0]}</div>
-        )}
+
+      {/* Bottom content */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 22px 18px", zIndex: 2, background: "linear-gradient(transparent, rgba(0,0,0,.6))" }}>
+        <div style={{ fontWeight: 900, fontSize: 26, lineHeight: 1.1, marginBottom: desc ? 6 : 14, letterSpacing: "-0.5px" }}>{name}</div>
+        {desc && <div style={{ fontSize: 12, color: "rgba(232,232,236,.5)", marginBottom: 14, maxWidth: 480, lineHeight: 1.4 }}>{desc}</div>}
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onJoin(roomId(lobby), Boolean(lobby?.pinned)); }}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            background: accent, color: "#fff", border: "none", borderRadius: 10,
+            padding: "10px 20px", fontWeight: 800, fontSize: 13,
+            cursor: "pointer", fontFamily: "inherit",
+            boxShadow: `0 4px 16px ${accent}44`,
+            transition: "transform .15s, box-shadow .15s",
+          }}
+        >
+          Join {lobby.pinned ? "Lobby" : "Room"}
+        </button>
       </div>
     </div>
   );
 }
 
-/* ─── RoomCard ───────────────────────────────────────────── */
-function RoomCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id: string) => void }) {
-  const name = roomName(room);
-  const cnt  = onlineCount(room);
-  const acc  = ACCENTS[idx % ACCENTS.length];
-  const em   = emojiFor(name);
+/* ─── LiveTicker ─────────────────────────────────────────── */
+function LiveTicker({ rooms, onJoin }: { rooms: any[]; onJoin: (id: string, pinned: boolean) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const live = rooms.filter(r => onlineCount(r) > 0);
+  if (live.length === 0) return null;
 
   return (
-    <div onClick={() => onJoin(roomId(room))} style={cardBase}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.18)"; el.style.transform = "translateY(-1px)"; }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.07)"; el.style.transform = "translateY(0)"; }}
+    <div style={{ marginTop: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <PulseDot color="#22c55e" size={5} />
+        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.4)" }}>
+          Live now
+        </span>
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
+      </div>
+      <div ref={scrollRef} style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+        {live.map((r, i) => {
+          const name = roomName(r);
+          const cnt = onlineCount(r);
+          const accent = lobbyAccent(r, i);
+          return (
+            <button
+              key={roomId(r)}
+              type="button"
+              onClick={() => onJoin(roomId(r), Boolean(r?.pinned))}
+              style={{
+                flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 14px", borderRadius: 10,
+                background: `${accent}08`, border: `1px solid ${accent}18`,
+                color: "inherit", cursor: "pointer", fontFamily: "inherit",
+                transition: "all .15s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}18`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
+            >
+              {r?.logoUrl && <img src={r.logoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain" }} />}
+              <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{name}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
+                <PulseDot color="#22c55e" size={4} />
+                {cnt}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── LobbyCard (redesigned) ─────────────────────────────── */
+function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id: string) => void }) {
+  const name = roomName(room);
+  const cnt = onlineCount(room);
+  const accent = lobbyAccent(room, idx);
+  const desc = room?.description as string | undefined;
+  const logo = room?.logoUrl;
+  const heat = heatLabel(cnt);
+
+  return (
+    <div
+      onClick={() => onJoin(roomId(room))}
+      style={{
+        background: "rgba(255,255,255,.02)",
+        border: "1px solid rgba(255,255,255,.06)",
+        borderRadius: 14, padding: 0, cursor: "pointer",
+        position: "relative", overflow: "hidden",
+        transition: "border-color .2s, transform .15s",
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}35`; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
     >
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${acc.bar}44, ${acc.bar}88)`, borderRadius: "12px 12px 0 0" }} />
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: acc.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{em}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
-          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
-          {cnt}
+      {/* Accent top bar */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}55, ${accent})`, borderRadius: "14px 14px 0 0" }} />
+
+      {/* Card body */}
+      <div style={{ padding: "14px 16px 16px" }}>
+        {/* Header row */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {logo ? (
+              <img src={logo} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />
+            ) : (
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: `${accent}15`, border: `1px solid ${accent}22`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 15, fontWeight: 900, color: accent,
+              }}>
+                {name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.2, letterSpacing: "-0.2px" }}>{name}</div>
+              {desc && <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 2, lineHeight: 1.3, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{desc}</div>}
+            </div>
+          </div>
+
+          {/* Online badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: heatColor(cnt), flexShrink: 0 }}>
+            <PulseDot color={heatColor(cnt)} size={4} />
+            {cnt}
+          </div>
+        </div>
+
+        {/* Heat bar */}
+        <div style={{ height: 2, background: "rgba(255,255,255,.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+          <div style={{
+            height: "100%", width: `${Math.min(100, cnt * 10)}%`,
+            background: `linear-gradient(90deg, ${accent}66, ${accent})`,
+            borderRadius: 99, transition: "width 1s ease",
+          }} />
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{
+            fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 5,
+            background: `${accent}12`, border: `1px solid ${accent}20`,
+            color: accent, textTransform: "uppercase", letterSpacing: ".5px",
+          }}>
+            {room?.pinned ? "lobby" : "room"}
+          </span>
+          {cnt > 0 && (
+            <span style={{ fontSize: 9, fontFamily: "monospace", color: heatColor(cnt), opacity: 0.7 }}>
+              {heat}
+            </span>
+          )}
         </div>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 10 }}>{cnt === 1 ? "1 person online" : `${cnt} people online`}</div>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <div style={{ fontSize: 9, fontFamily: "monospace", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 7px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>room</div>
+    </div>
+  );
+}
+
+/* ─── FriendStrip (compact horizontal) ───────────────────── */
+function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any) => void; onJoin: (u: any) => void }) {
+  if (friends.length === 0) return null;
+  return (
+    <div style={{ marginTop: 24 }}>
+      <SectionHeader icon="👥" label="Active Now" count={friends.length} />
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, scrollbarWidth: "none" }}>
+        {friends.map((u, i) => {
+          const name = pickFirst(u?.name, u?.username, "?");
+          const initial = name[0]?.toUpperCase() ?? "?";
+          const inRoom = Boolean(u?.room ?? u?.roomId ?? u?.activeRoom);
+          const loc = inRoom ? String(u?.room ?? u?.roomId ?? "a room").replace("room:", "") : "lobby";
+          const avatar = u?.avatar || null;
+          const color = u?.avatarColor || avatarBg(name);
+          return (
+            <div
+              key={u?.id || i}
+              onClick={() => onDm(u)}
+              style={{
+                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
+                gap: 5, padding: "10px 14px", borderRadius: 12,
+                background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)",
+                cursor: "pointer", transition: "all .15s", minWidth: 72,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+            >
+              <div style={{ position: "relative" }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: avatar ? "rgba(255,255,255,.08)" : color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontWeight: 800, fontSize: 14, color: "#fff", overflow: "hidden",
+                }}>
+                  {avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initial}
+                </div>
+                <span style={{
+                  position: "absolute", bottom: 0, right: 0,
+                  width: 9, height: 9, borderRadius: "50%",
+                  background: inRoom ? "#a78bfa" : "#22c55e",
+                  border: "2px solid rgba(10,10,15,1)",
+                  boxShadow: `0 0 4px ${inRoom ? "#a78bfa" : "#22c55e"}`,
+                }} />
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.8)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{name}</span>
+              <span style={{ fontSize: 9, fontFamily: "monospace", color: "rgba(255,255,255,.3)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {inRoom ? loc : "lobby"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -133,75 +358,66 @@ function RoomCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id: 
 /* ─── RecentRow ──────────────────────────────────────────── */
 function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string) => void }) {
   const name = roomName(room);
-  const cnt  = onlineCount(room);
-  const em   = emojiFor(name);
+  const cnt = onlineCount(room);
+  const accent = lobbyAccent(room, 0);
   return (
-    <div onClick={() => onJoin(roomId(room))}
-      style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 12px", background: "var(--weered-panel, #141416)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, cursor: "pointer", transition: "border-color .2s, background .2s" }}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.16)"; el.style.background = "#16161a"; }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.07)"; el.style.background = "var(--weered-panel, #141416)"; }}
+    <div
+      onClick={() => onJoin(roomId(room))}
+      style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "9px 12px", background: "rgba(255,255,255,.02)",
+        border: "1px solid rgba(255,255,255,.06)", borderRadius: 10,
+        cursor: "pointer", transition: "all .15s",
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
     >
-      <div style={{ width: 30, height: 30, borderRadius: 7, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{em}</div>
+      <div style={{
+        width: 30, height: 30, borderRadius: 8,
+        background: `${accent}12`, border: `1px solid ${accent}18`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 13, fontWeight: 900, color: accent, flexShrink: 0,
+      }}>
+        {name.slice(0, 1).toUpperCase()}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1, fontFamily: "monospace" }}>{cnt} online</div>
+        <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
-          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
-          live
-        </div>
-        <button type="button" onClick={e => { e.stopPropagation(); onJoin(roomId(room)); }}
-          style={{ background: "rgba(124,106,247,0.12)", border: "1px solid rgba(124,106,247,0.25)", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, color: "#a78bfa", cursor: "pointer" }}>
-          Rejoin
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ─── FriendCard ─────────────────────────────────────────── */
-function FriendCard({ user, onDm, onJoin }: { user: any; onDm: (u: any) => void; onJoin?: (u: any) => void }) {
-  const name    = pickFirst(user?.name, user?.username, "?");
-  const initial = name[0]?.toUpperCase() ?? "?";
-  const inRoom  = Boolean(user?.room ?? user?.roomId ?? user?.activeRoom);
-  const loc     = inRoom ? (user?.room ?? user?.roomId ?? "a room") : "lobby";
-  const colors  = ["#7c6af7", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308"];
-  const color   = colors[name.charCodeAt(0) % colors.length];
-  return (
-    <div style={{ background: "var(--weered-panel, #141416)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 12, cursor: "pointer", textAlign: "center", transition: "border-color .2s, transform .15s" }}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.16)"; el.style.transform = "translateY(-1px)"; }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.07)"; el.style.transform = "translateY(0)"; }}
-    >
-      <div style={{ position: "relative", display: "inline-block", marginBottom: 7 }}>
-        <div style={{ width: 40, height: 40, borderRadius: "50%", background: `linear-gradient(135deg, ${color}cc, ${color})`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 16, color: "#fff", margin: "0 auto" }}>{initial}</div>
-        <div style={{ position: "absolute", bottom: 1, right: 1, width: 9, height: 9, borderRadius: "50%", border: "2px solid #141416", background: inRoom ? "#a78bfa" : "#22c55e", boxShadow: inRoom ? "0 0 6px #a78bfa" : "0 0 6px #22c55e" }} />
-      </div>
-      <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{name}</div>
-      <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,0.35)", marginBottom: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {inRoom ? `🔵 ${String(loc).replace("room:", "")}` : "🟢 lobby"}
-      </div>
-      <div style={{ display: "flex", gap: 5, justifyContent: "center" }}>
-        <button type="button" onClick={e => { e.stopPropagation(); onDm(user); }}
-          style={{ flex: 1, borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,0.5)", padding: "4px 6px", cursor: "pointer" }}>DM</button>
-        {inRoom && onJoin && (
-          <button type="button" onClick={e => { e.stopPropagation(); onJoin(user); }}
-            style={{ flex: 1, borderRadius: 6, background: "rgba(124,106,247,0.12)", border: "1px solid rgba(124,106,247,0.25)", fontSize: 10, fontFamily: "monospace", color: "#a78bfa", padding: "4px 6px", cursor: "pointer" }}>Join</button>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        {cnt > 0 && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
+            <PulseDot color="#22c55e" size={4} />
+            {cnt}
+          </span>
         )}
+        <span style={{
+          fontSize: 10, padding: "3px 8px", borderRadius: 6,
+          background: "rgba(124,106,247,.1)", border: "1px solid rgba(124,106,247,.2)",
+          color: "#a78bfa", fontWeight: 700, cursor: "pointer",
+        }}>
+          Rejoin
+        </span>
       </div>
     </div>
   );
 }
 
 /* ─── SectionHeader ──────────────────────────────────────── */
-function SectionHeader({ icon, label, count, sub }: { icon: string; label: string; count: number; sub?: string }) {
+function SectionHeader({ icon, label, count, sub }: { icon: string; label: string; count?: number; sub?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 11 }}>
-      <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
-        {icon} {label}
-        <span style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 99, padding: "1px 8px" }}>{count}</span>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: "-0.1px" }}>{label}</span>
+        {count !== undefined && (
+          <span style={{
+            fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.3)",
+            background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.07)",
+            borderRadius: 99, padding: "1px 8px",
+          }}>{count}</span>
+        )}
       </div>
-      {sub && <div style={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.25)" }}>{sub}</div>}
+      {sub && <span style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.2)" }}>{sub}</span>}
     </div>
   );
 }
@@ -213,63 +429,58 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
-React.useEffect(() => {
-  const base = "https://api.weered.ca";
-  const token = localStorage.getItem("weered_token") ?? "";
-  const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
-
-  Promise.all([
-    fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
-    fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
-  ]).then(([lobbyData, roomData]) => {
-    const lobbies = Array.isArray(lobbyData?.lobbies)
-      ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
-      : [];
-    const rooms = Array.isArray(roomData?.rooms) ? roomData.rooms : [];
-    const seen = new Set<string>();
-    const merged = [...lobbies, ...rooms].filter(r => {
-      const id = r.id ?? r.roomId;
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
+  React.useEffect(() => {
+    const base = "https://api.weered.ca";
+    const token = localStorage.getItem("weered_token") ?? "";
+    const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
+    Promise.all([
+      fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
+      fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
+    ]).then(([lobbyData, roomData]) => {
+      const lobbies = Array.isArray(lobbyData?.lobbies)
+        ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
+        : [];
+      const rms = Array.isArray(roomData?.rooms) ? roomData.rooms : [];
+      const seen = new Set<string>();
+      const merged = [...lobbies, ...rms].filter(r => {
+        const id = r.id ?? r.roomId;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+      setFetchedRooms(merged);
     });
-    setFetchedRooms(merged);
-  });
-}, []);
+  }, []);
 
   const myName = pickFirst(me?.name, me?.username, "there");
 
-const allRooms: any[] = useMemo(() => {
-  const ws = Array.isArray(rooms) ? rooms : [];
-  if (ws.length > 0 && fetchedRooms.length > 0) {
-    // WS has live counts — enrich with branding from API fetch
-    const brandingMap = new Map(fetchedRooms.map((r: any) => [r.id, r]));
-    return ws.map((r: any) => {
-      const branding = brandingMap.get(r.id) ?? brandingMap.get(r.roomId) ?? {};
-      return { ...branding, ...r };
-    });
-  }
-  return ws.length > 0 ? ws : fetchedRooms;
-}, [rooms, fetchedRooms]);
-
-const allUsers: any[] = useMemo(() => {
-  if (!usersByRoom || typeof usersByRoom !== "object") return [];
-  const seen = new Set<string>();
-  const out: any[] = [];
-  for (const roomUsers of Object.values(usersByRoom) as any[][]) {
-    for (const u of roomUsers) {
-      const id = u?.id ?? u?.userId;
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      // Find which room they're in
-      const roomId = Object.keys(usersByRoom).find(rid =>
-        (usersByRoom[rid] as any[]).some((ru: any) => ru.id === id)
-      );
-      out.push({ ...u, room: roomId });
+  const allRooms: any[] = useMemo(() => {
+    const ws = Array.isArray(rooms) ? rooms : [];
+    if (ws.length > 0 && fetchedRooms.length > 0) {
+      const brandingMap = new Map(fetchedRooms.map((r: any) => [r.id, r]));
+      return ws.map((r: any) => {
+        const branding = brandingMap.get(r.id) ?? brandingMap.get(r.roomId) ?? {};
+        return { ...branding, ...r };
+      });
     }
-  }
-  return out;
-}, [usersByRoom]);
+    return ws.length > 0 ? ws : fetchedRooms;
+  }, [rooms, fetchedRooms]);
+
+  const allUsers: any[] = useMemo(() => {
+    if (!usersByRoom || typeof usersByRoom !== "object") return [];
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const roomUsers of Object.values(usersByRoom) as any[][]) {
+      for (const u of roomUsers) {
+        const id = u?.id ?? u?.userId;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        const rid = Object.keys(usersByRoom).find(rid => (usersByRoom[rid] as any[]).some((ru: any) => ru.id === id));
+        out.push({ ...u, room: rid });
+      }
+    }
+    return out;
+  }, [usersByRoom]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allRooms;
@@ -277,13 +488,11 @@ const allUsers: any[] = useMemo(() => {
     return allRooms.filter(r => roomName(r).toLowerCase().includes(q));
   }, [allRooms, search]);
 
-  // Lobbies = pinned, sorted by online count desc
   const lobbies = useMemo(() =>
     filtered.filter(r => isPinned(r)).sort((a, b) => onlineCount(b) - onlineCount(a)),
     [filtered]
   );
 
-  // Popular rooms = non-pinned, non-private, at least 1 online
   const popularRooms = useMemo(() =>
     filtered
       .filter(r => !isPinned(r) && !isPrivateRoom(r) && onlineCount(r) > 0)
@@ -292,58 +501,42 @@ const allUsers: any[] = useMemo(() => {
     [filtered]
   );
 
-  // Featured = most active lobby first, fallback to most active room
   const featured = useMemo(() =>
     lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null,
     [lobbies, popularRooms]
   );
 
   const recentIds: string[] = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("weered:recentRooms") || "[]"); }
-    catch { return []; }
+    try { return JSON.parse(localStorage.getItem("weered:recentRooms") || "[]"); } catch { return []; }
   }, []);
   const recentRooms = useMemo(() =>
     recentIds.map(id => allRooms.find(r => roomId(r) === id || roomName(r) === id)).filter(Boolean).filter((r: any) => !isPrivateRoom(r)).slice(0, 4),
     [recentIds, allRooms]
   );
-  const friends = useMemo(() =>
-    allUsers.filter(u => u?.id !== me?.id && u?.id !== me?.userId).slice(0, 8),
-    [allUsers, me]
-  );
-  const [friendsList, setFriendsList] = React.useState<any[]>([]);
 
+  const [friendsList, setFriendsList] = React.useState<any[]>([]);
   React.useEffect(() => {
     const token = localStorage.getItem("weered_token") ?? "";
     if (!token) return;
-    fetch("https://api.weered.ca/friends", {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    fetch("https://api.weered.ca/friends", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => { if (Array.isArray(d?.friends)) setFriendsList(d.friends); })
       .catch(() => {});
   }, []);
 
-  const onlineFriends = useMemo(() =>
-    friendsList.filter(u => u?.online).slice(0, 8),
-    [friendsList]
-  );
+  const onlineFriends = useMemo(() => friendsList.filter(u => u?.online).slice(0, 12), [friendsList]);
 
   function handleJoin(id: string, pinned?: boolean) {
     if (!id) return;
     const clean = id.replace("room:", "");
-    // Lobbies (pinned) route to /lobby or /lobby/<id>
     if (pinned) {
-      if (clean === "lobby") {
-        router.push("/lobby");
-      } else {
-        router.push(`/lobby/${encodeURIComponent(clean)}`);
-      }
+      if (clean === "lobby") router.push("/lobby");
+      else router.push(`/lobby/${encodeURIComponent(clean)}`);
       return;
     }
     const normalized = id.startsWith("room:") ? id : `room:${id}`;
     try {
       const prev: string[] = JSON.parse(localStorage.getItem("weered:recentRooms") || "[]");
-      // Filter out private rooms from recent history
       if (!clean.startsWith("@") && !/^[a-z0-9]{4,7}$/i.test(clean)) {
         localStorage.setItem("weered:recentRooms", JSON.stringify([normalized, ...prev.filter(x => x !== normalized)].slice(0, 10)));
       }
@@ -364,59 +557,43 @@ const allUsers: any[] = useMemo(() => {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
       {/* TOP BAR */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{greeting()}</div>
-          <div style={{ fontWeight: 800, fontSize: 20, lineHeight: 1.1, marginTop: 2, letterSpacing: "-0.3px" }}>
-            Hey, <span style={{ color: "#a78bfa" }}>{myName}</span> 👋
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
+          <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px" }}>
+            Hey, <span style={{ color: "#a78bfa" }}>{myName}</span>
           </div>
         </div>
         <div style={{ position: "relative" }}>
-          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 14, pointerEvents: "none" }}>⌕</span>
+          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,.25)", fontSize: 14, pointerEvents: "none" }}>&#8981;</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby..."
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 14px 8px 34px", color: "#e8e8ec", fontSize: 13, width: 210, outline: "none", fontFamily: "inherit" }} />
+            style={{
+              background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
+              borderRadius: 10, padding: "9px 14px 9px 34px",
+              color: "#e8e8ec", fontSize: 13, width: 220, outline: "none", fontFamily: "inherit",
+              transition: "border-color .15s",
+            }}
+            onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.15)"}
+            onBlur={e => (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.07)"}
+          />
         </div>
       </div>
 
       {/* SCROLL AREA */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 40px" }}>
 
-        {/* FEATURED BANNER */}
-        {featured && (
-          <div style={{ paddingTop: 16 }}>
-            <div style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 10 }}>✦ Featured right now</div>
-            <div
-              onClick={() => handleJoin(roomId(featured), Boolean(featured?.pinned))}
-              style={{ position: "relative", borderRadius: 14, overflow: "hidden", height: 180, cursor: "pointer", border: "1px solid rgba(255,255,255,0.08)", background: "linear-gradient(135deg, #1a103a 0%, #0d0d1a 50%, #0d1a1a 100%)", transition: "transform .2s, border-color .2s" }}
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = "translateY(-1px)"; el.style.borderColor = "rgba(255,255,255,0.16)"; }}
-              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = "translateY(0)"; el.style.borderColor = "rgba(255,255,255,0.08)"; }}
-            >
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 30% 50%, rgba(124,106,247,0.22) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(34,197,94,0.10) 0%, transparent 50%)" }} />
-              <div style={{ position: "absolute", inset: 0, opacity: 0.05, pointerEvents: "none", backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
-              <div style={{ position: "absolute", top: 14, left: 18, display: "flex", alignItems: "center", gap: 6, background: "rgba(124,106,247,0.18)", border: "1px solid rgba(124,106,247,0.3)", borderRadius: 99, padding: "3px 10px", fontSize: 10, fontFamily: "monospace", color: "#a78bfa" }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#a78bfa", animation: "weered-pulse 2s ease-in-out infinite" }} />
-                {featured.pinned ? "✦ Lobby" : "Popular room"}
-              </div>
-              <div style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", gap: 4 }}>
-                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />
-                {onlineCount(featured)} online
-              </div>
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 22px", zIndex: 2 }}>
-                <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1.1, marginBottom: featured.description ? 6 : 14 }}>{roomName(featured)}</div>
-                {featured.description && <div style={{ fontSize: 12, color: "rgba(232,232,236,0.5)", marginBottom: 12, maxWidth: 400 }}>{featured.description}</div>}
-                <button type="button" onClick={e => { e.stopPropagation(); handleJoin(roomId(featured), Boolean(featured?.pinned)); }}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#7c6af7", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                  ↗ Join {featured.pinned ? "Lobby" : "Room"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* HERO BANNER */}
+        <div style={{ paddingTop: 16 }}>
+          <HeroBanner lobby={featured} onJoin={handleJoin} />
+        </div>
+
+        {/* LIVE TICKER */}
+        <LiveTicker rooms={allRooms} onJoin={handleJoin} />
 
         {/* LOBBIES */}
         {lobbies.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="✦" label="Lobbies" count={lobbies.length} sub="verified & pinned" />
+            <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
               {lobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
             </div>
@@ -426,47 +603,42 @@ const allUsers: any[] = useMemo(() => {
         {/* POPULAR ROOMS */}
         {popularRooms.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="🔥" label="Popular Rooms" count={popularRooms.length} sub="active right now" />
+            <SectionHeader icon="&#128293;" label="Popular Rooms" count={popularRooms.length} sub="active right now" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {popularRooms.map((r, i) => <RoomCard key={roomId(r) || i} room={r} idx={i} onJoin={handleJoin} />)}
+              {popularRooms.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={handleJoin} />)}
             </div>
           </div>
         )}
 
+        {/* ACTIVE FRIENDS */}
+        <FriendStrip friends={onlineFriends} onDm={handleDm} onJoin={u => { const rid = pickFirst(u?.room, u?.roomId, ""); if (rid) handleJoin(rid); }} />
+
         {/* RECENTLY VISITED */}
         {recentRooms.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="🕓" label="Recently Visited" count={recentRooms.length} />
+            <SectionHeader icon="&#128339;" label="Recently Visited" count={recentRooms.length} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {recentRooms.map((r, i) => <RecentRow key={roomId(r) || i} room={r} onJoin={handleJoin} />)}
             </div>
           </div>
         )}
 
-        {/* ACTIVE NOW */}
-        {onlineFriends.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="👥" label="Active Now" count={onlineFriends.length} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-              {onlineFriends.map((u, i) => (
-                <FriendCard key={u?.id || i} user={u} onDm={handleDm}
-                  onJoin={u => { const rid = pickFirst(u?.room, u?.roomId, u?.activeRoom, ""); if (rid) handleJoin(rid); }} />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* EMPTY STATE */}
         {lobbies.length === 0 && popularRooms.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.3)" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>👋</div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Nothing here yet</div>
-            <div style={{ fontSize: 13 }}>Head to Lobby to browse and join rooms.</div>
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,.25)" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>&#128075;</div>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Nothing here yet</div>
+            <div style={{ fontSize: 13, opacity: 0.7 }}>Head to Lobby to browse and join rooms.</div>
           </div>
         )}
 
       </div>
-      <style>{`@keyframes weered-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}`}</style>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes weered-ripple{0%{transform:scale(.5);opacity:.5}100%{transform:scale(2);opacity:0}}
+        div::-webkit-scrollbar{display:none}
+      `}</style>
     </div>
   );
 }
