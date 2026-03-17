@@ -1248,6 +1248,8 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
           globalRole: true,
           createdAt: true,
           updatedAt: true,
+          avatar: true,
+          avatarColor: true,
         },
       });
 
@@ -1266,6 +1268,8 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
         joinedAt: u.createdAt.toISOString(),
         lastSeen: u.updatedAt.toISOString(),
         roomsHosted,
+        avatar: u.avatar || null,
+        avatarColor: u.avatarColor || null,
       });
     } catch (e) {
       console.error("[profile GET]", e);
@@ -1282,12 +1286,13 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     const body: any = (req as any).body || {};
     const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 280) : undefined;
     const avatarColor = typeof body.avatarColor === "string" ? body.avatarColor.slice(0, 20) : undefined;
-    if (bio === undefined && avatarColor === undefined) return reply.code(400).send({ error: "Nothing to update" });
+    const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 500) : undefined;
+    if (bio === undefined && avatarColor === undefined && avatar === undefined) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
       const u = await prisma.user.update({
         where: { id: viewer.id },
-        data: { ...(bio !== undefined && { bio }), ...(avatarColor !== undefined && { avatarColor }) },
+        data: { ...(bio !== undefined && { bio }), ...(avatarColor !== undefined && { avatarColor }), ...(avatar !== undefined && { avatar: avatar || null }) },
         select: { id: true, bio: true },
       });
 
