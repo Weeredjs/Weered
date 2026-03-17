@@ -40,6 +40,7 @@ type AuditItem = {
 type RoomState = {
   roomId: string;
   name?: string;
+  thumbnail?: string;
   users: Map<string, RoomUser>;
   sockets: Set<Sock>;
   msgs: ChatMsg[];
@@ -283,6 +284,7 @@ function buildStatePayload(room: RoomState) {
   }));
   return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
+    thumbnail: room.thumbnail || null,
     users, count: users.length, locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
@@ -679,6 +681,19 @@ async function runFeedWorker() {
         update: { heat, usersInRoom, fetchedAt: new Date(), title: item.title, thumbnail: item.thumbnail ?? null },
         create: { url: item.url, title: item.title, thumbnail: item.thumbnail ?? null, domain: item.domain, sourceName: item.sourceName, category: item.category, heat, usersInRoom, postedAt: item.postedAt },
       }).catch((e: any) => console.warn("[feed] upsert failed:", e?.message));
+
+      // Seed the room's name and thumbnail from article title so header shows real title
+      const shortTitle = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
+      await prisma.room.upsert({
+        where: { id: roomId },
+        update: { name: shortTitle },
+        create: { id: roomId, name: shortTitle, locked: false, ownerId: null },
+      }).catch(() => {});
+      // Update in-memory state if room is already loaded
+      if (roomState) {
+        roomState.name = shortTitle;
+        if (item.thumbnail) roomState.thumbnail = item.thumbnail;
+      }
       upserted++;
     }
     console.log(`[feed] worker done — ${upserted} items upserted`);

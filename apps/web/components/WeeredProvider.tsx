@@ -22,7 +22,7 @@ type AuditItem = {
   targetId?: string; targetName?: string; note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; ownerId: string; mods: string[] };
+type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[] };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 
 type Ctx = {
@@ -262,7 +262,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         setUsersByRoom(prev => ({ ...prev, [rid]: list }));
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
+          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), thumbnail: msg.thumbnail || undefined, ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
         // activeRoomId managed by path effect — no override needed here
@@ -314,7 +314,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         }));
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
+          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), thumbnail: msg.thumbnail || undefined, ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         return;
       }
