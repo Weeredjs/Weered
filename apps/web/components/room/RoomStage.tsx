@@ -138,56 +138,92 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     };
   }, [videoId, ytReady]);
 
-  // ── Listen for WS youtube:state events ──
+  // ── Listen for WS youtube events ──
   useEffect(() => {
     const handler = (ev: any) => {
       const d = ev.detail;
       if (!d || d.roomId !== roomId) return;
-      if (d.type === "youtube:stopped") {
+
+      // ── stop ──
+      if (d.type === "youtube:stop" || d.type === "youtube:stopped") {
         setVideoId(null);
         setPlaying(false);
         return;
       }
-      if (d.type !== "youtube:state") return;
 
-      // Load new video — use loadVideoById directly if player exists to avoid teardown
-      if (d.videoId && d.videoId !== videoId) {
-        if (playerRef.current?.loadVideoById) {
+      // ── load new video ──
+      if (d.type === "youtube:load") {
+        if (!d.videoId) return;
+        if (playerRef.current?.loadVideoById && d.videoId !== videoId) {
           isSyncing.current = true;
           playerRef.current.loadVideoById(d.videoId);
-          setVideoId(d.videoId);
           setTimeout(() => { isSyncing.current = false; }, 800);
-          return;
-        } else {
-          setVideoId(d.videoId);
-          return;
         }
+        setVideoId(d.videoId);
+        return;
       }
 
-      const player = playerRef.current;
-      if (!player?.seekTo) return;
-
-      isSyncing.current = true;
-      try {
-        // Compute drift-adjusted position
-        const drift = (Date.now() - d.updatedAt) / 1000;
-        const targetPos = d.position + (d.playing ? drift : 0);
-
-        const currentPos = player.getCurrentTime?.() ?? 0;
-        // Only seek if > 2s off to avoid constant micro-seeks
-        if (Math.abs(currentPos - targetPos) > 2) {
-          player.seekTo(targetPos, true);
-        }
-
-        if (d.playing) {
+      // ── play ──
+      if (d.type === "youtube:play") {
+        const player = playerRef.current;
+        if (!player?.seekTo) return;
+        isSyncing.current = true;
+        try {
+          const drift = (Date.now() - (d.updatedAt ?? Date.now())) / 1000;
+          const target = (d.position ?? 0) + drift;
+          const current = player.getCurrentTime?.() ?? 0;
+          if (Math.abs(current - target) > 2) player.seekTo(target, true);
           player.playVideo?.();
           setPlaying(true);
-        } else {
+        } finally {
+          setTimeout(() => { isSyncing.current = false; }, 500);
+        }
+        return;
+      }
+
+      // ── pause ──
+      if (d.type === "youtube:pause") {
+        const player = playerRef.current;
+        if (!player?.seekTo) return;
+        isSyncing.current = true;
+        try {
+          const target = d.position ?? 0;
+          const current = player.getCurrentTime?.() ?? 0;
+          if (Math.abs(current - target) > 2) player.seekTo(target, true);
           player.pauseVideo?.();
           setPlaying(false);
+        } finally {
+          setTimeout(() => { isSyncing.current = false; }, 500);
         }
-      } finally {
-        setTimeout(() => { isSyncing.current = false; }, 500);
+        return;
+      }
+
+      // ── legacy youtube:state (late-join snapshot) ──
+      if (d.type === "youtube:state") {
+        if (d.videoId && d.videoId !== videoId) {
+          if (playerRef.current?.loadVideoById) {
+            isSyncing.current = true;
+            playerRef.current.loadVideoById(d.videoId);
+            setVideoId(d.videoId);
+            setTimeout(() => { isSyncing.current = false; }, 800);
+            return;
+          }
+          setVideoId(d.videoId);
+          return;
+        }
+        const player = playerRef.current;
+        if (!player?.seekTo) return;
+        isSyncing.current = true;
+        try {
+          const drift = (Date.now() - (d.updatedAt ?? Date.now())) / 1000;
+          const target = (d.position ?? 0) + (d.playing ? drift : 0);
+          const current = player.getCurrentTime?.() ?? 0;
+          if (Math.abs(current - target) > 2) player.seekTo(target, true);
+          if (d.playing) { player.playVideo?.(); setPlaying(true); }
+          else           { player.pauseVideo?.(); setPlaying(false); }
+        } finally {
+          setTimeout(() => { isSyncing.current = false; }, 500);
+        }
       }
     };
 
