@@ -639,19 +639,22 @@ export default function LeftRail() {
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
               const label = getRoomName(room);
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:2 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:3 }}>
                   <Link
                     href={href}
                     className={"weered-left-link rounded-lg border transition-colors" + (isActive ? " weered-left-link-active" : "")}
-                    style={{ flex:1, minWidth:0, borderColor:"rgba(252,211,77,.18)", background: isActive ? "rgba(252,211,77,.10)" : "rgba(252,211,77,.04)", padding:"6px 10px", display:"block", textDecoration:"none" }}
+                    style={{
+                      flex:1, minWidth:0, display:"block", textDecoration:"none",
+                      borderColor: isActive ? "rgba(252,211,77,.40)" : "rgba(252,211,77,.14)",
+                      background: isActive ? "rgba(252,211,77,.12)" : "rgba(252,211,77,.04)",
+                      padding:"7px 10px 6px 12px",
+                      boxShadow: isActive ? "0 0 12px rgba(252,211,77,.08), inset 2px 0 0 rgba(252,211,77,.6)" : "inset 2px 0 0 rgba(252,211,77,.18)",
+                    }}
                   >
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:4 }}>
-                      <span style={{ fontSize:12, fontWeight:700, color:"rgba(252,211,77,.92)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.3 }}>{label}</span>
-                      {isActive && <span style={{ width:6, height:6, borderRadius:"50%", background:"#fcd34d", flexShrink:0 }} />}
-                    </div>
-                    <div style={{ fontSize:10, opacity:0.45, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>{room}</div>
+                    <div style={{ fontSize:12, fontWeight:700, color: isActive ? "rgba(252,211,77,1)" : "rgba(252,211,77,.82)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.35 }}>{label}</div>
+                    {room !== label && <div style={{ fontSize:10, opacity:0.38, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>{room}</div>}
                   </Link>
-                  <button onClick={() => toggleFav(room)} title="Unpin" style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", flexShrink:0, color:"rgba(252,211,77,.5)", fontSize:13, lineHeight:1 }}>★</button>
+                  <button onClick={() => toggleFav(room)} title="Unpin" style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", flexShrink:0, color: isActive ? "rgba(252,211,77,.8)" : "rgba(252,211,77,.35)", fontSize:13, lineHeight:1, transition:"color 0.12s" }}>★</button>
                 </div>
               );
             })}
@@ -669,19 +672,22 @@ export default function LeftRail() {
               const isActive = normRoomKey(joinedRoomId || activeRoomId || "") === room;
               const label = getRoomName(room);
               return (
-                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:2 }}>
+                <div key={room} style={{ display:"flex", alignItems:"center", gap:3, marginBottom:3 }}>
                   <Link
                     href={href}
                     className={"weered-left-link rounded-lg border transition-colors" + (isActive ? " weered-left-link-active" : "")}
-                    style={{ flex:1, minWidth:0, borderColor: isActive ? "rgba(124,58,237,.30)" : "rgba(148,163,184,.10)", background: isActive ? "rgba(124,58,237,.10)" : "rgba(148,163,184,.03)", padding:"6px 10px", display:"block", textDecoration:"none" }}
+                    style={{
+                      flex:1, minWidth:0, display:"block", textDecoration:"none",
+                      borderColor: isActive ? "rgba(124,58,237,.40)" : "rgba(148,163,184,.10)",
+                      background: isActive ? "rgba(124,58,237,.12)" : "rgba(148,163,184,.03)",
+                      padding:"7px 10px 6px 12px",
+                      boxShadow: isActive ? "0 0 12px rgba(124,58,237,.10), inset 2px 0 0 rgba(167,139,250,.7)" : "inset 2px 0 0 rgba(148,163,184,.12)",
+                    }}
                   >
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:4 }}>
-                      <span style={{ fontSize:12, fontWeight: isActive ? 700 : 500, color: isActive ? "rgba(243,244,246,.95)" : "rgba(203,213,225,.75)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.3 }}>{label}</span>
-                      {isActive && <span style={{ width:6, height:6, borderRadius:"50%", background:"rgba(167,139,250,.9)", flexShrink:0 }} />}
-                    </div>
-                    <div style={{ fontSize:10, opacity:0.35, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>{room}</div>
+                    <div style={{ fontSize:12, fontWeight: isActive ? 700 : 500, color: isActive ? "rgba(243,244,246,.97)" : "rgba(203,213,225,.72)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.35 }}>{label}</div>
+                    {room !== label && <div style={{ fontSize:10, opacity:0.32, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>{room}</div>}
                   </Link>
-                  <button onClick={() => toggleFav(room)} title="Pin to favorites" style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", flexShrink:0, color:"rgba(255,255,255,.2)", fontSize:13, lineHeight:1 }}>☆</button>
+                  <button onClick={() => toggleFav(room)} title="Pin to favorites" style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 6px", flexShrink:0, color: isActive ? "rgba(167,139,250,.5)" : "rgba(255,255,255,.15)", fontSize:13, lineHeight:1, transition:"color 0.12s" }}>☆</button>
                 </div>
               );
             })}

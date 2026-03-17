@@ -121,10 +121,16 @@ function FriendsPanel() {
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: hasUnread ? "rgba(243,244,246,1)" : "inherit" }}>
-                  {f.name}
-                </span>
-                {f.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{f.roomName}</span>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: hasUnread ? "rgba(243,244,246,1)" : "inherit" }}>
+                    {f.name}
+                  </div>
+                  {f.roomName && (
+                    <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
+                      {f.roomName}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -197,8 +203,14 @@ function CrewPanel() {
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
                   >
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)", boxShadow: m.online ? "0 0 5px #a78bfa" : "none", flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
-                    {m.online && m.roomName && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace", whiteSpace: "nowrap" }}>{m.roomName}</span>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                      {m.online && m.roomName && (
+                        <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
+                          {m.roomName}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
