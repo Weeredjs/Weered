@@ -1664,7 +1664,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
           ws.user = await hydrateGlobalRole(u);
-          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole } });
+          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, avatarColor: ws.user.avatarColor, avatar: ws.user.avatar } });
           return;
         }
 
@@ -2161,14 +2161,22 @@ app.post("/dm/:peerId", async (req, reply) => {
       where: { userId: u.id },
       include: { crew: { include: { members: { select: { userId: true, name: true, role: true } } } } },
     });
-    const crews = (memberships as any[]).map((m: any) => {
+    const crews = await Promise.all((memberships as any[]).map(async (m: any) => {
+      // Hydrate avatars from User table
+      const memberIds = (m.crew.members || []).map((cm: any) => cm.userId);
+      const userAvatars = memberIds.length
+        ? await prisma.user.findMany({ where: { id: { in: memberIds } }, select: { id: true, avatar: true, avatarColor: true } })
+        : [];
+      const avatarMap = new Map(userAvatars.map(u => [u.id, u]));
+
       const memberPresence = (m.crew.members || []).map((cm: any) => {
         let roomId: string | null = null; let roomName: string | null = null;
         for (const [rid, rs] of rooms) { if (rs.users.has(cm.userId)) { roomId = rid; roomName = rs.name || rid; break; } }
-        return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName };
+        const ua = avatarMap.get(cm.userId);
+        return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName, avatar: ua?.avatar || null, avatarColor: ua?.avatarColor || null };
       });
       return { ...m.crew, myRole: m.role, members: memberPresence };
-    });
+    }));
     return reply.send({ crews });
   });
 
