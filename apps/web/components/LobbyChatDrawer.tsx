@@ -18,36 +18,40 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
 
   const ctx = useWeered() as any;
 
-  // Read msgs directly from the room-specific map, not the derived ctx.msgs
-  // which depends on activeRoomId matching this drawer's roomId
+  // accent with fallback
+  const ac = accentColor || "#7C3AED";
+  const acDim = `${ac}33`;
+  const acMid = `${ac}55`;
+
+  // Resolve effective room ID from prop
   const effectiveRoomId = (() => {
     let rid = String(roomId || "").trim();
     if (rid.startsWith("room:")) rid = rid.slice(5);
     try { rid = decodeURIComponent(rid); } catch {}
     return rid;
   })();
-  const msgsByRoom = ctx?.msgsByRoom || {};
-  const msgs = Array.isArray(msgsByRoom[effectiveRoomId]) ? msgsByRoom[effectiveRoomId] : [];
-
-  // accent with fallback
-  const ac = accentColor || "#7C3AED";
-  const acDim = `${ac}33`;
-  const acMid = `${ac}55`;
 
   // Keep ref in sync
   useEffect(() => { openRef.current = open; }, [open]);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Track unread: increment when new messages arrive while closed
-  const msgCountRef = useRef(msgs.length);
+  // Track unread via DOM event — works even when chat panel is unmounted
   useEffect(() => {
-    const newCount = msgs.length;
-    if (newCount > msgCountRef.current && !openRef.current) {
-      setUnread(prev => prev + (newCount - msgCountRef.current));
+    function onChatNew(e: Event) {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || String(detail.roomId || "") !== effectiveRoomId) return;
+      // Don't count own messages
+      const senderId = detail.msg?.user?.id;
+      const myId = ctx?.me?.id;
+      if (senderId && myId && senderId === myId) return;
+      if (!openRef.current) {
+        setUnread(prev => prev + 1);
+      }
     }
-    msgCountRef.current = newCount;
-  }, [msgs.length]);
+    window.addEventListener("weered:chat:new", onChatNew);
+    return () => window.removeEventListener("weered:chat:new", onChatNew);
+  }, [effectiveRoomId, ctx?.me?.id]);
 
   // Clear unread when opening
   function handleOpen() {
