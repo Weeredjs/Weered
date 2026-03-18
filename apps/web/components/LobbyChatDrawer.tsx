@@ -155,7 +155,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         <div
           className={`lobby-chat-tab${open ? " open" : ""}${hasUnread && !open ? " has-unread" : ""}`}
           onClick={handleToggle}
-          style={{ right: open ? "min(340px, 90%)" : 0, position: "relative" }}
+          style={{ right: open ? "min(340px, 90%)" : 0 }}
         >
           CHAT
           {/* Unread badge */}
