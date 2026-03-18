@@ -45,18 +45,18 @@ model Lobby {
   moduleType  ModuleType @default(REDDIT)
   moduleConfig Json?
 
-  // Search keywords — e.g. ["destiny", "destiny2", "bungie", "guardian"]
+  // Search keywords ΓÇö e.g. ["destiny", "destiny2", "bungie", "guardian"]
   keywords    String[]   @default([])
 
-  // Branding — used for pinned lobby cards and lobby page theming
+  // Branding ΓÇö used for pinned lobby cards and lobby page theming
   accentColor String?    // hex e.g. "#4F88C6"
   logoUrl     String?    // square logo for search card / lobby header
   bannerUrl   String?    // wide banner for lobby hero area
   websiteUrl  String?    // embedded in Content tab
   // linkedSubreddits stored in moduleConfig as { subreddits: string[] }
 
-  // Lobby admin — custom role titles and module toggles
-  // roleNames: JSON map of level→title, e.g. {"5":"Boss","4":"Lieutenant","3":"Bouncer","2":"VIP","1":"Viewer"}
+  // Lobby admin ΓÇö custom role titles and module toggles
+  // roleNames: JSON map of levelΓåÆtitle, e.g. {"5":"Boss","4":"Lieutenant","3":"Bouncer","2":"VIP","1":"Viewer"}
   roleNames       Json?
   // enabledModules: which modules lobby rooms can use, e.g. ["voice","youtube","reddit"]
   enabledModules  String[]  @default(["voice", "youtube", "reddit"])
@@ -311,7 +311,7 @@ model DirectMessage {
   @@index([toId, readAt])
 }
 
-// ── Crew / Dojo ───────────────────────────────────────────────────────────────
+// ΓöÇΓöÇ Crew / Dojo ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 enum CrewRole {
   LEADER
@@ -345,7 +345,7 @@ model CrewMember {
   @@index([userId])
 }
 
-// ── Friends ───────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇ Friends ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 enum FriendStatus {
   PENDING
@@ -384,7 +384,7 @@ model FeedItem {
   @@index([fetchedAt])
 }
 
-// ── Game Accounts ─────────────────────────────────────────────────────────────
+// ΓöÇΓöÇ Game Accounts ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Stores per-user OAuth tokens and cached playcard data for each game integration.
 // gameType maps to ModuleType (BUNGIE = Destiny 2, etc.)
 
@@ -403,7 +403,7 @@ model UserGameAccount {
   displayName   String     @default("")
   platform      String     @default("")  // e.g. "pc", "xbox", "psn"
 
-  // Cached playcard — refreshed on hover if stale (5 min TTL)
+  // Cached playcard ΓÇö refreshed on hover if stale (5 min TTL)
   cardData      Json?
   cardCachedAt  DateTime?
 
@@ -416,7 +416,7 @@ model UserGameAccount {
   @@index([userId])
 }
 
-// ── Invites ───────────────────────────────────────────────────────────────────
+// ΓöÇΓöÇ Invites ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 enum InviteType {
   PLATFORM
@@ -429,7 +429,7 @@ model Invite {
   id        String     @id @default(cuid())
   token     String     @unique @default(cuid())
   type      InviteType @default(PLATFORM)
-  targetId  String?    // roomId, lobbyId, or crewId — null for PLATFORM
+  targetId  String?    // roomId, lobbyId, or crewId ΓÇö null for PLATFORM
   createdBy String     // userId of creator
   note      String?
   maxUses   Int        @default(1)
@@ -441,13 +441,13 @@ model Invite {
   @@index([createdBy])
 }
 
-// ── Subscriptions (Stripe-backed) ────────────────────────────────────────────
+// ΓöÇΓöÇ Subscriptions (Stripe-backed) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 enum SubTier {
-  FREE       // Innocent — default
-  INDICTED   // $6/mo — colored username, video streaming, custom fonts
-  FELON      // $14/mo — above + own up to 3 lobbies
-  KINGPIN    // Staff-granted — unlimited lobbies, all modules
+  FREE       // Innocent ΓÇö default
+  INDICTED   // $6/mo ΓÇö colored username, video streaming, custom fonts
+  FELON      // $14/mo ΓÇö above + own up to 3 lobbies
+  KINGPIN    // Staff-granted ΓÇö unlimited lobbies, all modules
 }
 
 model Subscription {
@@ -467,7 +467,7 @@ model Subscription {
   @@index([stripeCustomerId])
 }
 
-// ── LFG / Fireteam Board ─────────────────────────────────────────────────────
+// ΓöÇΓöÇ LFG / Fireteam Board ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 enum LfgStatus {
   OPEN
@@ -494,7 +494,7 @@ model LfgPost {
   @@index([lobbyId, createdAt])
 }
 
-// ── Bungie Manifest Cache ────────────────────────────────────────────────────
+// ΓöÇΓöÇ Bungie Manifest Cache ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Caches Bungie API responses (Xur inventory, weekly reset, etc.) with TTL
 
 model BungieCache {

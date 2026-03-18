@@ -10,24 +10,27 @@ import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-// Domains that have verified status
 const VERIFIED_DOMAINS = new Set([
   "ign.com", "espn.com", "techcrunch.com", "bbc.com", "nba.com",
   "nfl.com", "kotaku.com", "theverge.com", "wired.com", "reuters.com",
   "theguardian.com", "spotify.com",
 ]);
 
-// Lobbies with special module types get the modules panel
 const MODULE_GAME_NAMES: Record<string, string> = {
   BUNGIE: "Destiny 2",
+  TWITCH: "Twitch",
 };
 
 type LobbyInfo = {
   moduleType: string;
   accentColor?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  description?: string;
   enabledModules?: string[];
   verified?: boolean;
   name?: string;
+  _count?: { rooms: number; members: number };
 };
 
 export default function LobbyIdPage() {
@@ -39,20 +42,22 @@ export default function LobbyIdPage() {
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
   const [view, setView] = useState<"feed" | "modules">("feed");
 
-  // Fetch lobby info to determine if it has special modules
   useEffect(() => {
     fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}`)
       .then(r => r.json())
       .then(j => {
         if (j.ok && j.lobby) {
           setLobbyInfo({
-            moduleType: j.lobby.moduleType,
-            accentColor: j.lobby.accentColor,
+            moduleType:    j.lobby.moduleType,
+            accentColor:   j.lobby.accentColor,
+            logoUrl:       j.lobby.logoUrl,
+            bannerUrl:     j.lobby.bannerUrl,
+            description:   j.lobby.description,
             enabledModules: j.lobby.enabledModules,
-            verified: j.lobby.verified,
-            name: j.lobby.name,
+            verified:      j.lobby.verified,
+            name:          j.lobby.name,
+            _count:        j.lobby._count,
           });
-          // Auto-show modules for Bungie/Twitch-type lobbies
           if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH") {
             setView("modules");
           }
@@ -62,26 +67,58 @@ export default function LobbyIdPage() {
   }, [lobbyId]);
 
   const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH";
-  const accent = lobbyInfo?.accentColor || undefined;
-  const gameName = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
+  const accent     = lobbyInfo?.accentColor || undefined;
+  const gameName   = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "calc(100vh - 32px)", minHeight: 0 }}>
-      <LobbyHeaderBar />
+    // ── CSS variable injection — all children can use var(--lobby-accent) ──
+    <div
+      style={{
+        display: "flex", flexDirection: "column", gap: 12,
+        height: "calc(100vh - 32px)", minHeight: 0,
+        paddingBottom: 64,          // clears bottom pills bar
+        "--lobby-accent":     accent || "#7C3AED",
+        "--lobby-accent-dim": accent ? `${accent}22` : "rgba(124,58,237,0.13)",
+        "--lobby-accent-mid": accent ? `${accent}55` : "rgba(124,58,237,0.33)",
+      } as React.CSSProperties}
+    >
+      {/* Header bar — now receives full branding */}
+      <LobbyHeaderBar
+        title={lobbyInfo?.name || lobbyId}
+        lobbyId={lobbyId}
+        accentColor={accent}
+        logoUrl={lobbyInfo?.logoUrl}
+        verified={isVerified || lobbyInfo?.verified}
+      />
 
       <div style={{
         flex: 1, minHeight: 0, position: "relative",
-        border: "1px solid var(--weered-border)",
+        border: `1px solid ${accent ? `${accent}33` : "var(--weered-border)"}`,
         borderRadius: 16,
         background: "var(--weered-panel2)",
         overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}>
-        {/* Verified lobby hero bar */}
+        {/* Accent top strip — propagated from lobby branding */}
+        {accent && (
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, height: 2, zIndex: 10,
+            background: `linear-gradient(90deg, transparent 0%, ${accent}88 20%, ${accent} 50%, ${accent}88 80%, transparent 100%)`,
+            pointerEvents: "none",
+          }} />
+        )}
+
+        {/* Hero bar — receives full branding */}
         <LobbyHeroBar
           lobbyId={lobbyId}
           lobbyName={lobbyInfo?.name || lobbyId}
+          description={lobbyInfo?.description}
           verified={isVerified || lobbyInfo?.verified || false}
+          accentColor={accent}
+          logoUrl={lobbyInfo?.logoUrl}
+          bannerUrl={lobbyInfo?.bannerUrl}
+          roomCount={lobbyInfo?._count?.rooms}
+          memberCount={lobbyInfo?._count?.members}
         />
 
         {/* View toggle for lobbies with modules */}
@@ -89,31 +126,15 @@ export default function LobbyIdPage() {
           <div style={{
             display: "flex", gap: 2, padding: "6px 14px",
             borderBottom: "1px solid rgba(255,255,255,.06)",
-            background: accent ? `${accent}06` : "transparent",
+            background: accent ? `${accent}08` : "transparent",
             flexShrink: 0,
           }}>
-            <button
-              onClick={() => setView("modules")}
-              style={{
-                padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                background: view === "modules" ? (accent ? `${accent}25` : "rgba(124,58,237,.15)") : "transparent",
-                color: view === "modules" ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)",
-                transition: "background .15s",
-              }}
-            >
+            <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>
               Modules
-            </button>
-            <button
-              onClick={() => setView("feed")}
-              style={{
-                padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                background: view === "feed" ? "rgba(255,255,255,.08)" : "transparent",
-                color: view === "feed" ? "rgba(243,244,246,.85)" : "rgba(148,163,184,.6)",
-                transition: "background .15s",
-              }}
-            >
+            </TabBtn>
+            <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>
               Feed
-            </button>
+            </TabBtn>
             {lobbyInfo?.verified && (
               <a
                 href={`/lobby/${encodeURIComponent(lobbyId)}/admin`}
@@ -124,7 +145,7 @@ export default function LobbyIdPage() {
                   display: "flex", alignItems: "center", gap: 5,
                 }}
               >
-                Admin
+                ⚙ Admin
               </a>
             )}
           </div>
@@ -144,8 +165,37 @@ export default function LobbyIdPage() {
           )}
         </div>
 
-        <LobbyChatDrawer roomId={roomId} title={`${lobbyId} · Chat`} />
+        {/* Chat drawer — now receives accentColor for themed styling */}
+        <LobbyChatDrawer
+          roomId={roomId}
+          title={`${lobbyInfo?.name || lobbyId} · Chat`}
+          accentColor={accent}
+        />
       </div>
     </div>
+  );
+}
+
+// ── Small helper ─────────────────────────────────────────────────────────────
+function TabBtn({
+  active, accent, onClick, children,
+}: {
+  active: boolean; accent?: string; onClick: () => void; children: React.ReactNode;
+}) {
+  const bg = active
+    ? accent ? `${accent}25` : "rgba(124,58,237,.15)"
+    : "transparent";
+  const color = active ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)";
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "5px 14px", borderRadius: 7, border: "none",
+        fontSize: 12, fontWeight: 600, cursor: "pointer",
+        background: bg, color, transition: "background .15s",
+      }}
+    >
+      {children}
+    </button>
   );
 }
