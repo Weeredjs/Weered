@@ -16,7 +16,18 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
   const [unread, setUnread] = useState(0);
   const openRef = useRef(false);
 
-  const { msgs } = useWeered();
+  const ctx = useWeered() as any;
+
+  // Read msgs directly from the room-specific map, not the derived ctx.msgs
+  // which depends on activeRoomId matching this drawer's roomId
+  const effectiveRoomId = (() => {
+    let rid = String(roomId || "").trim();
+    if (rid.startsWith("room:")) rid = rid.slice(5);
+    try { rid = decodeURIComponent(rid); } catch {}
+    return rid;
+  })();
+  const msgsByRoom = ctx?.msgsByRoom || {};
+  const msgs = Array.isArray(msgsByRoom[effectiveRoomId]) ? msgsByRoom[effectiveRoomId] : [];
 
   // accent with fallback
   const ac = accentColor || "#7C3AED";
