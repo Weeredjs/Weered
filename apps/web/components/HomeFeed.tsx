@@ -275,9 +275,10 @@ function ColHeader({ children, align = "left" }: { children: React.ReactNode; al
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function HomeFeed({ domain }: { domain?: string } = {}) {
+export default function HomeFeed({ domain, defaultCategory }: { domain?: string; defaultCategory?: string } = {}) {
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState<Category>("all");
+  const initialCat = (defaultCategory && CATEGORIES.includes(defaultCategory as Category)) ? defaultCategory as Category : "all";
+  const [activeCategory, setActiveCategory] = useState<Category>(initialCat);
   const [sort, setSort] = useState<"hot" | "new">("hot");
 
   const { items, loading, updatedAt } = useLiveFeed(activeCategory, sort, domain);
