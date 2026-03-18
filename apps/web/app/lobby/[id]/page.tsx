@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useWeered } from "../../../components/WeeredProvider";
 import LobbyContent from "../../../components/LobbyContent";
 import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
@@ -36,11 +37,16 @@ type LobbyInfo = {
 export default function LobbyIdPage() {
   const params  = useParams();
   const lobbyId = decodeURIComponent(String(params?.id ?? "lobby"));
-  const roomId  = `room:${lobbyId}`;
   const isVerified = VERIFIED_DOMAINS.has(lobbyId);
 
+  const { join } = useWeered();
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
   const [view, setView] = useState<"feed" | "modules">("feed");
+
+  // ── Explicitly join the lobby room for presence + chat ──
+  useEffect(() => {
+    if (lobbyId) join(lobbyId);
+  }, [lobbyId]);
 
   useEffect(() => {
     fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}`)
@@ -156,7 +162,7 @@ export default function LobbyIdPage() {
         </div>
 
         <LobbyChatDrawer
-          roomId={roomId}
+          roomId={lobbyId}
           title={`${lobbyInfo?.name || lobbyId} · Chat`}
           accentColor={accent}
         />
