@@ -55,6 +55,7 @@ type RoomState = {
 };
 
 const rooms = new Map<string, RoomState>();
+const lobbyIds = new Set<string>();
 // Title/thumbnail for article rooms — populated by feed worker, used in ensureRoomLoaded
 const articleRoomMeta = new Map<string, { name: string; thumbnail?: string }>();
 let wss: WebSocketServer;
@@ -112,11 +113,17 @@ async function seedLobbies() {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
         update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
-        create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
+        create: { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
       });
+      lobbyIds.add(l.id);
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
   }
-  console.log("[weered] lobbies seeded");
+  // Also load any non-seeded lobbies from DB so they're protected too
+  try {
+    const all = await prisma.lobby.findMany({ select: { id: true } });
+    for (const l of all) lobbyIds.add(l.id);
+  } catch {}
+  console.log("[weered] lobbies seeded", [...lobbyIds]);
 }
 
 async function globalAudit(actorId: string, actorName: string, action: string, targetId?: string, targetName?: string, meta?: any) {
