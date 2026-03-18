@@ -48,15 +48,15 @@ export default function LobbyIdPage() {
       .then(j => {
         if (j.ok && j.lobby) {
           setLobbyInfo({
-            moduleType:    j.lobby.moduleType,
-            accentColor:   j.lobby.accentColor,
-            logoUrl:       j.lobby.logoUrl,
-            bannerUrl:     j.lobby.bannerUrl,
-            description:   j.lobby.description,
+            moduleType:     j.lobby.moduleType,
+            accentColor:    j.lobby.accentColor,
+            logoUrl:        j.lobby.logoUrl,
+            bannerUrl:      j.lobby.bannerUrl,
+            description:    j.lobby.description,
             enabledModules: j.lobby.enabledModules,
-            verified:      j.lobby.verified,
-            name:          j.lobby.name,
-            _count:        j.lobby._count,
+            verified:       j.lobby.verified,
+            name:           j.lobby.name,
+            _count:         j.lobby._count,
           });
           if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH") {
             setView("modules");
@@ -71,18 +71,16 @@ export default function LobbyIdPage() {
   const gameName   = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
 
   return (
-    // ── CSS variable injection — all children can use var(--lobby-accent) ──
     <div
       style={{
         display: "flex", flexDirection: "column", gap: 12,
         height: "calc(100vh - 32px)", minHeight: 0,
-        paddingBottom: 64,          // clears bottom pills bar
+        paddingBottom: 64,
         "--lobby-accent":     accent || "#7C3AED",
         "--lobby-accent-dim": accent ? `${accent}22` : "rgba(124,58,237,0.13)",
         "--lobby-accent-mid": accent ? `${accent}55` : "rgba(124,58,237,0.33)",
       } as React.CSSProperties}
     >
-      {/* Header bar — now receives full branding */}
       <LobbyHeaderBar
         title={lobbyInfo?.name || lobbyId}
         lobbyId={lobbyId}
@@ -99,16 +97,16 @@ export default function LobbyIdPage() {
         overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}>
-        {/* Accent top strip — propagated from lobby branding */}
+        {/* Accent top strip */}
         {accent && (
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0, height: 2, zIndex: 10,
-            background: `linear-gradient(90deg, transparent 0%, ${accent}88 20%, ${accent} 50%, ${accent}88 80%, transparent 100%)`,
+            background: `linear-gradient(90deg, transparent, ${accent}88 20%, ${accent} 50%, ${accent}88 80%, transparent)`,
             pointerEvents: "none",
           }} />
         )}
 
-        {/* Hero bar — receives full branding */}
+        {/* Hero bar — passes moduleType so it knows to fetch a stream */}
         <LobbyHeroBar
           lobbyId={lobbyId}
           lobbyName={lobbyInfo?.name || lobbyId}
@@ -119,9 +117,11 @@ export default function LobbyIdPage() {
           bannerUrl={lobbyInfo?.bannerUrl}
           roomCount={lobbyInfo?._count?.rooms}
           memberCount={lobbyInfo?._count?.members}
+          moduleType={lobbyInfo?.moduleType}
+          gameName={hasModules ? gameName : undefined}
         />
 
-        {/* View toggle for lobbies with modules */}
+        {/* View toggle */}
         {hasModules && (
           <div style={{
             display: "flex", gap: 2, padding: "6px 14px",
@@ -129,12 +129,8 @@ export default function LobbyIdPage() {
             background: accent ? `${accent}08` : "transparent",
             flexShrink: 0,
           }}>
-            <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>
-              Modules
-            </TabBtn>
-            <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>
-              Feed
-            </TabBtn>
+            <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>Modules</TabBtn>
+            <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>Feed</TabBtn>
             {lobbyInfo?.verified && (
               <a
                 href={`/lobby/${encodeURIComponent(lobbyId)}/admin`}
@@ -151,21 +147,14 @@ export default function LobbyIdPage() {
           </div>
         )}
 
-        {/* Content area */}
+        {/* Content */}
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          {view === "modules" && hasModules ? (
-            <LobbyModulesPanel
-              lobbyId={lobbyId}
-              gameName={gameName}
-              accentColor={accent}
-              style={{ flex: 1, minHeight: 0 }}
-            />
-          ) : (
-            <LobbyContent lobbyId={lobbyId} />
-          )}
+          {view === "modules" && hasModules
+            ? <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+            : <LobbyContent lobbyId={lobbyId} />
+          }
         </div>
 
-        {/* Chat drawer — now receives accentColor for themed styling */}
         <LobbyChatDrawer
           roomId={roomId}
           title={`${lobbyInfo?.name || lobbyId} · Chat`}
@@ -176,25 +165,14 @@ export default function LobbyIdPage() {
   );
 }
 
-// ── Small helper ─────────────────────────────────────────────────────────────
-function TabBtn({
-  active, accent, onClick, children,
-}: {
-  active: boolean; accent?: string; onClick: () => void; children: React.ReactNode;
-}) {
-  const bg = active
-    ? accent ? `${accent}25` : "rgba(124,58,237,.15)"
-    : "transparent";
-  const color = active ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)";
+function TabBtn({ active, accent, onClick, children }: { active: boolean; accent?: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "5px 14px", borderRadius: 7, border: "none",
-        fontSize: 12, fontWeight: 600, cursor: "pointer",
-        background: bg, color, transition: "background .15s",
-      }}
-    >
+    <button onClick={onClick} style={{
+      padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+      background: active ? (accent ? `${accent}25` : "rgba(124,58,237,.15)") : "transparent",
+      color: active ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)",
+      transition: "background .15s",
+    }}>
       {children}
     </button>
   );
