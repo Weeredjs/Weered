@@ -41,6 +41,7 @@ type RoomState = {
   roomId: string;
   name?: string;
   thumbnail?: string;
+  lobbyId?: string;
   users: Map<string, RoomUser>;
   sockets: Set<Sock>;
   msgs: ChatMsg[];
@@ -181,6 +182,7 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.name = dbRoom.name || "";
     r.locked = Boolean(dbRoom.locked);
     r.ownerId = dbRoom.ownerId || undefined;
+    r.lobbyId = (dbRoom as any).lobbyId || undefined;
     for (const m of dbRoom.members) { if (m.role === "MOD") r.mods.add(m.userId); }
     for (const b of dbRoom.bans) r.banned.add(b.userId);
     r.msgs = dbRoom.messages.map((m) => ({
@@ -216,6 +218,14 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
         }
       } catch {}
     }
+  }
+
+  // If this room IS a lobby, set lobbyId to itself
+  if (!r.lobbyId) {
+    try {
+      const isLobby = await prisma.lobby.findUnique({ where: { id: roomId }, select: { id: true } });
+      if (isLobby) r.lobbyId = roomId;
+    } catch {}
   }
 
   rooms.set(roomId, r);
@@ -313,7 +323,7 @@ function buildStatePayload(room: RoomState) {
   }));
   return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
-    thumbnail: room.thumbnail || null,
+    thumbnail: room.thumbnail || null, lobbyId: room.lobbyId || null,
     users, count: users.length, locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
