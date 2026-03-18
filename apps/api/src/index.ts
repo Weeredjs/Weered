@@ -22,7 +22,7 @@ type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?:
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
-type RoomUser = { id: string; name: string; role?: Role };
+type RoomUser = { id: string; name: string; role: string; avatarColor?: string | null; avatar?: string | null; }
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
 
@@ -111,7 +111,7 @@ async function seedLobbies() {
     try {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
+        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
         create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
       });
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
@@ -545,8 +545,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
-    room.users.set(ws.user.id, userEntry);
+    const userEntry = { id: ws.user.id, name: ws.user.name, role: roleOf(room, ws.user.id), globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
 
@@ -2074,12 +2073,23 @@ app.post("/dm/:peerId", async (req, reply) => {
     const profiles = peerIds.length
       ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true } })
       : [];
-    const out = profiles.map(p => {
-      let roomId: string | null = null; let roomName: string | null = null;
-      for (const [rid, rs] of rooms) { if (rs.users.has(p.id)) { roomId = rid; roomName = rs.name || rid; break; } }
-      return { ...p, online: roomId !== null, roomId, roomName };
-    });
-    return reply.send({ friends: out });
+  const presenceMap = new Map<string, { roomId: string; roomName: string }>();
+      for (const p of profiles) {
+        for (const [rid, rs] of rooms) {
+          if (rs.users.has(p.id)) { presenceMap.set(p.id, { roomId: rid, roomName: rs.name || rid }); break; }
+        }
+      }
+      const activeRoomIds = [...new Set([...presenceMap.values()].map(v => v.roomId))];
+      const lobbySet = activeRoomIds.length
+        ? new Set((await prisma.lobby.findMany({ where: { id: { in: activeRoomIds } }, select: { id: true } })).map(l => l.id))
+        : new Set<string>();
+      const out = profiles.map(p => {
+        const pres = presenceMap.get(p.id);
+        const roomId = pres?.roomId ?? null;
+        const roomName = pres?.roomName ?? null;
+        return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false };
+      });
+      return reply.send({ friends: out });
   });
 
   app.get("/friends/requests", async (req, reply) => {
@@ -2169,12 +2179,17 @@ app.post("/dm/:peerId", async (req, reply) => {
         : [];
       const avatarMap = new Map(userAvatars.map(u => [u.id, u]));
 
-      const memberPresence = (m.crew.members || []).map((cm: any) => {
+const memberPresenceRaw = (m.crew.members || []).map((cm: any) => {
         let roomId: string | null = null; let roomName: string | null = null;
         for (const [rid, rs] of rooms) { if (rs.users.has(cm.userId)) { roomId = rid; roomName = rs.name || rid; break; } }
         const ua = avatarMap.get(cm.userId);
         return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName, avatar: ua?.avatar || null, avatarColor: ua?.avatarColor || null };
       });
+      const crewRoomIds = [...new Set(memberPresenceRaw.map((m: any) => m.roomId).filter(Boolean))] as string[];
+      const crewLobbySet = crewRoomIds.length
+        ? new Set((await prisma.lobby.findMany({ where: { id: { in: crewRoomIds } }, select: { id: true } })).map(l => l.id))
+        : new Set<string>();
+      const memberPresence = memberPresenceRaw.map((m: any) => ({ ...m, roomIsLobby: m.roomId ? crewLobbySet.has(m.roomId) : false }));
       return { ...m.crew, myRole: m.role, members: memberPresence };
     }));
     return reply.send({ crews });
