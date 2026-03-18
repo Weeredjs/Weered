@@ -35,7 +35,6 @@ function pickFirstString(...vals: any[]) {
   return "";
 }
 
-// Module type → display label
 const MODULE_LABELS: Record<string, string> = {
   BUNGIE: "Destiny 2",
   TWITCH: "Twitch",
@@ -48,13 +47,23 @@ export default function LobbyHeaderBar({
   title = "Lobby",
   subtitle,
   lobbyId,
+  accentColor,
+  logoUrl,
+  verified,
 }: {
   title?: string;
   subtitle?: string;
   lobbyId?: string;
+  accentColor?: string;
+  logoUrl?: string;
+  verified?: boolean;
 }) {
   const router = useRouter();
   const w = useWeered() as any;
+
+  const accent = accentColor || undefined;
+  const isBranded = !!(accentColor || logoUrl) && lobbyId && lobbyId !== "lobby";
+  const initial = (title || lobbyId || "L").charAt(0).toUpperCase();
 
   const [mode, setMode]         = React.useState<Mode>("rooms");
   const [q, setQ]               = React.useState("");
@@ -62,18 +71,15 @@ export default function LobbyHeaderBar({
   const [open, setOpen]         = React.useState(false);
   const [idx, setIdx]           = React.useState(0);
 
-  // Search results from API
   const [pinnedResults, setPinnedResults] = React.useState<PinnedLobby[]>([]);
   const [roomResults, setRoomResults]     = React.useState<RoomResult[]>([]);
   const [searching, setSearching]         = React.useState(false);
 
-  // People list from WeeredProvider
   const people: PersonLite[] = React.useMemo(
     () => (Array.isArray(w?.users) ? w.users : []),
     [w?.users]
   );
 
-  // ── Debounced API search ───────────────────────────────────────────────────
   const searchRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -84,12 +90,12 @@ export default function LobbyHeaderBar({
       return;
     }
 
-if (searchRef.current) clearTimeout(searchRef.current);
+    if (searchRef.current) clearTimeout(searchRef.current);
     searchRef.current = setTimeout(async () => {
       setSearching(true);
       try {
         const token = typeof window !== "undefined"
-          ? localStorage.getItem("weered:token") ?? ""
+          ? localStorage.getItem("weered_token") ?? ""
           : "";
         const res = await fetch(
           `https://api.weered.ca/lobbies/search?q=${encodeURIComponent(query)}`,
@@ -101,7 +107,7 @@ if (searchRef.current) clearTimeout(searchRef.current);
           setRoomResults(Array.isArray(data.rooms) ? data.rooms : []);
         }
       } catch {
-        // silently fail — no results
+        // silently fail
       } finally {
         setSearching(false);
       }
@@ -110,7 +116,6 @@ if (searchRef.current) clearTimeout(searchRef.current);
     return () => { if (searchRef.current) clearTimeout(searchRef.current); };
   }, [q, mode]);
 
-  // ── People filter (local, no API) ─────────────────────────────────────────
   const peopleResults = React.useMemo(() => {
     if (mode !== "people" || !q.trim()) return [];
     const lower = q.trim().toLowerCase();
@@ -119,8 +124,6 @@ if (searchRef.current) clearTimeout(searchRef.current);
       .slice(0, 10);
   }, [mode, q, people]);
 
-  // Flat list for keyboard navigation
-  // Sections: [pinned lobbies] [rooms] [people]
   type NavItem =
     | { kind: "pinned"; lobby: PinnedLobby }
     | { kind: "room";   room: RoomResult }
@@ -166,19 +169,75 @@ if (searchRef.current) clearTimeout(searchRef.current);
     window.dispatchEvent(new CustomEvent("weered:lobby:browse"));
   }
 
-  const hasResults = navItems.length > 0;
+  const hasResults  = navItems.length > 0;
   const showDropdown = open && q.trim().length >= 2;
 
   return (
-    <div className={ui.panel} style={{ position: "relative", flexShrink: 0 }}>
+    <div
+      className={ui.panel}
+      style={{
+        position: "relative", flexShrink: 0,
+        // Accent strip on top border when branded
+        ...(isBranded && accent ? {
+          borderTopColor: `${accent}55`,
+          boxShadow: `0 1px 0 0 ${accent}22`,
+        } : {}),
+      }}
+    >
+      {/* Branded accent strip */}
+      {isBranded && accent && (
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: 2, borderRadius: "16px 16px 0 0",
+          background: `linear-gradient(90deg, transparent, ${accent}99, ${accent}, ${accent}99, transparent)`,
+          pointerEvents: "none",
+        }} />
+      )}
+
       <div className={ui.panelHeader}>
-        <div className="min-w-0">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div className={ui.panelTitle}>{title}</div>
-            {subtitle && <div className={`${ui.muted} text-xs truncate`}>{subtitle}</div>}
-          </div>
-          <div className={`${ui.muted} text-xs mt-0.5`}>
-            Browse content, find rooms, and connect with people.
+        <div className="min-w-0" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+          {/* ── Lobby logo in header (when branded) ── */}
+          {isBranded && (
+            <div style={{
+              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+              background: logoUrl ? "rgba(0,0,0,0.3)" : `${accent || "#7C3AED"}28`,
+              border: `1.5px solid ${accent || "#7C3AED"}50`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden",
+              boxShadow: `0 0 10px ${accent || "#7C3AED"}30`,
+            }}>
+              {logoUrl ? (
+                <img src={logoUrl} alt={title} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 3 }} />
+              ) : (
+                <span style={{ fontSize: 14, fontWeight: 900, color: accent || "#7C3AED" }}>{initial}</span>
+              )}
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div
+                className={ui.panelTitle}
+                style={isBranded && accent ? { color: accent } : undefined}
+              >
+                {title}
+              </div>
+              {verified && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 999,
+                  background: `${accent || "#7C3AED"}20`,
+                  border: `1px solid ${accent || "#7C3AED"}50`,
+                  color: accent || "#a78bfa",
+                  letterSpacing: "0.05em",
+                }}>
+                  ✓
+                </span>
+              )}
+              {subtitle && <div className={`${ui.muted} text-xs truncate`}>{subtitle}</div>}
+            </div>
+            <div className={`${ui.muted} text-xs mt-0.5`}>
+              Browse content, find rooms, and connect with people.
+            </div>
           </div>
         </div>
       </div>
@@ -195,6 +254,7 @@ if (searchRef.current) clearTimeout(searchRef.current);
                   "rounded-lg px-2 py-1 text-xs font-semibold " +
                   (mode === m ? "bg-white/15" : "opacity-70 hover:bg-white/10")
                 }
+                style={mode === m && accent ? { background: `${accent}25`, color: accent } : undefined}
                 onClick={() => setMode(m)}
               >
                 {m === "rooms" ? "Rooms" : "People"}
@@ -209,169 +269,106 @@ if (searchRef.current) clearTimeout(searchRef.current);
               placeholder={mode === "rooms" ? "Search rooms or lobbies…" : "Search people"}
               value={q}
               onChange={e => { setQ(e.target.value); setOpen(true); }}
-              onFocus={() => setOpen(true)}
+              onFocus={() => { if (q.trim().length >= 2) setOpen(true); }}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
               onKeyDown={onKeyDown}
+              style={accent && isBranded ? {
+                outline: "none",
+              } : undefined}
             />
+            {searching && (
+              <div style={{
+                position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                fontSize: 10, opacity: 0.4,
+              }}>
+                …
+              </div>
+            )}
 
-            {/* Dropdown */}
+            {/* ── Search dropdown ───────────────────────────────────────── */}
             {showDropdown && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: "calc(100% + 6px)",
-                  zIndex: 5000,
-                  borderRadius: 14,
-                  border: "1px solid var(--weered-border2)",
-                  background: "var(--weered-panel2)",
-                  overflow: "hidden",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                }}
-              >
-                {/* Loading state */}
-                {searching && !hasResults && (
-                  <div style={{ padding: "12px 14px", fontSize: 12, opacity: 0.45, textAlign: "center" }}>
-                    Searching…
+              <div style={{
+                position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 200,
+                background: "rgba(12,12,20,0.98)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 12,
+                boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+                overflow: "hidden",
+                backdropFilter: "blur(12px)",
+                maxHeight: 380,
+                overflowY: "auto",
+              }}>
+                {!hasResults && !searching && (
+                  <div style={{ padding: "12px 16px", fontSize: 12, opacity: 0.45, textAlign: "center" }}>
+                    No results
                   </div>
                 )}
 
-                {/* Empty state */}
-                {!searching && !hasResults && (
-                  <div style={{ padding: "12px 14px", fontSize: 12, opacity: 0.4, textAlign: "center" }}>
-                    No results for "{q}"
-                  </div>
-                )}
-
-                {/* ── Pinned lobbies section ─────────────────────────────── */}
+                {/* Pinned lobbies */}
                 {pinnedResults.length > 0 && (
                   <>
                     <SectionLabel label="LOBBIES" />
                     {pinnedResults.map((lobby, i) => {
-                      const globalIdx = i;
-                      const active = globalIdx === idx;
-                      const accent = lobby.accentColor ?? "#7C3AED";
+                      const active = i === idx;
+                      const la = lobby.accentColor || accent || "#7C3AED";
                       return (
                         <button
                           key={lobby.id}
                           type="button"
-                          onMouseEnter={() => setIdx(globalIdx)}
+                          onMouseEnter={() => setIdx(i)}
                           onMouseDown={e => e.preventDefault()}
-                          onClick={() => choose(globalIdx)}
+                          onClick={() => choose(i)}
                           style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "10px 12px",
-                            border: "none",
-                            borderLeft: `3px solid ${active ? accent : "transparent"}`,
+                            width: "100%", textAlign: "left",
+                            padding: "10px 12px", border: "none",
+                            borderLeft: `3px solid ${active ? la : "transparent"}`,
                             cursor: "pointer",
-                            background: active ? `${accent}18` : "transparent",
+                            background: active ? `${la}18` : "transparent",
                             color: "rgba(243,244,246,.98)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            transition: "background 0.1s, border-color 0.1s",
+                            display: "flex", alignItems: "center", gap: 10,
+                            transition: "background 0.1s",
                           }}
                         >
-                          {/* Logo or accent dot */}
-                          {lobby.logoUrl ? (
-                            <img
-                              src={lobby.logoUrl}
-                              alt=""
-                              style={{
-                                width: 30, height: 30,
-                                borderRadius: 6,
-                                objectFit: "cover",
-                                flexShrink: 0,
-                                border: `1px solid ${accent}44`,
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: 30, height: 30,
-                              borderRadius: 6,
-                              flexShrink: 0,
-                              background: `${accent}33`,
-                              border: `1px solid ${accent}55`,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 13,
-                            }}>
-                              📌
-                            </div>
-                          )}
+                          {/* Logo or initial */}
+                          <div style={{
+                            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                            background: lobby.logoUrl ? "rgba(0,0,0,0.3)" : `${la}28`,
+                            border: `1px solid ${la}40`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            overflow: "hidden",
+                          }}>
+                            {lobby.logoUrl ? (
+                              <img src={lobby.logoUrl} alt={lobby.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 3 }} />
+                            ) : (
+                              <span style={{ fontSize: 13, fontWeight: 900, color: la }}>
+                                {lobby.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
 
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              marginBottom: 2,
-                            }}>
-                              <span style={{
-                                fontWeight: 800,
-                                fontSize: 13,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {lobby.name}
-                              </span>
+                              </div>
                               {lobby.verified && (
-                                <span style={{
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  color: "#22C55E",
-                                  background: "rgba(34,197,94,0.12)",
-                                  border: "1px solid rgba(34,197,94,0.25)",
-                                  padding: "1px 5px",
-                                  borderRadius: 4,
-                                  letterSpacing: "0.08em",
-                                  flexShrink: 0,
-                                }}>
-                                  ✓ VERIFIED
-                                </span>
+                                <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, background: `${la}20`, border: `1px solid ${la}40`, color: la, flexShrink: 0 }}>✓</span>
                               )}
                               {lobby.moduleType && lobby.moduleType !== "NONE" && (
-                                <span style={{
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  color: accent,
-                                  background: `${accent}22`,
-                                  border: `1px solid ${accent}44`,
-                                  padding: "1px 5px",
-                                  borderRadius: 4,
-                                  letterSpacing: "0.08em",
-                                  flexShrink: 0,
-                                }}>
-                                  {MODULE_LABELS[lobby.moduleType] ?? lobby.moduleType}
+                                <span style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace", flexShrink: 0 }}>
+                                  {MODULE_LABELS[lobby.moduleType] || lobby.moduleType}
                                 </span>
                               )}
                             </div>
                             {lobby.description && (
-                              <div style={{
-                                fontSize: 11,
-                                opacity: 0.5,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}>
+                              <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {lobby.description}
                               </div>
                             )}
                           </div>
 
-                          {/* Room/member counts */}
                           {lobby._count && (
-                            <div style={{
-                              fontSize: 11,
-                              opacity: 0.5,
-                              whiteSpace: "nowrap",
-                              flexShrink: 0,
-                              textAlign: "right",
-                            }}>
+                            <div style={{ fontSize: 11, opacity: 0.5, whiteSpace: "nowrap", flexShrink: 0, textAlign: "right" }}>
                               <div>{lobby._count.rooms} rooms</div>
                               <div>{lobby._count.members} members</div>
                             </div>
@@ -382,14 +379,14 @@ if (searchRef.current) clearTimeout(searchRef.current);
                   </>
                 )}
 
-                {/* ── Rooms section ─────────────────────────────────────── */}
+                {/* Rooms */}
                 {roomResults.length > 0 && (
                   <>
                     <SectionLabel label="ROOMS" />
                     {roomResults.map((room, i) => {
                       const globalIdx = pinnedResults.length + i;
                       const active = globalIdx === idx;
-                      const accent = room.lobby?.accentColor ?? "#7C3AED";
+                      const ra = room.lobby?.accentColor ?? accent ?? "#7C3AED";
                       return (
                         <button
                           key={room.id}
@@ -398,52 +395,31 @@ if (searchRef.current) clearTimeout(searchRef.current);
                           onMouseDown={e => e.preventDefault()}
                           onClick={() => choose(globalIdx)}
                           style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "9px 12px",
-                            border: "none",
-                            borderLeft: `3px solid ${active ? accent : "transparent"}`,
+                            width: "100%", textAlign: "left",
+                            padding: "9px 12px", border: "none",
+                            borderLeft: `3px solid ${active ? ra : "transparent"}`,
                             cursor: "pointer",
-                            background: active ? "rgba(124,58,237,.14)" : "transparent",
+                            background: active ? `${ra}18` : "transparent",
                             color: "rgba(243,244,246,.98)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
+                            display: "flex", alignItems: "center", gap: 10,
                             transition: "background 0.1s",
                           }}
                         >
-                          {/* Room icon */}
                           <div style={{
-                            width: 26, height: 26,
-                            borderRadius: 6,
-                            flexShrink: 0,
-                            background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 11,
+                            width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
                           }}>
                             {room.locked ? "🔒" : "#"}
                           </div>
-
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              fontWeight: 700,
-                              fontSize: 13,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {room.name}
                             </div>
                             {room.lobby && (
-                              <div style={{ fontSize: 11, opacity: 0.45 }}>
-                                in {room.lobby.name}
-                              </div>
+                              <div style={{ fontSize: 11, opacity: 0.45 }}>in {room.lobby.name}</div>
                             )}
                           </div>
-
                           <div style={{ fontSize: 11, opacity: 0.5, whiteSpace: "nowrap", flexShrink: 0 }}>
                             {typeof room._count?.members === "number"
                               ? `${room._count.members} online`
@@ -455,7 +431,7 @@ if (searchRef.current) clearTimeout(searchRef.current);
                   </>
                 )}
 
-                {/* ── People section ────────────────────────────────────── */}
+                {/* People */}
                 {peopleResults.length > 0 && (
                   <>
                     <SectionLabel label="PEOPLE" />
@@ -470,46 +446,28 @@ if (searchRef.current) clearTimeout(searchRef.current);
                           onMouseDown={e => e.preventDefault()}
                           onClick={() => choose(globalIdx)}
                           style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "9px 12px",
-                            border: "none",
+                            width: "100%", textAlign: "left",
+                            padding: "9px 12px", border: "none",
                             borderLeft: `3px solid ${active ? "#7C3AED" : "transparent"}`,
                             cursor: "pointer",
                             background: active ? "rgba(124,58,237,.14)" : "transparent",
                             color: "rgba(243,244,246,.98)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
+                            display: "flex", alignItems: "center", gap: 10,
                           }}
                         >
                           <div style={{
-                            width: 26, height: 26,
-                            borderRadius: "50%",
-                            flexShrink: 0,
-                            background: "rgba(124,58,237,0.25)",
-                            border: "1px solid rgba(124,58,237,0.4)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 11,
-                            fontWeight: 700,
+                            width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                            background: "rgba(124,58,237,0.25)", border: "1px solid rgba(124,58,237,0.4)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 700,
                           }}>
                             {pickFirstString(person?.name, person?.username, "?").charAt(0).toUpperCase()}
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{
-                              fontWeight: 700,
-                              fontSize: 13,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {pickFirstString(person?.name, person?.username, person?.id)}
                             </div>
-                            <div style={{ fontSize: 11, opacity: 0.45 }}>
-                              {person?.role ?? "member"}
-                            </div>
+                            <div style={{ fontSize: 11, opacity: 0.45 }}>{person?.role ?? "member"}</div>
                           </div>
                         </button>
                       );
@@ -520,14 +478,13 @@ if (searchRef.current) clearTimeout(searchRef.current);
             )}
           </div>
 
-          {/* Browse button */}
+          {/* Action buttons */}
           <button type="button" className="weered-btn" onClick={openBrowse}>
             Browse Rooms
           </button>
           <button type="button" className="weered-btn" onClick={() => setShowLobbyInvite(true)}>
             Invite
           </button>
-
           <button
             type="button"
             className="weered-btn"
@@ -538,6 +495,7 @@ if (searchRef.current) clearTimeout(searchRef.current);
           </button>
         </div>
       </div>
+
       {showLobbyInvite && (
         <InviteModal
           type="LOBBY"
@@ -550,14 +508,11 @@ if (searchRef.current) clearTimeout(searchRef.current);
   );
 }
 
-// ── Section divider label ──────────────────────────────────────────────────
 function SectionLabel({ label }: { label: string }) {
   return (
     <div style={{
       padding: "7px 14px 4px",
-      fontSize: 9,
-      fontWeight: 800,
-      letterSpacing: "0.12em",
+      fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
       color: "rgba(148,163,184,0.35)",
       borderTop: "1px solid rgba(255,255,255,0.05)",
     }}>
