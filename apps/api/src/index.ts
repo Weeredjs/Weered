@@ -22,7 +22,7 @@ type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?:
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
-type RoomUser = { id: string; name: string; role?: Role };
+type RoomUser = { id: string; name: string; role?: Role; avatarColor?: string | null; avatar?: string | null };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
 
@@ -111,8 +111,8 @@ async function seedLobbies() {
     try {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
-        create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
+        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
+        create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
       });
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
   }
@@ -360,11 +360,17 @@ function leaveRoom(ws: Sock) {
 
   room.sockets.delete(ws);
   if (ws.user) {
-    const existed = room.users.delete(ws.user.id);
-    if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
-    // Do NOT call publishState here — presence:leave is the correct incremental update.
-    // Broadcasting a full presence:state snapshot here overwrites other clients' local state
-    // and causes the presence flicker bug when users navigate between rooms.
+    // Only remove the user from the room if they have NO other sockets still connected.
+    // During a page refresh the new socket joins before the old one fires "close",
+    // so deleting by userId here would evict the user who already reconnected.
+    let userHasOtherSocket = false;
+    for (const s of room.sockets) {
+      if (s.user?.id === ws.user.id) { userHasOtherSocket = true; break; }
+    }
+    if (!userHasOtherSocket) {
+      const existed = room.users.delete(ws.user.id);
+      if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
+    }
   }
   ws.roomId = undefined;
 
