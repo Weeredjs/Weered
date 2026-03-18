@@ -177,72 +177,10 @@ export default function LobbyHeaderBar({
       className={ui.panel}
       style={{
         position: "relative", flexShrink: 0,
-        // Accent strip on top border when branded
-        ...(isBranded && accent ? {
-          borderTopColor: `${accent}55`,
-          boxShadow: `0 1px 0 0 ${accent}22`,
-        } : {}),
+        padding: 0,
       }}
     >
-      {/* Branded accent strip */}
-      {isBranded && accent && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: 2, borderRadius: "16px 16px 0 0",
-          background: `linear-gradient(90deg, transparent, ${accent}99, ${accent}, ${accent}99, transparent)`,
-          pointerEvents: "none",
-        }} />
-      )}
-
-      <div className={ui.panelHeader}>
-        <div className="min-w-0" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-
-          {/* ── Lobby logo in header (when branded) ── */}
-          {isBranded && (
-            <div style={{
-              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-              background: logoUrl ? "rgba(0,0,0,0.3)" : `${accent || "#7C3AED"}28`,
-              border: `1.5px solid ${accent || "#7C3AED"}50`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              overflow: "hidden",
-              boxShadow: `0 0 10px ${accent || "#7C3AED"}30`,
-            }}>
-              {logoUrl ? (
-                <img src={logoUrl} alt={title} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 3 }} />
-              ) : (
-                <span style={{ fontSize: 14, fontWeight: 900, color: accent || "#7C3AED" }}>{initial}</span>
-              )}
-            </div>
-          )}
-
-          <div className="min-w-0">
-            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <div
-                className={ui.panelTitle}
-                style={isBranded && accent ? { color: accent } : undefined}
-              >
-                {title}
-              </div>
-              {verified && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 999,
-                  background: `${accent || "#7C3AED"}20`,
-                  border: `1px solid ${accent || "#7C3AED"}50`,
-                  color: accent || "#a78bfa",
-                  letterSpacing: "0.05em",
-                }}>
-                  ✓
-                </span>
-              )}
-              {subtitle && <div className={`${ui.muted} text-xs truncate`}>{subtitle}</div>}
-            </div>
-            <div className={`${ui.muted} text-xs mt-0.5`}>
-              Browse content, find rooms, and connect with people.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pb-3">
+      <div className="px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
           {/* Mode tabs */}
           <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
