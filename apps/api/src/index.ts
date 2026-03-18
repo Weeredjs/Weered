@@ -22,7 +22,7 @@ type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?:
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
-type RoomUser = { id: string; name: string; role: string; avatarColor?: string | null; avatar?: string | null; }
+type RoomUser = { id: string; name: string; role?: Role };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
 
@@ -55,7 +55,6 @@ type RoomState = {
 };
 
 const rooms = new Map<string, RoomState>();
-const lobbyIds = new Set<string>();
 // Title/thumbnail for article rooms — populated by feed worker, used in ensureRoomLoaded
 const articleRoomMeta = new Map<string, { name: string; thumbnail?: string }>();
 let wss: WebSocketServer;
@@ -112,18 +111,12 @@ async function seedLobbies() {
     try {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
-        create: { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
+        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
+        create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
       });
-      lobbyIds.add(l.id);
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
   }
-  // Also load any non-seeded lobbies from DB so they're protected too
-  try {
-    const all = await prisma.lobby.findMany({ select: { id: true } });
-    for (const l of all) lobbyIds.add(l.id);
-  } catch {}
-  console.log("[weered] lobbies seeded", [...lobbyIds]);
+  console.log("[weered] lobbies seeded");
 }
 
 async function globalAudit(actorId: string, actorName: string, action: string, targetId?: string, targetName?: string, meta?: any) {
@@ -552,7 +545,8 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, role: roleOf(room, ws.user.id), globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
+    room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
 
@@ -2186,17 +2180,12 @@ app.post("/dm/:peerId", async (req, reply) => {
         : [];
       const avatarMap = new Map(userAvatars.map(u => [u.id, u]));
 
-const memberPresenceRaw = (m.crew.members || []).map((cm: any) => {
+      const memberPresence = (m.crew.members || []).map((cm: any) => {
         let roomId: string | null = null; let roomName: string | null = null;
         for (const [rid, rs] of rooms) { if (rs.users.has(cm.userId)) { roomId = rid; roomName = rs.name || rid; break; } }
         const ua = avatarMap.get(cm.userId);
         return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName, avatar: ua?.avatar || null, avatarColor: ua?.avatarColor || null };
       });
-      const crewRoomIds = [...new Set(memberPresenceRaw.map((m: any) => m.roomId).filter(Boolean))] as string[];
-      const crewLobbySet = crewRoomIds.length
-        ? new Set((await prisma.lobby.findMany({ where: { id: { in: crewRoomIds } }, select: { id: true } })).map(l => l.id))
-        : new Set<string>();
-      const memberPresence = memberPresenceRaw.map((m: any) => ({ ...m, roomIsLobby: m.roomId ? crewLobbySet.has(m.roomId) : false }));
       return { ...m.crew, myRole: m.role, members: memberPresence };
     }));
     return reply.send({ crews });
