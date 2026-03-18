@@ -29,7 +29,7 @@ type Ctx = {
   apiBase: string; wsUrl: string;
   token: string; me: any; authed: boolean; globalRole: string;
   wsReady: boolean; wsState: number;
-  activeRoomId: string; joinedRoomId: string;
+  activeRoomId: string; joinedRoomId: string; currentLobbyId: string;
   setActiveRoomId: (id: string) => void;
   users: RoomUser[]; msgs: ChatMsg[];
   usersByRoom: Record<string, RoomUser[]>;
@@ -94,6 +94,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   // ── Room state ──
   const [activeRoomId,  setActiveRoomId ] = useState("");
   const [joinedRoomId,  setJoinedRoomId ] = useState("");
+  const [currentLobbyId, setCurrentLobbyId] = useState("");
   const [usersByRoom,   setUsersByRoom  ] = useState<Record<string, RoomUser[]>>({});
   const [msgsByRoom,    setMsgsByRoom   ] = useState<Record<string, ChatMsg[]>>({});
   const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
@@ -176,6 +177,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       const rid = seg ? decodeURIComponent(seg) : "lobby";
       activeRoomIdRef.current = rid;
       setActiveRoomId(rid);
+      // Set lobby context from path immediately (WS will confirm/override later)
+      if (seg) setCurrentLobbyId(decodeURIComponent(seg));
       return;
     }
     } catch {}
@@ -265,6 +268,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), thumbnail: msg.thumbnail || undefined, ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
+        // Track lobby context from the server's lobbyId field
+        if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
         // activeRoomId managed by path effect — no override needed here
         setJoinedRoomId(prev => {
           if (prev && prev !== rid) {
@@ -552,9 +557,9 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     apiBase: API, wsUrl: WS_URL,
     token, me, authed, globalRole,
     wsReady, wsState,
-    activeRoomId, joinedRoomId, setActiveRoomId,
+    activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom,
+    usersByRoom, msgsByRoom, metaByRoom, adminByRoom,
     rooms, join, knock,
     devLogin, logout,
     sendChat, renameRoom,

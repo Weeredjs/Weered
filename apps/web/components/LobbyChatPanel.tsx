@@ -21,9 +21,26 @@ export default function LobbyChatPanel(
   const activeRoomId = String(ctx?.activeRoomId || "");
   const joinedRoomId = String(ctx?.joinedRoomId || "");
   const joinStatus = String(ctx?.joinStatus || "idle");
-  const msgs = Array.isArray(ctx?.msgs) ? ctx.msgs : [];
-  const meta = ctx?.meta || null;
-  const admin = ctx?.admin || null;
+
+  // Resolve the effective room ID — prefer the explicit prop over activeRoomId
+  const effectiveRoomId = (() => {
+    let forced = String(props.roomId || "").trim();
+    if (forced.startsWith("room:")) forced = forced.slice(5);
+    try { forced = decodeURIComponent(forced); } catch {}
+    return forced || activeRoomId;
+  })();
+
+  // Read msgs and meta from the effective room, not just activeRoomId
+  const msgsByRoom = ctx?.msgsByRoom || {};
+  const metaByRoom = ctx?.metaByRoom || {};
+  const adminByRoom = ctx?.adminByRoom || {};
+  const statusByRoom = ctx?.statusByRoom || {};
+
+  const msgs = Array.isArray(msgsByRoom[effectiveRoomId]) ? msgsByRoom[effectiveRoomId]
+    : Array.isArray(ctx?.msgs) ? ctx.msgs : [];
+  const meta = metaByRoom[effectiveRoomId] || ctx?.meta || null;
+  const admin = adminByRoom[effectiveRoomId] || ctx?.admin || null;
+  const effectiveJoinStatus = statusByRoom[effectiveRoomId] || joinStatus;
 
   const displayRoomName = String(
     meta?.name || meta?.title || meta?.label || admin?.name || ""
@@ -39,18 +56,12 @@ export default function LobbyChatPanel(
     try { ctx?.setActiveRoomId?.(forced); } catch {}
   }, [props.roomId]);
 
-  const roomLabel = useMemo(() => {
-    let forced = String(props.roomId || "").trim();
-    let active = String(activeRoomId || "").trim();
-    if (forced.startsWith("room:")) forced = forced.slice(5);
-    if (active.startsWith("room:")) active = active.slice(5);
-    return (forced || active || "").trim();
-  }, [props.roomId, activeRoomId]);
+  const roomLabel = effectiveRoomId;
 
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const joinedStrict = Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && joinStatus === "joined");
+  const joinedStrict = Boolean(effectiveRoomId && joinedRoomId && effectiveRoomId === joinedRoomId && effectiveJoinStatus === "joined");
   const joinedByMeta = Boolean((meta || admin) && !meta?.locked && !admin?.locked);
   const canType = (joinedStrict || joinedByMeta) && !meta?.locked;
   const msgTrim = String(text || "").trim();
@@ -64,7 +75,7 @@ export default function LobbyChatPanel(
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
     return () => cancelAnimationFrame(id);
-  }, [msgs.length, activeRoomId]);
+  }, [msgs.length, effectiveRoomId]);
 
   const onSend = () => {
     if (!canType) return;

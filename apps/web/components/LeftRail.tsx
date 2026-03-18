@@ -149,7 +149,7 @@ function accentForRoom(id: string): string {
 export default function LeftRail() {
   const { openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
-  const { users, joinedRoomId, activeRoomId, me, globalRole } = useWeered();
+  const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId } = useWeered() as any;
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
@@ -160,7 +160,9 @@ export default function LeftRail() {
     return m ? `r/${m[1]}` : "";
   }, [pathname]);
 
-  const lobbyHrefMain = sub ? `/lobby?sub=${encodeURIComponent(sub)}` : "/lobby";
+  const lobbyHrefMain = currentLobbyId && currentLobbyId !== "lobby"
+    ? `/lobby/${encodeURIComponent(currentLobbyId)}`
+    : sub ? `/lobby?sub=${encodeURIComponent(sub)}` : "/lobby";
 
   const isLobbyActive = pathname.startsWith("/lobby");
   const isHomeActive  = pathname.startsWith("/home") || pathname === "/";
