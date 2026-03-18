@@ -33,9 +33,6 @@ type Ctx = {
   setActiveRoomId: (id: string) => void;
   users: RoomUser[]; msgs: ChatMsg[];
   usersByRoom: Record<string, RoomUser[]>;
-  msgsByRoom: Record<string, ChatMsg[]>;
-  metaByRoom: Record<string, RoomMeta>;
-  adminByRoom: Record<string, AdminState>;
   meta: RoomMeta | null; admin: AdminState | null;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
   rooms: any[];
@@ -350,6 +347,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const m   = msg.msg as ChatMsg;
         if (!m?.id) return;
         setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), m].slice(-200) }));
+        // Dispatch DOM event so closed chat drawers can track unread
+        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } })); } catch {}
         return;
       }
 
