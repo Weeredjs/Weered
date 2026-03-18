@@ -33,6 +33,9 @@ type Ctx = {
   setActiveRoomId: (id: string) => void;
   users: RoomUser[]; msgs: ChatMsg[];
   usersByRoom: Record<string, RoomUser[]>;
+  msgsByRoom: Record<string, ChatMsg[]>;
+  metaByRoom: Record<string, RoomMeta>;
+  adminByRoom: Record<string, AdminState>;
   meta: RoomMeta | null; admin: AdminState | null;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
   rooms: any[];
