@@ -11,6 +11,17 @@ const FEED_DOMAINS = new Set([
   "joe.fm", "podcasts.apple.com",
 ]);
 
+// Non-domain lobbies → map to a feed category so HomeFeed filters correctly
+const LOBBY_FEED_CATEGORY: Record<string, string> = {
+  "lobby":        "all",
+  "r/all":        "all",
+  "r/gaming":     "gaming",
+  "r/technology": "tech",
+  "r/worldnews":  "news",
+  "weered.ca":    "all",
+  "destiny2":     "gaming",
+};
+
 // Domains known to block iframes (X-Frame-Options: DENY)
 const IFRAME_BLOCKED = new Set([
   "google.com", "facebook.com", "twitter.com", "x.com",
@@ -23,9 +34,11 @@ interface Props {
 }
 
 export default function LobbyContent({ lobbyId, initialUrl }: Props) {
-  const hasFeed   = FEED_DOMAINS.has(lobbyId);
-  const isBlocked = IFRAME_BLOCKED.has(lobbyId);
-  const siteUrl   = initialUrl || `https://${lobbyId}`;
+  const hasFeed      = FEED_DOMAINS.has(lobbyId);
+  const lobbyCategory = LOBBY_FEED_CATEGORY[lobbyId];
+  const showFeed     = hasFeed || lobbyCategory !== undefined;
+  const isBlocked    = IFRAME_BLOCKED.has(lobbyId);
+  const siteUrl      = initialUrl || `https://${lobbyId}`;
 
   const [iframeUrl, setIframeUrl] = useState(siteUrl);
   const [inputVal, setInputVal]   = useState(siteUrl);
@@ -53,9 +66,9 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
     if (e.key === "Enter") navigate(inputVal);
   }
 
-  // If we have structured feed data, show the feed
-  if (hasFeed && !initialUrl) {
-    return <HomeFeed domain={lobbyId} />;
+  // If we have structured feed data (domain or lobby), show the feed
+  if (showFeed && !initialUrl) {
+    return <HomeFeed domain={hasFeed ? lobbyId : undefined} defaultCategory={lobbyCategory} />;
   }
 
   // Otherwise show embedded browser
