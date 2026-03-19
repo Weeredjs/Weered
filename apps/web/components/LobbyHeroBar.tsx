@@ -71,8 +71,8 @@ export default function LobbyHeroBar({
       {/* Background */}
       {bannerUrl ? (
         <>
-          <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.18, filter: "blur(2px)" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 0%, rgba(10,10,18,0.88) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.55 }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,18,0.25) 0%, rgba(10,10,18,0.75) 100%)" }} />
         </>
       ) : (
         <>

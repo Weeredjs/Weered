@@ -436,10 +436,12 @@ export default function LeftRail() {
                       border: `1.5px solid ${aColor}44`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontWeight: 700, fontSize: 11, color: aColor,
-                      position: "relative", overflow: "hidden",
+                      position: "relative",
                     }}>
-                      {userAvatar ? <img src={userAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase() ?? "?"}
-                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 7, height: 7, borderRadius: "50%", background: "#22c55e", border: "1.5px solid var(--weered-bg, #0f1117)", boxShadow: "0 0 4px #22c55e" }} />
+                      <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {userAvatar ? <img src={userAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: "50%", background: "#22c55e", border: "2px solid var(--weered-bg, #0f1117)", boxShadow: "0 0 4px #22c55e" }} />
                     </div>
                   );
                 })()}
