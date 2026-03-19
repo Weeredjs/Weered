@@ -192,12 +192,31 @@ button:hover, [role="button"]:hover {
   overflow-x: hidden;
 }
 
-/* Collapse rails on smaller screens */
+/* Collapse rails on smaller screens — handled by useRailMode + ShellGate JS */
+/* The old CSS media query is removed; ShellGate now renders icon strips instead */
 @media (max-width: 1099px) {
-  .weered-shell { gap: 0; padding: 0; }
-  .weered-left  { display: none; }
-  .weered-right { display: none; }
-  .weered-center { width: 100%; padding: 12px; }
+  .weered-shell { gap: 10px; padding: 10px 10px 0 10px; }
+  .weered-center { width: 100%; }
+}
+
+/* ── Rail overlay animations ────────────────────────────────── */
+@keyframes weeredFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes weeredSlideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes weeredSlideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Icon strip button reset ────────────────────────────────── */
+.weered-icon-strip button {
+  border: none !important;
+  padding: 0 !important;
 }
 
 /* Center content padding */
