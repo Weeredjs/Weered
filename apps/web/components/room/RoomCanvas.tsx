@@ -23,6 +23,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
 const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
   { id: "youtube", icon: "▶",  label: "YouTube", live: true  },
+  { id: "twitch",  icon: "📺", label: "Twitch",  live: true  },
   { id: "browser", icon: "🌐", label: "Browser", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
   { id: "video",   icon: "📹", label: "Video",   live: false },
@@ -49,6 +50,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [browserUrl, setBrowserUrl]     = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
   const [iframeBlocked, setIframeBlocked] = useState(false);
+
+  // Twitch state
+  const [twitchChannel, setTwitchChannel] = useState<string>("");
+  const [twitchInput, setTwitchInput]     = useState<string>("");
 
   // Chat state — open by default
   const [chatOpen, setChatOpen]         = useState(true);
@@ -82,7 +87,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   }
 
   useEffect(() => {
-    const art = new URLSearchParams(window.location.search).get("article");
+    const params = new URLSearchParams(window.location.search);
+    const art = params.get("article");
     if (art) {
       const decoded = decodeURIComponent(art);
       setArticleUrl(decoded);
@@ -90,6 +96,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       setBrowserInput(decoded);
       setIframeBlocked(false);
       setStageMode("browser");
+    }
+    const twitch = params.get("twitch");
+    if (twitch) {
+      const channel = decodeURIComponent(twitch).trim().toLowerCase();
+      setTwitchChannel(channel);
+      setTwitchInput(channel);
+      setStageMode("twitch");
     }
   }, []);
 
@@ -346,7 +359,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
+        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : stageMode === "twitch" ? "clamp(320px, 52vh, 560px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
       >
         {!stageActive && (
           <div className="flex items-center px-4 h-10">
@@ -419,6 +432,46 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 />
               );
             })()}
+          </div>
+        )}
+
+        {/* ── Twitch stage ── */}
+        {stageActive && stageMode === "twitch" && (
+          <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(145,70,255,0.08)", borderBottom: "1px solid rgba(145,70,255,0.15)", flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: "rgba(145,70,255,0.6)" }}>📺</span>
+              <input
+                value={twitchInput}
+                onChange={e => setTwitchInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    const ch = twitchInput.trim().toLowerCase().replace(/^https?:\/\/(www\.)?twitch\.tv\//i, "").split(/[/?#]/)[0];
+                    if (ch) { setTwitchChannel(ch); setTwitchInput(ch); }
+                  }
+                }}
+                placeholder="Enter Twitch channel name..."
+                style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(145,70,255,0.15)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
+              />
+              {twitchChannel && (
+                <a href={`https://www.twitch.tv/${twitchChannel}`} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(145,70,255,0.15)", background: "rgba(145,70,255,0.08)", color: "rgba(216,180,254,0.7)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Twitch</a>
+              )}
+              <button onClick={() => { setTwitchChannel(""); setTwitchInput(""); setStageMode(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
+            </div>
+            {twitchChannel ? (
+              <iframe
+                src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=false`}
+                style={{ flex: 1, border: "none", display: "block", width: "100%" }}
+                allowFullScreen
+                allow="autoplay; encrypted-media"
+                title={`Twitch - ${twitchChannel}`}
+              />
+            ) : (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "rgba(0,0,0,0.2)" }}>
+                <div style={{ fontSize: 40, opacity: 0.2 }}>📺</div>
+                <div style={{ fontSize: 13, opacity: 0.4 }}>Enter a Twitch channel name above to start watching</div>
+                <div style={{ fontSize: 11, opacity: 0.25 }}>You can paste a full twitch.tv URL or just the channel name</div>
+              </div>
+            )}
           </div>
         )}
       </div>
