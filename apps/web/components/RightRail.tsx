@@ -294,8 +294,12 @@ function FriendsPanel() {
     const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
     const userId      = String(f.id ?? f.userId ?? f.username ?? "");
     const rawRoomId   = String(f.roomId || "").replace(/^room:/, "");
-    // ── Use roomIsLobby from API — no more heuristics ──
-    const joinHref    = rawRoomId ? presenceHref(rawRoomId, Boolean(f.roomIsLobby)) : null;
+    // ── Use roomIsLobby from API, fall back to smart detection ──
+    const isLobby     = f.roomIsLobby === true
+      || (f.roomName || "").toLowerCase().includes("lobby")
+      || rawRoomId === "lobby"
+      || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/i.test(rawRoomId) && rawRoomId.length < 30 && !/^[a-z0-9]{20,}$/i.test(rawRoomId));
+    const joinHref    = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
 
     return (
       <div key={f.id}
@@ -375,8 +379,12 @@ function CrewPanel() {
           {allMembers.map((m: any) => {
             const userId     = String(m.userId ?? m.id ?? "");
             const rawRoomId  = String(m.roomId || "").replace(/^room:/, "");
-            // ── Use roomIsLobby from API ──
-            const joinHref   = rawRoomId ? presenceHref(rawRoomId, Boolean(m.roomIsLobby)) : null;
+            // ── Use roomIsLobby from API, fall back to smart detection ──
+            const isLobby    = m.roomIsLobby === true
+              || (m.roomName || "").toLowerCase().includes("lobby")
+              || rawRoomId === "lobby"
+              || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/i.test(rawRoomId) && rawRoomId.length < 30 && !/^[a-z0-9]{20,}$/i.test(rawRoomId));
+            const joinHref   = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
             return (
               <div key={m.userId}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", cursor: "pointer", transition: "background 0.12s" }}
