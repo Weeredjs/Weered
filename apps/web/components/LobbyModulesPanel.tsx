@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 
+import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders() {
@@ -27,10 +29,11 @@ const ACCENT_DESTINY = "#4F88C6";
 
 // ── Twitch Streams ───────────────────────────────────────────────────────────
 
-function TwitchStreams({ gameName = "Destiny 2" }: { gameName?: string }) {
+function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameName?: string; lobbyId?: string; accentColor?: string }) {
   const [streams, setStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStream, setActiveStream] = useState<string | null>(null);
+  const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
 
   useEffect(() => {
     apiFetch(`/twitch/streams?game=${encodeURIComponent(gameName)}`)
@@ -39,6 +42,21 @@ function TwitchStreams({ gameName = "Destiny 2" }: { gameName?: string }) {
   }, [gameName]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading streams...</div>;
+
+  function handleCardClick(s: any) {
+    setInterceptStream({
+      userLogin: s.userLogin || s.user_login || "",
+      userName: s.userName || s.user_name || "",
+      title: s.title || "",
+      viewerCount: Number(s.viewerCount || s.viewer_count || 0),
+      thumbnailUrl: s.thumbnailUrl || s.thumbnail_url || "",
+      gameName,
+    });
+  }
+
+  function handleWatchHere(stream: StreamInfo) {
+    setActiveStream(stream.userLogin);
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -64,7 +82,7 @@ function TwitchStreams({ gameName = "Destiny 2" }: { gameName?: string }) {
         {streams.map(s => (
           <div
             key={s.id}
-            onClick={() => setActiveStream(s.userLogin)}
+            onClick={() => handleCardClick(s)}
             style={{
               ...S.card,
               cursor: "pointer",
@@ -95,6 +113,14 @@ function TwitchStreams({ gameName = "Destiny 2" }: { gameName?: string }) {
       {streams.length === 0 && (
         <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No live {gameName} streams right now.</div>
       )}
+
+      <StreamInterceptModal
+        stream={interceptStream}
+        lobbyId={lobbyId}
+        accentColor={accentColor}
+        onClose={() => setInterceptStream(null)}
+        onWatchHere={handleWatchHere}
+      />
     </div>
   );
 }
@@ -476,7 +502,7 @@ export default function LobbyModulesPanel({
 
       {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px" }}>
-        {tab === "streams"  && <TwitchStreams gameName={gameName} />}
+        {tab === "streams"  && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"      && <LfgBoard lobbyId={lobbyId} />}
         {tab === "weekly"   && <BungieWeekly />}
         {tab === "guardian"  && <GuardianLookup />}

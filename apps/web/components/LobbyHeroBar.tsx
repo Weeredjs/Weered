@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -42,6 +43,7 @@ export default function LobbyHeroBar({
 
   const [stream, setStream]           = useState<FeaturedStream | null>(null);
   const [streamLoading, setLoading]   = useState(false);
+  const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
 
   useEffect(() => {
     if (!twitchGame) return;
@@ -148,12 +150,39 @@ export default function LobbyHeroBar({
             {streamLoading
               ? <StreamSkeleton accent={accent} />
               : stream
-                ? <a href={stream.url || "#"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}><StreamCard stream={stream} accent={accent} /></a>
+                ? <div
+                    onClick={() => setInterceptStream({
+                      userLogin: stream.streamer?.toLowerCase() || "",
+                      userName: stream.streamer || "",
+                      title: stream.title || "",
+                      viewerCount: stream.viewers || 0,
+                      thumbnailUrl: stream.thumbnail || "",
+                      gameName: twitchGame,
+                    })}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <LiveStreamCard stream={stream} accent={accent} />
+                  </div>
                 : <EmptyStream accent={accent} game={twitchGame} />
             }
           </div>
         )}
       </div>
+
+      <StreamInterceptModal
+        stream={interceptStream}
+        lobbyId={lobbyId}
+        accentColor={accent}
+        onClose={() => setInterceptStream(null)}
+        onWatchHere={() => {
+          // Dispatch event so the modules panel can pick it up and open inline
+          if (interceptStream) {
+            window.dispatchEvent(new CustomEvent("weered:stream:watchhere", {
+              detail: { channel: interceptStream.userLogin },
+            }));
+          }
+        }}
+      />
     </div>
   );
 }
@@ -167,21 +196,50 @@ function StatChip({ value, label }: { value: number; label: string }) {
   );
 }
 
-function StreamCard({ stream, accent }: { stream: FeaturedStream; accent: string }) {
-  const [err, setErr] = React.useState(false);
+function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: string }) {
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
+  const channel = stream.streamer?.toLowerCase() || "";
+
   return (
     <div
-      style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accent}33`, background: "rgba(0,0,0,0.4)", boxShadow: `0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px ${accent}1a`, transition: "transform 0.15s, box-shadow 0.15s" }}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = "translateY(-2px)"; el.style.boxShadow = `0 8px 28px rgba(0,0,0,0.6), 0 0 0 1px ${accent}44`; }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = "translateY(0)"; el.style.boxShadow = `0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px ${accent}1a`; }}
+      style={{
+        borderRadius: 10, overflow: "hidden",
+        border: `1px solid ${accent}33`,
+        background: "rgba(0,0,0,0.4)",
+        boxShadow: `0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px ${accent}1a`,
+        transition: "transform 0.15s, box-shadow 0.15s",
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.transform = "translateY(-2px)";
+        el.style.boxShadow = `0 8px 28px rgba(0,0,0,0.6), 0 0 0 1px ${accent}44`;
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.transform = "translateY(0)";
+        el.style.boxShadow = `0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px ${accent}1a`;
+      }}
     >
-      <div style={{ position: "relative", aspectRatio: "16/9", background: `${accent}10` }}>
-        {!err && stream.thumbnail
-          ? <img src={stream.thumbnail} alt={stream.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={() => setErr(true)} />
-          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 28, opacity: 0.25 }}>▶</span></div>
-        }
-        <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "#ef4444", color: "#fff", letterSpacing: "0.06em" }}>LIVE</div>
-        <div style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)" }}>
+      <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
+        {channel ? (
+          <>
+            <iframe
+              src={`https://player.twitch.tv/?channel=${channel}&parent=${hostname}&muted=true&autoplay=true&controls=false`}
+              width="100%"
+              height="100%"
+              style={{ border: "none", display: "block", pointerEvents: "none" }}
+              allow="autoplay"
+            />
+            {/* Click overlay — iframe pointerEvents is none so this catches clicks */}
+            <div style={{ position: "absolute", inset: 0, cursor: "pointer" }} />
+          </>
+        ) : (
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 28, opacity: 0.25 }}>▶</span>
+          </div>
+        )}
+        <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "#ef4444", color: "#fff", letterSpacing: "0.06em", pointerEvents: "none" }}>LIVE</div>
+        <div style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)", pointerEvents: "none" }}>
           {stream.viewers.toLocaleString()} viewers
         </div>
       </div>
