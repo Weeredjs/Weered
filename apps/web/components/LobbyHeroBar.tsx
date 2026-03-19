@@ -197,8 +197,17 @@ function StatChip({ value, label }: { value: number; label: string }) {
 }
 
 function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: string }) {
-  const hostname = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
-  const channel = stream.streamer?.toLowerCase() || "";
+  const [tick, setTick] = React.useState(0);
+
+  React.useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Twitch thumbnails support {width}x{height} — append cache bust to force refresh
+  const thumb = (stream.thumbnail || "")
+    .replace("{width}", "440").replace("{height}", "248");
+  const src = thumb ? `${thumb}${thumb.includes("?") ? "&" : "?"}t=${tick}` : "";
 
   return (
     <div
@@ -208,6 +217,7 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
         background: "rgba(0,0,0,0.4)",
         boxShadow: `0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px ${accent}1a`,
         transition: "transform 0.15s, box-shadow 0.15s",
+        cursor: "pointer",
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
@@ -221,25 +231,15 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
       }}
     >
       <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
-        {channel ? (
-          <>
-            <iframe
-              src={`https://player.twitch.tv/?channel=${channel}&parent=${hostname}&muted=true&autoplay=true&controls=false`}
-              width="100%"
-              height="100%"
-              style={{ border: "none", display: "block", pointerEvents: "none" }}
-              allow="autoplay"
-            />
-            {/* Click overlay — iframe pointerEvents is none so this catches clicks */}
-            <div style={{ position: "absolute", inset: 0, cursor: "pointer" }} />
-          </>
+        {src ? (
+          <img src={src} alt={stream.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         ) : (
           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: 28, opacity: 0.25 }}>▶</span>
           </div>
         )}
-        <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "#ef4444", color: "#fff", letterSpacing: "0.06em", pointerEvents: "none" }}>LIVE</div>
-        <div style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)", pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "#ef4444", color: "#fff", letterSpacing: "0.06em" }}>LIVE</div>
+        <div style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)" }}>
           {stream.viewers.toLocaleString()} viewers
         </div>
       </div>
