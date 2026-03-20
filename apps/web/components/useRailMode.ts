@@ -31,10 +31,12 @@ function getTier(w: number): "wide" | "mid" | "narrow" {
 
 export function useRailMode(): RailMode {
   const pathname = usePathname() || "";
-  const [width, setWidth] = useState(1600); // Default to wide — real value set on mount
+  const [mounted, setMounted] = useState(false);
+  const [width, setWidth] = useState(1600);
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     setWidth(window.innerWidth);
     const onResize = () => setWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
@@ -43,6 +45,11 @@ export function useRailMode(): RailMode {
 
   // Close overlay on route change
   useEffect(() => { setOverlay(null); }, [pathname]);
+
+  // Before mount, always return "full" for both rails to match SSR
+  if (!mounted) {
+    return { left: "full", right: "full", overlay: null, setOverlay, tier: "wide" };
+  }
 
   const tier = getTier(width);
   const priority = routePriority(pathname);
