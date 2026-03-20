@@ -8,6 +8,7 @@ import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
+import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -39,11 +40,10 @@ export default function LobbyIdPage() {
   const lobbyId = decodeURIComponent(String(params?.id ?? "lobby"));
   const isVerified = VERIFIED_DOMAINS.has(lobbyId);
 
-  const { join } = useWeered();
+  const { join, globalRole } = useWeered() as any;
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
-  const [view, setView] = useState<"feed" | "modules">("feed");
+  const [view, setView] = useState<"rooms" | "feed" | "modules">("rooms");
 
-  // ── Explicitly join the lobby room for presence + chat ──
   useEffect(() => {
     if (lobbyId) join(lobbyId);
   }, [lobbyId]);
@@ -66,6 +66,8 @@ export default function LobbyIdPage() {
           });
           if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH") {
             setView("modules");
+          } else {
+            setView("rooms");
           }
         }
       })
@@ -75,6 +77,8 @@ export default function LobbyIdPage() {
   const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
+  const isStaff    = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "ADMIN";
+  const showAdmin  = lobbyInfo?.verified || isStaff;
 
   return (
     <div
@@ -103,7 +107,6 @@ export default function LobbyIdPage() {
         overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}>
-        {/* Accent top strip */}
         {accent && (
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0, height: 2, zIndex: 10,
@@ -112,7 +115,6 @@ export default function LobbyIdPage() {
           }} />
         )}
 
-        {/* Hero bar — passes moduleType so it knows to fetch a stream */}
         <LobbyHeroBar
           lobbyId={lobbyId}
           lobbyName={lobbyInfo?.name || lobbyId}
@@ -127,38 +129,46 @@ export default function LobbyIdPage() {
           gameName={hasModules ? gameName : undefined}
         />
 
-        {/* View toggle */}
-        {hasModules && (
-          <div style={{
-            display: "flex", gap: 2, padding: "6px 14px",
-            borderBottom: "1px solid rgba(255,255,255,.06)",
-            background: accent ? `${accent}08` : "transparent",
-            flexShrink: 0,
-          }}>
+        {/* Tab bar — always visible */}
+        <div style={{
+          display: "flex", gap: 2, padding: "6px 14px",
+          borderBottom: "1px solid rgba(255,255,255,.06)",
+          background: accent ? `${accent}08` : "transparent",
+          flexShrink: 0,
+        }}>
+          <TabBtn active={view === "rooms"} accent={accent} onClick={() => setView("rooms")}>Rooms</TabBtn>
+          {hasModules && (
             <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>Modules</TabBtn>
-            <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>Feed</TabBtn>
-            {lobbyInfo?.verified && (
-              <a
-                href={`/lobby/${encodeURIComponent(lobbyId)}/admin`}
-                style={{
-                  marginLeft: "auto", padding: "5px 12px", borderRadius: 7,
-                  border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)",
-                  fontSize: 11, color: "rgba(148,163,184,.6)", textDecoration: "none",
-                  display: "flex", alignItems: "center", gap: 5,
-                }}
-              >
-                ⚙ Admin
-              </a>
-            )}
-          </div>
-        )}
+          )}
+          <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>Feed</TabBtn>
+
+          {showAdmin && (
+            <a
+              href={`/lobby/${encodeURIComponent(lobbyId)}/admin`}
+              style={{
+                marginLeft: "auto", padding: "5px 12px", borderRadius: 7,
+                border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)",
+                fontSize: 11, color: "rgba(148,163,184,.6)", textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 5,
+                transition: "background .15s, border-color .15s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)"; }}
+            >
+              ⚙ Admin
+            </a>
+          )}
+        </div>
 
         {/* Content */}
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          {view === "modules" && hasModules
-            ? <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
-            : <LobbyContent lobbyId={lobbyId} />
-          }
+          {view === "modules" && hasModules ? (
+            <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+          ) : view === "rooms" ? (
+            <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+          ) : (
+            <LobbyContent lobbyId={lobbyId} />
+          )}
         </div>
 
         <LobbyChatDrawer
@@ -178,6 +188,7 @@ function TabBtn({ active, accent, onClick, children }: { active: boolean; accent
       background: active ? (accent ? `${accent}25` : "rgba(124,58,237,.15)") : "transparent",
       color: active ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)",
       transition: "background .15s",
+      fontFamily: "inherit",
     }}>
       {children}
     </button>
