@@ -31,12 +31,11 @@ function getTier(w: number): "wide" | "mid" | "narrow" {
 
 export function useRailMode(): RailMode {
   const pathname = usePathname() || "";
-  const [width, setWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 1600
-  );
+  const [width, setWidth] = useState(1600); // Default to wide — real value set on mount
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
 
   useEffect(() => {
+    setWidth(window.innerWidth);
     const onResize = () => setWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
