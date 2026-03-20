@@ -295,10 +295,12 @@ function FriendsPanel() {
     const userId      = String(f.id ?? f.userId ?? f.username ?? "");
     const rawRoomId   = String(f.roomId || "").replace(/^room:/, "");
     // ── Use roomIsLobby from API, fall back to smart detection ──
+    // Lobby slugs are always lowercase and human-readable (destiny2, warframe, etc.)
+    // Random room IDs from shortRoomId() have mixed case (zbZTrF, k1rc3P)
     const isLobby     = f.roomIsLobby === true
       || (f.roomName || "").toLowerCase().includes("lobby")
       || rawRoomId === "lobby"
-      || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/i.test(rawRoomId) && rawRoomId.length < 30 && !/^[a-z0-9]{20,}$/i.test(rawRoomId));
+      || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/.test(rawRoomId) && rawRoomId.length < 30);
     const joinHref    = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
 
     return (
@@ -380,10 +382,11 @@ function CrewPanel() {
             const userId     = String(m.userId ?? m.id ?? "");
             const rawRoomId  = String(m.roomId || "").replace(/^room:/, "");
             // ── Use roomIsLobby from API, fall back to smart detection ──
+            // Lobby slugs are always lowercase (destiny2, warframe), random IDs have mixed case (zbZTrF)
             const isLobby    = m.roomIsLobby === true
               || (m.roomName || "").toLowerCase().includes("lobby")
               || rawRoomId === "lobby"
-              || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/i.test(rawRoomId) && rawRoomId.length < 30 && !/^[a-z0-9]{20,}$/i.test(rawRoomId));
+              || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/.test(rawRoomId) && rawRoomId.length < 30);
             const joinHref   = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
             return (
               <div key={m.userId}
