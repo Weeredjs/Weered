@@ -67,6 +67,18 @@ function heatLabel(count: number): string {
   return "quiet";
 }
 
+// Determine if an accent color is too light for white text
+function isLightAccent(hex: string): boolean {
+  const h = hex.replace("#", "");
+  if (h.length < 6) return false;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // Relative luminance
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.65;
+}
+
 // Lobby accent or fallback
 function lobbyAccent(r: any, idx: number): string {
   if (r?.accentColor) return r.accentColor;
@@ -99,7 +111,10 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   const cnt = onlineCount(lobby);
   const accent = lobby?.accentColor || "#7c6af7";
   const logo = lobby?.logoUrl;
+  const banner = lobby?.bannerUrl;
   const desc = lobby?.description;
+  const lightAccent = isLightAccent(accent);
+  const btnText = lightAccent ? "#111" : "#fff";
 
   return (
     <div
@@ -108,15 +123,33 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         position: "relative", borderRadius: 16, overflow: "hidden",
         height: 200, cursor: "pointer",
         border: `1px solid ${accent}22`,
-        background: `linear-gradient(135deg, ${accent}15 0%, rgba(10,10,15,.95) 40%, ${accent}08 100%)`,
+        background: banner
+          ? `linear-gradient(135deg, rgba(10,10,15,.7) 0%, rgba(10,10,15,.4) 50%, rgba(10,10,15,.7) 100%)`
+          : `linear-gradient(135deg, ${accent}15 0%, rgba(10,10,15,.95) 40%, ${accent}08 100%)`,
         transition: "transform .2s, border-color .2s",
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.borderColor = `${accent}44`; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = `${accent}22`; }}
     >
-      {/* Ambient effects */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(ellipse at 25% 50%, ${accent}20 0%, transparent 55%), radial-gradient(ellipse at 85% 20%, ${accent}10 0%, transparent 40%)` }} />
-      <div style={{ position: "absolute", inset: 0, opacity: 0.04, pointerEvents: "none", backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+      {/* Banner image */}
+      {banner && (
+        <img
+          src={banner}
+          alt=""
+          style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            objectFit: "cover", opacity: 0.55, pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Ambient effects (only when no banner) */}
+      {!banner && (
+        <>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(ellipse at 25% 50%, ${accent}20 0%, transparent 55%), radial-gradient(ellipse at 85% 20%, ${accent}10 0%, transparent 40%)` }} />
+          <div style={{ position: "absolute", inset: 0, opacity: 0.04, pointerEvents: "none", backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+        </>
+      )}
 
       {/* Top bar */}
       <div style={{ position: "absolute", top: 14, left: 18, right: 18, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 2 }}>
@@ -124,7 +157,8 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
           {logo && <img src={logo} alt="" style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />}
           <span style={{
             display: "flex", alignItems: "center", gap: 6,
-            background: `${accent}20`, border: `1px solid ${accent}35`,
+            background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
+            border: `1px solid ${accent}35`,
             borderRadius: 99, padding: "3px 11px",
             fontSize: 10, fontWeight: 800, color: accent, letterSpacing: ".3px",
           }}>
@@ -144,15 +178,18 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
       </div>
 
       {/* Bottom content */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 22px 18px", zIndex: 2, background: "linear-gradient(transparent, rgba(0,0,0,.6))" }}>
-        <div style={{ fontWeight: 900, fontSize: 26, lineHeight: 1.1, marginBottom: desc ? 6 : 14, letterSpacing: "-0.5px" }}>{name}</div>
-        {desc && <div style={{ fontSize: 12, color: "rgba(232,232,236,.5)", marginBottom: 14, maxWidth: 480, lineHeight: 1.4 }}>{desc}</div>}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 22px 18px", zIndex: 2, background: "linear-gradient(transparent, rgba(0,0,0,.75))" }}>
+        <div style={{ fontWeight: 900, fontSize: 26, lineHeight: 1.1, marginBottom: desc ? 6 : 14, letterSpacing: "-0.5px", textShadow: banner ? "0 2px 8px rgba(0,0,0,.6)" : "none" }}>{name}</div>
+        {desc && <div style={{ fontSize: 12, color: "rgba(232,232,236,.6)", marginBottom: 14, maxWidth: 480, lineHeight: 1.4, textShadow: banner ? "0 1px 4px rgba(0,0,0,.5)" : "none" }}>{desc}</div>}
         <button
           type="button"
           onClick={e => { e.stopPropagation(); onJoin(roomId(lobby), Boolean(lobby?.pinned)); }}
           style={{
             display: "inline-flex", alignItems: "center", gap: 7,
-            background: accent, color: "#fff", border: "none", borderRadius: 10,
+            background: lightAccent ? "#fff" : accent,
+            color: btnText,
+            border: lightAccent ? "1px solid rgba(255,255,255,.3)" : "none",
+            borderRadius: 10,
             padding: "10px 20px", fontWeight: 800, fontSize: 13,
             cursor: "pointer", fontFamily: "inherit",
             boxShadow: `0 4px 16px ${accent}44`,
@@ -222,6 +259,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   const accent = lobbyAccent(room, idx);
   const desc = room?.description as string | undefined;
   const logo = room?.logoUrl;
+  const banner = room?.bannerUrl;
   const heat = heatLabel(cnt);
 
   return (
@@ -237,11 +275,23 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}35`; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
     >
+      {/* Banner background */}
+      {banner && (
+        <img
+          src={banner}
+          alt=""
+          style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            objectFit: "cover", opacity: 0.12, pointerEvents: "none",
+          }}
+        />
+      )}
+
       {/* Accent top bar */}
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}55, ${accent})`, borderRadius: "14px 14px 0 0" }} />
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}55, ${accent})`, borderRadius: "14px 14px 0 0", position: "relative", zIndex: 1 }} />
 
       {/* Card body */}
-      <div style={{ padding: "14px 16px 16px" }}>
+      <div style={{ padding: "14px 16px 16px", position: "relative", zIndex: 1 }}>
         {/* Header row */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
