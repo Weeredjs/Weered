@@ -2314,7 +2314,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     const lobbies = await (prisma as any).lobby.findMany({
       select: {
         id: true, name: true, description: true, verified: true, pinned: true,
-        moduleType: true, accentColor: true, logoUrl: true,
+        moduleType: true, accentColor: true, logoUrl: true, bannerUrl: true,
         _count: { select: { rooms: true, members: true } },
       },
       orderBy: [{ pinned: "desc" }, { name: "asc" }],
