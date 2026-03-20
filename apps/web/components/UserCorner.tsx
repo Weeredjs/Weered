@@ -47,8 +47,32 @@ const IconDock = () => (
 );
 
 export default function UserCorner() {
-  const { me, role, globalRole } = useWeered() as any;
+  const { me, role, globalRole, currentLobbyId } = useWeered() as any;
   const { openSheet } = useOverlay();
+
+  // ── Lobby branding: fetch logoUrl for current lobby ─────────────────────────
+  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
+  const [lobbyLogo, setLobbyLogo] = React.useState<string | null>(null);
+  const [lobbyAccent, setLobbyAccent] = React.useState<string | null>(null);
+  const prevLobbyRef = React.useRef<string>("");
+  React.useEffect(() => {
+    const lid = currentLobbyId || "";
+    if (lid === prevLobbyRef.current) return;
+    prevLobbyRef.current = lid;
+    if (!lid || lid === "lobby") { setLobbyLogo(null); setLobbyAccent(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/lobbies/${encodeURIComponent(lid)}`);
+        const j = await r.json();
+        if (!cancelled && j?.ok && j?.lobby) {
+          setLobbyLogo(j.lobby.logoUrl || null);
+          setLobbyAccent(j.lobby.accentColor || null);
+        }
+      } catch { if (!cancelled) { setLobbyLogo(null); setLobbyAccent(null); } }
+    })();
+    return () => { cancelled = true; };
+  }, [currentLobbyId]);
 
   const name = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
   const avatarUrl = me?.avatar || null;
@@ -129,14 +153,31 @@ export default function UserCorner() {
         marginBottom: 4,
       }}
     >
-      {/* Ambient brand watermark */}
-      <div style={{
-        position: "absolute", top: 8, right: 10,
-        opacity: 0.045, pointerEvents: "none", userSelect: "none",
-        fontSize: 11, fontWeight: 900, letterSpacing: "3px", textTransform: "uppercase",
-      }}>
-        WEERED
-      </div>
+      {/* Lobby logo / brand watermark */}
+      {lobbyLogo ? (
+        <div style={{
+          position: "absolute", top: 6, right: 8,
+          width: 36, height: 36, borderRadius: 8,
+          overflow: "hidden", pointerEvents: "none", userSelect: "none",
+          opacity: 0.7,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <img
+            src={lobbyLogo}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(0,0,0,.4))" }}
+          />
+        </div>
+      ) : (
+        <div style={{
+          position: "absolute", top: 8, right: 10,
+          opacity: 0.045, pointerEvents: "none", userSelect: "none",
+          fontSize: 11, fontWeight: 900, letterSpacing: "3px", textTransform: "uppercase",
+          color: lobbyAccent || undefined,
+        }}>
+          WEERED
+        </div>
+      )}
 
       {/* Main identity row */}
       <button
