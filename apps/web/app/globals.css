@@ -174,8 +174,8 @@ button:hover, [role="button"]:hover {
 .weered-center { 
   flex: 1 1 auto; 
   min-width: 0; 
-  height: 100%;                /* add this */
-  overflow: hidden;            /* add this */
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Rails: sticky, panel-styled */
@@ -192,12 +192,105 @@ button:hover, [role="button"]:hover {
   overflow-x: hidden;
 }
 
-/* Collapse rails on smaller screens */
-@media (max-width: 1099px) {
-  .weered-shell { gap: 0; padding: 0; }
+/* ── Icon strips — hidden by default (wide screens) ────────── */
+.weered-icon-strip {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0;
+  width: 48px;
+  flex: 0 0 48px;
+  background: var(--weered-panel);
+  border: 1px solid var(--weered-border);
+  border-radius: 16px;
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+}
+
+.weered-icon-strip-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none !important;
+  padding: 0 !important;
+  background: transparent;
+  color: rgba(148,163,184,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.weered-icon-strip-btn:hover {
+  background: rgba(255,255,255,.06);
+  color: rgba(243,244,246,.85);
+}
+.weered-icon-strip-btn-active {
+  background: rgba(124,58,237,.15) !important;
+  color: rgba(167,139,250,.95) !important;
+}
+
+/* ── Overlay panels (slide-in from icon strip click) ───────── */
+.weered-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+  animation: weeredFadeIn 0.15s ease-out;
+}
+
+.weered-overlay-panel {
+  position: fixed;
+  top: 12px;
+  bottom: 12px;
+  z-index: 1000;
+  background: var(--weered-panel);
+  border: 1px solid var(--weered-border);
+  border-radius: 16px;
+  overflow: auto;
+  overflow-x: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,.55);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.weered-overlay-panel-left {
+  left: 60px;
+  width: 320px;
+  animation: weeredSlideInLeft 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+.weered-overlay-panel-right {
+  right: 60px;
+  width: 340px;
+  animation: weeredSlideInRight 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+
+@keyframes weeredFadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes weeredSlideInLeft {
+  from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); }
+}
+@keyframes weeredSlideInRight {
+  from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Mid breakpoint: 1100–1399px — hide both full rails, show icon strips ── */
+@media (max-width: 1399px) {
+  .weered-shell { gap: 10px; padding: 10px 10px 0 10px; }
   .weered-left  { display: none; }
   .weered-right { display: none; }
-  .weered-center { width: 100%; padding: 12px; }
+  .weered-icon-strip { display: flex; }
+}
+
+/* ── Narrow breakpoint: <1100px — hide everything including icon strips ──── */
+@media (max-width: 1099px) {
+  .weered-shell { gap: 0; padding: 0; }
+  .weered-left       { display: none; }
+  .weered-right      { display: none; }
+  .weered-icon-strip { display: none; }
+  .weered-center     { width: 100%; padding: 12px; }
 }
 
 /* Center content padding */
