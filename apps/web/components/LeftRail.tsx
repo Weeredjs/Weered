@@ -70,38 +70,14 @@ type Flair = {
 };
 
 const ICON_GOD = (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M6 1L7.5 4.5H11L8.5 6.8L9.5 10L6 8L2.5 10L3.5 6.8L1 4.5H4.5L6 1Z" fill="#fcd34d" stroke="#f59e0b" strokeWidth="0.5"/>
-  </svg>
+  <span style={{ fontSize: 10, lineHeight: 1 }}>★</span>
 );
-const ICON_STAFF = (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <circle cx="6" cy="6" r="5" stroke="#60a5fa" strokeWidth="1.2"/>
-    <path d="M6 3v3.5L8 8" stroke="#60a5fa" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>
-);
-const ICON_ADMIN = (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M6 1.5L10 4V8L6 10.5L2 8V4L6 1.5Z" stroke="#a78bfa" strokeWidth="1.2" fill="rgba(124,58,237,0.15)"/>
-  </svg>
-);
-const ICON_MOD = (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M6 1.5L10 4V8L6 10.5L2 8V4L6 1.5Z" stroke="#34d399" strokeWidth="1.2" fill="rgba(16,185,129,0.12)"/>
-    <path d="M4 6l1.5 1.5L8 4.5" stroke="#34d399" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const ICON_OWNER = (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <rect x="2" y="5" width="8" height="5" rx="1" stroke="#f97316" strokeWidth="1.1" fill="rgba(249,115,22,0.1)"/>
-    <path d="M4 5V4a2 2 0 014 0v1" stroke="#f97316" strokeWidth="1.1"/>
-  </svg>
-);
+const ICON_STAFF = null;
+const ICON_ADMIN = null;
+const ICON_MOD = null;
+const ICON_OWNER = null;
 const ICON_PAID = (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <circle cx="6" cy="6" r="4.5" stroke="#a78bfa" strokeWidth="1.1" fill="rgba(124,58,237,0.1)"/>
-    <path d="M6 3.5v5M4.5 5h2.2a.8.8 0 010 1.6H4.5" stroke="#a78bfa" strokeWidth="1" strokeLinecap="round"/>
-  </svg>
+  <span style={{ fontSize: 9, lineHeight: 1 }}>💎</span>
 );
 
 function flairFor(u: any): Flair {
@@ -275,7 +251,6 @@ export default function LeftRail() {
   // ── Pending knock indicator ─────────────────────────────────────────────────
   const [pendingRooms, setPendingRooms] = useState<Set<string>>(new Set());
   useEffect(() => {
-    // Listen for knock:queued and admitted/denied events from WeeredProvider
     const onKnockQueued = (e: Event) => {
       const rid = (e as CustomEvent)?.detail?.roomId;
       if (rid) setPendingRooms(prev => new Set(prev).add(String(rid)));
@@ -298,7 +273,6 @@ export default function LeftRail() {
     };
   }, []);
 
-  // Also check joinStatus from WeeredProvider if available
   const pendingFromProvider = typeof joinStatus === "object" && joinStatus !== null ? joinStatus : {};
   const isRoomPending = (room: string): boolean => {
     if (pendingRooms.has(room)) return true;
@@ -307,6 +281,8 @@ export default function LeftRail() {
     if (pendingFromProvider[room] === "knocking" || pendingFromProvider[clean] === "knocking" || pendingFromProvider[`room:${clean}`] === "knocking") return true;
     return false;
   };
+
+  // ── Presence popover ───────────────────────────────────────────────────────
   const [presenceHoverOpen, setPresenceHoverOpen] = useState(false);
   const [presenceHoverXY, setPresenceHoverXY] = useState({ x: 0, y: 0 });
   const [presenceHoverName, setPresenceHoverName] = useState("");
