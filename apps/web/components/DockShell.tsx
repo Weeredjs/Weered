@@ -98,7 +98,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const { me, wsReady, wsState, activeRoomId, joinedRoomId, users, msgs, meta, admin, role, joinStatus, sendChat, logout, renameRoom, lockRoom, unlockRoom, knock, admit } = ctx || {};
 
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("room");
+  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("friends");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
   const [theme, setTheme] = useState<WeeredThemeName>("stone");
@@ -347,9 +347,9 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
         {/* Tabs */}
         <SegmentedControl
           tabs={[
-            {id:"room",label:"Room"},
-            {id:"dms",label:"DMs",badge:totalUnread},
             {id:"friends",label:"Friends"},
+            {id:"dms",label:"DMs",badge:totalUnread},
+            {id:"room",label:"Room"},
             {id:"crew",label:"Crew"},
           ]}
           active={tab}
