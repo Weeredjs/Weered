@@ -369,7 +369,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {stageActive && stageMode !== "browser" && (
+        {stageActive && stageMode !== "browser" && stageMode !== "twitch" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
             <RoomStage roomId={roomId} mode={stageMode} onClose={() => setStageMode(null)} />
           </div>
