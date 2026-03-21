@@ -484,9 +484,11 @@ function verifyToken(token?: string): AuthedUser | null {
 
 function authFromHeader(authHeader?: string): AuthedUser | null {
   if (!authHeader) return null;
-  const m = String(authHeader).match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  return verifyToken(m[1]);
+  const raw = String(authHeader).trim();
+  const m = raw.match(/^Bearer\s+(.+)$/i);
+  if (m) return verifyToken(m[1]);
+  // Fallback: try raw token directly (for query param auth)
+  return verifyToken(raw);
 }
 
 async function resolveUserId(raw: string): Promise<string> {
