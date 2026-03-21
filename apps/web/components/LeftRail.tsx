@@ -209,7 +209,25 @@ export default function LeftRail() {
       try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch {}
       return next;
     });
-  }, [joinedRoomId, activeRoomId]);
+    // Enrich the name cache with lobbyId context if we know which lobby we're in
+    if (currentLobbyId && currentLobbyId !== "lobby") {
+      try {
+        const cache = JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}");
+        const existing = cache[room];
+        if (existing && typeof existing === "object") {
+          if (!existing.lobbyId) {
+            existing.lobbyId = currentLobbyId;
+            localStorage.setItem("weered:roomnames:v1", JSON.stringify(cache));
+            setRoomNameCache({ ...cache });
+          }
+        } else if (!existing) {
+          cache[room] = { name: room, lobbyId: currentLobbyId, count: 0 };
+          localStorage.setItem("weered:roomnames:v1", JSON.stringify(cache));
+          setRoomNameCache({ ...cache });
+        }
+      } catch {}
+    }
+  }, [joinedRoomId, activeRoomId, currentLobbyId]);
 
   function toggleFav(room: string) {
     setFavs(prev => {
