@@ -76,51 +76,14 @@ const ROLE_DISPLAY: Record<string, string> = {
 };
 function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase(); }
 
-// ── Role icons — clean, 13px, instantly recognizable ─────────────────────────
-const ICON_GOD = ( // Crown — gold
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M2.5 12h11V10.5L11 7l-3 3-3-3-2.5 3.5V12Z" fill="#fcd34d"/>
-    <path d="M2.5 6l2.5 4 3-3 3 3 2.5-4" stroke="#f59e0b" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    <path d="M2.5 12h11" stroke="#f59e0b" strokeWidth="1.2" strokeLinecap="round"/>
-    <circle cx="8" cy="3.5" r="1" fill="#fcd34d" stroke="#f59e0b" strokeWidth="0.6"/>
-  </svg>
-);
-const ICON_ADMIN = ( // W monogram — red
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="rgba(239,68,68,.15)" stroke="#f87171" strokeWidth="1.1"/>
-    <path d="M4 5.5L5.5 11 8 7l2.5 4L12 5.5" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-  </svg>
-);
-const ICON_STAFF = ( // Shield — blue
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M8 2L3 4.5V8c0 2.8 2.2 5 5 6 2.8-1 5-3.2 5-6V4.5L8 2Z" fill="rgba(96,165,250,.15)" stroke="#60a5fa" strokeWidth="1.1"/>
-    <path d="M6 8l1.5 1.5L10 6.5" stroke="#60a5fa" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const ICON_SUPPORT = ( // Diamond — teal
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="rgba(20,184,166,.12)" stroke="#2dd4bf" strokeWidth="1.1"/>
-  </svg>
-);
-const ICON_MOD = ( // Chevron — green
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M3 6l5 5 5-5" stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 3l5 5 5-5" stroke="#34d399" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
-  </svg>
-);
-const ICON_OWNER = ( // Key — orange
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <circle cx="5.5" cy="6" r="3" fill="rgba(249,115,22,.12)" stroke="#f97316" strokeWidth="1.1"/>
-    <path d="M8 7.5h4.5M11 7.5v2M12.5 7.5v1.5" stroke="#f97316" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>
-);
-const ICON_PAID = ( // Gem — purple
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
-    <path d="M4 3h8l2.5 4L8 14 1.5 7Z" fill="rgba(167,139,250,.15)" stroke="#a78bfa" strokeWidth="1.1" strokeLinejoin="round"/>
-    <path d="M1.5 7h13" stroke="#a78bfa" strokeWidth="0.8"/>
-    <path d="M8 14L6 7l2-4 2 4-2 7Z" fill="rgba(167,139,250,.10)" stroke="#a78bfa" strokeWidth="0.6"/>
-  </svg>
-);
+// ── Role icons — emoji, readable at any size ─────────────────────────────────
+const ICON_GOD     = <span style={{ fontSize: 12, lineHeight: 1 }}>👑</span>;
+const ICON_ADMIN   = <span style={{ fontSize: 12, lineHeight: 1 }}>🔱</span>;
+const ICON_STAFF   = <span style={{ fontSize: 12, lineHeight: 1 }}>🛡</span>;
+const ICON_SUPPORT = <span style={{ fontSize: 12, lineHeight: 1 }}>💎</span>;
+const ICON_MOD     = <span style={{ fontSize: 12, lineHeight: 1 }}>⚡</span>;
+const ICON_OWNER   = <span style={{ fontSize: 12, lineHeight: 1 }}>🔑</span>;
+const ICON_PAID    = <span style={{ fontSize: 11, lineHeight: 1 }}>💠</span>;
 
 function flairFor(u: any): Flair {
   const g  = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
@@ -522,22 +485,6 @@ export default function LeftRail() {
             );
           })}
           {!listed.length ? <div className="weered-muted" style={{ padding: 10 }}>No users.</div> : null}
-        </div>
-
-        <div className="weered-presence-foot">
-          <details className="opacity-80">
-            <summary className="cursor-pointer select-none text-xs opacity-70 hover:opacity-90">
-              flair <span className="opacity-60">(?)</span>
-            </summary>
-            <div className="mt-2 weered-legend">
-              <span className="weered-legend-item"><span className="weered-mark weered-mark-paid" /> paid</span>
-              <span className="weered-legend-item"><span className="weered-mark weered-mark-owner" /> owner</span>
-              <span className="weered-legend-item"><span className="weered-mark weered-mark-mod" /> mod</span>
-              <span className="weered-legend-item"><span className="weered-mark weered-mark-admin" /> admin</span>
-              <span className="weered-legend-item"><span className="weered-mark weered-mark-staff" /> staff</span>
-              <span className="weered-legend-item"><span className="weered-mark weered-mark-god" /> god</span>
-            </div>
-          </details>
         </div>
       </div>
 
