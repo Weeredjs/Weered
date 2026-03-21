@@ -239,6 +239,19 @@ export default function LeftRail() {
 
   const recentRooms = recents.filter(r => !favs.includes(r));
 
+  // ── Lobby logo cache (for recents/favs room sublabels) ────────────────────
+  const [lobbyLogos, setLobbyLogos] = useState<Record<string, string>>({});
+  useEffect(() => {
+    fetch(`${API_BASE}/lobbies`).then(r => r.json()).then(j => {
+      if (!Array.isArray(j?.lobbies)) return;
+      const map: Record<string, string> = {};
+      for (const l of j.lobbies) {
+        if (l.id && l.logoUrl) map[l.id] = l.logoUrl;
+      }
+      setLobbyLogos(map);
+    }).catch(() => {});
+  }, []);
+
   // ── Room name cache ────────────────────────────────────────────────────────
   const [roomNameCache, setRoomNameCache] = useState<Record<string,string>>(() => {
     try { return JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}"); } catch { return {}; }
@@ -266,10 +279,15 @@ export default function LeftRail() {
   const getRoomSublabel = (id: string): string => {
     const lobby = getRoomLobby(id);
     if (lobby) return lobby;
-    // If the ID is a lobby slug (lowercase, hyphens, dots), show "lobby"
     const isLobbySlug = /^[a-z][a-z0-9._-]*$/.test(id) && id.length > 2;
     if (isLobbySlug) return "lobby";
     return "";
+  };
+  const getLobbyLogo = (id: string): string | null => {
+    if (lobbyLogos[id]) return lobbyLogos[id];
+    const lobby = getRoomLobby(id);
+    if (lobby && lobbyLogos[lobby]) return lobbyLogos[lobby];
+    return null;
   };
 
   // ── Online counts for favs/recents (fetched periodically) ─────────────────
@@ -648,8 +666,14 @@ export default function LeftRail() {
                       el.style.borderColor = isActive ? `${accent}55` : `${accent}22`;
                     }}
                   >
-                    {/* Top row: name + live badge */}
-                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                    {/* Top row: logo + name + live badge */}
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      {(() => {
+                        const logo = getLobbyLogo(room);
+                        return logo ? (
+                          <img src={logo} alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: "contain", flexShrink: 0, background: "rgba(0,0,0,.3)" }} />
+                        ) : null;
+                      })()}
                       <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, color: isActive ? "rgba(243,244,246,.98)" : "rgba(203,213,225,.82)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.35 }}>
                         {label}
                       </div>
@@ -678,8 +702,8 @@ export default function LeftRail() {
                       )}
                     </div>
                     {/* Sub row: lobby context */}
-                    {(() => { const sub = getRoomSublabel(room); return sub ? (
-                      <div style={{ fontSize:10, opacity:0.32, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>
+                    {(() => { const sub = getRoomSublabel(room); const logo = getLobbyLogo(room); return sub ? (
+                      <div style={{ fontSize:10, opacity:0.32, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace", paddingLeft: logo ? 22 : 0 }}>
                         {sub}
                       </div>
                     ) : null; })()}
@@ -740,9 +764,16 @@ export default function LeftRail() {
                       el.style.borderColor = isActive ? "rgba(124,58,237,.40)" : "rgba(148,163,184,.09)";
                     }}
                   >
-                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      {/* Live pulse dot */}
-                      <div style={{ width:5, height:5, borderRadius:"50%", flexShrink:0, background: isLive ? "#22c55e" : "rgba(255,255,255,.12)", boxShadow: isLive ? "0 0 4px #22c55e" : "none" }} />
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      {/* Lobby logo or live dot */}
+                      {(() => {
+                        const logo = getLobbyLogo(room);
+                        return logo ? (
+                          <img src={logo} alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: "contain", flexShrink: 0, background: "rgba(0,0,0,.3)" }} />
+                        ) : (
+                          <div style={{ width:5, height:5, borderRadius:"50%", flexShrink:0, background: isLive ? "#22c55e" : "rgba(255,255,255,.12)", boxShadow: isLive ? "0 0 4px #22c55e" : "none" }} />
+                        );
+                      })()}
                       <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight: isActive ? 700 : 500, color: isActive ? "rgba(243,244,246,.97)" : "rgba(203,213,225,.72)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.35 }}>
                         {label}
                       </div>
@@ -767,8 +798,8 @@ export default function LeftRail() {
                         </span>
                       )}
                     </div>
-                    {(() => { const sub = getRoomSublabel(room); return sub ? (
-                      <div style={{ fontSize:10, opacity:0.28, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace", paddingLeft:10 }}>
+                    {(() => { const sub = getRoomSublabel(room); const logo = getLobbyLogo(room); return sub ? (
+                      <div style={{ fontSize:10, opacity:0.32, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace", paddingLeft: logo ? 22 : 10 }}>
                         {sub}
                       </div>
                     ) : null; })()}
