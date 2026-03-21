@@ -4,16 +4,6 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 
-// ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
-
-function TwitchIcon({ size = 13, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
-      <path d="M17.458 0L0 46.556v185.81h63.983v34.934h34.932l34.898-34.934h52.36L256 162.954V0H17.458zm23.259 23.263H232.73v128.029l-40.739 40.736H128L93.113 226.93v-34.902H40.717V23.263zm64.008 116.405H128V69.844h-23.275v69.824zm63.997 0h23.275V69.844h-23.275v69.824z" fill={color} />
-    </svg>
-  );
-}
-
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders() {
@@ -36,6 +26,52 @@ const S = {
 };
 
 const ACCENT_DESTINY = "#4F88C6";
+
+// ── Tier colors for item rarity ──────────────────────────────────────────────
+
+const TIER_COLORS: Record<string, string> = { Exotic: "#ceae33", Legendary: "#522f65", Rare: "#5076a3", Uncommon: "#366e42", Common: "#c3bcb4", Unknown: "rgba(255,255,255,.1)", Currency: "rgba(255,255,255,.1)" };
+const TIER_BORDER: Record<string, string> = { Exotic: "rgba(206,174,51,.6)", Legendary: "rgba(82,47,101,.8)", Rare: "rgba(80,118,163,.6)", Uncommon: "rgba(54,110,66,.6)", Common: "rgba(195,188,180,.4)", Unknown: "rgba(255,255,255,.08)", Currency: "rgba(255,255,255,.08)" };
+
+// ── Item Tile (compact or full) ──────────────────────────────────────────────
+
+function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
+  const tier = item.tierName || "Unknown";
+  const borderColor = TIER_BORDER[tier] || "rgba(255,255,255,.08)";
+  const bgColor = TIER_COLORS[tier] || "rgba(255,255,255,.03)";
+
+  if (compact) {
+    return (
+      <div title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`} style={{
+        width: 44, height: 44, borderRadius: 8, background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
+        border: `1.5px solid ${borderColor}`, overflow: "hidden", position: "relative", cursor: "default",
+      }}>
+        {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        {item.primaryStat && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,.75)", textAlign: "center",
+            fontSize: 9, fontWeight: 800, color: tier === "Exotic" ? "#ceae33" : "#fff", padding: "1px 0" }}>{item.primaryStat}</div>
+        )}
+        {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, pointerEvents: "none" }} />}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: `1px solid ${borderColor}`, background: `${bgColor}18` }}>
+      <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: item.icon ? "rgba(0,0,0,.5)" : bgColor, border: `1px solid ${borderColor}`, position: "relative" }}>
+        {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.3, pointerEvents: "none" }} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tier === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown Item"}</div>
+        <div style={{ fontSize: 10, opacity: 0.4, display: "flex", alignItems: "center", gap: 6 }}>
+          {item.slotName && <span>{item.slotName}</span>}
+          {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>·</span>{item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
+        </div>
+      </div>
+      {item.primaryStat && <div style={{ fontSize: 14, fontWeight: 900, color: tier === "Exotic" ? "#ceae33" : "rgba(253,230,138,.9)", flexShrink: 0 }}>{item.primaryStat}</div>}
+    </div>
+  );
+}
 
 // ── Twitch Streams ───────────────────────────────────────────────────────────
 
@@ -278,83 +314,90 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
 
 // ── Bungie Weekly / Xur ──────────────────────────────────────────────────────
 
-function BungieWeekly() {
-  const [weekly, setWeekly] = useState<any>(null);
-  const [xur, setXur]       = useState<any>(null);
+function BungieWeekly({ accentColor }: { accentColor?: string }) {
+  const accent = accentColor || ACCENT_DESTINY;
+  const [data, setData] = useState<any>(null);
+  const [xur, setXur]   = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch("/bungie/weekly"),
-      apiFetch("/bungie/xur"),
-    ]).then(([w, x]) => {
-      setWeekly(w);
-      setXur(x);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    Promise.all([apiFetch("/bungie/weekly"), apiFetch("/bungie/xur")])
+      .then(([w, x]) => { setData(w); setXur(x); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading Bungie data...</div>;
 
-  const CLASS_NAMES: Record<number, string> = { 0: "Titan", 1: "Hunter", 2: "Warlock" };
+  const milestones = data?.milestones || [];
+  const hasManifest = !!data?.manifestVersion;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Xur Status */}
-      <div style={{
-        ...S.card,
-        border: xur?.available ? "1px solid rgba(245,158,11,.30)" : "1px solid rgba(255,255,255,.08)",
-        background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+      <div style={{ ...S.card, border: xur?.available ? "1px solid rgba(245,158,11,.30)" : "1px solid rgba(255,255,255,.08)", background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 22 }}>🐍</span>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: xur?.available ? "rgb(253,230,138)" : "rgba(255,255,255,.6)" }}>
-              Xur {xur?.available ? "is here!" : "is away"}
-            </div>
-            <div style={{ fontSize: 11, opacity: 0.5 }}>
-              {xur?.available ? "Exotic vendor is active — check inventory in-game" : "Returns every Friday at reset"}
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: xur?.available ? "rgb(253,230,138)" : "rgba(255,255,255,.6)" }}>Xur {xur?.available ? "is here!" : "is away"}</div>
+            <div style={{ fontSize: 11, opacity: 0.5 }}>{xur?.available ? "Exotic vendor is active — check inventory in-game" : "Returns every Friday at reset"}</div>
           </div>
         </div>
       </div>
 
-      {/* Weekly Milestones */}
-      <div style={{ ...S.card }}>
-        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-          <span>Weekly Activities</span>
-          <span style={{ fontSize: 10, opacity: 0.4 }}>{weekly?.totalMilestones || 0} active milestones</span>
-        </div>
-        {(weekly?.milestones || []).length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {weekly.milestones.map((ms: any) => (
-              <div key={ms.hash} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${ACCENT_DESTINY}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
-                  {ms.name.includes("Nightfall") ? "🌙" : ms.name.includes("Raid") ? "⚔" : ms.name.includes("Crucible") ? "🎯" : ms.name.includes("Xur") ? "🐍" : "📋"}
+      {/* Milestones */}
+      {milestones.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {milestones.filter((ms: any) => !ms.name.startsWith("Milestone")).slice(0, 20).map((ms: any) => (
+            <div key={ms.hash} style={{ ...S.card }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: ms.activities?.length ? 8 : 0 }}>
+                {ms.icon ? (
+                  <img src={ms.icon} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>📋</div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{ms.name}</div>
+                  {ms.description && <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ms.description}</div>}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 12 }}>{ms.name}</div>
-                  <div style={{ fontSize: 10, opacity: 0.4 }}>
-                    {ms.activities?.length || 0} activities · {ms.availableQuests || 0} quests
-                  </div>
-                </div>
+                {ms.activities?.length > 0 && <span style={{ fontSize: 10, opacity: 0.35, flexShrink: 0 }}>{ms.activities.length} activities</span>}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ fontSize: 12, opacity: 0.4 }}>
-            {weekly?.error ? "Bungie API unavailable — check back later" : "No milestone data available"}
-          </div>
-        )}
-      </div>
+              {hasManifest && ms.activities?.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {ms.activities.slice(0, 5).map((act: any, i: number) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
+                      {act.icon && <img src={act.icon} alt="" style={{ width: 24, height: 24, borderRadius: 5, objectFit: "cover", flexShrink: 0 }} />}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600 }}>{act.name}</div>
+                        {act.lightLevel > 0 && <span style={{ fontSize: 9, opacity: 0.4 }}>{act.lightLevel} Power</span>}
+                      </div>
+                      {act.modifiers?.length > 0 && (
+                        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                          {act.modifiers.slice(0, 6).map((mod: any, mi: number) => (
+                            <div key={mi} title={`${mod.name}: ${mod.description || ""}`} style={{ width: 20, height: 20, borderRadius: 4, overflow: "hidden", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
+                              {mod.icon && <img src={mod.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ ...S.card, fontSize: 12, opacity: 0.4 }}>{data?.error ? "Bungie API unavailable — check back later" : "No milestone data available"}</div>
+      )}
 
-      {/* Reset Timer */}
       <div style={{ ...S.card, textAlign: "center" }}>
         <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.4, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 4 }}>Weekly Reset</div>
         <div style={{ fontSize: 13, opacity: 0.7 }}>Every Tuesday at 17:00 UTC</div>
+        {hasManifest && <div style={{ fontSize: 9, opacity: 0.25, marginTop: 4 }}>Manifest v{data.manifestVersion}</div>}
       </div>
     </div>
   );
+}
 }
 
 // ── Guardian Lookup ──────────────────────────────────────────────────────────
@@ -466,10 +509,8 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const CLASS_NAMES: Record<number, string> = { 0: "Titan", 1: "Hunter", 2: "Warlock" };
-  const CLASS_EMOJI: Record<number, string> = { 0: "🛡", 1: "🗡", 2: "✨" };
-  const RACE_NAMES: Record<number, string> = { 0: "Human", 1: "Awoken", 2: "Exo" };
+  const [selectedChar, setSelectedChar] = useState(0);
+  const [subTab, setSubTab] = useState<"equipped" | "inventory" | "vault">("equipped");
 
   useEffect(() => {
     apiFetch("/bungie/me")
@@ -479,11 +520,9 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading your Guardian...</div>;
 
-  // Not linked — show link button
   if (!data?.linked) {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
     const linkUrl = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
-
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
         <div style={{ fontSize: 48, opacity: 0.3 }}>🔗</div>
@@ -491,165 +530,201 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
         <div style={{ fontSize: 12, opacity: 0.45, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
           Connect your Bungie.net account to view your characters, inventory, vault, and loadouts right here on Weered.
         </div>
-        <a
-          href={linkUrl}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "12px 28px", borderRadius: 12,
-            background: `${accent}20`, border: `1px solid ${accent}50`,
-            color: accent, fontWeight: 800, fontSize: 14,
-            textDecoration: "none", cursor: "pointer",
-            transition: "background .15s, border-color .15s",
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${accent}35`; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${accent}20`; }}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M5 8h6M8 5v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          Link Bungie Account
-        </a>
-        <div style={{ fontSize: 10, opacity: 0.25, textAlign: "center" }}>
-          You'll be redirected to Bungie.net to authorize
-        </div>
+        <a href={linkUrl} style={{
+          display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 12,
+          background: `${accent}20`, border: `1px solid ${accent}50`, color: accent, fontWeight: 800, fontSize: 14,
+          textDecoration: "none", cursor: "pointer",
+        }}>Link Bungie Account</a>
+        <div style={{ fontSize: 10, opacity: 0.25 }}>You will be redirected to Bungie.net to authorize</div>
       </div>
     );
   }
 
-  if (error) return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error}</div>;
+  if (error || data?.error) return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error || data.error}</div>;
 
-  const characters = Array.isArray(data?.characters) ? data.characters : typeof data?.characters === "object" && data.characters ? Object.values(data.characters) : [];
-  const inventoryCount = data?.profileInventory || 0;
-  const hasVault = data?.hasVaultAccess || false;
+  const characters: any[] = Array.isArray(data?.characters) ? data.characters : typeof data?.characters === "object" && data.characters ? Object.values(data.characters) : [];
+  const vault: any[] = data?.vault || [];
+  const char = characters[selectedChar];
+  const hasManifest = !!data?.manifestVersion;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Linked account header */}
-      <div style={{
-        ...S.card,
-        display: "flex", alignItems: "center", gap: 12,
-        border: `1px solid ${accent}30`, background: `${accent}08`,
-      }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 10,
-          background: `${accent}25`, border: `1px solid ${accent}40`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, flexShrink: 0,
-        }}>
-          ⚔
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%" }}>
+      {/* Account header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>⚔</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
             {data.displayName}
-            <span style={{
-              fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
-              background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)",
-              color: "rgba(134,239,172,.9)",
-            }}>LINKED</span>
+            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
           </div>
-          <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>
-            Platform {data.platform} · {characters.length} characters{inventoryCount ? ` · ${inventoryCount} items` : ""}{hasVault ? " · Vault access" : ""}
-          </div>
+          <div style={{ fontSize: 10, opacity: 0.4 }}>Platform {data.platform} · {characters.length} characters{data.vaultCount ? ` · ${data.vaultCount} vault items` : ""}</div>
         </div>
-        <button
-          onClick={() => {
-            const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-            window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
-          }}
-          style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}
-        >
-          Re-link
-        </button>
+        <button onClick={() => { const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(t)}`; }} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>Re-link</button>
       </div>
 
-      {/* Characters */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
-        {characters.map((c: any) => {
-          const equipped = c.equipment || c.items || [];
-          return (
-            <div key={c.characterId} style={{
-              ...S.card,
-              position: "relative",
-              overflow: "hidden",
-              border: `1px solid ${accent}20`,
+      {/* Character tabs */}
+      {characters.length > 0 && (
+        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
+          {characters.map((c: any, i: number) => (
+            <button key={c.characterId || i} onClick={() => { setSelectedChar(i); if (subTab === "vault") setSubTab("equipped"); }} style={{
+              flex: 1, padding: "8px 6px", border: "none", cursor: "pointer",
+              background: selectedChar === i && subTab !== "vault" ? `${accent}18` : "transparent",
+              borderBottom: selectedChar === i && subTab !== "vault" ? `2px solid ${accent}` : "2px solid transparent",
+              color: selectedChar === i && subTab !== "vault" ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.55)",
+              fontWeight: selectedChar === i && subTab !== "vault" ? 700 : 400, fontSize: 12, transition: "all .12s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}>
-              {/* Emblem background */}
-              {c.emblemBackgroundPath && (
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: `url(${c.emblemBackgroundPath.startsWith("http") ? c.emblemBackgroundPath : "https://www.bungie.net" + c.emblemBackgroundPath}) center/cover no-repeat`,
-                  opacity: 0.12, pointerEvents: "none",
-                }} />
-              )}
-
-              <div style={{ position: "relative" }}>
-                {/* Class info */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 22 }}>{CLASS_EMOJI[c.classType] || "?"}</span>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
-                      {CLASS_NAMES[c.classType] || "Unknown"}
-                      <span style={{ fontSize: 10, opacity: 0.4, fontWeight: 400 }}>{RACE_NAMES[c.raceType] || ""}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 22, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1 }}>
-                        {c.light}
-                      </span>
-                      <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.4 }}>POWER</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div style={{ fontSize: 10, opacity: 0.35, marginBottom: 8 }}>
-                  {Math.round((c.minutesPlayedTotal || 0) / 60)}h played · Last: {c.dateLastPlayed ? new Date(c.dateLastPlayed).toLocaleDateString() : "—"}
-                </div>
-
-                {/* Equipped items */}
-                {equipped.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.35, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
-                      Equipped
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      {equipped.slice(0, 10).map((item: any, i: number) => (
-                        <div key={i} title={item.name || `Item ${item.itemHash}`} style={{
-                          width: 32, height: 32, borderRadius: 6,
-                          background: item.iconPath ? "rgba(0,0,0,.4)" : "rgba(255,255,255,.06)",
-                          border: "1px solid rgba(255,255,255,.08)",
-                          overflow: "hidden",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                          {item.iconPath ? (
-                            <img src={`https://www.bungie.net${item.iconPath}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            <span style={{ fontSize: 8, opacity: 0.3 }}>?</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {characters.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>
-          No characters found. Make sure your Bungie profile is public.
+              <span style={{ fontSize: 14 }}>{c.classType === 0 ? "🛡" : c.classType === 1 ? "🗡" : "✨"}</span>
+              {c.className || ["Titan", "Hunter", "Warlock"][c.classType]}
+              <span style={{ fontSize: 16, fontWeight: 900, color: "rgb(253,230,138)" }}>{c.light}</span>
+            </button>
+          ))}
+          <button onClick={() => setSubTab("vault")} style={{
+            padding: "8px 12px", border: "none", cursor: "pointer",
+            background: subTab === "vault" ? "rgba(245,158,11,.08)" : "transparent",
+            borderBottom: subTab === "vault" ? "2px solid rgba(245,158,11,.6)" : "2px solid transparent",
+            color: subTab === "vault" ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.55)",
+            fontWeight: subTab === "vault" ? 700 : 400, fontSize: 12, transition: "all .12s",
+          }}>🔒 Vault{data.vaultCount ? ` (${data.vaultCount})` : ""}</button>
         </div>
       )}
+
+      {/* Sub-tabs for character view */}
+      {subTab !== "vault" && char && (
+        <div style={{ display: "flex", gap: 2, padding: "6px 12px", borderBottom: "1px solid rgba(255,255,255,.04)", flexShrink: 0 }}>
+          {(["equipped", "inventory"] as const).map(st => (
+            <button key={st} onClick={() => setSubTab(st)} style={{
+              padding: "4px 10px", borderRadius: 6, border: "none", fontSize: 11, cursor: "pointer",
+              background: subTab === st ? `${accent}20` : "transparent",
+              color: subTab === st ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
+              fontWeight: subTab === st ? 700 : 400, textTransform: "capitalize",
+            }}>{st}{st === "inventory" ? ` (${char.inventory?.length || 0})` : ""}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12 }}>
+        {subTab === "vault" ? (
+          <VaultView items={vault} />
+        ) : char ? (
+          subTab === "equipped" ? (
+            <EquippedView char={char} hasManifest={hasManifest} accent={accent} />
+          ) : (
+            <InventoryGrid items={char.inventory || []} hasManifest={hasManifest} />
+          )
+        ) : (
+          <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>No character data available</div>
+        )}
+      </div>
     </div>
   );
 }
 
+function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: boolean; accent: string }) {
+  const weapons = char.weapons || [];
+  const armor = char.armor || [];
+  const other = char.otherEquipped || [];
+  const allEquipped = char.equipped || [];
+  const hasGrouped = weapons.length > 0 || armor.length > 0;
+
+  if (!hasGrouped && allEquipped.length > 0) {
+    return (
+      <div>
+        <div style={S.label}>Equipped</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {allEquipped.slice(0, 12).map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}
+        </div>
+        {!hasManifest && <div style={{ fontSize: 10, opacity: 0.25, marginTop: 12, textAlign: "center" }}>Manifest not synced — item names unavailable</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {char.emblemBackgroundPath && (
+        <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", height: 56,
+          background: `url(${char.emblemBackgroundPath?.startsWith("http") ? char.emblemBackgroundPath : "https://www.bungie.net" + char.emblemBackgroundPath}) center/cover` }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,.7) 0%, transparent 60%)", display: "flex", alignItems: "center", padding: "0 16px", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{char.classType === 0 ? "🛡" : char.classType === 1 ? "🗡" : "✨"}</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>{char.className} <span style={{ opacity: 0.4, fontWeight: 400, fontSize: 11 }}>{char.raceName}</span></div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1 }}>{char.light} <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.5 }}>POWER</span></div>
+            </div>
+          </div>
+        </div>
+      )}
+      {weapons.length > 0 && (
+        <div><div style={S.label}>Weapons</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{weapons.map((item: any, i: number) => <ItemTile key={i} item={item} />)}</div></div>
+      )}
+      {armor.length > 0 && (
+        <div><div style={S.label}>Armor</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{armor.map((item: any, i: number) => <ItemTile key={i} item={item} />)}</div></div>
+      )}
+      {other.length > 0 && (
+        <div><div style={S.label}>Other</div><div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{other.map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}</div></div>
+      )}
+      <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center" }}>Last played: {char.dateLastPlayed ? new Date(char.dateLastPlayed).toLocaleDateString() : "—"} · {Math.round((char.minutesPlayedTotal || 0) / 60)}h total</div>
+    </div>
+  );
+}
+
+function InventoryGrid({ items, hasManifest }: { items: any[]; hasManifest: boolean }) {
+  if (!items.length) return <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>Inventory empty</div>;
+  const exotics = items.filter((i: any) => i.tierName === "Exotic");
+  const legendaries = items.filter((i: any) => i.tierName === "Legendary");
+  const rest = items.filter((i: any) => i.tierName !== "Exotic" && i.tierName !== "Legendary");
+
+  const renderGroup = (label: string, group: any[]) => group.length === 0 ? null : (
+    <div>
+      <div style={S.label}>{label} ({group.length})</div>
+      {hasManifest ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} />)}</div>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}</div>
+      )}
+    </div>
+  );
+  return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{renderGroup("Exotics", exotics)}{renderGroup("Legendaries", legendaries)}{renderGroup("Other", rest)}</div>;
+}
+
+function VaultView({ items }: { items: any[] }) {
+  const [filter, setFilter] = useState<"all" | "weapons" | "armor">("all");
+  if (!items.length) return <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>Vault empty or not loaded</div>;
+  const weaponBuckets = new Set([1498876634, 2465295065, 953998645]);
+  const armorBuckets = new Set([3448274439, 3551918588, 14239492, 20886954, 1585787867]);
+  const filtered = items.filter((i: any) => {
+    if (filter === "weapons") return weaponBuckets.has(i.bucketHash);
+    if (filter === "armor") return armorBuckets.has(i.bucketHash);
+    return true;
+  });
+  filtered.sort((a: any, b: any) => { const ta = a.tierType || 0, tb = b.tierType || 0; if (ta !== tb) return tb - ta; return (b.primaryStat || 0) - (a.primaryStat || 0); });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 4 }}>
+        {(["all", "weapons", "armor"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: "4px 10px", borderRadius: 6, border: "none", fontSize: 11, cursor: "pointer",
+            background: filter === f ? "rgba(245,158,11,.15)" : "transparent",
+            color: filter === f ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.5)",
+            fontWeight: filter === f ? 700 : 400, textTransform: "capitalize",
+          }}>{f} ({f === "all" ? items.length : items.filter((i: any) => f === "weapons" ? weaponBuckets.has(i.bucketHash) : armorBuckets.has(i.bucketHash)).length})</button>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+        {filtered.slice(0, 100).map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}
+      </div>
+      {filtered.length > 100 && <div style={{ fontSize: 10, opacity: 0.3, textAlign: "center" }}>Showing first 100 of {filtered.length}</div>}
+    </div>
+  );
+}
+
+
+
 // ── Main Panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "streams",  label: "Live Streams", icon: "__twitch__" },
+  { id: "streams",  label: "Live Streams", icon: "📺" },
   { id: "lfg",      label: "Fireteams",    icon: "🔥" },
   { id: "weekly",   label: "Weekly Reset",  icon: "📋" },
   { id: "guardian",  label: "Guardian Lookup", icon: "🔍" },
@@ -692,22 +767,18 @@ export default function LobbyModulesPanel({
               display: "flex", alignItems: "center", gap: 5,
             }}
           >
-            {t.icon === "__twitch__" ? (
-              <TwitchIcon size={13} color={tab === t.id ? "#9146FF" : "rgba(148,163,184,.5)"} />
-            ) : (
-              <span style={{ fontSize: 13 }}>{t.icon}</span>
-            )}
+            <span style={{ fontSize: 13 }}>{t.icon}</span>
             {t.label}
           </button>
         ))}
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px" }}>
-        {tab === "streams"  && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
-        {tab === "lfg"      && <LfgBoard lobbyId={lobbyId} />}
-        {tab === "weekly"   && <BungieWeekly />}
-        {tab === "guardian"  && <GuardianLookup />}
+      <div style={{ flex: 1, minHeight: 0, overflowY: tab === "myguardian" ? "hidden" : "auto", padding: tab === "myguardian" ? 0 : "14px 14px 14px", display: "flex", flexDirection: "column" }}>
+        {tab === "streams"    && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
+        {tab === "lfg"        && <LfgBoard lobbyId={lobbyId} />}
+        {tab === "weekly"     && <BungieWeekly accentColor={accentColor} />}
+        {tab === "guardian"   && <GuardianLookup />}
         {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}
       </div>
     </div>
