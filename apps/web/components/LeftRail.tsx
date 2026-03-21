@@ -149,7 +149,7 @@ function accentForRoom(id: string): string {
 export default function LeftRail() {
   const { openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
-  const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId } = useWeered() as any;
+  const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus } = useWeered() as any;
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
@@ -272,7 +272,41 @@ export default function LeftRail() {
     return () => clearInterval(t);
   }, [favs.length, recentRooms.length]);
 
-  // ── Presence popover ───────────────────────────────────────────────────────
+  // ── Pending knock indicator ─────────────────────────────────────────────────
+  const [pendingRooms, setPendingRooms] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    // Listen for knock:queued and admitted/denied events from WeeredProvider
+    const onKnockQueued = (e: Event) => {
+      const rid = (e as CustomEvent)?.detail?.roomId;
+      if (rid) setPendingRooms(prev => new Set(prev).add(String(rid)));
+    };
+    const onAdmitted = (e: Event) => {
+      const rid = (e as CustomEvent)?.detail?.roomId;
+      if (rid) setPendingRooms(prev => { const next = new Set(prev); next.delete(String(rid)); return next; });
+    };
+    const onDenied = (e: Event) => {
+      const rid = (e as CustomEvent)?.detail?.roomId;
+      if (rid) setPendingRooms(prev => { const next = new Set(prev); next.delete(String(rid)); return next; });
+    };
+    window.addEventListener("weered:knock:queued", onKnockQueued);
+    window.addEventListener("weered:knock:admitted", onAdmitted);
+    window.addEventListener("weered:knock:denied", onDenied);
+    return () => {
+      window.removeEventListener("weered:knock:queued", onKnockQueued);
+      window.removeEventListener("weered:knock:admitted", onAdmitted);
+      window.removeEventListener("weered:knock:denied", onDenied);
+    };
+  }, []);
+
+  // Also check joinStatus from WeeredProvider if available
+  const pendingFromProvider = typeof joinStatus === "object" && joinStatus !== null ? joinStatus : {};
+  const isRoomPending = (room: string): boolean => {
+    if (pendingRooms.has(room)) return true;
+    const clean = room.startsWith("room:") ? room.slice(5) : room;
+    if (pendingRooms.has(clean) || pendingRooms.has(`room:${clean}`)) return true;
+    if (pendingFromProvider[room] === "knocking" || pendingFromProvider[clean] === "knocking" || pendingFromProvider[`room:${clean}`] === "knocking") return true;
+    return false;
+  };
   const [presenceHoverOpen, setPresenceHoverOpen] = useState(false);
   const [presenceHoverXY, setPresenceHoverXY] = useState({ x: 0, y: 0 });
   const [presenceHoverName, setPresenceHoverName] = useState("");
@@ -625,6 +659,18 @@ export default function LeftRail() {
                           {count} live
                         </span>
                       )}
+                      {isRoomPending(room) && (
+                        <span style={{
+                          flexShrink:0, fontSize:8, fontWeight:800, padding:"2px 6px",
+                          borderRadius:99, letterSpacing:"0.04em",
+                          background:"rgba(245,158,11,.12)",
+                          border:"1px solid rgba(245,158,11,.30)",
+                          color:"rgba(251,191,36,.9)",
+                          animation:"weered-pending-pulse 2s ease-in-out infinite",
+                        }}>
+                          PENDING
+                        </span>
+                      )}
                     </div>
                     {/* Sub row: context path if different from label */}
                     {room !== label && (
@@ -703,6 +749,18 @@ export default function LeftRail() {
                           {count}
                         </span>
                       )}
+                      {isRoomPending(room) && (
+                        <span style={{
+                          flexShrink:0, fontSize:8, fontWeight:800, padding:"2px 6px",
+                          borderRadius:99, letterSpacing:"0.04em",
+                          background:"rgba(245,158,11,.12)",
+                          border:"1px solid rgba(245,158,11,.30)",
+                          color:"rgba(251,191,36,.9)",
+                          animation:"weered-pending-pulse 2s ease-in-out infinite",
+                        }}>
+                          PENDING
+                        </span>
+                      )}
                     </div>
                     {room !== label && (
                       <div style={{ fontSize:10, opacity:0.28, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace", paddingLeft:10 }}>
@@ -731,6 +789,9 @@ export default function LeftRail() {
           </div>
         )}
       </div>
+
+      {/* Pending pill animation */}
+      <style>{`@keyframes weered-pending-pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
     </div>
   );
 }
