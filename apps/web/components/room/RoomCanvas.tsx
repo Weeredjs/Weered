@@ -8,6 +8,16 @@ import RoomStage, { StageMode } from "./RoomStage";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 
+// ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
+
+function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
+      <path d="M17.458 0L0 46.556v185.81h63.983v34.934h34.932l34.898-34.934h52.36L256 162.954V0H17.458zm23.259 23.263H232.73v128.029l-40.739 40.736H128L93.113 226.93v-34.902H40.717V23.263zm64.008 116.405H128V69.844h-23.275v69.824zm63.997 0h23.275V69.844h-23.275v69.824z" fill={color} />
+    </svg>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function safeCopy(s: string) {
@@ -23,7 +33,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
 const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
   { id: "youtube", icon: "▶",  label: "YouTube", live: true  },
-  { id: "twitch",  icon: "📺", label: "Twitch",  live: true  },
+  { id: "twitch",  icon: "__twitch__", label: "Twitch",  live: true  },
   { id: "browser", icon: "🌐", label: "Browser", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
   { id: "video",   icon: "📹", label: "Video",   live: false },
@@ -439,7 +449,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         {stageActive && stageMode === "twitch" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(145,70,255,0.08)", borderBottom: "1px solid rgba(145,70,255,0.15)", flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: "rgba(145,70,255,0.6)" }}>📺</span>
+              <TwitchIcon size={14} color="rgba(145,70,255,0.8)" />
               <input
                 value={twitchInput}
                 onChange={e => setTwitchInput(e.target.value)}
@@ -467,7 +477,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               />
             ) : (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "rgba(0,0,0,0.2)" }}>
-                <div style={{ fontSize: 40, opacity: 0.2 }}>📺</div>
+                <TwitchIcon size={40} color="rgba(145,70,255,0.25)" />
                 <div style={{ fontSize: 13, opacity: 0.4 }}>Enter a Twitch channel name above to start watching</div>
                 <div style={{ fontSize: 11, opacity: 0.25 }}>You can paste a full twitch.tv URL or just the channel name</div>
               </div>
@@ -511,7 +521,16 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                           : "border-white/[0.06] text-white/20 cursor-default",
                     ].join(" ")}
                   >
-                    {m.icon} {m.label}
+                    {m.icon === "__twitch__" ? (
+                      <TwitchIcon
+                        size={11}
+                        color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.6)" : "rgba(255,255,255,0.2)"}
+                        style={{ marginRight: 2 }}
+                      />
+                    ) : (
+                      <>{m.icon} </>
+                    )}
+                    {m.label}
                     {isActive && <span className="ml-1 text-[9px]">on</span>}
                     {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
                   </button>
