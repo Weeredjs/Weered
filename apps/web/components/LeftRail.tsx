@@ -197,10 +197,16 @@ export default function LeftRail() {
   });
 
   useEffect(() => {
-    const room = normRoomKey(joinedRoomId || activeRoomId || "");
-    if (!room || room === "lobby") return;
+    const raw = normRoomKey(joinedRoomId || activeRoomId || "");
+    if (!raw || raw === "lobby") return;
+    // Normalize: strip room: prefix, dedupe against both forms
+    const room = raw.startsWith("room:") ? raw.slice(5) : raw;
     setRecents(prev => {
-      const next = [room, ...prev.filter(r => r !== room)].slice(0, 8);
+      const filtered = prev.filter(r => {
+        const n = r.startsWith("room:") ? r.slice(5) : r;
+        return n !== room;
+      });
+      const next = [room, ...filtered].slice(0, 8);
       try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch {}
       return next;
     });
@@ -233,6 +239,18 @@ export default function LeftRail() {
     if (typeof v === "string") return v;
     if (typeof v === "object" && v !== null) return (v as any).name || id;
     return id;
+  };
+  const getRoomLobby = (id: string): string => {
+    const v = roomNameCache[id];
+    if (typeof v === "object" && v !== null) return (v as any).lobbyId || (v as any).lobby || "";
+    return "";
+  };
+  // Sublabel: show lobby context for room hashes, nothing for lobby slugs
+  const getRoomSublabel = (id: string): string => {
+    const lobby = getRoomLobby(id);
+    if (lobby && lobby !== id) return lobby;
+    // If the ID looks like a random hash (mixed case, short), don't show it as sublabel
+    return "";
   };
 
   // ── Online counts for favs/recents (fetched periodically) ─────────────────
@@ -640,12 +658,12 @@ export default function LeftRail() {
                         </span>
                       )}
                     </div>
-                    {/* Sub row: context path if different from label */}
-                    {room !== label && (
+                    {/* Sub row: lobby context */}
+                    {(() => { const sub = getRoomSublabel(room); return sub ? (
                       <div style={{ fontSize:10, opacity:0.32, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>
-                        {room}
+                        {sub}
                       </div>
-                    )}
+                    ) : null; })()}
                   </Link>
                   <button
                     onClick={() => toggleFav(room)}
@@ -730,11 +748,11 @@ export default function LeftRail() {
                         </span>
                       )}
                     </div>
-                    {room !== label && (
+                    {(() => { const sub = getRoomSublabel(room); return sub ? (
                       <div style={{ fontSize:10, opacity:0.28, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace", paddingLeft:10 }}>
-                        {room}
+                        {sub}
                       </div>
-                    )}
+                    ) : null; })()}
                   </Link>
                   <button
                     onClick={() => toggleFav(room)}
