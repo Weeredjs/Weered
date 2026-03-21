@@ -18,6 +18,17 @@ function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; co
   );
 }
 
+// ── YouTube play icon (official shape, used per YouTube API branding guidelines) ──
+
+function YouTubeIcon({ size = 11, color = "#FF0000", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.72)} viewBox="0 0 159 110" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
+      <path d="M154 17.5c-1.82-6.73-7.07-12-13.8-13.8C128.04 0 79.5 0 79.5 0S30.96 0 18.8 3.7C12.07 5.5 6.82 10.77 5 17.5 1.3 29.66 1.3 55 1.3 55s0 25.34 3.7 37.5c1.82 6.73 7.07 12 13.8 13.8C30.96 110 79.5 110 79.5 110s48.54 0 60.7-3.7c6.73-1.82 12-7.07 13.8-13.8 3.7-12.16 3.7-37.5 3.7-37.5s0-25.34-3.7-37.5z" fill={color} />
+      <path d="M64 78.8V31.2L105 55 64 78.8z" fill="#fff" />
+    </svg>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function safeCopy(s: string) {
@@ -32,7 +43,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
 
 const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
-  { id: "youtube", icon: "▶",  label: "YouTube", live: true  },
+  { id: "youtube", icon: "__youtube__",  label: "YouTube", live: true  },
   { id: "twitch",  icon: "__twitch__", label: "Twitch",  live: true  },
   { id: "browser", icon: "🌐", label: "Browser", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
@@ -423,7 +434,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               const embedUrl = toEmbedUrl(browserUrl);
               if (embedUrl === "__youtube_blocked__") return (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "rgba(0,0,0,0.3)", padding: 32 }}>
-                  <div style={{ fontSize: 40 }}>▶️</div>
+                  <YouTubeIcon size={48} color="rgba(255,0,0,0.3)" />
                   <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>YouTube blocks direct embedding</div>
                   <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>Use the YouTube tab above to sync playback for everyone</div>
                   <button onClick={() => { handleModuleClick("youtube" as any); setStageMode("youtube"); }} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "rgba(252,165,165,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -525,6 +536,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                       <TwitchIcon
                         size={11}
                         color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.6)" : "rgba(255,255,255,0.2)"}
+                        style={{ marginRight: 2 }}
+                      />
+                    ) : m.icon === "__youtube__" ? (
+                      <YouTubeIcon
+                        size={13}
+                        color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.45)" : "rgba(255,255,255,0.2)"}
                         style={{ marginRight: 2 }}
                       />
                     ) : (
