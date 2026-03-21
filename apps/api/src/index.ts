@@ -3109,6 +3109,60 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   }
 
+  // Refresh Bungie OAuth token if expired, returns fresh access token
+  async function refreshBungieToken(account: any): Promise<string | null> {
+    // If token is still valid, return it
+    if (account.tokenExpiry && new Date(account.tokenExpiry) > new Date()) {
+      return account.accessToken;
+    }
+
+    // No refresh token — can't refresh
+    if (!account.refreshToken) {
+      console.log("[bungie] No refresh token, user must re-link");
+      return null;
+    }
+
+    console.log("[bungie] Access token expired, refreshing...");
+    try {
+      const tokenBody: Record<string, string> = {
+        grant_type: "refresh_token",
+        refresh_token: account.refreshToken,
+        client_id: BUNGIE_CLIENT_ID,
+      };
+      if (BUNGIE_CLIENT_SECRET) {
+        tokenBody.client_secret = BUNGIE_CLIENT_SECRET;
+      }
+
+      const tokenRes = await fetch("https://www.bungie.net/Platform/App/OAuth/Token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-API-Key": BUNGIE_API_KEY },
+        body: new URLSearchParams(tokenBody),
+      });
+      const tokens = await tokenRes.json();
+
+      if (!tokens.access_token) {
+        console.error("[bungie] Token refresh failed:", tokens);
+        return null;
+      }
+
+      // Update stored tokens
+      await (prisma as any).userGameAccount.update({
+        where: { userId_gameType: { userId: account.userId, gameType: "BUNGIE" } },
+        data: {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || account.refreshToken,
+          tokenExpiry: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null,
+        },
+      });
+
+      console.log("[bungie] Token refreshed successfully");
+      return tokens.access_token;
+    } catch (e) {
+      console.error("[bungie] Token refresh error:", e);
+      return null;
+    }
+  }
+
   // GET /bungie/xur — Xur's inventory (cached 30 min)
   app.get("/bungie/xur", async (_req, reply) => {
     const data = await bungieGetCached("xur_inventory", "/Destiny2/Milestones/", 30);
@@ -3336,11 +3390,18 @@ app.post("/dm/:peerId", async (req, reply) => {
     });
     if (!account?.accessToken) return reply.send({ ok: true, linked: false });
 
+    // Refresh token if expired
+    const accessToken = await refreshBungieToken(account);
+    if (!accessToken) {
+      return reply.send({ ok: true, linked: true, error: "token_expired", displayName: account.displayName,
+        message: "Your Bungie session expired. Please re-link your account." });
+    }
+
     try {
       // Fetch full profile: characters, equipment, inventories, vault, item instances
       const profile = await bungieGet(
         `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300`,
-        account.accessToken
+        accessToken
       );
 
       const profileData = profile?.Response;
