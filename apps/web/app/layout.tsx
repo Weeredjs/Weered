@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <DockDrawer />
             <LobbyBrowser />
             <OverlayHost />
-            <WelcomeModal />
+            
           </WeeredProvider>
         </OverlayProvider>
       </body>
