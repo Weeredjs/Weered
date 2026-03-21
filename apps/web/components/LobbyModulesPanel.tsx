@@ -509,9 +509,9 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
 
   if (error) return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error}</div>;
 
-  const characters = data?.characters || [];
-  const inventoryItems = data?.inventory || [];
-  const vaultItems = data?.vault || [];
+  const characters = Array.isArray(data?.characters) ? data.characters : typeof data?.characters === "object" && data.characters ? Object.values(data.characters) : [];
+  const inventoryCount = data?.profileInventory || 0;
+  const hasVault = data?.hasVaultAccess || false;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -539,7 +539,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
             }}>LINKED</span>
           </div>
           <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>
-            Platform {data.platform} · {characters.length} characters
+            Platform {data.platform} · {characters.length} characters{inventoryCount ? ` · ${inventoryCount} items` : ""}{hasVault ? " · Vault access" : ""}
           </div>
         </div>
         <button
@@ -568,7 +568,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
               {c.emblemBackgroundPath && (
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: `url(${c.emblemBackgroundPath}) center/cover no-repeat`,
+                  background: `url(${c.emblemBackgroundPath.startsWith("http") ? c.emblemBackgroundPath : "https://www.bungie.net" + c.emblemBackgroundPath}) center/cover no-repeat`,
                   opacity: 0.12, pointerEvents: "none",
                 }} />
               )}
