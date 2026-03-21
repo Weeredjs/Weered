@@ -69,15 +69,57 @@ type Flair = {
   icon?: React.ReactNode;
 };
 
-const ICON_GOD = (
-  <span style={{ fontSize: 10, lineHeight: 1 }}>★</span>
+// ── Role display names (DB value → street name) ─────────────────────────────
+const ROLE_DISPLAY: Record<string, string> = {
+  GOD: "Kingpin", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Lookout",
+  MOD: "Captain", OWNER: "Founder",
+};
+function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase(); }
+
+// ── Role icons — clean, 13px, instantly recognizable ─────────────────────────
+const ICON_GOD = ( // Crown — gold
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M2.5 12h11V10.5L11 7l-3 3-3-3-2.5 3.5V12Z" fill="#fcd34d"/>
+    <path d="M2.5 6l2.5 4 3-3 3 3 2.5-4" stroke="#f59e0b" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M2.5 12h11" stroke="#f59e0b" strokeWidth="1.2" strokeLinecap="round"/>
+    <circle cx="8" cy="3.5" r="1" fill="#fcd34d" stroke="#f59e0b" strokeWidth="0.6"/>
+  </svg>
 );
-const ICON_STAFF = null;
-const ICON_ADMIN = null;
-const ICON_MOD = null;
-const ICON_OWNER = null;
-const ICON_PAID = (
-  <span style={{ fontSize: 9, lineHeight: 1 }}>💎</span>
+const ICON_ADMIN = ( // W monogram — red
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="rgba(239,68,68,.15)" stroke="#f87171" strokeWidth="1.1"/>
+    <path d="M4 5.5L5.5 11 8 7l2.5 4L12 5.5" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+const ICON_STAFF = ( // Shield — blue
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M8 2L3 4.5V8c0 2.8 2.2 5 5 6 2.8-1 5-3.2 5-6V4.5L8 2Z" fill="rgba(96,165,250,.15)" stroke="#60a5fa" strokeWidth="1.1"/>
+    <path d="M6 8l1.5 1.5L10 6.5" stroke="#60a5fa" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const ICON_SUPPORT = ( // Diamond — teal
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="rgba(20,184,166,.12)" stroke="#2dd4bf" strokeWidth="1.1"/>
+  </svg>
+);
+const ICON_MOD = ( // Chevron — green
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M3 6l5 5 5-5" stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 3l5 5 5-5" stroke="#34d399" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+  </svg>
+);
+const ICON_OWNER = ( // Key — orange
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <circle cx="5.5" cy="6" r="3" fill="rgba(249,115,22,.12)" stroke="#f97316" strokeWidth="1.1"/>
+    <path d="M8 7.5h4.5M11 7.5v2M12.5 7.5v1.5" stroke="#f97316" strokeWidth="1.2" strokeLinecap="round"/>
+  </svg>
+);
+const ICON_PAID = ( // Gem — purple
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{display:"inline",verticalAlign:"middle"}}>
+    <path d="M4 3h8l2.5 4L8 14 1.5 7Z" fill="rgba(167,139,250,.15)" stroke="#a78bfa" strokeWidth="1.1" strokeLinejoin="round"/>
+    <path d="M1.5 7h13" stroke="#a78bfa" strokeWidth="0.8"/>
+    <path d="M8 14L6 7l2-4 2 4-2 7Z" fill="rgba(167,139,250,.10)" stroke="#a78bfa" strokeWidth="0.6"/>
+  </svg>
 );
 
 function flairFor(u: any): Flair {
@@ -87,10 +129,12 @@ function flairFor(u: any): Flair {
 
   if (g === "GOD")
     return { markClass: "weered-mark-god", nameClass: "weered-name-god", badge: "GOD", badgeClass: "weered-badge-god", icon: ICON_GOD };
-  if (g === "STAFF" || g === "SUPPORT")
-    return { markClass: "weered-mark-staff", nameClass: "weered-name-staff", badge: g, badgeClass: "weered-badge-staff", icon: ICON_STAFF };
   if (g === "ADMIN")
     return { markClass: "weered-mark-admin", nameClass: "weered-name-admin", badge: "ADMIN", badgeClass: "weered-badge-admin", icon: ICON_ADMIN };
+  if (g === "STAFF")
+    return { markClass: "weered-mark-staff", nameClass: "weered-name-staff", badge: "STAFF", badgeClass: "weered-badge-staff", icon: ICON_STAFF };
+  if (g === "SUPPORT")
+    return { markClass: "weered-mark-staff", nameClass: "weered-name-staff", badge: "SUPPORT", badgeClass: "weered-badge-staff", icon: ICON_SUPPORT };
   if (g === "MOD")
     return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: ICON_MOD };
   if (rr === "OWNER")
@@ -104,11 +148,12 @@ function flairFor(u: any): Flair {
 function groupRank(u: any): number {
   const g  = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
   const rr = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
-  if (rr === "OWNER") return 0;
-  if (g === "STAFF" || g === "SUPPORT") return 1;
+  if (g === "GOD") return 0;
+  if (rr === "OWNER") return 1;
   if (g === "ADMIN") return 2;
-  if (g === "MOD" || rr === "MOD") return 3;
-  return 4;
+  if (g === "STAFF" || g === "SUPPORT") return 3;
+  if (g === "MOD" || rr === "MOD") return 4;
+  return 5;
 }
 
 // ── Simple accent color from room name hash ───────────────────────────────────
@@ -461,7 +506,7 @@ export default function LeftRail() {
                     {f.icon && <span style={{ opacity: 0.85, lineHeight: 1 }}>{f.icon}</span>}
                   </div>
                   <div style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", marginTop: 1, fontFamily: "monospace" }}>
-                    {you ? "you" : label}
+                    {you ? "you" : roleDisplay(f.badge || "member")}
                   </div>
                 </div>
                 {f.badge && (
@@ -471,7 +516,7 @@ export default function LeftRail() {
                     border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("violet") ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.1)"}`,
                     background: cls.includes("emerald") ? "rgba(16,185,129,0.1)" : cls.includes("amber") ? "rgba(245,158,11,0.1)" : cls.includes("violet") ? "rgba(124,58,237,0.1)" : "rgba(255,255,255,0.05)",
                     color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("violet") ? "#c4b5fd" : "rgba(255,255,255,0.5)",
-                  }}>{label}</span>
+                  }}>{roleDisplay(f.badge || label)}</span>
                 )}
               </div>
             );
