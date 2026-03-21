@@ -200,10 +200,6 @@ export default function LeftRail() {
     const raw = normRoomKey(joinedRoomId || activeRoomId || "");
     if (!raw || raw === "lobby") return;
     const room = raw.startsWith("room:") ? raw.slice(5) : raw;
-    // Skip lobby slugs — lobbies are lowercase-only with possible dots/hyphens
-    // Room hashes are mixed-case random IDs like "XlKwIz" or "MwlnQa"
-    const isLobbySlug = /^[a-z][a-z0-9._-]*$/.test(room) && room.length > 2;
-    if (isLobbySlug) return;
     setRecents(prev => {
       const filtered = prev.filter(r => {
         const n = r.startsWith("room:") ? r.slice(5) : r;
@@ -248,11 +244,13 @@ export default function LeftRail() {
     if (typeof v === "object" && v !== null) return (v as any).lobbyId || (v as any).lobby || "";
     return "";
   };
-  // Sublabel: show lobby context for room hashes, nothing for lobby slugs
+  // Sublabel: show parent lobby name for rooms, nothing for lobby slugs in recents
   const getRoomSublabel = (id: string): string => {
     const lobby = getRoomLobby(id);
-    if (lobby && lobby !== id) return lobby;
-    // If the ID looks like a random hash (mixed case, short), don't show it as sublabel
+    if (lobby) return lobby;
+    // If the ID is a lobby slug (lowercase, hyphens, dots), show "lobby"
+    const isLobbySlug = /^[a-z][a-z0-9._-]*$/.test(id) && id.length > 2;
+    if (isLobbySlug) return "lobby";
     return "";
   };
 
