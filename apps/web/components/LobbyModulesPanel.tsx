@@ -398,7 +398,6 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
     </div>
   );
 }
-}
 
 // ── Guardian Lookup ──────────────────────────────────────────────────────────
 
