@@ -199,8 +199,11 @@ export default function LeftRail() {
   useEffect(() => {
     const raw = normRoomKey(joinedRoomId || activeRoomId || "");
     if (!raw || raw === "lobby") return;
-    // Normalize: strip room: prefix, dedupe against both forms
     const room = raw.startsWith("room:") ? raw.slice(5) : raw;
+    // Skip lobby slugs — lobbies are lowercase-only with possible dots/hyphens
+    // Room hashes are mixed-case random IDs like "XlKwIz" or "MwlnQa"
+    const isLobbySlug = /^[a-z][a-z0-9._-]*$/.test(room) && room.length > 2;
+    if (isLobbySlug) return;
     setRecents(prev => {
       const filtered = prev.filter(r => {
         const n = r.startsWith("room:") ? r.slice(5) : r;
