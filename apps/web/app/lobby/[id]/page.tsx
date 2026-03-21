@@ -12,6 +12,16 @@ import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
+// ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
+
+function TwitchIcon({ size = 12, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
+      <path d="M17.458 0L0 46.556v185.81h63.983v34.934h34.932l34.898-34.934h52.36L256 162.954V0H17.458zm23.259 23.263H232.73v128.029l-40.739 40.736H128L93.113 226.93v-34.902H40.717V23.263zm64.008 116.405H128V69.844h-23.275v69.824zm63.997 0h23.275V69.844h-23.275v69.824z" fill={color} />
+    </svg>
+  );
+}
+
 const VERIFIED_DOMAINS = new Set([
   "ign.com", "espn.com", "techcrunch.com", "bbc.com", "nba.com",
   "nfl.com", "kotaku.com", "theverge.com", "wired.com", "reuters.com",
@@ -138,7 +148,16 @@ export default function LobbyIdPage() {
         }}>
           <TabBtn active={view === "rooms"} accent={accent} onClick={() => setView("rooms")}>Rooms</TabBtn>
           {hasModules && (
-            <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>Modules</TabBtn>
+            <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>
+              {lobbyInfo?.moduleType === "TWITCH" && (
+                <TwitchIcon
+                  size={12}
+                  color={view === "modules" ? "#9146FF" : "rgba(148,163,184,.5)"}
+                  style={{ marginRight: 5 }}
+                />
+              )}
+              Modules
+            </TabBtn>
           )}
           <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>Feed</TabBtn>
 

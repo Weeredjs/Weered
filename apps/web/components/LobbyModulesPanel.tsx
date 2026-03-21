@@ -4,6 +4,16 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 
+// ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
+
+function TwitchIcon({ size = 13, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
+      <path d="M17.458 0L0 46.556v185.81h63.983v34.934h34.932l34.898-34.934h52.36L256 162.954V0H17.458zm23.259 23.263H232.73v128.029l-40.739 40.736H128L93.113 226.93v-34.902H40.717V23.263zm64.008 116.405H128V69.844h-23.275v69.824zm63.997 0h23.275V69.844h-23.275v69.824z" fill={color} />
+    </svg>
+  );
+}
+
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders() {
@@ -639,7 +649,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
 // ── Main Panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "streams",  label: "Live Streams", icon: "📺" },
+  { id: "streams",  label: "Live Streams", icon: "__twitch__" },
   { id: "lfg",      label: "Fireteams",    icon: "🔥" },
   { id: "weekly",   label: "Weekly Reset",  icon: "📋" },
   { id: "guardian",  label: "Guardian Lookup", icon: "🔍" },
@@ -682,7 +692,11 @@ export default function LobbyModulesPanel({
               display: "flex", alignItems: "center", gap: 5,
             }}
           >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
+            {t.icon === "__twitch__" ? (
+              <TwitchIcon size={13} color={tab === t.id ? "#9146FF" : "rgba(148,163,184,.5)"} />
+            ) : (
+              <span style={{ fontSize: 13 }}>{t.icon}</span>
+            )}
             {t.label}
           </button>
         ))}
