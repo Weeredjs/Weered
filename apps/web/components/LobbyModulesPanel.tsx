@@ -449,6 +449,193 @@ function GuardianLookup() {
   );
 }
 
+// ── My Guardian (linked Bungie account) ─────────────────────────────────────
+
+function MyGuardian({ accentColor }: { accentColor?: string }) {
+  const accent = accentColor || ACCENT_DESTINY;
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const CLASS_NAMES: Record<number, string> = { 0: "Titan", 1: "Hunter", 2: "Warlock" };
+  const CLASS_EMOJI: Record<number, string> = { 0: "🛡", 1: "🗡", 2: "✨" };
+  const RACE_NAMES: Record<number, string> = { 0: "Human", 1: "Awoken", 2: "Exo" };
+
+  useEffect(() => {
+    apiFetch("/bungie/me")
+      .then(j => { setData(j); setLoading(false); })
+      .catch(() => { setError("Failed to load"); setLoading(false); });
+  }, []);
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading your Guardian...</div>;
+
+  // Not linked — show link button
+  if (!data?.linked) {
+    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+    const linkUrl = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
+        <div style={{ fontSize: 48, opacity: 0.3 }}>🔗</div>
+        <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center" }}>Link your Bungie account</div>
+        <div style={{ fontSize: 12, opacity: 0.45, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
+          Connect your Bungie.net account to view your characters, inventory, vault, and loadouts right here on Weered.
+        </div>
+        <a
+          href={linkUrl}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            padding: "12px 28px", borderRadius: 12,
+            background: `${accent}20`, border: `1px solid ${accent}50`,
+            color: accent, fontWeight: 800, fontSize: 14,
+            textDecoration: "none", cursor: "pointer",
+            transition: "background .15s, border-color .15s",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${accent}35`; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${accent}20`; }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M5 8h6M8 5v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          Link Bungie Account
+        </a>
+        <div style={{ fontSize: 10, opacity: 0.25, textAlign: "center" }}>
+          You'll be redirected to Bungie.net to authorize
+        </div>
+      </div>
+    );
+  }
+
+  if (error) return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error}</div>;
+
+  const characters = data?.characters || [];
+  const inventoryItems = data?.inventory || [];
+  const vaultItems = data?.vault || [];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Linked account header */}
+      <div style={{
+        ...S.card,
+        display: "flex", alignItems: "center", gap: 12,
+        border: `1px solid ${accent}30`, background: `${accent}08`,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 10,
+          background: `${accent}25`, border: `1px solid ${accent}40`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, flexShrink: 0,
+        }}>
+          ⚔
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+            {data.displayName}
+            <span style={{
+              fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+              background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)",
+              color: "rgba(134,239,172,.9)",
+            }}>LINKED</span>
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>
+            Platform {data.platform} · {characters.length} characters
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+            window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
+          }}
+          style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}
+        >
+          Re-link
+        </button>
+      </div>
+
+      {/* Characters */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+        {characters.map((c: any) => {
+          const equipped = c.equipment || c.items || [];
+          return (
+            <div key={c.characterId} style={{
+              ...S.card,
+              position: "relative",
+              overflow: "hidden",
+              border: `1px solid ${accent}20`,
+            }}>
+              {/* Emblem background */}
+              {c.emblemBackgroundPath && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: `url(${c.emblemBackgroundPath}) center/cover no-repeat`,
+                  opacity: 0.12, pointerEvents: "none",
+                }} />
+              )}
+
+              <div style={{ position: "relative" }}>
+                {/* Class info */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: 22 }}>{CLASS_EMOJI[c.classType] || "?"}</span>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
+                      {CLASS_NAMES[c.classType] || "Unknown"}
+                      <span style={{ fontSize: 10, opacity: 0.4, fontWeight: 400 }}>{RACE_NAMES[c.raceType] || ""}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 22, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1 }}>
+                        {c.light}
+                      </span>
+                      <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.4 }}>POWER</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div style={{ fontSize: 10, opacity: 0.35, marginBottom: 8 }}>
+                  {Math.round((c.minutesPlayedTotal || 0) / 60)}h played · Last: {c.dateLastPlayed ? new Date(c.dateLastPlayed).toLocaleDateString() : "—"}
+                </div>
+
+                {/* Equipped items */}
+                {equipped.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.35, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
+                      Equipped
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {equipped.slice(0, 10).map((item: any, i: number) => (
+                        <div key={i} title={item.name || `Item ${item.itemHash}`} style={{
+                          width: 32, height: 32, borderRadius: 6,
+                          background: item.iconPath ? "rgba(0,0,0,.4)" : "rgba(255,255,255,.06)",
+                          border: "1px solid rgba(255,255,255,.08)",
+                          overflow: "hidden",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          {item.iconPath ? (
+                            <img src={`https://www.bungie.net${item.iconPath}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <span style={{ fontSize: 8, opacity: 0.3 }}>?</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {characters.length === 0 && (
+        <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>
+          No characters found. Make sure your Bungie profile is public.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -456,6 +643,7 @@ const TABS = [
   { id: "lfg",      label: "Fireteams",    icon: "🔥" },
   { id: "weekly",   label: "Weekly Reset",  icon: "📋" },
   { id: "guardian",  label: "Guardian Lookup", icon: "🔍" },
+  { id: "myguardian", label: "My Guardian", icon: "⚔" },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -506,6 +694,7 @@ export default function LobbyModulesPanel({
         {tab === "lfg"      && <LfgBoard lobbyId={lobbyId} />}
         {tab === "weekly"   && <BungieWeekly />}
         {tab === "guardian"  && <GuardianLookup />}
+        {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}
       </div>
     </div>
   );
