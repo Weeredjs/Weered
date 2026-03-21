@@ -7,6 +7,7 @@ import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
 import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
+import { syncManifest, enrichProfile, enrichMilestones, isLoaded as manifestLoaded, manifestVersion } from "./manifest";
 
 const prisma = new PrismaClient();
 
@@ -3068,6 +3069,13 @@ app.post("/dm/:peerId", async (req, reply) => {
   const BUNGIE_CLIENT_SECRET = process.env.BUNGIE_CLIENT_SECRET || "";
   const BUNGIE_ROOT          = "https://www.bungie.net/Platform";
 
+  // Auto-sync Bungie manifest on startup (non-blocking)
+  if (BUNGIE_API_KEY) {
+    syncManifest(BUNGIE_API_KEY).then(r => {
+      console.log(`[manifest] Startup sync: ${r.ok ? "OK" : "FAILED"} — v${r.version}`, r.counts);
+    }).catch(e => console.error("[manifest] Startup sync error:", e));
+  }
+
   async function bungieGet(path: string, accessToken?: string) {
     const headers: Record<string, string> = { "X-API-Key": BUNGIE_API_KEY };
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
@@ -3114,43 +3122,53 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, available: isAvailable, milestone: xurMilestone || null, raw: data?.Response ? undefined : data });
   });
 
-  // GET /bungie/weekly — Weekly reset info (cached 15 min)
+  // POST /bungie/manifest/sync — Force re-sync manifest
+  app.post("/bungie/manifest/sync", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!BUNGIE_API_KEY) return reply.send({ ok: false, error: "bungie_not_configured" });
+    const result = await syncManifest(BUNGIE_API_KEY);
+    return reply.send({ ok: true, ...result });
+  });
+
+  // GET /bungie/manifest/status — Check manifest cache status
+  app.get("/bungie/manifest/status", async (_req, reply) => {
+    return reply.send({ ok: true, loaded: manifestLoaded(), version: manifestVersion() });
+  });
+
+  // GET /bungie/weekly — Weekly reset info, enriched with manifest names
   app.get("/bungie/weekly", async (_req, reply) => {
     const data = await bungieGetCached("weekly_reset", "/Destiny2/Milestones/", 15);
-    if (!data) return reply.send({ ok: true, milestones: null, error: "bungie_unavailable" });
+    if (!data) return reply.send({ ok: true, milestones: [], error: "bungie_unavailable" });
 
-    // Extract key milestones
-    const milestones = data?.Response || {};
-    const summary: any[] = [];
+    const milestonesRaw = data?.Response || {};
 
-    // Known milestone hashes
+    if (manifestLoaded()) {
+      const enriched = enrichMilestones(milestonesRaw);
+      return reply.send({
+        ok: true,
+        milestones: enriched,
+        totalMilestones: Object.keys(milestonesRaw).length,
+        manifestVersion: manifestVersion(),
+      });
+    }
+
+    // Fallback: hardcoded names when manifest not yet synced
     const KNOWN: Record<string, string> = {
-      "2029743966": "Nightfall",
-      "3603098564": "Crucible Playlist",
-      "534869653":  "Xur",
-      "4253138191": "Raid",
-      "1437935813": "Vanguard Ops",
+      "2029743966": "Nightfall", "3603098564": "Crucible Playlist",
+      "534869653": "Xur", "4253138191": "Raid", "1437935813": "Vanguard Ops",
     };
-
-    for (const [hash, ms] of Object.entries(milestones) as [string, any][]) {
+    const summary: any[] = [];
+    for (const [hash, ms] of Object.entries(milestonesRaw) as [string, any][]) {
       if (KNOWN[hash]) {
         summary.push({
-          hash,
-          name: KNOWN[hash],
-          activities: ms?.activities?.map((a: any) => ({
-            hash: a.activityHash,
-            challenges: a.challengeObjectiveHashes,
-            modifiers: a.modifierHashes,
-            phases: a.phaseHashes,
-          })) || [],
-          availableQuests: ms?.availableQuests?.length || 0,
-          startDate: ms?.startDate,
-          endDate: ms?.endDate,
+          hash, name: KNOWN[hash],
+          activities: ms?.activities?.map((a: any) => ({ hash: a.activityHash, challenges: a.challengeObjectiveHashes, modifiers: a.modifierHashes, phases: a.phaseHashes })) || [],
+          availableQuests: ms?.availableQuests?.length || 0, startDate: ms?.startDate, endDate: ms?.endDate,
         });
       }
     }
-
-    return reply.send({ ok: true, milestones: summary, totalMilestones: Object.keys(milestones).length });
+    return reply.send({ ok: true, milestones: summary, totalMilestones: Object.keys(milestonesRaw).length });
   });
 
   // GET /bungie/player/:name — Guardian stats lookup (platform search)
@@ -3308,7 +3326,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
-  // GET /bungie/me — get current user's Bungie profile (requires linked account)
+  // GET /bungie/me — Full enriched Bungie profile with inventory
   app.get("/bungie/me", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3319,24 +3337,62 @@ app.post("/dm/:peerId", async (req, reply) => {
     if (!account?.accessToken) return reply.send({ ok: true, linked: false });
 
     try {
-      // Fetch full profile with inventory
+      // Fetch full profile: characters, equipment, inventories, vault, item instances
       const profile = await bungieGet(
-        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300,800`,
+        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300`,
         account.accessToken
       );
 
+      const profileData = profile?.Response;
+      if (!profileData) return reply.send({ ok: true, linked: true, error: "no_profile_data", displayName: account.displayName });
+
+      // Enrich with manifest if loaded
+      if (manifestLoaded()) {
+        const enriched = enrichProfile(profileData);
+        return reply.send({
+          ok: true,
+          linked: true,
+          displayName: account.displayName,
+          platform: account.platform,
+          externalId: account.externalId,
+          manifestVersion: manifestVersion(),
+          ...enriched,
+        });
+      }
+
+      // Fallback: raw data without manifest resolution
+      const characters = profileData?.characters?.data || {};
+      const charEquipment = profileData?.characterEquipment?.data || {};
+      const instances = profileData?.itemComponents?.instances?.data || {};
+      const vaultItems = profileData?.profileInventory?.data?.items || [];
+
+      const charSummary = Object.entries(characters).map(([charId, c]: [string, any]) => {
+        const equipped = (charEquipment[charId]?.items || []).map((item: any) => {
+          const inst = instances[item.itemInstanceId] || {};
+          return {
+            itemHash: item.itemHash, itemInstanceId: item.itemInstanceId, bucketHash: item.bucketHash,
+            primaryStat: inst.primaryStat?.value || null, name: null, icon: null,
+          };
+        });
+        return {
+          characterId: charId, classType: c.classType,
+          className: ["Titan", "Hunter", "Warlock"][c.classType] || "Unknown",
+          light: c.light, raceType: c.raceType,
+          raceName: ["Human", "Awoken", "Exo"][c.raceType] || "Unknown",
+          emblemPath: c.emblemPath, emblemBackgroundPath: c.emblemBackgroundPath,
+          dateLastPlayed: c.dateLastPlayed, minutesPlayedTotal: c.minutesPlayedTotal,
+          equipped, weapons: [], armor: [], inventory: [],
+        };
+      });
+
       return reply.send({
-        ok: true,
-        linked: true,
-        displayName: account.displayName,
-        platform: account.platform,
-        externalId: account.externalId,
-        characters: profile?.Response?.characters?.data || {},
-        profileInventory: profile?.Response?.profileInventory?.data?.items?.length || 0,
-        hasVaultAccess: true,
+        ok: true, linked: true,
+        displayName: account.displayName, platform: account.platform, externalId: account.externalId,
+        characters: charSummary, vault: vaultItems.slice(0, 20), vaultCount: vaultItems.length,
       });
     } catch (e) {
-      return reply.send({ ok: true, linked: true, displayName: account.displayName, error: "fetch_failed" });
+      console.error("[bungie/me]", e);
+      return reply.send({ ok: true, linked: true, error: "fetch_failed", displayName: account.displayName });
     }
   });
 
