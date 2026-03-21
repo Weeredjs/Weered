@@ -23,6 +23,13 @@ function normRole(x: string) {
   return s.slice(0, 14);
 }
 
+// Street hierarchy display names
+const ROLE_DISPLAY: Record<string, string> = {
+  GOD: "KINGPIN", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "LOOKOUT",
+  MOD: "CAPTAIN", OWNER: "FOUNDER", MEMBER: "MEMBER",
+};
+function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole; }
+
 const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }> = {
   GOD:     { border: "rgba(250,204,21,.38)",  bg: "rgba(234,179,8,.18)",   color: "#fde68a" },
   ADMIN:   { border: "rgba(248,113,113,.34)", bg: "rgba(239,68,68,.14)",   color: "#fca5a5" },
@@ -223,7 +230,7 @@ export default function UserCorner() {
                 background: "rgba(255,255,255,.06)",
                 ...chipStyle(gRole),
               }}>
-                {gRole}
+                {roleDisplay(gRole)}
               </span>
             )}
             {roomRole && roomRole !== gRole && (
@@ -233,7 +240,7 @@ export default function UserCorner() {
                 background: "rgba(255,255,255,.06)",
                 ...chipStyle(roomRole),
               }}>
-                {roomRole}
+                {roleDisplay(roomRole)}
               </span>
             )}
           </div>
