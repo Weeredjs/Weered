@@ -556,13 +556,16 @@ export default function HomePage() {
     [filtered]
   );
 
-  // Hero: prefer Marathon, then highest-traffic lobby, then any
+  // Hero: prefer Marathon (search raw fetched data to avoid merge issues), then highest-traffic lobby
   const featured = useMemo(() => {
-    const marathon = lobbies.find(r => roomId(r) === "marathon" || roomName(r) === "marathon" || r?.slug === "marathon");
-    if (marathon) return marathon;
+    // Search all data sources for marathon
+    const marathonFromFetched = fetchedRooms.find((r: any) => r?.id === "marathon" || r?.slug === "marathon");
+    const marathonFromLobbies = lobbies.find(r => roomId(r) === "marathon" || roomName(r) === "marathon");
+    const marathon = marathonFromFetched || marathonFromLobbies;
+    if (marathon) return { ...marathon, pinned: true };
     return lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null;
   },
-    [lobbies, popularRooms]
+    [lobbies, popularRooms, fetchedRooms]
   );
 
   const isMarathonFeatured = featured && (roomId(featured) === "marathon" || roomName(featured) === "marathon" || featured?.slug === "marathon");
