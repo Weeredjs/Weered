@@ -29,6 +29,7 @@ enum GlobalRole {
 
 enum ModuleType {
   REDDIT
+  MARATHON
   BUNGIE
   TWITCH
   YOUTUBE

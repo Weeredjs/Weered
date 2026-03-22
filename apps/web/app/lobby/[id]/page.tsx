@@ -8,6 +8,7 @@ import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
+import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -31,6 +32,7 @@ const VERIFIED_DOMAINS = new Set([
 const MODULE_GAME_NAMES: Record<string, string> = {
   BUNGIE: "Destiny 2",
   TWITCH: "Twitch",
+  MARATHON: "Marathon",
 };
 
 type LobbyInfo = {
@@ -74,7 +76,7 @@ export default function LobbyIdPage() {
             name:           j.lobby.name,
             _count:         j.lobby._count,
           });
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH") {
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON") {
             setView("modules");
           } else {
             setView("rooms");
@@ -84,7 +86,7 @@ export default function LobbyIdPage() {
       .catch(() => {});
   }, [lobbyId]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH";
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const isStaff    = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "ADMIN";
@@ -182,7 +184,11 @@ export default function LobbyIdPage() {
         {/* Content */}
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {view === "modules" && hasModules ? (
-            <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+            lobbyInfo?.moduleType === "MARATHON" ? (
+              <MarathonModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+            ) : (
+              <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+            )
           ) : view === "rooms" ? (
             <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
           ) : (
