@@ -3339,7 +3339,7 @@ app.post("/dm/:peerId", async (req, reply) => {
 
       if (!tokens.access_token) {
         console.error("[bungie oauth] token error", tokens);
-        return reply.redirect(`${SITE_URL}/settings?bungie=error`);
+        return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=error`);
       }
 
       // Get membership info
@@ -3373,10 +3373,10 @@ app.post("/dm/:peerId", async (req, reply) => {
         },
       });
 
-      return reply.redirect(`${SITE_URL}/settings?bungie=success`);
+      return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=success`);
     } catch (e) {
       console.error("[bungie oauth callback]", e);
-      return reply.redirect(`${SITE_URL}/settings?bungie=error`);
+      return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=error`);
     }
   });
 
