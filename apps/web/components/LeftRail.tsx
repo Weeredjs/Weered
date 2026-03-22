@@ -123,7 +123,7 @@ function groupRank(u: any): number {
 // ── Simple accent color from room name hash ───────────────────────────────────
 const ROOM_ACCENTS = [
   "#5800E5", "#22c55e", "#f97316", "#60a5fa", "#ef4444",
-  "#eab308", "#ec4899", "#14b8a6", "#9B5FFF", "#fb923c",
+  "#eab308", "#ec4899", "#14b8a6", "#5800E5", "#fb923c",
 ];
 function accentForRoom(id: string): string {
   let h = 0;
@@ -456,7 +456,7 @@ export default function LeftRail() {
             const cls   =
               label === "owner" || label === "admin"  ? "border-emerald-300/25 bg-emerald-500/10 text-emerald-200"
               : label === "staff" || label === "support" || label === "god" ? "border-amber-300/25 bg-amber-500/10 text-amber-200"
-              : label === "mod"   ? "border-[#5800E5]/25 bg-[#5800E5]/10 text-[#c4a0ff] weered-mod"
+              : label === "mod"   ? "border-[#5800E5]/25 bg-[#5800E5]/10 text-[rgba(243,244,246,0.85)] weered-mod"
               : "border-white/10 bg-black/10 text-white/70";
 
             return (
@@ -500,7 +500,7 @@ export default function LeftRail() {
                 }}
               >
                 {(() => {
-                  const roleColors: Record<string,string> = { god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa", admin: "#9B5FFF", mod: "#34d399", owner: "#f97316", paid: "#9B5FFF" };
+                  const roleColors: Record<string,string> = { god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa", admin: "#5800E5", mod: "#34d399", owner: "#f97316", paid: "#5800E5" };
                   const aColor = roleColors[label] || avatarBg(nm, label === "you", u?.avatarColor);
                   const userAvatar = u?.avatar || null;
                   return (
@@ -520,7 +520,7 @@ export default function LeftRail() {
                   );
                 })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: you ? "rgba(155,95,255,0.95)" : "rgba(232,232,236,0.9)", display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: you ? "rgba(243,244,246,0.95)" : "rgba(232,232,236,0.9)", display: "flex", alignItems: "center", gap: 4 }}>
                     {nm}
                     {f.icon && <span style={{ opacity: 0.85, lineHeight: 1 }}>{f.icon}</span>}
                   </div>
@@ -532,9 +532,9 @@ export default function LeftRail() {
                   <span style={{
                     fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
                     padding: "2px 6px", borderRadius: 999, flexShrink: 0,
-                    border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("weered-mod") ? "rgba(155,95,255,0.3)" : "rgba(255,255,255,0.1)"}`,
+                    border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("weered-mod") ? "rgba(88,0,229,0.35)" : "rgba(255,255,255,0.1)"}`,
                     background: cls.includes("emerald") ? "rgba(16,185,129,0.1)" : cls.includes("amber") ? "rgba(245,158,11,0.1)" : cls.includes("weered-mod") ? "rgba(88,0,229,0.1)" : "rgba(255,255,255,0.05)",
-                    color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("weered-mod") ? "#c4a0ff" : "rgba(255,255,255,0.5)",
+                    color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("weered-mod") ? "rgba(243,244,246,0.85)" : "rgba(255,255,255,0.5)",
                   }}>{roleDisplay(f.badge || label)}</span>
                 )}
               </div>
@@ -578,7 +578,7 @@ export default function LeftRail() {
                   View profile
                 </button>
                 <button type="button"
-                  className="flex-1 rounded-xl border border-[#5800E5]/25 bg-[#5800E5]/10 px-3 py-2 text-sm hover:bg-[#5800E5]/15 font-semibold text-[#c4a0ff]"
+                  className="flex-1 rounded-xl border border-[#5800E5]/25 bg-[#5800E5]/10 px-3 py-2 text-sm hover:bg-[#5800E5]/15 font-semibold text-[rgba(243,244,246,0.85)]"
                   onClick={() => {
                     try {
                       const peerName = String(presenceHoverUser?.name ?? presenceHoverUser?.username ?? presenceHoverName ?? "").trim();
@@ -752,7 +752,7 @@ export default function LeftRail() {
                       padding:"9px 10px 8px 11px",
                       position:"relative", overflow:"hidden",
                       transition:"background 0.12s, border-color 0.12s",
-                      boxShadow: isActive ? "inset 2px 0 0 rgba(155,95,255,.8)" : "inset 2px 0 0 rgba(148,163,184,.12)",
+                      boxShadow: isActive ? "inset 2px 0 0 #5800E5" : "inset 2px 0 0 rgba(148,163,184,.12)",
                     }}
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement;
