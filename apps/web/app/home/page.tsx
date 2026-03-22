@@ -538,8 +538,13 @@ export default function HomePage() {
     return allRooms.filter(r => roomName(r).toLowerCase().includes(q));
   }, [allRooms, search]);
 
-  const lobbies = useMemo(() =>
-    filtered.filter(r => isPinned(r)).sort((a, b) => onlineCount(b) - onlineCount(a)),
+  const lobbies = useMemo(() => {
+    const sorted = filtered.filter(r => isPinned(r)).sort((a, b) => onlineCount(b) - onlineCount(a));
+    // Pin destiny2 to top of grid
+    const d2idx = sorted.findIndex(r => roomId(r) === "destiny2" || roomName(r) === "destiny2");
+    if (d2idx > 0) { const [d2] = sorted.splice(d2idx, 1); sorted.unshift(d2); }
+    return sorted;
+  },
     [filtered]
   );
 
@@ -551,8 +556,12 @@ export default function HomePage() {
     [filtered]
   );
 
-  const featured = useMemo(() =>
-    lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null,
+  // Hero: prefer Marathon, then highest-traffic lobby, then any
+  const featured = useMemo(() => {
+    const marathon = lobbies.find(r => roomId(r) === "marathon" || roomName(r) === "marathon");
+    if (marathon) return marathon;
+    return lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null;
+  },
     [lobbies, popularRooms]
   );
 
@@ -645,7 +654,7 @@ export default function HomePage() {
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {lobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
+              {lobbies.filter(r => featured ? roomId(r) !== roomId(featured) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
             </div>
           </div>
         )}
