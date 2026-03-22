@@ -15,7 +15,7 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
+// â”€â”€ Style â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const S = {
   card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
@@ -27,12 +27,12 @@ const S = {
 
 const ACCENT_DESTINY = "#4F88C6";
 
-// ── Tier colors for item rarity ──────────────────────────────────────────────
+// â”€â”€ Tier colors for item rarity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const TIER_COLORS: Record<string, string> = { Exotic: "#ceae33", Legendary: "#522f65", Rare: "#5076a3", Uncommon: "#366e42", Common: "#c3bcb4", Unknown: "rgba(255,255,255,.1)", Currency: "rgba(255,255,255,.1)" };
 const TIER_BORDER: Record<string, string> = { Exotic: "rgba(206,174,51,.6)", Legendary: "rgba(82,47,101,.8)", Rare: "rgba(80,118,163,.6)", Uncommon: "rgba(54,110,66,.6)", Common: "rgba(195,188,180,.4)", Unknown: "rgba(255,255,255,.08)", Currency: "rgba(255,255,255,.08)" };
 
-// ── Item Tile (compact or full) ──────────────────────────────────────────────
+// â”€â”€ Item Tile (compact or full) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
   const tier = item.tierName || "Unknown";
@@ -65,7 +65,7 @@ function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
         <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tier === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown Item"}</div>
         <div style={{ fontSize: 10, opacity: 0.4, display: "flex", alignItems: "center", gap: 6 }}>
           {item.slotName && <span>{item.slotName}</span>}
-          {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>·</span>{item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
+          {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>Â·</span>{item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
         </div>
       </div>
       {item.primaryStat && <div style={{ fontSize: 14, fontWeight: 900, color: tier === "Exotic" ? "#ceae33" : "rgba(253,230,138,.9)", flexShrink: 0 }}>{item.primaryStat}</div>}
@@ -73,7 +73,7 @@ function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
   );
 }
 
-// ── Twitch Streams ───────────────────────────────────────────────────────────
+// â”€â”€ Twitch Streams â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameName?: string; lobbyId?: string; accentColor?: string }) {
   const [streams, setStreams] = useState<any[]>([]);
@@ -171,7 +171,7 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
   );
 }
 
-// ── LFG Board ────────────────────────────────────────────────────────────────
+// â”€â”€ LFG Board â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const D2_ACTIVITIES = [
   "Raid: Crota's End", "Raid: Root of Nightmares", "Raid: King's Fall",
@@ -312,7 +312,7 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── Bungie Weekly / Xur ──────────────────────────────────────────────────────
+// â”€â”€ Bungie Weekly / Xur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function BungieWeekly({ accentColor }: { accentColor?: string }) {
   const accent = accentColor || ACCENT_DESTINY;
@@ -336,10 +336,10 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
       {/* Xur Status */}
       <div style={{ ...S.card, border: xur?.available ? "1px solid rgba(245,158,11,.30)" : "1px solid rgba(255,255,255,.08)", background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 22 }}>🐍</span>
+          <span style={{ fontSize: 22 }}>ðŸ</span>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: xur?.available ? "rgb(253,230,138)" : "rgba(255,255,255,.6)" }}>Xur {xur?.available ? "is here!" : "is away"}</div>
-            <div style={{ fontSize: 11, opacity: 0.5 }}>{xur?.available ? "Exotic vendor is active — check inventory in-game" : "Returns every Friday at reset"}</div>
+            <div style={{ fontSize: 11, opacity: 0.5 }}>{xur?.available ? "Exotic vendor is active â€” check inventory in-game" : "Returns every Friday at reset"}</div>
           </div>
         </div>
       </div>
@@ -353,7 +353,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
                 {ms.icon ? (
                   <img src={ms.icon} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>📋</div>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>ðŸ“‹</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{ms.name}</div>
@@ -387,7 +387,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
           ))}
         </div>
       ) : (
-        <div style={{ ...S.card, fontSize: 12, opacity: 0.4 }}>{data?.error ? "Bungie API unavailable — check back later" : "No milestone data available"}</div>
+        <div style={{ ...S.card, fontSize: 12, opacity: 0.4 }}>{data?.error ? "Bungie API unavailable â€” check back later" : "No milestone data available"}</div>
       )}
 
       <div style={{ ...S.card, textAlign: "center" }}>
@@ -399,7 +399,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
   );
 }
 
-// ── Guardian Lookup ──────────────────────────────────────────────────────────
+// â”€â”€ Guardian Lookup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function GuardianLookup() {
   const [query, setQuery]     = useState("");
@@ -408,7 +408,7 @@ function GuardianLookup() {
   const [error, setError]     = useState("");
 
   const CLASS_NAMES: Record<number, string> = { 0: "Titan", 1: "Hunter", 2: "Warlock" };
-  const CLASS_EMOJI: Record<number, string> = { 0: "🛡", 1: "🗡", 2: "✨" };
+  const CLASS_EMOJI: Record<number, string> = { 0: "ðŸ›¡", 1: "ðŸ—¡", 2: "âœ¨" };
 
   async function search() {
     if (!query.trim()) return;
@@ -452,7 +452,7 @@ function GuardianLookup() {
                 {result.player?.displayNameCode ? `#${result.player.displayNameCode}` : ""}
               </div>
               <div style={{ fontSize: 11, opacity: 0.5 }}>
-                {result.totalCharacters} characters · Platform {result.player?.membershipType}
+                {result.totalCharacters} characters Â· Platform {result.player?.membershipType}
               </div>
             </div>
           </div>
@@ -501,7 +501,7 @@ function GuardianLookup() {
   );
 }
 
-// ── My Guardian (linked Bungie account) ─────────────────────────────────────
+// â”€â”€ My Guardian (linked Bungie account) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MyGuardian({ accentColor }: { accentColor?: string }) {
   const accent = accentColor || ACCENT_DESTINY;
@@ -524,7 +524,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
     const linkUrl = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
-        <div style={{ fontSize: 48, opacity: 0.3 }}>🔗</div>
+        <div style={{ fontSize: 48, opacity: 0.3 }}>ðŸ”—</div>
         <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center" }}>Link your Bungie account</div>
         <div style={{ fontSize: 12, opacity: 0.45, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
           Connect your Bungie.net account to view your characters, inventory, vault, and loadouts right here on Weered.
@@ -539,7 +539,29 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
     );
   }
 
-  if (error || data?.error) return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error || data.error}</div>;
+  if (error || data?.error) {
+    const isExpired = data?.error === "token_expired" || data?.error === "no_profile_data" || data?.error === "fetch_failed";
+    if (isExpired && data?.linked) {
+      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+      const linkUrl = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
+          <div style={{ fontSize: 48, opacity: 0.3 }}>&#x1F504;</div>
+          <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center" }}>Session expired</div>
+          <div style={{ fontSize: 12, opacity: 0.45, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
+            Your Bungie authorization has expired. Re-link to restore access to your characters, inventory, and vault.
+          </div>
+          <a href={linkUrl} style={{
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 12,
+            background: `${accent}20`, border: `1px solid ${accent}50`, color: accent, fontWeight: 800, fontSize: 14,
+            textDecoration: "none", cursor: "pointer",
+          }}>Re-link Bungie Account</a>
+          <div style={{ fontSize: 10, opacity: 0.25 }}>You will be redirected to Bungie.net</div>
+        </div>
+      );
+    }
+    return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error || data?.message || data?.error}</div>;
+  }
 
   const characters: any[] = Array.isArray(data?.characters) ? data.characters : typeof data?.characters === "object" && data.characters ? Object.values(data.characters) : [];
   const vault: any[] = data?.vault || [];
@@ -550,13 +572,13 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%" }}>
       {/* Account header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>⚔</div>
+        <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>âš”</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
             {data.displayName}
             <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
           </div>
-          <div style={{ fontSize: 10, opacity: 0.4 }}>Platform {data.platform} · {characters.length} characters{data.vaultCount ? ` · ${data.vaultCount} vault items` : ""}</div>
+          <div style={{ fontSize: 10, opacity: 0.4 }}>Platform {data.platform} Â· {characters.length} characters{data.vaultCount ? ` Â· ${data.vaultCount} vault items` : ""}</div>
         </div>
         <button onClick={() => { const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(t)}`; }} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>Re-link</button>
       </div>
@@ -573,7 +595,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
               fontWeight: selectedChar === i && subTab !== "vault" ? 700 : 400, fontSize: 12, transition: "all .12s",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}>
-              <span style={{ fontSize: 14 }}>{c.classType === 0 ? "🛡" : c.classType === 1 ? "🗡" : "✨"}</span>
+              <span style={{ fontSize: 14 }}>{c.classType === 0 ? "ðŸ›¡" : c.classType === 1 ? "ðŸ—¡" : "âœ¨"}</span>
               {c.className || ["Titan", "Hunter", "Warlock"][c.classType]}
               <span style={{ fontSize: 16, fontWeight: 900, color: "rgb(253,230,138)" }}>{c.light}</span>
             </button>
@@ -584,7 +606,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
             borderBottom: subTab === "vault" ? "2px solid rgba(245,158,11,.6)" : "2px solid transparent",
             color: subTab === "vault" ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.55)",
             fontWeight: subTab === "vault" ? 700 : 400, fontSize: 12, transition: "all .12s",
-          }}>🔒 Vault{data.vaultCount ? ` (${data.vaultCount})` : ""}</button>
+          }}>ðŸ”’ Vault{data.vaultCount ? ` (${data.vaultCount})` : ""}</button>
         </div>
       )}
 
@@ -634,7 +656,7 @@ function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: b
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {allEquipped.slice(0, 12).map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}
         </div>
-        {!hasManifest && <div style={{ fontSize: 10, opacity: 0.25, marginTop: 12, textAlign: "center" }}>Manifest not synced — item names unavailable</div>}
+        {!hasManifest && <div style={{ fontSize: 10, opacity: 0.25, marginTop: 12, textAlign: "center" }}>Manifest not synced â€” item names unavailable</div>}
       </div>
     );
   }
@@ -645,7 +667,7 @@ function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: b
         <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", height: 56,
           background: `url(${char.emblemBackgroundPath?.startsWith("http") ? char.emblemBackgroundPath : "https://www.bungie.net" + char.emblemBackgroundPath}) center/cover` }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,.7) 0%, transparent 60%)", display: "flex", alignItems: "center", padding: "0 16px", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{char.classType === 0 ? "🛡" : char.classType === 1 ? "🗡" : "✨"}</span>
+            <span style={{ fontSize: 20 }}>{char.classType === 0 ? "ðŸ›¡" : char.classType === 1 ? "ðŸ—¡" : "âœ¨"}</span>
             <div>
               <div style={{ fontWeight: 800, fontSize: 14 }}>{char.className} <span style={{ opacity: 0.4, fontWeight: 400, fontSize: 11 }}>{char.raceName}</span></div>
               <div style={{ fontSize: 18, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1 }}>{char.light} <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.5 }}>POWER</span></div>
@@ -662,7 +684,7 @@ function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: b
       {other.length > 0 && (
         <div><div style={S.label}>Other</div><div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{other.map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}</div></div>
       )}
-      <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center" }}>Last played: {char.dateLastPlayed ? new Date(char.dateLastPlayed).toLocaleDateString() : "—"} · {Math.round((char.minutesPlayedTotal || 0) / 60)}h total</div>
+      <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center" }}>Last played: {char.dateLastPlayed ? new Date(char.dateLastPlayed).toLocaleDateString() : "â€”"} Â· {Math.round((char.minutesPlayedTotal || 0) / 60)}h total</div>
     </div>
   );
 }
@@ -720,14 +742,14 @@ function VaultView({ items }: { items: any[] }) {
 
 
 
-// ── Main Panel ───────────────────────────────────────────────────────────────
+// â”€â”€ Main Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const TABS = [
-  { id: "streams",  label: "Live Streams", icon: "📺" },
-  { id: "lfg",      label: "Fireteams",    icon: "🔥" },
-  { id: "weekly",   label: "Weekly Reset",  icon: "📋" },
-  { id: "guardian",  label: "Guardian Lookup", icon: "🔍" },
-  { id: "myguardian", label: "My Guardian", icon: "⚔" },
+  { id: "streams",  label: "Live Streams", icon: "ðŸ“º" },
+  { id: "lfg",      label: "Fireteams",    icon: "ðŸ”¥" },
+  { id: "weekly",   label: "Weekly Reset",  icon: "ðŸ“‹" },
+  { id: "guardian",  label: "Guardian Lookup", icon: "ðŸ”" },
+  { id: "myguardian", label: "My Guardian", icon: "âš”" },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
