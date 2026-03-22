@@ -558,12 +558,14 @@ export default function HomePage() {
 
   // Hero: prefer Marathon, then highest-traffic lobby, then any
   const featured = useMemo(() => {
-    const marathon = lobbies.find(r => roomId(r) === "marathon" || roomName(r) === "marathon");
+    const marathon = lobbies.find(r => roomId(r) === "marathon" || roomName(r) === "marathon" || r?.slug === "marathon");
     if (marathon) return marathon;
     return lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null;
   },
     [lobbies, popularRooms]
   );
+
+  const isMarathonFeatured = featured && (roomId(featured) === "marathon" || roomName(featured) === "marathon" || featured?.slug === "marathon");
 
   const recentIds: string[] = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("weered:recentRooms") || "[]"); } catch { return []; }
@@ -654,7 +656,7 @@ export default function HomePage() {
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {lobbies.filter(r => featured ? roomId(r) !== roomId(featured) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
+              {lobbies.filter(r => isMarathonFeatured ? (roomId(r) !== "marathon" && roomName(r) !== "marathon") : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
             </div>
           </div>
         )}
