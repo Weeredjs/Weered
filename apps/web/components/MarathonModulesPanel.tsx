@@ -24,22 +24,29 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Marathon Design Tokens ──────────────────────────────────────────────────
+// ── Marathon Design Tokens (derived from lobby accent) ───────────────────────
 
-const M = {
-  accent:     "#00E5CC",
-  accentDim:  "rgba(0,229,204,0.12)",
-  accentMid:  "rgba(0,229,204,0.35)",
-  danger:     "#FF4444",
-  warning:    "#FFB020",
-  ranked:     "#E8C547",
-  bg:         "rgba(8,12,16,0.95)",
-  card:       "rgba(255,255,255,0.03)",
-  border:     "rgba(255,255,255,0.06)",
-  textPri:    "rgba(226,232,240,0.92)",
-  textSec:    "rgba(148,163,184,0.65)",
-  textDim:    "rgba(100,116,139,0.45)",
-};
+const DEFAULT_ACCENT = "#C2FE0B";
+
+function makeTheme(accent: string) {
+  return {
+    accent,
+    accentDim:  `${accent}18`,
+    accentMid:  `${accent}55`,
+    danger:     "#FF4444",
+    warning:    "#FFB020",
+    ranked:     "#E8C547",
+    bg:         "rgba(8,12,16,0.95)",
+    card:       "rgba(255,255,255,0.03)",
+    border:     "rgba(255,255,255,0.06)",
+    textPri:    "rgba(226,232,240,0.92)",
+    textSec:    "rgba(148,163,184,0.65)",
+    textDim:    "rgba(100,116,139,0.45)",
+  };
+}
+
+// Static default for module-level styles that can't be dynamic
+const M = makeTheme(DEFAULT_ACCENT);
 
 const S = {
   card: { borderRadius: 8, border: `1px solid ${M.border}`, background: M.card, padding: "10px 12px" } as React.CSSProperties,
@@ -366,7 +373,7 @@ function ZoneIntel() {
             </div>
           </div>
 
-          <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 6, background: `${M.accentDim}`, border: `1px solid rgba(0,229,204,0.1)` }}>
+          <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 6, background: M.accentDim, border: `1px solid ${M.accentMid}` }}>
             <div style={{ ...S.label, color: M.accent, opacity: 0.7 }}>INTEL</div>
             <div style={{ fontSize: 11, opacity: 0.65, lineHeight: 1.5 }}>{zone.tips}</div>
           </div>
@@ -605,7 +612,8 @@ export default function MarathonModulesPanel({
   accentColor?: string;
   style?: React.CSSProperties;
 }) {
-  const accent = accentColor || M.accent;
+  const accent = accentColor || DEFAULT_ACCENT;
+  const T = makeTheme(accent);
   const [tab, setTab] = useState<TabId>("streams");
 
   return (
@@ -613,8 +621,8 @@ export default function MarathonModulesPanel({
       {/* Tabs */}
       <div style={{
         display: "flex", gap: 1, padding: "6px 10px 0",
-        borderBottom: `1px solid ${M.border}`,
-        background: "rgba(0,229,204,0.02)",
+        borderBottom: `1px solid ${T.border}`,
+        background: `${accent}06`,
         flexShrink: 0, overflowX: "auto",
       }}>
         {TABS.map(t => (
@@ -625,8 +633,8 @@ export default function MarathonModulesPanel({
               padding: "6px 10px",
               borderRadius: "6px 6px 0 0",
               border: "none",
-              background: tab === t.id ? M.accentDim : "transparent",
-              color: tab === t.id ? M.accent : M.textSec,
+              background: tab === t.id ? T.accentDim : "transparent",
+              color: tab === t.id ? accent : M.textSec,
               fontWeight: tab === t.id ? 800 : 400,
               fontSize: 10,
               cursor: "pointer",
@@ -635,7 +643,7 @@ export default function MarathonModulesPanel({
               whiteSpace: "nowrap", flexShrink: 0,
               fontFamily: "monospace",
               letterSpacing: "0.5px",
-              borderBottom: tab === t.id ? `2px solid ${M.accent}` : "2px solid transparent",
+              borderBottom: tab === t.id ? `2px solid ${accent}` : "2px solid transparent",
             }}
           >
             {t.icon === "__twitch__" ? (
