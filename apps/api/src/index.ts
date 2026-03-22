@@ -3182,7 +3182,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!BUNGIE_API_KEY) return reply.send({ ok: false, error: "bungie_not_configured" });
     const result = await syncManifest(BUNGIE_API_KEY);
-    return reply.send({ ok: true, ...result });
+    return reply.send(result);
   });
 
   // GET /bungie/manifest/status — Check manifest cache status
