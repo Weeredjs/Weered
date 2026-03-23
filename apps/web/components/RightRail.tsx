@@ -185,14 +185,14 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 const el = e.currentTarget as HTMLElement;
                 el.style.background = hoverBg;
                 el.style.borderColor = active ? "rgba(88,0,229,.55)" : isLive ? "rgba(34,197,94,.35)" : "rgba(255,255,255,.12)";
-                el.style.transform = "translateX(2px)";
+                el.style.transform = "none";
                 el.style.boxShadow = isLive ? "0 0 12px rgba(34,197,94,.08)" : active ? "0 0 12px rgba(88,0,229,.08)" : "none";
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement;
                 el.style.background = bg;
                 el.style.borderColor = borderColor;
-                el.style.transform = "translateX(0)";
+                el.style.transform = "none";
                 el.style.boxShadow = "none";
               }}
             >
