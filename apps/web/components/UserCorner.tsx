@@ -284,12 +284,12 @@ export default function UserCorner() {
             gap: 7, padding: "9px 14px",
             background: dockUnread > 0
               ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
-              : "rgba(88,0,229,.08)",
+              : "rgba(88,0,229,.14)",
             border: dockUnread > 0
               ? "1px solid rgba(245,158,11,.40)"
-              : "1px solid rgba(88,0,229,.22)",
+              : "1px solid rgba(88,0,229,.35)",
             borderRadius: 10, cursor: "pointer",
-            color: dockUnread > 0 ? "rgba(253,230,138,.95)" : "rgba(243,244,246,.75)",
+            color: dockUnread > 0 ? "rgba(253,230,138,.95)" : "rgba(243,244,246,.88)",
             fontFamily: "inherit", fontSize: 12, fontWeight: 800,
             letterSpacing: "0.02em",
             transition: "all 0.2s",
@@ -299,15 +299,15 @@ export default function UserCorner() {
             const el = e.currentTarget as HTMLElement;
             el.style.background = dockUnread > 0
               ? "linear-gradient(135deg, rgba(245,158,11,.25), rgba(239,68,68,.18))"
-              : "rgba(88,0,229,.14)";
-            el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.55)" : "rgba(88,0,229,.35)";
+              : "rgba(88,0,229,.22)";
+            el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.55)" : "rgba(88,0,229,.45)";
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement;
             el.style.background = dockUnread > 0
               ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
-              : "rgba(88,0,229,.08)";
-            el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.40)" : "rgba(88,0,229,.22)";
+              : "rgba(88,0,229,.14)";
+            el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.40)" : "rgba(88,0,229,.35)";
           }}
         >
           {/* Burner phone icon */}
