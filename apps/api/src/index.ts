@@ -933,13 +933,24 @@ async function main() {
     const list = await prisma.room.findMany({
       where: { lobbyId },
       orderBy: { updatedAt: "desc" },
-      select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
+      select: { id: true, name: true, description: true, locked: true, ownerId: true, _count: { select: { members: true } } },
     });
-    const out = list.map(r => ({
-      id: r.id, roomId: r.id, name: r.name || r.id,
-      onlineCount: rooms.get(r.id)?.users.size ?? 0,
-      locked: Boolean(r.locked), lobbyId,
-    }));
+    const out = list.map(r => {
+      const wsRoom = rooms.get(r.id);
+      const onlineUsers: { id: string; name: string; avatar?: string }[] = [];
+      if (wsRoom?.users) {
+        for (const [uid, u] of wsRoom.users) {
+          if (onlineUsers.length >= 4) break;
+          onlineUsers.push({ id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });
+        }
+      }
+      return {
+        id: r.id, roomId: r.id, name: r.name || r.id, description: r.description || "",
+        onlineCount: wsRoom?.users?.size ?? 0, onlineUsers,
+        locked: Boolean(r.locked), lobbyId, ownerId: r.ownerId,
+        _count: r._count,
+      };
+    });
     return { ok: true, rooms: out };
   });
 
@@ -2334,14 +2345,28 @@ app.post("/dm/:peerId", async (req, reply) => {
         moduleType: true, moduleConfig: true, keywords: true,
         accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
         rooms: {
-          select: { id: true, name: true, locked: true, _count: { select: { members: true } } },
+          select: { id: true, name: true, description: true, locked: true, ownerId: true, _count: { select: { members: true } },},
           orderBy: { name: "asc" },
         },
         _count: { select: { rooms: true, members: true } },
       },
     });
     if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
-    return reply.send({ ok: true, lobby });
+
+    // Enrich rooms with live presence data + avatar stack (up to 4 users)
+    const enrichedRooms = lobby.rooms.map((r: any) => {
+      const wsRoom = rooms.get(r.id);
+      const onlineUsers: { id: string; name: string; avatar?: string }[] = [];
+      if (wsRoom?.users) {
+        for (const [uid, u] of wsRoom.users) {
+          if (onlineUsers.length >= 4) break;
+          onlineUsers.push({ id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });
+        }
+      }
+      return { ...r, onlineCount: wsRoom?.users?.size ?? 0, onlineUsers };
+    });
+
+    return reply.send({ ok: true, lobby: { ...lobby, rooms: enrichedRooms } });
   });
 
   app.post("/lobbies", async (req, reply) => {
