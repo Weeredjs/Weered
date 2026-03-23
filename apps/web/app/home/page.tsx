@@ -82,7 +82,7 @@ function isLightAccent(hex: string): boolean {
 // Lobby accent or fallback
 function lobbyAccent(r: any, idx: number): string {
   if (r?.accentColor) return r.accentColor;
-  const fallbacks = ["#7c6af7", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308", "#a78bfa", "#06b6d4"];
+  const fallbacks = ["#5800E5", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308", "#5800E5", "#06b6d4"];
   return fallbacks[idx % fallbacks.length];
 }
 
@@ -109,7 +109,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   if (!lobby) return null;
   const name = roomName(lobby);
   const cnt = onlineCount(lobby);
-  const accent = lobby?.accentColor || "#7c6af7";
+  const accent = lobby?.accentColor || "#5800E5";
   const logo = lobby?.logoUrl;
   const banner = lobby?.bannerUrl;
   const desc = lobby?.description;
@@ -388,9 +388,9 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
                 <span style={{
                   position: "absolute", bottom: 0, right: 0,
                   width: 9, height: 9, borderRadius: "50%",
-                  background: inRoom ? "#a78bfa" : "#22c55e",
+                  background: inRoom ? "#5800E5" : "#22c55e",
                   border: "2px solid rgba(10,10,15,1)",
-                  boxShadow: `0 0 4px ${inRoom ? "#a78bfa" : "#22c55e"}`,
+                  boxShadow: `0 0 4px ${inRoom ? "#5800E5" : "#22c55e"}`,
                 }} />
               </div>
               <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.8)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{name}</span>
@@ -443,7 +443,7 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string) => void }
         <span style={{
           fontSize: 10, padding: "3px 8px", borderRadius: 6,
           background: "rgba(124,106,247,.1)", border: "1px solid rgba(124,106,247,.2)",
-          color: "#a78bfa", fontWeight: 700, cursor: "pointer",
+          color: "#5800E5", fontWeight: 700, cursor: "pointer",
         }}>
           Rejoin
         </span>
@@ -479,6 +479,9 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
+  // Aggregated lobby presence counts (live users across all rooms)
+  const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
+
   React.useEffect(() => {
     const base = "https://api.weered.ca";
     const token = localStorage.getItem("weered_token") ?? "";
@@ -499,6 +502,23 @@ export default function HomePage() {
         return true;
       });
       setFetchedRooms(merged);
+
+      // Fetch aggregated presence for all lobbies
+      const lobbyIds = lobbies.map((l: any) => l.id).filter(Boolean);
+      if (lobbyIds.length) {
+        Promise.all(
+          lobbyIds.map((id: string) =>
+            fetch(`${base}/lobbies/${encodeURIComponent(id)}/presence`, { headers })
+              .then(r => r.json())
+              .then(j => ({ id, count: j?.count ?? 0 }))
+              .catch(() => ({ id, count: 0 }))
+          )
+        ).then(results => {
+          const counts: Record<string, number> = {};
+          for (const r of results) counts[r.id] = r.count;
+          setLobbyPresenceCounts(counts);
+        });
+      }
     });
   }, []);
 
@@ -506,15 +526,28 @@ export default function HomePage() {
 
   const allRooms: any[] = useMemo(() => {
     const ws = Array.isArray(rooms) ? rooms : [];
+    let base: any[];
     if (ws.length > 0 && fetchedRooms.length > 0) {
       const brandingMap = new Map(fetchedRooms.map((r: any) => [r.id, r]));
-      return ws.map((r: any) => {
+      base = ws.map((r: any) => {
         const branding = brandingMap.get(r.id) ?? brandingMap.get(r.roomId) ?? {};
         return { ...branding, ...r };
       });
+    } else {
+      base = ws.length > 0 ? ws : fetchedRooms;
     }
-    return ws.length > 0 ? ws : fetchedRooms;
-  }, [rooms, fetchedRooms]);
+    // Override online counts with aggregated lobby presence where available
+    if (Object.keys(lobbyPresenceCounts).length > 0) {
+      return base.map((r: any) => {
+        const id = r.id ?? r.roomId;
+        if (id && lobbyPresenceCounts[id] !== undefined) {
+          return { ...r, onlineCount: lobbyPresenceCounts[id] };
+        }
+        return r;
+      });
+    }
+    return base;
+  }, [rooms, fetchedRooms, lobbyPresenceCounts]);
 
   const allUsers: any[] = useMemo(() => {
     if (!usersByRoom || typeof usersByRoom !== "object") return [];
@@ -625,7 +658,7 @@ export default function HomePage() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
           <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px" }}>
-            Hey, <span style={{ color: "#a78bfa" }}>{myName}</span>
+            Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
         <div style={{ position: "relative" }}>
