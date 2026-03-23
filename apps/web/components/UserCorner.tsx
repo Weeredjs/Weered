@@ -36,7 +36,7 @@ const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }>
   STAFF:   { border: "rgba(96,165,250,.34)",  bg: "rgba(59,130,246,.14)",  color: "#93c5fd" },
   SUPPORT: { border: "rgba(52,211,153,.34)",  bg: "rgba(16,185,129,.14)",  color: "#6ee7b7" },
   OWNER:   { border: "rgba(249,115,22,.34)",  bg: "rgba(234,88,12,.14)",   color: "#fdba74" },
-  MOD:     { border: "rgba(167,139,250,.34)", bg: "rgba(124,58,237,.18)",  color: "#c4b5fd" },
+  MOD:     { border: "rgba(88,0,229,.34)", bg: "rgba(88,0,229,.18)",  color: "rgba(243,244,246,.85)" },
 };
 
 const IconSettings = () => (
@@ -249,51 +249,115 @@ export default function UserCorner() {
 
       {/* Action strip */}
       <div style={{
-        display: "flex", borderTop: "1px solid rgba(255,255,255,.05)",
+        display: "flex", gap: 6, padding: "8px 12px 10px",
+        borderTop: "1px solid rgba(255,255,255,.05)",
       }}>
+        {/* Settings — compact, subdued */}
         <button
           type="button"
           onClick={() => openSheet("settings")}
           title="Settings"
-          style={actionBtn}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 5, padding: "8px 12px",
+            background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
+            borderRadius: 10, cursor: "pointer",
+            color: "rgba(255,255,255,.45)", fontFamily: "inherit",
+            fontSize: 11, fontWeight: 600,
+            transition: "all 0.15s",
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.07)"; }}
         >
           <IconSettings />
-          <span style={{ fontSize: 11 }}>Settings</span>
         </button>
 
-        <div style={{ width: 1, background: "rgba(255,255,255,.05)", flexShrink: 0 }} />
-
-        {/* FIX: Dock button with unread badge */}
+        {/* BURNER PHONE — loud, unmissable */}
         <button
           type="button"
           onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
-          title={dockUnread > 0 ? `Dock · ${dockUnread} unread` : "Dock"}
-          style={{ ...actionBtn, color: dockUnread > 0 ? "rgb(255, 255, 255)" : actionBtn.color }}
+          title={dockUnread > 0 ? `${dockUnread} unread` : "Messages, friends, crew"}
+          className={dockUnread > 0 ? "weered-burner-hot" : ""}
+          style={{
+            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 7, padding: "9px 14px",
+            background: dockUnread > 0
+              ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
+              : "rgba(88,0,229,.08)",
+            border: dockUnread > 0
+              ? "1px solid rgba(245,158,11,.40)"
+              : "1px solid rgba(88,0,229,.22)",
+            borderRadius: 10, cursor: "pointer",
+            color: dockUnread > 0 ? "rgba(253,230,138,.95)" : "rgba(243,244,246,.75)",
+            fontFamily: "inherit", fontSize: 12, fontWeight: 800,
+            letterSpacing: "0.02em",
+            transition: "all 0.2s",
+            position: "relative", overflow: "hidden",
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = dockUnread > 0
+              ? "linear-gradient(135deg, rgba(245,158,11,.25), rgba(239,68,68,.18))"
+              : "rgba(88,0,229,.14)";
+            el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.55)" : "rgba(88,0,229,.35)";
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = dockUnread > 0
+              ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
+              : "rgba(88,0,229,.08)";
+            el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.40)" : "rgba(88,0,229,.22)";
+          }}
         >
-          {/* Icon wrapper with badge */}
-          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <IconDock />
-            {dockUnread > 0 && (
-              <span style={{
-                position: "absolute",
-                top: -5, right: -6,
-                minWidth: 14, height: 14,
-                borderRadius: 999,
-                background: "#f59e0b",
-                border: "2px solid rgba(10,10,15,1)",
-                fontSize: 8, fontWeight: 900, color: "#000",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                padding: dockUnread > 9 ? "0 2px" : "0",
-                lineHeight: 1,
-                pointerEvents: "none",
-              }}>
-                {dockUnread > 9 ? "9+" : dockUnread}
-              </span>
-            )}
-          </div>
-          <span style={{ fontSize: 11 }}>Dock</span>
+          {/* Burner phone icon */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <rect x="6" y="2" width="12" height="20" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+            <rect x="9" y="5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2" opacity="0.6" />
+            <circle cx="10" cy="14.5" r="0.8" fill="currentColor" opacity="0.5" />
+            <circle cx="12" cy="14.5" r="0.8" fill="currentColor" opacity="0.5" />
+            <circle cx="14" cy="14.5" r="0.8" fill="currentColor" opacity="0.5" />
+            <circle cx="10" cy="17" r="0.8" fill="currentColor" opacity="0.5" />
+            <circle cx="12" cy="17" r="0.8" fill="currentColor" opacity="0.5" />
+            <circle cx="14" cy="17" r="0.8" fill="currentColor" opacity="0.5" />
+            <circle cx="12" cy="19.5" r="0.8" fill="currentColor" opacity="0.5" />
+          </svg>
+
+          <span>Burner</span>
+
+          {/* Unread badge */}
+          {dockUnread > 0 && (
+            <span style={{
+              minWidth: 18, height: 18, borderRadius: 999,
+              background: "#f59e0b",
+              border: "2px solid rgba(10,10,15,.9)",
+              fontSize: 9, fontWeight: 900, color: "#000",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              padding: dockUnread > 9 ? "0 3px" : "0",
+              lineHeight: 1,
+              boxShadow: "0 0 8px rgba(245,158,11,.5)",
+              animation: "weered-burner-badge 2s ease-in-out infinite",
+            }}>
+              {dockUnread > 99 ? "99+" : dockUnread}
+            </span>
+          )}
         </button>
       </div>
+
+      {/* Burner phone animations */}
+      <style>{`
+        @keyframes weered-burner-badge {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+        }
+        @keyframes weered-burner-glow {
+          0%, 100% { box-shadow: 0 0 8px rgba(245,158,11,.15), inset 0 0 12px rgba(245,158,11,.05); }
+          50% { box-shadow: 0 0 18px rgba(245,158,11,.30), inset 0 0 20px rgba(245,158,11,.08); }
+        }
+        .weered-burner-hot {
+          animation: weered-burner-glow 2.5s ease-in-out infinite !important;
+        }
+      `}</style>
     </div>
   );
 }
