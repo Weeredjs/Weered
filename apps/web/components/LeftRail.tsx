@@ -55,11 +55,16 @@ function normRole(x: any) {
   return s.slice(0, 18);
 }
 
+function userTier(u: any): string {
+  const t = String(u?.tier || "").toUpperCase();
+  if (t === "KINGPIN") return "KINGPIN";
+  if (t === "FELON") return "FELON";
+  if (t === "INDICTED") return "INDICTED";
+  return "INNOCENT";
+}
 function isPaidUser(u: any) {
-  return (
-    Boolean(u?.isPaid ?? u?.paid ?? u?.premium ?? u?.supporter ?? u?.plus ?? u?.pro ?? u?.is_pro ?? u?.isPlus) ||
-    /paid|plus|premium|pro|supporter/i.test(pickFirstString(u?.tier, u?.plan, u?.membership, u?.entitlement))
-  );
+  const t = userTier(u);
+  return t === "INDICTED" || t === "FELON" || t === "KINGPIN";
 }
 
 type Flair = {
@@ -84,7 +89,9 @@ const ICON_STAFF   = <span style={{ fontSize: 12, lineHeight: 1 }}>🛡</span>;
 const ICON_SUPPORT = <span style={{ fontSize: 12, lineHeight: 1 }}>💎</span>;
 const ICON_MOD     = <span style={{ fontSize: 12, lineHeight: 1 }}>⚡</span>;
 const ICON_OWNER   = <span style={{ fontSize: 12, lineHeight: 1 }}>🔑</span>;
-const ICON_PAID    = <span style={{ fontSize: 11, lineHeight: 1 }}>💠</span>;
+const ICON_INDICTED = <span style={{ fontSize: 10, lineHeight: 1 }}>⚖️</span>;
+const ICON_FELON    = <span style={{ fontSize: 10, lineHeight: 1 }}>🔥</span>;
+const ICON_KINGPIN_TIER = <span style={{ fontSize: 10, lineHeight: 1 }}>💀</span>;
 
 function flairFor(u: any): Flair {
   const g  = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
@@ -105,7 +112,10 @@ function flairFor(u: any): Flair {
     return { markClass: "weered-mark-owner", nameClass: "weered-name-owner", badge: "OWNER", badgeClass: "weered-badge-owner", icon: ICON_OWNER };
   if (rr === "MOD")
     return { markClass: "weered-mark-mod", nameClass: "weered-name-mod", badge: "MOD", badgeClass: "weered-badge-mod", icon: ICON_MOD };
-  if (paid) return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", icon: ICON_PAID };
+  const tier = userTier(u);
+  if (tier === "KINGPIN") return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", badge: "KINGPIN", badgeClass: "weered-badge-kingpin", icon: ICON_KINGPIN_TIER };
+  if (tier === "FELON") return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", badge: "FELON", badgeClass: "weered-badge-felon", icon: ICON_FELON };
+  if (tier === "INDICTED") return { markClass: "weered-mark-paid", nameClass: "weered-name-paid", badge: "INDICTED", badgeClass: "weered-badge-indicted", icon: ICON_INDICTED };
   return { markClass: "weered-mark-none" };
 }
 
@@ -487,7 +497,10 @@ export default function LeftRail() {
             const cls   =
               label === "owner" || label === "admin"  ? "border-emerald-300/25 bg-emerald-500/10 text-emerald-200"
               : label === "staff" || label === "support" || label === "god" ? "border-amber-300/25 bg-amber-500/10 text-amber-200"
-              : label === "mod"   ? "border-violet-300/25 bg-violet-500/10 text-violet-200"
+              : label === "mod"   ? "weered-mod"
+              : label === "kingpin" ? "weered-tier-kingpin"
+              : label === "felon"   ? "weered-tier-felon"
+              : label === "indicted" ? "weered-tier-indicted"
               : "border-white/10 bg-black/10 text-white/70";
 
             return (
@@ -559,15 +572,27 @@ export default function LeftRail() {
                     {you ? "you" : isLobbyActive && u?.roomName ? `in ${u.roomName}` : roleDisplay(f.badge || "member")}
                   </div>
                 </div>
-                {f.badge && (
-                  <span style={{
-                    fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
-                    padding: "2px 6px", borderRadius: 999, flexShrink: 0,
-                    border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("violet") ? "rgba(88,0,229,0.35)" : "rgba(255,255,255,0.1)"}`,
-                    background: cls.includes("emerald") ? "rgba(16,185,129,0.1)" : cls.includes("amber") ? "rgba(245,158,11,0.1)" : cls.includes("violet") ? "rgba(124,58,237,0.1)" : "rgba(255,255,255,0.05)",
-                    color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("violet") ? "#c4b5fd" : "rgba(255,255,255,0.5)",
-                  }}>{roleDisplay(f.badge || label)}</span>
-                )}
+                {f.badge && (() => {
+                  // Badge colors by type
+                  const tierColors: Record<string, { border: string; bg: string; color: string }> = {
+                    "weered-tier-kingpin":  { border: "rgba(252,211,77,0.4)",  bg: "rgba(252,211,77,0.12)", color: "#fde68a" },
+                    "weered-tier-felon":    { border: "rgba(249,115,22,0.4)",  bg: "rgba(249,115,22,0.12)", color: "#fdba74" },
+                    "weered-tier-indicted": { border: "rgba(88,0,229,0.35)",   bg: "rgba(88,0,229,0.12)",   color: "rgba(243,244,246,0.8)" },
+                    "weered-mod":           { border: "rgba(88,0,229,0.35)",   bg: "rgba(88,0,229,0.12)",   color: "rgba(243,244,246,0.8)" },
+                  };
+                  const roleColors: Record<string, { border: string; bg: string; color: string }> = {
+                    emerald: { border: "rgba(52,211,153,0.3)",  bg: "rgba(16,185,129,0.1)",  color: "#6ee7b7" },
+                    amber:   { border: "rgba(251,191,36,0.3)",  bg: "rgba(245,158,11,0.1)",  color: "#fcd34d" },
+                  };
+                  const tc = tierColors[cls] || (cls.includes("emerald") ? roleColors.emerald : cls.includes("amber") ? roleColors.amber : { border: "rgba(255,255,255,0.1)", bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" });
+                  return (
+                    <span style={{
+                      fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
+                      padding: "2px 6px", borderRadius: 999, flexShrink: 0,
+                      border: `1px solid ${tc.border}`, background: tc.bg, color: tc.color,
+                    }}>{label === "kingpin" || label === "felon" || label === "indicted" ? label.toUpperCase() : roleDisplay(f.badge || label)}</span>
+                  );
+                })()}
               </div>
             );
           })}
