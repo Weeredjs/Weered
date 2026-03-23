@@ -136,7 +136,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Rooms</div>
         {lobbyId && (
-          <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(167,139,250,.70)", background: "rgba(124,58,237,.10)", border: "1px solid rgba(124,58,237,.20)", borderRadius: 6, padding: "2px 7px" }}>
+          <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.70)", background: "rgba(88,0,229,.10)", border: "1px solid rgba(88,0,229,.20)", borderRadius: 6, padding: "2px 7px" }}>
             {lobbyId}
           </div>
         )}
@@ -149,7 +149,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       <input style={{ ...s.input, marginBottom: 8 }} placeholder="Search rooms…" value={q} onChange={e => setQ(e.target.value)} />
       {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginBottom: 6 }}>{err}</div>}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 360, overflowY: "auto" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 360, overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.15) transparent" }}>
         {loading && !rows.length && <div style={{ fontSize: 12, opacity: 0.5 }}>Loading…</div>}
         {!loading && !filtered.length && (
           <div style={{ fontSize: 12, opacity: 0.4, padding: "8px 0" }}>{lobbyId ? `No rooms in ${lobbyId} yet.` : "No rooms."}</div>
@@ -159,36 +159,100 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
           const liveWsUsers = usersByRoom[rm.id] || [];
           const liveCount   = liveWsUsers.length || rm.users;
           const isLive      = liveCount > 0;
+
+          // Mini icon based on room name
+          const n = (rm.name || "").toLowerCase();
+          const icon = n.includes("voice") ? "🎙" : n.includes("lfg") || n.includes("squad") ? "🔥"
+            : n.includes("trad") ? "💱" : n.includes("general") ? "💬" : n.includes("ranked") ? "🏆"
+            : n.includes("watch") || n.includes("stream") ? "📺" : n.includes("cryo") || n.includes("archive") ? "🧊"
+            : n.includes("chill") || n.includes("lounge") ? "🌙" : "◆";
+
+          // Color: live = green, active = accent, default = subtle
+          const cardAccent = isLive ? "#22c55e" : active ? "#5800E5" : "rgba(255,255,255,.08)";
+          const borderColor = active ? "rgba(88,0,229,.45)" : isLive ? "rgba(34,197,94,.25)" : "rgba(255,255,255,.06)";
+          const bg = active ? "rgba(88,0,229,.08)" : isLive ? "rgba(34,197,94,.04)" : "rgba(255,255,255,.015)";
+          const hoverBg = active ? "rgba(88,0,229,.14)" : isLive ? "rgba(34,197,94,.08)" : "rgba(255,255,255,.04)";
+
           return (
             <Link key={rm.id} href={`/room/${encodeURIComponent(rm.id)}`}
               style={{
-                display: "block", textDecoration: "none", padding: "10px 11px", borderRadius: 10,
-                border: active ? "1px solid rgba(124,58,237,.45)" : isLive ? "1px solid rgba(255,255,255,.10)" : "1px solid rgba(255,255,255,.06)",
-                background: active ? "rgba(124,58,237,.12)" : "rgba(255,255,255,.02)",
-                transition: "background 0.12s", position: "relative", overflow: "hidden",
+                display: "block", textDecoration: "none", padding: "9px 10px", borderRadius: 10,
+                border: `1px solid ${borderColor}`,
+                background: bg,
+                transition: "all 0.15s ease", position: "relative", overflow: "hidden",
               }}
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = active ? "rgba(124,58,237,.16)" : "rgba(255,255,255,.05)"; }}
-              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = active ? "rgba(124,58,237,.12)" : "rgba(255,255,255,.02)"; }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.background = hoverBg;
+                el.style.borderColor = active ? "rgba(88,0,229,.55)" : isLive ? "rgba(34,197,94,.35)" : "rgba(255,255,255,.12)";
+                el.style.transform = "translateX(2px)";
+                el.style.boxShadow = isLive ? "0 0 12px rgba(34,197,94,.08)" : active ? "0 0 12px rgba(88,0,229,.08)" : "none";
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.background = bg;
+                el.style.borderColor = borderColor;
+                el.style.transform = "translateX(0)";
+                el.style.boxShadow = "none";
+              }}
             >
-              {active && <div style={{ position: "absolute", left: 0, top: 4, bottom: 4, width: 2.5, borderRadius: 2, background: "#a78bfa" }} />}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: liveWsUsers.length ? 7 : 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: 1 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: isLive ? "#22c55e" : "rgba(255,255,255,.15)", boxShadow: isLive ? "0 0 5px #22c55e" : "none" }} />
-                  <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: active ? "rgba(196,181,253,.97)" : "rgba(243,244,246,.92)" }}>
-                    {rm.name || rm.id}{rm.locked && <span style={{ marginLeft: 5, fontSize: 10, opacity: 0.55 }}>🔒</span>}
-                  </div>
+              {/* Active accent bar */}
+              {active && <div style={{ position: "absolute", left: 0, top: 3, bottom: 3, width: 2.5, borderRadius: 2, background: "#5800E5", boxShadow: "0 0 6px rgba(88,0,229,.4)" }} />}
+
+              {/* Top accent line */}
+              <div style={{
+                position: "absolute", top: 0, left: "10%", right: "10%", height: 1,
+                background: `linear-gradient(90deg, transparent, ${cardAccent}${isLive ? "44" : active ? "33" : "08"}, transparent)`,
+                borderRadius: 1,
+              }} />
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Mini icon */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                  background: isLive ? "rgba(34,197,94,.10)" : active ? "rgba(88,0,229,.10)" : "rgba(255,255,255,.03)",
+                  border: `1px solid ${isLive ? "rgba(34,197,94,.18)" : active ? "rgba(88,0,229,.18)" : "rgba(255,255,255,.05)"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, lineHeight: 1,
+                }}>
+                  {icon}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                  {isLive && <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "monospace", color: "rgba(34,197,94,.85)" }}>{liveCount}</span>}
-                  {isLive && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 999, border: "1px solid rgba(34,197,94,.25)", background: "rgba(34,197,94,.08)", color: "rgba(134,239,172,.85)", fontWeight: 700 }}>live</span>}
+
+                {/* Name + lock */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontWeight: 700, fontSize: 12, lineHeight: 1.3,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    color: "rgba(243,244,246,.92)",
+                  }}>
+                    {rm.name || rm.id}
+                    {rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔒</span>}
+                  </div>
+                  {/* Avatar stack row */}
+                  {liveWsUsers.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+                      <AvatarStack users={liveWsUsers} size={16} />
+                      {liveWsUsers.length > 3 && <span style={{ fontSize: 9, opacity: 0.35, fontFamily: "monospace" }}>+{liveWsUsers.length - 3}</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Live badge / count */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                  {isLive ? (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      padding: "3px 7px", borderRadius: 99,
+                      background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.20)",
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "monospace", color: "rgba(134,239,172,.85)" }}>{liveCount}</span>
+                    </div>
+                  ) : (
+                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,.10)" }} />
+                  )}
                 </div>
               </div>
-              {liveWsUsers.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 12 }}>
-                  <AvatarStack users={liveWsUsers} size={18} />
-                  {liveWsUsers.length > 3 && <span style={{ fontSize: 10, opacity: 0.4, fontFamily: "monospace" }}>+{liveWsUsers.length - 3}</span>}
-                </div>
-              )}
             </Link>
           );
         })}
@@ -311,7 +375,7 @@ function FriendsPanel() {
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
       >
         <div style={{ position: "relative", flexShrink: 0 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatar ? "rgba(255,255,255,.08)" : (f.avatarColor || "rgba(124,58,237,.3)"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden" }}>
+          <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatar ? "rgba(255,255,255,.08)" : (f.avatarColor || "rgba(88,0,229,.3)"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden" }}>
             {f.avatar ? <img src={f.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (f.name || "?").slice(0, 1).toUpperCase()}
           </div>
           <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
@@ -326,7 +390,7 @@ function FriendsPanel() {
           {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
         </div>
         {f.online && joinHref && (
-          <Link href={joinHref} onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.10)", color: "rgba(216,180,254,.85)", textDecoration: "none", flexShrink: 0 }}>
+          <Link href={joinHref} onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}>
             join
           </Link>
         )}
