@@ -98,9 +98,9 @@ export default function LobbyIdPage() {
         display: "flex", flexDirection: "column", gap: 12,
         height: "calc(100vh - 32px)", minHeight: 0,
         paddingBottom: 64,
-        "--lobby-accent":     accent || "#7C3AED",
-        "--lobby-accent-dim": accent ? `${accent}22` : "rgba(124,58,237,0.13)",
-        "--lobby-accent-mid": accent ? `${accent}55` : "rgba(124,58,237,0.33)",
+        "--lobby-accent":     accent || "#5800E5",
+        "--lobby-accent-dim": accent ? `${accent}22` : "rgba(88,0,229,0.13)",
+        "--lobby-accent-mid": accent ? `${accent}55` : "rgba(88,0,229,0.33)",
       } as React.CSSProperties}
     >
       <LobbyHeaderBar
@@ -210,7 +210,7 @@ function TabBtn({ active, accent, onClick, children }: { active: boolean; accent
   return (
     <button onClick={onClick} style={{
       padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
-      background: active ? (accent ? `${accent}25` : "rgba(124,58,237,.15)") : "transparent",
+      background: active ? (accent ? `${accent}25` : "rgba(88,0,229,.15)") : "transparent",
       color: active ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)",
       transition: "background .15s",
       fontFamily: "inherit",

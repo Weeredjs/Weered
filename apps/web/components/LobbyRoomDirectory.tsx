@@ -6,12 +6,26 @@ import { useWeered } from "./WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
+/* ── Types ───────────────────────────────────────────────────────────────── */
+
+interface RoomUser {
+  id?: string;
+  name?: string;
+  avatar?: string;
+}
+
 interface RoomData {
   id: string;
   name: string;
+  description?: string;
   locked: boolean;
+  ownerId?: string;
   _count?: { members: number };
+  onlineCount?: number;
+  onlineUsers?: RoomUser[];
 }
+
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
 
 function authHeaders() {
   try {
@@ -20,29 +34,45 @@ function authHeaders() {
   } catch { return {}; }
 }
 
-// Room type icons
 function roomIcon(name: string): string {
   const n = name.toLowerCase();
-  if (n.includes("voice"))   return "🎙";
-  if (n.includes("lfg"))     return "🔥";
-  if (n.includes("trading")) return "💱";
-  if (n.includes("general")) return "💬";
-  if (n.includes("watch"))   return "📺";
-  if (n.includes("bug"))     return "🐛";
-  if (n.includes("drop"))    return "🔔";
-  if (n.includes("alpha"))   return "📈";
-  if (n.includes("season"))  return "📅";
-  if (n.includes("fight"))   return "🥊";
+  if (n.includes("voice"))    return "🎙";
+  if (n.includes("lfg") || n.includes("squad"))  return "🔥";
+  if (n.includes("trading") || n.includes("trade"))  return "💱";
+  if (n.includes("general"))  return "💬";
+  if (n.includes("watch") || n.includes("stream")) return "📺";
+  if (n.includes("ranked"))   return "🏆";
+  if (n.includes("chill") || n.includes("lounge")) return "🌙";
+  if (n.includes("news") || n.includes("feed"))    return "📰";
+  if (n.includes("meme") || n.includes("shitpost")) return "🤣";
+  if (n.includes("help") || n.includes("support")) return "🛟";
+  if (n.includes("music") || n.includes("audio"))  return "🎵";
+  if (n.includes("art") || n.includes("creative")) return "🎨";
+  if (n.includes("cryo") || n.includes("archive")) return "🧊";
   return "◆";
 }
 
-function roomAccent(name: string, lobbyAccent?: string): string {
+function roomSubtitle(name: string): string {
   const n = name.toLowerCase();
-  if (n.includes("voice"))   return "#22c55e";
-  if (n.includes("lfg"))     return "#f97316";
-  if (n.includes("general")) return lobbyAccent || "#7c6af7";
-  return lobbyAccent || "#a78bfa";
+  if (n.includes("voice"))    return "Voice channel";
+  if (n.includes("lfg") || n.includes("squad"))  return "Looking for group";
+  if (n.includes("trading") || n.includes("trade"))  return "Trading post";
+  if (n.includes("general"))  return "General chat";
+  if (n.includes("watch") || n.includes("stream")) return "Watch party";
+  if (n.includes("ranked"))   return "Competitive";
+  if (n.includes("chill") || n.includes("lounge")) return "Chill zone";
+  return "Text channel";
 }
+
+/* Avatar color from name hash */
+const AV_COLORS = ["#5800E5", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308", "#ec4899", "#14b8a6"];
+function avColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return AV_COLORS[Math.abs(h) % AV_COLORS.length];
+}
+
+/* ── Component ────────────────────────────────────────────────────────────── */
 
 export default function LobbyRoomDirectory({
   lobbyId,
@@ -54,11 +84,11 @@ export default function LobbyRoomDirectory({
   style?: React.CSSProperties;
 }) {
   const router = useRouter();
-  const { users, join } = useWeered() as any;
+  const { join } = useWeered() as any;
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const accent = accentColor || "#7c6af7";
+  const accent = accentColor || "#5800E5";
 
   useEffect(() => {
     setLoading(true);
@@ -71,181 +101,256 @@ export default function LobbyRoomDirectory({
       .finally(() => setLoading(false));
   }, [lobbyId]);
 
-  // Get online counts from WS presence
-  const onlineCounts: Record<string, number> = {};
-  if (users && typeof users === "object") {
-    // users might be an array of users with roomId, or usersByRoom map
-    if (Array.isArray(users)) {
-      for (const u of users) {
-        const rid = u?.roomId || u?.room;
-        if (rid) onlineCounts[rid] = (onlineCounts[rid] || 0) + 1;
-      }
-    }
-  }
-
   function handleJoin(room: RoomData) {
     try { join?.(`room:${room.id}`); } catch {}
     router.push(`/room/${encodeURIComponent(room.id)}`);
   }
 
+  /* ── Loading state ─────────────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 60, ...style }}>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,.3)" }}>Loading rooms...</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 80, ...style }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <div style={{
+            width: 32, height: 32, border: `2px solid ${accent}33`,
+            borderTop: `2px solid ${accent}`, borderRadius: "50%",
+            animation: "weered-room-spin 0.8s linear infinite",
+          }} />
+          <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.3)", letterSpacing: "0.04em" }}>Loading rooms</div>
+        </div>
       </div>
     );
   }
 
+  /* ── Empty state ───────────────────────────────────────────────────────── */
   if (rooms.length === 0) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 60, gap: 8, ...style }}>
-        <div style={{ fontSize: 32, opacity: 0.2 }}>🚪</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,.3)" }}>No rooms yet</div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,.2)" }}>Create one from the right panel</div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 10, ...style }}>
+        <div style={{ fontSize: 40, opacity: 0.15 }}>🚪</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,.25)" }}>No rooms yet</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.15)" }}>Create one from the right panel</div>
       </div>
     );
   }
 
+  /* ── Room grid ─────────────────────────────────────────────────────────── */
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px", ...style }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px 32px", ...style }}>
 
       {/* Section header */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8, marginBottom: 16,
-      }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <div style={{
-          width: 4, height: 16, borderRadius: 2,
-          background: `linear-gradient(180deg, ${accent}, ${accent}55)`,
+          width: 3, height: 18, borderRadius: 2,
+          background: accent,
+          boxShadow: `0 0 8px ${accent}55`,
         }} />
-        <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,.5)" }}>
+        <span style={{
+          fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase",
+          color: "rgba(255,255,255,.45)",
+        }}>
           Rooms
         </span>
         <span style={{
-          fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.25)",
-          background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.07)",
-          borderRadius: 99, padding: "1px 8px",
+          fontSize: 10, fontFamily: "monospace", fontWeight: 700,
+          color: "rgba(255,255,255,.2)",
+          background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.06)",
+          borderRadius: 99, padding: "2px 10px",
         }}>
           {rooms.length}
         </span>
-        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.05)" }} />
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.04)" }} />
       </div>
 
-      {/* Room grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
+      {/* Grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+        gap: 14,
+      }}>
         {rooms.map(room => {
           const icon = roomIcon(room.name);
-          const rAccent = roomAccent(room.name, accent);
+          const subtitle = room.description || roomSubtitle(room.name);
           const memberCount = room._count?.members ?? 0;
-          const liveCount = onlineCounts[room.id] ?? 0;
-          const isVoice = room.name.toLowerCase().includes("voice");
-          const isLfg = room.name.toLowerCase().includes("lfg");
+          const liveCount = room.onlineCount ?? 0;
+          const onlineUsers: RoomUser[] = room.onlineUsers ?? [];
 
           return (
             <div
               key={room.id}
               onClick={() => handleJoin(room)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleJoin(room); } }}
               style={{
                 position: "relative", overflow: "hidden",
-                borderRadius: 12, cursor: "pointer",
-                background: "rgba(255,255,255,.025)",
-                border: `1px solid rgba(255,255,255,.06)`,
-                transition: "all .2s",
+                borderRadius: 14, cursor: "pointer",
+                background: "rgba(255,255,255,.02)",
+                border: "1px solid rgba(255,255,255,.06)",
+                transition: "all .18s ease",
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget;
-                el.style.borderColor = `${rAccent}40`;
+                el.style.borderColor = `${accent}44`;
                 el.style.transform = "translateY(-2px)";
-                el.style.boxShadow = `0 8px 24px rgba(0,0,0,.3), inset 0 1px 0 ${rAccent}15`;
+                el.style.boxShadow = `0 12px 32px rgba(0,0,0,.35), 0 0 0 1px ${accent}18`;
+                el.style.background = "rgba(255,255,255,.035)";
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget;
                 el.style.borderColor = "rgba(255,255,255,.06)";
                 el.style.transform = "translateY(0)";
                 el.style.boxShadow = "none";
+                el.style.background = "rgba(255,255,255,.02)";
               }}
             >
-              {/* Accent top edge */}
+              {/* Accent top bar */}
               <div style={{
-                height: 2, background: `linear-gradient(90deg, ${rAccent}44, ${rAccent}, ${rAccent}44)`,
+                height: 2,
+                background: liveCount > 0
+                  ? `linear-gradient(90deg, #22c55e44, #22c55e, #22c55e44)`
+                  : `linear-gradient(90deg, ${accent}33, ${accent}aa, ${accent}33)`,
               }} />
 
-              <div style={{ padding: "14px 16px 16px" }}>
-                {/* Top row: icon + name + status */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  {/* Icon pill */}
+              <div style={{ padding: "16px 18px 18px" }}>
+
+                {/* ── Row 1: Icon + Name + Status ────────────────────────── */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+
+                  {/* Icon box */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: `${rAccent}12`, border: `1px solid ${rAccent}22`,
+                    width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                    background: `${accent}0c`,
+                    border: `1px solid ${accent}1a`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 16,
+                    fontSize: 20,
                   }}>
                     {icon}
                   </div>
 
+                  {/* Name + subtitle */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontWeight: 800, fontSize: 14, lineHeight: 1.2,
-                      color: "rgba(243,244,246,.95)", letterSpacing: "-0.2px",
+                      fontWeight: 800, fontSize: 15, lineHeight: 1.25,
+                      color: "rgba(243,244,246,.95)", letterSpacing: "-0.3px",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     }}>
                       {room.name}
                     </div>
                     <div style={{
-                      fontSize: 10, color: "rgba(148,163,184,.45)", marginTop: 2,
-                      fontFamily: "monospace",
+                      fontSize: 11, color: "rgba(148,163,184,.4)", marginTop: 3,
+                      lineHeight: 1.4,
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     }}>
-                      {isVoice ? "Voice channel" : isLfg ? "Looking for group" : "Text channel"}
+                      {subtitle}
                     </div>
                   </div>
 
-                  {/* Live indicator */}
+                  {/* Status badge */}
                   {liveCount > 0 ? (
                     <div style={{
-                      display: "flex", alignItems: "center", gap: 4,
-                      padding: "3px 8px", borderRadius: 99,
-                      background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.20)",
+                      display: "flex", alignItems: "center", gap: 5,
+                      padding: "4px 10px", borderRadius: 99, flexShrink: 0,
+                      background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.18)",
                     }}>
                       <span style={{
-                        width: 5, height: 5, borderRadius: "50%",
-                        background: "#22c55e", boxShadow: "0 0 6px #22c55e",
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "#22c55e", boxShadow: "0 0 8px #22c55e",
+                        animation: "weered-room-pulse 2s ease-in-out infinite",
                       }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(134,239,172,.9)", fontFamily: "monospace" }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700,
+                        color: "rgba(134,239,172,.9)", fontFamily: "monospace",
+                      }}>
                         {liveCount}
                       </span>
                     </div>
                   ) : room.locked ? (
                     <div style={{
-                      fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 99,
-                      background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.18)",
-                      color: "rgba(252,165,165,.7)",
+                      fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 99,
+                      background: "rgba(239,68,68,.06)", border: "1px solid rgba(239,68,68,.15)",
+                      color: "rgba(252,165,165,.6)", flexShrink: 0, letterSpacing: "0.02em",
                     }}>
                       🔒 Locked
                     </div>
                   ) : null}
                 </div>
 
-                {/* Bottom row: member count + join hint */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {memberCount > 0 && (
-                      <span style={{
-                        fontSize: 10, color: "rgba(148,163,184,.4)", fontFamily: "monospace",
-                        display: "flex", alignItems: "center", gap: 3,
-                      }}>
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.5 }}>
-                          <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
-                          <path d="M2 14c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
-                        {memberCount} joined
-                      </span>
+                {/* ── Row 2: Avatar stack + member count + join ──────────── */}
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  paddingTop: 12,
+                  borderTop: "1px solid rgba(255,255,255,.04)",
+                }}>
+
+                  {/* Avatar stack + count */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+                    {/* Avatar stack */}
+                    {onlineUsers.length > 0 && (
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        {onlineUsers.slice(0, 4).map((u, i) => {
+                          const name = u.name || "?";
+                          const color = avColor(name);
+                          return (
+                            <div
+                              key={u.id || i}
+                              title={name}
+                              style={{
+                                width: 24, height: 24, borderRadius: "50%",
+                                border: "2px solid rgba(15,17,23,.95)",
+                                marginLeft: i === 0 ? 0 : -8,
+                                zIndex: 4 - i,
+                                position: "relative",
+                                overflow: "hidden",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.85)",
+                                background: u.avatar ? "rgba(255,255,255,.08)" : `linear-gradient(135deg, ${color}55, ${color}aa)`,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {u.avatar
+                                ? <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                : name[0]?.toUpperCase() ?? "?"
+                              }
+                            </div>
+                          );
+                        })}
+                        {liveCount > 4 && (
+                          <div style={{
+                            width: 24, height: 24, borderRadius: "50%",
+                            border: "2px solid rgba(15,17,23,.95)",
+                            marginLeft: -8, zIndex: 0,
+                            background: "rgba(255,255,255,.06)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,.4)",
+                            fontFamily: "monospace",
+                          }}>
+                            +{liveCount - 4}
+                          </div>
+                        )}
+                      </div>
                     )}
+
+                    {/* Member count */}
+                    <span style={{
+                      fontSize: 10, color: "rgba(148,163,184,.35)", fontFamily: "monospace",
+                      display: "flex", alignItems: "center", gap: 4,
+                    }}>
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.5 }}>
+                        <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M2 14c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                      {memberCount > 0 ? `${memberCount} joined` : "Empty"}
+                    </span>
                   </div>
 
+                  {/* Join button */}
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 6,
-                    background: `${rAccent}10`, border: `1px solid ${rAccent}18`,
-                    color: rAccent, opacity: 0.7,
-                    transition: "opacity .15s",
+                    fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 8,
+                    background: `${accent}10`, border: `1px solid ${accent}22`,
+                    color: "rgba(243,244,246,.75)",
+                    transition: "all .15s",
+                    letterSpacing: "0.02em",
                   }}>
                     Join →
                   </span>
@@ -255,6 +360,12 @@ export default function LobbyRoomDirectory({
           );
         })}
       </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes weered-room-spin { to { transform: rotate(360deg); } }
+        @keyframes weered-room-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+      `}</style>
     </div>
   );
 }
