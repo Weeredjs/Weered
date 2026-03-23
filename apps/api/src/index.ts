@@ -23,7 +23,7 @@ type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?:
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
-type RoomUser = { id: string; name: string; role?: Role; avatarColor?: string | null; avatar?: string | null };
+type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string | null; avatar?: string | null };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
 
