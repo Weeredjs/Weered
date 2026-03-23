@@ -19,11 +19,11 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
-type AuthedUser = { id: string; name: string; globalRole?: string; avatarColor?: string; avatar?: string };
+type AuthedUser = { id: string; name: string; globalRole?: string; tier?: string; avatarColor?: string; avatar?: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
-type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string | null; avatar?: string | null };
+type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; tier?: string; avatarColor?: string | null; avatar?: string | null };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
 type Knock = { userId: string; name: string; ts: number };
 
@@ -467,8 +467,8 @@ function removeKnock(room: RoomState, userId: string) {
 // Hydrate globalRole onto AuthedUser from DB (called once per WS connection)
 async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
-    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true, avatarColor: true, avatar: true } });
-    return { ...user, globalRole: String(u?.globalRole ?? "USER"), avatarColor: u?.avatarColor ?? undefined, avatar: u?.avatar ?? undefined };
+    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true, tier: true, avatarColor: true, avatar: true } });
+    return { ...user, globalRole: String(u?.globalRole ?? "USER"), tier: String(u?.tier ?? "INNOCENT"), avatarColor: u?.avatarColor ?? undefined, avatar: u?.avatar ?? undefined };
   } catch { return user; }
 }
 
@@ -564,7 +564,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -1694,7 +1694,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
           ws.user = await hydrateGlobalRole(u);
-          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, avatarColor: ws.user.avatarColor, avatar: ws.user.avatar } });
+          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar } });
           return;
         }
 
@@ -2374,21 +2374,39 @@ app.post("/dm/:peerId", async (req, reply) => {
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ error: "Staff only" });
+    const isStaff = canAccessStaff(role);
+
+    // Non-staff: check tier (Felon+ can create up to 3 lobbies, Kingpin unlimited)
+    if (!isStaff) {
+      const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
+      const tier = String(dbUser?.tier ?? "INNOCENT");
+      if (tier !== "FELON" && tier !== "KINGPIN") {
+        return reply.code(403).send({ ok: false, error: "tier_required", message: "Felon tier or higher required to create lobbies." });
+      }
+      // Count existing lobbies owned by this user
+      const ownedCount = await (prisma as any).lobby.count({ where: { ownerId: u.id } });
+      const maxLobbies = tier === "KINGPIN" ? 999 : 3;
+      if (ownedCount >= maxLobbies) {
+        return reply.code(403).send({ ok: false, error: "lobby_limit", message: `You can own up to ${maxLobbies} lobbies on the ${tier} tier.` });
+      }
+    }
 
     const { id, name, description = "", pinned = false, moduleType = "NONE",
             moduleConfig, keywords = [], accentColor, logoUrl, bannerUrl, websiteUrl } = req.body as any;
     if (!id || !name) return reply.code(400).send({ ok: false, error: "id and name required" });
 
+    // Non-staff can't pin lobbies
+    const shouldPin = isStaff ? Boolean(pinned) : false;
+
     const lobby = await (prisma as any).lobby.upsert({
       where: { id: String(id) },
-      update: { name: String(name), description: String(description), pinned: Boolean(pinned),
+      update: { name: String(name), description: String(description), pinned: shouldPin,
         moduleType, moduleConfig: moduleConfig ?? undefined,
         keywords: Array.isArray(keywords) ? keywords.map(String) : [],
         accentColor: accentColor ?? null, logoUrl: logoUrl ?? null,
         bannerUrl: bannerUrl ?? null, websiteUrl: websiteUrl ?? null },
       create: { id: String(id), name: String(name), description: String(description),
-        pinned: Boolean(pinned), moduleType, moduleConfig: moduleConfig ?? undefined,
+        pinned: shouldPin, verified: true, ownerId: u.id, moduleType, moduleConfig: moduleConfig ?? undefined,
         keywords: Array.isArray(keywords) ? keywords.map(String) : [],
         accentColor: accentColor ?? null, logoUrl: logoUrl ?? null,
         bannerUrl: bannerUrl ?? null, websiteUrl: websiteUrl ?? null },
@@ -2425,55 +2443,6 @@ app.post("/dm/:peerId", async (req, reply) => {
       cardData: account.cardData, isStale,
     });
   });
-
- // GET /lobbies/:id/presence — aggregate online users across all rooms in a lobby
-  app.get("/lobbies/:id/presence", async (req, reply) => {
-    const lobbyId = String((req.params as any).id || "");
-    // Find all rooms belonging to this lobby
-    const dbRooms = await prisma.room.findMany({
-      where: { lobbyId },
-      select: { id: true, name: true },
-    });
-
-    const seen = new Map<string, any>(); // dedupe by user ID
-
-    // Users in the lobby room itself (people browsing the lobby page)
-    const lobbyWsRoom = rooms.get(lobbyId);
-    if (lobbyWsRoom?.users) {
-      for (const [uid, u] of lobbyWsRoom.users) {
-        if (!seen.has(uid)) {
-          seen.set(uid, {
-            id: uid, name: u?.name || uid, role: u?.role || "member",
-            globalRole: u?.globalRole || undefined,
-            avatar: u?.avatar || undefined,
-            avatarColor: u?.avatarColor || undefined,
-            roomId: lobbyId, roomName: "Lobby",
-          });
-        }
-      }
-    }
-
-    // Users in each child room
-    for (const dbRoom of dbRooms) {
-      const wsRoom = rooms.get(dbRoom.id);
-      if (!wsRoom?.users) continue;
-      for (const [uid, u] of wsRoom.users) {
-        // If user is in multiple rooms (shouldn't happen but be safe), prefer the room entry
-        seen.set(uid, {
-          id: uid, name: u?.name || uid, role: u?.role || "member",
-          globalRole: u?.globalRole || undefined,
-          avatar: u?.avatar || undefined,
-          avatarColor: u?.avatarColor || undefined,
-          roomId: dbRoom.id, roomName: dbRoom.name || dbRoom.id,
-        });
-      }
-    }
-
-    const users = Array.from(seen.values());
-    return reply.send({ ok: true, lobbyId, count: users.length, users });
-  });
-
-
   // ── Lobby Admin API ──────────────────────────────────────────────────────────
   // Access: lobby roleLevel >= 4, or GlobalRole STAFF/ADMIN/GOD
 
