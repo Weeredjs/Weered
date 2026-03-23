@@ -122,8 +122,8 @@ function groupRank(u: any): number {
 
 // ── Simple accent color from room name hash ───────────────────────────────────
 const ROOM_ACCENTS = [
-  "#5800E5", "#22c55e", "#f97316", "#60a5fa", "#ef4444",
-  "#eab308", "#ec4899", "#14b8a6", "#5800E5", "#fb923c",
+  "#7c6af7", "#22c55e", "#f97316", "#60a5fa", "#ef4444",
+  "#eab308", "#ec4899", "#14b8a6", "#a78bfa", "#fb923c",
 ];
 function accentForRoom(id: string): string {
   let h = 0;
@@ -155,8 +155,39 @@ export default function LeftRail() {
   const rawRoomKey = pickFirstString(joinedRoomId, activeRoomId, "");
   const roomLabel  = useMemo(() => normRoomKey(rawRoomKey), [rawRoomKey]);
 
+  // ── Lobby-wide presence aggregation ──────────────────────────────────────
+  const [lobbyPresence, setLobbyPresence] = useState<any[]>([]);
+  const lobbyPresenceId = isLobbyActive ? (currentLobbyId || "") : "";
+
+  useEffect(() => {
+    if (!lobbyPresenceId || lobbyPresenceId === "lobby") { setLobbyPresence([]); return; }
+    let cancelled = false;
+    const fetchPresence = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/lobbies/${encodeURIComponent(lobbyPresenceId)}/presence`, { headers: authHeaders() as any });
+        const j = await r.json();
+        if (!cancelled && j.ok && Array.isArray(j.users)) setLobbyPresence(j.users);
+      } catch {}
+    };
+    fetchPresence();
+    const t = setInterval(fetchPresence, 6000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [lobbyPresenceId]);
+
+  // When on a lobby page, merge lobby-wide presence with WS users
+  const effectiveUsers = useMemo(() => {
+    if (!isLobbyActive || !lobbyPresence.length) return users;
+    // Merge: lobby presence is the primary source, WS users fill gaps
+    const seen = new Map<string, any>();
+    for (const u of lobbyPresence) { if (u?.id) seen.set(u.id, u); }
+    for (const u of (Array.isArray(users) ? users : [])) {
+      if (u?.id && !seen.has(u.id)) seen.set(u.id, u);
+    }
+    return Array.from(seen.values());
+  }, [isLobbyActive, lobbyPresence, users]);
+
   const filtered = useMemo(() => {
-    const arr0 = Array.isArray(users) ? users : [];
+    const arr0 = Array.isArray(effectiveUsers) ? effectiveUsers : [];
     const arr = (() => {
       const a = [...arr0];
       try {
@@ -410,7 +441,7 @@ export default function LeftRail() {
           href={lobbyHrefMain}
         >
           <span>Lobby</span>
-          {isLobbyActive ? <span className="h-2 w-2 rounded-full shadow-[0_0_0_2px_rgba(88,0,229,.22)]" style={{ background:"#5800E5" }} /> : null}
+          {isLobbyActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
         </Link>
 
         <Link
@@ -418,7 +449,7 @@ export default function LeftRail() {
           href="/home"
         >
           <span>Home</span>
-          {isHomeActive ? <span className="h-2 w-2 rounded-full shadow-[0_0_0_2px_rgba(88,0,229,.22)]" style={{ background:"#5800E5" }} /> : null}
+          {isHomeActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
         </Link>
 
         {(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT") && (
@@ -427,7 +458,7 @@ export default function LeftRail() {
             href="/staff"
           >
             <span>Ops</span>
-            {pathname.startsWith("/staff") ? <span className="h-2 w-2 rounded-full shadow-[0_0_0_2px_rgba(88,0,229,.22)]" style={{ background:"#5800E5" }} /> : null}
+            {pathname.startsWith("/staff") ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
           </Link>
         )}
 
@@ -440,7 +471,7 @@ export default function LeftRail() {
       <div className="weered-presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
-          <div className="weered-presence-sub">{`context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`} • {listed.length}</div>
+          <div className="weered-presence-sub">{isLobbyActive && lobbyPresence.length > 0 ? `${lobbyPresenceId} · all rooms` : `context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`} • {listed.length}</div>
         </div>
 
         <input className="weered-presence-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users..." />
@@ -456,7 +487,7 @@ export default function LeftRail() {
             const cls   =
               label === "owner" || label === "admin"  ? "border-emerald-300/25 bg-emerald-500/10 text-emerald-200"
               : label === "staff" || label === "support" || label === "god" ? "border-amber-300/25 bg-amber-500/10 text-amber-200"
-              : label === "mod"   ? "border-[#5800E5]/25 bg-[#5800E5]/10 text-[rgba(243,244,246,0.85)] weered-mod"
+              : label === "mod"   ? "border-violet-300/25 bg-violet-500/10 text-violet-200"
               : "border-white/10 bg-black/10 text-white/70";
 
             return (
@@ -467,7 +498,7 @@ export default function LeftRail() {
                   display: "flex", alignItems: "center", gap: 9,
                   padding: "7px 9px", borderRadius: 10,
                   border: "1px solid rgba(255,255,255,0.07)",
-                  background: you ? "rgba(88,0,229,0.07)" : "rgba(255,255,255,0.03)",
+                  background: you ? "rgba(124,58,237,0.07)" : "rgba(255,255,255,0.03)",
                   cursor: "pointer", transition: "background 0.12s, border-color 0.12s",
                 }}
                 title={nm}
@@ -482,7 +513,7 @@ export default function LeftRail() {
                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = you ? "rgba(88,0,229,0.12)" : "rgba(255,255,255,0.06)";
+                  el.style.background = you ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.06)";
                   el.style.borderColor = "rgba(255,255,255,0.14)";
                   const r = el.getBoundingClientRect();
                   cancelClose();
@@ -494,13 +525,13 @@ export default function LeftRail() {
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = you ? "rgba(88,0,229,0.07)" : "rgba(255,255,255,0.03)";
+                  el.style.background = you ? "rgba(124,58,237,0.07)" : "rgba(255,255,255,0.03)";
                   el.style.borderColor = "rgba(255,255,255,0.07)";
                   scheduleClose(160);
                 }}
               >
                 {(() => {
-                  const roleColors: Record<string,string> = { god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa", admin: "#5800E5", mod: "#34d399", owner: "#f97316", paid: "#5800E5" };
+                  const roleColors: Record<string,string> = { god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa", admin: "#a78bfa", mod: "#34d399", owner: "#f97316", paid: "#a78bfa" };
                   const aColor = roleColors[label] || avatarBg(nm, label === "you", u?.avatarColor);
                   const userAvatar = u?.avatar || null;
                   return (
@@ -525,16 +556,16 @@ export default function LeftRail() {
                     {f.icon && <span style={{ opacity: 0.85, lineHeight: 1 }}>{f.icon}</span>}
                   </div>
                   <div style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", marginTop: 1, fontFamily: "monospace" }}>
-                    {you ? "you" : roleDisplay(f.badge || "member")}
+                    {you ? "you" : isLobbyActive && u?.roomName ? `in ${u.roomName}` : roleDisplay(f.badge || "member")}
                   </div>
                 </div>
                 {f.badge && (
                   <span style={{
                     fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
                     padding: "2px 6px", borderRadius: 999, flexShrink: 0,
-                    border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("weered-mod") ? "rgba(88,0,229,0.35)" : "rgba(255,255,255,0.1)"}`,
-                    background: cls.includes("emerald") ? "rgba(16,185,129,0.1)" : cls.includes("amber") ? "rgba(245,158,11,0.1)" : cls.includes("weered-mod") ? "rgba(88,0,229,0.1)" : "rgba(255,255,255,0.05)",
-                    color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("weered-mod") ? "rgba(243,244,246,0.85)" : "rgba(255,255,255,0.5)",
+                    border: `1px solid ${cls.includes("emerald") ? "rgba(52,211,153,0.3)" : cls.includes("amber") ? "rgba(251,191,36,0.3)" : cls.includes("violet") ? "rgba(88,0,229,0.35)" : "rgba(255,255,255,0.1)"}`,
+                    background: cls.includes("emerald") ? "rgba(16,185,129,0.1)" : cls.includes("amber") ? "rgba(245,158,11,0.1)" : cls.includes("violet") ? "rgba(124,58,237,0.1)" : "rgba(255,255,255,0.05)",
+                    color: cls.includes("emerald") ? "#6ee7b7" : cls.includes("amber") ? "#fcd34d" : cls.includes("violet") ? "#c4b5fd" : "rgba(255,255,255,0.5)",
                   }}>{roleDisplay(f.badge || label)}</span>
                 )}
               </div>
@@ -578,7 +609,7 @@ export default function LeftRail() {
                   View profile
                 </button>
                 <button type="button"
-                  className="flex-1 rounded-xl border border-[#5800E5]/25 bg-[#5800E5]/10 px-3 py-2 text-sm hover:bg-[#5800E5]/15 font-semibold text-[rgba(243,244,246,0.85)]"
+                  className="flex-1 rounded-xl border border-violet-300/25 bg-violet-500/10 px-3 py-2 text-sm hover:bg-violet-500/15 font-semibold text-violet-100"
                   onClick={() => {
                     try {
                       const peerName = String(presenceHoverUser?.name ?? presenceHoverUser?.username ?? presenceHoverName ?? "").trim();
@@ -744,10 +775,10 @@ export default function LeftRail() {
                       flex:1, minWidth:0, display:"block", textDecoration:"none",
                       borderRadius:10,
                       border: isActive
-                        ? "1px solid rgba(88,0,229,.40)"
+                        ? "1px solid rgba(124,58,237,.40)"
                         : "1px solid rgba(148,163,184,.09)",
                       background: isActive
-                        ? "rgba(88,0,229,.10)"
+                        ? "rgba(124,58,237,.10)"
                         : "rgba(148,163,184,.03)",
                       padding:"9px 10px 8px 11px",
                       position:"relative", overflow:"hidden",
@@ -756,13 +787,13 @@ export default function LeftRail() {
                     }}
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement;
-                      el.style.background = isActive ? "rgba(88,0,229,.14)" : "rgba(255,255,255,.04)";
-                      el.style.borderColor = isActive ? "rgba(88,0,229,.50)" : "rgba(148,163,184,.16)";
+                      el.style.background = isActive ? "rgba(124,58,237,.14)" : "rgba(255,255,255,.04)";
+                      el.style.borderColor = isActive ? "rgba(124,58,237,.50)" : "rgba(148,163,184,.16)";
                     }}
                     onMouseLeave={e => {
                       const el = e.currentTarget as HTMLElement;
-                      el.style.background = isActive ? "rgba(88,0,229,.10)" : "rgba(148,163,184,.03)";
-                      el.style.borderColor = isActive ? "rgba(88,0,229,.40)" : "rgba(148,163,184,.09)";
+                      el.style.background = isActive ? "rgba(124,58,237,.10)" : "rgba(148,163,184,.03)";
+                      el.style.borderColor = isActive ? "rgba(124,58,237,.40)" : "rgba(148,163,184,.09)";
                     }}
                   >
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>

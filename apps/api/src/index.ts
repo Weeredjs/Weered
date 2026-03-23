@@ -2425,6 +2425,55 @@ app.post("/dm/:peerId", async (req, reply) => {
       cardData: account.cardData, isStale,
     });
   });
+
+ // GET /lobbies/:id/presence — aggregate online users across all rooms in a lobby
+  app.get("/lobbies/:id/presence", async (req, reply) => {
+    const lobbyId = String((req.params as any).id || "");
+    // Find all rooms belonging to this lobby
+    const dbRooms = await prisma.room.findMany({
+      where: { lobbyId },
+      select: { id: true, name: true },
+    });
+
+    const seen = new Map<string, any>(); // dedupe by user ID
+
+    // Users in the lobby room itself (people browsing the lobby page)
+    const lobbyWsRoom = rooms.get(lobbyId);
+    if (lobbyWsRoom?.users) {
+      for (const [uid, u] of lobbyWsRoom.users) {
+        if (!seen.has(uid)) {
+          seen.set(uid, {
+            id: uid, name: u?.name || uid, role: u?.role || "member",
+            globalRole: u?.globalRole || undefined,
+            avatar: u?.avatar || undefined,
+            avatarColor: u?.avatarColor || undefined,
+            roomId: lobbyId, roomName: "Lobby",
+          });
+        }
+      }
+    }
+
+    // Users in each child room
+    for (const dbRoom of dbRooms) {
+      const wsRoom = rooms.get(dbRoom.id);
+      if (!wsRoom?.users) continue;
+      for (const [uid, u] of wsRoom.users) {
+        // If user is in multiple rooms (shouldn't happen but be safe), prefer the room entry
+        seen.set(uid, {
+          id: uid, name: u?.name || uid, role: u?.role || "member",
+          globalRole: u?.globalRole || undefined,
+          avatar: u?.avatar || undefined,
+          avatarColor: u?.avatarColor || undefined,
+          roomId: dbRoom.id, roomName: dbRoom.name || dbRoom.id,
+        });
+      }
+    }
+
+    const users = Array.from(seen.values());
+    return reply.send({ ok: true, lobbyId, count: users.length, users });
+  });
+
+
   // ── Lobby Admin API ──────────────────────────────────────────────────────────
   // Access: lobby roleLevel >= 4, or GlobalRole STAFF/ADMIN/GOD
 
