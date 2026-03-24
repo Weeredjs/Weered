@@ -25,7 +25,7 @@ function normRole(x: string) {
 
 // Street hierarchy display names
 const ROLE_DISPLAY: Record<string, string> = {
-  GOD: "KINGPIN", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "LOOKOUT",
+  GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "LOOKOUT",
   MOD: "CAPTAIN", OWNER: "FOUNDER", MEMBER: "MEMBER",
 };
 function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole; }
