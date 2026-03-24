@@ -2376,16 +2376,16 @@ app.post("/dm/:peerId", async (req, reply) => {
     const role = await getGlobalRole(u.id);
     const isStaff = canAccessStaff(role);
 
-    // Non-staff: check tier (Felon+ can create up to 3 lobbies, Kingpin unlimited)
+    // Non-staff: check tier (Indicted=1, Felon=3, Kingpin=unlimited)
     if (!isStaff) {
       const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
       const tier = String(dbUser?.tier ?? "INNOCENT");
-      if (tier !== "FELON" && tier !== "KINGPIN") {
-        return reply.code(403).send({ ok: false, error: "tier_required", message: "Felon tier or higher required to create lobbies." });
+      if (tier === "INNOCENT") {
+        return reply.code(403).send({ ok: false, error: "tier_required", message: "Indicted tier or higher required to create lobbies." });
       }
       // Count existing lobbies owned by this user
       const ownedCount = await (prisma as any).lobby.count({ where: { ownerId: u.id } });
-      const maxLobbies = tier === "KINGPIN" ? 999 : 3;
+      const maxLobbies = tier === "KINGPIN" ? 999 : tier === "FELON" ? 3 : 1;
       if (ownedCount >= maxLobbies) {
         return reply.code(403).send({ ok: false, error: "lobby_limit", message: `You can own up to ${maxLobbies} lobbies on the ${tier} tier.` });
       }
@@ -3123,7 +3123,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     const headers: Record<string, string> = { "X-API-Key": BUNGIE_API_KEY };
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
     const res = await fetch(`${BUNGIE_ROOT}${path}`, { headers });
-    return res.json();
+    const j = await res.json(); if (j.error) console.error("[stripeReq]", path, JSON.stringify(j.error)); return j;
   }
 
   // Cache helper — reads from DB, fetches if stale
