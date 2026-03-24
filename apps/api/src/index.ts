@@ -753,7 +753,7 @@ async function main() {
       const raw = Buffer.concat(chunks);
       (req as any).rawBody = raw;
       // Return a new readable stream so Fastify can still parse it
-      const { Readable } = require("stream");
+      const { Readable } = await import("stream");
       const copy = new Readable();
       copy.push(raw);
       copy.push(null);
@@ -2777,10 +2777,10 @@ app.post("/dm/:peerId", async (req, reply) => {
     };
     const opts: any = { method, headers };
     if (body) {
-      opts.body = new URLSearchParams(body).toString();
+      const clean: Record<string,string> = {}; for (const [k,v] of Object.entries(body)) { if (v !== undefined && v !== null && v !== '') clean[k] = String(v); } opts.body = new URLSearchParams(clean).toString();
     }
     const res = await fetch(url, opts);
-    return res.json();
+    const j = await res.json(); if (j.error) console.error("[stripeReq]", path, JSON.stringify(j.error)); return j;
   }
 
   // GET /subscribe/config — publishable key + price IDs for frontend
@@ -2825,7 +2825,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     let sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
     let customerId = sub?.stripeCustomerId;
 
-    if (!customerId) {
+    if (!customerId || customerId === "") {
       const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true, email: true } });
       const customer = await stripeReq("POST", "/customers", {
         email: dbUser?.email || undefined,
