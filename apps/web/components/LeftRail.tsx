@@ -77,7 +77,7 @@ type Flair = {
 
 // ── Role display names (DB value → street name) ─────────────────────────────
 const ROLE_DISPLAY: Record<string, string> = {
-  GOD: "Kingpin", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Lookout",
+  GOD: "Godfather", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Lookout",
   MOD: "Captain", OWNER: "Founder",
 };
 function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase(); }
