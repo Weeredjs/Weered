@@ -39,6 +39,12 @@ function __id() { return Math.random().toString(36).slice(2) + Date.now().toStri
 function pickFirstString(...vals: any[]): string { for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim(); return ""; }
 function normRole(v: any): string { const s = String(v||"").trim(); return s ? s.toUpperCase() : ""; }
 
+const ROLE_DISPLAY_DOCK: Record<string, string> = {
+  GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "LOOKOUT",
+  MOD: "CAPTAIN", OWNER: "FOUNDER",
+};
+function roleDisplayDock(dbRole: string): string { return ROLE_DISPLAY_DOCK[dbRole] || dbRole; }
+
 function b64UrlDecode(input: string): string {
   try {
     const s = String(input||"").replace(/-/g,"+").replace(/_/g,"/");
@@ -329,7 +335,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               <span style={{ fontSize:11, color:"var(--weered-muted)" }}>
                 {wsUp ? (roomTitle ? roomTitle : "online") : "offline"}
               </span>
-              {globalRole && <span style={{ fontSize:10, color:"var(--weered-accent-text)", background:"var(--weered-accent-bg)", padding:"1px 6px", borderRadius:999, fontWeight:700 }}>{globalRole}</span>}
+              {globalRole && <span style={{ fontSize:10, color:"var(--weered-accent-text)", background:"var(--weered-accent-bg)", padding:"1px 6px", borderRadius:999, fontWeight:700 }}>{roleDisplayDock(globalRole)}</span>}
             </div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
