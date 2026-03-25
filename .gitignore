@@ -48,3 +48,5 @@ pnpm-debug.log*
 Thumbs.db
 
 apps/api/manifest-cache/
+
+apps/api/manifest-cache/
