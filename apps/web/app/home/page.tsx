@@ -688,6 +688,43 @@ export default function HomePage() {
           <HeroBanner lobby={featured} onJoin={handleJoin} />
         </div>
 
+        {/* UPGRADE BANNER — only for Innocent (free) users */}
+        {me && String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" && (
+          <div
+            onClick={() => router.push("/subscribe")}
+            style={{
+              marginTop: 14, padding: "14px 20px",
+              borderRadius: 14, cursor: "pointer",
+              background: "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)",
+              border: "1px solid rgba(88,0,229,.18)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 16, transition: "all .2s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.35)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.12) 0%, rgba(167,139,250,.08) 50%, rgba(249,115,22,.06) 100%)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)"; }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 18 }}>⚖️</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
+                  Own your own lobby
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
+                  Get Indicted — create a branded community, unlock premium features
+                </div>
+              </div>
+            </div>
+            <span style={{
+              flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 14px",
+              borderRadius: 8, background: "rgba(88,0,229,.15)", border: "1px solid rgba(88,0,229,.30)",
+              color: "rgba(167,139,250,.9)", letterSpacing: ".2px",
+              transition: "all .15s",
+            }}>
+              Upgrade
+            </span>
+          </div>
+        )}
+
         {/* LIVE TICKER */}
         <LiveTicker rooms={allRooms} onJoin={handleJoin} />
 
@@ -697,6 +734,36 @@ export default function HomePage() {
             <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
               {lobbies.filter(r => isMarathonFeatured ? (roomId(r) !== "marathon" && roomName(r) !== "marathon") : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
+
+              {/* Create Your Lobby CTA card */}
+              {me && (
+                <div
+                  onClick={() => {
+                    const tier = String(me?.tier || "INNOCENT").toUpperCase();
+                    if (tier === "INNOCENT") router.push("/subscribe");
+                    else router.push("/lobby/create");
+                  }}
+                  style={{
+                    background: "rgba(255,255,255,.02)",
+                    border: "1px dashed rgba(88,0,229,.25)",
+                    borderRadius: 14, padding: 0, cursor: "pointer",
+                    position: "relative", overflow: "hidden",
+                    transition: "border-color .2s, transform .15s",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    minHeight: 140,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.45)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.background = "rgba(88,0,229,.04)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.25)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
+                >
+                  <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.5 }}>+</div>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.7)", letterSpacing: "-0.1px" }}>
+                    Create Your Lobby
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginTop: 4 }}>
+                    {String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" ? "Indicted+ required" : "Start your community"}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
