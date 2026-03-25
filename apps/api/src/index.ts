@@ -81,6 +81,19 @@ function canAssignRoles(role: GlobalRole) {
   return role === GlobalRole.STAFF || role === GlobalRole.ADMIN || role === GlobalRole.GOD;
 }
 
+// ── Reserved name check ─────────────────────────────────────────────────────
+async function isNameReserved(name: string, scope: "LOBBY" | "USERNAME" | "BOTH"): Promise<boolean> {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!normalized) return false;
+  const match = await (prisma as any).reservedName.findFirst({
+    where: {
+      name: normalized,
+      scope: { in: scope === "BOTH" ? ["BOTH", "LOBBY", "USERNAME"] : ["BOTH", scope] },
+    },
+  });
+  return Boolean(match);
+}
+
 // ── Lobby role helpers ────────────────────────────────────────────────────────
 
 async function getLobbyRole(userId: string, lobbyId: string): Promise<LobbyRole | null> {
@@ -542,9 +555,7 @@ async function doJoin(ws: Sock, roomId: string) {
   const room = await ensureRoomLoaded(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
-  // Auto-assign owner ONLY for standalone rooms (no lobby).
-  // Lobby rooms are community-shared — first joiner shouldn't claim ownership.
-  if (!room.ownerId && ws.user && !room.lobbyId) {
+  if (!room.ownerId && ws.user) {
     room.ownerId = ws.user.id;
     if (room.roomId !== "lobby") {
       await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
@@ -801,6 +812,8 @@ async function main() {
     if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
     const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
     if (existing) return reply.code(409).send({ error: "Username already exists" });
+    const reserved = await isNameReserved(username, "USERNAME");
+    if (reserved) return reply.code(403).send({ error: "This username is reserved and cannot be used." });
     const user = await prisma.user.create({ data: { name: username, usernameKey: username } });
     const passwordHash = await bcrypt.hash(password, 10);
     await prisma.localAuth.create({ data: { username, passwordHash, userId: user.id } });
@@ -902,6 +915,8 @@ async function main() {
     if (usernameKey.length < 2) return reply.code(400).send({ error: "Username too short" });
     const existing = await prisma.user.findUnique({ where: { usernameKey } }).catch(() => null);
     if (existing && existing.id !== u.id) return reply.code(409).send({ error: "Username taken" });
+    const reserved = await isNameReserved(usernameKey, "USERNAME");
+    if (reserved) return reply.code(403).send({ error: "This username is reserved and cannot be used." });
     const updated = await prisma.user.update({
       where: { id: u.id },
       data: { name: usernameKey, usernameKey },
@@ -2397,6 +2412,12 @@ app.post("/dm/:peerId", async (req, reply) => {
             moduleConfig, keywords = [], accentColor, logoUrl, bannerUrl, websiteUrl } = req.body as any;
     if (!id || !name) return reply.code(400).send({ ok: false, error: "id and name required" });
 
+    // Check reserved names (staff can bypass)
+    if (!isStaff) {
+      const reserved = await isNameReserved(String(id), "LOBBY");
+      if (reserved) return reply.code(403).send({ ok: false, error: "name_reserved", message: "This lobby name is reserved and cannot be used." });
+    }
+
     // Non-staff can't pin lobbies
     const shouldPin = isStaff ? Boolean(pinned) : false;
 
@@ -2919,20 +2940,10 @@ app.post("/dm/:peerId", async (req, reply) => {
         if (userId && subId) {
           // Fetch subscription details from Stripe
           const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
-          // Clear any existing subscription with this stripeCustomerId (prevents unique constraint violation)
-          if (session.customer) {
-            try {
-              const existing = await (prisma as any).subscription.findUnique({ where: { stripeCustomerId: String(session.customer) } });
-              if (existing && existing.userId !== userId) {
-                await (prisma as any).subscription.delete({ where: { id: existing.id } });
-              }
-            } catch {}
-          }
           await (prisma as any).subscription.upsert({
             where: { userId },
             update: {
               tier, stripeSubId: subId, status: "active",
-              stripeCustomerId: session.customer,
               stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
               currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
             },
@@ -3041,6 +3052,54 @@ app.post("/dm/:peerId", async (req, reply) => {
       updatedAt: s.updatedAt?.toISOString() || null,
     }));
     return reply.send({ ok: true, subscriptions: enriched });
+  });
+
+  // ── Reserved Names (staff-managed blocklist) ────────────────────────────────
+
+  app.get("/staff/reserved", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const list = await (prisma as any).reservedName.findMany({ orderBy: { name: "asc" } });
+    return reply.send({ ok: true, reserved: list });
+  });
+
+  app.post("/staff/reserved", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const body: any = (req as any).body || {};
+    const name = String(body.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const scope = ["BOTH", "LOBBY", "USERNAME"].includes(body.scope) ? body.scope : "BOTH";
+    const reason = String(body.reason || "").slice(0, 200);
+    if (!name || name.length < 2) return reply.code(400).send({ ok: false, error: "Name too short (min 2 chars)" });
+    try {
+      const entry = await (prisma as any).reservedName.create({
+        data: { name, scope, reason, addedBy: u.id },
+      });
+      await globalAudit(u.id, u.name, "reserved_name_add", undefined, undefined, { name, scope, reason });
+      return reply.send({ ok: true, entry });
+    } catch (e: any) {
+      if (e?.code === "P2002") return reply.code(409).send({ ok: false, error: "Name already reserved" });
+      throw e;
+    }
+  });
+
+  app.delete("/staff/reserved/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const id = String((req as any).params?.id || "");
+    try {
+      const deleted = await (prisma as any).reservedName.delete({ where: { id } });
+      await globalAudit(u.id, u.name, "reserved_name_remove", undefined, undefined, { name: deleted.name });
+      return reply.send({ ok: true });
+    } catch {
+      return reply.code(404).send({ ok: false, error: "Not found" });
+    }
   });
 
   // ══════════════════════════════════════════════════════════════════════════════

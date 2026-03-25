@@ -509,3 +509,21 @@ model BungieCache {
   expiresAt DateTime
 }
 
+// — Reserved Names —————————————————————————————————————————————————————————
+// Blocks lobby IDs and usernames from being claimed. Staff-managed via admin panel.
+
+enum ReservedScope {
+  BOTH       // blocks lobbies AND usernames
+  LOBBY      // blocks lobby IDs only
+  USERNAME   // blocks usernames only
+}
+
+model ReservedName {
+  id        String        @id @default(cuid())
+  name      String        @unique   // lowercase, normalized
+  scope     ReservedScope @default(BOTH)
+  reason    String        @default("")
+  addedBy   String        @default("system")  // userId or "system" for seed
+  createdAt DateTime      @default(now())
+}
+
