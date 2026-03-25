@@ -208,17 +208,17 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
       body: JSON.stringify({ activity, description: desc, maxPlayers, platform }),
     });
     if (j.ok) { setShowForm(false); setDesc(""); load(); }
-    else setMsg(j.error || "Failed");
+    else setMsg(j.message || j.error || "Failed");
   }
 
   async function join(postId: string) {
     const j = await apiFetch(`/lfg/${postId}/join`, { method: "POST", body: JSON.stringify({}) });
-    if (j.ok) load(); else setMsg(j.error || "Failed");
+    if (j.ok) load(); else setMsg(j.message || j.error || "Failed");
   }
 
   async function leave(postId: string) {
     const j = await apiFetch(`/lfg/${postId}/leave`, { method: "POST", body: JSON.stringify({}) });
-    if (j.ok) load(); else setMsg(j.error || "Failed");
+    if (j.ok) load(); else setMsg(j.message || j.error || "Failed");
   }
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading fireteams...</div>;
