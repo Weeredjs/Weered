@@ -1,0 +1,27 @@
+{
+  "name": "Weered",
+  "short_name": "Weered",
+  "description": "Enter the portal",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#5800E5",
+  "icons": [
+    {
+      "src": "/brand/mark-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/mark-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/mark-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
