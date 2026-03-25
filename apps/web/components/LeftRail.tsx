@@ -455,15 +455,14 @@ export default function LeftRail() {
           {isLobbyActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
         </Link>
 
-        <button
-          type="button"
-          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between w-full text-left box-border " + (isHomeActive ? " weered-left-link-active" : "")}
-          style={{ boxSizing: "border-box", maxWidth: "100%" }}
-          onClick={() => { try { leave(); } catch {} router.push("/home"); }}
+        <Link
+          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " + (isHomeActive ? " weered-left-link-active" : "")}
+          href="/home"
+          onClick={(e) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); }}
         >
           <span>Home</span>
           {isHomeActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
-        </button>
+        </Link>
 
         {(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT") && (
           <Link
