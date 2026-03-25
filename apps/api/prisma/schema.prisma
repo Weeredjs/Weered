@@ -143,9 +143,10 @@ model LobbyAdminMessage {
 }
 
 model Room {
-  id        String   @id
-  name      String   @default("")
-  locked    Boolean  @default(false)
+  id          String   @id
+  name        String   @default("")
+  description String   @default("")
+  locked      Boolean  @default(false)
   ownerId   String?
   lobbyId   String?
   createdAt DateTime @default(now())
@@ -161,11 +162,12 @@ model Room {
 }
 
 model RoomMember {
-  id        String   @id @default(cuid())
-  roomId    String
-  userId    String
-  name      String   @default("")
-  role      RoomRole @default(MEMBER)
+  id          String   @id @default(cuid())
+  roomId      String
+  userId      String
+  name        String   @default("")
+  description String   @default("")
+  role        RoomRole @default(MEMBER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -217,6 +219,7 @@ model User {
   id          String     @id @default(cuid())
   usernameKey String     @unique
   name        String     @default("")
+  description String     @default("")
   bio         String?
   email       String?    @unique
   googleId    String?    @unique
@@ -333,11 +336,12 @@ model Crew {
 }
 
 model CrewMember {
-  id        String   @id @default(cuid())
-  crewId    String
-  userId    String
-  name      String   @default("")
-  role      CrewRole @default(MEMBER)
+  id          String   @id @default(cuid())
+  crewId      String
+  userId      String
+  name        String   @default("")
+  description String   @default("")
+  role        CrewRole @default(MEMBER)
   joinedAt  DateTime @default(now())
 
   crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
