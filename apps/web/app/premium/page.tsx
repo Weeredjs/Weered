@@ -18,7 +18,7 @@ const tiers = [
       "The feed. All of it.",
     ],
     cta: "You're already here.",
-    ctaLink: "/login",
+    ctaLink: "/subscribe",
     ctaStyle: "ghost",
   },
   {
@@ -27,19 +27,19 @@ const tiers = [
     price: "$6",
     sub: "/ month",
     color: "#a78bfa",
-    glow: "rgba(124,58,237,0.2)",
-    border: "rgba(124,58,237,0.35)",
+    glow: "rgba(88,0,229,0.2)",
+    border: "rgba(88,0,229,0.35)",
     badge: "most popular",
     features: [
       "Everything in Innocent",
-      "Unlimited video streaming",
+      "Own 1 branded lobby",
       "Colored username + custom icon",
       "Custom fonts & text color in chat",
-      "Priority presence visibility",
+      "Unlimited video streaming",
       "Early access to new features",
     ],
     cta: "Get Indicted",
-    ctaLink: "/login",
+    ctaLink: "/subscribe",
     ctaStyle: "primary",
   },
   {
@@ -59,7 +59,7 @@ const tiers = [
       "Your lobbies surface on Home",
     ],
     cta: "Become a Felon",
-    ctaLink: "/login",
+    ctaLink: "/subscribe",
     ctaStyle: "orange",
   },
   {
@@ -108,7 +108,7 @@ export default function PremiumPage() {
           position: fixed;
           inset: 0;
           background:
-            radial-gradient(ellipse 70% 50% at 10% 5%, rgba(124,58,237,0.12) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 50% at 10% 5%, rgba(88,0,229,0.12) 0%, transparent 55%),
             radial-gradient(ellipse 50% 40% at 90% 95%, rgba(249,115,22,0.07) 0%, transparent 55%);
           pointer-events: none;
         }
@@ -137,7 +137,7 @@ export default function PremiumPage() {
           font-size: 10px;
           letter-spacing: 0.25em;
           text-transform: uppercase;
-          color: rgba(124,58,237,0.55);
+          color: rgba(88,0,229,0.55);
           margin-bottom: 16px;
         }
         .prem-title {
@@ -282,7 +282,7 @@ export default function PremiumPage() {
               }}>
                 {tier.badge && (
                   <div className="prem-badge" style={{
-                    background: tier.id === "kingpin" ? "rgba(252,211,77,0.15)" : "rgba(124,58,237,0.2)",
+                    background: tier.id === "kingpin" ? "rgba(252,211,77,0.15)" : "rgba(88,0,229,0.2)",
                     border: `1px solid ${tier.border}`,
                     color: tier.color,
                   }}>{tier.badge}</div>
@@ -301,10 +301,10 @@ export default function PremiumPage() {
                 {tier.ctaLink ? (
                   <a href={tier.ctaLink} className="prem-cta" style={
                     tier.ctaStyle === "primary" ? {
-                      background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(217,70,239,0.75))",
-                      border: "1px solid rgba(124,58,237,0.45)",
+                      background: "linear-gradient(135deg, rgba(88,0,229,0.85), rgba(217,70,239,0.75))",
+                      border: "1px solid rgba(88,0,229,0.45)",
                       color: "#fff",
-                      boxShadow: "0 4px 20px rgba(124,58,237,0.25)",
+                      boxShadow: "0 4px 20px rgba(88,0,229,0.25)",
                     } : tier.ctaStyle === "orange" ? {
                       background: "rgba(249,115,22,0.12)",
                       border: "1px solid rgba(249,115,22,0.3)",
