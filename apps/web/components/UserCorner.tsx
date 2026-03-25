@@ -274,25 +274,26 @@ export default function UserCorner() {
         display: "flex", gap: 6, padding: "8px 12px 10px",
         borderTop: "1px solid rgba(255,255,255,.05)",
       }}>
-        {/* Settings — compact, subdued */}
+        {/* Settings — visible, with label */}
         <button
           type="button"
           onClick={() => openSheet("settings")}
           title="Settings"
           style={{
             display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 5, padding: "8px 12px",
-            background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
+            gap: 6, padding: "8px 14px",
+            background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.10)",
             borderRadius: 10, cursor: "pointer",
-            color: "rgba(255,255,255,.45)", fontFamily: "inherit",
-            fontSize: 11, fontWeight: 600,
+            color: "rgba(255,255,255,.55)", fontFamily: "inherit",
+            fontSize: 11, fontWeight: 700,
             transition: "all 0.15s",
             flexShrink: 0,
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.07)"; }}
+          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(255,255,255,.12)"; el.style.borderColor = "rgba(255,255,255,.20)"; el.style.color = "rgba(255,255,255,.80)"; }}
+          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(255,255,255,.06)"; el.style.borderColor = "rgba(255,255,255,.10)"; el.style.color = "rgba(255,255,255,.55)"; }}
         >
           <IconSettings />
+          <span>Settings</span>
         </button>
 
         {/* BURNER PHONE — loud, unmissable */}

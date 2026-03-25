@@ -40,6 +40,7 @@ type Ctx = {
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
   rooms: any[];
   join: (roomId: string) => void;
+  leave: () => void;
   knock: (roomId: string) => void;
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
@@ -529,6 +530,22 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function leave() {
+    const rid = joinedRoomId || activeRoomId;
+    if (rid) {
+      const ws = wsRef.current;
+      if (ws?.readyState === WebSocket.OPEN) {
+        let decoded = rid; try { decoded = decodeURIComponent(rid); } catch {}
+        try { ws.send(JSON.stringify({ type: "presence:leave", roomId: decoded })); } catch {}
+      }
+    }
+    setActiveRoomId("");
+    setJoinedRoomId("");
+    setCurrentLobbyId("");
+    activeRoomIdRef.current = "";
+    lastJoinedRidRef.current = "";
+  }
+
   function sendChat(body: string) {
     const b = body.trim();
     if (!b || !canChat()) return;
@@ -565,7 +582,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
     usersByRoom, msgsByRoom, metaByRoom, adminByRoom,
-    rooms, join, knock,
+    rooms, join, leave, knock,
     devLogin, logout,
     sendChat, renameRoom,
     lockRoom, unlockRoom,

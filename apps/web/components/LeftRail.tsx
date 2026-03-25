@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 
 import { useOverlay } from "./overlays/OverlayProvider";
@@ -144,7 +144,8 @@ function accentForRoom(id: string): string {
 export default function LeftRail() {
   const { openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
-  const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus } = useWeered() as any;
+  const router = useRouter();
+  const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } = useWeered() as any;
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
@@ -454,13 +455,14 @@ export default function LeftRail() {
           {isLobbyActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
         </Link>
 
-        <Link
-          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " + (isHomeActive ? " weered-left-link-active" : "")}
-          href="/home"
+        <button
+          type="button"
+          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between w-full text-left " + (isHomeActive ? " weered-left-link-active" : "")}
+          onClick={() => { try { leave(); } catch {} router.push("/home"); }}
         >
           <span>Home</span>
           {isHomeActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
-        </Link>
+        </button>
 
         {(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT") && (
           <Link
