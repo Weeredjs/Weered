@@ -542,7 +542,9 @@ async function doJoin(ws: Sock, roomId: string) {
   const room = await ensureRoomLoaded(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
-  if (!room.ownerId && ws.user) {
+  // Auto-assign owner ONLY for standalone rooms (no lobby).
+  // Lobby rooms are community-shared — first joiner shouldn't claim ownership.
+  if (!room.ownerId && ws.user && !room.lobbyId) {
     room.ownerId = ws.user.id;
     if (room.roomId !== "lobby") {
       await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
@@ -2917,10 +2919,20 @@ app.post("/dm/:peerId", async (req, reply) => {
         if (userId && subId) {
           // Fetch subscription details from Stripe
           const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
+          // Clear any existing subscription with this stripeCustomerId (prevents unique constraint violation)
+          if (session.customer) {
+            try {
+              const existing = await (prisma as any).subscription.findUnique({ where: { stripeCustomerId: String(session.customer) } });
+              if (existing && existing.userId !== userId) {
+                await (prisma as any).subscription.delete({ where: { id: existing.id } });
+              }
+            } catch {}
+          }
           await (prisma as any).subscription.upsert({
             where: { userId },
             update: {
               tier, stripeSubId: subId, status: "active",
+              stripeCustomerId: session.customer,
               stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
               currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
             },
