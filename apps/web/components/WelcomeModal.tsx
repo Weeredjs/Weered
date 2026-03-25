@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useWeered } from "./WeeredProvider";
 
 const WELCOME_KEY = "weered:welcome:seen:v1";
 
@@ -8,42 +9,44 @@ const FEATURES = [
   {
     icon: "🏠",
     title: "Lobbies",
-    desc: "Browse verified communities — gaming, music, sports, culture. Each lobby has its own rooms, chat, and modules.",
+    desc: "Gaming, music, sports, culture — each lobby has its own rooms, live streams, and community modules.",
   },
   {
     icon: "🚪",
     title: "Rooms",
-    desc: "Join or create rooms inside any lobby. Text chat, voice chat, or just hang. Rooms are where it happens.",
+    desc: "Create or join rooms inside any lobby. Voice, text, video — rooms are where everything happens.",
   },
   {
     icon: "🎙",
     title: "Voice",
-    desc: "Hop into a Voice room and talk — works in the background. Game, browse, whatever. Your squad stays connected.",
+    desc: "Drop into voice and stay connected while you game, browse, or just vibe. Works in the background.",
   },
   {
-    icon: "👥",
-    title: "Friends & Crew",
-    desc: "Add friends, send DMs, form a Crew (Dojo). See who's online and what they're up to. Jump in with one click.",
+    icon: "📱",
+    title: "Burner Phone",
+    desc: "DMs, friends list, and crew — all in one dock. See who's online and jump in with one click.",
   },
   {
-    icon: "🎭",
-    title: "Your Profile",
-    desc: "Pick an avatar, set your bio, earn notoriety. Your identity on the platform — make it yours.",
+    icon: "⚖️",
+    title: "Notoriety",
+    desc: "Earn rep by being active. Unlock tiers, create lobbies, and stand out. Your presence matters here.",
   },
 ];
 
 export default function WelcomeModal() {
+  const { authed, me } = useWeered() as any;
   const [show, setShow] = useState(false);
   const [entered, setEntered] = useState(false);
 
   useEffect(() => {
+    // Only show after user is logged in, and only once ever
+    if (!authed || !me) return;
     try {
       if (localStorage.getItem(WELCOME_KEY)) return;
-      // Small delay so the page loads first
       const t = setTimeout(() => setShow(true), 800);
       return () => clearTimeout(t);
     } catch {}
-  }, []);
+  }, [authed, me]);
 
   useEffect(() => {
     if (show) {
@@ -61,6 +64,8 @@ export default function WelcomeModal() {
   }
 
   if (!show) return null;
+
+  const name = me?.name || me?.username || "";
 
   return (
     <>
@@ -100,14 +105,14 @@ export default function WelcomeModal() {
         <div style={{
           position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)",
           width: 300, height: 120, borderRadius: "50%",
-          background: "radial-gradient(ellipse, rgba(124,58,237,.25) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(88,0,229,.25) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
 
         {/* Top accent line */}
         <div style={{
           height: 2,
-          background: "linear-gradient(90deg, transparent, rgba(124,58,237,.6) 30%, rgba(167,139,250,.8) 50%, rgba(124,58,237,.6) 70%, transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(88,0,229,.6) 30%, rgba(167,139,250,.8) 50%, rgba(88,0,229,.6) 70%, transparent)",
         }} />
 
         {/* Content */}
@@ -125,14 +130,14 @@ export default function WelcomeModal() {
             letterSpacing: "-0.5px", marginBottom: 6,
             color: "rgba(243,244,246,.96)",
           }}>
-            Welcome to the lobby.
+            {name ? `Welcome in, ${name}.` : "Welcome in."}
           </div>
 
           <div style={{
             fontSize: 13, color: "rgba(148,163,184,.65)", lineHeight: 1.5,
             marginBottom: 20,
           }}>
-            A fireteam for the internet. Here's the quick rundown.
+            A fireteam for the internet. Lobbies, voice, streams, and squads — all under one roof. Here's the rundown.
           </div>
         </div>
 
@@ -164,8 +169,8 @@ export default function WelcomeModal() {
             >
               <div style={{
                 width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                background: "rgba(124,58,237,.10)",
-                border: "1px solid rgba(124,58,237,.18)",
+                background: "rgba(88,0,229,.10)",
+                border: "1px solid rgba(88,0,229,.18)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 18,
               }}>
@@ -199,20 +204,20 @@ export default function WelcomeModal() {
             style={{
               width: "100%", padding: "13px 20px",
               borderRadius: 12, border: "none",
-              background: "linear-gradient(135deg, rgba(124,58,237,.9), rgba(167,139,250,.85))",
+              background: "linear-gradient(135deg, rgba(88,0,229,.9), rgba(167,139,250,.85))",
               color: "#fff", fontWeight: 800, fontSize: 14,
               cursor: "pointer", fontFamily: "inherit",
               letterSpacing: "-0.2px",
-              boxShadow: "0 4px 20px rgba(124,58,237,.35)",
+              boxShadow: "0 4px 20px rgba(88,0,229,.35)",
               transition: "transform .15s, box-shadow .15s",
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 28px rgba(124,58,237,.45)";
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 28px rgba(88,0,229,.45)";
             }}
             onMouseLeave={e => {
               (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(124,58,237,.35)";
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(88,0,229,.35)";
             }}
           >
             Let's go
