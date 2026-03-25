@@ -178,6 +178,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
     if (pathname.startsWith("/lobby")) {
       const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim();
+      // Skip static routes that aren't lobby IDs
+      const staticRoutes = ["create", "admin", "settings"];
+      if (seg && staticRoutes.includes(seg.split("/")[0])) return;
       const rid = seg ? decodeURIComponent(seg) : "lobby";
       activeRoomIdRef.current = rid;
       setActiveRoomId(rid);
