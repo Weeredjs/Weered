@@ -457,7 +457,8 @@ export default function LeftRail() {
 
         <button
           type="button"
-          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between w-full text-left " + (isHomeActive ? " weered-left-link-active" : "")}
+          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between w-full text-left box-border " + (isHomeActive ? " weered-left-link-active" : "")}
+          style={{ boxSizing: "border-box", maxWidth: "100%" }}
           onClick={() => { try { leave(); } catch {} router.push("/home"); }}
         >
           <span>Home</span>
