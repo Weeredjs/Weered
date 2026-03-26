@@ -56,13 +56,15 @@ function gallerySeeds(username: string): string[] {
 // ─── Helpers ────────────────────────────────────────────────
 function notorietyRank(n: number): { name: string; next: number; prev: number } {
   const ranks = [
-    { name: "Nobody",     threshold: 0 },
-    { name: "Small-Timer", threshold: 100 },
-    { name: "Hustler",    threshold: 500 },
-    { name: "Associate",  threshold: 1000 },
-    { name: "Made Man",   threshold: 2000 },
-    { name: "Crime Boss", threshold: 5000 },
-    { name: "Legend",     threshold: 10000 },
+    { name: "Street Rat",   threshold: 0 },
+    { name: "Corner Boy",   threshold: 100 },
+    { name: "Hustler",      threshold: 300 },
+    { name: "Shot Caller",  threshold: 500 },
+    { name: "Enforcer",     threshold: 1000 },
+    { name: "Made Man",     threshold: 1500 },
+    { name: "Underboss",    threshold: 3000 },
+    { name: "Crime Lord",   threshold: 5000 },
+    { name: "Kingpin",      threshold: 10000 },
   ];
   let current = ranks[0];
   let nextThreshold = 100;
@@ -566,19 +568,31 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         <div style={sectionLabel}>Notoriety</div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
-            fontSize: 30, fontWeight: 950, letterSpacing: "-1.5px",
-            color: tier.color,
-            textShadow: `0 0 20px ${tier.glow}`,
-            lineHeight: 1,
+            width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+            background: "linear-gradient(135deg, rgba(88,0,229,0.15), rgba(212,160,23,0.15))",
+            border: "1px solid rgba(212,160,23,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, fontWeight: 900, color: "#D4A017",
+            fontFamily: "monospace",
+            boxShadow: "0 0 16px rgba(212,160,23,0.15)",
           }}>
-            {profile.notoriety.toLocaleString()}
+            ★
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>{rank.name}</div>
-            <div style={{ fontSize: 10, opacity: 0.3, fontFamily: "monospace", marginTop: 2 }}>street rank</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "rgba(243,244,246,0.95)", letterSpacing: "-0.3px" }}>{rank.name}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#D4A017", fontFamily: "monospace" }}>
+                {profile.notoriety.toLocaleString()} XP
+              </div>
+            </div>
+            {rank.next > rank.prev && (
+              <div style={{ fontSize: 10, color: "rgba(148,163,184,0.45)", fontFamily: "monospace", marginTop: 2 }}>
+                {(rank.next - profile.notoriety).toLocaleString()} XP to {notorietyRank(rank.next).name}
+              </div>
+            )}
           </div>
         </div>
-        <NotorietyBar value={profile.notoriety} color={tier.color} prev={rank.prev} next={rank.next} />
+        <NotorietyBar value={profile.notoriety} color="#D4A017" prev={rank.prev} next={rank.next} />
       </div>
 
       {/* ── Stats row ───────────────────────────────────── */}
