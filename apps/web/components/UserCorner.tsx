@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
-import RoleIcon, { getRoleDisplayName } from "./RoleIcon";
+import { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
@@ -26,7 +26,7 @@ function normRole(x: string) {
 
 // Street hierarchy display names
 const ROLE_DISPLAY: Record<string, string> = {
-  GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "LOOKOUT",
+  GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "BACKUP",
   MOD: "CAPTAIN", OWNER: "FOUNDER", MEMBER: "MEMBER",
 };
 function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole; }
@@ -248,9 +248,9 @@ export default function UserCorner() {
               const tier = String(me?.tier || "").toUpperCase();
               if (!tier || tier === "INNOCENT") return null;
               const tierStyles: Record<string, { border: string; bg: string; color: string; icon: React.ReactNode }> = {
-                KINGPIN:  { border: "rgba(252,211,77,.45)",  bg: "rgba(252,211,77,.15)", color: "#fde68a", icon: <RoleIcon role="GOD" size={11} /> },
-                FELON:    { border: "rgba(249,115,22,.45)",  bg: "rgba(249,115,22,.15)", color: "#fdba74", icon: <RoleIcon role="PAID" size={11} /> },
-                INDICTED: { border: "rgba(88,0,229,.40)",    bg: "rgba(88,0,229,.15)",   color: "rgba(243,244,246,.85)", icon: <RoleIcon role="PAID" size={11} /> },
+                KINGPIN:  { border: "rgba(252,211,77,.45)",  bg: "rgba(252,211,77,.15)", color: "#fde68a", icon: <TierIcon tier="KINGPIN" size={11} /> },
+                FELON:    { border: "rgba(249,115,22,.45)",  bg: "rgba(249,115,22,.15)", color: "#fdba74", icon: <TierIcon tier="FELON" size={11} /> },
+                INDICTED: { border: "rgba(88,0,229,.40)",    bg: "rgba(88,0,229,.15)",   color: "rgba(243,244,246,.85)", icon: <TierIcon tier="INDICTED" size={11} /> },
               };
               const s = tierStyles[tier];
               if (!s) return null;
