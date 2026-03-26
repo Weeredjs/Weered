@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
-import RoleIcon, { getRoleDisplayName } from "./RoleIcon";
+import RoleIcon, { getRoleDisplayName, TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
@@ -78,11 +78,12 @@ type Flair = {
 
 // ── Role display names (DB value → street name) ─────────────────────────────
 const ROLE_DISPLAY: Record<string, string> = {
-  GOD: "Godfather", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Lookout",
+  GOD: "Godfather", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Backup",
   MOD: "Captain", OWNER: "Founder",
 };
 function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase(); }
 
+// ── Role icons — emoji, readable at any size ─────────────────────────────────
 // ── Role icons — brand PNGs via RoleIcon component ──────────────────────────
 const ICON_GOD     = <RoleIcon role="GOD" size={14} />;
 const ICON_ADMIN   = <RoleIcon role="ADMIN" size={14} />;
@@ -90,9 +91,9 @@ const ICON_STAFF   = <RoleIcon role="STAFF" size={14} />;
 const ICON_SUPPORT = <RoleIcon role="SUPPORT" size={14} />;
 const ICON_MOD     = <RoleIcon role="MOD" size={14} />;
 const ICON_OWNER   = <RoleIcon role="OWNER" size={14} />;
-const ICON_INDICTED = <RoleIcon role="PAID" size={12} />;
-const ICON_FELON    = <RoleIcon role="PAID" size={12} />;
-const ICON_KINGPIN_TIER = <RoleIcon role="GOD" size={12} />;
+const ICON_INDICTED = <TierIcon tier="INDICTED" size={12} />;
+const ICON_FELON    = <TierIcon tier="FELON" size={12} />;
+const ICON_KINGPIN_TIER = <TierIcon tier="KINGPIN" size={12} />;
 
 function flairFor(u: any): Flair {
   const g  = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
