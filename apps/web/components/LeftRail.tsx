@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
+import RoleIcon, { getRoleDisplayName } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
@@ -82,16 +83,16 @@ const ROLE_DISPLAY: Record<string, string> = {
 };
 function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase(); }
 
-// ── Role icons — emoji, readable at any size ─────────────────────────────────
-const ICON_GOD     = <span style={{ fontSize: 12, lineHeight: 1 }}>👑</span>;
-const ICON_ADMIN   = <span style={{ fontSize: 12, lineHeight: 1 }}>🔱</span>;
-const ICON_STAFF   = <span style={{ fontSize: 12, lineHeight: 1 }}>🛡</span>;
-const ICON_SUPPORT = <span style={{ fontSize: 12, lineHeight: 1 }}>💎</span>;
-const ICON_MOD     = <span style={{ fontSize: 12, lineHeight: 1 }}>⚡</span>;
-const ICON_OWNER   = <span style={{ fontSize: 12, lineHeight: 1 }}>🔑</span>;
-const ICON_INDICTED = <span style={{ fontSize: 10, lineHeight: 1 }}>⚖️</span>;
-const ICON_FELON    = <span style={{ fontSize: 10, lineHeight: 1 }}>🔥</span>;
-const ICON_KINGPIN_TIER = <span style={{ fontSize: 10, lineHeight: 1 }}>💀</span>;
+// ── Role icons — brand PNGs via RoleIcon component ──────────────────────────
+const ICON_GOD     = <RoleIcon role="GOD" size={14} />;
+const ICON_ADMIN   = <RoleIcon role="ADMIN" size={14} />;
+const ICON_STAFF   = <RoleIcon role="STAFF" size={14} />;
+const ICON_SUPPORT = <RoleIcon role="SUPPORT" size={14} />;
+const ICON_MOD     = <RoleIcon role="MOD" size={14} />;
+const ICON_OWNER   = <RoleIcon role="OWNER" size={14} />;
+const ICON_INDICTED = <RoleIcon role="PAID" size={12} />;
+const ICON_FELON    = <RoleIcon role="PAID" size={12} />;
+const ICON_KINGPIN_TIER = <RoleIcon role="GOD" size={12} />;
 
 function flairFor(u: any): Flair {
   const g  = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
