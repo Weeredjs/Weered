@@ -268,7 +268,7 @@ export default function PremiumPage() {
 
           <div className="prem-header">
             <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
-              <img src="/brand/mark-512.png" alt="Weered" style={{ width: 72, height: 72, filter: "drop-shadow(0 0 24px rgba(88,0,229,0.3))" }} />
+              <img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered" style={{ width: 120, height: 120, filter: "drop-shadow(0 0 32px rgba(88,0,229,0.35))" }} />
             </div>
             <div className="prem-eyebrow">// access levels</div>
             <div className="prem-title">Choose your status.</div>

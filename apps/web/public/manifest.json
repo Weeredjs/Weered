@@ -8,17 +8,17 @@
   "theme_color": "#5800E5",
   "icons": [
     {
-      "src": "/brand/mark-192.png",
-      "sizes": "192x192",
+      "src": "/brand/logo/weered-logo-128.png",
+      "sizes": "128x128",
       "type": "image/png"
     },
     {
-      "src": "/brand/mark-512.png",
+      "src": "/brand/logo/weered-logo-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/brand/mark-512.png",
+      "src": "/brand/logo/weered-logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

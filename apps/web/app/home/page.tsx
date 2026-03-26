@@ -704,7 +704,7 @@ export default function HomePage() {
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)"; }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <img src="/brand/mark-192.png" alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: "contain" }} />
+              <img src="/brand/logo/weered-logo-128.png" alt="" style={{ width: 36, height: 36, objectFit: "contain" }} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
                   Get Indicted. Own a lobby.
@@ -794,7 +794,7 @@ export default function HomePage() {
         {/* EMPTY STATE */}
         {lobbies.length === 0 && popularRooms.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,.25)" }}>
-            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><img src="/brand/mark-192.png" alt="" style={{ width: 48, height: 48, opacity: 0.4 }} /></div>
+            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><img src="/brand/logo/weered-shieldlogo-512.png" alt="" style={{ width: 80, height: 80, opacity: 0.5 }} /></div>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Nothing here yet</div>
             <div style={{ fontSize: 13, opacity: 0.7 }}>Head to Lobby to browse and join rooms.</div>
           </div>
