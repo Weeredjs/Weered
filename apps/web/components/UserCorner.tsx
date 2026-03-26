@@ -5,6 +5,7 @@ import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
+import NotorietyBar from "./NotorietyBar";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -269,6 +270,11 @@ export default function UserCorner() {
           </div>
         </div>
       </button>
+
+      {/* Notoriety XP bar */}
+      <div style={{ padding: "6px 12px 0" }}>
+        <NotorietyBar compact />
+      </div>
 
       {/* Action strip */}
       <div style={{

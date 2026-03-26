@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { VoiceProvider } from "./VoiceContext";
+import NotorietyToast from "./NotorietyToast";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -422,6 +423,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
         return;
       }
+
+      if (msg.type === "notoriety:award") {
+        window.dispatchEvent(new CustomEvent("weered:notoriety:award", {
+          detail: { action: msg.action, points: msg.points },
+        }));
+        return;
+      }
     };
 
     return () => { /* do not close — guards at effect top handle re-auth in-band */ };
@@ -598,7 +606,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     },
   };
 
-  return <WeeredContext.Provider value={value}><VoiceProvider>{children}</VoiceProvider></WeeredContext.Provider>;
+  return <WeeredContext.Provider value={value}><VoiceProvider>{children}<NotorietyToast /></VoiceProvider></WeeredContext.Provider>;
 }
 
 export function useWeered(): Ctx {
