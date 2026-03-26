@@ -16,10 +16,10 @@ export const metadata = {
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/brand/logo/weered-logo-128.png",
     shortcut: "/favicon.ico",
   },
   manifest: "/manifest.json",
@@ -30,7 +30,7 @@ export const metadata = {
     siteName: "Weered",
     images: [
       {
-        url: "https://weered.ca/og-image.png",
+        url: "https://weered.ca/brand/og-image.png",
         width: 1200,
         height: 630,
         alt: "Weered — Enter the portal",
