@@ -512,56 +512,113 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <div className="flex-1 min-h-0" />
 
           {/* ── Bottom pills — always visible ── */}
-          <div className="flex-shrink-0 border-t border-white/[0.07] px-4 pt-2.5 pb-2">
-            <div className="flex flex-wrap gap-1.5">
+          <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(0,0,0,0.15)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
               {MODULES.map((m) => {
                 const isActive = stageMode === m.id;
                 const isLive   = m.live;
+                const isTwitch = m.icon === "__twitch__";
+                const isYT     = m.icon === "__youtube__";
+
+                // Per-module accent colors
+                const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#38bdf8" : "#7C3AED";
+
                 return (
                   <button
                     key={m.id}
                     type="button"
                     disabled={!isLive}
                     onClick={() => isLive && handleModuleClick(m.id)}
-                    className={[
-                      "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 font-mono",
-                      isActive
-                        ? "border-violet-400/35 bg-violet-500/15 text-violet-200"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      padding: "6px 14px", borderRadius: 999,
+                      fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
+                      fontFamily: "monospace", cursor: isLive ? "pointer" : "default",
+                      transition: "all 0.15s ease",
+                      border: isActive
+                        ? `1px solid ${accent}88`
                         : isLive
-                          ? "border-green-500/25 bg-green-500/[0.06] text-green-300/60 hover:bg-green-500/12 hover:text-green-200 cursor-pointer"
-                          : "border-white/[0.06] text-white/20 cursor-default",
-                    ].join(" ")}
+                          ? `1px solid ${accent}30`
+                          : "1px solid rgba(255,255,255,0.06)",
+                      background: isActive
+                        ? `${accent}22`
+                        : isLive
+                          ? `${accent}0a`
+                          : "rgba(255,255,255,0.02)",
+                      color: isActive
+                        ? "#fff"
+                        : isLive
+                          ? "rgba(226,232,240,0.65)"
+                          : "rgba(255,255,255,0.18)",
+                      boxShadow: isActive ? `0 0 14px ${accent}35, 0 0 4px ${accent}20` : "none",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isLive || isActive) return;
+                      const el = e.currentTarget;
+                      el.style.background = `${accent}18`;
+                      el.style.borderColor = `${accent}50`;
+                      el.style.color = "rgba(226,232,240,0.9)";
+                      el.style.boxShadow = `0 0 10px ${accent}20`;
+                    }}
+                    onMouseLeave={e => {
+                      if (!isLive || isActive) return;
+                      const el = e.currentTarget;
+                      el.style.background = `${accent}0a`;
+                      el.style.borderColor = `${accent}30`;
+                      el.style.color = "rgba(226,232,240,0.65)";
+                      el.style.boxShadow = "none";
+                    }}
                   >
-                    {m.icon === "__twitch__" ? (
+                    {isTwitch ? (
                       <TwitchIcon
-                        size={11}
-                        color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.6)" : "rgba(255,255,255,0.2)"}
-                        style={{ marginRight: 2 }}
-                      />
-                    ) : m.icon === "__youtube__" ? (
-                      <YouTubeIcon
                         size={13}
-                        color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.45)" : "rgba(255,255,255,0.2)"}
-                        style={{ marginRight: 2 }}
+                        color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.75)" : "rgba(255,255,255,0.18)"}
+                      />
+                    ) : isYT ? (
+                      <YouTubeIcon
+                        size={15}
+                        color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.6)" : "rgba(255,255,255,0.18)"}
                       />
                     ) : (
-                      <>{m.icon} </>
+                      <span style={{ fontSize: 12, lineHeight: 1 }}>{m.icon}</span>
                     )}
                     {m.label}
-                    {isActive && <span className="ml-1 text-[9px]">on</span>}
-                    {!isLive && !isActive && <span className="ml-1 text-[8px] opacity-40">soon</span>}
+                    {isActive && (
+                      <span style={{
+                        fontSize: 8, fontWeight: 800, letterSpacing: "0.1em",
+                        padding: "1px 5px", borderRadius: 4,
+                        background: `${accent}44`, color: accent,
+                        textTransform: "uppercase",
+                      }}>ON</span>
+                    )}
+                    {!isLive && !isActive && (
+                      <span style={{
+                        fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
+                        padding: "1px 5px", borderRadius: 4,
+                        background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.22)",
+                        textTransform: "uppercase",
+                      }}>SOON</span>
+                    )}
                   </button>
                 );
               })}
               <button
                 type="button"
                 onClick={() => setShowDetails(d => !d)}
-                className={[
-                  "text-[10px] font-bold tracking-wide px-2.5 py-1 rounded-full border transition-all duration-150 ml-auto font-mono",
-                  showDetails ? "border-white/20 bg-white/[0.08] text-white/70" : "border-white/[0.06] text-white/25 hover:text-white/50 hover:border-white/15",
-                ].join(" ")}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "6px 14px", borderRadius: 999,
+                  fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
+                  fontFamily: "monospace", cursor: "pointer",
+                  marginLeft: "auto", transition: "all 0.15s ease",
+                  border: showDetails ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.06)",
+                  background: showDetails ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.02)",
+                  color: showDetails ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)",
+                }}
+                onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}}
+                onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}}
               >
-                {showDetails ? "close details" : "... details"}
+                {showDetails ? "✕ close" : "⋯ details"}
               </button>
             </div>
           </div>
