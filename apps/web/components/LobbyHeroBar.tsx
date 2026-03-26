@@ -57,7 +57,7 @@ export default function LobbyHeroBar({
             .replace("{width}", "440").replace("{height}", "248"),
           title:    s.title   || "",
           streamer: s.userName || s.user_name || s.streamer || "",
-          viewers:  Number(s.viewers || s.viewer_count || 0),
+          viewers:  Number(s.viewerCount || s.viewer_count || 0),
           url:      s.url || `https://www.twitch.tv/${s.userName || s.user_name || ""}`,
         });
       })
