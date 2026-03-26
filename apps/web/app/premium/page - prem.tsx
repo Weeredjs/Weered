@@ -267,9 +267,6 @@ export default function PremiumPage() {
         <div className={`prem-inner${visible ? " visible" : ""}`}>
 
           <div className="prem-header">
-            <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
-              <img src="/brand/mark-512.png" alt="Weered" style={{ width: 72, height: 72, filter: "drop-shadow(0 0 24px rgba(88,0,229,0.3))" }} />
-            </div>
             <div className="prem-eyebrow">// access levels</div>
             <div className="prem-title">Choose your status.</div>
             <div className="prem-sub">Some things cost money. Most things don't. One thing can't be bought.</div>
