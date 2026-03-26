@@ -665,6 +665,7 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
   const [newDesc, setNewDesc] = React.useState("");
   const [creating, setCreating] = React.useState(false);
   const [note, setNote] = React.useState("");
+  const [expandedCrew, setExpandedCrew] = React.useState<string|null>(null);
 
   async function load() {
     if (!apiBase||!tokenMaybe) return;
@@ -706,21 +707,32 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
 
   const iStyle:React.CSSProperties={width:"100%",padding:"8px 10px",borderRadius:10,border:"1px solid var(--weered-bd2)",background:"rgba(255,255,255,.05)",color:"var(--weered-text)",outline:"none",fontSize:13,boxSizing:"border-box" as const};
 
+  const roleBadge = (role: string) => {
+    if (role === "LEADER") return { label: "★ LEADER", bg: "rgba(212,160,23,.15)", border: "rgba(212,160,23,.35)", color: "#D4A017" };
+    if (role === "OFFICER") return { label: "◆ OFFICER", bg: "rgba(88,0,229,.12)", border: "rgba(88,0,229,.3)", color: "#a78bfa" };
+    return null;
+  };
+
   if (view==="create") return (
     <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
         <button onClick={()=>setView("list")} style={{background:"none",border:"none",color:"var(--weered-muted)",cursor:"pointer",fontSize:18,padding:"0 4px"}}>←</button>
-        <span style={{fontWeight:700,fontSize:14}}>Create Dojo</span>
+        <span style={{fontWeight:800,fontSize:14,letterSpacing:"-0.2px"}}>Establish Crew</span>
       </div>
       {([["Name","name",newName,setNewName,40,"The 8 Meter"],["Tag","tag",newTag,setNewTag,6,"W8M"],["Description","desc",newDesc,setNewDesc,200,"What's your crew about"]] as any[]).map(([label,key,val,set,max,ph])=>(
         <div key={key}>
-          <div style={{fontSize:10,fontWeight:700,color:"var(--weered-muted)",marginBottom:4,textTransform:"uppercase" as const,letterSpacing:.5}}>{label}</div>
+          <div style={{fontSize:10,fontWeight:700,color:"var(--weered-muted)",marginBottom:4,textTransform:"uppercase" as const,letterSpacing:"0.06em"}}>{label}</div>
           <input value={val} onChange={(e:any)=>set(e.target.value.slice(0,max))} placeholder={ph} style={iStyle} />
         </div>
       ))}
       {note&&<div style={{fontSize:11,color:"rgba(252,165,165,.8)"}}>{note}</div>}
-      <button onClick={createCrew} disabled={creating||!newName.trim()} style={{padding:"10px",borderRadius:12,border:"1px solid var(--weered-accent-ring)",background:"var(--weered-accent-bg)",color:"var(--weered-accent-text)",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-        {creating?"Creating…":"Establish Dojo"}
+      <button onClick={createCrew} disabled={creating||!newName.trim()} style={{
+        padding:"10px",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",
+        border:"1px solid rgba(212,160,23,.4)",
+        background:"linear-gradient(135deg, rgba(88,0,229,.12), rgba(212,160,23,.12))",
+        color:"#D4A017",
+      }}>
+        {creating?"Establishing…":"⚔ Establish Crew"}
       </button>
     </div>
   );
@@ -728,61 +740,221 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
   return (
     <div style={{display:"flex",flexDirection:"column",flex:1}}>
       <div style={{padding:"10px 12px",borderBottom:"1px solid var(--weered-bd)",flexShrink:0}}>
-        <button onClick={()=>setView("create")} style={{width:"100%",padding:"9px",borderRadius:10,border:"1px solid var(--weered-accent-ring)",background:"var(--weered-accent-bg)",color:"var(--weered-accent-text)",fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Establish Dojo</button>
+        <button onClick={()=>setView("create")} style={{
+          width:"100%",padding:"9px",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",
+          border:"1px solid rgba(212,160,23,.3)",
+          background:"linear-gradient(135deg, rgba(88,0,229,.08), rgba(212,160,23,.08))",
+          color:"#D4A017",
+        }}>⚔ Establish Crew</button>
       </div>
       <div style={{flex:1,overflowY:"auto"}}>
-        {!crews.length&&<div style={{padding:24,textAlign:"center" as const,color:"var(--weered-muted)",fontSize:13}}><div style={{fontSize:28,marginBottom:8}}>⚔️</div>No crew yet.<br/>Establish your Dojo.</div>}
+        {!crews.length&&(
+          <div style={{padding:32,textAlign:"center" as const,color:"var(--weered-muted)",fontSize:13}}>
+            <div style={{fontSize:32,marginBottom:10,opacity:0.3}}>⚔</div>
+            <div style={{fontWeight:700,marginBottom:4,color:"rgba(243,244,246,.6)"}}>No crew yet</div>
+            <div style={{fontSize:11,opacity:0.4,lineHeight:1.5}}>Establish your crew and<br/>build your reputation together.</div>
+          </div>
+        )}
         {crews.map(crew=>{
           const isLeader=crew.myRole==="LEADER";
-          const onlineMembers=(crew.members||[]).filter((m:any)=>m.online);
+          const isOfficer=crew.myRole==="OFFICER";
+          const canManage=isLeader||isOfficer;
+          const members=crew.members||[];
+          const onlineMembers=members.filter((m:any)=>m.online);
+          const isExpanded=expandedCrew===crew.id;
+
           return (
-            <div key={crew.id} style={{borderBottom:"1px solid var(--weered-bd)",padding:"12px 14px"}}>
-              <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:10}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:800,fontSize:14,display:"flex",alignItems:"center",gap:6}}>
-                    {crew.name}
-                    {crew.tag&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:6,border:"1px solid var(--weered-accent-ring)",color:"var(--weered-accent-text)",background:"var(--weered-accent-bg)",fontFamily:"monospace"}}>[{crew.tag}]</span>}
+            <div key={crew.id} style={{borderBottom:"1px solid var(--weered-bd)"}}>
+              {/* Crew header card */}
+              <div
+                onClick={()=>setExpandedCrew(isExpanded?null:crew.id)}
+                style={{
+                  padding:"12px 14px",cursor:"pointer",
+                  background:isExpanded?"rgba(88,0,229,.04)":"transparent",
+                  transition:"background 0.15s",
+                }}
+              >
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  {/* Crew icon */}
+                  <div style={{
+                    width:38,height:38,borderRadius:10,flexShrink:0,
+                    background:"linear-gradient(135deg, rgba(88,0,229,.2), rgba(212,160,23,.15))",
+                    border:"1px solid rgba(212,160,23,.25)",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:16,fontWeight:900,color:"#D4A017",fontFamily:"monospace",
+                  }}>
+                    {crew.tag?crew.tag.slice(0,2):crew.name.slice(0,1).toUpperCase()}
                   </div>
-                  <div style={{fontSize:11,color:"var(--weered-muted)",marginTop:2}}>{crew.members?.length??0} members · {onlineMembers.length} online</div>
+
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                      <span style={{fontWeight:800,fontSize:13,color:"rgba(243,244,246,.95)",letterSpacing:"-0.2px"}}>
+                        {crew.name}
+                      </span>
+                      {crew.tag&&(
+                        <span style={{
+                          fontSize:9,padding:"2px 5px",borderRadius:5,fontFamily:"monospace",fontWeight:700,
+                          background:"rgba(212,160,23,.1)",border:"1px solid rgba(212,160,23,.25)",color:"rgba(212,160,23,.7)",
+                        }}>[{crew.tag}]</span>
+                      )}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:10}}>
+                      <span style={{color:"var(--weered-muted)"}}>{members.length} members</span>
+                      {onlineMembers.length>0&&(
+                        <span style={{display:"flex",alignItems:"center",gap:3,color:"rgba(74,222,128,.7)"}}>
+                          <span style={{width:5,height:5,borderRadius:999,background:"#22c55e",boxShadow:"0 0 4px rgba(34,197,94,.5)"}} />
+                          {onlineMembers.length} online
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expand chevron */}
+                  <span style={{
+                    fontSize:12,color:"var(--weered-muted)",transition:"transform 0.2s",
+                    transform:isExpanded?"rotate(180deg)":"rotate(0deg)",
+                  }}>▾</span>
                 </div>
-                {isLeader
-                  ?<button onClick={()=>disbandCrew(crew.id)} style={{padding:"4px 8px",borderRadius:7,border:"1px solid rgba(239,68,68,.3)",background:"transparent",color:"rgba(252,165,165,.8)",fontSize:10,cursor:"pointer"}}>Disband</button>
-                  :<button onClick={()=>leaveCrew(crew.id)} style={{padding:"4px 8px",borderRadius:7,border:"1px solid var(--weered-bd)",background:"transparent",color:"var(--weered-muted)",fontSize:10,cursor:"pointer"}}>Leave</button>
-                }
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                {(crew.members||[]).map((m:any)=>(
-                  <div key={m.userId} style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{position:"relative" as const}}>
-                      <Avatar name={m.name||"?"} size={26} />
-                      <span style={{position:"absolute" as const,bottom:-1,right:-1,width:8,height:8,borderRadius:999,background:m.online?"#22c55e":"rgba(255,255,255,.15)",border:"2px solid var(--weered-panel2)"}} />
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
-                        {m.name}
-                        {m.role==="LEADER"&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:5,background:"rgba(245,158,11,.15)",color:"rgb(251,191,36)",border:"1px solid rgba(245,158,11,.3)"}}>★</span>}
-                      </div>
-                      {m.online&&m.roomName&&<div style={{fontSize:10,color:"var(--weered-muted)"}}>in {m.roomName}</div>}
-                    </div>
-                    {m.online&&m.roomId&&m.userId!==myId&&(
-                      <button onClick={()=>onJoin(m.roomId)} style={{padding:"4px 8px",borderRadius:7,border:"1px solid var(--weered-accent-ring)",background:"var(--weered-accent-bg)",color:"var(--weered-accent-text)",fontSize:10,cursor:"pointer",fontWeight:600}}>Join</button>
+
+                {/* Avatar stack preview (collapsed) */}
+                {!isExpanded&&members.length>0&&(
+                  <div style={{display:"flex",marginTop:8,marginLeft:48}}>
+                    {members.slice(0,6).map((m:any,i:number)=>{
+                      const bg=m.avatarColor||avatarBg(m.name||"?");
+                      return (
+                        <div key={m.userId} style={{
+                          width:22,height:22,borderRadius:999,
+                          border:"2px solid rgba(15,17,23,.9)",
+                          marginLeft:i>0?-6:0,zIndex:6-i,
+                          background:m.avatar?`url(${m.avatar}) center/cover`:(bg||"rgba(255,255,255,.1)"),
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          fontSize:9,fontWeight:700,color:"#fff",
+                          position:"relative" as const,
+                        }}>
+                          {!m.avatar&&(m.name||"?")[0]?.toUpperCase()}
+                          {m.online&&<span style={{position:"absolute",bottom:-1,right:-1,width:6,height:6,borderRadius:999,background:"#22c55e",border:"1.5px solid rgba(15,17,23,.9)"}} />}
+                        </div>
+                      );
+                    })}
+                    {members.length>6&&(
+                      <div style={{
+                        width:22,height:22,borderRadius:999,marginLeft:-6,
+                        background:"rgba(255,255,255,.06)",border:"2px solid rgba(15,17,23,.9)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        fontSize:8,fontWeight:700,color:"rgba(255,255,255,.35)",fontFamily:"monospace",
+                      }}>+{members.length-6}</div>
                     )}
                   </div>
-                ))}
+                )}
               </div>
-              {(crew.myRole === "LEADER" || crew.myRole === "OFFICER") && (
-                <div style={{marginTop:8,display:"flex",gap:6}}>
-                  <input
-                    value={inviteInput[crew.id]||""}
-                    onChange={(e:any)=>setInviteInput(v=>({...v,[crew.id]:e.target.value}))}
-                    placeholder="Invite by username…"
-                    style={{flex:1,padding:"6px 9px",borderRadius:9,border:"1px solid var(--weered-bd2)",background:"rgba(255,255,255,.05)",color:"var(--weered-text)",outline:"none",fontSize:11}}
-                    onKeyDown={(e:any)=>{if(e.key==="Enter")inviteMember(crew.id);}}
-                  />
-                  <button onClick={()=>inviteMember(crew.id)} style={{padding:"6px 10px",borderRadius:9,border:"1px solid var(--weered-accent-ring)",background:"var(--weered-accent-bg)",color:"var(--weered-accent-text)",fontSize:11,cursor:"pointer",fontWeight:700}}>+</button>
+
+              {/* Expanded member list + actions */}
+              {isExpanded&&(
+                <div style={{padding:"0 14px 12px"}}>
+                  {/* Description */}
+                  {crew.description&&(
+                    <div style={{fontSize:11,color:"var(--weered-muted)",lineHeight:1.5,marginBottom:10,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.04)"}}>
+                      {crew.description}
+                    </div>
+                  )}
+
+                  {/* Member list */}
+                  <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:10}}>
+                    {members.map((m:any)=>{
+                      const badge=roleBadge(m.role);
+                      const bg=m.avatarColor||avatarBg(m.name||"?");
+                      return (
+                        <div key={m.userId} style={{
+                          display:"flex",alignItems:"center",gap:8,
+                          padding:"6px 8px",borderRadius:8,
+                          background:m.online?"rgba(34,197,94,.04)":"transparent",
+                          transition:"background 0.15s",
+                        }}>
+                          {/* Avatar with online indicator */}
+                          <div style={{position:"relative" as const,flexShrink:0}}>
+                            <div style={{
+                              width:28,height:28,borderRadius:999,overflow:"hidden",
+                              background:m.avatar?"rgba(255,255,255,.08)":(bg||"rgba(255,255,255,.1)"),
+                              display:"flex",alignItems:"center",justifyContent:"center",
+                              fontSize:11,fontWeight:700,color:"#fff",
+                            }}>
+                              {m.avatar
+                                ?<img src={m.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                                :(m.name||"?")[0]?.toUpperCase()
+                              }
+                            </div>
+                            <span style={{
+                              position:"absolute" as const,bottom:-1,right:-1,
+                              width:8,height:8,borderRadius:999,
+                              background:m.online?"#22c55e":"rgba(255,255,255,.12)",
+                              border:"2px solid rgba(15,17,23,.95)",
+                            }} />
+                          </div>
+
+                          {/* Name + role + location */}
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{display:"flex",alignItems:"center",gap:5}}>
+                              <span style={{fontSize:12,fontWeight:m.role==="LEADER"?800:600,color:m.role==="LEADER"?"rgba(243,244,246,.95)":"rgba(226,232,240,.8)"}}>
+                                {m.name}
+                              </span>
+                              {badge&&(
+                                <span style={{
+                                  fontSize:8,fontWeight:700,letterSpacing:"0.06em",
+                                  padding:"1px 5px",borderRadius:4,
+                                  background:badge.bg,border:`1px solid ${badge.border}`,color:badge.color,
+                                }}>{badge.label}</span>
+                              )}
+                              {m.userId===myId&&(
+                                <span style={{fontSize:8,fontWeight:700,padding:"1px 4px",borderRadius:4,background:"rgba(255,255,255,.06)",color:"rgba(255,255,255,.25)"}}>YOU</span>
+                              )}
+                            </div>
+                            {m.online&&m.roomName&&(
+                              <div style={{fontSize:10,color:"rgba(74,222,128,.5)",marginTop:1}}>
+                                in {m.roomName}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Join button */}
+                          {m.online&&m.roomId&&m.userId!==myId&&(
+                            <button onClick={()=>onJoin(m.roomId)} style={{
+                              padding:"4px 10px",borderRadius:7,fontSize:10,fontWeight:700,cursor:"pointer",
+                              border:"1px solid rgba(88,0,229,.35)",background:"rgba(88,0,229,.12)",color:"rgba(167,139,250,.9)",
+                              transition:"all 0.15s",
+                            }}>Join</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Invite input (leaders/officers) */}
+                  {canManage && (
+                    <div style={{display:"flex",gap:6,marginBottom:6}}>
+                      <input
+                        value={inviteInput[crew.id]||""}
+                        onChange={(e:any)=>setInviteInput(v=>({...v,[crew.id]:e.target.value}))}
+                        placeholder="Invite by username…"
+                        style={{flex:1,padding:"7px 10px",borderRadius:9,border:"1px solid var(--weered-bd2)",background:"rgba(255,255,255,.04)",color:"var(--weered-text)",outline:"none",fontSize:11}}
+                        onKeyDown={(e:any)=>{if(e.key==="Enter")inviteMember(crew.id);}}
+                      />
+                      <button onClick={()=>inviteMember(crew.id)} style={{
+                        padding:"7px 12px",borderRadius:9,fontSize:11,cursor:"pointer",fontWeight:700,
+                        border:"1px solid rgba(88,0,229,.3)",background:"rgba(88,0,229,.1)",color:"rgba(167,139,250,.9)",
+                      }}>+</button>
+                    </div>
+                  )}
+                  {inviteNote[crew.id]&&<div style={{fontSize:10,marginBottom:4,color:inviteNote[crew.id]==="Invited!"?"rgba(74,222,128,.7)":"rgba(252,165,165,.7)"}}>{inviteNote[crew.id]}</div>}
+
+                  {/* Actions */}
+                  <div style={{display:"flex",gap:6}}>
+                    {isLeader
+                      ?<button onClick={()=>disbandCrew(crew.id)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(239,68,68,.25)",background:"rgba(239,68,68,.06)",color:"rgba(252,165,165,.7)",fontSize:10,cursor:"pointer",fontWeight:600}}>Disband Crew</button>
+                      :<button onClick={()=>leaveCrew(crew.id)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid var(--weered-bd)",background:"transparent",color:"var(--weered-muted)",fontSize:10,cursor:"pointer",fontWeight:600}}>Leave Crew</button>
+                    }
+                  </div>
                 </div>
               )}
-              {inviteNote[crew.id]&&<div style={{fontSize:10,marginTop:4,color:"var(--weered-muted)"}}>{inviteNote[crew.id]}</div>}
             </div>
           );
         })}
