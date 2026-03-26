@@ -704,13 +704,13 @@ export default function HomePage() {
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)"; }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 18 }}>⚖️</span>
+              <img src="/brand/mark-192.png" alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: "contain" }} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
-                  Own your own lobby
+                  Get Indicted. Own a lobby.
                 </div>
                 <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                  Get Indicted — create a branded community, unlock premium features
+                  Create your own branded community. Premium features. Your rules.
                 </div>
               </div>
             </div>
@@ -755,8 +755,8 @@ export default function HomePage() {
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.45)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.background = "rgba(88,0,229,.04)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.25)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
                 >
-                  <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.5 }}>+</div>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.7)", letterSpacing: "-0.1px" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.7, color: '#5800E5' }}>+</div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
                     Create Your Lobby
                   </div>
                   <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginTop: 4 }}>
@@ -794,7 +794,7 @@ export default function HomePage() {
         {/* EMPTY STATE */}
         {lobbies.length === 0 && popularRooms.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,.25)" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>&#128075;</div>
+            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><img src="/brand/mark-192.png" alt="" style={{ width: 48, height: 48, opacity: 0.4 }} /></div>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Nothing here yet</div>
             <div style={{ fontSize: 13, opacity: 0.7 }}>Head to Lobby to browse and join rooms.</div>
           </div>

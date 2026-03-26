@@ -146,19 +146,17 @@ function LoginForm() {
           margin-bottom: 28px;
         }
         .wl-logo {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #7C3AED, #D946EF);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: 'Syne', sans-serif;
-          font-weight: 800;
-          font-size: 18px;
-          color: white;
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
           flex-shrink: 0;
-          box-shadow: 0 0 24px rgba(124,58,237,0.35);
+          overflow: hidden;
+        }
+        .wl-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(0 0 16px rgba(124,58,237,0.4));
         }
          .wl-input:-webkit-autofill,
         .wl-input:-webkit-autofill:hover,
@@ -285,10 +283,10 @@ function LoginForm() {
       <div className="wl-root">
         <div className="wl-card">
           <div className="wl-brand">
-            <div className="wl-logo">w</div>
+            <div className="wl-logo"><img src="/brand/mark-512.png" alt="Weered" /></div>
             <div>
               <div className="wl-brand-name">weered</div>
-              <div className="wl-brand-sub">communities · presence · rooms</div>
+              <div className="wl-brand-sub">enter the portal</div>
             </div>
           </div>
 
