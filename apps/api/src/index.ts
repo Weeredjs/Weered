@@ -404,28 +404,71 @@ function leaveRoom(ws: Sock) {
 }
 // ── Notoriety system ──────────────────────────────────────────────────────────
 // Point values per action (idempotent where flagged)
-const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean }> = {
+const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean; cooldown?: number }> = {
   BIO_COMPLETE:        { points: 50,   once: true  },
   FIRST_ROOM_HOSTED:   { points: 100,  once: true  },
-  ROOM_25_USERS:       { points: 250,  once: false },  // per occurrence
+  ROOM_25_USERS:       { points: 250,  once: false },
   SUBREDDIT_LINKED:    { points: 75,   once: true  },
-  DAILY_ACTIVE:        { points: 10,   once: false },
+  DAILY_ACTIVE:        { points: 10,   once: false, cooldown: 86400000 },  // 24h
+  CHAT_MESSAGE:        { points: 2,    once: false, cooldown: 30000   },   // 30s cooldown
+  ROOM_JOINED:         { points: 5,    once: false, cooldown: 60000   },   // 1min cooldown
+  VOICE_JOINED:        { points: 15,   once: false, cooldown: 300000  },   // 5min cooldown
+  CREW_CREATED:        { points: 100,  once: true  },
+  CREW_JOINED:         { points: 25,   once: false },
+  FRIEND_ADDED:        { points: 15,   once: false },
+  LOBBY_CREATED:       { points: 200,  once: false },
+  AVATAR_SET:          { points: 30,   once: true  },
+  BUNGIE_LINKED:       { points: 75,   once: true  },
 };
+
+// Notoriety rank titles (cosmetic only — does NOT affect Stripe tier)
+const NOTORIETY_RANKS = [
+  { title: "Street Rat",   min: 0    },
+  { title: "Corner Boy",   min: 100  },
+  { title: "Hustler",      min: 300  },
+  { title: "Shot Caller",  min: 500  },
+  { title: "Enforcer",     min: 1000 },
+  { title: "Made Man",     min: 1500 },
+  { title: "Underboss",    min: 3000 },
+  { title: "Crime Lord",   min: 5000 },
+  { title: "Kingpin",      min: 10000},
+];
+
+function getNotorietyRank(n: number): { title: string; min: number; next: { title: string; min: number } | null } {
+  let rank = NOTORIETY_RANKS[0];
+  for (const r of NOTORIETY_RANKS) {
+    if (n >= r.min) rank = r;
+  }
+  const idx = NOTORIETY_RANKS.indexOf(rank);
+  const next = idx < NOTORIETY_RANKS.length - 1 ? NOTORIETY_RANKS[idx + 1] : null;
+  return { ...rank, next };
+}
+
+// Cooldown tracking (in-memory, resets on restart — good enough for rate limiting XP)
+const notorietyCooldowns = new Map<string, number>();
 
 // Track one-time awards in a simple DB table — for now use a JSON field on User
 // or a separate NotorietyEvent table. Using NotorietyEvent for auditability.
-async function awardNotoriety(userId: string, action: string): Promise<void> {
+async function awardNotoriety(userId: string, action: string): Promise<number | null> {
   const cfg = NOTORIETY_ACTIONS[action];
-  if (!cfg) return;
+  if (!cfg) return null;
 
   try {
+    // Check cooldown
+    if (cfg.cooldown) {
+      const key = `${userId}:${action}`;
+      const last = notorietyCooldowns.get(key) || 0;
+      if (Date.now() - last < cfg.cooldown) return null;
+      notorietyCooldowns.set(key, Date.now());
+    }
+
     if (cfg.once) {
       // Check if already awarded
       const existing = await prisma.notorietyEvent.findFirst({
         where: { userId, action },
       });
       
-      if (existing) return;
+      if (existing) return null;
     }
 
     await prisma.$transaction([
@@ -436,22 +479,18 @@ async function awardNotoriety(userId: string, action: string): Promise<void> {
       }),
     ]);
 
-    // Recalculate tier after award
-    await recalcTier(userId);
+    // Send realtime XP notification via WebSocket
+    for (const sock of wss.clients) {
+      if ((sock as any).user?.id === userId) {
+        send(sock as any, { type: "notoriety:award", action, points: cfg.points });
+      }
+    }
+
+    return cfg.points;
   } catch (e) {
     console.error("[notoriety] award failed", action, userId, e);
+    return null;
   }
-}
-
-async function recalcTier(userId: string): Promise<void> {
-  try {
-    const u = await prisma.user.findUnique({ where: { id: userId }, select: { notoriety: true } });
-    if (!u) return;
-    const n = u.notoriety ?? 0;
-    // Tier thresholds — Kingpin is staff-granted only (not earned by score)
-    const tier = n >= 2000 ? "FELON" : n >= 500 ? "INDICTED" : "INNOCENT";
-    await prisma.user.update({ where: { id: userId }, data: { tier } });
-  } catch {}
 }
 
 // DM delivery — push to all sockets belonging to a user
@@ -583,6 +622,9 @@ async function doJoin(ws: Sock, roomId: string) {
   }
 
   if (ws.user) { try { await persistMember(room, ws.user); } catch {} }
+
+  // Award notoriety for joining a room (cooldown-gated)
+  if (ws.user) awardNotoriety(ws.user.id, "ROOM_JOINED").catch(() => {});
 
   // Only send full state to the joining socket — everyone else already got presence:join
   publishStateToSocket(ws, room);
@@ -936,6 +978,7 @@ async function main() {
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, { identity: u.id, name: u.name });
     at.addGrant({ roomJoin: true, room: roomId, canPublish: true, canSubscribe: true, canPublishData: true });
     const token = await at.toJwt();
+    awardNotoriety(u.id, "VOICE_JOINED").catch(() => {});
     return reply.send({ ok: true, url: LIVEKIT_URL, token });
   });
 
@@ -1308,11 +1351,14 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       // Count rooms hosted (owned)
       const roomsHosted = await prisma.room.count({ where: { ownerId: u.id } });
 
+      const nRank = getNotorietyRank(u.notoriety ?? 0);
       return reply.send({
         id: u.id,
         name: u.name,
         bio: u.bio || "",
         notoriety: u.notoriety ?? 0,
+        notorietyRank: nRank.title,
+        notorietyNext: nRank.next ? { title: nRank.next.title, min: nRank.next.min } : null,
         tier: u.tier ?? "INNOCENT",
         globalRole: String(u.globalRole ?? "USER"),
         joinedAt: u.createdAt.toISOString(),
@@ -1354,6 +1400,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       // If avatarColor or avatar changed, update all live sockets for this user and re-broadcast
       // presence in every room they're in so other clients see the change instantly
       if (avatarColor !== undefined || avatar !== undefined) {
+        if (avatar !== undefined && avatar) awardNotoriety(viewer.id, "AVATAR_SET").catch(() => {});
         for (const sock of wss.clients) {
           const s = sock as Sock;
           if (s.user?.id === viewer.id) {
@@ -1380,6 +1427,92 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       return reply.code(500).send({ error: "Server error" });
     }
   });
+
+  // GET /notoriety/me — current user's notoriety score, rank, recent events, next milestone
+  app.get("/notoriety/me", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ error: "unauthorized" });
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { notoriety: true },
+    });
+    const score = dbUser?.notoriety ?? 0;
+    const rank = getNotorietyRank(score);
+
+    const recentEvents = await prisma.notorietyEvent.findMany({
+      where: { userId: u.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { action: true, points: true, createdAt: true },
+    });
+
+    return reply.send({
+      ok: true,
+      score,
+      rank: rank.title,
+      rankMin: rank.min,
+      nextRank: rank.next ? { title: rank.next.title, min: rank.next.min, pointsNeeded: rank.next.min - score } : null,
+      recentEvents,
+      ranks: NOTORIETY_RANKS,
+    });
+  });
+
+  // GET /notoriety/leaderboard — top users by notoriety
+  app.get("/notoriety/leaderboard", async (req, reply) => {
+    const limit = Math.min(Number((req as any).query?.limit || 25), 50);
+    const leaders = await prisma.user.findMany({
+      orderBy: { notoriety: "desc" },
+      take: limit,
+      select: { id: true, name: true, notoriety: true, tier: true, avatar: true, avatarColor: true },
+    });
+    const ranked = leaders.map((u, i) => ({
+      position: i + 1,
+      id: u.id,
+      name: u.name,
+      score: u.notoriety,
+      rank: getNotorietyRank(u.notoriety).title,
+      tier: u.tier,
+      avatar: u.avatar,
+      avatarColor: u.avatarColor,
+    }));
+    return reply.send({ ok: true, leaders: ranked });
+  });
+
+  // GET /crews/leaderboard — top crews by aggregate member notoriety
+  app.get("/crews/leaderboard", async (req, reply) => {
+    const limit = Math.min(Number((req as any).query?.limit || 25), 50);
+    const db = prisma as any;
+    const crews = await db.crew.findMany({
+      include: { members: { select: { userId: true } } },
+      take: 100,
+    });
+    // Aggregate scores
+    const crewScores: { id: string; name: string; tag: string; memberCount: number; totalScore: number }[] = [];
+    for (const crew of crews) {
+      const userIds = crew.members.map((m: any) => m.userId);
+      if (!userIds.length) continue;
+      const agg = await prisma.user.aggregate({
+        where: { id: { in: userIds } },
+        _sum: { notoriety: true },
+      });
+      crewScores.push({
+        id: crew.id,
+        name: crew.name,
+        tag: crew.tag,
+        memberCount: userIds.length,
+        totalScore: agg._sum.notoriety ?? 0,
+      });
+    }
+    crewScores.sort((a, b) => b.totalScore - a.totalScore);
+    const ranked = crewScores.slice(0, limit).map((c, i) => ({
+      position: i + 1,
+      ...c,
+      rank: getNotorietyRank(Math.floor(c.totalScore / c.memberCount)).title,
+    }));
+    return reply.send({ ok: true, leaders: ranked });
+  });
+
   // DELETE /staff/rooms/:roomId — STAFF+ can delete rooms
   app.delete("/staff/rooms/:roomId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -1504,6 +1637,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
         create: { crewId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
         update: {},
       }).catch(() => {});
+      awardNotoriety(u.id, "CREW_JOINED").catch(() => {});
       redirect = "/lobby";
     }
 
@@ -1712,6 +1846,8 @@ app.post("/dm/:peerId", async (req, reply) => {
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
           ws.user = await hydrateGlobalRole(u);
           send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar } });
+          // Award daily active notoriety (cooldown-gated, fires at most once per 24h)
+          awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
           return;
         }
 
@@ -1818,6 +1954,7 @@ app.post("/dm/:peerId", async (req, reply) => {
             }).catch(() => {});
           }
           broadcast(room, { type: "chat:new", roomId, msg: m });
+          awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(() => {});
           return;
         }
 
@@ -2183,6 +2320,8 @@ app.post("/dm/:peerId", async (req, reply) => {
       update: { status: "ACCEPTED" },
       create: { fromId: u.id, toId: fr.fromId, status: "ACCEPTED" },
     });
+    awardNotoriety(u.id, "FRIEND_ADDED").catch(() => {});
+    awardNotoriety(fr.fromId, "FRIEND_ADDED").catch(() => {});
     return reply.send({ ok: true });
   });
 
@@ -2255,6 +2394,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       },
       include: { members: true },
     });
+    awardNotoriety(u.id, "CREW_CREATED").catch(() => {});
     return reply.send({ ok: true, crew });
   });
 
@@ -2273,6 +2413,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       update: {},
       create: { crewId, userId, name: target.name, role: "MEMBER" },
     });
+    awardNotoriety(userId, "CREW_JOINED").catch(() => {});
     return reply.send({ ok: true });
   });
 
@@ -2434,6 +2575,7 @@ app.post("/dm/:peerId", async (req, reply) => {
         accentColor: accentColor ?? null, logoUrl: logoUrl ?? null,
         bannerUrl: bannerUrl ?? null, websiteUrl: websiteUrl ?? null },
     });
+    awardNotoriety(u.id, "LOBBY_CREATED").catch(() => {});
     return reply.send({ ok: true, lobby });
   });
 
@@ -3487,6 +3629,7 @@ app.post("/dm/:peerId", async (req, reply) => {
         },
       });
 
+      awardNotoriety(userId, "BUNGIE_LINKED").catch(() => {});
       return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=success`);
     } catch (e) {
       console.error("[bungie oauth callback]", e);
