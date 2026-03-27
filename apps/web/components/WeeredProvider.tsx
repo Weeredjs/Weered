@@ -429,6 +429,14 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         try { router.replace("/lobby"); } catch {}
         return;
       }
+      if (msg.type === "room:closed") {
+        const rid = String(msg.roomId || "");
+        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
+        setActiveRoomId("");
+        setJoinedRoomId("");
+        try { router.replace("/lobby"); } catch {}
+        return;
+      }
       if (msg.type === "room:admitted") {
         const rid = String(msg.roomId || "");
         if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
