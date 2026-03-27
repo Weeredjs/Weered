@@ -230,49 +230,70 @@ export default function LeftRail() {
     return arr;
   }, [filtered]);
 
-  // ── Recents + Favorites ───────────────────────────────────────────────────
-  const RECENTS_KEY = "weered:recents:v1";
-  const FAVS_KEY    = "weered:favs:v1";
+  // ── Recents (server-side) + Favorites (local) ──────────────────────────────
+  const FAVS_KEY = "weered:favs:v1";
 
-  const [recents, setRecents] = useState<string[]>(() => {
-    try { const r = localStorage.getItem(RECENTS_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
-  });
-  const [favs, setFavs] = useState<string[]>(() => {
-    try { const r = localStorage.getItem(FAVS_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
-  });
+  // Server-side recents
+  const [serverRecents, setServerRecents] = useState<any[]>([]);
+  const recentsLoaded = useRef(false);
 
+  // Fetch recents from API on mount
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
+    if (!token) return;
+    fetch(`${API_BASE}/recents`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(j => { if (Array.isArray(j?.recents)) { setServerRecents(j.recents); recentsLoaded.current = true; } })
+      .catch(() => {});
+  }, []);
+
+  // Record visits server-side when navigating
   useEffect(() => {
     const raw = normRoomKey(joinedRoomId || activeRoomId || "");
     if (!raw || raw === "lobby") return;
     const room = raw.startsWith("room:") ? raw.slice(5) : raw;
-    setRecents(prev => {
-      const filtered = prev.filter(r => {
-        const n = r.startsWith("room:") ? r.slice(5) : r;
-        return n !== room;
-      });
-      const next = [room, ...filtered].slice(0, 8);
-      try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-    // Enrich the name cache with lobbyId context if we know which lobby we're in
-    if (currentLobbyId && currentLobbyId !== "lobby") {
-      try {
-        const cache = JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}");
-        const existing = cache[room];
-        if (existing && typeof existing === "object") {
-          if (!existing.lobbyId) {
-            existing.lobbyId = currentLobbyId;
-            localStorage.setItem("weered:roomnames:v1", JSON.stringify(cache));
-            setRoomNameCache({ ...cache });
-          }
-        } else if (!existing) {
-          cache[room] = { name: room, lobbyId: currentLobbyId, count: 0 };
-          localStorage.setItem("weered:roomnames:v1", JSON.stringify(cache));
-          setRoomNameCache({ ...cache });
-        }
-      } catch {}
+    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
+    if (!token) return;
+
+    // Determine if this is a lobby or a room
+    const isLobbySlug = /^[a-z][a-z0-9._/-]*$/.test(room) && room.length > 2;
+    const body = isLobbySlug ? { lobbyId: room } : { roomId: room };
+
+    fetch(`${API_BASE}/recents`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then(r => r.json())
+      .then(() => {
+        // Re-fetch recents to get updated list
+        fetch(`${API_BASE}/recents`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(j => { if (Array.isArray(j?.recents)) setServerRecents(j.recents); })
+          .catch(() => {});
+      })
+      .catch(() => {});
+  }, [joinedRoomId, activeRoomId]);
+
+  // Derive recents as string IDs for compatibility with existing rendering
+  const recents = useMemo(() =>
+    serverRecents.map(r => r.lobbyId || r.roomId).filter(Boolean),
+    [serverRecents]
+  );
+
+  // Build a map from ID → server recent data (for name/logo enrichment)
+  const serverRecentMap = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const r of serverRecents) {
+      const id = r.lobbyId || r.roomId;
+      if (id) m.set(id, r);
     }
-  }, [joinedRoomId, activeRoomId, currentLobbyId]);
+    return m;
+  }, [serverRecents]);
+
+  const [favs, setFavs] = useState<string[]>(() => {
+    try { const r = localStorage.getItem(FAVS_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
+  });
 
   function toggleFav(room: string) {
     setFavs(prev => {
@@ -309,6 +330,9 @@ export default function LeftRail() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
   const getRoomName = (id: string) => {
+    // Check server recents first (has enriched name from API)
+    const sr = serverRecentMap.get(id);
+    if (sr?.name && sr.name !== id) return sr.name;
     const v = roomNameCache[id];
     if (!v) return id;
     if (typeof v === "string") return v;
@@ -316,12 +340,22 @@ export default function LeftRail() {
     return id;
   };
   const getRoomLobby = (id: string): string => {
+    // Check server recents for lobby context
+    const sr = serverRecentMap.get(id);
+    if (sr?.lobbyId && sr.lobbyId !== id) return sr.lobbyName || sr.lobbyId;
+    if (sr?.lobbyId === id) return "lobby";
     const v = roomNameCache[id];
     if (typeof v === "object" && v !== null) return (v as any).lobbyId || (v as any).lobby || "";
     return "";
   };
-  // Sublabel: show parent lobby name for rooms, nothing for lobby slugs in recents
+  // Sublabel: show parent lobby name for rooms, "lobby" for lobby slugs
   const getRoomSublabel = (id: string): string => {
+    const sr = serverRecentMap.get(id);
+    // If it's a lobby visit, show the slug as sublabel
+    if (sr?.lobbyId === id) return id;
+    // If it's a room in a lobby, show the lobby name
+    if (sr?.lobbyName) return sr.lobbyName;
+    if (sr?.lobbyId) return sr.lobbyId;
     const lobby = getRoomLobby(id);
     if (lobby) return lobby;
     const isLobbySlug = /^[a-z][a-z0-9._-]*$/.test(id) && id.length > 2;
@@ -329,6 +363,9 @@ export default function LeftRail() {
     return "";
   };
   const getLobbyLogo = (id: string): string | null => {
+    // Check server recents for logo
+    const sr = serverRecentMap.get(id);
+    if (sr?.logoUrl) return sr.logoUrl;
     if (lobbyLogos[id]) return lobbyLogos[id];
     const lobby = getRoomLobby(id);
     if (lobby && lobbyLogos[lobby]) return lobbyLogos[lobby];
