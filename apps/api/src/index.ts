@@ -131,11 +131,11 @@ async function canModLobby(userId: string, lobbyId: string, globalRole: GlobalRo
 // ── Seed pinned lobbies into DB on startup ────────────────────────────────────
 
 const SEED_LOBBIES = [
-  { id: "lobby",        name: "The Lobby",    description: "General hangout. Everyone starts here.", keywords: ["lobby","general","home"],              moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
-  { id: "r/all",        name: "r/all",        description: "Reddit firehose. All topics welcome.",   keywords: ["reddit","all","general"],              moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/all" } },
-  { id: "r/gaming",     name: "r/gaming",     description: "Gamers of all kinds.",                   keywords: ["reddit","gaming","games","gamer"],     moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/gaming" } },
-  { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         keywords: ["reddit","tech","technology","coding"],  moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/technology" } },
-  { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        keywords: ["reddit","news","world","worldnews"],   moduleType: ModuleType.REDDIT,  moduleConfig: { subreddit: "r/worldnews" } },
+  { id: "lobby",        name: "The Lobby",    description: "General hangout. Everyone starts here.", keywords: ["lobby","general","home"],              moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/all" } },
+  { id: "r/all",        name: "r/all",        description: "Reddit firehose. All topics welcome.",   keywords: ["reddit","all","general"],              moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/all" } },
+  { id: "r/gaming",     name: "r/gaming",     description: "Gamers of all kinds.",                   keywords: ["reddit","gaming","games","gamer"],     moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/gaming" } },
+  { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         keywords: ["reddit","tech","technology","coding"],  moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/technology" } },
+  { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        keywords: ["reddit","news","world","worldnews"],   moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/worldnews" } },
   { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    keywords: ["weered","meta","official","hq"],       moduleType: ModuleType.NONE,    moduleConfig: null },
   { id: "destiny2", name: "Destiny 2 | Bungie.net", description: "Guardians, strikes, raids and loot. Powered by the Bungie API.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"] }, accentColor: "#4F88C6", logoUrl: "https://www.bungie.net/img/logos/bungie-saber-logo.png", bannerUrl: null, websiteUrl: "https://www.bungie.net" },
 ];
@@ -3132,7 +3132,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       where: { id: lobbyId }, select: { moduleType: true },
     });
     if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (lobby.moduleType === "NONE" || lobby.moduleType === "REDDIT") {
+    if (lobby.moduleType === "NONE" || lobby.moduleType === "FEED") {
       return reply.send({ ok: true, hasCard: false });
     }
 

@@ -17,7 +17,7 @@ const MODULE_TYPES = [
   { id: "NONE", label: "None", desc: "Just rooms and chat", icon: "💬" },
   { id: "TWITCH", label: "Twitch", desc: "Live stream integration", icon: "📺" },
   { id: "YOUTUBE", label: "YouTube", desc: "Video sync & watch parties", icon: "▶️" },
-  { id: "REDDIT", label: "Feed", desc: "Community content feed", icon: "📰" },
+  { id: "FEED", label: "Feed", desc: "Community content feed", icon: "📰" },
 ];
 
 const ACCENT_PRESETS = [

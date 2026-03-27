@@ -233,7 +233,7 @@ export function makeLobbiesRoutes(prisma: PrismaClient) {
           select: { moduleType: true },
         });
         if (!lobby) { reply.code(404).send({ ok: false, error: "not_found" }); return; }
-        if (lobby.moduleType === "NONE" || lobby.moduleType === "REDDIT") {
+        if (lobby.moduleType === "NONE" || lobby.moduleType === "FEED") {
           return { ok: true, linked: false };
         }
 
@@ -268,7 +268,7 @@ export function makeLobbiesRoutes(prisma: PrismaClient) {
           select: { moduleType: true },
         });
         if (!lobby) { reply.code(404).send({ ok: false, error: "not_found" }); return; }
-        if (lobby.moduleType === "NONE" || lobby.moduleType === "REDDIT") {
+        if (lobby.moduleType === "NONE" || lobby.moduleType === "FEED") {
           return { ok: true, hasCard: false };
         }
 
