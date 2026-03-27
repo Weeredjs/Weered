@@ -405,6 +405,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         locked={locked}
         thumbnail={roomThumbnail}
         pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
+        users={Array.isArray(w?.users) ? w.users : []}
+        lobbyName={w?.meta?.lobbyName || w?.meta?.lobbyId || null}
+        lobbyLogo={w?.meta?.lobbyLogo || null}
         onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
         onDetailsClick={() => setShowDetails(d => !d)}
         showDetails={showDetails}
