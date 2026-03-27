@@ -213,7 +213,7 @@ const ALL_MODULES = [
   { key: "video",   label: "Video/Screenshare", desc: "Camera and screen sharing" },
   { key: "twitch",  label: "Twitch Embed",     desc: "Live Twitch stream embed" },
   { key: "custom",  label: "Custom Embed",     desc: "Custom iframe integration" },
-  { key: "reddit",  label: "Reddit Feed",      desc: "Subreddit content browser" },
+  { key: "feed",  label: "Reddit Feed",      desc: "Subreddit content browser" },
 ];
 
 function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => void }) {

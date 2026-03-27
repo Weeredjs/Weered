@@ -39,7 +39,7 @@ const MODULE_LABELS: Record<string, string> = {
   BUNGIE: "Destiny 2",
   TWITCH: "Twitch",
   YOUTUBE: "YouTube",
-  REDDIT: "Reddit",
+  FEED: "Feed",
   CUSTOM: "Custom",
 };
 
