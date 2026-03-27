@@ -8,6 +8,8 @@ import { AccessToken } from "livekit-server-sdk";
 import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
 import { syncManifest, enrichProfile, enrichMilestones, isLoaded as manifestLoaded, manifestVersion } from "./manifest";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { join } from "path";
 
 const prisma = new PrismaClient();
 
@@ -1426,6 +1428,98 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       console.error("[profile PATCH]", e);
       return reply.code(500).send({ error: "Server error" });
     }
+  });
+
+  // ── Avatar upload (Indicted+ only) ────────────────────────────────────────
+  const AVATAR_DIR = join(process.cwd(), "uploads", "avatars");
+  if (!existsSync(AVATAR_DIR)) mkdirSync(AVATAR_DIR, { recursive: true });
+  const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+  const SITE_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+
+  app.post("/profile/avatar/upload", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ error: "unauthorized" });
+
+    // Tier gate — Indicted+ only
+    const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
+    const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
+    if (tier === "INNOCENT") {
+      return reply.code(403).send({ error: "tier_required", message: "Custom avatar uploads require Indicted tier or higher." });
+    }
+
+    const body: any = (req as any).body || {};
+    const dataUrl = body.image;
+    if (!dataUrl || typeof dataUrl !== "string") {
+      return reply.code(400).send({ error: "missing_image" });
+    }
+
+    // Validate data URL format
+    const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+    if (!match) {
+      return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+    }
+
+    const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1];
+    const buffer = Buffer.from(match[2], "base64");
+
+    if (buffer.length > AVATAR_MAX_BYTES) {
+      return reply.code(400).send({ error: "too_large", message: "Image must be under 2MB." });
+    }
+
+    try {
+      const filename = `${u.id}-${Date.now()}.${ext}`;
+      const filepath = join(AVATAR_DIR, filename);
+      writeFileSync(filepath, buffer);
+
+      const avatarUrl = `${SITE_BASE}/avatars/${filename}`;
+
+      // Update user record
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { avatar: avatarUrl },
+      });
+
+      // Award notoriety for setting avatar
+      awardNotoriety(u.id, "AVATAR_SET").catch(() => {});
+
+      // Update live WS presence
+      for (const sock of wss.clients) {
+        const s = sock as Sock;
+        if (s.user?.id === u.id) {
+          s.user.avatar = avatarUrl;
+          if (s.roomId) {
+            const room = rooms.get(s.roomId);
+            if (room) {
+              const entry = room.users.get(u.id);
+              if (entry) (entry as any).avatar = avatarUrl;
+              publishState(room);
+            }
+          }
+        }
+      }
+
+      return reply.send({ ok: true, avatar: avatarUrl });
+    } catch (e) {
+      console.error("[avatar upload]", e);
+      return reply.code(500).send({ error: "upload_failed" });
+    }
+  });
+
+  // Serve uploaded avatars as static files
+  app.get("/avatars/:filename", async (req, reply) => {
+    const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
+    if (!filename) return reply.code(400).send("bad request");
+    const filepath = join(AVATAR_DIR, filename);
+    if (!existsSync(filepath)) return reply.code(404).send("not found");
+
+    const ext = filename.split(".").pop()?.toLowerCase();
+    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
+
+    const { readFileSync } = await import("fs");
+    const data = readFileSync(filepath);
+    reply.header("Content-Type", mime);
+    reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    return reply.send(data);
   });
 
   // GET /notoriety/me — current user's notoriety score, rank, recent events, next milestone

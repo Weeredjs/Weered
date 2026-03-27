@@ -257,7 +257,9 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [avatarUrl,   setAvatarUrl  ] = useState<string | null>(null);
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
-  const [activeTab,   setActiveTab  ] = useState<"gallery" | "color">("gallery");
+  const [activeTab,   setActiveTab  ] = useState<"gallery" | "color" | "upload">("gallery");
+  const [uploading,   setUploading  ] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // Fetch profile
   useEffect(() => {
@@ -490,11 +492,11 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
           {/* Tab toggle */}
           <div style={{ display: "flex", gap: 2, marginBottom: 12, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: 2 }}>
-            {(["gallery", "color"] as const).map(tab => (
+            {(["gallery", "color", ...(profile.tier !== "INNOCENT" ? ["upload"] : [])] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTab(tab as any)}
                 style={{
                   flex: 1, padding: "6px 0", borderRadius: 6,
                   fontSize: 11, fontWeight: 700, fontFamily: "inherit",
@@ -504,7 +506,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                   transition: "all 0.15s",
                 }}
               >
-                {tab === "gallery" ? "Avatar Gallery" : "Color"}
+                {tab === "gallery" ? "Gallery" : tab === "color" ? "Color" : "⬆ Upload"}
               </button>
             ))}
           </div>
@@ -515,9 +517,99 @@ export default function ProfileSheet({ userId }: { userId: string }) {
               currentAvatar={avatarUrl}
               onSelect={saveAvatar}
             />
-          ) : (
+          ) : activeTab === "color" ? (
             <ColorPicker current={aColor} onChange={saveColor} />
-          )}
+          ) : activeTab === "upload" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{
+                border: "2px dashed rgba(212,160,23,.25)",
+                borderRadius: 12,
+                padding: 24,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+                background: "rgba(212,160,23,.03)",
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/png,image/jpeg,image/webp,image/gif";
+                  input.onchange = async () => {
+                    const file = input.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) {
+                      setUploadError("Image must be under 2MB.");
+                      return;
+                    }
+                    setUploading(true);
+                    setUploadError("");
+                    try {
+                      // Resize to 256x256 using canvas
+                      const img = new Image();
+                      const url = URL.createObjectURL(file);
+                      await new Promise<void>((resolve, reject) => {
+                        img.onload = () => resolve();
+                        img.onerror = () => reject(new Error("Failed to load image"));
+                        img.src = url;
+                      });
+                      const canvas = document.createElement("canvas");
+                      canvas.width = 256;
+                      canvas.height = 256;
+                      const ctx = canvas.getContext("2d")!;
+                      // Center crop
+                      const size = Math.min(img.width, img.height);
+                      const sx = (img.width - size) / 2;
+                      const sy = (img.height - size) / 2;
+                      ctx.drawImage(img, sx, sy, size, size, 0, 0, 256, 256);
+                      URL.revokeObjectURL(url);
+
+                      const dataUrl = canvas.toDataURL("image/webp", 0.85);
+                      const res = await fetch(`${apiBase}/profile/avatar/upload`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ image: dataUrl }),
+                      }).then(r => r.json());
+
+                      if (res.ok && res.avatar) {
+                        setAvatarUrl(res.avatar);
+                        setProfile((prev: any) => prev ? { ...prev, avatar: res.avatar } : prev);
+                      } else {
+                        setUploadError(res.message || res.error || "Upload failed");
+                      }
+                    } catch (e) {
+                      setUploadError("Upload failed. Please try again.");
+                    }
+                    setUploading(false);
+                  };
+                  input.click();
+                }}
+              >
+                {uploading ? (
+                  <>
+                    <div style={{ fontSize: 24, opacity: 0.4 }}>⏳</div>
+                    <div style={{ fontSize: 12, color: "rgba(212,160,23,.7)", fontWeight: 700 }}>Uploading...</div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 28, opacity: 0.3 }}>📷</div>
+                    <div style={{ fontSize: 12, color: "rgba(212,160,23,.7)", fontWeight: 700 }}>Click to upload your avatar</div>
+                    <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)" }}>PNG, JPEG, WebP, or GIF — max 2MB</div>
+                    <div style={{ fontSize: 10, color: "rgba(148,163,184,.3)" }}>Auto-resized to 256×256</div>
+                  </>
+                )}
+              </div>
+              {uploadError && (
+                <div style={{ fontSize: 11, color: "rgba(239,68,68,.8)", padding: "6px 10px", borderRadius: 8, background: "rgba(239,68,68,.06)", border: "1px solid rgba(239,68,68,.15)" }}>
+                  {uploadError}
+                </div>
+              )}
+              {profile.tier !== "INNOCENT" && (
+                <div style={{ fontSize: 10, color: "rgba(212,160,23,.4)", textAlign: "center" as const }}>
+                  ★ Premium feature — available to Indicted and above
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 
