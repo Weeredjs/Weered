@@ -80,11 +80,12 @@ const S = {
 const NAV_ITEMS = [
   { id: "users",    label: "Users",         icon: "👤", minRole: "SUPPORT" },
   { id: "subs",     label: "Subscriptions", icon: "💳", minRole: "STAFF" },
-  { id: "rooms",    label: "Rooms",         icon: "🚪", minRole: "STAFF" },
-  { id: "lobbies",  label: "Lobbies",       icon: "🏛️", minRole: "STAFF" },
-  { id: "audit",    label: "Audit Log",     icon: "📋", minRole: "STAFF" },
-  { id: "files",    label: "Files",         icon: "🗂️", minRole: "GOD" },
-  { id: "config",   label: "Config",        icon: "⚙️", minRole: "GOD" },
+  { id: "rooms",     label: "Rooms",         icon: "🚪", minRole: "STAFF" },
+  { id: "lobbies",   label: "Lobbies",       icon: "🏛️", minRole: "STAFF" },
+  { id: "broadcast", label: "Broadcast",     icon: "📢", minRole: "STAFF" },
+  { id: "audit",     label: "Audit Log",     icon: "📋", minRole: "STAFF" },
+  { id: "files",     label: "Files",         icon: "🗂️", minRole: "GOD" },
+  { id: "config",    label: "Config",        icon: "⚙️", minRole: "GOD" },
 ] as const;
 
 type NavId = typeof NAV_ITEMS[number]["id"];
@@ -606,6 +607,126 @@ function AuditTab() {
   );
 }
 
+// ── Broadcast tab ─────────────────────────────────────────────────────────────
+
+function BroadcastTab() {
+  const [message, setMessage] = useState("");
+  const [level, setLevel]     = useState<"info" | "warning" | "urgent">("info");
+  const [sending, setSending] = useState(false);
+  const [result, setResult]   = useState("");
+  const [history, setHistory] = useState<Array<{ message: string; level: string; sent: number; ts: string }>>([]);
+
+  async function send() {
+    if (!message.trim()) return;
+    if (!confirm(`Broadcast "${message.trim()}" as ${level.toUpperCase()} to all connected users?`)) return;
+    setSending(true); setResult("");
+    try {
+      const j = await apiFetch("/staff/broadcast", { method: "POST", body: JSON.stringify({ message: message.trim(), level }) });
+      if (j.ok) {
+        setResult(`Sent to ${j.sent} user${j.sent !== 1 ? "s" : ""}.`);
+        setHistory(prev => [{ message: message.trim(), level, sent: j.sent, ts: new Date().toLocaleString() }, ...prev].slice(0, 10));
+        setMessage("");
+      } else {
+        setResult(j.error || "Failed.");
+      }
+    } catch { setResult("Request failed."); }
+    finally { setSending(false); }
+  }
+
+  const levelStyles: Record<string, { bg: string; border: string; color: string; label: string }> = {
+    info:    { bg: "rgba(88,0,229,.12)", border: "rgba(88,0,229,.35)", color: "rgb(216,180,254)", label: "📢 Info" },
+    warning: { bg: "rgba(245,158,11,.10)", border: "rgba(245,158,11,.35)", color: "rgb(253,230,138)", label: "⚠️ Warning" },
+    urgent:  { bg: "rgba(239,68,68,.10)", border: "rgba(239,68,68,.35)", color: "rgb(252,165,165)", label: "🚨 Urgent" },
+  };
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ ...S.card, marginBottom: 16 }}>
+        <div style={S.sectionTitle}>Send System Broadcast</div>
+        <div style={{ fontSize: 11, opacity: 0.45, marginBottom: 12 }}>
+          Sends a persistent alert bar to all connected users. They must manually dismiss it.
+        </div>
+
+        {/* Message */}
+        <textarea
+          style={{ ...S.input, resize: "vertical", minHeight: 70, marginBottom: 10 }}
+          placeholder="Broadcast message…"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          maxLength={500}
+        />
+        <div style={{ fontSize: 10, opacity: 0.3, textAlign: "right", marginBottom: 10 }}>{message.length}/500</div>
+
+        {/* Level selector */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+          {(["info", "warning", "urgent"] as const).map(l => {
+            const ls = levelStyles[l];
+            const active = level === l;
+            return (
+              <button key={l} onClick={() => setLevel(l)} style={{
+                flex: 1, padding: "10px", borderRadius: 9, textAlign: "center",
+                border: `1px solid ${active ? ls.border : "rgba(255,255,255,.08)"}`,
+                background: active ? ls.bg : "rgba(255,255,255,.02)",
+                color: active ? ls.color : "rgba(243,244,246,.5)",
+                fontSize: 12, fontWeight: active ? 700 : 400, cursor: "pointer",
+                transition: "all .12s",
+              }}>
+                {ls.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Preview */}
+        {message.trim() && (
+          <div style={{
+            marginBottom: 14, padding: "10px 14px", borderRadius: 9,
+            background: levelStyles[level].bg,
+            border: `1px solid ${levelStyles[level].border}`,
+            color: levelStyles[level].color,
+            fontSize: 13, fontWeight: 600,
+          }}>
+            <span style={{ marginRight: 8 }}>{level === "info" ? "📢" : level === "warning" ? "⚠️" : "🚨"}</span>
+            {message.trim()}
+          </div>
+        )}
+
+        {/* Send */}
+        <button
+          onClick={send}
+          disabled={sending || !message.trim()}
+          style={{
+            ...S.btnPri, width: "100%", padding: "10px", fontSize: 13,
+            opacity: sending || !message.trim() ? 0.5 : 1,
+          }}
+        >
+          {sending ? "Sending…" : "Send Broadcast"}
+        </button>
+
+        {result && <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>{result}</div>}
+      </div>
+
+      {/* Recent broadcasts */}
+      {history.length > 0 && (
+        <div style={S.card}>
+          <div style={S.sectionTitle}>Recent Broadcasts (this session)</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {history.map((h, i) => {
+              const ls = levelStyles[h.level] || levelStyles.info;
+              return (
+                <div key={i} style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)" }}>
+                  <div style={{ fontSize: 12, color: ls.color }}>{h.message}</div>
+                  <div style={{ fontSize: 10, opacity: 0.4, marginTop: 3 }}>{h.level.toUpperCase()} · {h.sent} users · {h.ts}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Files tab ─────────────────────────────────────────────────────────────────
 
 function FilesTab() {
@@ -783,8 +904,9 @@ export default function StaffPage() {
             {nav === "subs"    && <SubsTab />}
             {nav === "rooms"   && <RoomsTab myRole={myRole} />}
             {nav === "lobbies" && <LobbiesTab myRole={myRole} />}
-            {nav === "audit"   && <AuditTab />}
-            {nav === "files"   && <FilesTab />}
+            {nav === "audit"     && <AuditTab />}
+            {nav === "broadcast" && <BroadcastTab />}
+            {nav === "files"     && <FilesTab />}
             {nav === "config"  && <ConfigTab />}
           </div>
         </div>
