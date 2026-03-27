@@ -28,7 +28,7 @@ enum GlobalRole {
 }
 
 enum ModuleType {
-  REDDIT
+  FEED
   MARATHON
   BUNGIE
   TWITCH
@@ -43,7 +43,7 @@ model Lobby {
   description String     @default("")
   verified    Boolean    @default(false)
   pinned      Boolean    @default(false)
-  moduleType  ModuleType @default(REDDIT)
+  moduleType  ModuleType @default(FEED)
   moduleConfig Json?
 
   // Search keywords ΓÇö e.g. ["destiny", "destiny2", "bungie", "guardian"]
