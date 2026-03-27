@@ -9,12 +9,12 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 type GlobalRole = "USER" | "SUPPORT" | "STAFF" | "ADMIN" | "GOD";
 type UserTier   = "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
-type StaffUser  = { id: string; name: string; usernameKey: string; globalRole: GlobalRole; tier: UserTier; notoriety: number; createdAt: string; email?: string; banned?: boolean; banReason?: string };
+type StaffUser  = { id: string; name: string; usernameKey: string; globalRole: GlobalRole; tier: UserTier; notoriety: number; createdAt: string; email?: string };
 type AuditLog   = { id: string; actorName: string; action: string; targetName?: string; meta?: any; createdAt: string };
 type StaffNote  = { id: string; authorName: string; body: string; createdAt: string };
 type StaffRoom  = { id: string; name: string; locked: boolean; members: number; lobbyId?: string; createdAt: string };
 type StaffLobby = { id: string; name: string; description?: string; verified: boolean; pinned: boolean; moduleType: string; onlineCount: number };
-type SiteConfig = { featuredLobbyId: string; registrationOpen: boolean; maintenanceMode: boolean; defaultTier: UserTier; maxRoomsPerLobby: number; chatRateLimit: number };
+type SiteConfig = { registrationOpen: boolean; maintenanceMode: boolean; defaultTier: UserTier; maxRoomsPerLobby: number; chatRateLimit: number };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,10 +47,6 @@ function TierBadge({ tier }: { tier: string }) {
   return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.color, fontWeight: 700, letterSpacing: ".4px", flexShrink: 0 }}>{tier}</span>;
 }
 
-function BannedBadge() {
-  return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: "rgba(239,68,68,.15)", border: "1px solid rgba(239,68,68,.40)", color: "rgb(252,165,165)", fontWeight: 700, letterSpacing: ".4px", flexShrink: 0 }}>BANNED</span>;
-}
-
 function authHeaders() {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
@@ -68,8 +64,6 @@ const S = {
   btn:     { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
   btnPri:  { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", fontSize: 12, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
   danger:  { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.30)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
-  warn:    { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.08)", fontSize: 12, cursor: "pointer", color: "rgb(253,230,138)" } as React.CSSProperties,
-  success: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(16,185,129,.30)", background: "rgba(16,185,129,.08)", fontSize: 12, cursor: "pointer", color: "rgb(110,231,183)" } as React.CSSProperties,
   input:   { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
   label:   { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 },
   sectionTitle: { fontSize: 12, fontWeight: 700, opacity: 0.6, letterSpacing: ".5px", textTransform: "uppercase" as const, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.07)" },
@@ -123,7 +117,7 @@ function OpsPresence() {
   );
 }
 
-// ── Users tab (with global ban/unban) ────────────────────────────────────────
+// ── Users tab ─────────────────────────────────────────────────────────────────
 
 function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [q, setQ]               = useState("");
@@ -133,11 +127,9 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [notes, setNotes]       = useState<StaffNote[]>([]);
   const [newNote, setNewNote]   = useState("");
   const [msg, setMsg]           = useState("");
-  const [banReason, setBanReason] = useState("");
 
   const canEdit    = myRole !== "SUPPORT";
   const canGod     = myRole === "GOD";
-  const canBan     = myRole === "STAFF" || myRole === "ADMIN" || myRole === "GOD";
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -150,7 +142,7 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
   useEffect(() => { void search(); }, []);
 
   async function loadNotes(u: StaffUser) {
-    setSelected(u); setNotes([]); setBanReason("");
+    setSelected(u); setNotes([]);
     const j = await apiFetch(`/staff/users/${u.id}/notes`);
     setNotes(j.notes || []);
   }
@@ -174,27 +166,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
     setMsg(j.ok ? `Kicked ${name}` : j.error || "Failed.");
   }
 
-  async function banUser(userId: string, name: string) {
-    if (!confirm(`Globally BAN ${name}? This will block them from the entire platform.`)) return;
-    const j = await apiFetch(`/staff/users/${userId}/ban`, { method: "POST", body: JSON.stringify({ reason: banReason.trim() }) });
-    if (j.ok) {
-      setMsg(`Banned ${name}`);
-      setBanReason("");
-      search();
-      if (selected?.id === userId) setSelected(s => s ? { ...s, banned: true, banReason: banReason.trim() } : s);
-    } else setMsg(j.error || "Failed.");
-  }
-
-  async function unbanUser(userId: string, name: string) {
-    if (!confirm(`Unban ${name}?`)) return;
-    const j = await apiFetch(`/staff/users/${userId}/ban`, { method: "DELETE" });
-    if (j.ok) {
-      setMsg(`Unbanned ${name}`);
-      search();
-      if (selected?.id === userId) setSelected(s => s ? { ...s, banned: false, banReason: undefined } : s);
-    } else setMsg(j.error || "Failed.");
-  }
-
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start", height: "100%" }}>
       {/* Left: list */}
@@ -210,10 +181,7 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
               style={{ ...(selected?.id === u.id ? S.cardHov : S.card), cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-                    {u.name || u.usernameKey}
-                    {u.banned && <BannedBadge />}
-                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name || u.usernameKey}</div>
                   <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>@{u.usernameKey} · {fmtDate(u.createdAt)}</div>
                 </div>
                 <RoleBadge role={u.globalRole} />
@@ -235,10 +203,7 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
                 {(selected.name || selected.usernameKey).slice(0, 1).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-                  {selected.name || selected.usernameKey}
-                  {selected.banned && <BannedBadge />}
-                </div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>{selected.name || selected.usernameKey}</div>
                 <div style={{ fontSize: 11, opacity: 0.5 }}>@{selected.usernameKey}</div>
                 {selected.email && <div style={{ fontSize: 11, opacity: 0.45, marginTop: 2 }}>{selected.email}</div>}
               </div>
@@ -248,11 +213,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
             </div>
             <div style={{ fontSize: 11, opacity: 0.4 }}>ID: <span style={{ fontFamily: "monospace" }}>{selected.id}</span></div>
             <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>Joined: {fmtDate(selected.createdAt)}</div>
-            {selected.banned && selected.banReason && (
-              <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginTop: 6, padding: "6px 10px", borderRadius: 6, background: "rgba(239,68,68,.06)", border: "1px solid rgba(239,68,68,.15)" }}>
-                Ban reason: {selected.banReason}
-              </div>
-            )}
           </div>
 
           {/* Role actions */}
@@ -267,38 +227,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
                 <button style={S.danger} onClick={() => kickUser(selected.id, selected.name)}>Global Kick</button>
               </div>
               {msg && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>{msg}</div>}
-            </div>
-          )}
-
-          {/* Global Ban */}
-          {canBan && (
-            <div style={S.card}>
-              <div style={S.sectionTitle}>Global Ban</div>
-              {selected.banned ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontSize: 12, color: "rgba(252,165,165,.80)" }}>
-                    This user is currently banned from the platform.
-                  </div>
-                  <button style={S.success} onClick={() => unbanUser(selected.id, selected.name)}>Unban User</button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input
-                    style={S.input}
-                    placeholder="Ban reason (optional)…"
-                    value={banReason}
-                    onChange={e => setBanReason(e.target.value)}
-                  />
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button style={S.danger} onClick={() => banUser(selected.id, selected.name)}>
-                      Ban from Platform
-                    </button>
-                  </div>
-                  <div style={{ fontSize: 10, opacity: 0.35 }}>
-                    Banning disconnects the user from all rooms and prevents login.
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -455,40 +383,23 @@ function RoomsTab({ myRole }: { myRole: GlobalRole }) {
   );
 }
 
-// ── Lobbies tab (with Set Featured) ──────────────────────────────────────────
+// ── Lobbies tab ───────────────────────────────────────────────────────────────
 
 function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
-  const [lobbies, setLobbies]         = useState<StaffLobby[]>([]);
-  const [loading, setLoading]         = useState(false);
-  const [msg, setMsg]                 = useState("");
-  const [featuredId, setFeaturedId]   = useState("");
+  const [lobbies, setLobbies] = useState<StaffLobby[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg]         = useState("");
   const canEdit = myRole === "STAFF" || myRole === "ADMIN" || myRole === "GOD";
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      apiFetch("/staff/lobbies"),
-      apiFetch("/staff/featured"),
-    ]).then(([lobbyData, featData]) => {
-      setLobbies(lobbyData.lobbies || []);
-      setFeaturedId(featData.featuredLobbyId || "");
-      setLoading(false);
-    });
+    apiFetch("/staff/lobbies").then(j => { setLobbies(j.lobbies || []); setLoading(false); });
   }, []);
 
   async function togglePin(id: string, pinned: boolean) {
     const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(id)}/pin`, { method: "POST", body: JSON.stringify({ pinned: !pinned }) });
     if (j.ok) { setMsg(`${!pinned ? "Pinned" : "Unpinned"} ${id}`); setLobbies(prev => prev.map(l => l.id === id ? { ...l, pinned: !pinned } : l)); }
     else setMsg(j.error || "Failed.");
-  }
-
-  async function setFeatured(id: string) {
-    const clearing = featuredId === id;
-    const j = await apiFetch("/staff/featured", { method: "POST", body: JSON.stringify({ lobbyId: clearing ? "" : id }) });
-    if (j.ok) {
-      setFeaturedId(clearing ? "" : id);
-      setMsg(clearing ? "Featured cleared" : `Featured → ${id}`);
-    } else setMsg(j.error || "Failed.");
   }
 
   async function lockLobby(id: string) {
@@ -510,52 +421,35 @@ function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 13, opacity: 0.6 }}>{lobbies.length} lobbies</div>
-          {featuredId && (
-            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>
-              Featured: {featuredId}
-            </span>
-          )}
-        </div>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>{lobbies.length} lobbies</div>
         {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
       </div>
       {loading && <div style={{ opacity: 0.4 }}>Loading…</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {lobbies.map(l => {
-          const isFeatured = featuredId === l.id;
-          return (
-            <div key={l.id} style={{ ...S.card, borderColor: isFeatured ? "rgba(245,158,11,.35)" : undefined, background: isFeatured ? "rgba(245,158,11,.04)" : undefined }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: canEdit ? 8 : 0 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
-                    {l.name || l.id}
-                    {l.pinned && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", color: "rgba(216,180,254,.80)", background: "rgba(124,58,237,.08)" }}>PINNED</span>}
-                    {l.verified && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(16,185,129,.30)", color: "rgba(110,231,183,.80)", background: "rgba(16,185,129,.08)" }}>VERIFIED</span>}
-                    {isFeatured && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(245,158,11,.40)", color: "rgb(253,230,138)", background: "rgba(245,158,11,.12)", fontWeight: 800 }}>★ FEATURED</span>}
-                  </div>
-                  <div style={{ fontSize: 11, opacity: 0.4, marginTop: 1, fontFamily: "monospace" }}>{l.id} · {l.moduleType} · {l.onlineCount} online</div>
+        {lobbies.map(l => (
+          <div key={l.id} style={S.card}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: canEdit ? 8 : 0 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                  {l.name || l.id}
+                  {l.pinned && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(124,58,237,.30)", color: "rgba(216,180,254,.80)", background: "rgba(124,58,237,.08)" }}>PINNED</span>}
+                  {l.verified && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, border: "1px solid rgba(16,185,129,.30)", color: "rgba(110,231,183,.80)", background: "rgba(16,185,129,.08)" }}>VERIFIED</span>}
                 </div>
+                <div style={{ fontSize: 11, opacity: 0.4, marginTop: 1, fontFamily: "monospace" }}>{l.id} · {l.moduleType} · {l.onlineCount} online</div>
               </div>
-              {canEdit && (
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                  <button
-                    style={isFeatured ? { ...S.warn, fontSize: 11, padding: "4px 8px", fontWeight: 800 } : { ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(245,158,11,.25)", color: "rgb(253,230,138)" }}
-                    onClick={() => setFeatured(l.id)}
-                  >
-                    {isFeatured ? "★ Unfeature" : "☆ Set Featured"}
-                  </button>
-                  <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }} onClick={() => togglePin(l.id, l.pinned)}>
-                    {l.pinned ? "Unpin" : "Pin"}
-                  </button>
-                  <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(245,158,11,.25)", color: "rgb(253,230,138)" }} onClick={() => lockLobby(l.id)}>Lock Chat</button>
-                  <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(16,185,129,.25)", color: "rgb(110,231,183)" }} onClick={() => unlockLobby(l.id)}>Unlock Chat</button>
-                  <button style={{ ...S.danger, fontSize: 11, padding: "4px 8px" }} onClick={() => clearChat(l.id)}>Clear Chat</button>
-                </div>
-              )}
             </div>
-          );
-        })}
+            {canEdit && (
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }} onClick={() => togglePin(l.id, l.pinned)}>
+                  {l.pinned ? "Unpin" : "Pin"}
+                </button>
+                <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(245,158,11,.25)", color: "rgb(253,230,138)" }} onClick={() => lockLobby(l.id)}>Lock Chat</button>
+                <button style={{ ...S.btn, fontSize: 11, padding: "4px 8px", borderColor: "rgba(16,185,129,.25)", color: "rgb(110,231,183)" }} onClick={() => unlockLobby(l.id)}>Unlock Chat</button>
+                <button style={{ ...S.danger, fontSize: 11, padding: "4px 8px" }} onClick={() => clearChat(l.id)}>Clear Chat</button>
+              </div>
+            )}
+          </div>
+        ))}
         {!lobbies.length && !loading && <div style={{ opacity: 0.4, fontSize: 13 }}>No lobbies found.</div>}
       </div>
     </div>
@@ -580,7 +474,6 @@ function AuditTab() {
     if (a.includes("note"))  return "rgba(14,165,233,.85)";
     if (a.includes("lock"))  return "rgba(245,158,11,.85)";
     if (a.includes("clear")) return "rgba(239,68,68,.65)";
-    if (a.includes("featured") || a.includes("config")) return "rgba(16,185,129,.85)";
     return "rgba(148,163,184,.75)";
   };
 
@@ -620,24 +513,16 @@ function FilesTab() {
   );
 }
 
-// ── Config tab (wired to real SiteConfig endpoints) ──────────────────────────
+// ── Config tab ────────────────────────────────────────────────────────────────
 
 function ConfigTab() {
   const [config, setConfig]   = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState("");
-  const [lobbies, setLobbies] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch("/staff/config"),
-      apiFetch("/staff/lobbies"),
-    ]).then(([configData, lobbyData]) => {
-      if (configData.ok) setConfig(configData.config);
-      setLobbies((lobbyData.lobbies || []).map((l: any) => ({ id: l.id, name: l.name })));
-      setLoading(false);
-    });
+    apiFetch("/staff/config").then(j => { if (j.ok) setConfig(j.config); setLoading(false); });
   }, []);
 
   async function save() {
@@ -669,18 +554,6 @@ function ConfigTab() {
 
   return (
     <div style={{ maxWidth: 560 }}>
-      <Row label="Featured Hero Lobby">
-        <select
-          value={config.featuredLobbyId || ""}
-          onChange={e => setConfig(c => c ? { ...c, featuredLobbyId: e.target.value } : c)}
-          style={{ ...S.input, width: 200, cursor: "pointer" }}
-        >
-          <option value="">None (auto-fallback)</option>
-          {lobbies.map(l => (
-            <option key={l.id} value={l.id}>{l.name || l.id}</option>
-          ))}
-        </select>
-      </Row>
       <Row label="Registration Open"><Toggle on={config.registrationOpen} onClick={() => toggle("registrationOpen")} /></Row>
       <Row label="Maintenance Mode"><Toggle on={config.maintenanceMode} onClick={() => toggle("maintenanceMode")} /></Row>
       <Row label="Chat Rate Limit (msg/min)">
