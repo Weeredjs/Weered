@@ -32,8 +32,6 @@ function YouTubeIcon({ size = 15, color = "#FF0000" }: { size?: number; color?: 
   );
 }
 
-// ── Accent per module ────────────────────────────────────────────────────────
-
 function getAccent(id: string): string {
   switch (id) {
     case "twitch":  return "#9146FF";
@@ -46,7 +44,7 @@ function getAccent(id: string): string {
 
 // ── Avatar stack ─────────────────────────────────────────────────────────────
 
-function AvatarStack({ users, max = 5 }: { users: any[]; max?: number }) {
+function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
   const shown = users.slice(0, max);
   const overflow = users.length - max;
   return (
@@ -60,9 +58,9 @@ function AvatarStack({ users, max = 5 }: { users: any[]; max?: number }) {
             key={u?.id || i}
             title={name}
             style={{
-              width: 22, height: 22, borderRadius: "50%",
+              width: 24, height: 24, borderRadius: "50%",
               border: "2px solid rgba(10,10,18,0.95)",
-              marginLeft: i > 0 ? -6 : 0,
+              marginLeft: i > 0 ? -7 : 0,
               background: bg,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 9, fontWeight: 800, color: "#fff",
@@ -78,9 +76,9 @@ function AvatarStack({ users, max = 5 }: { users: any[]; max?: number }) {
       })}
       {overflow > 0 && (
         <div style={{
-          width: 22, height: 22, borderRadius: "50%",
+          width: 24, height: 24, borderRadius: "50%",
           border: "2px solid rgba(10,10,18,0.95)",
-          marginLeft: -6, zIndex: 0,
+          marginLeft: -7, zIndex: 0,
           background: "rgba(255,255,255,.06)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.4)",
@@ -106,6 +104,7 @@ export default function RoomHeader({
   lobbyLogo,
   onPillClick,
   onDetailsClick,
+  onLeave,
   showDetails,
 }: {
   title: string;
@@ -118,16 +117,19 @@ export default function RoomHeader({
   lobbyLogo?: string | null;
   onPillClick?: (id: string) => void;
   onDetailsClick?: () => void;
+  onLeave?: () => void;
   showDetails?: boolean;
 }) {
   const activeModule = pills?.find(p => p.active);
   const activeAccent = activeModule ? getAccent(activeModule.id) : "#5800E5";
   const userArr = Array.isArray(users) ? users : [];
+  const count = memberCount ?? userArr.length;
 
   return (
     <div style={{
       flexShrink: 0, position: "relative", overflow: "hidden",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
+      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      background: "rgba(10,10,18,0.6)",
     }}>
       {/* ── Ambient layers ── */}
 
@@ -137,9 +139,9 @@ export default function RoomHeader({
           position: "absolute", inset: 0, zIndex: 0,
           backgroundImage: `url(${thumbnail})`,
           backgroundSize: "cover", backgroundPosition: "center",
-          opacity: 0.1,
-          filter: "blur(16px) saturate(1.6)",
-          transform: "scale(1.15)",
+          opacity: 0.08,
+          filter: "blur(20px) saturate(1.8)",
+          transform: "scale(1.2)",
           pointerEvents: "none",
         }} />
       )}
@@ -147,226 +149,244 @@ export default function RoomHeader({
       {/* Gradient base */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
-        background: activeModule
-          ? `linear-gradient(135deg, ${activeAccent}08 0%, rgba(10,10,18,0) 50%, ${activeAccent}04 100%)`
-          : "linear-gradient(135deg, rgba(88,0,229,0.04) 0%, rgba(10,10,18,0) 60%)",
+        background: "linear-gradient(180deg, rgba(10,10,18,0.3) 0%, rgba(10,10,18,0.7) 100%)",
       }} />
 
-      {/* Soft glow — follows active module accent */}
+      {/* Accent wash */}
       <div style={{
-        position: "absolute", top: -20, left: 40, width: 120, height: 80,
-        borderRadius: "50%",
-        background: `radial-gradient(circle, ${activeAccent}10 0%, transparent 70%)`,
-        pointerEvents: "none", zIndex: 0,
+        position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
+        background: activeModule
+          ? `linear-gradient(135deg, ${activeAccent}06 0%, transparent 40%, ${activeAccent}03 100%)`
+          : "linear-gradient(135deg, rgba(88,0,229,0.03) 0%, transparent 60%)",
+      }} />
+
+      {/* Noise texture */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
+        opacity: 0.015,
+        backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
+        backgroundSize: "16px 16px",
       }} />
 
       {/* Bottom edge glow */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0, height: 1,
-        background: `linear-gradient(90deg, transparent 5%, ${activeAccent}30 30%, ${activeAccent}18 70%, transparent 95%)`,
-        zIndex: 2,
+        background: `linear-gradient(90deg, transparent 2%, ${activeAccent}35 25%, ${activeAccent}20 75%, transparent 98%)`,
+        zIndex: 3,
       }} />
 
-      {/* ── Row 1: Identity + Status ── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 16px 0",
-        position: "relative", zIndex: 1,
-      }}>
-        {/* Lobby logo */}
-        {lobbyLogo && (
-          <img src={lobbyLogo} alt="" style={{
-            width: 20, height: 20, borderRadius: 5,
-            objectFit: "contain", background: "rgba(0,0,0,.3)",
-            flexShrink: 0,
-          }} />
-        )}
+      {/* ── Content ── */}
+      <div style={{ position: "relative", zIndex: 1, padding: "10px 16px 8px" }}>
 
-        {/* Room name + lobby context */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{
-            fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px",
-            color: "rgba(243,244,246,0.95)",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            margin: 0, lineHeight: 1.2,
-          }}>
-            {title}
-          </h1>
-          {lobbyName && (
-            <div style={{
-              fontSize: 10, color: "rgba(148,163,184,0.4)",
-              marginTop: 1, fontWeight: 500,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>
-              {lobbyName}
-            </div>
-          )}
-        </div>
+        {/* ── Row 1: Identity bar ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
 
-        {/* Status badges */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          {locked && (
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
-              padding: "3px 8px", borderRadius: 6,
-              border: "1px solid rgba(251,191,36,0.15)",
-              background: "rgba(251,191,36,0.06)",
-              color: "rgba(252,211,77,0.55)",
-            }}>
-              🔒
-            </span>
-          )}
-
-          {/* Avatar stack + count */}
-          {userArr.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <AvatarStack users={userArr} max={4} />
-              <span style={{
-                fontSize: 10, fontWeight: 700, color: "rgba(134,239,172,0.7)",
-                fontFamily: "monospace",
+          {/* Lobby logo + room identity */}
+          <div style={{ display: "flex", alignItems: "center", gap: 9, flex: 1, minWidth: 0 }}>
+            {lobbyLogo ? (
+              <div style={{
+                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                background: "rgba(0,0,0,.4)",
+                border: "1px solid rgba(255,255,255,.06)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden",
               }}>
-                {memberCount ?? userArr.length}
-              </span>
-            </div>
-          )}
-          {userArr.length === 0 && typeof memberCount === "number" && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 5,
-              fontSize: 10, color: "rgba(255,255,255,0.35)",
-            }}>
-              <span style={{
-                width: 5, height: 5, borderRadius: "50%",
-                background: "#4ade80",
-                boxShadow: "0 0 6px rgba(74,222,128,0.5)",
-              }} />
-              {memberCount}
-            </div>
-          )}
-
-          {/* Dock button */}
-          <button
-            type="button"
-            onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
-            style={{
-              fontSize: 10, fontWeight: 700,
-              padding: "4px 10px", borderRadius: 6,
-              border: "1px solid rgba(255,255,255,0.07)",
-              background: "rgba(255,255,255,0.03)",
-              color: "rgba(255,255,255,0.35)",
-              cursor: "pointer", transition: "all 0.15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
-          >
-            Dock
-          </button>
-        </div>
-      </div>
-
-      {/* ── Row 2: Module pills ── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 5,
-        padding: "6px 16px 8px",
-        position: "relative", zIndex: 1,
-        overflowX: "auto", scrollbarWidth: "none",
-      }}>
-        {pills && pills.map((m) => {
-          const isTwitch = m.icon === "__twitch__";
-          const isYT     = m.icon === "__youtube__";
-          const accent   = getAccent(m.id);
-
-          return (
-            <button
-              key={m.id}
-              type="button"
-              disabled={!m.live}
-              onClick={() => m.live && onPillClick?.(m.id)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                padding: "4px 10px", borderRadius: 6,
-                fontSize: 10, fontWeight: 700, letterSpacing: "0.03em",
-                cursor: m.live ? "pointer" : "default",
-                transition: "all 0.15s ease",
-                whiteSpace: "nowrap", flexShrink: 0,
-                border: m.active
-                  ? `1px solid ${accent}66`
-                  : m.live
-                    ? "1px solid rgba(255,255,255,0.06)"
-                    : "1px solid rgba(255,255,255,0.03)",
-                background: m.active
-                  ? `${accent}18`
-                  : "transparent",
-                color: m.active
-                  ? "#fff"
-                  : m.live
-                    ? "rgba(226,232,240,0.5)"
-                    : "rgba(255,255,255,0.15)",
-                boxShadow: m.active ? `0 0 12px ${accent}25` : "none",
-              }}
-              onMouseEnter={e => {
-                if (!m.live || m.active) return;
-                e.currentTarget.style.background = `${accent}0c`;
-                e.currentTarget.style.borderColor = `${accent}30`;
-                e.currentTarget.style.color = "rgba(226,232,240,0.8)";
-              }}
-              onMouseLeave={e => {
-                if (!m.live || m.active) return;
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
-                e.currentTarget.style.color = "rgba(226,232,240,0.5)";
-              }}
-            >
-              {isTwitch ? (
-                <TwitchIcon size={11} color={m.active ? "#9146FF" : m.live ? "rgba(145,70,255,0.6)" : "rgba(255,255,255,0.15)"} />
-              ) : isYT ? (
-                <YouTubeIcon size={12} color={m.active ? "#FF0000" : m.live ? "rgba(255,0,0,0.5)" : "rgba(255,255,255,0.15)"} />
-              ) : (
-                <span style={{ fontSize: 10, lineHeight: 1 }}>{m.icon}</span>
+                <img src={lobbyLogo} alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
+              </div>
+            ) : (
+              <div style={{
+                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                background: `${activeAccent}12`,
+                border: `1px solid ${activeAccent}18`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 900, color: activeAccent,
+              }}>
+                {title.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <h1 style={{
+                  fontSize: 15, fontWeight: 900, letterSpacing: "-0.4px",
+                  color: "rgba(243,244,246,0.97)",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  margin: 0, lineHeight: 1.2,
+                }}>
+                  {title}
+                </h1>
+                {locked && (
+                  <span style={{ fontSize: 10, opacity: 0.4, flexShrink: 0 }}>🔒</span>
+                )}
+              </div>
+              {lobbyName && (
+                <div style={{
+                  fontSize: 10, color: "rgba(148,163,184,0.35)",
+                  marginTop: 1, fontWeight: 500,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {lobbyName}
+                </div>
               )}
-              {m.label}
-              {m.active && (
+            </div>
+          </div>
+
+          {/* Right cluster */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+
+            {/* People block */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "4px 10px 4px 5px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,.02)",
+              border: "1px solid rgba(255,255,255,.05)",
+            }}>
+              {userArr.length > 0 ? (
+                <AvatarStack users={userArr} max={4} />
+              ) : (
                 <span style={{
-                  width: 4, height: 4, borderRadius: "50%",
-                  background: accent,
-                  boxShadow: `0 0 6px ${accent}`,
-                  marginLeft: 2,
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: count > 0 ? "#4ade80" : "rgba(255,255,255,.12)",
+                  boxShadow: count > 0 ? "0 0 6px rgba(74,222,128,0.5)" : "none",
                 }} />
               )}
-              {!m.live && !m.active && (
-                <span style={{
-                  fontSize: 7, fontWeight: 700, letterSpacing: "0.06em",
-                  padding: "1px 4px", borderRadius: 3,
-                  background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.18)",
-                  textTransform: "uppercase",
-                }}>SOON</span>
-              )}
-            </button>
-          );
-        })}
+              <span style={{
+                fontSize: 11, fontWeight: 700,
+                color: count > 0 ? "rgba(134,239,172,0.8)" : "rgba(255,255,255,.25)",
+                fontFamily: "monospace",
+              }}>
+                {count}
+              </span>
+            </div>
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
+            {/* Details toggle */}
+            {onDetailsClick && (
+              <button
+                type="button"
+                onClick={onDetailsClick}
+                title={showDetails ? "Close details" : "Room details"}
+                style={{
+                  width: 28, height: 28, borderRadius: 7,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+                  border: showDetails ? "1px solid rgba(255,255,255,.15)" : "1px solid rgba(255,255,255,.06)",
+                  background: showDetails ? "rgba(255,255,255,.07)" : "rgba(255,255,255,.02)",
+                  color: showDetails ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.22)",
+                }}
+                onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.background = "rgba(255,255,255,.05)"; e.currentTarget.style.color = "rgba(255,255,255,.45)"; } }}
+                onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.background = "rgba(255,255,255,.02)"; e.currentTarget.style.color = "rgba(255,255,255,.22)"; } }}
+              >
+                {showDetails ? "✕" : "⋯"}
+              </button>
+            )}
 
-        {/* Details toggle */}
-        {onDetailsClick && (
-          <button
-            type="button"
-            onClick={onDetailsClick}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 3,
-              padding: "4px 10px", borderRadius: 6,
-              fontSize: 10, fontWeight: 700,
-              cursor: "pointer", transition: "all 0.15s ease",
-              flexShrink: 0,
-              border: showDetails ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(255,255,255,0.05)",
-              background: showDetails ? "rgba(255,255,255,0.06)" : "transparent",
-              color: showDetails ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)",
-            }}
-            onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}}
-            onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.2)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}}
-          >
-            {showDetails ? "✕" : "⋯"}
-          </button>
+            {/* Leave button */}
+            {onLeave && (
+              <button
+                type="button"
+                onClick={onLeave}
+                title="Leave room"
+                style={{
+                  height: 28, borderRadius: 7,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  gap: 4, padding: "0 10px",
+                  fontSize: 10, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                  border: "1px solid rgba(239,68,68,.12)",
+                  background: "rgba(239,68,68,.05)",
+                  color: "rgba(252,165,165,.45)",
+                  letterSpacing: "0.03em",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,.12)"; e.currentTarget.style.color = "rgba(252,165,165,.85)"; e.currentTarget.style.borderColor = "rgba(239,68,68,.28)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,.05)"; e.currentTarget.style.color = "rgba(252,165,165,.45)"; e.currentTarget.style.borderColor = "rgba(239,68,68,.12)"; }}
+              >
+                Leave
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Row 2: Module controls ── */}
+        {pills && pills.length > 0 && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 4,
+            overflowX: "auto", scrollbarWidth: "none",
+            padding: "2px 0 2px",
+          }}>
+            {pills.map((m) => {
+              const isTwitch = m.icon === "__twitch__";
+              const isYT     = m.icon === "__youtube__";
+              const accent   = getAccent(m.id);
+
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  disabled={!m.live}
+                  onClick={() => m.live && onPillClick?.(m.id)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "5px 12px", borderRadius: 7,
+                    fontSize: 11, fontWeight: 700, letterSpacing: "0.02em",
+                    cursor: m.live ? "pointer" : "default",
+                    transition: "all 0.15s ease",
+                    whiteSpace: "nowrap", flexShrink: 0,
+                    border: m.active
+                      ? `1px solid ${accent}55`
+                      : m.live
+                        ? "1px solid rgba(255,255,255,0.06)"
+                        : "1px solid rgba(255,255,255,0.03)",
+                    background: m.active
+                      ? `${accent}15`
+                      : m.live
+                        ? "rgba(255,255,255,0.02)"
+                        : "transparent",
+                    color: m.active
+                      ? "rgba(255,255,255,.92)"
+                      : m.live
+                        ? "rgba(226,232,240,0.5)"
+                        : "rgba(255,255,255,0.14)",
+                    boxShadow: m.active ? `0 0 16px ${accent}20, inset 0 0 12px ${accent}08` : "none",
+                  }}
+                  onMouseEnter={e => {
+                    if (!m.live || m.active) return;
+                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                    e.currentTarget.style.borderColor = `${accent}25`;
+                    e.currentTarget.style.color = "rgba(226,232,240,0.8)";
+                  }}
+                  onMouseLeave={e => {
+                    if (!m.live || m.active) return;
+                    e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+                    e.currentTarget.style.color = "rgba(226,232,240,0.5)";
+                  }}
+                >
+                  {isTwitch ? (
+                    <TwitchIcon size={12} color={m.active ? "#9146FF" : m.live ? "rgba(145,70,255,0.55)" : "rgba(255,255,255,0.14)"} />
+                  ) : isYT ? (
+                    <YouTubeIcon size={13} color={m.active ? "#FF0000" : m.live ? "rgba(255,0,0,0.45)" : "rgba(255,255,255,0.14)"} />
+                  ) : (
+                    <span style={{ fontSize: 11, lineHeight: 1 }}>{m.icon}</span>
+                  )}
+                  {m.label}
+                  {m.active && (
+                    <span style={{
+                      width: 5, height: 5, borderRadius: "50%",
+                      background: accent,
+                      boxShadow: `0 0 8px ${accent}`,
+                    }} />
+                  )}
+                  {!m.live && !m.active && (
+                    <span style={{
+                      fontSize: 7, fontWeight: 700,
+                      padding: "1px 4px", borderRadius: 3,
+                      background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.16)",
+                      textTransform: "uppercase", letterSpacing: "0.05em",
+                    }}>SOON</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

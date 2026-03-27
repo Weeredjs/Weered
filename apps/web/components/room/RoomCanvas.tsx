@@ -410,6 +410,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         lobbyLogo={w?.meta?.lobbyLogo || null}
         onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
         onDetailsClick={() => setShowDetails(d => !d)}
+        onLeave={() => {
+          try { w?.leave?.(); } catch {}
+          const lobbyId = w?.meta?.lobbyId;
+          if (lobbyId) {
+            window.location.href = `/lobby/${encodeURIComponent(lobbyId)}`;
+          } else {
+            window.location.href = "/home";
+          }
+        }}
         showDetails={showDetails}
       />
 
