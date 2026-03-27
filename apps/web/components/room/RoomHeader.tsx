@@ -149,15 +149,25 @@ export default function RoomHeader({
       {/* Gradient base */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
-        background: "linear-gradient(180deg, rgba(10,10,18,0.3) 0%, rgba(10,10,18,0.7) 100%)",
+        background: "linear-gradient(180deg, rgba(10,10,18,0.2) 0%, rgba(10,10,18,0.65) 100%)",
       }} />
 
-      {/* Accent wash */}
+      {/* Accent wash — visible color tint from active module */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
         background: activeModule
-          ? `linear-gradient(135deg, ${activeAccent}06 0%, transparent 40%, ${activeAccent}03 100%)`
-          : "linear-gradient(135deg, rgba(88,0,229,0.03) 0%, transparent 60%)",
+          ? `linear-gradient(135deg, ${activeAccent}18 0%, ${activeAccent}08 35%, transparent 60%, ${activeAccent}06 100%)`
+          : "linear-gradient(135deg, rgba(88,0,229,0.06) 0%, transparent 60%)",
+        transition: "background 0.4s ease",
+      }} />
+
+      {/* Accent glow orb — top-left radial */}
+      <div style={{
+        position: "absolute", top: -15, left: 30, width: 160, height: 80,
+        borderRadius: "50%",
+        background: `radial-gradient(circle, ${activeAccent}20 0%, ${activeAccent}08 40%, transparent 70%)`,
+        pointerEvents: "none", zIndex: 0,
+        transition: "background 0.4s ease",
       }} />
 
       {/* Noise texture */}
@@ -168,11 +178,13 @@ export default function RoomHeader({
         backgroundSize: "16px 16px",
       }} />
 
-      {/* Bottom edge glow */}
+      {/* Bottom edge glow — thicker, more visible */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 1,
-        background: `linear-gradient(90deg, transparent 2%, ${activeAccent}35 25%, ${activeAccent}20 75%, transparent 98%)`,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 2,
+        background: `linear-gradient(90deg, transparent 2%, ${activeAccent}50 20%, ${activeAccent}35 50%, ${activeAccent}50 80%, transparent 98%)`,
         zIndex: 3,
+        transition: "background 0.4s ease",
+        boxShadow: `0 0 12px ${activeAccent}25, 0 0 4px ${activeAccent}15`,
       }} />
 
       {/* ── Content ── */}
