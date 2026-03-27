@@ -237,15 +237,15 @@ export default function LeftRail() {
   const [serverRecents, setServerRecents] = useState<any[]>([]);
   const recentsLoaded = useRef(false);
 
-  // Fetch recents from API on mount
+  // Fetch recents from API on mount + when user authenticates
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
-    if (!token) return;
+    if (!token || !me?.id) return;
     fetch(`${API_BASE}/recents`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(j => { if (Array.isArray(j?.recents)) { setServerRecents(j.recents); recentsLoaded.current = true; } })
       .catch(() => {});
-  }, []);
+  }, [me?.id]);
 
   // Record visits server-side when navigating
   useEffect(() => {
