@@ -25,6 +25,7 @@ type AuditItem = {
 
 type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[] };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
+type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
 type Ctx = {
   apiBase: string; wsUrl: string;
@@ -37,7 +38,9 @@ type Ctx = {
   msgsByRoom: Record<string, ChatMsg[]>;
   metaByRoom: Record<string, RoomMeta>;
   adminByRoom: Record<string, AdminState>;
+  moduleByRoom: Record<string, ModuleState>;
   meta: RoomMeta | null; admin: AdminState | null;
+  moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
   rooms: any[];
   join: (roomId: string) => void;
@@ -47,6 +50,7 @@ type Ctx = {
   logout: () => void;
   sendChat: (body: string) => void;
   renameRoom: (name: string) => void;
+  setModuleState: (mode: string | null, opts?: { url?: string; channel?: string }) => void;
   lockRoom: () => void; unlockRoom: () => void;
   promote: (userId: string) => void; demote: (userId: string) => void;
   kick: (userId: string) => void; ban: (userId: string) => void;
@@ -105,6 +109,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
   const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
+  const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
 
   // ── Derived ──
@@ -114,6 +119,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const users      = activeRoomId ? (usersByRoom[activeRoomId]  || [])      : [];
   const msgs       = activeRoomId ? (msgsByRoom[activeRoomId]   || [])      : [];
   const joinStatus = activeRoomId ? (statusByRoom[activeRoomId] || "idle")  : "idle";
+  const moduleState: ModuleState = activeRoomId ? (moduleByRoom[activeRoomId] ?? null) : null;
 
   const role: Role = useMemo(() => {
     if (!meta || !me?.id) return "none";
@@ -276,6 +282,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), thumbnail: msg.thumbnail || undefined, ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
+        // Extract active module state sent on join
+        if (msg.activeModule) {
+          setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule }));
+        }
         // Track lobby context from the server's lobbyId field
         if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
         // activeRoomId managed by path effect — no override needed here
@@ -430,6 +440,31 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         }));
         return;
       }
+
+      // ── Module state sync — another user changed the active module ──
+      if (msg.type === "module:state") {
+        const rid = String(msg.roomId || "");
+        if (!rid) return;
+        setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule ?? null }));
+        // Dispatch DOM event so RoomCanvas can react immediately
+        try { window.dispatchEvent(new CustomEvent("weered:module:state", { detail: { roomId: rid, activeModule: msg.activeModule ?? null } })); } catch {}
+        return;
+      }
+
+      // ── System broadcast from staff ──
+      if (msg.type === "system:broadcast") {
+        try { window.dispatchEvent(new CustomEvent("weered:system:broadcast", { detail: { message: msg.message, level: msg.level, from: msg.from, ts: msg.ts } })); } catch {}
+        return;
+      }
+
+      // ── Staff banned — kicked from platform ──
+      if (msg.type === "staff:banned") {
+        try { window.dispatchEvent(new CustomEvent("weered:staff:banned", { detail: { reason: msg.reason } })); } catch {}
+        setActiveRoomId("");
+        setJoinedRoomId("");
+        try { router.replace("/login?error=account_suspended"); } catch {}
+        return;
+      }
     };
 
     return () => { /* do not close — guards at effect top handle re-auth in-band */ };
@@ -512,7 +547,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     setToken(""); setMe(null);
     setUsersByRoom({}); setMsgsByRoom({});
     setMetaByRoom({}); setAdminByRoom({});
-    setStatusByRoom({});
+    setStatusByRoom({}); setModuleByRoom({});
     setActiveRoomId(""); setJoinedRoomId("");
     try { wsRef.current?.close(); } catch {}
     wsRef.current = null;
@@ -573,6 +608,20 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     ws.send(JSON.stringify({ type, roomId: rid, ...payload }));
   }
 
+  function setModuleState(mode: string | null, opts?: { url?: string; channel?: string }) {
+    const ws = wsRef.current;
+    const rid = activeRoomId || joinedRoomId;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !rid) return;
+    if (!mode) {
+      ws.send(JSON.stringify({ type: "module:clear", roomId: rid }));
+      setModuleByRoom(prev => ({ ...prev, [rid]: null }));
+    } else {
+      ws.send(JSON.stringify({ type: "module:set", roomId: rid, mode, url: opts?.url, channel: opts?.channel }));
+      // Optimistic local update
+      setModuleByRoom(prev => ({ ...prev, [rid]: { mode, url: opts?.url, channel: opts?.channel, setBy: me?.id, setAt: Date.now() } }));
+    }
+  }
+
 const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
   const lockRoom   = ()               => sendAdmin("room:lock");
   const unlockRoom = ()               => sendAdmin("room:unlock");
@@ -592,7 +641,8 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom, msgsByRoom, metaByRoom, adminByRoom,
+    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom,
+    moduleState, setModuleState,
     rooms, join, leave, knock,
     devLogin, logout,
     sendChat, renameRoom,

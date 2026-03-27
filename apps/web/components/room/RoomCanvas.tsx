@@ -83,6 +83,71 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const [voicePrompt, setVoicePrompt] = useState(true);
 
+  // Track whether we set the module ourselves (avoid echo-back re-setting)
+  const selfSetRef = useRef(false);
+
+  // ── Module sync: initialize from server state on join ──
+  const serverModule = w?.moduleState;
+  const prevServerModuleRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Skip if this is our own echo
+    if (selfSetRef.current) { selfSetRef.current = false; return; }
+    // Skip if nothing changed
+    if (JSON.stringify(serverModule) === JSON.stringify(prevServerModuleRef.current)) return;
+    prevServerModuleRef.current = serverModule;
+
+    if (!serverModule || !serverModule.mode) {
+      // Module was cleared by someone — don't force-close if user has local state
+      // Only clear if we didn't set it ourselves
+      return;
+    }
+
+    const mode = serverModule.mode as StageMode;
+    setStageMode(mode);
+
+    if (mode === "twitch" && serverModule.channel) {
+      setTwitchChannel(serverModule.channel);
+      setTwitchInput(serverModule.channel);
+    }
+    if (mode === "browser" && serverModule.url) {
+      setBrowserUrl(serverModule.url);
+      setBrowserInput(serverModule.url);
+      setIframeBlocked(false);
+    }
+  }, [serverModule]);
+
+  // ── Module sync: listen for live updates from other users ──
+  useEffect(() => {
+    function onModuleState(ev: any) {
+      const detail = ev?.detail;
+      if (!detail || detail.roomId !== roomId) return;
+      if (selfSetRef.current) { selfSetRef.current = false; return; }
+
+      const mod = detail.activeModule;
+      if (!mod || !mod.mode) {
+        // Another user cleared the module
+        setStageMode(null);
+        return;
+      }
+
+      const mode = mod.mode as StageMode;
+      setStageMode(mode);
+
+      if (mode === "twitch" && mod.channel) {
+        setTwitchChannel(mod.channel);
+        setTwitchInput(mod.channel);
+      }
+      if (mode === "browser" && mod.url) {
+        setBrowserUrl(mod.url);
+        setBrowserInput(mod.url);
+        setIframeBlocked(false);
+      }
+    }
+    window.addEventListener("weered:module:state", onModuleState);
+    return () => window.removeEventListener("weered:module:state", onModuleState);
+  }, [roomId]);
+
   function toEmbedUrl(url: string): string {
     try {
       const u = new URL(url);
@@ -225,7 +290,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
   const handleModuleClick = (id: NonNullable<StageMode>) => {
-    setStageMode(prev => prev === id ? null : id);
+    const newMode = stageMode === id ? null : id;
+    setStageMode(newMode);
+    selfSetRef.current = true;
+    if (newMode) {
+      // Broadcast the new module — for twitch/browser, content will be set when user enters a channel/URL
+      const opts: any = {};
+      if (newMode === "twitch" && twitchChannel) opts.channel = twitchChannel;
+      if (newMode === "browser" && browserUrl) opts.url = browserUrl;
+      w?.setModuleState?.(newMode, opts);
+    } else {
+      w?.setModuleState?.(null);
+    }
   };
 
   const stageActive = stageMode !== null;
@@ -392,7 +468,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {stageActive && stageMode !== "browser" && stageMode !== "twitch" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
-            <RoomStage roomId={roomId} mode={stageMode} onClose={() => setStageMode(null)} />
+            <RoomStage roomId={roomId} mode={stageMode} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
           </div>
         )}
 
@@ -408,12 +484,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                     let u = browserInput.trim();
                     if (!u.startsWith("http")) u = "https://" + u;
                     setBrowserUrl(u); setBrowserInput(u); setIframeBlocked(false);
+                    selfSetRef.current = true;
+                    w?.setModuleState?.("browser", { url: u });
                   }
                 }}
                 style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
               <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&#8599;</button>
-              <button onClick={() => setStageMode(null)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
+              <button onClick={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
             {(() => {
               const BLOCKED = ["espn.com","nfl.com","nba.com","twitter.com","x.com","facebook.com","instagram.com","tiktok.com","reddit.com","linkedin.com","nytimes.com","wsj.com","bloomberg.com"];
@@ -467,7 +545,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 onKeyDown={e => {
                   if (e.key === "Enter") {
                     const ch = twitchInput.trim().toLowerCase().replace(/^https?:\/\/(www\.)?twitch\.tv\//i, "").split(/[/?#]/)[0];
-                    if (ch) { setTwitchChannel(ch); setTwitchInput(ch); }
+                    if (ch) {
+                      setTwitchChannel(ch);
+                      setTwitchInput(ch);
+                      selfSetRef.current = true;
+                      w?.setModuleState?.("twitch", { channel: ch });
+                    }
                   }
                 }}
                 placeholder="Enter Twitch channel name..."
@@ -476,7 +559,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               {twitchChannel && (
                 <a href={`https://www.twitch.tv/${twitchChannel}`} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(145,70,255,0.15)", background: "rgba(145,70,255,0.08)", color: "rgba(216,180,254,0.7)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Twitch</a>
               )}
-              <button onClick={() => { setTwitchChannel(""); setTwitchInput(""); setStageMode(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
+              <button onClick={() => { setTwitchChannel(""); setTwitchInput(""); setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
             {twitchChannel ? (
               <iframe
