@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { avatarBg } from "../../lib/avatarColor";
 
 export type RoomTab = "chat" | "media" | "activity" | "details";
 
@@ -12,7 +13,7 @@ export type ModulePill = {
   active: boolean;
 };
 
-// ── Inline brand icons (same as RoomCanvas) ──────────────────────────────────
+// ── Inline brand icons ───────────────────────────────────────────────────────
 
 function TwitchIcon({ size = 13, color = "#9146FF" }: { size?: number; color?: string }) {
   return (
@@ -31,7 +32,7 @@ function YouTubeIcon({ size = 15, color = "#FF0000" }: { size?: number; color?: 
   );
 }
 
-// ── Accent color per module ──────────────────────────────────────────────────
+// ── Accent per module ────────────────────────────────────────────────────────
 
 function getAccent(id: string): string {
   switch (id) {
@@ -39,8 +40,57 @@ function getAccent(id: string): string {
     case "youtube": return "#FF0000";
     case "voice":   return "#22c55e";
     case "browser": return "#38bdf8";
-    default:        return "#7C3AED";
+    default:        return "#5800E5";
   }
+}
+
+// ── Avatar stack ─────────────────────────────────────────────────────────────
+
+function AvatarStack({ users, max = 5 }: { users: any[]; max?: number }) {
+  const shown = users.slice(0, max);
+  const overflow = users.length - max;
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      {shown.map((u, i) => {
+        const name = u?.name || u?.username || "?";
+        const avatar = u?.avatar || null;
+        const bg = avatar ? "rgba(255,255,255,.08)" : avatarBg(name);
+        return (
+          <div
+            key={u?.id || i}
+            title={name}
+            style={{
+              width: 22, height: 22, borderRadius: "50%",
+              border: "2px solid rgba(10,10,18,0.95)",
+              marginLeft: i > 0 ? -6 : 0,
+              background: bg,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 9, fontWeight: 800, color: "#fff",
+              overflow: "hidden", position: "relative", zIndex: max - i,
+            }}
+          >
+            {avatar
+              ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : name[0]?.toUpperCase() ?? "?"
+            }
+          </div>
+        );
+      })}
+      {overflow > 0 && (
+        <div style={{
+          width: 22, height: 22, borderRadius: "50%",
+          border: "2px solid rgba(10,10,18,0.95)",
+          marginLeft: -6, zIndex: 0,
+          background: "rgba(255,255,255,.06)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.4)",
+          fontFamily: "monospace",
+        }}>
+          +{overflow}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -51,6 +101,9 @@ export default function RoomHeader({
   locked,
   thumbnail,
   pills,
+  users,
+  lobbyName,
+  lobbyLogo,
   onPillClick,
   onDetailsClick,
   showDetails,
@@ -60,240 +113,262 @@ export default function RoomHeader({
   locked?: boolean;
   thumbnail?: string | null;
   pills?: ModulePill[];
+  users?: any[];
+  lobbyName?: string | null;
+  lobbyLogo?: string | null;
   onPillClick?: (id: string) => void;
   onDetailsClick?: () => void;
   showDetails?: boolean;
 }) {
+  const activeModule = pills?.find(p => p.active);
+  const activeAccent = activeModule ? getAccent(activeModule.id) : "#5800E5";
+  const userArr = Array.isArray(users) ? users : [];
+
   return (
     <div style={{
       flexShrink: 0, position: "relative", overflow: "hidden",
-      borderBottom: "1px solid rgba(255,255,255,0.07)",
-      background: "linear-gradient(180deg, rgba(88,0,229,0.06) 0%, rgba(10,10,18,0) 100%)",
+      borderBottom: "1px solid rgba(255,255,255,0.06)",
     }}>
-      {/* Faded thumbnail background */}
+      {/* ── Ambient layers ── */}
+
+      {/* Thumbnail wash */}
       {thumbnail && (
         <div style={{
           position: "absolute", inset: 0, zIndex: 0,
           backgroundImage: `url(${thumbnail})`,
           backgroundSize: "cover", backgroundPosition: "center",
-          opacity: 0.18,
-          filter: "blur(10px) saturate(1.5)",
-          transform: "scale(1.08)",
+          opacity: 0.1,
+          filter: "blur(16px) saturate(1.6)",
+          transform: "scale(1.15)",
           pointerEvents: "none",
         }} />
       )}
 
-      {/* Subtle accent glow top-left */}
+      {/* Gradient base */}
       <div style={{
-        position: "absolute", top: -30, left: -20, width: 180, height: 100,
+        position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
+        background: activeModule
+          ? `linear-gradient(135deg, ${activeAccent}08 0%, rgba(10,10,18,0) 50%, ${activeAccent}04 100%)`
+          : "linear-gradient(135deg, rgba(88,0,229,0.04) 0%, rgba(10,10,18,0) 60%)",
+      }} />
+
+      {/* Soft glow — follows active module accent */}
+      <div style={{
+        position: "absolute", top: -20, left: 40, width: 120, height: 80,
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(88,0,229,0.12) 0%, transparent 70%)",
+        background: `radial-gradient(circle, ${activeAccent}10 0%, transparent 70%)`,
         pointerEvents: "none", zIndex: 0,
       }} />
 
-      {/* Bottom accent line */}
+      {/* Bottom edge glow */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0, height: 1,
-        background: "linear-gradient(90deg, transparent, rgba(88,0,229,0.3), transparent)",
+        background: `linear-gradient(90deg, transparent 5%, ${activeAccent}30 30%, ${activeAccent}18 70%, transparent 95%)`,
         zIndex: 2,
       }} />
 
-      {/* ── Main header row ── */}
+      {/* ── Row 1: Identity + Status ── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "0 16px", height: 46,
+        padding: "10px 16px 0",
         position: "relative", zIndex: 1,
       }}>
-        <h1 style={{
-          fontSize: 15, fontWeight: 800, letterSpacing: "-0.3px",
-          color: "rgba(243,244,246,0.95)",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          maxWidth: "50%", margin: 0, lineHeight: 1,
-        }}>
-          {title}
-        </h1>
-
-        <span style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          padding: "3px 8px", borderRadius: 999,
-          border: "1px solid rgba(88,0,229,0.3)",
-          background: "rgba(88,0,229,0.1)",
-          color: "rgba(167,139,250,0.6)",
-          flexShrink: 0,
-        }}>
-          ROOM
-        </span>
-
-        {locked && (
-          <span style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            padding: "3px 8px", borderRadius: 999,
-            border: "1px solid rgba(251,191,36,0.2)",
-            background: "rgba(251,191,36,0.05)",
-            color: "rgba(252,211,77,0.6)",
+        {/* Lobby logo */}
+        {lobbyLogo && (
+          <img src={lobbyLogo} alt="" style={{
+            width: 20, height: 20, borderRadius: 5,
+            objectFit: "contain", background: "rgba(0,0,0,.3)",
             flexShrink: 0,
-          }}>
-            🔒 LOCKED
-          </span>
+          }} />
         )}
 
-        {typeof memberCount === "number" && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            fontSize: 11, color: "rgba(255,255,255,0.4)", flexShrink: 0,
+        {/* Room name + lobby context */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{
+            fontSize: 14, fontWeight: 800, letterSpacing: "-0.3px",
+            color: "rgba(243,244,246,0.95)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            margin: 0, lineHeight: 1.2,
           }}>
+            {title}
+          </h1>
+          {lobbyName && (
+            <div style={{
+              fontSize: 10, color: "rgba(148,163,184,0.4)",
+              marginTop: 1, fontWeight: 500,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {lobbyName}
+            </div>
+          )}
+        </div>
+
+        {/* Status badges */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          {locked && (
             <span style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: "#4ade80",
-              boxShadow: "0 0 6px rgba(74,222,128,0.6)",
-            }} />
-            {memberCount} online
-          </div>
-        )}
+              fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+              padding: "3px 8px", borderRadius: 6,
+              border: "1px solid rgba(251,191,36,0.15)",
+              background: "rgba(251,191,36,0.06)",
+              color: "rgba(252,211,77,0.55)",
+            }}>
+              🔒
+            </span>
+          )}
 
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+          {/* Avatar stack + count */}
+          {userArr.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <AvatarStack users={userArr} max={4} />
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: "rgba(134,239,172,0.7)",
+                fontFamily: "monospace",
+              }}>
+                {memberCount ?? userArr.length}
+              </span>
+            </div>
+          )}
+          {userArr.length === 0 && typeof memberCount === "number" && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 5,
+              fontSize: 10, color: "rgba(255,255,255,0.35)",
+            }}>
+              <span style={{
+                width: 5, height: 5, borderRadius: "50%",
+                background: "#4ade80",
+                boxShadow: "0 0 6px rgba(74,222,128,0.5)",
+              }} />
+              {memberCount}
+            </div>
+          )}
+
+          {/* Dock button */}
           <button
             type="button"
-            onClick={() => {
-              try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {}
-            }}
+            onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
             style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-              padding: "5px 14px", borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.55)",
+              fontSize: 10, fontWeight: 700,
+              padding: "4px 10px", borderRadius: 6,
+              border: "1px solid rgba(255,255,255,0.07)",
+              background: "rgba(255,255,255,0.03)",
+              color: "rgba(255,255,255,0.35)",
               cursor: "pointer", transition: "all 0.15s",
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-              e.currentTarget.style.color = "rgba(255,255,255,0.85)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-              e.currentTarget.style.color = "rgba(255,255,255,0.55)";
-            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
           >
             Dock
           </button>
         </div>
       </div>
 
-      {/* ── Module pills row ── */}
-      {pills && pills.length > 0 && (
-        <div style={{
-          display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6,
-          padding: "0 16px 10px",
-          position: "relative", zIndex: 1,
-        }}>
-          {pills.map((m) => {
-            const isTwitch = m.icon === "__twitch__";
-            const isYT     = m.icon === "__youtube__";
-            const accent   = getAccent(m.id);
+      {/* ── Row 2: Module pills ── */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 5,
+        padding: "6px 16px 8px",
+        position: "relative", zIndex: 1,
+        overflowX: "auto", scrollbarWidth: "none",
+      }}>
+        {pills && pills.map((m) => {
+          const isTwitch = m.icon === "__twitch__";
+          const isYT     = m.icon === "__youtube__";
+          const accent   = getAccent(m.id);
 
-            return (
-              <button
-                key={m.id}
-                type="button"
-                disabled={!m.live}
-                onClick={() => m.live && onPillClick?.(m.id)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "6px 14px", borderRadius: 999,
-                  fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-                  fontFamily: "monospace", cursor: m.live ? "pointer" : "default",
-                  transition: "all 0.15s ease",
-                  border: m.active
-                    ? `1px solid ${accent}88`
-                    : m.live
-                      ? `1px solid ${accent}30`
-                      : "1px solid rgba(255,255,255,0.06)",
-                  background: m.active
-                    ? `${accent}22`
-                    : m.live
-                      ? `${accent}0a`
-                      : "rgba(255,255,255,0.02)",
-                  color: m.active
-                    ? "#fff"
-                    : m.live
-                      ? "rgba(226,232,240,0.65)"
-                      : "rgba(255,255,255,0.18)",
-                  boxShadow: m.active ? `0 0 14px ${accent}35, 0 0 4px ${accent}20` : "none",
-                }}
-                onMouseEnter={e => {
-                  if (!m.live || m.active) return;
-                  const el = e.currentTarget;
-                  el.style.background = `${accent}18`;
-                  el.style.borderColor = `${accent}50`;
-                  el.style.color = "rgba(226,232,240,0.9)";
-                  el.style.boxShadow = `0 0 10px ${accent}20`;
-                }}
-                onMouseLeave={e => {
-                  if (!m.live || m.active) return;
-                  const el = e.currentTarget;
-                  el.style.background = `${accent}0a`;
-                  el.style.borderColor = `${accent}30`;
-                  el.style.color = "rgba(226,232,240,0.65)";
-                  el.style.boxShadow = "none";
-                }}
-              >
-                {isTwitch ? (
-                  <TwitchIcon
-                    size={13}
-                    color={m.active ? "#9146FF" : m.live ? "rgba(145,70,255,0.75)" : "rgba(255,255,255,0.18)"}
-                  />
-                ) : isYT ? (
-                  <YouTubeIcon
-                    size={15}
-                    color={m.active ? "#FF0000" : m.live ? "rgba(255,0,0,0.6)" : "rgba(255,255,255,0.18)"}
-                  />
-                ) : (
-                  <span style={{ fontSize: 12, lineHeight: 1 }}>{m.icon}</span>
-                )}
-                {m.label}
-                {m.active && (
-                  <span style={{
-                    fontSize: 8, fontWeight: 800, letterSpacing: "0.1em",
-                    padding: "1px 5px", borderRadius: 4,
-                    background: `${accent}44`, color: accent,
-                    textTransform: "uppercase",
-                  }}>ON</span>
-                )}
-                {!m.live && !m.active && (
-                  <span style={{
-                    fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
-                    padding: "1px 5px", borderRadius: 4,
-                    background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.22)",
-                    textTransform: "uppercase",
-                  }}>SOON</span>
-                )}
-              </button>
-            );
-          })}
-          {onDetailsClick && (
+          return (
             <button
+              key={m.id}
               type="button"
-              onClick={onDetailsClick}
+              disabled={!m.live}
+              onClick={() => m.live && onPillClick?.(m.id)}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 4,
-                padding: "6px 14px", borderRadius: 999,
-                fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-                fontFamily: "monospace", cursor: "pointer",
-                marginLeft: "auto", transition: "all 0.15s ease",
-                border: showDetails ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.06)",
-                background: showDetails ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.02)",
-                color: showDetails ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)",
+                padding: "4px 10px", borderRadius: 6,
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.03em",
+                cursor: m.live ? "pointer" : "default",
+                transition: "all 0.15s ease",
+                whiteSpace: "nowrap", flexShrink: 0,
+                border: m.active
+                  ? `1px solid ${accent}66`
+                  : m.live
+                    ? "1px solid rgba(255,255,255,0.06)"
+                    : "1px solid rgba(255,255,255,0.03)",
+                background: m.active
+                  ? `${accent}18`
+                  : "transparent",
+                color: m.active
+                  ? "#fff"
+                  : m.live
+                    ? "rgba(226,232,240,0.5)"
+                    : "rgba(255,255,255,0.15)",
+                boxShadow: m.active ? `0 0 12px ${accent}25` : "none",
               }}
-              onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}}
-              onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}}
+              onMouseEnter={e => {
+                if (!m.live || m.active) return;
+                e.currentTarget.style.background = `${accent}0c`;
+                e.currentTarget.style.borderColor = `${accent}30`;
+                e.currentTarget.style.color = "rgba(226,232,240,0.8)";
+              }}
+              onMouseLeave={e => {
+                if (!m.live || m.active) return;
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+                e.currentTarget.style.color = "rgba(226,232,240,0.5)";
+              }}
             >
-              {showDetails ? "✕ close" : "⋯ details"}
+              {isTwitch ? (
+                <TwitchIcon size={11} color={m.active ? "#9146FF" : m.live ? "rgba(145,70,255,0.6)" : "rgba(255,255,255,0.15)"} />
+              ) : isYT ? (
+                <YouTubeIcon size={12} color={m.active ? "#FF0000" : m.live ? "rgba(255,0,0,0.5)" : "rgba(255,255,255,0.15)"} />
+              ) : (
+                <span style={{ fontSize: 10, lineHeight: 1 }}>{m.icon}</span>
+              )}
+              {m.label}
+              {m.active && (
+                <span style={{
+                  width: 4, height: 4, borderRadius: "50%",
+                  background: accent,
+                  boxShadow: `0 0 6px ${accent}`,
+                  marginLeft: 2,
+                }} />
+              )}
+              {!m.live && !m.active && (
+                <span style={{
+                  fontSize: 7, fontWeight: 700, letterSpacing: "0.06em",
+                  padding: "1px 4px", borderRadius: 3,
+                  background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.18)",
+                  textTransform: "uppercase",
+                }}>SOON</span>
+              )}
             </button>
-          )}
-        </div>
-      )}
+          );
+        })}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Details toggle */}
+        {onDetailsClick && (
+          <button
+            type="button"
+            onClick={onDetailsClick}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 3,
+              padding: "4px 10px", borderRadius: 6,
+              fontSize: 10, fontWeight: 700,
+              cursor: "pointer", transition: "all 0.15s ease",
+              flexShrink: 0,
+              border: showDetails ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(255,255,255,0.05)",
+              background: showDetails ? "rgba(255,255,255,0.06)" : "transparent",
+              color: showDetails ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)",
+            }}
+            onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.45)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}}
+            onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.2)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}}
+          >
+            {showDetails ? "✕" : "⋯"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
