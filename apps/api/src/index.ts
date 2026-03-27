@@ -40,6 +40,14 @@ type AuditItem = {
   note?: string;
 };
 
+type ModuleState = {
+  mode: string;
+  url?: string;
+  channel?: string;
+  setBy?: string;
+  setAt?: number;
+};
+
 type RoomState = {
   roomId: string;
   name?: string;
@@ -56,6 +64,7 @@ type RoomState = {
   knocks: Knock[];
   pending: Map<string, Set<Sock>>;
   audit: AuditItem[];
+  activeModule: ModuleState | null;
 };
 
 const rooms = new Map<string, RoomState>();
@@ -185,7 +194,7 @@ function makeEmptyRoom(roomId: string): RoomState {
     roomId, name: "",
     users: new Map(), sockets: new Set(), msgs: [],
     ownerId: undefined, mods: new Set(), banned: new Set(), muted: new Set(),
-    locked: false, knocks: [], pending: new Map(), audit: [],
+    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null,
   };
 }
 
@@ -377,6 +386,7 @@ function buildStatePayload(room: RoomState) {
     users, count: users.length, locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
+    activeModule: room.activeModule || null,
   };
 }
 
@@ -1343,6 +1353,29 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     broadcast(room, { type: "chat:cleared", roomId: rid });
     return reply.send({ ok: true });
   });
+  // POST /staff/broadcast — send a system message to all connected users
+  app.post("/staff/broadcast", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const body: any = (req as any).body || {};
+    const message = typeof body.message === "string" ? body.message.trim().slice(0, 500) : "";
+    const level = ["info", "warning", "urgent"].includes(body.level) ? body.level : "info";
+    if (!message) return reply.code(400).send({ ok: false, error: "message required" });
+    const payload = { type: "system:broadcast", message, level, from: u.name, ts: Date.now() };
+    const sent = new Set<string>();
+    for (const room of rooms.values()) {
+      for (const s of room.sockets) {
+        const sid = s.user?.id;
+        if (!sid || sent.has(sid)) continue;
+        sent.add(sid);
+        send(s, payload);
+      }
+    }
+    await globalAudit(u.id, u.name, "system_broadcast", undefined, undefined, { message, level });
+    return reply.send({ ok: true, sent: sent.size });
+  });
   // POST /staff/users/:userId/kick
   app.post("/staff/users/:userId/kick", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -2168,7 +2201,41 @@ app.post("/dm/:peerId", async (req, reply) => {
           leaveRoom(ws);
           return;
         }
+          // ── module:set — user sets the active module for the room
+        if (msg.type === "module:set") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!room.users.has(ws.user.id)) return;
+          const mode = String(msg.mode || "").trim() || null;
+          if (!mode) {
+            room.activeModule = null;
+            broadcast(room, { type: "module:state", roomId, activeModule: null });
+            return;
+          }
+          const moduleState: ModuleState = {
+            mode,
+            url: typeof msg.url === "string" ? msg.url.slice(0, 2000) : undefined,
+            channel: typeof msg.channel === "string" ? msg.channel.slice(0, 100).toLowerCase() : undefined,
+            setBy: ws.user.id,
+            setAt: Date.now(),
+          };
+          room.activeModule = moduleState;
+          broadcast(room, { type: "module:state", roomId, activeModule: moduleState });
+          return;
+        }
 
+        if (msg.type === "module:clear") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!room.users.has(ws.user.id)) return;
+          room.activeModule = null;
+          broadcast(room, { type: "module:state", roomId, activeModule: null });
+          return;
+        }
         if (msg.type === "chat:send") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           const body = String(msg.body || "").trim();
