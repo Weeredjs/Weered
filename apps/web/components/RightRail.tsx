@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
@@ -78,6 +78,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   const [selectedModule, setSelectedModule] = React.useState<string>("voice");
 
   const w = useWeered() as any;
+  const navRouter = useRouter();
   const wsUsers: any[] = React.useMemo(() => Array.isArray(w?.users) ? w.users : [], [w?.users]);
 
   const ROOM_MODULES = [
@@ -126,18 +127,20 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         body: JSON.stringify({ name, lobbyId, module: selectedModule }),
       }).then(r => r.json());
       if (!j?.ok) throw new Error(j?.message || j?.error || "create failed");
+      const roomId = j.room?.id || name;
+      const chosenModule = selectedModule;
       setNewRoom("");
       setShowCreate(false);
       setSelectedModule("voice");
-      await load();
 
-      // Navigate to the new room and set the module
-      const roomId = j.room?.id || name;
-      if (selectedModule && selectedModule !== "none") {
-        // Give a brief delay for navigation, then set the module
+      // Auto-join: navigate into the new room
+      navRouter.push(`/room/${encodeURIComponent(roomId)}`);
+
+      // Set the module after a brief delay to let the room join complete
+      if (chosenModule && chosenModule !== "none") {
         setTimeout(() => {
-          try { w?.setModuleState?.(selectedModule); } catch {}
-        }, 500);
+          try { w?.setModuleState?.(chosenModule); } catch {}
+        }, 800);
       }
     } catch (e: any) { setErr(String(e?.message || e)); }
     finally { setCreating(false); }

@@ -65,7 +65,9 @@ type RoomState = {
   pending: Map<string, Set<Sock>>;
   audit: AuditItem[];
   activeModule: ModuleState | null;
-};
+  lastActiveAt: number;
+  pinned: boolean;
+  };
 
 const rooms = new Map<string, RoomState>();
 // Title/thumbnail for article rooms — populated by feed worker, used in ensureRoomLoaded
@@ -194,7 +196,7 @@ function makeEmptyRoom(roomId: string): RoomState {
     roomId, name: "",
     users: new Map(), sockets: new Set(), msgs: [],
     ownerId: undefined, mods: new Set(), banned: new Set(), muted: new Set(),
-    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null,
+    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null, lastActiveAt: Date.now(), pinned: false,
   };
 }
 
@@ -444,9 +446,9 @@ function leaveRoom(ws: Sock) {
   }
   ws.roomId = undefined;
 
-  if (room.sockets.size === 0 && room.users.size === 0 && room.roomId !== "lobby") {
-    rooms.delete(roomId);
-  }
+  // Mark last activity so dissolution timer knows when the room went idle
+  room.lastActiveAt = Date.now();
+  // Don't delete immediately — let the dissolution interval handle cleanup after TTL
 }
 // ── Notoriety system ──────────────────────────────────────────────────────────
 // Point values per action (idempotent where flagged)
@@ -659,6 +661,7 @@ async function doJoin(ws: Sock, roomId: string) {
   ws.roomId = roomId;
   ws.pendingRoomId = undefined;
   room.sockets.add(ws);
+  room.lastActiveAt = Date.now();
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
@@ -1479,13 +1482,19 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, locked: true, createdAt: true, _count: { select: { members: true } } },
     });
-
-    const rooms = list.map(r => ({
+    const roomsMem = new Map([...rooms.entries()]);
+    const enriched = list.map(r => {
+    const mem = roomsMem.get(r.id);
+    return {
       id: r.id, name: r.name || "", locked: Boolean(r.locked),
       members: r._count.members, createdAt: r.createdAt.toISOString(),
-    }));
-
-    return reply.send({ ok: true, rooms });
+      lobbyId: r.lobbyId || null,
+      pinned: mem?.pinned || false,
+      liveUsers: mem?.users.size || 0,
+      lastActiveAt: mem?.lastActiveAt || null,
+    };
+  });
+  return reply.send({ ok: true, rooms: enriched });
   });
   app.get("/profile/:userId", async (req, reply) => {
     const { userId } = req.params as any;
@@ -1801,7 +1810,88 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
 
     return reply.send({ ok: true });
   });
+  // POST /staff/rooms/:roomId/rename — rename a room
+  app.post("/staff/rooms/:roomId/rename", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
+    const roomId = String((req as any).params?.roomId || "");
+    const body: any = (req as any).body || {};
+    const name = typeof body.name === "string" ? body.name.trim().slice(0, 100) : "";
+    if (!name) return reply.code(400).send({ ok: false, error: "name required" });
+
+    // Update DB
+    try {
+      await prisma.room.update({ where: { id: roomId }, data: { name } });
+    } catch {
+      return reply.code(404).send({ ok: false, error: "room_not_found" });
+    }
+
+    // Update in-memory
+    const room = rooms.get(roomId);
+    if (room) {
+      room.name = name;
+      publishState(room);
+    }
+
+    await globalAudit(u.id, u.name, "room_rename", roomId, undefined, { name });
+    return reply.send({ ok: true, name });
+  });
+
+  // POST /staff/rooms/:roomId/pin — pin/unpin a room (pinned rooms don't dissolve)
+  app.post("/staff/rooms/:roomId/pin", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const roomId = String((req as any).params?.roomId || "");
+    const body: any = (req as any).body || {};
+    const pinned = body.pinned !== false; // default to pinning
+
+    // Update in-memory
+    const room = rooms.get(roomId);
+    if (room) {
+      room.pinned = pinned;
+    }
+
+    await globalAudit(u.id, u.name, pinned ? "room_pin" : "room_unpin", roomId);
+    return reply.send({ ok: true, pinned });
+  });
+
+  // POST /staff/rooms/:roomId/close — staff force-close a room
+  app.post("/staff/rooms/:roomId/close", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const roomId = String((req as any).params?.roomId || "");
+    const room = rooms.get(roomId);
+
+    if (room) {
+      // Kick everyone
+      for (const s of room.sockets) {
+        send(s, { type: "room:closed", roomId, by: u.name });
+        try { s.close(4004, "room:closed"); } catch {}
+      }
+      room.users.clear();
+      room.sockets.clear();
+      rooms.delete(roomId);
+    }
+
+    // Delete from DB
+    try {
+      await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
+      await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
+      await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
+    } catch {}
+
+    await globalAudit(u.id, u.name, "room_close", roomId);
+    return reply.send({ ok: true });
+  });
 
 // ── Invites ──────────────────────────────────────────────────────────────────
 
@@ -2236,6 +2326,40 @@ app.post("/dm/:peerId", async (req, reply) => {
           broadcast(room, { type: "module:state", roomId, activeModule: null });
           return;
         }
+                // ── room:close — owner/mod force-closes the room ─────────────────
+        if (msg.type === "room:close") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          // Only owner, mods, or staff can close
+          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
+
+          // Kick everyone
+          for (const s of room.sockets) {
+            send(s, { type: "room:closed", roomId, by: ws.user.name });
+            try { s.close(4004, "room:closed"); } catch {}
+          }
+
+          // Clean up in-memory state
+          room.users.clear();
+          room.sockets.clear();
+          room.msgs = [];
+          room.activeModule = null;
+
+          // Delete from DB
+          try {
+            await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
+            await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
+            await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
+          } catch {}
+
+          // Remove from in-memory map
+          rooms.delete(roomId);
+
+          await globalAudit(ws.user.id, ws.user.name, "room_close", roomId);
+          return;
+        }
         if (msg.type === "chat:send") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           const body = String(msg.body || "").trim();
@@ -2254,6 +2378,7 @@ app.post("/dm/:peerId", async (req, reply) => {
             }).catch(() => {});
           }
           broadcast(room, { type: "chat:new", roomId, msg: m });
+          room.lastActiveAt = Date.now();
           awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(() => {});
           return;
         }
@@ -4266,6 +4391,43 @@ app.post("/dm/:peerId", async (req, reply) => {
     try { await prisma.$disconnect(); } catch {}
     process.exit(0);
   });
+    // ── Room dissolution: clean up empty unpinned rooms after 1 hour ──────────
+  const ROOM_TTL_MS = 60 * 60 * 1000; // 1 hour
+  const DISSOLUTION_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
+
+  setInterval(async () => {
+    const now = Date.now();
+    const toDelete: string[] = [];
+
+    for (const [roomId, room] of rooms.entries()) {
+      // Skip pinned rooms
+      if (room.pinned) continue;
+      // Skip lobby rooms
+      if (roomId.startsWith("lobby:") || roomId === "lobby" || roomId === "@ops") continue;
+      // Skip rooms with users
+      if (room.users.size > 0 || room.sockets.size > 0) continue;
+      // Skip rooms that haven't been empty long enough
+      if (now - room.lastActiveAt < ROOM_TTL_MS) continue;
+
+      toDelete.push(roomId);
+    }
+
+    for (const roomId of toDelete) {
+      rooms.delete(roomId);
+      // Also delete from DB (soft — just remove the room record)
+      try {
+        await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
+        // Clean up related records
+        await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
+        await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
+      } catch {}
+      console.log(`[dissolution] Room "${roomId}" dissolved after ${ROOM_TTL_MS / 60000}min empty`);
+    }
+
+    if (toDelete.length > 0) {
+      console.log(`[dissolution] Cleaned up ${toDelete.length} empty room(s)`);
+    }
+  }, DISSOLUTION_INTERVAL_MS);
 }
 
 main().catch((err) => {
