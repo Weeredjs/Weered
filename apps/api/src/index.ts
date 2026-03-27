@@ -2702,7 +2702,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       return reply.send({ friends: out });
   });
   app.get("/recents", async (req, reply) => {
-    const user = await getUser(req);
+    const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ error: "unauthorized" });
 
     const visits = await prisma.recentVisit.findMany({
@@ -2775,7 +2775,7 @@ app.post("/dm/:peerId", async (req, reply) => {
   // Body: { roomId?: string, lobbyId?: string }
   // Upserts so we only keep one entry per user+target, updates timestamp
   app.post("/recents", async (req, reply) => {
-    const user = await getUser(req);
+    const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ error: "unauthorized" });
 
     const { roomId, lobbyId } = req.body as any;
@@ -2808,7 +2808,7 @@ app.post("/dm/:peerId", async (req, reply) => {
 
   // ── DELETE /recents/:id — remove a specific recent ──────────────────────────
   app.delete("/recents/:id", async (req, reply) => {
-    const user = await getUser(req);
+    const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ error: "unauthorized" });
 
     const { id } = req.params as any;
