@@ -14,14 +14,20 @@ function onlineCount(r: any): number {
   return Number(r?.onlineCount ?? r?.online ?? r?.memberCount ?? r?.count ?? 0);
 }
 function roomId(r: any): string {
-  return pickFirst(r?.id, r?.roomId, r?.name, "");
+  return pickFirst(r?.id, r?.roomId, "");
 }
+/** Display name: prefer .name, then fall back to cleaned ID */
 function roomName(r: any): string {
+  // Prefer explicit name field from API/WS
+  const name = pickFirst(r?.name, "");
+  if (name) return name;
+  // Fallback: strip room: prefix from ID
   const id = roomId(r);
   return id.startsWith("room:") ? id.slice(5) : id;
 }
 function isPrivateRoom(r: any): boolean {
-  const name = roomName(r);
+  const id = roomId(r);
+  const name = id.startsWith("room:") ? id.slice(5) : id;
   if (name.startsWith("@")) return true;
   if (/^[a-z0-9]{4,7}$/i.test(name) && !name.includes("/")) return true;
   if (/^test/i.test(name)) return true;
@@ -223,6 +229,8 @@ function LiveTicker({ rooms, onJoin }: { rooms: any[]; onJoin: (id: string, pinn
           const name = roomName(r);
           const cnt = onlineCount(r);
           const accent = lobbyAccent(r, i);
+          // For rooms inside a lobby, show parent lobby context
+          const parentLobby = r?.lobbyId ? pickFirst(r?.lobbyName, r?.lobbyId, "") : "";
           return (
             <button
               key={roomId(r)}
@@ -239,7 +247,10 @@ function LiveTicker({ rooms, onJoin }: { rooms: any[]; onJoin: (id: string, pinn
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}18`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
             >
               {r?.logoUrl && <img src={r.logoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain" }} />}
-              <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{name}</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{name}</span>
+                {parentLobby && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)", whiteSpace: "nowrap" }}>{parentLobby}</span>}
+              </div>
               <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
                 <PulseDot color="#22c55e" size={4} />
                 {cnt}
@@ -406,13 +417,15 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
 }
 
 /* ─── RecentRow ──────────────────────────────────────────── */
-function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string) => void }) {
+function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: boolean) => void }) {
   const name = roomName(room);
   const cnt = onlineCount(room);
   const accent = lobbyAccent(room, 0);
+  const logo = room?.logoUrl;
+  const pinned = isPinned(room);
   return (
     <div
-      onClick={() => onJoin(roomId(room))}
+      onClick={() => onJoin(roomId(room), pinned)}
       style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "9px 12px", background: "rgba(255,255,255,.02)",
@@ -422,16 +435,23 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string) => void }
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
     >
-      <div style={{
-        width: 30, height: 30, borderRadius: 8,
-        background: `${accent}12`, border: `1px solid ${accent}18`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 13, fontWeight: 900, color: accent, flexShrink: 0,
-      }}>
-        {name.slice(0, 1).toUpperCase()}
-      </div>
+      {logo ? (
+        <img src={logo} alt="" style={{ width: 30, height: 30, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
+      ) : (
+        <div style={{
+          width: 30, height: 30, borderRadius: 8,
+          background: `${accent}12`, border: `1px solid ${accent}18`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 13, fontWeight: 900, color: accent, flexShrink: 0,
+        }}>
+          {name.slice(0, 1).toUpperCase()}
+        </div>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+        {room?.lobbyId && (
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,.25)", marginTop: 1 }}>{pickFirst(room?.lobbyName, room?.lobbyId, "")}</div>
+        )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
         {cnt > 0 && (
@@ -485,6 +505,9 @@ export default function HomePage() {
   // Featured lobby from staff config
   const [featuredLobby, setFeaturedLobby] = React.useState<any>(null);
 
+  // Server-side recents
+  const [serverRecents, setServerRecents] = React.useState<any[]>([]);
+
   React.useEffect(() => {
     const base = "https://api.weered.ca";
     const token = localStorage.getItem("weered_token") ?? "";
@@ -493,7 +516,8 @@ export default function HomePage() {
       fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/featured`, { headers }).then(r => r.json()).catch(() => ({})),
-    ]).then(([lobbyData, roomData, featuredData]) => {
+      token ? fetch(`${base}/recents`, { headers }).then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
+    ]).then(([lobbyData, roomData, featuredData, recentsData]) => {
       const lobbies = Array.isArray(lobbyData?.lobbies)
         ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
         : [];
@@ -510,6 +534,11 @@ export default function HomePage() {
       // Set featured lobby from API config
       if (featuredData?.ok && featuredData?.lobby) {
         setFeaturedLobby({ ...featuredData.lobby, pinned: true });
+      }
+
+      // Set server-side recents
+      if (Array.isArray(recentsData?.recents)) {
+        setServerRecents(recentsData.recents);
       }
 
       // Fetch aggregated presence for all lobbies
@@ -540,7 +569,14 @@ export default function HomePage() {
       const brandingMap = new Map(fetchedRooms.map((r: any) => [r.id, r]));
       base = ws.map((r: any) => {
         const branding = brandingMap.get(r.id) ?? brandingMap.get(r.roomId) ?? {};
-        return { ...branding, ...r };
+        // Merge: branding is base, WS overrides counts/presence,
+        // but preserve branding's name if WS doesn't have one
+        const merged = { ...branding, ...r };
+        // If WS name is just the ID, prefer branding name
+        if (branding.name && (!r.name || r.name === r.id || r.name === r.roomId)) {
+          merged.name = branding.name;
+        }
+        return merged;
       });
     } else {
       base = ws.length > 0 ? ws : fetchedRooms;
@@ -615,13 +651,21 @@ export default function HomePage() {
   // Hide featured lobby from the grid to avoid duplication
   const featuredId = featured ? roomId(featured) : "";
 
-  const recentIds: string[] = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("weered:recentRooms") || "[]"); } catch { return []; }
-  }, []);
-  const recentRooms = useMemo(() =>
-    recentIds.map(id => allRooms.find(r => roomId(r) === id || roomName(r) === id)).filter(Boolean).filter((r: any) => !isPrivateRoom(r)).slice(0, 4),
-    [recentIds, allRooms]
-  );
+  // Recents: server-side, enriched with live data from allRooms
+  const recentRooms = useMemo(() => {
+    if (serverRecents.length === 0) return [];
+    return serverRecents
+      .map(rec => {
+        // Try to find live data for this room/lobby
+        const targetId = rec.lobbyId || rec.roomId;
+        const live = allRooms.find(r => roomId(r) === targetId);
+        if (live) return { ...live, ...rec, id: targetId, onlineCount: onlineCount(live) };
+        // Fallback to the stored data
+        return { ...rec, id: targetId, name: rec.name || targetId, pinned: Boolean(rec.lobbyId) };
+      })
+      .filter((r: any) => !isPrivateRoom(r))
+      .slice(0, 6);
+  }, [serverRecents, allRooms]);
 
   const [friendsList, setFriendsList] = React.useState<any[]>([]);
   React.useEffect(() => {
@@ -644,14 +688,31 @@ export default function HomePage() {
       return;
     }
     const normalized = id.startsWith("room:") ? id : `room:${id}`;
-    try {
-      const prev: string[] = JSON.parse(localStorage.getItem("weered:recentRooms") || "[]");
-      if (!clean.startsWith("@") && !/^[a-z0-9]{4,7}$/i.test(clean)) {
-        localStorage.setItem("weered:recentRooms", JSON.stringify([normalized, ...prev.filter(x => x !== normalized)].slice(0, 10)));
-      }
-    } catch {}
+
+    // Record visit server-side
+    const token = localStorage.getItem("weered_token") ?? "";
+    if (token) {
+      fetch("https://api.weered.ca/recents", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: clean }),
+      }).catch(() => {});
+    }
+
     try { join?.(normalized); } catch {}
     router.push(`/room/${encodeURIComponent(clean)}`);
+  }
+
+  // Also record lobby visits
+  function handleLobbyVisit(lobbyId: string) {
+    const token = localStorage.getItem("weered_token") ?? "";
+    if (token && lobbyId) {
+      fetch("https://api.weered.ca/recents", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ lobbyId }),
+      }).catch(() => {});
+    }
   }
 
   function handleDm(user: any) {
@@ -741,7 +802,7 @@ export default function HomePage() {
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
+              {lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
 
               {/* Create Your Lobby CTA card */}
               {me && (

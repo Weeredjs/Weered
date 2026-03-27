@@ -2683,7 +2683,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     const profiles = peerIds.length
       ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true } })
       : [];
-  const presenceMap = new Map<string, { roomId: string; roomName: string }>();
+    const presenceMap = new Map<string, { roomId: string; roomName: string }>();
       for (const p of profiles) {
         for (const [rid, rs] of rooms) {
           if (rs.users.has(p.id)) { presenceMap.set(p.id, { roomId: rid, roomName: rs.name || rid }); break; }
@@ -2700,6 +2700,124 @@ app.post("/dm/:peerId", async (req, reply) => {
         return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false };
       });
       return reply.send({ friends: out });
+  });
+  app.get("/recents", async (req, reply) => {
+    const user = await getUser(req);
+    if (!user) return reply.code(401).send({ error: "unauthorized" });
+
+    const visits = await prisma.recentVisit.findMany({
+      where: { userId: user.id },
+      orderBy: { visitedAt: "desc" },
+      take: 10,
+    });
+
+    // Enrich with lobby data for lobby visits
+    const lobbyIds = visits.filter(v => v.lobbyId).map(v => v.lobbyId!);
+    const lobbies = lobbyIds.length
+      ? await prisma.lobby.findMany({
+          where: { id: { in: lobbyIds } },
+          select: {
+            id: true, name: true, description: true,
+            logoUrl: true, bannerUrl: true, accentColor: true, pinned: true,
+          },
+        })
+      : [];
+    const lobbyMap = new Map(lobbies.map(l => [l.id, l]));
+
+    // Enrich with room data for room visits (get parent lobby info)
+    const roomIds = visits.filter(v => v.roomId && !v.lobbyId).map(v => v.roomId!);
+    const roomRows = roomIds.length
+      ? await prisma.room.findMany({
+          where: { id: { in: roomIds } },
+          select: {
+            id: true, name: true, lobbyId: true,
+            lobby: { select: { id: true, name: true, logoUrl: true, accentColor: true } },
+          },
+        })
+      : [];
+    const roomMap = new Map(roomRows.map(r => [r.id, r]));
+
+    const recents = visits.map(v => {
+      if (v.lobbyId) {
+        const lobby = lobbyMap.get(v.lobbyId);
+        return {
+          lobbyId: v.lobbyId,
+          roomId: null,
+          name: lobby?.name || v.name || v.lobbyId,
+          logoUrl: lobby?.logoUrl || null,
+          bannerUrl: lobby?.bannerUrl || null,
+          accentColor: lobby?.accentColor || null,
+          pinned: lobby?.pinned ?? true,
+          visitedAt: v.visitedAt,
+        };
+      }
+      if (v.roomId) {
+        const room = roomMap.get(v.roomId);
+        return {
+          lobbyId: room?.lobbyId || null,
+          lobbyName: room?.lobby?.name || null,
+          roomId: v.roomId,
+          name: room?.name || v.name || v.roomId,
+          logoUrl: room?.lobby?.logoUrl || null,
+          accentColor: room?.lobby?.accentColor || null,
+          pinned: false,
+          visitedAt: v.visitedAt,
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    return reply.send({ ok: true, recents });
+  });
+  
+
+  // ── POST /recents — record a visit ──────────────────────────────────────────
+  // Body: { roomId?: string, lobbyId?: string }
+  // Upserts so we only keep one entry per user+target, updates timestamp
+  app.post("/recents", async (req, reply) => {
+    const user = await getUser(req);
+    if (!user) return reply.code(401).send({ error: "unauthorized" });
+
+    const { roomId, lobbyId } = req.body as any;
+    if (!roomId && !lobbyId) return reply.code(400).send({ error: "roomId or lobbyId required" });
+
+    try {
+      if (lobbyId) {
+        // Lobby visit — get display name
+        const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, select: { name: true } });
+        await prisma.recentVisit.upsert({
+          where: { userId_lobbyId: { userId: user.id, lobbyId } },
+          create: { userId: user.id, lobbyId, name: lobby?.name || lobbyId },
+          update: { visitedAt: new Date(), name: lobby?.name || lobbyId },
+        });
+      } else if (roomId) {
+        // Room visit — get display name + parent lobby
+        const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true, lobbyId: true } });
+        await prisma.recentVisit.upsert({
+          where: { userId_roomId: { userId: user.id, roomId } },
+          create: { userId: user.id, roomId, lobbyId: room?.lobbyId || null, name: room?.name || roomId },
+          update: { visitedAt: new Date(), name: room?.name || roomId },
+        });
+      }
+      return reply.send({ ok: true });
+    } catch (e: any) {
+      return reply.code(500).send({ error: e.message });
+    }
+  });
+
+
+  // ── DELETE /recents/:id — remove a specific recent ──────────────────────────
+  app.delete("/recents/:id", async (req, reply) => {
+    const user = await getUser(req);
+    if (!user) return reply.code(401).send({ error: "unauthorized" });
+
+    const { id } = req.params as any;
+    try {
+      await prisma.recentVisit.deleteMany({ where: { id, userId: user.id } });
+      return reply.send({ ok: true });
+    } catch (e: any) {
+      return reply.code(500).send({ error: e.message });
+    }
   });
 
   app.get("/friends/requests", async (req, reply) => {
