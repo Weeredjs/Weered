@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { VoiceProvider } from "./VoiceContext";
 import NotorietyToast from "./NotorietyToast";
+import SystemBroadcast from "./SystemBroadcast";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -656,7 +657,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     },
   };
 
-  return <WeeredContext.Provider value={value}><VoiceProvider>{children}<NotorietyToast /></VoiceProvider></WeeredContext.Provider>;
+  return <WeeredContext.Provider value={value}><VoiceProvider><SystemBroadcast />{children}<NotorietyToast /></VoiceProvider></WeeredContext.Provider>;
 }
 
 export function useWeered(): Ctx {

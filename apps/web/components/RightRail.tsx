@@ -67,14 +67,26 @@ function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
 // ── RoomsPanel ────────────────────────────────────────────────────────────────
 function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId: string }) {
   const [q,        setQ]        = React.useState("");
-  const [newRoom,  setNewRoom]  = React.useState("");
-  const [creating, setCreating] = React.useState(false);
   const [rows,     setRows]     = React.useState<RoomRow[]>([]);
   const [loading,  setLoading]  = React.useState(false);
   const [err,      setErr]      = React.useState("");
 
+  // Create room overlay state
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [newRoom,    setNewRoom]    = React.useState("");
+  const [creating,   setCreating]   = React.useState(false);
+  const [selectedModule, setSelectedModule] = React.useState<string>("voice");
+
   const w = useWeered() as any;
   const wsUsers: any[] = React.useMemo(() => Array.isArray(w?.users) ? w.users : [], [w?.users]);
+
+  const ROOM_MODULES = [
+    { id: "voice",   label: "Voice",   icon: "🎙", desc: "Voice chat room" },
+    { id: "youtube", label: "YouTube", icon: "▶️", desc: "Watch together" },
+    { id: "twitch",  label: "Twitch",  icon: "📺", desc: "Stream viewing party" },
+    { id: "browser", label: "Browser", icon: "🌐", desc: "Shared browsing" },
+    { id: "none",    label: "None",    icon: "💬", desc: "Chat only" },
+  ];
 
   const usersByRoom = React.useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -111,10 +123,22 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     try {
       const j = await fetch(`${API_BASE}/rooms`, {
         method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ name, lobbyId }),
+        body: JSON.stringify({ name, lobbyId, module: selectedModule }),
       }).then(r => r.json());
       if (!j?.ok) throw new Error(j?.message || j?.error || "create failed");
-      setNewRoom(""); await load();
+      setNewRoom("");
+      setShowCreate(false);
+      setSelectedModule("voice");
+      await load();
+
+      // Navigate to the new room and set the module
+      const roomId = j.room?.id || name;
+      if (selectedModule && selectedModule !== "none") {
+        // Give a brief delay for navigation, then set the module
+        setTimeout(() => {
+          try { w?.setModuleState?.(selectedModule); } catch {}
+        }, 500);
+      }
     } catch (e: any) { setErr(String(e?.message || e)); }
     finally { setCreating(false); }
   }
@@ -135,17 +159,106 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Rooms</div>
-        {lobbyId && (
-          <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.70)", background: "rgba(88,0,229,.10)", border: "1px solid rgba(88,0,229,.20)", borderRadius: 6, padding: "2px 7px" }}>
-            {lobbyId}
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {lobbyId && (
+            <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.70)", background: "rgba(88,0,229,.10)", border: "1px solid rgba(88,0,229,.20)", borderRadius: 6, padding: "2px 7px" }}>
+              {lobbyId}
+            </div>
+          )}
+          <button
+            onClick={() => setShowCreate(o => !o)}
+            style={{
+              padding: "3px 9px", borderRadius: 7, fontSize: 11, fontWeight: 700,
+              border: showCreate ? "1px solid rgba(88,0,229,.50)" : "1px solid rgba(88,0,229,.25)",
+              background: showCreate ? "rgba(88,0,229,.15)" : "rgba(88,0,229,.08)",
+              color: "rgba(167,139,250,.9)", cursor: "pointer", transition: "all .15s",
+            }}
+          >
+            {showCreate ? "✕" : "+ Room"}
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-        <input style={s.input} placeholder="New room name…" value={newRoom} onChange={e => setNewRoom(e.target.value)} onKeyDown={e => e.key === "Enter" && createRoom()} />
-        <button style={s.btn} onClick={createRoom} disabled={creating || !newRoom.trim()}>{creating ? "…" : "Create"}</button>
-      </div>
+      {/* ── Create Room Overlay ── */}
+      {showCreate && (
+        <div style={{
+          marginBottom: 10, padding: "12px", borderRadius: 12,
+          border: "1px solid rgba(88,0,229,.25)", background: "rgba(88,0,229,.05)",
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".7px", textTransform: "uppercase", color: "rgba(167,139,250,.7)", marginBottom: 8 }}>
+            Create Room
+          </div>
+
+          {/* Room name */}
+          <input
+            style={{ ...s.input, marginBottom: 8, borderColor: "rgba(88,0,229,.20)" }}
+            placeholder="Room name…"
+            value={newRoom}
+            onChange={e => setNewRoom(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && newRoom.trim() && createRoom()}
+            autoFocus
+          />
+
+          {/* Module picker */}
+          <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
+            Starting Module
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+            {ROOM_MODULES.map(m => {
+              const active = selectedModule === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setSelectedModule(m.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "7px 10px", borderRadius: 8, textAlign: "left", width: "100%",
+                    border: active ? "1px solid rgba(88,0,229,.50)" : "1px solid rgba(255,255,255,.08)",
+                    background: active ? "rgba(88,0,229,.12)" : "rgba(255,255,255,.02)",
+                    color: active ? "rgba(216,180,254,.95)" : "rgba(243,244,246,.70)",
+                    cursor: "pointer", transition: "all .12s", fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ fontSize: 14, width: 22, textAlign: "center", flexShrink: 0 }}>{m.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{m.label}</div>
+                    <div style={{ fontSize: 10, opacity: 0.5, marginTop: 1 }}>{m.desc}</div>
+                  </div>
+                  {active && (
+                    <span style={{
+                      fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 4,
+                      background: "rgba(88,0,229,.25)", color: "rgba(167,139,250,.9)",
+                      letterSpacing: ".1em", textTransform: "uppercase", flexShrink: 0,
+                    }}>
+                      selected
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Create button */}
+          <button
+            onClick={createRoom}
+            disabled={creating || !newRoom.trim()}
+            style={{
+              width: "100%", padding: "9px", borderRadius: 9,
+              border: "1px solid rgba(88,0,229,.40)", background: "rgba(88,0,229,.15)",
+              color: "rgba(167,139,250,.95)", fontSize: 12, fontWeight: 700,
+              cursor: creating || !newRoom.trim() ? "default" : "pointer",
+              opacity: creating || !newRoom.trim() ? 0.5 : 1,
+              transition: "all .15s",
+            }}
+          >
+            {creating ? "Creating…" : `Create "${newRoom.trim() || "…"}" with ${ROOM_MODULES.find(m => m.id === selectedModule)?.label || "module"}`}
+          </button>
+
+          {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginTop: 6 }}>{err}</div>}
+        </div>
+      )}
+
       <input style={{ ...s.input, marginBottom: 8 }} placeholder="Search rooms…" value={q} onChange={e => setQ(e.target.value)} />
       {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginBottom: 6 }}>{err}</div>}
 
