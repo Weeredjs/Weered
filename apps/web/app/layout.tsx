@@ -44,12 +44,17 @@ export const metadata = {
     description: "Enter the portal",
     images: ["https://weered.ca/og-image.png"],
   },
-  themeColor: "#5800E5",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Weered",
   },
+};
+
+export const viewport = {
+  themeColor: "#5800E5",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -68,6 +73,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <LobbyBrowser />
             <OverlayHost />
             <WelcomeModal />
+            <div className="weered-trademark-footer">
+              Game names, logos, and trademarks are the property of their respective owners. Weered is not affiliated with or endorsed by any game publisher or platform.
+            </div>
           </WeeredProvider>
         </OverlayProvider>
       </body>
