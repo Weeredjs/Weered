@@ -1480,7 +1480,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
 
     const list = await prisma.room.findMany({
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, locked: true, createdAt: true, _count: { select: { members: true } } },
+      select: { id: true, name: true, locked: true, createdAt: true, lobbyId: true, _count: { select: { members: true } } },
     });
     const roomsMem = new Map([...rooms.entries()]);
     const enriched = list.map(r => {
