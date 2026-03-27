@@ -229,6 +229,13 @@ model User {
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
   onboardingComplete Boolean    @default(false)
+
+  // Global ban — staff-imposed platform-wide ban
+  banned      Boolean    @default(false)
+  banReason   String?
+  bannedAt    DateTime?
+  bannedBy    String?    // userId of staff member who banned
+
   createdAt         DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -239,6 +246,16 @@ model User {
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
   notorietyEvents  NotorietyEvent[]
   gameAccounts     UserGameAccount[]
+}
+
+// —— Site Config (key-value) ————————————————————————————————————————————————
+// Stores platform-wide settings: featuredLobbyId, registrationOpen, etc.
+// Staff-managed via /staff/config endpoints.
+
+model SiteConfig {
+  key       String   @id           // e.g. "featuredLobbyId", "registrationOpen"
+  value     String   @default("")  // stored as string, parsed by consumer
+  updatedAt DateTime @updatedAt
 }
 
 model LocalAuth {

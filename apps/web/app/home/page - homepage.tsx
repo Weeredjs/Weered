@@ -482,9 +482,6 @@ export default function HomePage() {
   // Aggregated lobby presence counts (live users across all rooms)
   const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
 
-  // Featured lobby from staff config
-  const [featuredLobby, setFeaturedLobby] = React.useState<any>(null);
-
   React.useEffect(() => {
     const base = "https://api.weered.ca";
     const token = localStorage.getItem("weered_token") ?? "";
@@ -492,8 +489,7 @@ export default function HomePage() {
     Promise.all([
       fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
-      fetch(`${base}/featured`, { headers }).then(r => r.json()).catch(() => ({})),
-    ]).then(([lobbyData, roomData, featuredData]) => {
+    ]).then(([lobbyData, roomData]) => {
       const lobbies = Array.isArray(lobbyData?.lobbies)
         ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
         : [];
@@ -506,11 +502,6 @@ export default function HomePage() {
         return true;
       });
       setFetchedRooms(merged);
-
-      // Set featured lobby from API config
-      if (featuredData?.ok && featuredData?.lobby) {
-        setFeaturedLobby({ ...featuredData.lobby, pinned: true });
-      }
 
       // Fetch aggregated presence for all lobbies
       const lobbyIds = lobbies.map((l: any) => l.id).filter(Boolean);
@@ -598,22 +589,23 @@ export default function HomePage() {
     [filtered]
   );
 
-  // Hero: use staff-configured featured lobby, then fallback to highest-traffic lobby
+  // Hero: prefer Marathon, then highest-traffic lobby
   const featured = useMemo(() => {
-    // Use the featured lobby from staff config if available
-    if (featuredLobby) {
-      const id = featuredLobby.id;
-      const liveCount = lobbyPresenceCounts[id] ?? onlineCount(featuredLobby);
-      return { ...featuredLobby, pinned: true, onlineCount: liveCount };
+    // Find marathon from any data source
+    const marathon = allRooms.find((r: any) => r?.id === "marathon" || r?.slug === "marathon")
+      || fetchedRooms.find((r: any) => r?.id === "marathon" || r?.slug === "marathon")
+      || lobbies.find(r => roomId(r) === "marathon" || roomName(r) === "marathon");
+    if (marathon) {
+      // Always use aggregated presence count if available
+      const liveCount = lobbyPresenceCounts["marathon"] ?? onlineCount(marathon);
+      return { ...marathon, pinned: true, onlineCount: liveCount };
     }
-    // Fallback: highest-traffic lobby
     return lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null;
   },
-    [lobbies, popularRooms, featuredLobby, lobbyPresenceCounts]
+    [lobbies, popularRooms, allRooms, fetchedRooms, lobbyPresenceCounts]
   );
 
-  // Hide featured lobby from the grid to avoid duplication
-  const featuredId = featured ? roomId(featured) : "";
+  const isMarathonFeatured = featured && (roomId(featured) === "marathon" || roomName(featured) === "marathon" || featured?.slug === "marathon");
 
   const recentIds: string[] = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("weered:recentRooms") || "[]"); } catch { return []; }
@@ -741,7 +733,7 @@ export default function HomePage() {
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
+              {lobbies.filter(r => isMarathonFeatured ? (roomId(r) !== "marathon" && roomName(r) !== "marathon") : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => handleJoin(id, true)} />)}
 
               {/* Create Your Lobby CTA card */}
               {me && (
