@@ -258,6 +258,19 @@ model SiteConfig {
   updatedAt DateTime @updatedAt
 }
 
+model RecentVisit {
+  id        String   @id @default(cuid())
+  userId    String
+  roomId    String?              // ad-hoc room ID (null if lobby visit)
+  lobbyId   String?              // lobby ID (null if ad-hoc room visit)
+  name      String   @default("") // display name at time of visit
+  visitedAt DateTime @default(now())
+
+  @@unique([userId, roomId])     // one entry per user+room
+  @@unique([userId, lobbyId])    // one entry per user+lobby
+  @@index([userId, visitedAt])
+}
+
 model LocalAuth {
   id               String    @id @default(cuid())
   username         String    @unique
