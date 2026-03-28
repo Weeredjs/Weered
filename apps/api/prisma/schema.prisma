@@ -76,6 +76,7 @@ model Lobby {
   adminMessages LobbyAdminMessage[]
   audit       LobbyAudit[]
   tiers       LobbyTier[]
+  events      Event[]
 }
 
 model LobbyMember {
@@ -604,5 +605,66 @@ model ReservedName {
   reason    String        @default("")
   addedBy   String        @default("system")  // userId or "system" for seed
   createdAt DateTime      @default(now())
+}
+
+// ΓöÇΓöÇ Events ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Global + lobby-scoped events with promotion pipeline.
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELED
+  COMPLETED
+}
+
+enum PromotionStatus {
+  NONE
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model Event {
+  id              String          @id @default(cuid())
+
+  // Core
+  title           String
+  description     String          @default("")
+  category        String          @default("")        // free-text: "raid_night", "watch_party", "ban_court", etc.
+  coverImageUrl   String?
+
+  // Scheduling
+  startsAt        DateTime
+  endsAt          DateTime?
+  timezone        String          @default("UTC")
+
+  // Scope — null lobbyId = global event
+  lobbyId         String?
+  lobby           Lobby?          @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  // Status
+  status          EventStatus     @default(DRAFT)
+
+  // Creator
+  createdById     String
+  createdByName   String          @default("")
+
+  // Promotion pipeline (lobby events requesting global visibility)
+  promotionStatus         PromotionStatus @default(NONE)
+  promotionNote           String?         // lobby owner's pitch to staff
+  promotionReviewedById   String?
+  promotionReviewedByName String?
+  promotionReviewedAt     DateTime?
+  promotionDenyReason     String?
+
+  // Staff decides per-event whether to fire system:broadcast on publish
+  broadcastOnPublish Boolean @default(false)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([lobbyId, status, startsAt])
+  @@index([status, startsAt])
+  @@index([createdById])
 }
 

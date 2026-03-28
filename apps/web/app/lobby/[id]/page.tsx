@@ -11,6 +11,7 @@ import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
 import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
+import LobbyEvents from "../../../components/LobbyEvents";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -166,6 +167,7 @@ export default function LobbyIdPage() {
             </TabBtn>
           )}
           <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>Feed</TabBtn>
+          <TabBtn active={view === "events"} accent={accent} onClick={() => setView("events")}>Events</TabBtn>
 
           {showAdmin && (
             <a
@@ -195,6 +197,8 @@ export default function LobbyIdPage() {
             )
           ) : view === "rooms" ? (
             <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} bannerUrl={lobbyInfo?.bannerUrl} style={{ flex: 1, minHeight: 0 }} />
+          ) : view === "events" ? (
+            <LobbyEvents lobbyId={lobbyId} accent={accent} />
           ) : (
             <LobbyContent lobbyId={lobbyId} />
           )}
