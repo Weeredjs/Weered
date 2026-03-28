@@ -62,8 +62,13 @@ export default function LobbyChatPanel(
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const joinedStrict = Boolean(effectiveRoomId && joinedRoomId && effectiveRoomId === joinedRoomId && effectiveJoinStatus === "joined");
-  const joinedByMeta = Boolean((meta || admin) && !meta?.locked && !admin?.locked);
-  const canType = (joinedStrict || joinedByMeta) && !meta?.locked;
+  // For lobbies (not embedded): locked = chat locked (staff lobby lock controls).
+  // For rooms (embedded): locked = entry lock, NOT chat lock. Use chatDisabled instead.
+  const chatBlocked = props.embedded
+    ? Boolean(meta?.chatDisabled)          // rooms: only chatDisabled kills chat
+    : Boolean(meta?.locked);               // lobbies: locked = chat locked
+  const joinedByMeta = Boolean((meta || admin) && !chatBlocked && !admin?.locked);
+  const canType = (joinedStrict || joinedByMeta) && !chatBlocked;
   const msgTrim = String(text || "").trim();
   const canSend = !!canType && msgTrim.length > 0;
 
@@ -149,7 +154,7 @@ export default function LobbyChatPanel(
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={canType ? "Message..." : meta?.locked ? "Chat is locked." : "Join/admit required..."}
+            placeholder={canType ? "Message..." : chatBlocked ? "Chat is locked." : "Join/admit required..."}
             disabled={!canType}
             className={
               "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
