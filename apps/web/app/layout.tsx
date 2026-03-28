@@ -15,12 +15,11 @@ export const metadata = {
   description: "Enter the portal",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
       { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
     ],
     apple: "/brand/logo/weered-logo-128.png",
-    shortcut: "/favicon.ico",
+    shortcut: "/brand/logo/weered-logo-32.png",
   },
   manifest: "/manifest.json",
   openGraph: {
