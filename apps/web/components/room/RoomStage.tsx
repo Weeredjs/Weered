@@ -69,7 +69,7 @@ declare global {
 }
 
 function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
-  const { sendRaw } = useWeered() as any;
+  const { sendRaw, ytStateByRoom } = useWeered() as any;
   const voice = useVoice();
   const playerRef    = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
@@ -80,6 +80,18 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   const [inputErr,  setInputErr ] = useState("");
   const [ytReady,   setYtReady  ] = useState(false);
   const [playing,   setPlaying  ] = useState(false);
+  const didInitFromBuffer = useRef(false);
+
+  // ── Initialize from buffered server state on mount (handles late-join race) ──
+  useEffect(() => {
+    if (didInitFromBuffer.current) return;
+    const buf = ytStateByRoom?.[roomId];
+    if (buf?.videoId) {
+      didInitFromBuffer.current = true;
+      setVideoId(buf.videoId);
+      setPlaying(buf.playing);
+    }
+  }, [ytStateByRoom, roomId]);
 
   // ── Load YouTube IFrame API once ──
   useEffect(() => {
@@ -123,18 +135,35 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
           }
         },
         onReady: () => {
-          // If joining late with a playing state, autoplay handled by youtube:state handler
+          // If joining late, seek to buffered position and auto-play if room is playing
+          const buf = ytStateByRoom?.[roomId];
+          if (buf?.videoId && buf.videoId === videoId) {
+            const drift = (Date.now() - (buf.updatedAt || Date.now())) / 1000;
+            const target = (buf.position || 0) + (buf.playing ? drift : 0);
+            if (target > 2) {
+              isSyncing.current = true;
+              playerRef.current?.seekTo?.(target, true);
+              setTimeout(() => { isSyncing.current = false; }, 800);
+            }
+            if (buf.playing) {
+              playerRef.current?.playVideo?.();
+              setPlaying(true);
+            }
+          }
         },
       },
     });
     return () => {
-      try {
-        const p = playerRef.current;
-        playerRef.current = null;
-        // Detach the iframe from DOM before destroying to prevent React removeChild error
-        try { const iframe = p?.getIframe?.(); iframe?.parentNode?.removeChild(iframe); } catch {}
-        p?.destroy?.();
-      } catch {}
+      const p = playerRef.current;
+      playerRef.current = null;
+      // Defer destroy to next tick so React finishes its unmount first
+      // This prevents "Failed to execute 'removeChild' on 'Node'" errors
+      setTimeout(() => {
+        try {
+          try { const iframe = p?.getIframe?.(); iframe?.parentNode?.removeChild(iframe); } catch {}
+          p?.destroy?.();
+        } catch {}
+      }, 0);
     };
   }, [videoId, ytReady]);
 

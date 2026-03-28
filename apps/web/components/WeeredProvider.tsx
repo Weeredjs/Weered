@@ -40,6 +40,7 @@ type Ctx = {
   metaByRoom: Record<string, RoomMeta>;
   adminByRoom: Record<string, AdminState>;
   moduleByRoom: Record<string, ModuleState>;
+  ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
@@ -164,6 +165,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
+  const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
   const [passwordRoomId, setPasswordRoomId] = useState("");
   const [passwordError,  setPasswordError ] = useState("");
@@ -300,8 +302,20 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:message") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
       }
-      // Forward all youtube sync events to RoomStage via DOM event
+      // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
       if (msg.type?.startsWith("youtube:")) {
+        const rid = String(msg.roomId || "");
+        if (rid) {
+          if (msg.type === "youtube:state" || msg.type === "youtube:load") {
+            setYtStateByRoom(prev => ({ ...prev, [rid]: { videoId: msg.videoId, playing: Boolean(msg.playing), position: Number(msg.position ?? 0), updatedAt: Date.now() } }));
+          } else if (msg.type === "youtube:play") {
+            setYtStateByRoom(prev => ({ ...prev, [rid]: { ...(prev[rid] || { videoId: "", playing: false, position: 0, updatedAt: 0 }), playing: true, position: Number(msg.position ?? 0), updatedAt: Date.now() } }));
+          } else if (msg.type === "youtube:pause") {
+            setYtStateByRoom(prev => ({ ...prev, [rid]: { ...(prev[rid] || { videoId: "", playing: false, position: 0, updatedAt: 0 }), playing: false, position: Number(msg.position ?? 0), updatedAt: Date.now() } }));
+          } else if (msg.type === "youtube:stop") {
+            setYtStateByRoom(prev => { const n = { ...prev }; delete n[rid]; return n; });
+          }
+        }
         try { window.dispatchEvent(new CustomEvent("weered:youtube", { detail: { ...msg, updatedAt: Date.now() } })); } catch {}
       }
       // Generic rooms list payload
@@ -714,7 +728,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom,
+    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom,
     moduleState, setModuleState,
     rooms, join, leave, knock,
     devLogin, logout,
