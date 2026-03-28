@@ -67,6 +67,25 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
 
+  // Lobby context for this room
+  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string } | null>(null);
+  const currentLobbyId = w?.currentLobbyId || null;
+  useEffect(() => {
+    if (!currentLobbyId || currentLobbyId === "lobby") { setLobbyContext(null); return; }
+    fetch(`https://api.weered.ca/lobbies/${encodeURIComponent(currentLobbyId)}`)
+      .then(r => r.json())
+      .then(j => {
+        if (j?.ok && j?.lobby) {
+          setLobbyContext({
+            id: j.lobby.id,
+            name: j.lobby.name || j.lobby.id,
+            logoUrl: j.lobby.logoUrl || undefined,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [currentLobbyId]);
+
   const [articleUrl, setArticleUrl]     = useState<string>("");
   const [browserUrl, setBrowserUrl]     = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
@@ -406,13 +425,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         thumbnail={roomThumbnail}
         pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
         users={Array.isArray(w?.users) ? w.users : []}
-        lobbyName={w?.meta?.lobbyName || w?.meta?.lobbyId || null}
-        lobbyLogo={w?.meta?.lobbyLogo || null}
+        lobbyName={lobbyContext?.name || w?.meta?.lobbyName || null}
+        lobbyLogo={lobbyContext?.logoUrl || w?.meta?.lobbyLogo || null}
         onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
         onDetailsClick={() => setShowDetails(d => !d)}
         onLeave={() => {
           try { w?.leave?.(); } catch {}
-          const lobbyId = w?.meta?.lobbyId;
+          const lobbyId = lobbyContext?.id;
           if (lobbyId) {
             window.location.href = `/lobby/${encodeURIComponent(lobbyId)}`;
           } else {

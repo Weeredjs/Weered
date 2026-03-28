@@ -44,6 +44,7 @@ type LobbyInfo = {
   enabledModules?: string[];
   verified?: boolean;
   name?: string;
+  ownerId?: string | null;
   _count?: { rooms: number; members: number };
 };
 
@@ -52,7 +53,7 @@ export default function LobbyIdPage() {
   const lobbyId = decodeURIComponent(String(params?.id ?? "lobby"));
   const isVerified = VERIFIED_DOMAINS.has(lobbyId);
 
-  const { join, globalRole } = useWeered() as any;
+  const { join, globalRole, me } = useWeered() as any;
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
   const [view, setView] = useState<"rooms" | "feed" | "modules">("rooms");
 
@@ -74,6 +75,7 @@ export default function LobbyIdPage() {
             enabledModules: j.lobby.enabledModules,
             verified:       j.lobby.verified,
             name:           j.lobby.name,
+            ownerId:        j.lobby.ownerId || null,
             _count:         j.lobby._count,
           });
           if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON") {
@@ -90,7 +92,8 @@ export default function LobbyIdPage() {
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const isStaff    = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "ADMIN";
-  const showAdmin  = lobbyInfo?.verified || isStaff;
+  const isOwner    = !!(me?.id && lobbyInfo?.ownerId && me.id === lobbyInfo.ownerId);
+  const showAdmin  = isStaff || isOwner;
 
   return (
     <div

@@ -2999,7 +2999,7 @@ app.post("/dm/:peerId", async (req, reply) => {
         select: {
           id: true, name: true, description: true, verified: true,
           moduleType: true, moduleConfig: true, keywords: true,
-          accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
+          accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true, ownerId: true,
           _count: { select: { rooms: true, members: true } },
         },
         take: 100,

@@ -177,9 +177,76 @@ export default function LobbyHeaderBar({
       className={ui.panel}
       style={{
         position: "relative", flexShrink: 0,
-        padding: 0,
+        padding: 0, overflow: "hidden",
       }}
     >
+      {/* Accent top line */}
+      {accent && (
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: 2, zIndex: 2,
+          background: `linear-gradient(90deg, transparent, ${accent}66 30%, ${accent} 50%, ${accent}66 70%, transparent)`,
+          pointerEvents: "none",
+        }} />
+      )}
+
+      {/* Lobby identity bar */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "10px 16px 0",
+      }}>
+        {/* Logo or initial */}
+        {logoUrl ? (
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            background: "rgba(0,0,0,.4)",
+            border: `1px solid ${accent || "rgba(255,255,255,.08)"}33`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            overflow: "hidden",
+          }}>
+            <img src={logoUrl} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
+          </div>
+        ) : (
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            background: accent ? `${accent}15` : "rgba(88,0,229,.12)",
+            border: `1px solid ${accent || "#5800E5"}22`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, fontWeight: 900, color: accent || "#5800E5",
+          }}>
+            {initial}
+          </div>
+        )}
+
+        {/* Name + verified */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{
+              fontSize: 15, fontWeight: 900, letterSpacing: "-0.3px",
+              color: "rgba(243,244,246,.97)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {title}
+            </span>
+            {verified && (
+              <span style={{
+                fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
+                background: accent ? `${accent}20` : "rgba(88,0,229,.15)",
+                border: `1px solid ${accent || "#5800E5"}35`,
+                color: accent || "#5800E5",
+                letterSpacing: "0.05em",
+                flexShrink: 0,
+              }}>
+                VERIFIED
+              </span>
+            )}
+          </div>
+          {lobbyId && lobbyId !== "lobby" && lobbyId !== title && (
+            <div style={{ fontSize: 10, color: "rgba(148,163,184,.35)", marginTop: 1 }}>{lobbyId}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Search + action bar */}
       <div className="px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
           {/* Mode tabs */}
