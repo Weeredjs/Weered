@@ -1096,8 +1096,22 @@ async function main() {
         _count: r._count,
       };
     });
-    return { ok: true, rooms: out };
-  });
+  return { ok: true, rooms: out };
+    });
+
+    // GET /lobbies/:lobbyId/presence — aggregate online users across all lobby rooms
+    app.get("/lobbies/:lobbyId/presence", async (req, reply) => {
+      const lobbyId = String((req as any).params?.lobbyId || "");
+      const seen = new Map<string, { id: string; name: string; avatar?: string }>();
+      for (const [rid, rs] of rooms) {
+        if (rid === lobbyId || rs.lobbyId === lobbyId) {
+          for (const [uid, u] of rs.users) {
+            if (!seen.has(uid)) seen.set(uid, { id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });
+          }
+        }
+      }
+      return { ok: true, users: [...seen.values()], count: seen.size };
+    });
 
   // POST /lobbies/:lobbyId/claim — lobby owner claim (verified users)
   app.post("/lobbies/:lobbyId/claim", async (req, reply) => {
