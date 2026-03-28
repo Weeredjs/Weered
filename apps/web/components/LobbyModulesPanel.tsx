@@ -780,43 +780,44 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
   const hasManifest = !!data?.manifestVersion;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%", position: "relative" }}>
       {/* Account header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>⚔</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 7, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>⚔</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
             {data.displayName}
-            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
+            <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 999, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
           </div>
-          <div style={{ fontSize: 10, opacity: 0.4 }}>Platform {data.platform} · {characters.length} characters{data.vaultCount ? ` · ${data.vaultCount} vault items` : ""}</div>
+          <div style={{ fontSize: 9, opacity: 0.4 }}>Platform {data.platform} · {characters.length} chars{data.vaultCount ? ` · ${data.vaultCount} vault` : ""}</div>
         </div>
-        <button onClick={() => { const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(t)}`; }} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>Re-link</button>
+        <button onClick={() => { const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(t)}`; }} style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}>Re-link</button>
       </div>
 
       {/* Character tabs */}
       {characters.length > 0 && (
-        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden" }}>
           {characters.map((c: any, i: number) => (
             <button key={c.characterId || i} onClick={() => { setSelectedChar(i); if (subTab === "vault") setSubTab("equipped"); }} style={{
-              flex: 1, padding: "8px 6px", border: "none", cursor: "pointer",
+              flex: 1, padding: "6px 4px", border: "none", cursor: "pointer", minWidth: 0,
               background: selectedChar === i && subTab !== "vault" ? `${accent}18` : "transparent",
               borderBottom: selectedChar === i && subTab !== "vault" ? `2px solid ${accent}` : "2px solid transparent",
               color: selectedChar === i && subTab !== "vault" ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.55)",
-              fontWeight: selectedChar === i && subTab !== "vault" ? 700 : 400, fontSize: 12, transition: "all .12s",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              fontWeight: selectedChar === i && subTab !== "vault" ? 700 : 400, fontSize: 11, transition: "all .12s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+              overflow: "hidden", whiteSpace: "nowrap",
             }}>
-              <span style={{ fontSize: 14 }}>{c.classType === 0 ? "🛡" : c.classType === 1 ? "🗡" : "✨"}</span>
+              <span style={{ fontSize: 12 }}>{c.classType === 0 ? "🛡" : c.classType === 1 ? "🗡" : "✨"}</span>
               {c.className || ["Titan", "Hunter", "Warlock"][c.classType]}
-              <span style={{ fontSize: 16, fontWeight: 900, color: "rgb(253,230,138)" }}>{c.light}</span>
+              <span style={{ fontSize: 13, fontWeight: 900, color: "rgb(253,230,138)" }}>{c.light}</span>
             </button>
           ))}
           <button onClick={() => setSubTab("vault")} style={{
-            padding: "8px 12px", border: "none", cursor: "pointer",
+            padding: "6px 8px", border: "none", cursor: "pointer", flexShrink: 0,
             background: subTab === "vault" ? "rgba(245,158,11,.08)" : "transparent",
             borderBottom: subTab === "vault" ? "2px solid rgba(245,158,11,.6)" : "2px solid transparent",
             color: subTab === "vault" ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.55)",
-            fontWeight: subTab === "vault" ? 700 : 400, fontSize: 12, transition: "all .12s",
+            fontWeight: subTab === "vault" ? 700 : 400, fontSize: 11, transition: "all .12s",
           }}>🔒 Vault{data.vaultCount ? ` (${data.vaultCount})` : ""}</button>
         </div>
       )}
@@ -843,7 +844,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
       )}
 
       {/* Content */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12, position: "relative" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12 }}>
         {subTab === "vault" ? (
           <VaultView items={vault} onItemClick={setSelectedItem} />
         ) : char ? (
@@ -855,19 +856,19 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
         ) : (
           <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>No character data available</div>
         )}
-
-        {/* Item detail overlay */}
-        {selectedItem && (
-          <ItemDetailPanel
-            item={selectedItem}
-            onClose={() => setSelectedItem(null)}
-            onEquip={handleEquip}
-            onTransfer={handleTransfer}
-            characters={characters}
-            currentCharId={char?.characterId}
-          />
-        )}
       </div>
+
+      {/* Item detail overlay — positioned over entire MyGuardian panel */}
+      {selectedItem && (
+        <ItemDetailPanel
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onEquip={handleEquip}
+          onTransfer={handleTransfer}
+          characters={characters}
+          currentCharId={char?.characterId}
+        />
+      )}
     </div>
   );
 }
