@@ -57,7 +57,7 @@ export default function LobbyIdPage() {
 
   const { join, globalRole, me } = useWeered() as any;
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
-  const [view, setView] = useState<"rooms" | "feed" | "modules">("rooms");
+  const [view, setView] = useState<"rooms" | "feed" | "modules" | "events">("rooms");
 
   useEffect(() => {
     if (lobbyId) join(lobbyId);
