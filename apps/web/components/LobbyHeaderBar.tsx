@@ -189,108 +189,97 @@ export default function LobbyHeaderBar({
         }} />
       )}
 
-      {/* Lobby identity bar */}
+      {/* Single row: logo + name + search + actions */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 16px 0",
+        padding: "8px 14px",
       }}>
         {/* Logo or initial */}
         {logoUrl ? (
           <div style={{
-            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
             background: "rgba(0,0,0,.4)",
             border: `1px solid ${accent || "rgba(255,255,255,.08)"}33`,
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
-            <img src={logoUrl} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
+            <img src={logoUrl} alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
           </div>
         ) : (
           <div style={{
-            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
             background: accent ? `${accent}15` : "rgba(88,0,229,.12)",
             border: `1px solid ${accent || "#5800E5"}22`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14, fontWeight: 900, color: accent || "#5800E5",
+            fontSize: 12, fontWeight: 900, color: accent || "#5800E5",
           }}>
             {initial}
           </div>
         )}
 
         {/* Name + verified */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <span style={{
+            fontSize: 14, fontWeight: 900, letterSpacing: "-0.3px",
+            color: "rgba(243,244,246,.97)",
+            whiteSpace: "nowrap",
+          }}>
+            {title}
+          </span>
+          {verified && (
             <span style={{
-              fontSize: 15, fontWeight: 900, letterSpacing: "-0.3px",
-              color: "rgba(243,244,246,.97)",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
+              background: accent ? `${accent}20` : "rgba(88,0,229,.15)",
+              border: `1px solid ${accent || "#5800E5"}35`,
+              color: accent || "#5800E5",
+              letterSpacing: "0.05em",
+              flexShrink: 0,
             }}>
-              {title}
+              VERIFIED
             </span>
-            {verified && (
-              <span style={{
-                fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
-                background: accent ? `${accent}20` : "rgba(88,0,229,.15)",
-                border: `1px solid ${accent || "#5800E5"}35`,
-                color: accent || "#5800E5",
-                letterSpacing: "0.05em",
-                flexShrink: 0,
-              }}>
-                VERIFIED
-              </span>
-            )}
-          </div>
-          {lobbyId && lobbyId !== "lobby" && lobbyId !== title && (
-            <div style={{ fontSize: 10, color: "rgba(148,163,184,.35)", marginTop: 1 }}>{lobbyId}</div>
           )}
         </div>
-      </div>
 
-      {/* Search + action bar */}
-      <div className="px-4 py-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Mode tabs */}
-          <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
-            {(["rooms", "people"] as Mode[]).map(m => (
-              <button
-                key={m}
-                type="button"
-                className={
-                  "rounded-lg px-2 py-1 text-xs font-semibold " +
-                  (mode === m ? "bg-white/15" : "opacity-70 hover:bg-white/10")
-                }
-                style={mode === m && accent ? { background: `${accent}25`, color: accent } : undefined}
-                onClick={() => setMode(m)}
-              >
-                {m === "rooms" ? "Rooms" : "People"}
-              </button>
-            ))}
-          </div>
+        {/* Mode tabs */}
+        <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-0.5" style={{ flexShrink: 0 }}>
+          {(["rooms", "people"] as Mode[]).map(m => (
+            <button
+              key={m}
+              type="button"
+              className={
+                "rounded-lg px-2 py-1 text-xs font-semibold " +
+                (mode === m ? "bg-white/15" : "opacity-70 hover:bg-white/10")
+              }
+              style={mode === m && accent ? { background: `${accent}25`, color: accent } : undefined}
+              onClick={() => setMode(m)}
+            >
+              {m === "rooms" ? "Rooms" : "People"}
+            </button>
+          ))}
+        </div>
 
-          {/* Search input */}
-          <div style={{ position: "relative", flex: 1, minWidth: 260 }}>
-            <input
-              className="weered-input w-full"
-              placeholder={mode === "rooms" ? "Search rooms or lobbies…" : "Search people"}
-              value={q}
-              onChange={e => { setQ(e.target.value); setOpen(true); }}
-              onFocus={() => { if (q.trim().length >= 2) setOpen(true); }}
-              onBlur={() => setTimeout(() => setOpen(false), 150)}
-              onKeyDown={onKeyDown}
-              style={accent && isBranded ? {
-                outline: "none",
-              } : undefined}
-            />
-            {searching && (
-              <div style={{
-                position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-                fontSize: 10, opacity: 0.4,
-              }}>
-                …
-              </div>
-            )}
+        {/* Search input */}
+        <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
+          <input
+            className="weered-input w-full"
+            placeholder={mode === "rooms" ? "Search rooms or lobbies…" : "Search people"}
+            value={q}
+            onChange={e => { setQ(e.target.value); setOpen(true); }}
+            onFocus={() => { if (q.trim().length >= 2) setOpen(true); }}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            onKeyDown={onKeyDown}
+            style={{ outline: "none", padding: "5px 10px", fontSize: 12 }}
+          />
+          {searching && (
+            <div style={{
+              position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+              fontSize: 10, opacity: 0.4,
+            }}>
+              …
+            </div>
+          )}
 
-            {/* ── Search dropdown ───────────────────────────────────────── */}
+          {/* ── Search dropdown ───────────────────────────────────────── */}
             {showDropdown && (
               <div style={{
                 position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 200,
@@ -483,22 +472,13 @@ export default function LobbyHeaderBar({
             )}
           </div>
 
-          {/* Action buttons */}
-          <button type="button" className="weered-btn" onClick={openBrowse}>
-            Browse Rooms
-          </button>
-          <button type="button" className="weered-btn" onClick={() => setShowLobbyInvite(true)}>
-            Invite
-          </button>
-          <button
-            type="button"
-            className="weered-btn"
-            onClick={() => { setQ(""); setOpen(false); }}
-            disabled={!q.trim()}
-          >
-            Clear
-          </button>
-        </div>
+        {/* Action buttons */}
+        <button type="button" className="weered-btn" style={{ padding: "5px 10px", fontSize: 11 }} onClick={openBrowse}>
+          Browse
+        </button>
+        <button type="button" className="weered-btn" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => setShowLobbyInvite(true)}>
+          Invite
+        </button>
       </div>
 
       {showLobbyInvite && (

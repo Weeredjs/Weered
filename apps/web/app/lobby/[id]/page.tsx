@@ -100,9 +100,8 @@ export default function LobbyIdPage() {
   return (
     <div
       style={{
-        display: "flex", flexDirection: "column", gap: 12,
-        height: "calc(100vh - 32px)", minHeight: 0,
-        paddingBottom: 64,
+        display: "flex", flexDirection: "column", gap: 8,
+        height: "calc(100vh - 16px)", minHeight: 0,
         "--lobby-accent":     accent || "#5800E5",
         "--lobby-accent-dim": accent ? `${accent}22` : "rgba(88,0,229,0.13)",
         "--lobby-accent-mid": accent ? `${accent}55` : "rgba(88,0,229,0.33)",
