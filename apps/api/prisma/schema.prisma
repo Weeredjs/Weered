@@ -143,10 +143,11 @@ model LobbyAdminMessage {
 }
 
 model Room {
-  id          String   @id
-  name        String   @default("")
-  description String   @default("")
-  locked      Boolean  @default(false)
+  id           String   @id
+  name         String   @default("")
+  description  String   @default("")
+  locked       Boolean  @default(false)
+  passwordHash String?
   ownerId   String?
   lobbyId   String?
   createdAt DateTime @default(now())

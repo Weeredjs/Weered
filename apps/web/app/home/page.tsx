@@ -319,7 +319,18 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
               </div>
             )}
             <div>
-              <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.2, letterSpacing: "-0.2px" }}>{name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.2, letterSpacing: "-0.2px" }}>{name}</span>
+                {room?.verified && (
+                  <span style={{
+                    fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
+                    background: `${accent}18`, border: `1px solid ${accent}30`,
+                    color: accent, letterSpacing: "0.05em", flexShrink: 0,
+                  }}>
+                    VERIFIED
+                  </span>
+                )}
+              </div>
               {desc && <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 2, lineHeight: 1.3, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{desc}</div>}
             </div>
           </div>

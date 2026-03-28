@@ -67,6 +67,7 @@ type RoomState = {
   activeModule: ModuleState | null;
   lastActiveAt: number;
   pinned: boolean;
+  passwordHash?: string;
   };
 
 const rooms = new Map<string, RoomState>();
@@ -244,6 +245,7 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.locked = Boolean(dbRoom.locked);
     r.ownerId = dbRoom.ownerId || undefined;
     r.lobbyId = (dbRoom as any).lobbyId || undefined;
+    r.passwordHash = (dbRoom as any).passwordHash || undefined;
     for (const m of dbRoom.members) { if (m.role === "MOD") r.mods.add(m.userId); }
     for (const b of dbRoom.bans) r.banned.add(b.userId);
     r.msgs = dbRoom.messages.map((m) => ({
@@ -1093,25 +1095,12 @@ async function main() {
         id: r.id, roomId: r.id, name: r.name || r.id, description: r.description || "",
         onlineCount: wsRoom?.users?.size ?? 0, onlineUsers,
         locked: Boolean(r.locked), lobbyId, ownerId: r.ownerId,
+        hasPassword: !!(wsRoom?.passwordHash || (r as any).passwordHash),
         _count: r._count,
       };
     });
-  return { ok: true, rooms: out };
-    });
-
-    // GET /lobbies/:lobbyId/presence — aggregate online users across all lobby rooms
-    app.get("/lobbies/:lobbyId/presence", async (req, reply) => {
-      const lobbyId = String((req as any).params?.lobbyId || "");
-      const seen = new Map<string, { id: string; name: string; avatar?: string }>();
-      for (const [rid, rs] of rooms) {
-        if (rid === lobbyId || rs.lobbyId === lobbyId) {
-          for (const [uid, u] of rs.users) {
-            if (!seen.has(uid)) seen.set(uid, { id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });
-          }
-        }
-      }
-      return { ok: true, users: [...seen.values()], count: seen.size };
-    });
+    return { ok: true, rooms: out };
+  });
 
   // POST /lobbies/:lobbyId/claim — lobby owner claim (verified users)
   app.post("/lobbies/:lobbyId/claim", async (req, reply) => {
@@ -1194,7 +1183,9 @@ async function main() {
     }
 
     const ownerId = u?.id ?? null;
-    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId } });
+    const rawPassword = typeof body.password === "string" ? body.password.trim() : "";
+    const passwordHash = rawPassword ? await bcrypt.hash(rawPassword, 10) : null;
+    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, passwordHash } });
 
     // Make creator the owner in RoomMember
     if (ownerId) {
@@ -1208,8 +1199,9 @@ async function main() {
     const r = await ensureRoomLoaded(id);
     r.name = name;
     if (ownerId) r.ownerId = ownerId;
+    if (passwordHash) r.passwordHash = passwordHash;
     rooms.set(id, r);
-    return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId } });
+    return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash } });
   });
 
   app.get("/rooms/:roomId", async (req, reply) => {
@@ -2261,6 +2253,22 @@ app.post("/dm/:peerId", async (req, reply) => {
           if (room.banned.has(ws.user.id)) { send(ws, { type: "room:banned", roomId }); return; }
           const uid = ws.user.id;
           const isLobby = String(roomId || "").startsWith("lobby:");
+
+          // Password-protected rooms: check password before allowing entry
+          if (room.passwordHash && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
+            const suppliedPassword = typeof msg.password === "string" ? msg.password : "";
+            if (!suppliedPassword) {
+              send(ws, { type: "room:password:required", roomId });
+              return;
+            }
+            const passwordOk = await bcrypt.compare(suppliedPassword, room.passwordHash);
+            if (!passwordOk) {
+              send(ws, { type: "room:password:wrong", roomId });
+              return;
+            }
+            // Password correct — fall through to normal join
+          }
+
           if (isLobby) room.locked = false;
           if (room.locked && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
             if (!room.knocks.some((k) => k.userId === uid)) {
