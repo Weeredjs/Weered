@@ -79,6 +79,8 @@ const S = {
 
 const NAV_ITEMS = [
   { id: "users",    label: "Users",         icon: "👤", minRole: "SUPPORT" },
+  { id: "board",    label: "Board",         icon: "📌", minRole: "SUPPORT" },
+  { id: "roster",   label: "Roster",        icon: "🪪", minRole: "SUPPORT" },
   { id: "subs",     label: "Subscriptions", icon: "💳", minRole: "STAFF" },
   { id: "rooms",     label: "Rooms",         icon: "🚪", minRole: "STAFF" },
   { id: "lobbies",   label: "Lobbies",       icon: "🏛️", minRole: "STAFF" },
@@ -1031,6 +1033,152 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
   );
 }
 
+// ── Roster tab ────────────────────────────────────────────────────────────────
+
+function RosterTab() {
+  const [staff, setStaff] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch("/staff/roster")
+      .then(j => { setStaff(j.staff || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ textAlign: "center", padding: 20, opacity: 0.4 }}>Loading roster...</div>;
+
+  const grouped: Record<string, any[]> = {};
+  for (const u of staff) {
+    const r = u.globalRole || "STAFF";
+    if (!grouped[r]) grouped[r] = [];
+    grouped[r].push(u);
+  }
+  const order = ["GOD", "ADMIN", "STAFF", "SUPPORT"];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ fontSize: 13, opacity: 0.5 }}>{staff.length} staff members</div>
+      {order.filter(r => grouped[r]?.length).map(r => (
+        <div key={r}>
+          <div style={S.sectionTitle}>{r} ({grouped[r].length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {grouped[r].map((u: any) => {
+              const rc = roleColor(u.globalRole);
+              return (
+                <div key={u.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 999, background: u.avatarColor || "rgba(124,58,237,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, flexShrink: 0, border: `2px solid ${rc.border}` }}>
+                    {(u.name || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div>
+                    <div style={{ fontSize: 10, opacity: 0.4 }}>joined {fmtDate(u.createdAt)}</div>
+                  </div>
+                  <RoleBadge role={u.globalRole} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Board tab ─────────────────────────────────────────────────────────────────
+
+function BoardTab({ myRole }: { myRole: GlobalRole }) {
+  const [posts, setPosts]     = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [body, setBody]       = useState("");
+  const [posting, setPosting] = useState(false);
+  const [msg, setMsg]         = useState("");
+
+  const load = useCallback(() => {
+    apiFetch("/staff/board")
+      .then(j => { setPosts(j.posts || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function submit() {
+    if (!body.trim()) return;
+    setPosting(true); setMsg("");
+    const j = await apiFetch("/staff/board", { method: "POST", body: JSON.stringify({ body: body.trim() }) });
+    if (j.ok) { setBody(""); load(); }
+    else setMsg(j.error || "Failed");
+    setPosting(false);
+  }
+
+  async function togglePin(id: string) {
+    await apiFetch(`/staff/board/${id}/pin`, { method: "POST", body: JSON.stringify({}) });
+    load();
+  }
+
+  async function remove(id: string) {
+    await apiFetch(`/staff/board/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  if (loading) return <div style={{ textAlign: "center", padding: 20, opacity: 0.4 }}>Loading board...</div>;
+
+  const canManage = ROLE_RANK[myRole] >= ROLE_RANK["STAFF"];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* New post */}
+      <div style={{ ...S.card, border: "1px solid rgba(124,58,237,.20)", background: "rgba(124,58,237,.04)" }}>
+        <textarea
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          placeholder="Post a note, task, or update for the team..."
+          rows={3}
+          style={{ ...S.input, resize: "vertical", minHeight: 60, fontFamily: "inherit" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+          <span style={{ fontSize: 10, opacity: 0.3 }}>{body.length}/2000</span>
+          <button style={S.btnPri} onClick={submit} disabled={posting || !body.trim()}>
+            {posting ? "Posting..." : "Post"}
+          </button>
+        </div>
+        {msg && <div style={{ fontSize: 11, color: "rgba(252,165,165,.8)", marginTop: 4 }}>{msg}</div>}
+      </div>
+
+      {/* Posts */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {posts.map((p: any) => (
+          <div key={p.id} style={{ ...S.card, borderLeft: p.pinned ? "3px solid rgba(245,158,11,.5)" : "3px solid transparent" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <div style={{ width: 22, height: 22, borderRadius: 999, background: "rgba(124,58,237,.15)", border: "1px solid rgba(124,58,237,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                {(p.authorName || "?").slice(0, 1).toUpperCase()}
+              </div>
+              <span style={{ fontWeight: 700, fontSize: 12 }}>{p.authorName}</span>
+              {p.pinned && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.25)", color: "rgb(253,230,138)" }}>PINNED</span>}
+              <span style={{ fontSize: 10, opacity: 0.3, marginLeft: "auto" }}>{fmtDate(p.createdAt)}</span>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", opacity: 0.85 }}>{p.body}</div>
+            {canManage && (
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <button style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }} onClick={() => togglePin(p.id)}>
+                  {p.pinned ? "Unpin" : "Pin"}
+                </button>
+                <button style={{ ...S.danger, fontSize: 10, padding: "3px 8px" }} onClick={() => remove(p.id)}>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {posts.length === 0 && (
+          <div style={{ textAlign: "center", padding: 30, opacity: 0.3, fontSize: 13 }}>
+            No posts yet. Be the first to post something.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Files tab ─────────────────────────────────────────────────────────────────
 
 function FilesTab() {
@@ -1171,6 +1319,7 @@ export default function StaffPage() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <RoleBadge role={myRole} />
+          <button onClick={() => window.dispatchEvent(new CustomEvent("weered:dock:toggle"))} style={{ fontSize: 12, opacity: 0.55, padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)", cursor: "pointer", color: "inherit" }}>DMs</button>
           <a href="/lobby" style={{ fontSize: 12, opacity: 0.55, textDecoration: "none", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>← Lobby</a>
         </div>
       </div>
@@ -1205,6 +1354,8 @@ export default function StaffPage() {
           {/* Content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
             {nav === "users"   && <UsersTab myRole={myRole} />}
+            {nav === "board"   && <BoardTab myRole={myRole} />}
+            {nav === "roster"  && <RosterTab />}
             {nav === "subs"    && <SubsTab />}
             {nav === "rooms"   && <RoomsTab myRole={myRole} />}
             {nav === "lobbies" && <LobbiesTab myRole={myRole} />}

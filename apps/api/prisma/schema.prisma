@@ -250,6 +250,7 @@ model User {
   LocalAuth        LocalAuth?
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
+  staffPosts       StaffPost[]      @relation("StaffPostAuthor")
   notorietyEvents  NotorietyEvent[]
   gameAccounts     UserGameAccount[]
 }
@@ -666,5 +667,18 @@ model Event {
   @@index([lobbyId, status, startsAt])
   @@index([status, startsAt])
   @@index([createdById])
+}
+
+model StaffPost {
+  id         String   @id @default(cuid())
+  authorId   String
+  authorName String   @default("")
+  body       String
+  pinned     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  author User @relation("StaffPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
