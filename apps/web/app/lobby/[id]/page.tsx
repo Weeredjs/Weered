@@ -10,6 +10,7 @@ import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
 import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
+import LobbyTierCards from "../../../components/LobbyTierCards";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -197,6 +198,7 @@ export default function LobbyIdPage() {
           ) : (
             <LobbyContent lobbyId={lobbyId} />
           )}
+          <LobbyTierCards lobbyId={lobbyId} />
         </div>
 
         <LobbyChatDrawer

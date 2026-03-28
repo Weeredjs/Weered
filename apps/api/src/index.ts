@@ -1185,7 +1185,7 @@ async function main() {
     const ownerId = u?.id ?? null;
     const rawPassword = typeof body.password === "string" ? body.password.trim() : "";
     const passwordHash = rawPassword ? await bcrypt.hash(rawPassword, 10) : null;
-    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, passwordHash } });
+    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId } });
 
     // Make creator the owner in RoomMember
     if (ownerId) {
@@ -3485,6 +3485,142 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── LOBBY PAID TIERS ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // GET /lobbies/:id/tiers — public, returns active tiers for a lobby
+  app.get("/lobbies/:id/tiers", async (req, reply) => {
+    const lobbyId = String((req as any).params?.id || "");
+    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+    const tiers = await (prisma as any).lobbyTier.findMany({
+      where: { lobbyId, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, description: true, priceMonthly: true, grantLevel: true, color: true, sortOrder: true },
+    });
+    return reply.send({ ok: true, tiers, roleNames: lobby.roleNames });
+  });
+
+  // GET /lobbies/:id/my-tier — get current user's tier sub for this lobby
+  app.get("/lobbies/:id/my-tier", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const lobbyId = String((req as any).params?.id || "");
+    const sub = await (prisma as any).lobbyTierSub.findUnique({
+      where: { lobbyId_userId: { lobbyId, userId: u.id } },
+      include: { tier: { select: { id: true, name: true, color: true, grantLevel: true, priceMonthly: true } } },
+    });
+    if (!sub || sub.status === "canceled") return reply.send({ ok: true, tier: null, sub: null });
+    return reply.send({ ok: true, tier: sub.tier, sub: { status: sub.status, currentPeriodEnd: sub.currentPeriodEnd?.toISOString() || null, cancelAtPeriodEnd: sub.cancelAtPeriodEnd } });
+  });
+
+  // GET /lobbies/:id/admin/tiers — admin view of all tiers with subscriber counts
+  app.get("/lobbies/:id/admin/tiers", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 5);
+    if (!ctx) return;
+    const tiers = await (prisma as any).lobbyTier.findMany({
+      where: { lobbyId: ctx.lobby.id },
+      orderBy: { sortOrder: "asc" },
+      include: { _count: { select: { subscribers: true } } },
+    });
+    return reply.send({ ok: true, tiers, revenueSharePct: ctx.lobby.revenueSharePct ?? 0 });
+  });
+
+  // GET /lobbies/:id/admin/tier-stats — subscriber details for owner
+  app.get("/lobbies/:id/admin/tier-stats", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 5);
+    if (!ctx) return;
+    const subs = await (prisma as any).lobbyTierSub.findMany({
+      where: { lobbyId: ctx.lobby.id, status: "active" },
+      include: { tier: { select: { id: true, name: true, priceMonthly: true } } },
+    });
+    const userIds = subs.map((s: any) => s.userId);
+    const users = userIds.length > 0
+      ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, usernameKey: true, avatar: true } })
+      : [];
+    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+    const enriched = subs.map((s: any) => ({ ...s, user: userMap[s.userId] || null }));
+    return reply.send({ ok: true, subscribers: enriched });
+  });
+
+  // POST /lobbies/:id/admin/tiers — create a new paid tier
+  app.post("/lobbies/:id/admin/tiers", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 5);
+    if (!ctx) return;
+    const body: any = (req as any).body || {};
+    const name = String(body.name || "").trim();
+    const description = String(body.description || "").trim();
+    const priceMonthly = Math.max(Number(body.priceMonthly) || 0, 100); // minimum $1.00
+    const grantLevel = Math.min(Math.max(Number(body.grantLevel) || 2, 1), 4); // 1-4, never 5
+    const color = body.color ? String(body.color).trim() : null;
+    const sortOrder = Number(body.sortOrder) || 0;
+    if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
+    if (priceMonthly < 100) return reply.code(400).send({ ok: false, error: "min_price_100_cents" });
+
+    // Create Stripe Product + Price dynamically
+    const product = await stripeReq("POST", "/products", {
+      name: `${ctx.lobby.name || ctx.lobby.id} — ${name}`,
+      "metadata[lobby_id]": ctx.lobby.id,
+      "metadata[tier_type]": "lobby_tier",
+    });
+    if (product.error) return reply.code(500).send({ ok: false, error: "stripe_product_failed" });
+
+    const price = await stripeReq("POST", "/prices", {
+      product: product.id,
+      unit_amount: String(priceMonthly),
+      currency: "usd",
+      "recurring[interval]": "month",
+    });
+    if (price.error) return reply.code(500).send({ ok: false, error: "stripe_price_failed" });
+
+    const tier = await (prisma as any).lobbyTier.create({
+      data: { lobbyId: ctx.lobby.id, name, description, priceMonthly, grantLevel, color, sortOrder, stripePriceId: price.id, stripeProductId: product.id },
+    });
+
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "tier_created", actorId: ctx.user.id, actorName: ctx.user.name, note: `${name} — $${(priceMonthly / 100).toFixed(2)}/mo` },
+    });
+
+    return reply.send({ ok: true, tier });
+  });
+
+  // PATCH /lobbies/:id/admin/tiers/:tierId — update tier metadata (not price)
+  app.patch("/lobbies/:id/admin/tiers/:tierId", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 5);
+    if (!ctx) return;
+    const tierId = String((req as any).params?.tierId || "");
+    const existing = await (prisma as any).lobbyTier.findFirst({ where: { id: tierId, lobbyId: ctx.lobby.id } });
+    if (!existing) return reply.code(404).send({ ok: false, error: "tier_not_found" });
+
+    const body: any = (req as any).body || {};
+    const data: any = {};
+    if (body.name !== undefined) data.name = String(body.name).trim();
+    if (body.description !== undefined) data.description = String(body.description).trim();
+    if (body.grantLevel !== undefined) data.grantLevel = Math.min(Math.max(Number(body.grantLevel) || 2, 1), 4);
+    if (body.color !== undefined) data.color = body.color ? String(body.color).trim() : null;
+    if (body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder) || 0;
+    if (body.active !== undefined) data.active = Boolean(body.active);
+
+    const tier = await (prisma as any).lobbyTier.update({ where: { id: tierId }, data });
+
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "tier_updated", actorId: ctx.user.id, actorName: ctx.user.name, note: existing.name },
+    });
+
+    return reply.send({ ok: true, tier });
+  });
+
+  // PATCH /lobbies/:id/admin/revenue-share — set revenue share percentage
+  app.patch("/lobbies/:id/admin/revenue-share", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 5);
+    if (!ctx) return;
+    const body: any = (req as any).body || {};
+    const pct = Math.min(Math.max(Number(body.revenueSharePct) || 0, 0), 100);
+    await prisma.lobby.update({ where: { id: ctx.lobby.id }, data: { revenueSharePct: pct } });
+    return reply.send({ ok: true, revenueSharePct: pct });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── STRIPE SUBSCRIPTION SYSTEM ─────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
@@ -3600,6 +3736,79 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, url: session.url });
   });
 
+  // ── LOBBY TIER CHECKOUT / PORTAL ─────────────────────────────────────────
+
+  // POST /lobbies/:id/tiers/:tierId/checkout — start Stripe checkout for a lobby tier
+  app.post("/lobbies/:id/tiers/:tierId/checkout", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!STRIPE_SK) return reply.code(500).send({ ok: false, error: "stripe_not_configured" });
+
+    const lobbyId = String((req as any).params?.id || "");
+    const tierId = String((req as any).params?.tierId || "");
+
+    const tier = await (prisma as any).lobbyTier.findFirst({ where: { id: tierId, lobbyId, active: true } });
+    if (!tier || !tier.stripePriceId) return reply.code(404).send({ ok: false, error: "tier_not_found" });
+
+    // Check for existing active lobby tier sub
+    const existingSub = await (prisma as any).lobbyTierSub.findUnique({ where: { lobbyId_userId: { lobbyId, userId: u.id } } });
+    if (existingSub && existingSub.status === "active") {
+      return reply.code(400).send({ ok: false, error: "already_subscribed" });
+    }
+
+    // Find or create Stripe customer — reuse from platform subscription if possible
+    let customerId: string | null = null;
+    const platformSub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+    customerId = platformSub?.stripeCustomerId || null;
+
+    if (!customerId) {
+      const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true, email: true } });
+      const customer = await stripeReq("POST", "/customers", {
+        email: dbUser?.email || undefined,
+        name: dbUser?.name || u.name,
+        "metadata[weered_user_id]": u.id,
+      });
+      customerId = customer.id;
+      // Store customer ID in platform subscription record
+      await (prisma as any).subscription.upsert({
+        where: { userId: u.id },
+        update: { stripeCustomerId: customerId },
+        create: { userId: u.id, stripeCustomerId: customerId, tier: "FREE" },
+      });
+    }
+
+    const session = await stripeReq("POST", "/checkout/sessions", {
+      customer: customerId,
+      "line_items[0][price]": tier.stripePriceId,
+      "line_items[0][quantity]": "1",
+      mode: "subscription",
+      success_url: `${SITE_URL}/lobby/${encodeURIComponent(lobbyId)}?tier_success=true`,
+      cancel_url: `${SITE_URL}/lobby/${encodeURIComponent(lobbyId)}`,
+      "metadata[weered_user_id]": u.id,
+      "metadata[lobby_id]": lobbyId,
+      "metadata[lobby_tier_id]": tierId,
+      "metadata[sub_type]": "lobby_tier",
+    });
+
+    return reply.send({ ok: true, url: session.url, sessionId: session.id });
+  });
+
+  // POST /lobbies/:id/tiers/portal — Stripe billing portal for lobby tier management
+  app.post("/lobbies/:id/tiers/portal", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const lobbyId = String((req as any).params?.id || "");
+
+    const sub = await (prisma as any).lobbyTierSub.findUnique({ where: { lobbyId_userId: { lobbyId, userId: u.id } } });
+    if (!sub?.stripeCustomerId) return reply.code(400).send({ ok: false, error: "no_subscription" });
+
+    const session = await stripeReq("POST", "/billing_portal/sessions", {
+      customer: sub.stripeCustomerId,
+      return_url: `${SITE_URL}/lobby/${encodeURIComponent(lobbyId)}`,
+    });
+    return reply.send({ ok: true, url: session.url });
+  });
+
   // POST /subscribe/webhook — Stripe webhook with signature verification
   app.post("/subscribe/webhook", async (req, reply) => {
     const sigHeader = (req.headers as any)["stripe-signature"] || "";
@@ -3642,29 +3851,60 @@ app.post("/dm/:peerId", async (req, reply) => {
       if (event.type === "checkout.session.completed") {
         const session = event.data?.object;
         const userId = session?.metadata?.weered_user_id;
-        const tier = session?.metadata?.tier || "INDICTED";
         const subId = session?.subscription;
-        if (userId && subId) {
-          // Fetch subscription details from Stripe
-          const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
-          await (prisma as any).subscription.upsert({
-            where: { userId },
-            update: {
-              tier, stripeSubId: subId, status: "active",
-              stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
-              currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
-            },
-            create: {
-              userId, tier, stripeSubId: subId, status: "active",
-              stripeCustomerId: session.customer,
-              stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
-              currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
-            },
-          });
-          // Update user tier to match
-          const userTier = tier === "FELON" ? "FELON" : "INDICTED";
-          await prisma.user.update({ where: { id: userId }, data: { tier: userTier } });
-          await globalAudit("system", "Stripe", "subscription_activated", userId, undefined, { tier, subId });
+
+        if (session?.metadata?.sub_type === "lobby_tier") {
+          // ── Lobby tier checkout ──
+          const lobbyId = session?.metadata?.lobby_id;
+          const lobbyTierId = session?.metadata?.lobby_tier_id;
+          if (userId && subId && lobbyId && lobbyTierId) {
+            const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
+            await (prisma as any).lobbyTierSub.upsert({
+              where: { lobbyId_userId: { lobbyId, userId } },
+              update: { lobbyTierId, stripeSubId: subId, status: "active", stripeCustomerId: session.customer, currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null },
+              create: { lobbyTierId, lobbyId, userId, stripeSubId: subId, status: "active", stripeCustomerId: session.customer, currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null },
+            });
+            // Auto-promote member roleLevel
+            const lobbyTier = await (prisma as any).lobbyTier.findUnique({ where: { id: lobbyTierId } });
+            if (lobbyTier) {
+              const member = await prisma.lobbyMember.findUnique({ where: { lobbyId_userId: { lobbyId, userId } } });
+              if (member) {
+                if ((member.roleLevel ?? 1) < lobbyTier.grantLevel) {
+                  const lobbyRole = lobbyTier.grantLevel >= 4 ? "OWNER" : lobbyTier.grantLevel >= 3 ? "MOD" : "MEMBER";
+                  await prisma.lobbyMember.update({ where: { lobbyId_userId: { lobbyId, userId } }, data: { roleLevel: lobbyTier.grantLevel, role: lobbyRole } });
+                }
+              } else {
+                // Create membership if not already a member
+                await prisma.lobbyMember.create({ data: { lobbyId, userId, roleLevel: lobbyTier.grantLevel, role: "MEMBER", name: "" } });
+              }
+            }
+            await (prisma as any).lobbyAudit.create({
+              data: { id: randomUUID(), lobbyId, type: "tier_subscribed", actorId: userId, actorName: "system", note: lobbyTier?.name || lobbyTierId },
+            });
+          }
+        } else {
+          // ── Platform subscription checkout ──
+          const tier = session?.metadata?.tier || "INDICTED";
+          if (userId && subId) {
+            const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
+            await (prisma as any).subscription.upsert({
+              where: { userId },
+              update: {
+                tier, stripeSubId: subId, status: "active",
+                stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
+                currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+              },
+              create: {
+                userId, tier, stripeSubId: subId, status: "active",
+                stripeCustomerId: session.customer,
+                stripePriceId: stripeSub?.items?.data?.[0]?.price?.id || null,
+                currentPeriodEnd: stripeSub?.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+              },
+            });
+            const userTier = tier === "FELON" ? "FELON" : "INDICTED";
+            await prisma.user.update({ where: { id: userId }, data: { tier: userTier } });
+            await globalAudit("system", "Stripe", "subscription_activated", userId, undefined, { tier, subId });
+          }
         }
       }
 
@@ -3672,9 +3912,22 @@ app.post("/dm/:peerId", async (req, reply) => {
         const stripeSub = event.data?.object;
         const subId = stripeSub?.id;
         if (subId) {
+          // Check platform subscription first
           const dbSub = await (prisma as any).subscription.findUnique({ where: { stripeSubId: subId } });
           if (dbSub) {
             await (prisma as any).subscription.update({
+              where: { stripeSubId: subId },
+              data: {
+                status: stripeSub.status,
+                cancelAtPeriodEnd: Boolean(stripeSub.cancel_at_period_end),
+                currentPeriodEnd: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+              },
+            });
+          }
+          // Also check lobby tier subscription
+          const lobbyTierSub = await (prisma as any).lobbyTierSub.findUnique({ where: { stripeSubId: subId } });
+          if (lobbyTierSub) {
+            await (prisma as any).lobbyTierSub.update({
               where: { stripeSubId: subId },
               data: {
                 status: stripeSub.status,
@@ -3690,15 +3943,40 @@ app.post("/dm/:peerId", async (req, reply) => {
         const stripeSub = event.data?.object;
         const subId = stripeSub?.id;
         if (subId) {
+          // Check platform subscription
           const dbSub = await (prisma as any).subscription.findUnique({ where: { stripeSubId: subId } });
           if (dbSub) {
             await (prisma as any).subscription.update({
               where: { stripeSubId: subId },
               data: { status: "canceled", tier: "FREE" },
             });
-            // Downgrade user tier
             await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: "INNOCENT" } });
             await globalAudit("system", "Stripe", "subscription_canceled", dbSub.userId);
+          }
+          // Check lobby tier subscription — smart demotion
+          const lobbyTierSub = await (prisma as any).lobbyTierSub.findUnique({ where: { stripeSubId: subId } });
+          if (lobbyTierSub) {
+            await (prisma as any).lobbyTierSub.update({
+              where: { stripeSubId: subId },
+              data: { status: "canceled" },
+            });
+            // Only demote if their current roleLevel matches the tier's grantLevel
+            // (preserves manual promotions by admins)
+            const lobbyTier = await (prisma as any).lobbyTier.findUnique({ where: { id: lobbyTierSub.lobbyTierId } });
+            if (lobbyTier) {
+              const member = await prisma.lobbyMember.findUnique({
+                where: { lobbyId_userId: { lobbyId: lobbyTierSub.lobbyId, userId: lobbyTierSub.userId } },
+              });
+              if (member && member.roleLevel === lobbyTier.grantLevel) {
+                await prisma.lobbyMember.update({
+                  where: { lobbyId_userId: { lobbyId: lobbyTierSub.lobbyId, userId: lobbyTierSub.userId } },
+                  data: { roleLevel: 1, role: "MEMBER" },
+                });
+              }
+            }
+            await (prisma as any).lobbyAudit.create({
+              data: { id: randomUUID(), lobbyId: lobbyTierSub.lobbyId, type: "tier_canceled", actorId: lobbyTierSub.userId, actorName: "system", note: lobbyTier?.name || "" },
+            });
           }
         }
       }
