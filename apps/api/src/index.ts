@@ -4525,6 +4525,84 @@ app.post("/dm/:peerId", async (req, reply) => {
 
     return reply.send({ ok: true, lobbies });
   });
+  // GET /staff/roster — list all staff members with roles
+  app.get("/staff/roster", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const staff = await prisma.user.findMany({
+      where: { globalRole: { in: ["SUPPORT", "STAFF", "ADMIN", "GOD"] } },
+      select: { id: true, name: true, globalRole: true, avatar: true, avatarColor: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return reply.send({ ok: true, staff });
+  });
+
+  // GET /staff/board — list staff board posts
+  app.get("/staff/board", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const posts = await (prisma as any).staffPost.findMany({
+      orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
+      take: 100,
+    });
+    return reply.send({ ok: true, posts });
+  });
+
+  // POST /staff/board — create a board post
+  app.post("/staff/board", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const body: any = (req as any).body || {};
+    const text = String(body.body || "").trim();
+    if (!text || text.length > 2000) return reply.code(400).send({ ok: false, error: "body required (max 2000 chars)" });
+
+    const post = await (prisma as any).staffPost.create({
+      data: { authorId: u.id, authorName: u.name, body: text, pinned: !!body.pinned },
+    });
+    return reply.send({ ok: true, post });
+  });
+
+  // POST /staff/board/:id/pin — toggle pin on a board post
+  app.post("/staff/board/:id/pin", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const postId = (req as any).params.id;
+    const post = await (prisma as any).staffPost.findUnique({ where: { id: postId } });
+    if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    const updated = await (prisma as any).staffPost.update({
+      where: { id: postId },
+      data: { pinned: !post.pinned },
+    });
+    return reply.send({ ok: true, post: updated });
+  });
+
+  // DELETE /staff/board/:id — delete a board post
+  app.delete("/staff/board/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const postId = (req as any).params.id;
+    try {
+      await (prisma as any).staffPost.delete({ where: { id: postId } });
+    } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
+    return reply.send({ ok: true });
+  });
+
   // ══════════════════════════════════════════════════════════════════════════════
   // ── TWITCH INTEGRATION ─────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
