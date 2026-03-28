@@ -32,18 +32,163 @@ const ACCENT_DESTINY = "#4F88C6";
 const TIER_COLORS: Record<string, string> = { Exotic: "#ceae33", Legendary: "#522f65", Rare: "#5076a3", Uncommon: "#366e42", Common: "#c3bcb4", Unknown: "rgba(255,255,255,.1)", Currency: "rgba(255,255,255,.1)" };
 const TIER_BORDER: Record<string, string> = { Exotic: "rgba(206,174,51,.6)", Legendary: "rgba(82,47,101,.8)", Rare: "rgba(80,118,163,.6)", Uncommon: "rgba(54,110,66,.6)", Common: "rgba(195,188,180,.4)", Unknown: "rgba(255,255,255,.08)", Currency: "rgba(255,255,255,.08)" };
 
-// ── Item Tile (compact or full) ──────────────────────────────────────────────
+// ── Perk Row (small perk icons with tooltips) ───────────────────────────────
 
-function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
+function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
+  if (!perks?.length) return null;
+  // Filter out common cosmetic/tracker plugs by checking for icons
+  const visible = perks.filter((p: any) => p.icon && p.name).slice(0, max);
+  if (!visible.length) return null;
+  return (
+    <div style={{ display: "flex", gap: 2, marginTop: 2 }}>
+      {visible.map((p: any, i: number) => (
+        <div key={i} title={p.name} style={{ width: 16, height: 16, borderRadius: 3, overflow: "hidden", background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)", flexShrink: 0 }}>
+          <img src={p.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Armor Stat Bar ──────────────────────────────────────────────────────────
+
+const STAT_BARS = [
+  { key: "mobility", label: "MOB", color: "#7dd3fc" },
+  { key: "resilience", label: "RES", color: "#f87171" },
+  { key: "recovery", label: "REC", color: "#a3e635" },
+  { key: "discipline", label: "DIS", color: "#818cf8" },
+  { key: "intellect", label: "INT", color: "#fbbf24" },
+  { key: "strength", label: "STR", color: "#f472b6" },
+];
+
+function ArmorStatBar({ stats }: { stats: any }) {
+  if (!stats) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {STAT_BARS.map(s => (
+        <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10 }}>
+          <span style={{ width: 24, fontWeight: 700, color: s.color, opacity: 0.8, textAlign: "right" }}>{s.label}</span>
+          <div style={{ flex: 1, height: 6, borderRadius: 3, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
+            <div style={{ width: `${Math.min((stats[s.key] || 0) / 42 * 100, 100)}%`, height: "100%", borderRadius: 3, background: s.color, opacity: 0.6 }} />
+          </div>
+          <span style={{ width: 18, fontWeight: 700, color: "rgba(255,255,255,.6)", textAlign: "right" }}>{stats[s.key] || 0}</span>
+        </div>
+      ))}
+      <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 10, fontWeight: 800, color: "rgba(253,230,138,.7)", marginTop: 2 }}>
+        Total: {stats.total || 0}
+      </div>
+    </div>
+  );
+}
+
+// ── Item Detail Panel (overlay when clicking an item) ───────────────────────
+
+function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, currentCharId }: {
+  item: any; onClose: () => void;
+  onEquip?: (itemId: string, charId: string) => void;
+  onTransfer?: (item: any, toVault: boolean, charId: string) => void;
+  characters?: any[]; currentCharId?: string;
+}) {
+  const tier = item.tierName || "Unknown";
+  const borderColor = TIER_BORDER[tier] || "rgba(255,255,255,.08)";
+
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(5,8,16,.92)", backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase" }}>Item Detail</span>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 16, padding: "2px 6px" }}>✕</button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Icon + Name */}
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <div style={{ width: 80, height: 80, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: `2px solid ${borderColor}`, position: "relative", background: "rgba(0,0,0,.5)" }}>
+            {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+            {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, pointerEvents: "none" }} />}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: tier === "Exotic" ? "#ceae33" : "#fff" }}>{item.name}</div>
+            <div style={{ fontSize: 11, opacity: 0.5, display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+              <span style={{ padding: "1px 6px", borderRadius: 4, background: `${TIER_COLORS[tier] || "rgba(255,255,255,.1)"}40`, border: `1px solid ${borderColor}`, fontSize: 9, fontWeight: 700 }}>{tier}</span>
+              {item.slotName && <span>{item.slotName}</span>}
+              {item.damageType && item.damageType !== "None" && (
+                <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  {item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 11, height: 11, opacity: 0.7 }} />}
+                  {item.damageType}
+                </span>
+              )}
+            </div>
+            {item.primaryStat && <div style={{ fontSize: 24, fontWeight: 900, color: "rgb(253,230,138)", marginTop: 4 }}>{item.primaryStat}</div>}
+          </div>
+        </div>
+
+        {/* Description */}
+        {item.description && <div style={{ fontSize: 12, opacity: 0.5, lineHeight: 1.5 }}>{item.description}</div>}
+
+        {/* Perks */}
+        {item.perks?.length > 0 && (
+          <div>
+            <div style={S.label}>Perks</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {item.perks.filter((p: any) => p.icon && p.name).map((p: any, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 5, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
+                    <img src={p.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700 }}>{p.name}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Armor Stats */}
+        {item.armorStats && (
+          <div>
+            <div style={S.label}>Stats</div>
+            <ArmorStatBar stats={item.armorStats} />
+          </div>
+        )}
+
+        {/* Actions */}
+        {(onEquip || onTransfer) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+            {onEquip && currentCharId && !item.isEquipped && (
+              <button onClick={() => onEquip(item.itemInstanceId, currentCharId)} style={{ ...S.btnPri, width: "100%", padding: "10px 0", fontWeight: 800 }}>
+                Equip
+              </button>
+            )}
+            {onTransfer && currentCharId && (
+              <button onClick={() => onTransfer(item, true, currentCharId)} style={{ ...S.btn, width: "100%", padding: "8px 0", fontSize: 11 }}>
+                Send to Vault
+              </button>
+            )}
+            {onTransfer && characters && characters.filter(c => c.characterId !== currentCharId).map((c: any) => (
+              <button key={c.characterId} onClick={() => onTransfer(item, false, c.characterId)} style={{ ...S.btn, width: "100%", padding: "8px 0", fontSize: 11 }}>
+                Transfer to {c.className}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Item Tile (compact or full, with perks + click support) ─────────────────
+
+function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; onClick?: () => void }) {
   const tier = item.tierName || "Unknown";
   const borderColor = TIER_BORDER[tier] || "rgba(255,255,255,.08)";
   const bgColor = TIER_COLORS[tier] || "rgba(255,255,255,.03)";
+  const clickStyle = onClick ? { cursor: "pointer" } : {};
 
   if (compact) {
     return (
-      <div title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`} style={{
+      <div title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`} onClick={onClick} style={{
         width: 44, height: 44, borderRadius: 8, background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
-        border: `1.5px solid ${borderColor}`, overflow: "hidden", position: "relative", cursor: "default",
+        border: `1.5px solid ${borderColor}`, overflow: "hidden", position: "relative", ...clickStyle,
       }}>
         {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         {item.primaryStat && (
@@ -56,7 +201,7 @@ function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: `1px solid ${borderColor}`, background: `${bgColor}18` }}>
+    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: `1px solid ${borderColor}`, background: `${bgColor}18`, ...clickStyle }}>
       <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: item.icon ? "rgba(0,0,0,.5)" : bgColor, border: `1px solid ${borderColor}`, position: "relative" }}>
         {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.3, pointerEvents: "none" }} />}
@@ -67,8 +212,12 @@ function ItemTile({ item, compact }: { item: any; compact?: boolean }) {
           {item.slotName && <span>{item.slotName}</span>}
           {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>·</span>{item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
         </div>
+        <PerkRow perks={item.perks} max={5} />
       </div>
-      {item.primaryStat && <div style={{ fontSize: 14, fontWeight: 900, color: tier === "Exotic" ? "#ceae33" : "rgba(253,230,138,.9)", flexShrink: 0 }}>{item.primaryStat}</div>}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+        {item.primaryStat && <div style={{ fontSize: 14, fontWeight: 900, color: tier === "Exotic" ? "#ceae33" : "rgba(253,230,138,.9)" }}>{item.primaryStat}</div>}
+        {item.armorStats && <div style={{ fontSize: 9, opacity: 0.35, fontWeight: 600 }}>T{item.armorStats.total}</div>}
+      </div>
     </div>
   );
 }
@@ -333,15 +482,33 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Xur Status */}
+      {/* Xur Status + Inventory */}
       <div style={{ ...S.card, border: xur?.available ? "1px solid rgba(245,158,11,.30)" : "1px solid rgba(255,255,255,.08)", background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: xur?.available && xur?.items?.length ? 10 : 0 }}>
           <span style={{ fontSize: 22 }}>🐍</span>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: xur?.available ? "rgb(253,230,138)" : "rgba(255,255,255,.6)" }}>Xur {xur?.available ? "is here!" : "is away"}</div>
-            <div style={{ fontSize: 11, opacity: 0.5 }}>{xur?.available ? "Exotic vendor is active — check inventory in-game" : "Returns every Friday at reset"}</div>
+            <div style={{ fontSize: 11, opacity: 0.5 }}>{xur?.available ? "Exotic vendor is selling..." : "Returns every Friday at reset"}</div>
           </div>
         </div>
+        {xur?.available && xur?.items?.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid rgba(245,158,11,.12)", paddingTop: 8 }}>
+            {xur.items.map((item: any, i: number) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 8, border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, background: `${TIER_COLORS[item.tierName] || "rgba(255,255,255,.03)"}18` }}>
+                <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.5)", border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, position: "relative" }}>
+                  {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: item.tierName === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown"}</div>
+                  <div style={{ fontSize: 10, opacity: 0.4 }}>{item.tierName}{item.slotName ? ` · ${item.slotName}` : ""}</div>
+                  <PerkRow perks={item.perks} max={5} />
+                </div>
+                {item.armorStats && <div style={{ fontSize: 9, opacity: 0.35, fontWeight: 600, flexShrink: 0 }}>T{item.armorStats.total}</div>}
+              </div>
+            ))}
+            {xur.cachedAt && <div style={{ fontSize: 9, opacity: 0.2, textAlign: "center", marginTop: 2 }}>Cached {new Date(xur.cachedAt).toLocaleTimeString()}</div>}
+          </div>
+        )}
       </div>
 
       {/* Milestones */}
@@ -406,13 +573,14 @@ function GuardianLookup() {
   const [result, setResult]   = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const CLASS_NAMES: Record<number, string> = { 0: "Titan", 1: "Hunter", 2: "Warlock" };
   const CLASS_EMOJI: Record<number, string> = { 0: "🛡", 1: "🗡", 2: "✨" };
 
   async function search() {
     if (!query.trim()) return;
-    setLoading(true); setError(""); setResult(null);
+    setLoading(true); setError(""); setResult(null); setSelectedItem(null);
     try {
       const j = await apiFetch(`/bungie/player/${encodeURIComponent(query.trim())}`);
       if (j.ok && j.found) setResult(j);
@@ -423,7 +591,7 @@ function GuardianLookup() {
   }
 
   return (
-    <div>
+    <div style={{ position: "relative" }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <input
           style={{ ...S.input, flex: 1 }}
@@ -457,10 +625,14 @@ function GuardianLookup() {
             </div>
           </div>
 
-          {/* Characters */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-            {(result.characters || []).map((c: any) => (
-              <div key={c.characterId} style={{
+          {result.privacyRestricted && (
+            <div style={{ ...S.card, textAlign: "center", fontSize: 12, opacity: 0.5 }}>This guardian's equipment is private.</div>
+          )}
+
+          {/* Characters with equipment */}
+          {(result.characters || []).map((c: any) => (
+            <div key={c.characterId} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{
                 ...S.card,
                 position: "relative",
                 overflow: "hidden",
@@ -487,16 +659,31 @@ function GuardianLookup() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              {/* Equipped items grid */}
+              {(c.weapons?.length > 0 || c.armor?.length > 0 || c.equipped?.length > 0) && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingLeft: 4 }}>
+                  {(c.weapons || []).concat(c.armor || []).concat(c.otherEquipped || []).slice(0, 12).map((item: any, i: number) => (
+                    <ItemTile key={i} item={item} compact onClick={() => setSelectedItem(item)} />
+                  ))}
+                  {/* Fallback: if no grouped data, use flat equipped */}
+                  {!c.weapons?.length && !c.armor?.length && (c.equipped || []).slice(0, 12).map((item: any, i: number) => (
+                    <ItemTile key={`e${i}`} item={item} compact onClick={() => setSelectedItem(item)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
       {!result && !error && !loading && (
         <div style={{ textAlign: "center", padding: 20, opacity: 0.3, fontSize: 13 }}>
-          Search for any Destiny 2 guardian to see their characters and power level
+          Search for any Destiny 2 guardian to see their characters and loadout
         </div>
       )}
+
+      {/* Read-only detail panel (no equip/transfer — it's someone else's guardian) */}
+      {selectedItem && <ItemDetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />}
     </div>
   );
 }
@@ -510,12 +697,36 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
   const [error, setError] = useState("");
   const [selectedChar, setSelectedChar] = useState(0);
   const [subTab, setSubTab] = useState<"equipped" | "inventory" | "vault">("equipped");
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [actionMsg, setActionMsg] = useState("");
 
-  useEffect(() => {
+  const fetchProfile = useCallback(() => {
     apiFetch("/bungie/me")
       .then(j => { setData(j); setLoading(false); })
       .catch(() => { setError("Failed to load"); setLoading(false); });
   }, []);
+
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  async function handleEquip(itemId: string, charId: string) {
+    setActionMsg("Equipping...");
+    try {
+      const j = await apiFetch("/bungie/equip", { method: "POST", body: JSON.stringify({ itemId, characterId: charId, membershipType: data?.platform }) });
+      if (j.ok) { setActionMsg("Equipped!"); setSelectedItem(null); fetchProfile(); }
+      else setActionMsg(j.error || j.message || "Equip failed");
+    } catch { setActionMsg("Network error"); }
+    setTimeout(() => setActionMsg(""), 3000);
+  }
+
+  async function handleTransfer(item: any, toVault: boolean, charId: string) {
+    setActionMsg(toVault ? "Vaulting..." : "Transferring...");
+    try {
+      const j = await apiFetch("/bungie/transfer", { method: "POST", body: JSON.stringify({ itemReferenceHash: item.itemHash, stackSize: 1, transferToVault: toVault, itemId: item.itemInstanceId, characterId: charId, membershipType: data?.platform }) });
+      if (j.ok) { setActionMsg(toVault ? "Vaulted!" : "Transferred!"); setSelectedItem(null); fetchProfile(); }
+      else setActionMsg(j.error || j.message || "Transfer failed");
+    } catch { setActionMsg("Network error"); }
+    setTimeout(() => setActionMsg(""), 3000);
+  }
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading your Guardian...</div>;
 
@@ -624,25 +835,44 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
         </div>
       )}
 
+      {/* Action message */}
+      {actionMsg && (
+        <div style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, textAlign: "center", color: actionMsg.includes("failed") || actionMsg.includes("error") ? "rgba(252,165,165,.9)" : "rgba(134,239,172,.9)", background: actionMsg.includes("failed") || actionMsg.includes("error") ? "rgba(252,165,165,.06)" : "rgba(34,197,94,.06)", borderBottom: "1px solid rgba(255,255,255,.04)", flexShrink: 0 }}>
+          {actionMsg}
+        </div>
+      )}
+
       {/* Content */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12, position: "relative" }}>
         {subTab === "vault" ? (
-          <VaultView items={vault} />
+          <VaultView items={vault} onItemClick={setSelectedItem} />
         ) : char ? (
           subTab === "equipped" ? (
-            <EquippedView char={char} hasManifest={hasManifest} accent={accent} />
+            <EquippedView char={char} hasManifest={hasManifest} accent={accent} onItemClick={setSelectedItem} />
           ) : (
-            <InventoryGrid items={char.inventory || []} hasManifest={hasManifest} />
+            <InventoryGrid items={char.inventory || []} hasManifest={hasManifest} onItemClick={setSelectedItem} />
           )
         ) : (
           <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>No character data available</div>
+        )}
+
+        {/* Item detail overlay */}
+        {selectedItem && (
+          <ItemDetailPanel
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onEquip={handleEquip}
+            onTransfer={handleTransfer}
+            characters={characters}
+            currentCharId={char?.characterId}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: boolean; accent: string }) {
+function EquippedView({ char, hasManifest, accent, onItemClick }: { char: any; hasManifest: boolean; accent: string; onItemClick?: (item: any) => void }) {
   const weapons = char.weapons || [];
   const armor = char.armor || [];
   const other = char.otherEquipped || [];
@@ -654,7 +884,7 @@ function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: b
       <div>
         <div style={S.label}>Equipped</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {allEquipped.slice(0, 12).map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}
+          {allEquipped.slice(0, 12).map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}
         </div>
         {!hasManifest && <div style={{ fontSize: 10, opacity: 0.25, marginTop: 12, textAlign: "center" }}>Manifest not synced — item names unavailable</div>}
       </div>
@@ -676,20 +906,20 @@ function EquippedView({ char, hasManifest, accent }: { char: any; hasManifest: b
         </div>
       )}
       {weapons.length > 0 && (
-        <div><div style={S.label}>Weapons</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{weapons.map((item: any, i: number) => <ItemTile key={i} item={item} />)}</div></div>
+        <div><div style={S.label}>Weapons</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{weapons.map((item: any, i: number) => <ItemTile key={i} item={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div></div>
       )}
       {armor.length > 0 && (
-        <div><div style={S.label}>Armor</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{armor.map((item: any, i: number) => <ItemTile key={i} item={item} />)}</div></div>
+        <div><div style={S.label}>Armor</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{armor.map((item: any, i: number) => <ItemTile key={i} item={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div></div>
       )}
       {other.length > 0 && (
-        <div><div style={S.label}>Other</div><div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{other.map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}</div></div>
+        <div><div style={S.label}>Other</div><div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{other.map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div></div>
       )}
       <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center" }}>Last played: {char.dateLastPlayed ? new Date(char.dateLastPlayed).toLocaleDateString() : "—"} · {Math.round((char.minutesPlayedTotal || 0) / 60)}h total</div>
     </div>
   );
 }
 
-function InventoryGrid({ items, hasManifest }: { items: any[]; hasManifest: boolean }) {
+function InventoryGrid({ items, hasManifest, onItemClick }: { items: any[]; hasManifest: boolean; onItemClick?: (item: any) => void }) {
   if (!items.length) return <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>Inventory empty</div>;
   const exotics = items.filter((i: any) => i.tierName === "Exotic");
   const legendaries = items.filter((i: any) => i.tierName === "Legendary");
@@ -699,16 +929,16 @@ function InventoryGrid({ items, hasManifest }: { items: any[]; hasManifest: bool
     <div>
       <div style={S.label}>{label} ({group.length})</div>
       {hasManifest ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} />)}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div>
       ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div>
       )}
     </div>
   );
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{renderGroup("Exotics", exotics)}{renderGroup("Legendaries", legendaries)}{renderGroup("Other", rest)}</div>;
 }
 
-function VaultView({ items }: { items: any[] }) {
+function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: any) => void }) {
   const [filter, setFilter] = useState<"all" | "weapons" | "armor">("all");
   if (!items.length) return <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>Vault empty or not loaded</div>;
   const weaponBuckets = new Set([1498876634, 2465295065, 953998645]);
@@ -733,7 +963,7 @@ function VaultView({ items }: { items: any[] }) {
         ))}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {filtered.slice(0, 100).map((item: any, i: number) => <ItemTile key={i} item={item} compact />)}
+        {filtered.slice(0, 100).map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}
       </div>
       {filtered.length > 100 && <div style={{ fontSize: 10, opacity: 0.3, textAlign: "center" }}>Showing first 100 of {filtered.length}</div>}
     </div>

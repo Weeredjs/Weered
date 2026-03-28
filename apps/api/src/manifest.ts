@@ -30,6 +30,7 @@ export interface ItemDef {
   damageTypeHash: number;
   description: string;
   watermark: string;
+  socketEntries?: { plugHash: number; socketTypeHash: number }[];
 }
 
 export interface ActivityDef {
@@ -107,6 +108,16 @@ export const ARMOR_BUCKETS = new Set([
   BUCKET_HASHES.LEGS, BUCKET_HASHES.CLASS,
 ]);
 
+// Well-known armor stat hashes
+export const ARMOR_STAT_HASHES = {
+  MOBILITY:    2996146975,
+  RESILIENCE:  392767087,
+  RECOVERY:    1943323491,
+  DISCIPLINE:  1735777505,
+  INTELLECT:   144602215,
+  STRENGTH:    4244567218,
+};
+
 // ── In-memory indices ─────────────────────────────────────────────────────────
 
 const itemIndex     = new Map<string, ItemDef>();
@@ -148,6 +159,15 @@ export function resolveClass(hash: number | string): ClassDef | null {
 export function resolveModifier(hash: number | string): ModifierDef | null {
   return modifierIndex.get(String(hash)) || null;
 }
+export function resolveItemPerks(plugHashes: number[]): { hash: number; name: string; icon: string; description: string }[] {
+  return plugHashes
+    .map(h => {
+      const def = resolveItem(h);
+      if (!def) return null;
+      return { hash: h, name: def.name, icon: def.icon ? `${BUNGIE_BASE}${def.icon}` : "", description: def.description };
+    })
+    .filter(Boolean) as any;
+}
 export function isLoaded(): boolean { return _loaded; }
 export function manifestVersion(): string { return _version; }
 
@@ -162,12 +182,14 @@ export function enrichProfile(profileData: any) {
   const equipment  = profileData?.characterEquipment?.data || {};
   const inventories = profileData?.characterInventories?.data || {};
   const instances  = profileData?.itemComponents?.instances?.data || {};
+  const sockets    = profileData?.itemComponents?.sockets?.data || {};
+  const itemStats  = profileData?.itemComponents?.stats?.data || {};
   const vaultItems = profileData?.profileInventory?.data?.items || [];
 
   // Build enriched characters
   const enrichedChars = Object.entries(characters).map(([charId, char]: [string, any]) => {
-    const equippedItems = (equipment[charId]?.items || []).map((item: any) => enrichItem(item, instances));
-    const inventoryItems = (inventories[charId]?.items || []).map((item: any) => enrichItem(item, instances));
+    const equippedItems = (equipment[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats));
+    const inventoryItems = (inventories[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats));
 
     // Group equipped by slot
     const weapons = equippedItems.filter((i: any) => WEAPON_BUCKETS.has(i.bucketHash));
@@ -195,7 +217,7 @@ export function enrichProfile(profileData: any) {
   });
 
   // Enrich vault
-  const enrichedVault = vaultItems.map((item: any) => enrichItem(item, instances));
+  const enrichedVault = vaultItems.map((item: any) => enrichItem(item, instances, sockets, itemStats));
 
   return {
     characters: enrichedChars,
@@ -204,17 +226,64 @@ export function enrichProfile(profileData: any) {
   };
 }
 
-function enrichItem(item: any, instances: Record<string, any>) {
+function enrichItem(
+  item: any,
+  instances: Record<string, any>,
+  sockets?: Record<string, any>,
+  itemStats?: Record<string, any>,
+) {
   const def = resolveItem(item.itemHash);
   const instance = instances[item.itemInstanceId] || {};
   const bucket = resolveBucket(item.bucketHash || def?.bucketHash || 0);
   const damage = resolveDamageType(instance.damageTypeHash || def?.damageTypeHash || 0);
+  const bHash = item.bucketHash || def?.bucketHash || 0;
+
+  // Resolve perks from component 304 socket data (live instance perks)
+  let perks: { hash: number; name: string; icon: string; isEnabled: boolean }[] = [];
+  const socketData = sockets?.[item.itemInstanceId]?.sockets;
+  if (socketData && Array.isArray(socketData)) {
+    perks = socketData
+      .filter((s: any) => s.plugHash && s.plugHash !== 0)
+      .map((s: any) => {
+        const plugDef = resolveItem(s.plugHash);
+        if (!plugDef || !plugDef.name) return null;
+        return {
+          hash: s.plugHash,
+          name: plugDef.name,
+          icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "",
+          isEnabled: s.isEnabled ?? true,
+        };
+      })
+      .filter(Boolean) as any;
+  } else if (def?.socketEntries) {
+    // Fallback: use manifest default perks
+    perks = def.socketEntries
+      .map(s => {
+        const plugDef = resolveItem(s.plugHash);
+        if (!plugDef || !plugDef.name) return null;
+        return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "", isEnabled: true };
+      })
+      .filter(Boolean) as any;
+  }
+
+  // Armor stats from component 302
+  let armorStats: any = undefined;
+  if (ARMOR_BUCKETS.has(bHash) && itemStats?.[item.itemInstanceId]?.stats) {
+    const stats = itemStats[item.itemInstanceId].stats;
+    const m = Number(stats[ARMOR_STAT_HASHES.MOBILITY]?.value || 0);
+    const res = Number(stats[ARMOR_STAT_HASHES.RESILIENCE]?.value || 0);
+    const rec = Number(stats[ARMOR_STAT_HASHES.RECOVERY]?.value || 0);
+    const d = Number(stats[ARMOR_STAT_HASHES.DISCIPLINE]?.value || 0);
+    const i = Number(stats[ARMOR_STAT_HASHES.INTELLECT]?.value || 0);
+    const s = Number(stats[ARMOR_STAT_HASHES.STRENGTH]?.value || 0);
+    armorStats = { mobility: m, resilience: res, recovery: rec, discipline: d, intellect: i, strength: s, total: m + res + rec + d + i + s };
+  }
 
   return {
     itemHash: item.itemHash,
     itemInstanceId: item.itemInstanceId,
     quantity: item.quantity || 1,
-    bucketHash: item.bucketHash || def?.bucketHash || 0,
+    bucketHash: bHash,
     // Resolved fields
     name: def?.name || `Unknown (${item.itemHash})`,
     icon: def?.icon ? `${BUNGIE_BASE}${def.icon}` : "",
@@ -231,7 +300,67 @@ function enrichItem(item: any, instances: Record<string, any>) {
     canEquip: instance.canEquip ?? true,
     // Slot name
     slotName: bucket?.name || "",
+    // Perks & stats (Phase 2)
+    perks,
+    armorStats,
   };
+}
+
+/**
+ * Enrich Xur vendor sale items with manifest data + socket perks
+ */
+export function enrichVendorSales(
+  salesData: Record<string, any>,
+  socketsData?: Record<string, any>,
+) {
+  const items: any[] = [];
+  for (const [vendorItemIndex, sale] of Object.entries(salesData)) {
+    const itemHash = (sale as any).itemHash;
+    if (!itemHash) continue;
+    const def = resolveItem(itemHash);
+    if (!def) continue;
+
+    // Resolve perks from component 304 vendor socket data
+    let perks: { hash: number; name: string; icon: string }[] = [];
+    const itemSockets = socketsData?.[vendorItemIndex]?.sockets;
+    if (itemSockets && Array.isArray(itemSockets)) {
+      perks = itemSockets
+        .filter((s: any) => s.plugHash && s.plugHash !== 0)
+        .map((s: any) => {
+          const plugDef = resolveItem(s.plugHash);
+          if (!plugDef || !plugDef.name) return null;
+          return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "" };
+        })
+        .filter(Boolean) as any;
+    } else if (def.socketEntries) {
+      perks = def.socketEntries
+        .map(s => {
+          const plugDef = resolveItem(s.plugHash);
+          if (!plugDef || !plugDef.name) return null;
+          return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "" };
+        })
+        .filter(Boolean) as any;
+    }
+
+    items.push({
+      itemHash,
+      vendorItemIndex: Number(vendorItemIndex),
+      name: def.name,
+      icon: def.icon ? `${BUNGIE_BASE}${def.icon}` : "",
+      tierName: def.tierName,
+      tierType: def.tierType,
+      itemType: def.itemType,
+      itemSubType: def.itemSubType,
+      bucketHash: def.bucketHash,
+      description: def.description,
+      watermark: def.watermark ? `${BUNGIE_BASE}${def.watermark}` : "",
+      perks,
+      costs: (sale as any).costs || [],
+    });
+  }
+  // Exotics first, then by tier
+  items.sort((a, b) => (b.tierType || 0) - (a.tierType || 0));
+  return items;
 }
 
 /**
@@ -390,7 +519,7 @@ function buildItemIndex(raw: Record<string, any>) {
   for (const [hash, def] of Object.entries(raw)) {
     const dp = def?.displayProperties;
     if (!dp?.name) continue;
-    itemIndex.set(hash, {
+    const entry: ItemDef = {
       name: dp.name,
       icon: dp.icon || "",
       itemType: def.itemType || 0,
@@ -401,7 +530,16 @@ function buildItemIndex(raw: Record<string, any>) {
       damageTypeHash: def.defaultDamageTypeHash || 0,
       description: (dp.description || "").slice(0, 200),
       watermark: def.iconWatermark || "",
-    });
+    };
+    // Extract default socket plugs (perks/mods) — cap at 10 per item
+    const sockets = def.sockets?.socketEntries;
+    if (sockets && Array.isArray(sockets)) {
+      entry.socketEntries = sockets
+        .filter((s: any) => s.singleInitialItemHash && s.singleInitialItemHash !== 0)
+        .slice(0, 10)
+        .map((s: any) => ({ plugHash: s.singleInitialItemHash, socketTypeHash: s.socketTypeHash || 0 }));
+    }
+    itemIndex.set(hash, entry);
   }
 }
 

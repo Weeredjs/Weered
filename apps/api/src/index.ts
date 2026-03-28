@@ -7,7 +7,7 @@ import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
 import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
-import { syncManifest, enrichProfile, enrichMilestones, isLoaded as manifestLoaded, manifestVersion } from "./manifest";
+import { syncManifest, enrichProfile, enrichMilestones, enrichVendorSales, resolveItem, resolveBucket, resolveDamageType, isLoaded as manifestLoaded, manifestVersion, WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES } from "./manifest";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
@@ -4646,6 +4646,27 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   }
 
+  // Authenticated cache helper — for endpoints that require OAuth but cache the result
+  async function bungieGetCachedAuth(key: string, path: string, ttlMinutes: number, accessToken: string) {
+    try {
+      const cached = await (prisma as any).bungieCache.findUnique({ where: { key } });
+      if (cached && new Date(cached.expiresAt) > new Date()) return cached.data;
+    } catch {}
+    try {
+      const data = await bungieGet(path, accessToken);
+      const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+      await (prisma as any).bungieCache.upsert({
+        where: { key },
+        update: { data, fetchedAt: new Date(), expiresAt },
+        create: { key, data, fetchedAt: new Date(), expiresAt },
+      });
+      return data;
+    } catch (e) {
+      console.error(`[bungie cache auth] ${key}`, e);
+      return null;
+    }
+  }
+
   // Refresh Bungie OAuth token if expired, returns fresh access token
   async function refreshBungieToken(account: any): Promise<string | null> {
     // If token is still valid, return it
@@ -4700,17 +4721,86 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   }
 
-  // GET /bungie/xur — Xur's inventory (cached 30 min)
-  app.get("/bungie/xur", async (_req, reply) => {
-    const data = await bungieGetCached("xur_inventory", "/Destiny2/Milestones/", 30);
-    if (!data) return reply.send({ ok: true, available: false, error: "bungie_unavailable" });
+  // GET /bungie/xur — Xur's full inventory with perks (cached 60 min)
+  app.get("/bungie/xur", async (req, reply) => {
+    if (!BUNGIE_API_KEY) return reply.send({ ok: true, available: false, error: "bungie_not_configured" });
 
-    // Xur appears Friday reset to Tuesday reset
-    // The milestones endpoint gives us active milestones — Xur is milestone hash 534869653
-    const xurMilestone = data?.Response?.["534869653"];
-    const isAvailable = !!xurMilestone;
+    // Quick milestone check for Xur presence
+    const milestoneData = await bungieGetCached("xur_milestone", "/Destiny2/Milestones/", 30);
+    const xurMilestone = milestoneData?.Response?.["534869653"];
+    if (!xurMilestone) {
+      return reply.send({ ok: true, available: false });
+    }
 
-    return reply.send({ ok: true, available: isAvailable, milestone: xurMilestone || null, raw: data?.Response ? undefined : data });
+    // Xur is here — try to get full vendor inventory
+    // Check if we have a cached vendor inventory first (any authenticated user's fetch works)
+    try {
+      const cached = await (prisma as any).bungieCache.findUnique({ where: { key: "xur_vendor_inventory" } });
+      if (cached && new Date(cached.expiresAt) > new Date() && cached.data?.items) {
+        return reply.send({ ok: true, available: true, items: cached.data.items, cachedAt: cached.fetchedAt });
+      }
+    } catch {}
+
+    // No cache — need an authenticated user to fetch vendor data
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) {
+      return reply.send({ ok: true, available: true, items: null, message: "Link your Bungie account to see Xur's inventory" });
+    }
+
+    const account = await (prisma as any).userGameAccount.findUnique({
+      where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
+    });
+    if (!account?.accessToken) {
+      return reply.send({ ok: true, available: true, items: null, message: "Link your Bungie account to see Xur's inventory" });
+    }
+
+    const accessToken = await refreshBungieToken(account);
+    if (!accessToken) {
+      return reply.send({ ok: true, available: true, items: null, error: "token_expired" });
+    }
+
+    try {
+      // Get a characterId (quick profile fetch)
+      const profileRes = await bungieGet(`/Destiny2/${account.platform}/Profile/${account.externalId}/?components=200`, accessToken);
+      const chars = profileRes?.Response?.characters?.data || {};
+      const charIds = Object.keys(chars);
+      if (charIds.length === 0) return reply.send({ ok: true, available: true, items: null, error: "no_characters" });
+
+      // Pick most recently played character
+      const sortedChars = charIds.sort((a, b) => new Date(chars[b].dateLastPlayed).getTime() - new Date(chars[a].dateLastPlayed).getTime());
+      const charId = sortedChars[0];
+
+      // Fetch Xur vendor (hash 2190858386) with sales + sockets
+      const vendorData = await bungieGetCachedAuth(
+        "xur_vendor_inventory",
+        `/Destiny2/${account.platform}/Profile/${account.externalId}/Character/${charId}/Vendors/2190858386/?components=402,304`,
+        60, accessToken
+      );
+
+      const sales = vendorData?.Response?.sales?.data || {};
+      const sockets = vendorData?.Response?.itemComponents?.sockets?.data || {};
+
+      if (Object.keys(sales).length === 0) {
+        return reply.send({ ok: true, available: true, items: [] });
+      }
+
+      const items = manifestLoaded() ? enrichVendorSales(sales, sockets) : [];
+
+      // Re-cache with enriched items for non-authenticated users
+      if (items.length > 0) {
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        await (prisma as any).bungieCache.upsert({
+          where: { key: "xur_vendor_inventory" },
+          update: { data: { items }, fetchedAt: new Date(), expiresAt },
+          create: { key: "xur_vendor_inventory", data: { items }, fetchedAt: new Date(), expiresAt },
+        });
+      }
+
+      return reply.send({ ok: true, available: true, items, cachedAt: new Date() });
+    } catch (e) {
+      console.error("[bungie/xur vendor]", e);
+      return reply.send({ ok: true, available: true, items: null, error: "vendor_fetch_failed" });
+    }
   });
   // POST /staff/users/:userId/tier — update user tier (alias for subscription grant)
   app.post("/staff/users/:userId/tier", async (req, reply) => {
@@ -4823,29 +4913,94 @@ app.post("/dm/:peerId", async (req, reply) => {
       const memberType = player.membershipType;
       const memberId = player.membershipId;
 
-      // Fetch profile: characters, stats, equipment
+      // Fetch profile: characters, equipment, sockets, stats
       const profile = await bungieGet(
-        `/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,205,800`
+        `/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,205,300,302,304`
       );
 
-      const characters = profile?.Response?.characters?.data || {};
-      const stats = profile?.Response?.profileRecords?.data || {};
+      const profileData = profile?.Response;
+      const characters = profileData?.characters?.data || {};
+      const equipment = profileData?.characterEquipment?.data || {};
+      const instances = profileData?.itemComponents?.instances?.data || {};
+      const socketData = profileData?.itemComponents?.sockets?.data || {};
+      const statData = profileData?.itemComponents?.stats?.data || {};
 
-      const charSummary = Object.values(characters).map((c: any) => ({
-        characterId: c.characterId,
-        classType: c.classType, // 0=Titan, 1=Hunter, 2=Warlock
-        light: c.light,
-        raceType: c.raceType,
-        emblemPath: c.emblemPath ? `https://www.bungie.net${c.emblemPath}` : null,
-        emblemBackgroundPath: c.emblemBackgroundPath ? `https://www.bungie.net${c.emblemBackgroundPath}` : null,
-        dateLastPlayed: c.dateLastPlayed,
-        minutesPlayedTotal: c.minutesPlayedTotal,
-        titleRecordHash: c.titleRecordHash,
-      }));
+      // Check privacy
+      const privacyRestricted = profileData?.characterEquipment?.privacy === 2;
+
+      const charSummary = Object.values(characters).map((c: any) => {
+        const charId = c.characterId;
+        const base: any = {
+          characterId: charId,
+          classType: c.classType,
+          className: ["Titan", "Hunter", "Warlock"][c.classType] || "Unknown",
+          light: c.light,
+          raceType: c.raceType,
+          raceName: ["Human", "Awoken", "Exo"][c.raceType] || "Unknown",
+          emblemPath: c.emblemPath ? `https://www.bungie.net${c.emblemPath}` : null,
+          emblemBackgroundPath: c.emblemBackgroundPath ? `https://www.bungie.net${c.emblemBackgroundPath}` : null,
+          dateLastPlayed: c.dateLastPlayed,
+          minutesPlayedTotal: c.minutesPlayedTotal,
+          titleRecordHash: c.titleRecordHash,
+        };
+
+        // Include enriched equipment if not privacy-restricted and manifest loaded
+        if (!privacyRestricted && manifestLoaded()) {
+          const equippedItems = (equipment[charId]?.items || []).map((item: any) => {
+            const def = resolveItem(item.itemHash);
+            const inst = instances[item.itemInstanceId] || {};
+            const bucket = resolveBucket(item.bucketHash || def?.bucketHash || 0);
+            const damage = resolveDamageType(inst.damageTypeHash || def?.damageTypeHash || 0);
+            const bHash = item.bucketHash || def?.bucketHash || 0;
+
+            // Perks from sockets
+            let perks: any[] = [];
+            const itemSockets = socketData[item.itemInstanceId]?.sockets;
+            if (itemSockets && Array.isArray(itemSockets)) {
+              perks = itemSockets
+                .filter((s: any) => s.plugHash && s.plugHash !== 0)
+                .map((s: any) => { const pd = resolveItem(s.plugHash); return pd ? { hash: s.plugHash, name: pd.name, icon: pd.icon ? `https://www.bungie.net${pd.icon}` : "" } : null; })
+                .filter(Boolean);
+            }
+
+            // Armor stats
+            let armorStats: any = undefined;
+            if (ARMOR_BUCKETS.has(bHash) && statData[item.itemInstanceId]?.stats) {
+              const stats = statData[item.itemInstanceId].stats;
+              const m = Number(stats[ARMOR_STAT_HASHES.MOBILITY]?.value || 0);
+              const r = Number(stats[ARMOR_STAT_HASHES.RESILIENCE]?.value || 0);
+              const rc = Number(stats[ARMOR_STAT_HASHES.RECOVERY]?.value || 0);
+              const d = Number(stats[ARMOR_STAT_HASHES.DISCIPLINE]?.value || 0);
+              const i = Number(stats[ARMOR_STAT_HASHES.INTELLECT]?.value || 0);
+              const s = Number(stats[ARMOR_STAT_HASHES.STRENGTH]?.value || 0);
+              armorStats = { mobility: m, resilience: r, recovery: rc, discipline: d, intellect: i, strength: s, total: m + r + rc + d + i + s };
+            }
+
+            return {
+              itemHash: item.itemHash, itemInstanceId: item.itemInstanceId,
+              bucketHash: bHash, name: def?.name || `Unknown`, icon: def?.icon ? `https://www.bungie.net${def.icon}` : "",
+              tierName: def?.tierName || "Unknown", tierType: def?.tierType || 0,
+              watermark: def?.watermark ? `https://www.bungie.net${def.watermark}` : "",
+              primaryStat: inst.primaryStat?.value || null,
+              damageType: damage?.name || null, damageIcon: damage?.icon ? `https://www.bungie.net${damage.icon}` : null,
+              slotName: bucket?.name || "", perks, armorStats,
+            };
+          });
+
+          const weapons = equippedItems.filter((i: any) => WEAPON_BUCKETS.has(i.bucketHash));
+          const armor = equippedItems.filter((i: any) => ARMOR_BUCKETS.has(i.bucketHash));
+          base.equipped = equippedItems;
+          base.weapons = weapons;
+          base.armor = armor;
+        }
+
+        return base;
+      });
 
       return reply.send({
         ok: true,
         found: true,
+        privacyRestricted,
         player: {
           membershipId: memberId,
           membershipType: memberType,
@@ -4965,9 +5120,9 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
 
     try {
-      // Fetch full profile: characters, equipment, inventories, vault, item instances
+      // Fetch full profile: characters, equipment, inventories, vault, item instances, sockets, stats
       const profile = await bungieGet(
-        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300`,
+        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300,302,304`,
         accessToken
       );
 
@@ -5021,6 +5176,70 @@ app.post("/dm/:peerId", async (req, reply) => {
     } catch (e) {
       console.error("[bungie/me]", e);
       return reply.send({ ok: true, linked: true, error: "fetch_failed", displayName: account.displayName });
+    }
+  });
+
+  // POST /bungie/equip — Equip an item on a character
+  app.post("/bungie/equip", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const account = await (prisma as any).userGameAccount.findUnique({
+      where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
+    });
+    if (!account?.accessToken) return reply.code(400).send({ ok: false, error: "not_linked" });
+
+    const accessToken = await refreshBungieToken(account);
+    if (!accessToken) return reply.code(401).send({ ok: false, error: "token_expired" });
+
+    const { itemId, characterId } = (req as any).body || {};
+    if (!itemId || !characterId) return reply.code(400).send({ ok: false, error: "missing_fields" });
+
+    try {
+      const result = await fetch(`${BUNGIE_ROOT}/Destiny2/Actions/Items/EquipItem/`, {
+        method: "POST",
+        headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, characterId, membershipType: Number(account.platform) }),
+      });
+      const data = await result.json();
+      return reply.send({ ok: !data.ErrorCode || data.ErrorCode === 1, data });
+    } catch (e) {
+      console.error("[bungie/equip]", e);
+      return reply.code(500).send({ ok: false, error: "equip_failed" });
+    }
+  });
+
+  // POST /bungie/transfer — Transfer an item to/from vault
+  app.post("/bungie/transfer", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const account = await (prisma as any).userGameAccount.findUnique({
+      where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
+    });
+    if (!account?.accessToken) return reply.code(400).send({ ok: false, error: "not_linked" });
+
+    const accessToken = await refreshBungieToken(account);
+    if (!accessToken) return reply.code(401).send({ ok: false, error: "token_expired" });
+
+    const { itemReferenceHash, stackSize, transferToVault, itemId, characterId } = (req as any).body || {};
+    if (!itemId || !characterId || !itemReferenceHash) return reply.code(400).send({ ok: false, error: "missing_fields" });
+
+    try {
+      const result = await fetch(`${BUNGIE_ROOT}/Destiny2/Actions/Items/TransferItem/`, {
+        method: "POST",
+        headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemReferenceHash, stackSize: stackSize || 1,
+          transferToVault: transferToVault ?? false,
+          itemId, characterId, membershipType: Number(account.platform),
+        }),
+      });
+      const data = await result.json();
+      return reply.send({ ok: !data.ErrorCode || data.ErrorCode === 1, data });
+    } catch (e) {
+      console.error("[bungie/transfer]", e);
+      return reply.code(500).send({ ok: false, error: "transfer_failed" });
     }
   });
 
