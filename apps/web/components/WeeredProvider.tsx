@@ -53,6 +53,9 @@ type Ctx = {
   renameRoom: (name: string) => void;
   setModuleState: (mode: string | null, opts?: { url?: string; channel?: string }) => void;
   lockRoom: () => void; unlockRoom: () => void;
+  joinWithPassword: (roomId: string, password: string) => void;
+  passwordRoomId: string; passwordError: string;
+  setPasswordRoomId: (id: string) => void;
   promote: (userId: string) => void; demote: (userId: string) => void;
   kick: (userId: string) => void; ban: (userId: string) => void;
   unban: (userId: string) => void; mute: (userId: string) => void; unmute: (userId: string) => void;
@@ -84,6 +87,56 @@ function readSettings(): any {
 // ─── Context ──────────────────────────────────────────────────────────────────
 const WeeredContext = createContext<Ctx | null>(null);
 
+/* ─── Password Prompt (inline sub-component) ─────────────────────────────── */
+function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
+  roomId: string; error: string; onSubmit: (pw: string) => void; onCancel: () => void;
+}) {
+  const [pw, setPw] = React.useState("");
+  return (
+    <>
+      <input
+        autoFocus
+        type="password"
+        placeholder="Enter room password…"
+        value={pw}
+        onChange={e => setPw(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter" && pw.trim()) onSubmit(pw.trim()); }}
+        style={{
+          width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13,
+          border: error ? "1px solid rgba(239,68,68,.50)" : "1px solid rgba(88,0,229,.30)",
+          background: "rgba(0,0,0,.35)", color: "rgba(243,244,246,.92)",
+          outline: "none", boxSizing: "border-box",
+        }}
+      />
+      {error && <div style={{ fontSize: 11, color: "rgba(252,165,165,.85)", marginTop: 6 }}>{error}</div>}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button
+          onClick={onCancel}
+          style={{
+            flex: 1, padding: "8px", borderRadius: 9, fontSize: 12, fontWeight: 600,
+            border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)",
+            color: "rgba(243,244,246,.70)", cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => pw.trim() && onSubmit(pw.trim())}
+          disabled={!pw.trim()}
+          style={{
+            flex: 1, padding: "8px", borderRadius: 9, fontSize: 12, fontWeight: 700,
+            border: "1px solid rgba(88,0,229,.45)", background: "rgba(88,0,229,.18)",
+            color: "rgba(167,139,250,.95)", cursor: pw.trim() ? "pointer" : "default",
+            opacity: pw.trim() ? 1 : 0.5,
+          }}
+        >
+          Enter Room
+        </button>
+      </div>
+    </>
+  );
+}
+
 export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
@@ -112,6 +165,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
+  const [passwordRoomId, setPasswordRoomId] = useState("");
+  const [passwordError,  setPasswordError ] = useState("");
 
   // ── Derived ──
   const authed     = useMemo(() => Boolean(token), [token]);
@@ -420,6 +475,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
       if (msg.type === "room:knock:queued") { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "knocking" })); return; }
       if (msg.type === "room:banned")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "banned"   })); return; }
+      if (msg.type === "room:password:required") { setPasswordRoomId(String(msg.roomId || "")); setPasswordError(""); return; }
+      if (msg.type === "room:password:wrong")    { setPasswordError("Wrong password."); return; }
       if (msg.type === "room:denied")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "denied"   })); return; }
       if (msg.type === "staff:kicked") {
         const rid = String(msg.roomId || "");
@@ -634,6 +691,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
   const lockRoom   = ()               => sendAdmin("room:lock");
   const unlockRoom = ()               => sendAdmin("room:unlock");
+  const joinWithPassword = (roomId: string, password: string) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    try { ws.send(JSON.stringify({ type: "presence:join", roomId, password })); } catch {}
+    setPasswordRoomId("");
+    setPasswordError("");
+  };
   const promote    = (userId: string) => sendAdmin("mod:promote",  { userId });
   const demote     = (userId: string) => sendAdmin("mod:demote",   { userId });
   const kick       = (userId: string) => sendAdmin("mod:kick",     { userId });
@@ -655,7 +719,8 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     rooms, join, leave, knock,
     devLogin, logout,
     sendChat, renameRoom,
-    lockRoom, unlockRoom,
+    lockRoom, unlockRoom, joinWithPassword,
+    passwordRoomId, passwordError, setPasswordRoomId,
     promote, demote, kick, ban, unban, mute, unmute, admit, deny,
     sendRaw: (msg: object) => {
       try {
@@ -665,7 +730,45 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     },
   };
 
-  return <WeeredContext.Provider value={value}><VoiceProvider><SystemBroadcast />{children}<NotorietyToast /></VoiceProvider></WeeredContext.Provider>;
+  return (
+    <WeeredContext.Provider value={value}>
+      <VoiceProvider>
+        <SystemBroadcast />
+        {children}
+        <NotorietyToast />
+        {/* Password prompt modal */}
+        {passwordRoomId && (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 99999,
+            background: "rgba(0,0,0,.65)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }} onClick={() => setPasswordRoomId("")}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: "rgba(18,18,24,.97)", border: "1px solid rgba(88,0,229,.35)",
+                borderRadius: 16, padding: "28px 24px", width: 340,
+                boxShadow: "0 8px 40px rgba(0,0,0,.5)",
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 900, color: "rgba(243,244,246,.95)", marginBottom: 4 }}>
+                🔑 Password Required
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", marginBottom: 16 }}>
+                This room requires a password to enter.
+              </div>
+              <PasswordPromptInput
+                roomId={passwordRoomId}
+                error={passwordError}
+                onSubmit={(pw: string) => joinWithPassword(passwordRoomId, pw)}
+                onCancel={() => setPasswordRoomId("")}
+              />
+            </div>
+          </div>
+        )}
+      </VoiceProvider>
+    </WeeredContext.Provider>
+  );
 }
 
 export function useWeered(): Ctx {

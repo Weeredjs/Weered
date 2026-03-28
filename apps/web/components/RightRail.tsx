@@ -9,7 +9,7 @@ import { avatarBg } from "../lib/avatarColor";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string };
+type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean };
 
 function authHeaders() {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
@@ -76,6 +76,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   const [newRoom,    setNewRoom]    = React.useState("");
   const [creating,   setCreating]   = React.useState(false);
   const [selectedModule, setSelectedModule] = React.useState<string>("voice");
+  const [roomPassword, setRoomPassword] = React.useState("");
 
   const w = useWeered() as any;
   const navRouter = useRouter();
@@ -110,7 +111,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       const raw = Array.isArray(j?.rooms) ? j.rooms : [];
       setRows(raw.map((r: any) => ({
         id: String(r.id || ""), name: String(r.name || r.id || ""),
-        locked: Boolean(r.locked), users: Number(r.onlineCount ?? r.users ?? r.memberCount ?? 0),
+        locked: Boolean(r.locked), users: Number(r.onlineCount ?? r.users ?? r.memberCount ?? 0), hasPassword: Boolean(r.hasPassword),
         lobbyId: r.lobbyId ?? lobbyId,
       })).filter((r: RoomRow) => r.id));
     } catch (e: any) { setErr(String(e?.message || e)); }
@@ -124,7 +125,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     try {
       const j = await fetch(`${API_BASE}/rooms`, {
         method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ name, lobbyId, module: selectedModule }),
+        body: JSON.stringify({ name, lobbyId, module: selectedModule, password: roomPassword.trim() || undefined }),
       }).then(r => r.json());
       if (!j?.ok) throw new Error(j?.message || j?.error || "create failed");
       const roomId = j.room?.id || name;
@@ -132,6 +133,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       setNewRoom("");
       setShowCreate(false);
       setSelectedModule("voice");
+      setRoomPassword("");
 
       // Auto-join: navigate into the new room
       navRouter.push(`/room/${encodeURIComponent(roomId)}`);
@@ -242,6 +244,18 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
             })}
           </div>
 
+          {/* Optional password */}
+          <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
+            Password <span style={{ fontWeight: 400, opacity: 0.6 }}>(optional)</span>
+          </div>
+          <input
+            style={{ ...s.input, marginBottom: 10, borderColor: roomPassword ? "rgba(88,0,229,.30)" : "rgba(255,255,255,.10)" }}
+            placeholder="Leave blank for open room…"
+            type="password"
+            value={roomPassword}
+            onChange={e => setRoomPassword(e.target.value)}
+          />
+
           {/* Create button */}
           <button
             onClick={createRoom}
@@ -343,6 +357,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                   }}>
                     {rm.name || rm.id}
                     {rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔒</span>}
+                    {rm.hasPassword && !rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔑</span>}
                   </div>
                   {/* Avatar stack row */}
                   {liveWsUsers.length > 0 && (
