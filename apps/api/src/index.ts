@@ -65,6 +65,7 @@ type RoomState = {
   pending: Map<string, Set<Sock>>;
   audit: AuditItem[];
   activeModule: ModuleState | null;
+  ytState: { videoId: string; playing: boolean; position: number; updatedAt: number } | null;
   lastActiveAt: number;
   pinned: boolean;
   passwordHash?: string;
@@ -197,7 +198,7 @@ function makeEmptyRoom(roomId: string): RoomState {
     roomId, name: "",
     users: new Map(), sockets: new Set(), msgs: [],
     ownerId: undefined, mods: new Set(), banned: new Set(), muted: new Set(),
-    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null, lastActiveAt: Date.now(), pinned: false,
+    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null, ytState: null, lastActiveAt: Date.now(), pinned: false,
   };
 }
 
@@ -682,6 +683,11 @@ async function doJoin(ws: Sock, roomId: string) {
 
   if (room.msgs.length) {
     send(ws, { type: "chat:history", roomId, msgs: room.msgs.slice(-80) });
+  }
+
+  // Send current YouTube state so late joiners see what everyone is watching
+  if (room.ytState) {
+    send(ws, { type: "youtube:state", roomId, ...room.ytState });
   }
 
   return true;
@@ -2323,9 +2329,12 @@ app.post("/dm/:peerId", async (req, reply) => {
           const mode = String(msg.mode || "").trim() || null;
           if (!mode) {
             room.activeModule = null;
+            room.ytState = null;
             broadcast(room, { type: "module:state", roomId, activeModule: null });
             return;
           }
+          // Clear YouTube state when switching away from YouTube
+          if (mode !== "youtube") room.ytState = null;
           const moduleState: ModuleState = {
             mode,
             url: typeof msg.url === "string" ? msg.url.slice(0, 2000) : undefined,
@@ -2345,6 +2354,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           if (!room) return;
           if (!room.users.has(ws.user.id)) return;
           room.activeModule = null;
+          room.ytState = null;
           broadcast(room, { type: "module:state", roomId, activeModule: null });
           return;
         }
@@ -2637,6 +2647,20 @@ app.post("/dm/:peerId", async (req, reply) => {
         if (msg.type === "youtube:load" || msg.type === "youtube:sync" ||
             msg.type === "youtube:play" || msg.type === "youtube:pause" || msg.type === "youtube:stop") {
           if (!room.users.has(ws.user.id)) return;
+          // Store YouTube state so late joiners can catch up
+          if (msg.type === "youtube:load" && msg.videoId) {
+            room.ytState = { videoId: String(msg.videoId), playing: false, position: 0, updatedAt: Date.now() };
+            // Also store videoId in activeModule for completeness
+            if (room.activeModule && room.activeModule.mode === "youtube") {
+              room.activeModule.url = String(msg.videoId);
+            }
+          } else if (msg.type === "youtube:play") {
+            if (room.ytState) { room.ytState.playing = true; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
+          } else if (msg.type === "youtube:pause") {
+            if (room.ytState) { room.ytState.playing = false; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
+          } else if (msg.type === "youtube:stop") {
+            room.ytState = null;
+          }
           for (const s of room.sockets) {
             if (s === ws) continue;
             send(s, { ...msg, roomId, _from: ws.user.id });
