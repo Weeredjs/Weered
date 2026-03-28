@@ -66,12 +66,16 @@ model Lobby {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Revenue sharing — manual payout percentage for lobby owner (0-100)
+  revenueSharePct Float @default(0)
+
   rooms       Room[]
   members     LobbyMember[]
   bans        LobbyBan[]
   messages    LobbyMessage[]
   adminMessages LobbyAdminMessage[]
   audit       LobbyAudit[]
+  tiers       LobbyTier[]
 }
 
 model LobbyMember {
@@ -501,6 +505,50 @@ model Subscription {
 
   @@index([userId])
   @@index([stripeCustomerId])
+}
+
+// ΓöÇΓöÇ Lobby Paid Tiers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// Lobby owners can create paid subscription tiers that auto-promote members.
+
+model LobbyTier {
+  id              String   @id @default(cuid())
+  lobbyId         String
+  name            String                    // e.g. "VIP", "Patron", "Supporter"
+  description     String   @default("")
+  priceMonthly    Int                       // cents, e.g. 500 = $5.00
+  grantLevel      Int      @default(2)      // roleLevel to auto-assign (1-4, never 5)
+  color           String?                   // hex accent for badge display
+  stripePriceId   String?  @unique          // Stripe Price ID (created dynamically)
+  stripeProductId String?                   // Stripe Product ID
+  sortOrder       Int      @default(0)      // display order
+  active          Boolean  @default(true)   // soft-disable without deleting
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lobby       Lobby          @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  subscribers LobbyTierSub[]
+
+  @@index([lobbyId, active])
+}
+
+model LobbyTierSub {
+  id                String    @id @default(cuid())
+  lobbyTierId       String
+  lobbyId           String                // denormalized for fast queries
+  userId            String
+  stripeSubId       String?   @unique     // Stripe subscription ID
+  stripeCustomerId  String?               // Stripe customer (may reuse from platform Subscription)
+  status            String    @default("inactive") // active, past_due, canceled, inactive
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tier LobbyTier @relation(fields: [lobbyTierId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, userId])             // one active lobby sub per user per lobby
+  @@index([userId])
+  @@index([stripeSubId])
 }
 
 // ΓöÇΓöÇ LFG / Fireteam Board ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
