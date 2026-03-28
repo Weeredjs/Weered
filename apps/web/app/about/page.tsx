@@ -156,10 +156,31 @@ export default function AboutPage() {
           <div className="about-block">
             <div className="about-label">// what this is</div>
             <div className="about-text">
-              Weered is a platform for communities that move.<br />
-              Part lobby. Part room. Part something that doesn't have a name yet.<br />
-              <em>Presence matters here.</em> Who is online, where they are, what they're watching.<br />
-              The feed is just the beginning.
+              Weered is a <em>real-time community platform</em>.<br />
+              Think lobbies, not servers. Rooms, not channels. Presence, not status dots.<br /><br />
+              <em>Lobbies</em> are living spaces — communities built around games, creators, topics, whatever pulls people in.
+              Each one has its own identity, roles, events, and modules.<br /><br />
+              <em>Rooms</em> are where things happen. Watch parties. Live feeds. Conversations.
+              Drop into a room and you're there — not lurking in a sidebar, actually <em>present</em>.<br /><br />
+              <em>Modules</em> plug directly into the things you care about.
+              Destiny 2 stats and LFG boards. Live Twitch streams. Marathon intel.
+              The lobby becomes the game's living room.<br /><br />
+              <em>Events</em> give communities a pulse — scheduled moments that bring people together.
+              Raid nights, watch parties, tournaments, whatever the lobby is built for.<br /><br />
+              The feed, the chat, the rooms — they all orbit <em>presence</em>.
+              Who is here. What they're doing. Right now.
+            </div>
+          </div>
+
+          <div className="about-divider" />
+
+          <div className="about-block">
+            <div className="about-label">// how it feels</div>
+            <div className="about-text">
+              Every platform looks like every other platform.<br />
+              Weered doesn't.<br />
+              The aesthetic is intentional — <em>dark, cinematic, a little dangerous</em>.<br />
+              It's supposed to feel like a place, not a product.
             </div>
           </div>
 
