@@ -4743,6 +4743,284 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── MLB STATS API INTEGRATION ───────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const MLB_API = "https://statsapi.mlb.com/api/v1";
+
+  // GET /mlb/scoreboard — today's games with live scores
+  app.get("/mlb/scoreboard", async (req, reply) => {
+    try {
+      const date = String((req as any).query?.date || new Date().toISOString().slice(0, 10));
+      const res = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}&hydrate=linescore,team,probablePitcher`);
+      const data = await res.json();
+      const games = (data?.dates?.[0]?.games || []).map((g: any) => ({
+        gameId: g.gamePk,
+        status: g.status?.detailedState || g.status?.abstractGameState || "Unknown",
+        statusCode: g.status?.statusCode,
+        startTime: g.gameDate,
+        venue: g.venue?.name,
+        away: {
+          id: g.teams?.away?.team?.id,
+          name: g.teams?.away?.team?.name,
+          abbr: g.teams?.away?.team?.abbreviation,
+          score: g.teams?.away?.score ?? null,
+          wins: g.teams?.away?.leagueRecord?.wins,
+          losses: g.teams?.away?.leagueRecord?.losses,
+          probablePitcher: g.teams?.away?.probablePitcher ? {
+            id: g.teams.away.probablePitcher.id,
+            name: g.teams.away.probablePitcher.fullName,
+            era: g.teams.away.probablePitcher.stats?.[0]?.stats?.era,
+          } : null,
+        },
+        home: {
+          id: g.teams?.home?.team?.id,
+          name: g.teams?.home?.team?.name,
+          abbr: g.teams?.home?.team?.abbreviation,
+          score: g.teams?.home?.score ?? null,
+          wins: g.teams?.home?.leagueRecord?.wins,
+          losses: g.teams?.home?.leagueRecord?.losses,
+          probablePitcher: g.teams?.home?.probablePitcher ? {
+            id: g.teams.home.probablePitcher.id,
+            name: g.teams.home.probablePitcher.fullName,
+            era: g.teams.home.probablePitcher.stats?.[0]?.stats?.era,
+          } : null,
+        },
+        linescore: g.linescore ? {
+          currentInning: g.linescore.currentInning,
+          inningHalf: g.linescore.inningHalf,
+          balls: g.linescore.balls,
+          strikes: g.linescore.strikes,
+          outs: g.linescore.outs,
+          innings: (g.linescore.innings || []).map((inn: any) => ({
+            num: inn.num,
+            away: inn.away?.runs ?? null,
+            home: inn.home?.runs ?? null,
+          })),
+        } : null,
+      }));
+      return reply.send({ ok: true, date, games });
+    } catch (e) {
+      console.error("[mlb scoreboard]", e);
+      return reply.send({ ok: true, date: "", games: [], error: "fetch_failed" });
+    }
+  });
+
+  // GET /mlb/standings — division standings
+  app.get("/mlb/standings", async (req, reply) => {
+    try {
+      const season = String((req as any).query?.season || new Date().getFullYear());
+      const res = await fetch(`${MLB_API}/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&hydrate=team`);
+      const data = await res.json();
+      const divisions = (data?.records || []).map((div: any) => ({
+        divisionId: div.division?.id,
+        divisionName: div.division?.name,
+        teams: (div.teamRecords || []).map((t: any) => ({
+          id: t.team?.id,
+          name: t.team?.name,
+          abbr: t.team?.abbreviation,
+          wins: t.wins,
+          losses: t.losses,
+          pct: t.winningPercentage,
+          gb: t.gamesBack,
+          streak: t.streak?.streakCode,
+          last10: `${t.records?.splitRecords?.find((s: any) => s.type === "lastTen")?.wins || 0}-${t.records?.splitRecords?.find((s: any) => s.type === "lastTen")?.losses || 0}`,
+          runsScored: t.runsScored,
+          runsAllowed: t.runsAllowed,
+          runDiff: t.runDifferential,
+        })),
+      }));
+      return reply.send({ ok: true, season, divisions });
+    } catch (e) {
+      console.error("[mlb standings]", e);
+      return reply.send({ ok: true, divisions: [], error: "fetch_failed" });
+    }
+  });
+
+  // GET /mlb/leaders — stat leaders
+  app.get("/mlb/leaders", async (req, reply) => {
+    try {
+      const season = String((req as any).query?.season || new Date().getFullYear());
+      const categories = [
+        { stat: "homeRuns", label: "Home Runs" },
+        { stat: "battingAverage", label: "Batting Avg" },
+        { stat: "runsBattedIn", label: "RBI" },
+        { stat: "stolenBases", label: "Stolen Bases" },
+        { stat: "earnedRunAverage", label: "ERA" },
+        { stat: "strikeouts", label: "Strikeouts" },
+        { stat: "wins", label: "Pitcher Wins" },
+        { stat: "saves", label: "Saves" },
+      ];
+      const results: any[] = [];
+      for (const cat of categories) {
+        const res = await fetch(`${MLB_API}/stats/leaders?leaderCategories=${cat.stat}&season=${season}&sportId=1&limit=10`);
+        const data = await res.json();
+        const leaders = (data?.leagueLeaders?.[0]?.leaders || []).map((l: any) => ({
+          rank: l.rank,
+          playerId: l.person?.id,
+          name: l.person?.fullName,
+          team: l.team?.name,
+          teamAbbr: l.team?.abbreviation,
+          value: l.value,
+        }));
+        results.push({ stat: cat.stat, label: cat.label, leaders });
+      }
+      return reply.send({ ok: true, season, categories: results });
+    } catch (e) {
+      console.error("[mlb leaders]", e);
+      return reply.send({ ok: true, categories: [], error: "fetch_failed" });
+    }
+  });
+
+  // GET /mlb/player/search?q=ohtani — search players
+  app.get("/mlb/player/search", async (req, reply) => {
+    try {
+      const q = String((req as any).query?.q || "");
+      if (!q) return reply.send({ ok: true, players: [] });
+      const res = await fetch(`${MLB_API}/people/search?names=${encodeURIComponent(q)}&sportId=1&active=true&hydrate=currentTeam`);
+      const data = await res.json();
+      const players = (data?.people || []).slice(0, 15).map((p: any) => ({
+        id: p.id,
+        name: p.fullName,
+        number: p.primaryNumber,
+        position: p.primaryPosition?.abbreviation,
+        team: p.currentTeam?.name,
+        teamAbbr: p.currentTeam?.abbreviation,
+        teamId: p.currentTeam?.id,
+        bats: p.batSide?.code,
+        throws: p.pitchHand?.code,
+        age: p.currentAge,
+        height: p.height,
+        weight: p.weight,
+        birthCountry: p.birthCountry,
+        mlbDebutDate: p.mlbDebutDate,
+        headshot: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.id}/headshot/67/current`,
+      }));
+      return reply.send({ ok: true, players });
+    } catch (e) {
+      console.error("[mlb player search]", e);
+      return reply.send({ ok: true, players: [], error: "fetch_failed" });
+    }
+  });
+
+  // GET /mlb/player/:id/stats — season stats for a player
+  app.get("/mlb/player/:id/stats", async (req, reply) => {
+    try {
+      const id = (req as any).params.id;
+      const season = String((req as any).query?.season || new Date().getFullYear());
+      const [bioRes, statsRes] = await Promise.all([
+        fetch(`${MLB_API}/people/${id}`),
+        fetch(`${MLB_API}/people/${id}/stats?stats=season,career&group=hitting,pitching,fielding&season=${season}`),
+      ]);
+      const bio = await bioRes.json();
+      const stats = await statsRes.json();
+      const person = bio?.people?.[0];
+      if (!person) return reply.send({ ok: false, error: "player_not_found" });
+
+      const statGroups: any = {};
+      for (const s of stats?.stats || []) {
+        const key = `${s.group?.displayName}_${s.type?.displayName}`;
+        statGroups[key] = (s.splits || []).map((sp: any) => ({
+          season: sp.season,
+          team: sp.team?.name,
+          stats: sp.stat,
+        }));
+      }
+
+      return reply.send({
+        ok: true,
+        player: {
+          id: person.id,
+          name: person.fullName,
+          number: person.primaryNumber,
+          position: person.primaryPosition?.abbreviation,
+          positionName: person.primaryPosition?.name,
+          team: person.currentTeam?.name,
+          teamId: person.currentTeam?.id,
+          bats: person.batSide?.description,
+          throws: person.pitchHand?.description,
+          age: person.currentAge,
+          height: person.height,
+          weight: person.weight,
+          birthDate: person.birthDate,
+          birthCity: person.birthCity,
+          birthCountry: person.birthCountry,
+          mlbDebutDate: person.mlbDebutDate,
+          headshot: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${person.id}/headshot/67/current`,
+        },
+        stats: statGroups,
+      });
+    } catch (e) {
+      console.error("[mlb player stats]", e);
+      return reply.send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // GET /mlb/game/:id/boxscore — game box score
+  app.get("/mlb/game/:id/boxscore", async (req, reply) => {
+    try {
+      const id = (req as any).params.id;
+      const res = await fetch(`${MLB_API.replace("/v1", "/v1.1")}/game/${id}/feed/live`);
+      const data = await res.json();
+      const gd = data?.gameData;
+      const ld = data?.liveData;
+      if (!gd || !ld) return reply.send({ ok: false, error: "game_not_found" });
+
+      const mapBatters = (team: any) => (team?.batters || []).map((pid: number) => {
+        const p = team.players?.[`ID${pid}`];
+        if (!p) return null;
+        const s = p.stats?.batting || {};
+        return {
+          id: pid, name: p.person?.fullName, position: p.position?.abbreviation,
+          ab: s.atBats, r: s.runs, h: s.hits, rbi: s.rbi, bb: s.baseOnBalls,
+          so: s.strikeOuts, avg: s.avg, ops: s.ops, hr: s.homeRuns,
+        };
+      }).filter(Boolean);
+
+      const mapPitchers = (team: any) => (team?.pitchers || []).map((pid: number) => {
+        const p = team.players?.[`ID${pid}`];
+        if (!p) return null;
+        const s = p.stats?.pitching || {};
+        return {
+          id: pid, name: p.person?.fullName,
+          ip: s.inningsPitched, h: s.hits, r: s.runs, er: s.earnedRuns,
+          bb: s.baseOnBalls, so: s.strikeOuts, hr: s.homeRuns, era: s.era,
+          pitches: s.numberOfPitches, strikes: s.strikes,
+        };
+      }).filter(Boolean);
+
+      return reply.send({
+        ok: true,
+        game: {
+          status: gd.status?.detailedState,
+          venue: gd.venue?.name,
+          weather: gd.weather ? `${gd.weather.temp}°F, ${gd.weather.condition}` : null,
+          away: {
+            name: gd.teams?.away?.name, abbr: gd.teams?.away?.abbreviation,
+            runs: ld.linescore?.teams?.away?.runs, hits: ld.linescore?.teams?.away?.hits, errors: ld.linescore?.teams?.away?.errors,
+            batters: mapBatters(ld.boxscore?.teams?.away),
+            pitchers: mapPitchers(ld.boxscore?.teams?.away),
+          },
+          home: {
+            name: gd.teams?.home?.name, abbr: gd.teams?.home?.abbreviation,
+            runs: ld.linescore?.teams?.home?.runs, hits: ld.linescore?.teams?.home?.hits, errors: ld.linescore?.teams?.home?.errors,
+            batters: mapBatters(ld.boxscore?.teams?.home),
+            pitchers: mapPitchers(ld.boxscore?.teams?.home),
+          },
+          innings: (ld.linescore?.innings || []).map((inn: any) => ({
+            num: inn.num,
+            away: inn.away?.runs ?? null,
+            home: inn.home?.runs ?? null,
+          })),
+        },
+      });
+    } catch (e) {
+      console.error("[mlb boxscore]", e);
+      return reply.send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── BUNGIE API INTEGRATION ─────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
