@@ -31,7 +31,12 @@ function timeAgo(iso: string): string {
 }
 
 function stripHtml(s: string): string {
-  return s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+  return s
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -74,15 +79,26 @@ function HeroStory({ article, accent }: { article: Article; accent: string }) {
       style={{
         display: "block", borderRadius: 14, overflow: "hidden",
         position: "relative", minHeight: 220, marginBottom: 16,
-        background: article.imageUrl ? `url(${article.imageUrl}) center/cover no-repeat` : "linear-gradient(135deg, rgba(20,20,30,1), rgba(30,20,40,1))",
+        background: "linear-gradient(135deg, rgba(20,20,30,1), rgba(30,20,40,1))",
         textDecoration: "none", color: "#fff",
         border: "1px solid rgba(255,255,255,.08)",
       }}
     >
+      {/* Background image via <img> for referrer policy */}
+      {article.imageUrl && (
+        <img
+          src={article.imageUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          loading="eager"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
       {/* Gradient overlay */}
       <div style={{
         position: "absolute", inset: 0,
-        background: "linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.5) 40%, rgba(0,0,0,.15) 100%)",
+        background: "linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.45) 45%, rgba(0,0,0,.1) 100%)",
       }} />
       {/* Content */}
       <div style={{
