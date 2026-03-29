@@ -99,6 +99,7 @@ export default function LobbyIdPage() {
 
   return (
     <div
+      className="weered-lobby-page"
       style={{
         display: "flex", flexDirection: "column", gap: 8,
         height: "calc(100vh - 16px)", minHeight: 0,
@@ -115,7 +116,7 @@ export default function LobbyIdPage() {
         verified={isVerified || lobbyInfo?.verified}
       />
 
-      <div style={{
+      <div className="weered-lobby-body" style={{
         flex: 1, minHeight: 0, position: "relative",
         border: `1px solid ${accent ? `${accent}33` : "var(--weered-border)"}`,
         borderRadius: 16,

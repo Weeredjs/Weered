@@ -190,9 +190,9 @@ export default function LobbyHeaderBar({
       )}
 
       {/* Single row: logo + name + search + actions */}
-      <div style={{
+      <div className="weered-lobby-header-row" style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "8px 14px",
+        padding: "8px 14px", flexWrap: "wrap",
       }}>
         {/* Logo or initial */}
         {logoUrl ? (
@@ -259,7 +259,7 @@ export default function LobbyHeaderBar({
         </div>
 
         {/* Search input */}
-        <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
+        <div style={{ position: "relative", flex: "1 1 120px", minWidth: 0 }}>
           <input
             className="weered-input w-full"
             placeholder={mode === "rooms" ? "Search rooms or lobbies…" : "Search people"}
