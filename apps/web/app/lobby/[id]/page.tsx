@@ -39,6 +39,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
 
 type LobbyInfo = {
   moduleType: string;
+  moduleConfig?: { twitchCategory?: string; subreddit?: string } | null;
   accentColor?: string;
   logoUrl?: string;
   bannerUrl?: string;
@@ -70,6 +71,7 @@ export default function LobbyIdPage() {
         if (j.ok && j.lobby) {
           setLobbyInfo({
             moduleType:     j.lobby.moduleType,
+            moduleConfig:   j.lobby.moduleConfig || null,
             accentColor:    j.lobby.accentColor,
             logoUrl:        j.lobby.logoUrl,
             bannerUrl:      j.lobby.bannerUrl,
@@ -92,7 +94,7 @@ export default function LobbyIdPage() {
 
   const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON";
   const accent     = lobbyInfo?.accentColor || undefined;
-  const gameName   = MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
+  const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const isStaff    = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "ADMIN";
   const isOwner    = !!(me?.id && lobbyInfo?.ownerId && me.id === lobbyInfo.ownerId);
   const showAdmin  = isStaff || isOwner;
