@@ -1,9 +1,62 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
+
+// ── URL regex — matches http(s) links ──
+const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
+
+function ChatBody({ text }: { text: string }) {
+  if (!text) return null;
+  const parts: React.ReactNode[] = [];
+  const imageUrls: string[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  URL_RE.lastIndex = 0;
+  let key = 0;
+  while ((match = URL_RE.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    const url = match[0];
+    parts.push(
+      <a key={key++} href={url} target="_blank" rel="noopener noreferrer" style={{
+        color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2,
+        wordBreak: "break-all",
+      }}>{url}</a>
+    );
+    if (IMG_EXT.test(url)) imageUrls.push(url);
+    last = match.index + url.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+
+  return (
+    <>
+      <div style={{ opacity: 0.95, wordBreak: "break-word" }}>{parts}</div>
+      {imageUrls.map((src, i) => (
+        <a key={`img-${i}`} href={src} target="_blank" rel="noopener noreferrer">
+          <img
+            src={src} alt="" loading="lazy"
+            style={{
+              maxWidth: 280, maxHeight: 200, borderRadius: 8, marginTop: 4,
+              border: "1px solid rgba(255,255,255,.1)", display: "block",
+            }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        </a>
+      ))}
+    </>
+  );
+}
+
+// ── Emoji picker data (compact) ──
+const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
+  { label: "😀", emojis: ["😀","😂","🤣","😅","😊","😍","🥰","😘","😎","🤩","🥳","😭","😤","🤔","🤫","🤯","🥶","🥵","😈","👻"] },
+  { label: "👍", emojis: ["👍","👎","👏","🙌","🤝","✌️","🤞","💪","🫡","🫶","❤️","🔥","💯","⭐","✨","💀","🎉","🎮","🏆","👀"] },
+  { label: "🎯", emojis: ["🎯","🚀","💡","⚡","🔫","🗡️","🛡️","💣","🎲","🃏","♟️","🏹","⚔️","🧨","💥","💫","🌟","🔮","🧿","🎪"] },
+  { label: "🐸", emojis: ["🐸","🐶","🐱","🦊","🐺","🦁","🐯","🦄","🐉","🦅","🐍","🦈","🐙","🦀","🐝","🦋","🌈","🌊","☀️","🌙"] },
+];
 
 export default function LobbyChatPanel(
   props: {
@@ -59,7 +112,26 @@ export default function LobbyChatPanel(
   const roomLabel = effectiveRoomId;
 
   const [text, setText] = useState("");
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiCat, setEmojiCat] = useState(0);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const emojiRef = useRef<HTMLDivElement | null>(null);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [emojiOpen]);
+
+  const insertEmoji = useCallback((emoji: string) => {
+    setText(prev => prev + emoji);
+    inputRef.current?.focus();
+  }, []);
 
   const joinedStrict = Boolean(effectiveRoomId && joinedRoomId && effectiveRoomId === joinedRoomId && effectiveJoinStatus === "joined");
   // For lobbies (not embedded): locked = chat locked (staff lobby lock controls).
@@ -141,7 +213,7 @@ export default function LobbyChatPanel(
                 <div data-chat-username style={{ fontWeight: 800, fontSize: 13 }}>
                   {String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}
                 </div>
-                <div data-chat-body style={{ opacity: 0.95 }}>{m?.body || m?.text || ""}</div>
+                <ChatBody text={m?.body || m?.text || ""} />
               </div>
             </div>
           ))
@@ -150,33 +222,84 @@ export default function LobbyChatPanel(
 
       {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
-        <div className="flex gap-2">
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={canType ? "Message..." : chatBlocked ? "Chat is locked." : "Join/admit required..."}
-            disabled={!canType}
-            className={
-              "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
-              (canType
-                ? "border-white/10 bg-black/10 text-white/90 focus:border-white/20"
-                : "border-white/10 bg-white/5 text-white/50 cursor-not-allowed")
-            }
-            onKeyDown={(e) => { if (e.key === "Enter" && canSend) onSend(); }}
-          />
-          <button
-            onClick={onSend}
-            disabled={!canSend}
-            className={
-              "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
-              (canSend
-                ? "border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100"
-                : "border-white/10 bg-white/5 text-white/60 cursor-not-allowed")
-            }
-            style={canSend ? { background: "rgba(124,58,237,.18)", borderColor: "rgba(124,58,237,.35)" } : undefined}
-          >
-            Send
-          </button>
+        <div style={{ position: "relative" }}>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={canType ? "Message..." : chatBlocked ? "Chat is locked." : "Join/admit required..."}
+              disabled={!canType}
+              className={
+                "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
+                (canType
+                  ? "border-white/10 bg-black/10 text-white/90 focus:border-white/20"
+                  : "border-white/10 bg-white/5 text-white/50 cursor-not-allowed")
+              }
+              onKeyDown={(e) => { if (e.key === "Enter" && canSend) onSend(); }}
+            />
+            <button
+              onClick={() => setEmojiOpen(v => !v)}
+              disabled={!canType}
+              title="Emoji"
+              style={{
+                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: emojiOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                padding: "0 10px", fontSize: 16, cursor: canType ? "pointer" : "not-allowed",
+                color: canType ? "#fff" : "rgba(255,255,255,.4)", transition: "background .15s",
+              }}
+            >
+              😀
+            </button>
+            <button
+              onClick={onSend}
+              disabled={!canSend}
+              className={
+                "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
+                (canSend
+                  ? "border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100"
+                  : "border-white/10 bg-white/5 text-white/60 cursor-not-allowed")
+              }
+              style={canSend ? { background: "rgba(124,58,237,.18)", borderColor: "rgba(124,58,237,.35)" } : undefined}
+            >
+              Send
+            </button>
+          </div>
+
+          {/* Emoji picker */}
+          {emojiOpen && (
+            <div ref={emojiRef} style={{
+              position: "absolute", bottom: "calc(100% + 6px)", right: 0,
+              width: 280, background: "#1a1a2e", border: "1px solid rgba(255,255,255,.12)",
+              borderRadius: 12, padding: 8, zIndex: 50,
+              boxShadow: "0 8px 32px rgba(0,0,0,.5)",
+            }}>
+              {/* Category tabs */}
+              <div style={{ display: "flex", gap: 2, marginBottom: 6, borderBottom: "1px solid rgba(255,255,255,.08)", paddingBottom: 6 }}>
+                {EMOJI_CATEGORIES.map((cat, ci) => (
+                  <button key={ci} onClick={() => setEmojiCat(ci)} style={{
+                    flex: 1, background: ci === emojiCat ? "rgba(124,58,237,.2)" : "transparent",
+                    border: "none", borderRadius: 6, padding: "4px 0", fontSize: 14, cursor: "pointer",
+                  }}>
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              {/* Emoji grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 2, maxHeight: 160, overflow: "auto" }}>
+                {EMOJI_CATEGORIES[emojiCat].emojis.map((em, ei) => (
+                  <button key={ei} onClick={() => insertEmoji(em)} style={{
+                    background: "transparent", border: "none", fontSize: 18, padding: 4,
+                    borderRadius: 6, cursor: "pointer", lineHeight: 1,
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,.1)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
