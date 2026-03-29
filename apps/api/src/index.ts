@@ -5151,6 +5151,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       if (!event) return reply.send({ ok: true, event: null, players: [] });
 
       const comp = event.competitions?.[0];
+      const broadcasts = (comp?.broadcasts || []).flatMap((b: any) => b.names || []);
       const players = (comp?.competitors || []).map((c: any, i: number) => ({
         position: i + 1,
         name: c.athlete?.displayName || "Unknown",
@@ -5158,8 +5159,15 @@ app.post("/dm/:peerId", async (req, reply) => {
         score: c.score || "E",
         rounds: (c.linescores || []).map((l: any) => l.value),
         today: c.linescores?.length ? c.linescores[c.linescores.length - 1]?.value : null,
+        todayDisplay: c.linescores?.length ? c.linescores[c.linescores.length - 1]?.displayValue : null,
         thru: c.status?.thru || c.status?.displayValue || "",
         status: c.status?.type?.description || "",
+        holeByHole: c.linescores?.length ? (c.linescores[c.linescores.length - 1]?.linescores || []).map((h: any, hi: number) => ({
+          hole: hi + 1,
+          score: h.value,
+          display: h.displayValue,
+          toPar: h.scoreType?.displayValue || "E",
+        })) : [],
       }));
 
       return reply.send({
@@ -5172,6 +5180,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           venue: comp?.venue?.fullName || "",
           location: event.location || "",
           purse: event.purse || event.displayPurse || null,
+          broadcasts,
         },
         players,
       });
