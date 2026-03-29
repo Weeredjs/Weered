@@ -253,6 +253,7 @@ model User {
   staffPosts       StaffPost[]      @relation("StaffPostAuthor")
   notorietyEvents  NotorietyEvent[]
   gameAccounts     UserGameAccount[]
+  pushSubs         PushSubscription[]
 }
 
 // —— Site Config (key-value) ————————————————————————————————————————————————
@@ -680,5 +681,19 @@ model StaffPost {
   author User @relation("StaffPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+// —— Push Notification Subscriptions ———————————————————————————————————————
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
