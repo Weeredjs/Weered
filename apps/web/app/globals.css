@@ -170,7 +170,7 @@ button:hover, [role="button"]:hover {
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
-.weered-right { width: 340px; flex: 0 0 340px; }
+.weered-right { width: 340px; flex: 0 0 340px; position: relative; }
 .weered-center { 
   flex: 1 1 auto; 
   min-width: 0; 
@@ -234,6 +234,41 @@ button:hover, [role="button"]:hover {
 /* Force-show icon strip when user manually collapsed right rail */
 .weered-icon-strip-forced {
   display: flex !important;
+}
+
+/* ── Right rail collapse tab — glowing edge tab ──────────── */
+.weered-rail-tab {
+  position: sticky;
+  top: 12px;
+  width: 28px;
+  flex: 0 0 28px;
+  max-height: calc(100vh - 24px);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: var(--weered-panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255,255,255,.5);
+  transition: all 0.2s;
+  padding: 0;
+  font-family: inherit;
+}
+.weered-rail-tab:hover {
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.8);
+  border-color: var(--weered-accent-ring, rgba(88,0,229,.35));
+}
+.weered-rail-tab-glow {
+  border-color: var(--weered-accent-ring, rgba(88,0,229,.25));
+  box-shadow: 0 0 12px var(--weered-accent-bg, rgba(88,0,229,.15)), inset 0 0 8px var(--weered-accent-bg, rgba(88,0,229,.08));
+  animation: railPulse 3s ease-in-out infinite;
+}
+@keyframes railPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--weered-accent-bg, rgba(88,0,229,.12)), inset 0 0 6px var(--weered-accent-bg, rgba(88,0,229,.06)); }
+  50% { box-shadow: 0 0 18px var(--weered-accent-bg, rgba(88,0,229,.25)), inset 0 0 12px var(--weered-accent-bg, rgba(88,0,229,.12)); border-color: var(--weered-accent-ring, rgba(88,0,229,.4)); }
 }
 
 /* Overlay close button — always visible so panel can be dismissed */
@@ -306,21 +341,27 @@ button:hover, [role="button"]:hover {
   from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); }
 }
 
-/* ── Mid breakpoint: 1100–1399px — hide both full rails, show icon strips ── */
+/* ── Mid breakpoint: 1100–1399px — hide left rail, shrink right ── */
 @media (max-width: 1399px) {
   .weered-shell { gap: 10px; padding: 10px 10px 0 10px; }
   .weered-left  { display: none; }
-  .weered-right { display: none; }
+  .weered-right { width: 280px; flex: 0 0 280px; }
   .weered-icon-strip { display: flex; }
 }
 
-/* ── Narrow breakpoint: <1100px — hide full rails, keep icon strips ──────── */
+/* ── Narrow breakpoint: <1100px — hide left, shrink right further ──────── */
 @media (max-width: 1099px) {
   .weered-shell { gap: 0; padding: 0; }
   .weered-left       { display: none; }
-  .weered-right      { display: none; }
+  .weered-right      { width: 260px; flex: 0 0 260px; }
   .weered-icon-strip { display: flex; }
   .weered-center     { width: 100%; padding: 12px; }
+}
+
+/* ── Mobile: hide right rail entirely, use overlay system ──────── */
+@media (max-width: 767px) {
+  .weered-right    { display: none !important; }
+  .weered-rail-tab { display: none !important; }
 }
 
 /* ── Mobile bottom nav — hidden by default ──────────────────────────────── */

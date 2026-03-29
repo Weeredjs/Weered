@@ -300,32 +300,39 @@ export default function ShellGate({
 
         <main className="weered-center">{children}</main>
 
-        {/* Right icon strip — shown when CSS collapses OR user manually collapsed */}
-        <div className={`weered-icon-strip weered-icon-strip-right ${rightCollapsed ? "weered-icon-strip-forced" : ""}`}>
+        {/* Collapse/expand tab — always visible on the right edge */}
+        {rightCollapsed ? (
           <button
             type="button"
-            title={rightCollapsed ? "Expand panel" : "Collapse panel"}
+            title="Expand panel"
             onClick={toggleRight}
-            className="weered-icon-strip-btn"
-            style={{ marginBottom: 4 }}
+            className="weered-rail-tab weered-rail-tab-glow"
           >
-            {rightCollapsed ? ICO_EXPAND_LEFT : ICO_COLLAPSE_RIGHT}
+            {ICO_EXPAND_LEFT}
           </button>
-          {RIGHT_ICONS.map((item) => (
+        ) : (
+          <aside className="weered-right">
+            {/* Collapse button inside the rail */}
             <button
-              key={item.id}
               type="button"
-              title={item.label}
-              onClick={() => setOverlay(o => o === "right" ? null : "right")}
-              className={`weered-icon-strip-btn ${overlay === "right" ? "weered-icon-strip-btn-active" : ""}`}
+              title="Collapse panel"
+              onClick={toggleRight}
+              style={{
+                position: "absolute", top: 10, right: 10, zIndex: 2,
+                width: 24, height: 24, borderRadius: 6,
+                border: "1px solid rgba(255,255,255,.08)",
+                background: "rgba(255,255,255,.04)",
+                color: "rgba(255,255,255,.4)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", transition: "all 0.15s",
+                padding: 0,
+              }}
             >
-              {item.icon}
+              {ICO_COLLAPSE_RIGHT}
             </button>
-          ))}
-        </div>
-
-        {/* Full right rail — hidden by CSS at mid/narrow breakpoints, or when manually collapsed */}
-        {!rightCollapsed && <aside className="weered-right">{right}</aside>}
+            {right}
+          </aside>
+        )}
       </div>
 
       {/* Overlay panels — triggered by icon strip clicks */}

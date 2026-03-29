@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentColor }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(0);
   const openRef = useRef(false);

@@ -2245,23 +2245,25 @@ app.post("/dm/:peerId", async (req, reply) => {
       const res = await fetch(feedUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0)" } });
       const xml = await res.text();
       const items: any[] = [];
-      const itemRx  = /<item>([\s\S]*?)<\/item>/g;
+      const itemRx  = /<item[^>]*>([\s\S]*?)<\/item>/g;
       const titleRx = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/;
-      const linkRx  = /<link>(?:<!\[CDATA\[)?(https?[^<\s]+?)(?:\]\]>)?<\/link>/;
+      const linkRx  = /<link>(?:<!\[CDATA\[)?\s*(https?[^<\s?]*[^<\s]*)(?:\]\]>)?<\/link>/;
+      const linkRx2 = /<link>\s*(https?:\/\/[^<]+?)\s*<\/link>/;
       const dateRx  = /<pubDate>(.*?)<\/pubDate>/;
       const descRx  = /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/;
-      const imgRx1  = /<media:content[^>]+url="([^"]+)"/;
-      const imgRx2  = /<media:thumbnail[^>]+url="([^"]+)"/;
-      const imgRx3  = /<enclosure[^>]+url="([^"]+)"[^>]+type="image/;
-      const imgRx4  = /<img[^>]+src="([^"]+)"/;
+      const imgRx1  = /<media:content[^>]+url=["']([^"']+)["']/;
+      const imgRx2  = /<media:thumbnail[^>]+url=["']([^"']+)["']/;
+      const imgRx3  = /<enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image/;
+      const imgRx4  = /<img[^>]+src=["']([^"']+)["']/;
       let m: RegExpExecArray | null;
       while ((m = itemRx.exec(xml)) !== null) {
         const block = m[1];
         const title = titleRx.exec(block)?.[1]?.trim();
-        const link  = linkRx.exec(block)?.[1]?.trim();
+        const link  = linkRx.exec(block)?.[1]?.trim() || linkRx2.exec(block)?.[1]?.trim();
         const dateStr = dateRx.exec(block)?.[1];
-        const desc  = descRx.exec(block)?.[1]?.replace(/<[^>]+>/g, "").trim().slice(0, 250) || "";
-        const img   = imgRx1.exec(block)?.[1] || imgRx2.exec(block)?.[1] || imgRx3.exec(block)?.[1] || imgRx4.exec(block)?.[1] || null;
+        const rawDesc = descRx.exec(block)?.[1] || "";
+        const desc  = rawDesc.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/\s+/g, " ").trim().slice(0, 250);
+        const img   = imgRx4.exec(rawDesc)?.[1] || imgRx1.exec(block)?.[1] || imgRx2.exec(block)?.[1] || imgRx3.exec(block)?.[1] || null;
         if (!title || !link) continue;
         const publishedAt = dateStr ? new Date(dateStr) : new Date();
         items.push({
