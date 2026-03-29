@@ -119,8 +119,8 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
             <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>{s.userName}</div>
             <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{s.title}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: M.danger, flexShrink: 0, boxShadow: `0 0 6px ${M.danger}` }} />
-              <span style={{ fontSize: 10, color: "rgba(255,100,100,.8)", fontWeight: 700, fontFamily: "monospace" }}>{s.viewerCount?.toLocaleString()}</span>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", flexShrink: 0, boxShadow: "0 0 6px rgba(34,197,94,.6)" }} />
+              <span style={{ fontSize: 10, color: "rgba(230,235,240,.75)", fontWeight: 700, fontFamily: "monospace" }}>{s.viewerCount?.toLocaleString()}</span>
             </div>
           </div>
         ))}
