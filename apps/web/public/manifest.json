@@ -2,6 +2,8 @@
   "name": "Weered",
   "short_name": "Weered",
   "description": "Enter the portal",
+  "id": "/home",
+  "scope": "/",
   "start_url": "/home",
   "display": "standalone",
   "background_color": "#0A0A0A",

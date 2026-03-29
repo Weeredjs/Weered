@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
 
 const NO_SHELL_ROUTES = ["/login", "/register", "/staff", "/about", "/premium", "/contact"];
@@ -89,6 +89,63 @@ function OverlayPanel({
   );
 }
 
+// ── Mobile bottom nav (shown <768px) ─────────────────────────────────────
+const MOB_ICO_HOME = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+);
+const MOB_ICO_DOCK = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
+);
+
+function MobileNav({
+  overlay,
+  setOverlay,
+}: {
+  overlay: "left" | "right" | null;
+  setOverlay: React.Dispatch<React.SetStateAction<"left" | "right" | null>>;
+}) {
+  const router = useRouter();
+  return (
+    <nav className="weered-mobile-nav">
+      <button
+        type="button"
+        className={`weered-mobile-nav-btn ${overlay === "left" ? "weered-mobile-nav-btn-active" : ""}`}
+        onClick={() => setOverlay(o => o === "left" ? null : "left")}
+      >
+        {ICO_NAV}<span>Menu</span>
+      </button>
+      <button
+        type="button"
+        className={`weered-mobile-nav-btn ${overlay === "right" ? "weered-mobile-nav-btn-active" : ""}`}
+        onClick={() => setOverlay(o => o === "right" ? null : "right")}
+      >
+        {ICO_ROOMS}<span>Rooms</span>
+      </button>
+      <button
+        type="button"
+        className="weered-mobile-nav-btn"
+        onClick={() => { setOverlay(null); router.push("/home"); }}
+      >
+        {MOB_ICO_HOME}<span>Home</span>
+      </button>
+      <button
+        type="button"
+        className="weered-mobile-nav-btn"
+        onClick={() => setOverlay(o => o === "left" ? null : "left")}
+      >
+        {ICO_PRESENCE}<span>People</span>
+      </button>
+      <button
+        type="button"
+        className="weered-mobile-nav-btn"
+        onClick={() => { setOverlay(null); window.dispatchEvent(new CustomEvent("weered:dock:toggle")); }}
+      >
+        {MOB_ICO_DOCK}<span>DMs</span>
+      </button>
+    </nav>
+  );
+}
+
 // ── ShellGate ────────────────────────────────────────────────────────────────
 export default function ShellGate({
   left,
@@ -151,6 +208,9 @@ export default function ShellGate({
       <OverlayPanel side="right" open={overlay === "right"} onClose={() => setOverlay(null)}>
         {right}
       </OverlayPanel>
+
+      {/* Mobile bottom nav — shown <768px by CSS */}
+      <MobileNav overlay={overlay} setOverlay={setOverlay} />
 
       {!hideFooter && <SiteFooter />}
     </>

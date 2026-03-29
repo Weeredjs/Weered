@@ -10,10 +10,19 @@ import { OAuth2Client } from "google-auth-library";
 import { syncManifest, enrichProfile, enrichMilestones, enrichVendorSales, resolveItem, resolveBucket, resolveDamageType, isLoaded as manifestLoaded, manifestVersion, WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES } from "./manifest";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
+import webpush from "web-push";
 
 const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
+
+// ── Web Push (VAPID) ──────────────────────────────────────────────────────
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || "";
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT     || "mailto:support@weered.ca";
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
+}
 const HTTP_PORT = Number(process.env.PORT || 4000);
 const WS_PORT = Number(process.env.WS_PORT || 4001);
 
@@ -555,6 +564,30 @@ function dmDeliver(toUserId: string, payload: object) {
 
 function send_to_user(userId: string, payload: object) {
   dmDeliver(userId, payload);
+}
+
+function isUserOnline(userId: string): boolean {
+  for (const sock of wss.clients) {
+    if ((sock as any).user?.id === userId) return true;
+  }
+  return false;
+}
+
+async function sendPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        JSON.stringify(data)
+      );
+    } catch (e: any) {
+      if (e.statusCode === 404 || e.statusCode === 410) {
+        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+      }
+    }
+  }
 }
 
 function removePending(room: RoomState, userId: string) {
@@ -2137,6 +2170,10 @@ app.post("/dm/:peerId", async (req, reply) => {
       });
       const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
       dmDeliver(peerId, payload);
+      // Push notification if peer is offline
+      if (!isUserOnline(peerId)) {
+        sendPush(peerId, { title: `DM from ${viewer.name}`, body: text.slice(0, 120), url: "/home", tag: `dm:${viewer.id}` }).catch(() => {});
+      }
       return reply.send({ ok: true, message: { ...dm, createdAt: dm.createdAt.toISOString() } });
     } catch (e) {
       console.error("[dm POST]", e);
@@ -2682,6 +2719,9 @@ app.post("/dm/:peerId", async (req, reply) => {
             });
           const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
           dmDeliver(toId, payload);
+          if (!isUserOnline(toId)) {
+            sendPush(toId, { title: `DM from ${ws.user?.name || "Someone"}`, body: body.slice(0, 120), url: "/home", tag: `dm:${fromId}` }).catch(() => {});
+          }
           } catch (e) { console.error("[dm:send]", e); }
           return;
         }
@@ -4525,6 +4565,33 @@ app.post("/dm/:peerId", async (req, reply) => {
 
     return reply.send({ ok: true, lobbies });
   });
+  // ── Push notification subscription endpoints ────────────────────────────
+  app.post("/push/subscribe", async (req, reply) => {
+    const viewer = extractViewer(req);
+    if (!viewer) return reply.code(401).send({ ok: false, error: "auth" });
+    const { endpoint, keys } = req.body as any;
+    if (!endpoint || !keys?.p256dh || !keys?.auth) return reply.code(400).send({ ok: false, error: "missing fields" });
+    await prisma.pushSubscription.upsert({
+      where: { endpoint },
+      create: { userId: viewer.id, endpoint, p256dh: keys.p256dh, auth: keys.auth },
+      update: { userId: viewer.id, p256dh: keys.p256dh, auth: keys.auth },
+    });
+    return reply.send({ ok: true });
+  });
+
+  app.delete("/push/subscribe", async (req, reply) => {
+    const viewer = extractViewer(req);
+    if (!viewer) return reply.code(401).send({ ok: false, error: "auth" });
+    const { endpoint } = req.body as any;
+    if (!endpoint) return reply.code(400).send({ ok: false, error: "missing endpoint" });
+    await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: viewer.id } });
+    return reply.send({ ok: true });
+  });
+
+  app.get("/push/vapid-key", async (_req, reply) => {
+    return reply.send({ ok: true, key: VAPID_PUBLIC });
+  });
+
   // GET /staff/roster — list all staff members with roles
   app.get("/staff/roster", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);

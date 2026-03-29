@@ -9,6 +9,8 @@ import DockDrawer from "../components/DockDrawer";
 import ShellGate from "../components/ShellGate";
 import LobbyBrowser from "../components/LobbyBrowser";
 import WelcomeModal from "../components/WelcomeModal";
+import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
+import PushPrompt from "../components/PushPrompt";
 
 export const metadata = {
   title: "Weered",
@@ -72,6 +74,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <LobbyBrowser />
             <OverlayHost />
             <WelcomeModal />
+            <ServiceWorkerRegister />
+            <PushPrompt />
             <div className="weered-trademark-footer">
               Game names, logos, and trademarks are the property of their respective owners. Weered is not affiliated with or endorsed by any game publisher or platform.
             </div>
