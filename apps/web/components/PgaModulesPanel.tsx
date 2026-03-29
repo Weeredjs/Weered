@@ -85,12 +85,51 @@ function countryFlag(code: string | undefined): string {
 
 // -- Leaderboard Tab ----------------------------------------------------------
 
+function HoleByHole({ holes, accentColor }: { holes: any[]; accentColor: string }) {
+  if (!holes?.length) return <div style={{ fontSize: 11, opacity: 0.35, padding: "4px 0" }}>No hole-by-hole data yet</div>;
+  return (
+    <div style={{ display: "flex", gap: 2, flexWrap: "wrap", padding: "6px 0" }}>
+      {holes.map((h: any) => {
+        const tp = String(h.toPar || "E");
+        const isEagle = tp.includes("-2") || parseInt(tp) <= -2;
+        const isBirdie = tp === "-1";
+        const isBogey = tp === "+1" || tp === "1";
+        const isDouble = parseInt(tp) >= 2;
+        const bg = isEagle ? "#eab308" : isBirdie ? "#ef4444" : isBogey ? "#3b82f6" : isDouble ? "#1d4ed8" : "rgba(255,255,255,.08)";
+        const border = isEagle ? "#eab30880" : isBirdie ? "#ef444460" : isBogey ? "#3b82f660" : isDouble ? "#1d4ed860" : "rgba(255,255,255,.06)";
+        const shape = isEagle ? "50%" : isBirdie ? "50%" : isBogey ? "3px" : isDouble ? "3px" : "3px";
+        return (
+          <div key={h.hole} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+            <div style={{ fontSize: 8, opacity: 0.35, fontWeight: 600 }}>{h.hole}</div>
+            <div style={{
+              width: 24, height: 24, borderRadius: shape,
+              background: bg + "25", border: `1.5px solid ${border}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, fontWeight: 700, color: bg === "rgba(255,255,255,.08)" ? "rgba(255,255,255,.6)" : bg,
+            }}>
+              {h.score}
+            </div>
+            <div style={{ fontSize: 7, opacity: 0.4, fontWeight: 600 }}>{tp === "E" || tp === "0" ? "" : tp}</div>
+          </div>
+        );
+      })}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 8, fontSize: 9, opacity: 0.4 }}>
+        <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#eab30840", border: "1px solid #eab30860", marginRight: 3 }} />Eagle</span>
+        <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#ef444440", border: "1px solid #ef444460", marginRight: 3 }} />Birdie</span>
+        <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.06)", marginRight: 3 }} />Par</span>
+        <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "#3b82f640", border: "1px solid #3b82f660", marginRight: 3 }} />Bogey+</span>
+      </div>
+    </div>
+  );
+}
+
 function Leaderboard({ accentColor }: { accentColor: string }) {
   const accent = accentColor;
   const [event, setEvent] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError("");
@@ -185,6 +224,20 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
               </span>
             )}
           </div>
+          {/* Broadcast info */}
+          {event.broadcasts?.length > 0 && (
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 9, fontWeight: 700, opacity: 0.4, letterSpacing: ".5px", textTransform: "uppercase" }}>WATCH ON</span>
+              {event.broadcasts.map((b: string, i: number) => (
+                <span key={i} style={{
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                  background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.08)",
+                }}>
+                  {b}
+                </span>
+              ))}
+            </div>
+          )}
           {isActive && (
             <div style={{ marginTop: 6, fontSize: 9, opacity: 0.3 }}>Auto-refreshing every 30s</div>
           )}
@@ -246,11 +299,14 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                         </td>
                       </tr>
                     )}
-                    <tr style={{
+                    <tr
+                      onClick={() => setExpanded(expanded === p.name ? null : p.name)}
+                      style={{
                       borderBottom: "1px solid rgba(255,255,255,.03)",
-                      background: isTop3 ? `${accent}08` : "transparent",
+                      background: expanded === p.name ? `${accent}12` : isTop3 ? `${accent}08` : "transparent",
                       opacity: isCut ? 0.4 : 1,
                       transition: "background .1s",
+                      cursor: "pointer",
                     }}>
                       {/* POS */}
                       <td style={{
@@ -313,6 +369,16 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                         {isCut ? "CUT" : thru || "—"}
                       </td>
                     </tr>
+                    {expanded === p.name && p.holeByHole?.length > 0 && (
+                      <tr>
+                        <td colSpan={8} style={{ padding: "6px 10px 10px", background: `${accent}06`, borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.4, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>
+                            CURRENT ROUND — HOLE BY HOLE
+                          </div>
+                          <HoleByHole holes={p.holeByHole} accentColor={accent} />
+                        </td>
+                      </tr>
+                    )}
                   </React.Fragment>
                 );
               })}
@@ -749,7 +815,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
 
 const TABS = [
   { id: "leaderboard", label: "Leaderboard", icon: "\u{1F3CC}" },
-  { id: "field",       label: "Field Intel",  icon: "\u{1F3AF}" },
+  { id: "field",       label: "Props & Picks", icon: "\u{1F3AF}" },
   { id: "news",        label: "News",         icon: "\u{1F4F0}" },
   { id: "streams",     label: "Streams",      icon: "\u{1F4FA}" },
 ] as const;
