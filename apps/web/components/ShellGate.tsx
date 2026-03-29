@@ -224,7 +224,7 @@ export default function ShellGate({
     </>
   );
 
-  const NO_FOOTER_ROUTES = ["/room/"];
+  const NO_FOOTER_ROUTES = ["/room/", "/lobby/"];
   const hideFooter = NO_FOOTER_ROUTES.some(r => pathname.startsWith(r));
 
   return (
