@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
 
@@ -146,6 +146,14 @@ function MobileNav({
   );
 }
 
+// ── Collapse toggle chevron ──────────────────────────────────────────────
+const ICO_COLLAPSE_RIGHT = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+);
+const ICO_EXPAND_LEFT = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+);
+
 // ── ShellGate ────────────────────────────────────────────────────────────────
 export default function ShellGate({
   left,
@@ -162,6 +170,19 @@ export default function ShellGate({
   );
 
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+
+  // Persist right rail collapse state
+  useEffect(() => {
+    const saved = localStorage.getItem("weered_right_collapsed");
+    if (saved === "1") setRightCollapsed(true);
+  }, []);
+  const toggleRight = () => {
+    setRightCollapsed(v => {
+      localStorage.setItem("weered_right_collapsed", v ? "0" : "1");
+      return !v;
+    });
+  };
 
   if (bare) return (
     <>
@@ -189,16 +210,32 @@ export default function ShellGate({
 
         <main className="weered-center">{children}</main>
 
-        {/* Right icon strip — shown by CSS at mid/narrow breakpoints */}
-        <IconStrip
-          side="right"
-          icons={RIGHT_ICONS}
-          active={overlay === "right"}
-          onToggle={() => setOverlay(o => o === "right" ? null : "right")}
-        />
+        {/* Right icon strip — shown when CSS collapses OR user manually collapsed */}
+        <div className={`weered-icon-strip weered-icon-strip-right ${rightCollapsed ? "weered-icon-strip-forced" : ""}`}>
+          <button
+            type="button"
+            title={rightCollapsed ? "Expand panel" : "Collapse panel"}
+            onClick={toggleRight}
+            className="weered-icon-strip-btn"
+            style={{ marginBottom: 4 }}
+          >
+            {rightCollapsed ? ICO_EXPAND_LEFT : ICO_COLLAPSE_RIGHT}
+          </button>
+          {RIGHT_ICONS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              title={item.label}
+              onClick={() => setOverlay(o => o === "right" ? null : "right")}
+              className={`weered-icon-strip-btn ${overlay === "right" ? "weered-icon-strip-btn-active" : ""}`}
+            >
+              {item.icon}
+            </button>
+          ))}
+        </div>
 
-        {/* Full right rail — hidden by CSS at mid/narrow breakpoints */}
-        <aside className="weered-right">{right}</aside>
+        {/* Full right rail — hidden by CSS at mid/narrow breakpoints, or when manually collapsed */}
+        {!rightCollapsed && <aside className="weered-right">{right}</aside>}
       </div>
 
       {/* Overlay panels — triggered by icon strip clicks */}

@@ -215,7 +215,7 @@ button:hover, [role="button"]:hover {
   border: none !important;
   padding: 0 !important;
   background: transparent;
-  color: rgba(148,163,184,.55);
+  color: rgba(167,139,250,.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -223,12 +223,17 @@ button:hover, [role="button"]:hover {
   transition: all 0.15s;
 }
 .weered-icon-strip-btn:hover {
-  background: rgba(255,255,255,.06);
-  color: rgba(243,244,246,.85);
+  background: rgba(124,58,237,.1);
+  color: rgba(167,139,250,.85);
 }
 .weered-icon-strip-btn-active {
-  background: rgba(124,58,237,.15) !important;
+  background: rgba(124,58,237,.18) !important;
   color: rgba(167,139,250,.95) !important;
+}
+
+/* Force-show icon strip when user manually collapsed right rail */
+.weered-icon-strip-forced {
+  display: flex !important;
 }
 
 /* ── Overlay panels (slide-in from icon strip click) ───────── */
@@ -318,7 +323,7 @@ button:hover, [role="button"]:hover {
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: rgba(148,163,184,.55);
+  color: rgba(167,139,250,.45);
   font-size: 9px;
   font-weight: 600;
   font-family: inherit;
