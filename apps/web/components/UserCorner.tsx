@@ -42,16 +42,16 @@ const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }>
 };
 
 const IconSettings = () => (
-  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="2.5" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" />
   </svg>
 );
 
 const IconDock = () => (
-  <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-    <rect x="1.5" y="4" width="13" height="8.5" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M5 7.5h6M5 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="14" rx="3" />
+    <path d="M7 9.5h10M7 13h6" opacity=".6" />
   </svg>
 );
 
@@ -341,16 +341,15 @@ export default function UserCorner() {
           }}
         >
           {/* Burner phone icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-            <rect x="6" y="2" width="12" height="20" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-            <rect x="9" y="5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2" opacity="0.6" />
-            <circle cx="10" cy="14.5" r="0.8" fill="currentColor" opacity="0.5" />
-            <circle cx="12" cy="14.5" r="0.8" fill="currentColor" opacity="0.5" />
-            <circle cx="14" cy="14.5" r="0.8" fill="currentColor" opacity="0.5" />
-            <circle cx="10" cy="17" r="0.8" fill="currentColor" opacity="0.5" />
-            <circle cx="12" cy="17" r="0.8" fill="currentColor" opacity="0.5" />
-            <circle cx="14" cy="17" r="0.8" fill="currentColor" opacity="0.5" />
-            <circle cx="12" cy="19.5" r="0.8" fill="currentColor" opacity="0.5" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
+            <rect x="6" y="2" width="12" height="20" rx="3" strokeWidth="2" />
+            <rect x="9" y="5" width="6" height="6" rx="1.5" strokeWidth="1.5" opacity=".55" />
+            <circle cx="10" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
+            <circle cx="14" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
+            <circle cx="10" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
+            <circle cx="14" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
+            <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
+            <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
           </svg>
 
           <span>Burner</span>

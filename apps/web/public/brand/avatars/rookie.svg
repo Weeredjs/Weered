@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Rookie / fresh face with backpack -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="46" rx="14" ry="17"/>
+    <!-- Messy hair -->
+    <path d="M50 38c0-10 6-16 14-16s14 6 14 16" opacity=".85"/>
+    <path d="M48 36c-1-3 2-8 6-10" stroke="#E2E8F0" stroke-width="2" fill="none" opacity=".6"/>
+    <path d="M80 36c1-3-2-8-6-10" stroke="#E2E8F0" stroke-width="2" fill="none" opacity=".6"/>
+    <!-- Wide eyes (eager) -->
+    <circle cx="57" cy="44" r="4" fill="#0B0F1A"/>
+    <circle cx="71" cy="44" r="4" fill="#0B0F1A"/>
+    <circle cx="58" cy="43.5" r="2" fill="#E2E8F0"/>
+    <circle cx="72" cy="43.5" r="2" fill="#E2E8F0"/>
+    <!-- Slight smile -->
+    <path d="M58 54q6 3 12 0" stroke="#0B0F1A" stroke-width="1.5" fill="none"/>
+    <!-- T-shirt body -->
+    <path d="M34 100c0-18 14-28 30-28s30 10 30 28v14H34V100z"/>
+    <!-- T-shirt neckline -->
+    <path d="M52 72c4 3 8 4 12 4s8-1 12-4" stroke="#0B0F1A" stroke-width="2.5" fill="none"/>
+    <!-- Backpack straps -->
+    <line x1="48" y1="72" x2="44" y2="100" stroke="#94A3B8" stroke-width="3" opacity=".5"/>
+    <line x1="80" y1="72" x2="84" y2="100" stroke="#94A3B8" stroke-width="3" opacity=".5"/>
+  </g>
+</svg>

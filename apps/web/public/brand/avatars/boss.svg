@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Suited boss with fedora -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Fedora hat -->
+    <ellipse cx="64" cy="38" rx="30" ry="6" opacity=".9"/>
+    <path d="M40 38c0-14 10-24 24-24s24 10 24 24H40z"/>
+    <!-- Head -->
+    <ellipse cx="64" cy="52" rx="14" ry="16"/>
+    <!-- Suit shoulders -->
+    <path d="M30 95c0-18 15-28 34-28s34 10 34 28v10H30V95z"/>
+    <!-- Suit lapels -->
+    <path d="M56 67l8 20 8-20" fill="#0B0F1A" stroke="#E2E8F0" stroke-width="2"/>
+    <!-- Tie -->
+    <path d="M62 72h4l1 18h-6z" fill="#7C3AED"/>
+    <!-- Sunglasses -->
+    <rect x="50" y="48" width="11" height="7" rx="2" fill="#0B0F1A"/>
+    <rect x="67" y="48" width="11" height="7" rx="2" fill="#0B0F1A"/>
+    <line x1="61" y1="51" x2="67" y2="51" stroke="#0B0F1A" stroke-width="1.5"/>
+  </g>
+</svg>

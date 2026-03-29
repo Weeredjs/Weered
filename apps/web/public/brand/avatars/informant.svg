@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Shady informant / rat with coat collar up and shadow -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head slightly turned -->
+    <ellipse cx="60" cy="48" rx="14" ry="17"/>
+    <!-- Slicked hair -->
+    <path d="M46 40c0-12 6-20 14-20s16 4 18 14l-2 6H46z" opacity=".9"/>
+    <!-- Shifty eyes looking sideways -->
+    <ellipse cx="54" cy="46" rx="4" ry="3" fill="#0B0F1A"/>
+    <ellipse cx="68" cy="46" rx="4" ry="3" fill="#0B0F1A"/>
+    <circle cx="56" cy="46" r="1.5" fill="#94A3B8"/>
+    <circle cx="70" cy="46" r="1.5" fill="#94A3B8"/>
+    <!-- Thin mustache -->
+    <path d="M55 53q5 2 10 0" stroke="#0B0F1A" stroke-width="1" fill="none"/>
+    <!-- Jacket with popped collar -->
+    <path d="M28 105c0-20 14-32 34-32s34 12 34 32v10H28V105z"/>
+    <path d="M44 73l-10-6v16z" opacity=".7"/>
+    <path d="M80 73l10-6v16z" opacity=".7"/>
+    <!-- Shadow/paranoia accent -->
+    <circle cx="98" cy="24" r="8" fill="#EF4444" opacity=".15"/>
+    <text x="94" y="28" font-family="Arial" font-size="12" fill="#EF4444" opacity=".4">!</text>
+  </g>
+</svg>

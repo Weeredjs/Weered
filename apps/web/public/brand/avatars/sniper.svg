@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Sniper / sharpshooter -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head with cap -->
+    <ellipse cx="58" cy="48" rx="14" ry="16"/>
+    <path d="M42 42h36v-4c0-2-1-4-3-5H45c-2 1-3 3-3 5v4z"/>
+    <rect x="40" y="40" width="38" height="5" rx="2"/>
+    <!-- Cap brim -->
+    <path d="M38 42h44l2-2H36z" opacity=".8"/>
+    <!-- One eye visible, other shadowed -->
+    <ellipse cx="53" cy="46" rx="3" ry="2.5" fill="#0B0F1A"/>
+    <circle cx="53" cy="46" r="1" fill="#22C55E"/>
+    <!-- Tactical vest body -->
+    <path d="M28 100c0-18 14-30 32-30s32 12 32 30v12H28V100z"/>
+    <!-- Vest details -->
+    <line x1="60" y1="72" x2="60" y2="112" stroke="#0B0F1A" stroke-width="2"/>
+    <rect x="36" y="82" width="16" height="10" rx="2" fill="#0B0F1A" opacity=".25"/>
+    <rect x="68" y="82" width="16" height="10" rx="2" fill="#0B0F1A" opacity=".25"/>
+    <!-- Scope crosshair accent -->
+    <circle cx="100" cy="28" r="10" stroke="#7C3AED" stroke-width="1.5" fill="none" opacity=".5"/>
+    <line x1="100" y1="16" x2="100" y2="40" stroke="#7C3AED" stroke-width="1" opacity=".4"/>
+    <line x1="88" y1="28" x2="112" y2="28" stroke="#7C3AED" stroke-width="1" opacity=".4"/>
+  </g>
+</svg>

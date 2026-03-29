@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Getaway driver with racing helmet -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Helmet -->
+    <path d="M36 52c0-18 12-30 28-30s28 12 28 30c0 8-3 14-8 18H44c-5-4-8-10-8-18z"/>
+    <!-- Visor -->
+    <path d="M42 48h44c0 6-4 12-10 14H52c-6-2-10-8-10-14z" fill="#0B0F1A"/>
+    <!-- Visor reflection -->
+    <path d="M48 48h32c0 4-3 8-7 10H55c-4-2-7-6-7-10z" fill="#7C3AED" opacity=".25"/>
+    <!-- Racing suit body -->
+    <path d="M34 100c0-16 14-26 30-26s30 10 30 26v14H34V100z"/>
+    <!-- Racing stripe -->
+    <rect x="62" y="74" width="4" height="40" fill="#F97316" opacity=".8"/>
+    <!-- Collar -->
+    <path d="M50 74h28v6c0 2-6 4-14 4s-14-2-14-4v-6z" fill="#0B0F1A" opacity=".3"/>
+  </g>
+</svg>

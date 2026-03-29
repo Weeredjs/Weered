@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Ghost / anonymous — skull bandana, hood -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Hood -->
+    <path d="M36 52c0-20 12-32 28-32s28 12 28 32c0 8-3 14-8 18H44c-5-4-8-10-8-18z" opacity=".7"/>
+    <!-- Face -->
+    <ellipse cx="64" cy="50" rx="16" ry="19"/>
+    <!-- Skull bandana covering lower face -->
+    <path d="M48 50h32v16c0 4-6 8-16 8s-16-4-16-8V50z" fill="#0B0F1A"/>
+    <!-- Skull teeth on bandana -->
+    <rect x="52" y="56" width="3" height="5" rx="1" fill="#E2E8F0" opacity=".7"/>
+    <rect x="57" y="56" width="3" height="5" rx="1" fill="#E2E8F0" opacity=".7"/>
+    <rect x="62" y="56" width="3" height="5" rx="1" fill="#E2E8F0" opacity=".7"/>
+    <rect x="67" y="56" width="3" height="5" rx="1" fill="#E2E8F0" opacity=".7"/>
+    <rect x="72" y="56" width="3" height="5" rx="1" fill="#E2E8F0" opacity=".7"/>
+    <!-- Nose hole -->
+    <path d="M62 53l2-2 2 2" stroke="#E2E8F0" stroke-width="1" fill="none" opacity=".5"/>
+    <!-- Dark hollow eyes -->
+    <ellipse cx="56" cy="46" rx="5" ry="4" fill="#0B0F1A"/>
+    <ellipse cx="72" cy="46" rx="5" ry="4" fill="#0B0F1A"/>
+    <!-- Eye glow -->
+    <circle cx="56" cy="46" r="2" fill="#EF4444" opacity=".5"/>
+    <circle cx="72" cy="46" r="2" fill="#EF4444" opacity=".5"/>
+    <!-- Body -->
+    <path d="M30 108c0-20 15-32 34-32s34 12 34 32v8H30V108z"/>
+  </g>
+</svg>

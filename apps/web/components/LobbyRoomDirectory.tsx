@@ -399,9 +399,9 @@ export default function LobbyRoomDirectory({
                         fontSize: 10, color: "rgba(148,163,184,.35)", fontFamily: "monospace",
                         display: "flex", alignItems: "center", gap: 4,
                       }}>
-                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.5 }}>
-                          <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
-                          <path d="M2 14c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                          <circle cx="12" cy="8" r="3.5" />
+                          <path d="M5.5 21v-1.5A5 5 0 0110.5 14h3a5 5 0 015 5.5V21" />
                         </svg>
                         {memberCount > 0 ? `${memberCount} joined` : "Empty"}
                       </span>

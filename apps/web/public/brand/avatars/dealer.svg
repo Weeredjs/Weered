@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Card dealer / gambler with visor -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="48" rx="14" ry="17"/>
+    <!-- Dealer visor -->
+    <rect x="46" y="34" width="36" height="5" rx="2" fill="#22C55E" opacity=".7"/>
+    <path d="M42 39h44l2-2H40z" fill="#22C55E" opacity=".5"/>
+    <!-- Visor shadow on eyes -->
+    <rect x="48" y="40" width="32" height="6" fill="#0B0F1A" opacity=".4"/>
+    <!-- Cool gaze -->
+    <circle cx="57" cy="44" r="2" fill="#0B0F1A"/>
+    <circle cx="71" cy="44" r="2" fill="#0B0F1A"/>
+    <!-- Smirk -->
+    <path d="M60 54q4 2 10-1" stroke="#0B0F1A" stroke-width="1.2" fill="none"/>
+    <!-- Vest / formal -->
+    <path d="M32 102c0-18 14-30 32-30s32 12 32 30v12H32V102z"/>
+    <!-- Vest details -->
+    <path d="M56 72l8 14 8-14" fill="#0B0F1A"/>
+    <!-- Bow tie -->
+    <path d="M58 72l6 4 6-4-6-3z" fill="#EF4444" opacity=".7"/>
+    <!-- Playing card accent -->
+    <rect x="88" y="18" width="16" height="22" rx="2" fill="#E2E8F0" opacity=".15" stroke="#E2E8F0" stroke-width="1" opacity=".3"/>
+    <text x="92" y="33" font-family="serif" font-size="12" fill="#EF4444" opacity=".5">A</text>
+  </g>
+</svg>

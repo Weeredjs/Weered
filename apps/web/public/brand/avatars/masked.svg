@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Ski mask figure -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head with balaclava -->
+    <ellipse cx="64" cy="50" rx="18" ry="22"/>
+    <!-- Eyes cut out -->
+    <ellipse cx="55" cy="47" rx="5" ry="3.5" fill="#0B0F1A"/>
+    <ellipse cx="73" cy="47" rx="5" ry="3.5" fill="#0B0F1A"/>
+    <!-- Eye glint -->
+    <ellipse cx="56" cy="47" rx="2" ry="1.5" fill="#7C3AED" opacity=".8"/>
+    <ellipse cx="74" cy="47" rx="2" ry="1.5" fill="#7C3AED" opacity=".8"/>
+    <!-- Hoodie body -->
+    <path d="M32 100c0-20 14-32 32-32s32 12 32 32v12H32V100z"/>
+    <!-- Hood -->
+    <path d="M42 42c-4 4-6 10-6 16 0 4 2 7 6 9v-25z" opacity=".6"/>
+    <path d="M86 42c4 4 6 10 6 16 0 4-2 7-6 9v-25z" opacity=".6"/>
+    <!-- Hoodie pocket -->
+    <rect x="48" y="90" width="32" height="10" rx="4" fill="#0B0F1A" opacity=".3"/>
+  </g>
+</svg>

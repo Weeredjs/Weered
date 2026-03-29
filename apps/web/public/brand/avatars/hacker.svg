@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Hacker with hoodie and glowing screen reflection -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="50" rx="15" ry="18"/>
+    <!-- Hoodie -->
+    <path d="M30 102c0-20 15-32 34-32s34 12 34 32v10H30V102z"/>
+    <!-- Hood shadow -->
+    <path d="M44 35c-6 5-9 12-9 20 0 5 3 9 7 11V35z" opacity=".5"/>
+    <path d="M84 35c6 5 9 12 9 20 0 5-3 9-7 11V35z" opacity=".5"/>
+    <!-- Glasses with screen glow -->
+    <rect x="49" y="45" width="12" height="8" rx="2" fill="#22C55E" opacity=".7"/>
+    <rect x="67" y="45" width="12" height="8" rx="2" fill="#22C55E" opacity=".7"/>
+    <line x1="61" y1="49" x2="67" y2="49" stroke="#22C55E" stroke-width="1.5" opacity=".7"/>
+    <!-- Screen glow on face -->
+    <ellipse cx="64" cy="55" rx="20" ry="12" fill="#22C55E" opacity=".06"/>
+    <!-- Code text accent -->
+    <text x="42" y="105" font-family="monospace" font-size="7" fill="#22C55E" opacity=".3">&gt;_</text>
+  </g>
+</svg>
