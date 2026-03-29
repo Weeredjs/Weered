@@ -798,7 +798,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
 
   useEffect(() => {
-    apiFetch(`/twitch/streams?game=${encodeURIComponent("MLB")}`)
+    apiFetch(`/twitch/streams?game=${encodeURIComponent("Baseball")}`)
       .then(j => { setStreams(j.streams || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
@@ -812,7 +812,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
       title: s.title || "",
       viewerCount: Number(s.viewerCount || s.viewer_count || 0),
       thumbnailUrl: s.thumbnailUrl || s.thumbnail_url || "",
-      gameName: "MLB",
+      gameName: "Baseball",
     });
   }
 
@@ -887,10 +887,270 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
   );
 }
 
+// ── Highlights Tab ──────────────────────────────────────────────────────────
+
+function Highlights({ accentColor }: { accentColor: string }) {
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch("/mlb/highlights")
+      .then(j => { setHighlights(j.highlights || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading highlights...</div>;
+  if (!highlights.length) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No highlights available yet today.</div>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Video player */}
+      {playing && (
+        <div style={{ ...S.card, padding: 0, overflow: "hidden", marginBottom: 4 }}>
+          <video
+            src={playing}
+            controls
+            autoPlay
+            style={{ width: "100%", borderRadius: 10, display: "block", maxHeight: 360, background: "#000" }}
+          />
+          <button
+            onClick={() => setPlaying(null)}
+            style={{ ...S.btn, margin: 8, fontSize: 11 }}
+          >
+            Close Player
+          </button>
+        </div>
+      )}
+
+      {/* Highlight grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+        {highlights.map((h: any) => (
+          <div
+            key={h.id}
+            onClick={() => setPlaying(h.videoUrl)}
+            style={{
+              ...S.card,
+              padding: 0,
+              cursor: "pointer",
+              overflow: "hidden",
+              transition: "border-color .15s",
+              borderColor: playing === h.videoUrl ? accentColor : "rgba(255,255,255,.08)",
+            }}
+          >
+            {/* Thumbnail */}
+            <div style={{ position: "relative", paddingTop: "56.25%", background: "rgba(0,0,0,.4)" }}>
+              {h.thumbnailUrl && (
+                <img
+                  src={h.thumbnailUrl}
+                  alt=""
+                  style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              )}
+              {/* Play button overlay */}
+              <div style={{
+                position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+                width: 36, height: 36, borderRadius: "50%", background: "rgba(0,0,0,.65)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ fontSize: 16, marginLeft: 2 }}>▶</span>
+              </div>
+              {/* Duration badge */}
+              {h.duration && (
+                <div style={{
+                  position: "absolute", bottom: 4, right: 4,
+                  background: "rgba(0,0,0,.75)", borderRadius: 4, padding: "1px 5px",
+                  fontSize: 10, fontWeight: 600,
+                }}>
+                  {h.duration}
+                </div>
+              )}
+            </div>
+            {/* Title */}
+            <div style={{ padding: "8px 10px" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, color: "rgba(243,244,246,.92)" }}>
+                {h.headline}
+              </div>
+              {h.description && (
+                <div style={{ fontSize: 11, opacity: 0.5, marginTop: 3, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}>
+                  {h.description}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Matchups Tab (Gambling-Adjacent Intel) ──────────────────────────────────
+
+function Matchups({ accentColor }: { accentColor: string }) {
+  const [matchups, setMatchups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  useEffect(() => {
+    apiFetch("/mlb/matchups")
+      .then(j => { setMatchups(j.matchups || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading matchups...</div>;
+  if (!matchups.length) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No games scheduled today.</div>;
+
+  const statRow = (label: string, value: string | number | undefined, highlight?: boolean) => (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
+      <span style={{ opacity: 0.55 }}>{label}</span>
+      <span style={{ fontWeight: 600, color: highlight ? accentColor : "rgba(243,244,246,.92)" }}>{value ?? "-"}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ ...S.label, marginBottom: 0 }}>TODAY&apos;S MATCHUP INTEL</div>
+
+      {matchups.map((m: any) => {
+        const isExpanded = expanded === m.gameId;
+        const isLive = m.status?.includes("In Progress") || m.status?.includes("Live");
+        const isFinal = m.status?.includes("Final");
+
+        return (
+          <div
+            key={m.gameId}
+            style={{
+              ...S.card,
+              cursor: "pointer",
+              borderColor: isLive ? `${accentColor}50` : "rgba(255,255,255,.08)",
+            }}
+            onClick={() => setExpanded(isExpanded ? null : m.gameId)}
+          >
+            {/* Header row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {isLive && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />}
+                <span style={{ fontWeight: 700, fontSize: 13 }}>
+                  {m.away?.abbr} <span style={{ opacity: 0.4, fontWeight: 400 }}>@</span> {m.home?.abbr}
+                </span>
+                {(isLive || isFinal) && (
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>
+                    {m.away?.score} - {m.home?.score}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {m.weather && (
+                  <span style={{ fontSize: 11, opacity: 0.45 }}>
+                    {m.weather.temp}°F {m.weather.condition}
+                  </span>
+                )}
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+                  background: isLive ? "rgba(34,197,94,.15)" : isFinal ? "rgba(255,255,255,.06)" : `${accentColor}15`,
+                  color: isLive ? "#22c55e" : isFinal ? "rgba(255,255,255,.4)" : accentColor,
+                }}>
+                  {isLive ? m.status : isFinal ? "FINAL" : fmtTime(m.startTime)}
+                </span>
+              </div>
+            </div>
+
+            {/* Pitching matchup preview - always visible */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
+              {/* Away pitcher */}
+              <div style={{ textAlign: "center" }}>
+                {m.away?.probablePitcher ? (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 600 }}>{m.away.probablePitcher.name}</div>
+                    <div style={{ fontSize: 11, opacity: 0.5 }}>
+                      {m.away.probablePitcher.record} · {m.away.probablePitcher.era} ERA
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 11, opacity: 0.35 }}>TBD</div>
+                )}
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.3, fontWeight: 700 }}>VS</div>
+              {/* Home pitcher */}
+              <div style={{ textAlign: "center" }}>
+                {m.home?.probablePitcher ? (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 600 }}>{m.home.probablePitcher.name}</div>
+                    <div style={{ fontSize: 11, opacity: 0.5 }}>
+                      {m.home.probablePitcher.record} · {m.home.probablePitcher.era} ERA
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 11, opacity: 0.35 }}>TBD</div>
+                )}
+              </div>
+            </div>
+
+            {/* Expanded detail */}
+            {isExpanded && (
+              <div style={{ marginTop: 10, borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  {/* Away pitcher detail */}
+                  {m.away?.probablePitcher && (
+                    <div>
+                      <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>{m.away.abbr} — {m.away.probablePitcher.name}</div>
+                      {statRow("ERA", m.away.probablePitcher.era)}
+                      {statRow("WHIP", m.away.probablePitcher.whip)}
+                      {statRow("K/9", m.away.probablePitcher.kPer9)}
+                      {statRow("BB/9", m.away.probablePitcher.bbPer9)}
+                      {statRow("HR/9", m.away.probablePitcher.homeRunsPer9)}
+                      {statRow("IP", m.away.probablePitcher.inningsPitched)}
+                      {statRow("K", m.away.probablePitcher.strikeouts)}
+                      {statRow("GS", m.away.probablePitcher.gamesStarted)}
+                    </div>
+                  )}
+                  {/* Home pitcher detail */}
+                  {m.home?.probablePitcher && (
+                    <div>
+                      <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>{m.home.abbr} — {m.home.probablePitcher.name}</div>
+                      {statRow("ERA", m.home.probablePitcher.era)}
+                      {statRow("WHIP", m.home.probablePitcher.whip)}
+                      {statRow("K/9", m.home.probablePitcher.kPer9)}
+                      {statRow("BB/9", m.home.probablePitcher.bbPer9)}
+                      {statRow("HR/9", m.home.probablePitcher.homeRunsPer9)}
+                      {statRow("IP", m.home.probablePitcher.inningsPitched)}
+                      {statRow("K", m.home.probablePitcher.strikeouts)}
+                      {statRow("GS", m.home.probablePitcher.gamesStarted)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Weather & Venue */}
+                <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {m.venue && (
+                    <div style={{ fontSize: 11, opacity: 0.45 }}>
+                      <span style={{ fontWeight: 600 }}>Venue:</span> {m.venue}
+                    </div>
+                  )}
+                  {m.weather?.wind && (
+                    <div style={{ fontSize: 11, opacity: 0.45 }}>
+                      <span style={{ fontWeight: 600 }}>Wind:</span> {m.weather.wind}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11, opacity: 0.45 }}>
+                    <span style={{ fontWeight: 600 }}>Records:</span> {m.away?.abbr} {m.away?.wins}-{m.away?.losses} · {m.home?.abbr} {m.home?.wins}-{m.home?.losses}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "scoreboard", label: "Scoreboard", icon: "\u26be" },
+  { id: "matchups",   label: "Matchups",   icon: "\ud83c\udfaf" },
+  { id: "highlights", label: "Highlights", icon: "\ud83c\udfac" },
   { id: "standings",  label: "Standings",  icon: "\ud83c\udfc6" },
   { id: "leaders",    label: "Leaders",    icon: "\ud83d\udcc8" },
   { id: "player",     label: "Player Search", icon: "\ud83d\udd0d" },
@@ -955,6 +1215,8 @@ export default function MlbModulesPanel({
       {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "scoreboard" && <Scoreboard accentColor={accentColor} />}
+        {tab === "matchups"   && <Matchups accentColor={accentColor} />}
+        {tab === "highlights" && <Highlights accentColor={accentColor} />}
         {tab === "standings"  && <Standings accentColor={accentColor} />}
         {tab === "leaders"    && <Leaders accentColor={accentColor} onPlayerClick={handleLeaderPlayerClick} />}
         {tab === "player"     && (

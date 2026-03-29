@@ -5020,6 +5020,122 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
+  // GET /mlb/highlights — video highlights from today's games
+  app.get("/mlb/highlights", async (req, reply) => {
+    try {
+      const date = String((req as any).query?.date || new Date().toISOString().slice(0, 10));
+      const schedRes = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}`);
+      const schedData = await schedRes.json();
+      const gameIds = (schedData?.dates?.[0]?.games || []).map((g: any) => g.gamePk);
+
+      const allHighlights: any[] = [];
+      // Fetch highlights from up to 6 games to keep response fast
+      const subset = gameIds.slice(0, 6);
+      await Promise.all(subset.map(async (gid: number) => {
+        try {
+          const res = await fetch(`${MLB_API}/game/${gid}/content`);
+          const data = await res.json();
+          const items = data?.highlights?.highlights?.items || [];
+          for (const item of items) {
+            const mp4 = item.playbacks?.find((p: any) => p.name === "mp4Avc") || item.playbacks?.find((p: any) => p.url?.includes(".mp4"));
+            if (!mp4) continue;
+            allHighlights.push({
+              id: item.id,
+              headline: item.headline || item.title || "",
+              description: item.description || "",
+              duration: item.duration || "",
+              thumbnailUrl: item.image?.cuts?.find((c: any) => c.width >= 320 && c.width <= 640)?.src
+                || item.image?.cuts?.[0]?.src || "",
+              videoUrl: mp4.url,
+              gameId: gid,
+              date: item.date || date,
+            });
+          }
+        } catch {}
+      }));
+
+      // Sort by most recent first
+      allHighlights.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      return reply.send({ ok: true, date, highlights: allHighlights.slice(0, 30) });
+    } catch (e) {
+      console.error("[mlb highlights]", e);
+      return reply.send({ ok: true, highlights: [], error: "fetch_failed" });
+    }
+  });
+
+  // GET /mlb/matchups — enriched game matchup data (pitcher stats, weather, trends)
+  app.get("/mlb/matchups", async (req, reply) => {
+    try {
+      const date = String((req as any).query?.date || new Date().toISOString().slice(0, 10));
+      const schedRes = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}&hydrate=probablePitcher(stats(type=season)),team,linescore,weather`);
+      const schedData = await schedRes.json();
+      const games = schedData?.dates?.[0]?.games || [];
+
+      const matchups = await Promise.all(games.map(async (g: any) => {
+        // Get detailed game feed for weather
+        let weather: any = null;
+        try {
+          const feedRes = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${g.gamePk}/feed/live`);
+          const feed = await feedRes.json();
+          const w = feed?.gameData?.weather;
+          if (w) weather = { temp: w.temp, condition: w.condition, wind: w.wind };
+        } catch {}
+
+        const mapPitcher = (team: any) => {
+          const pp = team?.probablePitcher;
+          if (!pp) return null;
+          const seasonStats = pp.stats?.find((s: any) => s.type?.displayName === "statsSingleSeason")?.stats || {};
+          return {
+            id: pp.id,
+            name: pp.fullName,
+            era: seasonStats.era || pp.stats?.[0]?.stats?.era || "-",
+            whip: seasonStats.whip || "-",
+            wins: seasonStats.wins || 0,
+            losses: seasonStats.losses || 0,
+            strikeouts: seasonStats.strikeOuts || 0,
+            inningsPitched: seasonStats.inningsPitched || "-",
+            kPer9: seasonStats.strikeoutsPer9Inn || "-",
+            bbPer9: seasonStats.walksPer9Inn || "-",
+            homeRunsPer9: seasonStats.homeRunsPer9 || "-",
+            record: `${seasonStats.wins || 0}-${seasonStats.losses || 0}`,
+            gamesStarted: seasonStats.gamesStarted || 0,
+          };
+        };
+
+        return {
+          gameId: g.gamePk,
+          startTime: g.gameDate,
+          status: g.status?.detailedState || "Scheduled",
+          venue: g.venue?.name,
+          weather,
+          away: {
+            id: g.teams?.away?.team?.id,
+            name: g.teams?.away?.team?.name,
+            abbr: g.teams?.away?.team?.abbreviation,
+            wins: g.teams?.away?.leagueRecord?.wins,
+            losses: g.teams?.away?.leagueRecord?.losses,
+            score: g.teams?.away?.score ?? null,
+            probablePitcher: mapPitcher(g.teams?.away),
+          },
+          home: {
+            id: g.teams?.home?.team?.id,
+            name: g.teams?.home?.team?.name,
+            abbr: g.teams?.home?.team?.abbreviation,
+            wins: g.teams?.home?.leagueRecord?.wins,
+            losses: g.teams?.home?.leagueRecord?.losses,
+            score: g.teams?.home?.score ?? null,
+            probablePitcher: mapPitcher(g.teams?.home),
+          },
+        };
+      }));
+
+      return reply.send({ ok: true, date, matchups });
+    } catch (e) {
+      console.error("[mlb matchups]", e);
+      return reply.send({ ok: true, matchups: [], error: "fetch_failed" });
+    }
+  });
+
   // ══════════════════════════════════════════════════════════════════════════════
   // ── BUNGIE API INTEGRATION ─────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
