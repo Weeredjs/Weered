@@ -44,6 +44,27 @@ const AVATAR_STYLES = [
   { id: "fun-emoji",    label: "Emoji",      url: (s: string) => `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${s}&backgroundColor=transparent` },
 ];
 
+// ─── GTA-style icon kit ─────────────────────────────────────
+const GTA_ICONS = [
+  { id: "boss",      label: "Boss" },
+  { id: "masked",    label: "Masked" },
+  { id: "sniper",    label: "Sniper" },
+  { id: "hacker",    label: "Hacker" },
+  { id: "driver",    label: "Driver" },
+  { id: "enforcer",  label: "Enforcer" },
+  { id: "femme",     label: "Femme" },
+  { id: "detective", label: "Detective" },
+  { id: "hustler",   label: "Hustler" },
+  { id: "informant", label: "Informant" },
+  { id: "kingpin",   label: "Kingpin" },
+  { id: "rookie",    label: "Rookie" },
+  { id: "phantom",   label: "Phantom" },
+  { id: "dealer",    label: "Dealer" },
+  { id: "pilot",     label: "Pilot" },
+  { id: "medic",     label: "Medic" },
+  { id: "ghost",     label: "Ghost" },
+];
+
 // Generate 12 seed variants per style for gallery
 function gallerySeeds(username: string): string[] {
   const seeds: string[] = [];
@@ -191,6 +212,50 @@ function AvatarGallery({ username, currentAvatar, onSelect }: {
   );
 }
 
+// ─── GTA Icon Gallery ────────────────────────────────────────
+function GtaGallery({ currentAvatar, onSelect }: {
+  currentAvatar: string | null;
+  onSelect: (url: string) => void;
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginBottom: 8 }}>
+        Choose your character
+      </div>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8,
+      }}>
+        {GTA_ICONS.map(icon => {
+          const url = `/brand/avatars/${icon.id}.svg`;
+          const isSelected = currentAvatar === url;
+          return (
+            <button
+              key={icon.id}
+              type="button"
+              onClick={() => onSelect(url)}
+              style={{
+                width: "100%", aspectRatio: "1", borderRadius: 12, padding: 4,
+                border: isSelected ? "2px solid #a78bfa" : "2px solid rgba(255,255,255,.06)",
+                background: isSelected ? "rgba(167,139,250,.12)" : "rgba(255,255,255,.03)",
+                cursor: "pointer", transition: "all 0.15s",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: 2, overflow: "hidden",
+              }}
+            >
+              <img
+                src={url}
+                alt={icon.label}
+                loading="lazy"
+                style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 8 }}
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── ColorPicker ────────────────────────────────────────────
 function ColorPicker({ current, onChange }: { current: string; onChange: (c: string) => void }) {
   return (
@@ -257,7 +322,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [avatarUrl,   setAvatarUrl  ] = useState<string | null>(null);
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
-  const [activeTab,   setActiveTab  ] = useState<"gallery" | "color" | "upload">("gallery");
+  const [activeTab,   setActiveTab  ] = useState<"gta" | "gallery" | "color" | "upload">("gta");
   const [uploading,   setUploading  ] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -492,7 +557,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
           {/* Tab toggle */}
           <div style={{ display: "flex", gap: 2, marginBottom: 12, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: 2 }}>
-            {(["gallery", "color", ...(profile.tier !== "INNOCENT" ? ["upload"] : [])] as const).map(tab => (
+            {(["gta", "gallery", "color", ...(profile.tier !== "INNOCENT" ? ["upload"] : [])] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
@@ -506,12 +571,17 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                   transition: "all 0.15s",
                 }}
               >
-                {tab === "gallery" ? "Gallery" : tab === "color" ? "Color" : "⬆ Upload"}
+                {tab === "gta" ? "GTA" : tab === "gallery" ? "Gallery" : tab === "color" ? "Color" : "⬆ Upload"}
               </button>
             ))}
           </div>
 
-          {activeTab === "gallery" ? (
+          {activeTab === "gta" ? (
+            <GtaGallery
+              currentAvatar={avatarUrl}
+              onSelect={saveAvatar}
+            />
+          ) : activeTab === "gallery" ? (
             <AvatarGallery
               username={profile.name}
               currentAvatar={avatarUrl}

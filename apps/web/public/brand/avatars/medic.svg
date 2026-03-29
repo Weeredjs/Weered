@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Street medic / doc with surgical mask -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="46" rx="14" ry="17"/>
+    <!-- Hair pulled back -->
+    <path d="M50 38c0-10 6-16 14-16s14 6 14 16" opacity=".8"/>
+    <!-- Surgical mask -->
+    <path d="M48 48h32v14c0 4-6 6-16 6s-16-2-16-6V48z" fill="#94A3B8" opacity=".6"/>
+    <line x1="48" y1="52" x2="80" y2="52" stroke="#0B0F1A" stroke-width=".5" opacity=".3"/>
+    <line x1="48" y1="56" x2="80" y2="56" stroke="#0B0F1A" stroke-width=".5" opacity=".3"/>
+    <!-- Eyes above mask -->
+    <ellipse cx="56" cy="43" rx="4" ry="3" fill="#0B0F1A"/>
+    <ellipse cx="72" cy="43" rx="4" ry="3" fill="#0B0F1A"/>
+    <circle cx="56.5" cy="42.5" r="1.5" fill="#22C55E"/>
+    <circle cx="72.5" cy="42.5" r="1.5" fill="#22C55E"/>
+    <!-- Scrubs body -->
+    <path d="M32 105c0-18 14-30 32-30s32 12 32 30v10H32V105z"/>
+    <!-- V-neck scrubs -->
+    <path d="M56 75l8 10 8-10" fill="#0B0F1A" opacity=".3"/>
+    <!-- Red cross -->
+    <rect x="60" y="90" width="8" height="16" rx="1" fill="#EF4444" opacity=".5"/>
+    <rect x="56" y="94" width="16" height="8" rx="1" fill="#EF4444" opacity=".5"/>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Kingpin — large, commanding, gold accents -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="44" rx="16" ry="18"/>
+    <!-- Slicked back hair -->
+    <path d="M48 36c0-10 7-16 16-16s16 6 16 16c2-2 4-6 4-10 0-12-9-18-20-18S44 14 44 26c0 4 2 8 4 10z" opacity=".8"/>
+    <!-- Heavy brow, stern look -->
+    <rect x="52" y="40" width="8" height="4" rx="1.5" fill="#0B0F1A"/>
+    <rect x="68" y="40" width="8" height="4" rx="1.5" fill="#0B0F1A"/>
+    <!-- Cigar -->
+    <rect x="72" y="52" width="18" height="3" rx="1.5" fill="#D97706"/>
+    <circle cx="90" cy="53.5" r="2" fill="#F97316" opacity=".6"/>
+    <!-- Massive suit -->
+    <path d="M18 108c0-22 20-38 46-38s46 16 46 38v8H18V108z"/>
+    <!-- Suit lapels -->
+    <path d="M54 70l10 22 10-22" fill="#0B0F1A" stroke="#E2E8F0" stroke-width="1.5"/>
+    <!-- Gold tie clip -->
+    <rect x="61" y="82" width="6" height="2" rx="1" fill="#EAB308"/>
+    <!-- Crown accent -->
+    <path d="M52 12l4 6 8-4 8 4 4-6" stroke="#EAB308" stroke-width="1.5" fill="none" opacity=".5"/>
+  </g>
+</svg>

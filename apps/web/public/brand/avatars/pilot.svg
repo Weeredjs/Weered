@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Pilot / aviator with bomber jacket and aviator shades -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="46" rx="14" ry="17"/>
+    <!-- Short cropped hair -->
+    <path d="M50 38c0-8 6-14 14-14s14 6 14 14" opacity=".7"/>
+    <!-- Aviator sunglasses -->
+    <path d="M48 42c0-1 2-3 6-3h5c2 0 3 1 3 3v5c0 3-3 6-7 6s-7-3-7-6v-5z" fill="#0B0F1A"/>
+    <path d="M67 42c0-1 2-3 6-3h5c2 0 3 1 3 3v5c0 3-3 6-7 6s-7-3-7-6v-5z" fill="#0B0F1A"/>
+    <line x1="62" y1="44" x2="67" y2="44" stroke="#0B0F1A" stroke-width="1.5"/>
+    <!-- Aviator lens shine -->
+    <ellipse cx="55" cy="44" rx="3" ry="2" fill="#3B82F6" opacity=".2"/>
+    <ellipse cx="74" cy="44" rx="3" ry="2" fill="#3B82F6" opacity=".2"/>
+    <!-- Bomber jacket -->
+    <path d="M28 102c0-20 16-32 36-32s36 12 36 32v12H28V102z"/>
+    <!-- Fur collar -->
+    <ellipse cx="42" cy="72" rx="8" ry="5" opacity=".5"/>
+    <ellipse cx="86" cy="72" rx="8" ry="5" opacity=".5"/>
+    <!-- Jacket zip -->
+    <line x1="64" y1="72" x2="64" y2="114" stroke="#0B0F1A" stroke-width="2"/>
+    <!-- Wings badge -->
+    <path d="M54 88h20" stroke="#EAB308" stroke-width="1.5" opacity=".6"/>
+    <circle cx="64" cy="88" r="3" fill="#EAB308" opacity=".5"/>
+  </g>
+</svg>

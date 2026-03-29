@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Noir detective with trench coat -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Hat -->
+    <ellipse cx="64" cy="34" rx="26" ry="5" opacity=".85"/>
+    <path d="M44 34c0-10 8-18 20-18s20 8 20 18H44z"/>
+    <!-- Hat shadow over face -->
+    <path d="M46 34h36v8H46z" fill="#0B0F1A" opacity=".4"/>
+    <!-- Head -->
+    <ellipse cx="64" cy="48" rx="14" ry="16"/>
+    <!-- Eyes in shadow (only glint visible) -->
+    <circle cx="57" cy="45" r="1.5" fill="#94A3B8" opacity=".6"/>
+    <circle cx="71" cy="45" r="1.5" fill="#94A3B8" opacity=".6"/>
+    <!-- Chin -->
+    <rect x="59" y="56" width="10" height="2" rx="1" fill="#0B0F1A" opacity=".2"/>
+    <!-- Trench coat -->
+    <path d="M28 105c0-20 16-34 36-34s36 14 36 34v10H28V105z"/>
+    <!-- Coat collar turned up -->
+    <path d="M48 72l-6-4h-6l8 14z" opacity=".7"/>
+    <path d="M80 72l6-4h6l-8 14z" opacity=".7"/>
+    <!-- Coat buttons -->
+    <circle cx="64" cy="85" r="1.5" fill="#0B0F1A"/>
+    <circle cx="64" cy="93" r="1.5" fill="#0B0F1A"/>
+    <circle cx="64" cy="101" r="1.5" fill="#0B0F1A"/>
+  </g>
+</svg>

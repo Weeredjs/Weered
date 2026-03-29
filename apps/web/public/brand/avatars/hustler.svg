@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Street hustler with chain and snapback -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Snapback cap -->
+    <rect x="42" y="28" width="44" height="6" rx="2"/>
+    <path d="M44 34c0-8 8-14 20-14s20 6 20 14H44z"/>
+    <!-- Flat brim angled -->
+    <path d="M38 34h52l4-2H34z" opacity=".8"/>
+    <!-- Head -->
+    <ellipse cx="64" cy="48" rx="14" ry="16"/>
+    <!-- Confident smirk -->
+    <ellipse cx="56" cy="46" rx="3" ry="2.5" fill="#0B0F1A"/>
+    <ellipse cx="72" cy="46" rx="3" ry="2.5" fill="#0B0F1A"/>
+    <path d="M58 54q6 4 12 0" stroke="#0B0F1A" stroke-width="1.5" fill="none"/>
+    <!-- Hoodie/jacket -->
+    <path d="M30 102c0-18 15-30 34-30s34 12 34 30v12H30V102z"/>
+    <!-- Zip line -->
+    <line x1="64" y1="72" x2="64" y2="114" stroke="#0B0F1A" stroke-width="1.5"/>
+    <!-- Chain necklace -->
+    <path d="M48 72c4 8 10 12 16 12s12-4 16-12" stroke="#EAB308" stroke-width="2" fill="none"/>
+    <!-- Dollar pendant -->
+    <text x="60" y="88" font-family="Arial" font-size="10" font-weight="bold" fill="#EAB308">$</text>
+  </g>
+</svg>

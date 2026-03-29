@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Femme fatale -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Hair flowing -->
+    <path d="M38 52c0-18 11-30 26-30s26 12 26 30c0 6-1 11-4 16l4 12h-6c-4 4-10 6-20 6s-16-2-20-6h-6l4-12c-3-5-4-10-4-16z" opacity=".85"/>
+    <!-- Face -->
+    <ellipse cx="64" cy="50" rx="14" ry="17"/>
+    <!-- Eyes -->
+    <ellipse cx="57" cy="48" rx="3.5" ry="2.5" fill="#0B0F1A"/>
+    <ellipse cx="71" cy="48" rx="3.5" ry="2.5" fill="#0B0F1A"/>
+    <ellipse cx="58" cy="47.5" rx="1.5" ry="1" fill="#A78BFA"/>
+    <ellipse cx="72" cy="47.5" rx="1.5" ry="1" fill="#A78BFA"/>
+    <!-- Lips -->
+    <ellipse cx="64" cy="57" rx="4" ry="2" fill="#EC4899" opacity=".7"/>
+    <!-- Elegant body -->
+    <path d="M36 105c0-18 12-28 28-28s28 10 28 28v8H36V105z"/>
+    <!-- V-neck -->
+    <path d="M56 77l8 16 8-16" fill="#0B0F1A"/>
+    <!-- Necklace -->
+    <path d="M50 80c4 6 9 8 14 8s10-2 14-8" stroke="#EAB308" stroke-width="1" fill="none" opacity=".7"/>
+    <circle cx="64" cy="88" r="2" fill="#EAB308" opacity=".8"/>
+  </g>
+</svg>

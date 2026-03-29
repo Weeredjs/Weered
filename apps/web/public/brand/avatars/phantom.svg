@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Phantom / ghost operative — half face shadow -->
+  <rect width="128" height="128" rx="16" fill="#0B0F1A"/>
+  <g fill="#E2E8F0">
+    <!-- Head -->
+    <ellipse cx="64" cy="48" rx="16" ry="19"/>
+    <!-- Half face in shadow -->
+    <path d="M64 29v38h16c2-4 3-8 3-12v-7c0-10-8-19-19-19z" fill="#94A3B8" opacity=".4"/>
+    <!-- One visible eye -->
+    <ellipse cx="56" cy="46" rx="4" ry="3" fill="#0B0F1A"/>
+    <circle cx="56.5" cy="45.5" r="1.5" fill="#7C3AED"/>
+    <!-- Shadow eye (barely visible) -->
+    <ellipse cx="72" cy="46" rx="4" ry="3" fill="#0B0F1A" opacity=".3"/>
+    <!-- Tactical turtleneck -->
+    <path d="M30 105c0-20 15-32 34-32s34 12 34 32v10H30V105z"/>
+    <rect x="52" y="64" width="24" height="10" rx="4" fill="#0B0F1A" opacity=".2"/>
+    <!-- Glitch/static effect -->
+    <rect x="20" y="60" width="88" height="1" fill="#7C3AED" opacity=".15"/>
+    <rect x="20" y="80" width="88" height="1" fill="#7C3AED" opacity=".1"/>
+    <rect x="20" y="100" width="88" height="1" fill="#7C3AED" opacity=".08"/>
+  </g>
+</svg>
