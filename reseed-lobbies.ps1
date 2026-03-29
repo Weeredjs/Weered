@@ -221,6 +221,18 @@ $lobbies = @'
     "logoUrl": null
   },
   {
+    "id": "mlb",
+    "name": "MLB",
+    "description": "America's pastime. Live scores, standings, stats, and streams.",
+    "pinned": true,
+    "moduleType": "MLB",
+    "moduleConfig": { "twitchCategory": "MLB The Show 25", "subreddit": "r/baseball" },
+    "keywords": ["mlb","baseball","yankees","dodgers","mets","astros","braves","phillies","padres","cubs","redsox","homerun"],
+    "accentColor": "#C41E3A",
+    "bannerUrl": "https://img.mlbstatic.com/mlb-images/image/upload/t_16x9/t_w1536/mlb/wbhdxjhxlrsqnnb1ivkp.jpg",
+    "logoUrl": "https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
+  },
+  {
     "id": "weered.ca",
     "name": "Weered HQ",
     "description": "Platform news, beta feedback, and announcements.",
