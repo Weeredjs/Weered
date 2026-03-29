@@ -84,7 +84,7 @@ function IconStrip({
   );
 }
 
-// ── Overlay Panel ────────────────────────────────────────────────────────────
+// ── Overlay Panel (with swipe-to-close) ─────────────────────────────────────
 function OverlayPanel({
   side,
   open,
@@ -96,11 +96,68 @@ function OverlayPanel({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el || !open) return;
+
+    let start: { x: number; y: number; t: number } | null = null;
+    let dx = 0;
+
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY, t: Date.now() };
+      dx = 0;
+      el.style.transition = "none";
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (!start) return;
+      const moveX = e.touches[0].clientX - start.x;
+      const moveY = e.touches[0].clientY - start.y;
+      if (Math.abs(moveY) > Math.abs(moveX) && dx === 0) { start = null; return; }
+      // Left panel: swipe left to close (negative dx). Right panel: swipe right (positive dx).
+      const dismiss = side === "left" ? -moveX : moveX;
+      if (dismiss > 0) {
+        dx = dismiss;
+        el.style.transform = side === "left" ? `translateX(${-dx}px)` : `translateX(${dx}px)`;
+        el.style.opacity = String(Math.max(0, 1 - dx / 250));
+      }
+    };
+
+    const onEnd = () => {
+      if (!start) return;
+      const dt = Date.now() - start.t;
+      const velocity = dx / Math.max(1, dt);
+      el.style.transition = "transform 220ms ease, opacity 180ms ease";
+      if (dx > 80 || velocity > 0.4) {
+        el.style.transform = side === "left" ? "translateX(-100%)" : "translateX(100%)";
+        el.style.opacity = "0";
+        setTimeout(onClose, 200);
+      } else {
+        el.style.transform = "translateX(0)";
+        el.style.opacity = "1";
+      }
+      start = null;
+      dx = 0;
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: true });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+    };
+  }, [open, side, onClose]);
+
   if (!open) return null;
   return (
     <>
       <div className="weered-overlay-backdrop" onClick={onClose} />
-      <div className={`weered-overlay-panel weered-overlay-panel-${side}`}>
+      <div ref={panelRef} className={`weered-overlay-panel weered-overlay-panel-${side}`}>
         {/* Close button — visible on mobile where backdrop is covered */}
         <button
           type="button"

@@ -1,10 +1,79 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import DockShell from "./DockShell";
+
+/** Hook: swipe right → close */
+function useSwipeClose(ref: React.RefObject<HTMLDivElement | null>, onClose: () => void, enabled: boolean) {
+  const touch = React.useRef<{ x: number; y: number; t: number } | null>(null);
+  const offset = React.useRef(0);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) return;
+
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touch.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+      offset.current = 0;
+      el.style.transition = "none";
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (!touch.current) return;
+      const dx = e.touches[0].clientX - touch.current.x;
+      const dy = e.touches[0].clientY - touch.current.y;
+      // Only track horizontal swipes (right)
+      if (Math.abs(dy) > Math.abs(dx) && offset.current === 0) {
+        touch.current = null;
+        return;
+      }
+      if (dx > 0) {
+        offset.current = dx;
+        el.style.transform = `translateX(${dx}px)`;
+        el.style.opacity = String(Math.max(0, 1 - dx / 300));
+      }
+    };
+
+    const onEnd = () => {
+      if (!touch.current) return;
+      const dx = offset.current;
+      const dt = Date.now() - touch.current.t;
+      const velocity = dx / Math.max(1, dt); // px/ms
+
+      el.style.transition = "transform 220ms ease, opacity 180ms ease";
+
+      if (dx > 100 || velocity > 0.4) {
+        // Swipe far enough or fast enough → close
+        el.style.transform = "translateX(100%)";
+        el.style.opacity = "0";
+        setTimeout(onClose, 200);
+      } else {
+        // Snap back
+        el.style.transform = "translateX(0)";
+        el.style.opacity = "1";
+      }
+      touch.current = null;
+      offset.current = 0;
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: true });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+    };
+  }, [ref, onClose, enabled]);
+}
+
 export default function DockDrawer() {
   const [open, setOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
+
+  useSwipeClose(panelRef, () => setOpen(false), open);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -38,6 +107,15 @@ export default function DockDrawer() {
     return () => window.removeEventListener("keydown", onKeyDown as any);
   }, [open]);
 
+  // Reset inline transform/opacity when reopened
+  React.useEffect(() => {
+    if (open && panelRef.current) {
+      panelRef.current.style.transition = "transform 220ms ease, opacity 180ms ease";
+      panelRef.current.style.transform = "translateX(0)";
+      panelRef.current.style.opacity = "1";
+    }
+  }, [open]);
+
   return (
     <>
       <div
@@ -54,8 +132,8 @@ export default function DockDrawer() {
       />
 
       <div
+        ref={panelRef}
         style={isMobile ? {
-          /* ── Mobile: full-screen like a native app ── */
           position: "fixed",
           top: 0, right: 0, bottom: 0, left: 0,
           width: "100%",
@@ -70,7 +148,6 @@ export default function DockDrawer() {
           zIndex: 30000,
           pointerEvents: open ? ("auto" as const) : ("none" as const),
         } : {
-          /* ── Desktop: slide-in panel ── */
           position: "fixed" as const,
           top: 12, right: 12, bottom: 12,
           width: 420,
@@ -93,5 +170,3 @@ export default function DockDrawer() {
     </>
   );
 }
-
-
