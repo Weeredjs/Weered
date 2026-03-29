@@ -296,8 +296,8 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
               {s.title}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: "rgba(252,165,165,.8)", fontWeight: 600 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0, boxShadow: "0 0 6px rgba(34,197,94,.6)" }} />
+              <span style={{ fontSize: 11, color: "rgba(230,235,240,.75)", fontWeight: 600 }}>
                 {s.viewerCount?.toLocaleString()} viewers
               </span>
             </div>
