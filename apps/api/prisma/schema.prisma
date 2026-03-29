@@ -36,7 +36,26 @@ enum ModuleType {
   CUSTOM
   MLB
   PGA
+  NEWS
   NONE
+}
+
+model NewsArticle {
+  id          String   @id @default(cuid())
+  guid        String   @unique
+  url         String
+  title       String
+  description String   @default("")
+  imageUrl    String?
+  source      String
+  sourceIcon  String?
+  category    String
+  publishedAt DateTime
+  fetchedAt   DateTime @default(now())
+  heat        Int      @default(0)
+
+  @@index([category, heat])
+  @@index([publishedAt])
 }
 
 model Lobby {

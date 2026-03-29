@@ -41,6 +41,7 @@ const MODULE_LABELS: Record<string, string> = {
   YOUTUBE: "YouTube",
   FEED: "Feed",
   CUSTOM: "Custom",
+  NEWS: "News",
 };
 
 export default function LobbyHeaderBar({

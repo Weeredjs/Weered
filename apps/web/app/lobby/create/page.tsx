@@ -18,6 +18,7 @@ const MODULE_TYPES = [
   { id: "TWITCH", label: "Twitch", desc: "Live stream integration", icon: "📺" },
   { id: "YOUTUBE", label: "YouTube", desc: "Video sync & watch parties", icon: "▶️" },
   { id: "FEED", label: "Feed", desc: "Community content feed", icon: "📰" },
+  { id: "NEWS", label: "News", desc: "Live news feed from global sources", icon: "🗞️" },
 ];
 
 const ACCENT_PRESETS = [

@@ -2222,6 +2222,135 @@ app.post("/dm/:peerId", async (req, reply) => {
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
 
+  // ── News RSS ingestion worker ─────────────────────────────────────────────
+  const NEWS_FEEDS = [
+    { url: "https://www.cbc.ca/webfeed/rss/rss-topstories",  category: "top",           source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-world",       category: "world",          source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-canada",      category: "canada",         source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-technology",   category: "tech",           source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-business",    category: "business",       source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-sports",      category: "sports",         source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-entertainment",category: "entertainment", source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/world/rss.xml",    category: "world",          source: "BBC World",  icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/technology/rss.xml",category: "tech",          source: "BBC Tech",   icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", category: "science", source: "BBC Science", icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "business",       source: "BBC Business",icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", category: "entertainment", source: "BBC Arts", icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",    source: "Google News", icon: "https://news.google.com/favicon.ico" },
+  ];
+
+  async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {
+    try {
+      const res = await fetch(feedUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0)" } });
+      const xml = await res.text();
+      const items: any[] = [];
+      const itemRx  = /<item>([\s\S]*?)<\/item>/g;
+      const titleRx = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/;
+      const linkRx  = /<link>(?:<!\[CDATA\[)?(https?[^<\s]+?)(?:\]\]>)?<\/link>/;
+      const dateRx  = /<pubDate>(.*?)<\/pubDate>/;
+      const descRx  = /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/;
+      const imgRx1  = /<media:content[^>]+url="([^"]+)"/;
+      const imgRx2  = /<media:thumbnail[^>]+url="([^"]+)"/;
+      const imgRx3  = /<enclosure[^>]+url="([^"]+)"[^>]+type="image/;
+      const imgRx4  = /<img[^>]+src="([^"]+)"/;
+      let m: RegExpExecArray | null;
+      while ((m = itemRx.exec(xml)) !== null) {
+        const block = m[1];
+        const title = titleRx.exec(block)?.[1]?.trim();
+        const link  = linkRx.exec(block)?.[1]?.trim();
+        const dateStr = dateRx.exec(block)?.[1];
+        const desc  = descRx.exec(block)?.[1]?.replace(/<[^>]+>/g, "").trim().slice(0, 250) || "";
+        const img   = imgRx1.exec(block)?.[1] || imgRx2.exec(block)?.[1] || imgRx3.exec(block)?.[1] || imgRx4.exec(block)?.[1] || null;
+        if (!title || !link) continue;
+        const publishedAt = dateStr ? new Date(dateStr) : new Date();
+        items.push({
+          guid: link,
+          url: link,
+          title,
+          description: desc,
+          imageUrl: img,
+          source,
+          sourceIcon,
+          category,
+          publishedAt,
+          heat: recencyScore(publishedAt),
+        });
+      }
+      return items.slice(0, 20);
+    } catch (e) { console.warn(`[news] RSS ${feedUrl} failed:`, e); return []; }
+  }
+
+  const newsCache = new Map<string, { articles: any[]; cachedAt: number }>();
+  const NEWS_CACHE_TTL = 5 * 60 * 1000;
+
+  async function runNewsWorker() {
+    console.log("[news] worker starting fetch...");
+    try {
+      const results = await Promise.allSettled(
+        NEWS_FEEDS.map(f => fetchNewsRss(f.url, f.category, f.source, f.icon))
+      );
+      const all = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
+      const seen = new Set<string>();
+      const deduped = all.filter(a => { if (!a.guid || seen.has(a.guid)) return false; seen.add(a.guid); return true; });
+
+      let upserted = 0;
+      for (const a of deduped) {
+        try {
+          await prisma.newsArticle.upsert({
+            where: { guid: a.guid },
+            update: { heat: a.heat, title: a.title, description: a.description, imageUrl: a.imageUrl },
+            create: a,
+          });
+          upserted++;
+        } catch {}
+      }
+
+      // Purge articles older than 72 hours
+      await prisma.newsArticle.deleteMany({
+        where: { publishedAt: { lt: new Date(Date.now() - 72 * 3600 * 1000) } },
+      });
+
+      newsCache.clear();
+      console.log(`[news] worker done: ${upserted} upserted from ${deduped.length} articles`);
+    } catch (e) { console.error("[news] worker error:", e); }
+  }
+
+  // GET /news/feed?category=top&limit=30
+  app.get("/news/feed", async (req, reply) => {
+    const category = String((req as any).query?.category || "top").toLowerCase();
+    const limit = Math.min(Number((req as any).query?.limit) || 30, 60);
+    const cacheKey = `feed:${category}:${limit}`;
+    const cached = newsCache.get(cacheKey);
+    if (cached && Date.now() - cached.cachedAt < NEWS_CACHE_TTL) {
+      return reply.send({ ok: true, articles: cached.articles, updatedAt: new Date(cached.cachedAt).toISOString() });
+    }
+    const articles = await prisma.newsArticle.findMany({
+      where: { category },
+      orderBy: { heat: "desc" },
+      take: limit,
+    });
+    newsCache.set(cacheKey, { articles, cachedAt: Date.now() });
+    return reply.send({ ok: true, articles, updatedAt: new Date().toISOString() });
+  });
+
+  // GET /news/trending — top 10 across all categories
+  app.get("/news/trending", async (_req, reply) => {
+    const cached = newsCache.get("trending");
+    if (cached && Date.now() - cached.cachedAt < NEWS_CACHE_TTL) {
+      return reply.send({ ok: true, articles: cached.articles });
+    }
+    const articles = await prisma.newsArticle.findMany({
+      orderBy: { heat: "desc" },
+      take: 10,
+    });
+    newsCache.set("trending", { articles, cachedAt: Date.now() });
+    return reply.send({ ok: true, articles });
+  });
+
+  // Start news worker on startup then every 15 minutes
+  runNewsWorker();
+  setInterval(runNewsWorker, 15 * 60 * 1000);
+
   await seedLobbies();
 
   app.listen({ host: "0.0.0.0", port: HTTP_PORT });
