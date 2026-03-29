@@ -233,6 +233,18 @@ $lobbies = @'
     "logoUrl": "https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
   },
   {
+    "id": "pga",
+    "name": "PGA Tour",
+    "description": "Leaderboards, field intel, news, and streams. Every tournament.",
+    "pinned": true,
+    "moduleType": "PGA",
+    "moduleConfig": { "twitchCategory": "Golf", "subreddit": "r/golf" },
+    "keywords": ["pga","golf","masters","pgatour","usopen","theopen","pga championship","ryder cup","tiger","scottie","rory"],
+    "accentColor": "#003B2F",
+    "bannerUrl": "https://a.espncdn.com/photo/2025/0410/r1310123_1296x729_16-9.jpg",
+    "logoUrl": null
+  },
+  {
     "id": "weered.ca",
     "name": "Weered HQ",
     "description": "Platform news, beta feedback, and announcements.",

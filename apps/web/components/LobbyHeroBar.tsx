@@ -8,6 +8,7 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const MODULE_GAME: Record<string, string> = {
   BUNGIE: "Destiny 2",
   MLB: "MLB The Show 25",
+  PGA: "Golf",
 };
 
 interface FeaturedStream {
