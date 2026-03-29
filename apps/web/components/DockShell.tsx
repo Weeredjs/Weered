@@ -61,6 +61,34 @@ function fmtTime(iso: string): string {
   try { return new Date(iso).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); } catch { return ""; }
 }
 
+function fmtRelative(iso: string): string {
+  try {
+    const now = Date.now();
+    const d = new Date(iso).getTime();
+    const diff = now - d;
+    if (diff < 60_000) return "now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    if (d >= yesterday.getTime() && d < today.getTime()) return "Yesterday";
+    if (diff < 604_800_000) return new Date(d).toLocaleDateString("en-US", { weekday: "short" });
+    return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } catch { return ""; }
+}
+
+function fmtDateSep(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const t = d.getTime();
+    if (t >= today.getTime()) return "Today";
+    if (t >= yesterday.getTime()) return "Yesterday";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch { return ""; }
+}
+
 function Avatar({ name, size=32, color, isMe, chosenColor }: { name: string; size?: number; color?: string; isMe?: boolean; chosenColor?: string }) {
   const bg = color || avatarBg(name, isMe, chosenColor);
   return (
@@ -104,7 +132,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const { me, wsReady, wsState, activeRoomId, joinedRoomId, users, msgs, meta, admin, role, joinStatus, sendChat, logout, renameRoom, lockRoom, unlockRoom, knock, admit } = ctx || {};
 
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("friends");
+  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("dms");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
   const [theme, setTheme] = useState<WeeredThemeName>("stone");
@@ -324,37 +352,24 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
     <div style={{...panel, display:"flex", flexDirection:"column"}}>
 
       {/* ── Header ── */}
-      <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
-        {/* Top row */}
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-          <Avatar name={meName} size={34} isMe />
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontWeight:700, fontSize:14, lineHeight:1.2 }}>{meName}</div>
-            <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
-              <StatusDot online={wsUp} />
-              <span style={{ fontSize:11, color:"var(--weered-muted)" }}>
-                {wsUp ? (roomTitle ? roomTitle : "online") : "offline"}
-              </span>
-              {globalRole && <span style={{ fontSize:10, color:"var(--weered-accent-text)", background:"var(--weered-accent-bg)", padding:"1px 6px", borderRadius:999, fontWeight:700 }}>{roleDisplayDock(globalRole)}</span>}
-            </div>
-          </div>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <select value={theme} onChange={e=>setTheme(e.target.value as any)} style={{ background:"rgba(255,255,255,.07)",color:"var(--weered-muted)",border:"1px solid var(--weered-bd)",borderRadius:8,padding:"4px 6px",fontSize:11,outline:"none",cursor:"pointer" }}>
-              <option value="slate">Slate</option>
-              <option value="zinc">Zinc</option>
-              <option value="stone">Stone</option>
-              <option value="gray">Gray</option>
-            </select>
-            {typeof logout==="function" && <button onClick={()=>call(logout)} style={{ padding:"5px 10px",borderRadius:8,border:"1px solid var(--weered-bd)",background:"transparent",color:"var(--weered-muted)",fontSize:11,cursor:"pointer",fontWeight:600 }}>Out</button>}
-            <button onClick={()=>{try{window.dispatchEvent(new CustomEvent("weered:dock:close"));}catch{}}} style={{ width:26,height:26,borderRadius:999,border:"none",background:"rgba(255,255,255,.08)",color:"var(--weered-muted)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
-          </div>
+      <div style={{ padding:"10px 14px 0", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
+        {/* App bar */}
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+          <img src="/brand/logo/weered-logo-32.png" alt="Weered" style={{ width:22, height:22, borderRadius:5 }} />
+          <span style={{ fontWeight:800, fontSize:15, letterSpacing:".02em", color:"var(--weered-text)" }}>Burner</span>
+          <StatusDot online={wsUp} />
+          <span style={{ flex:1 }} />
+          <button onClick={()=>{try{window.dispatchEvent(new CustomEvent("weered:dock:close"));}catch{}}} style={{ width:28,height:28,borderRadius:8,border:"1px solid rgba(255,255,255,.08)",background:"rgba(255,255,255,.04)",color:"var(--weered-muted)",cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.1)";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
+          >×</button>
         </div>
 
         {/* Tabs */}
         <SegmentedControl
           tabs={[
+            {id:"dms",label:"Messages",badge:totalUnread},
             {id:"friends",label:"Friends"},
-            {id:"dms",label:"DMs",badge:totalUnread},
             {id:"room",label:"Room"},
             {id:"crew",label:"Crew"},
           ]}
@@ -440,79 +455,152 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
           </div>
 
         ) : tab==="dms" ? (
-          // ── DMS TAB ──
-          <div style={{ display:"flex", flexDirection:"column", flex:1, height:"100%" }}>
-            {/* Thread list */}
-            <div style={{ padding:"10px 12px", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
-              <div style={{ display:"flex", gap:6 }}>
-                <input value={dmPeer} onChange={e=>setDmPeer((e.target as any).value||"")} placeholder="New message..." style={inputStyle}
-                  onKeyDown={e=>{if((e as any).key==="Enter") void dmCreateThread();}} />
-                <button style={sendBtn} onClick={()=>void dmCreateThread()}>+</button>
-              </div>
-            </div>
-
-            {dmThreads.length>0 && !dmActive && (
-              <div style={{ flex:1, overflowY:"auto" }}>
-                {dmThreads.map(t=>(
-                  <button key={t.peerId} onClick={()=>setDmActivePeerId(t.peerId)} style={{ width:"100%",textAlign:"left",padding:"12px 16px",border:"none",borderBottom:"1px solid var(--weered-bd)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:10 }}>
-                    <Avatar name={t.peerName} size={36} />
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:600, fontSize:13, color:"var(--weered-text)" }}>@{t.peerName}</div>
-                      <div style={{ fontSize:11, color:"var(--weered-muted)", marginTop:1 }}>{t.msgs.length ? t.msgs[t.msgs.length-1].body.slice(0,35)+"..." : "No messages"}</div>
-                    </div>
-                    {t.unread>0 && <UnreadBadge count={t.unread} />}
-                  </button>
-                ))}
-              </div>
-            )}
+          // ── MESSAGES TAB ──
+          <div style={{ display:"flex", flexDirection:"column", flex:1, height:"100%", position:"relative" }}>
 
             {dmActive ? (
               <>
-                {/* Thread header */}
-                <div style={{ padding:"10px 14px", borderBottom:"1px solid var(--weered-bd)", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-                  <button onClick={()=>setDmActivePeerId("")} style={{ background:"none",border:"none",color:"var(--weered-muted)",cursor:"pointer",fontSize:18,padding:"0 4px",lineHeight:1 }}>←</button>
-                  <Avatar name={dmActive.peerName} size={30} />
-                  <span style={{ fontWeight:700, fontSize:14 }}>@{dmActive.peerName}</span>
-                  <button onClick={()=>{setDmThreads(cur=>cur.filter(t=>t.peerId!==dmActive.peerId));setDmActivePeerId("");}} style={{ marginLeft:"auto",background:"none",border:"none",color:"var(--weered-muted)",cursor:"pointer",fontSize:12 }}>Delete</button>
+                {/* Conversation header */}
+                <div style={{ padding:"8px 12px", borderBottom:"1px solid var(--weered-bd)", display:"flex", alignItems:"center", gap:10, flexShrink:0, background:"rgba(255,255,255,.02)" }}>
+                  <button onClick={()=>setDmActivePeerId("")} style={{ background:"none",border:"none",color:"var(--weered-muted)",cursor:"pointer",fontSize:20,padding:"0 4px",lineHeight:1,display:"flex",alignItems:"center" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                  </button>
+                  <div style={{ position:"relative" }}>
+                    <Avatar name={dmActive.peerName} size={30} />
+                    <span style={{ position:"absolute",bottom:-1,right:-1,width:9,height:9,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <span style={{ fontWeight:700, fontSize:14, color:"var(--weered-text)" }}>{dmActive.peerName}</span>
+                  </div>
                 </div>
 
-                {/* Messages */}
-                <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+                {/* Messages with date separators */}
+                <div style={{ flex:1, overflowY:"auto", padding:"10px 14px", display:"flex", flexDirection:"column", gap:3 }}>
                   {dmLoading ? (
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", flex:1 }}>
                       <span style={{ color:"var(--weered-muted)", fontSize:13 }}>Loading...</span>
                     </div>
-                  ) : dmActive.msgs.length ? dmActive.msgs.map(m=>{
+                  ) : dmActive.msgs.length ? dmActive.msgs.map((m,i,arr)=>{
                     const isMe=m.fromId===String(me?.id||"");
+                    const prevMsg=i>0?arr[i-1]:null;
+                    const sameSender=prevMsg&&prevMsg.fromId===m.fromId;
+                    // Date separator
+                    const msgDate=fmtDateSep(m.createdAt);
+                    const prevDate=prevMsg?fmtDateSep(prevMsg.createdAt):"";
+                    const showDateSep=msgDate!==prevDate;
+                    // Show time only on last in a group or every 5 min gap
+                    const nextMsg=i<arr.length-1?arr[i+1]:null;
+                    const sameNext=nextMsg&&nextMsg.fromId===m.fromId;
+                    const timeDiff=nextMsg?new Date(nextMsg.createdAt).getTime()-new Date(m.createdAt).getTime():Infinity;
+                    const showTime=!sameNext||timeDiff>300_000;
+                    // Read receipt on last sent message
+                    const isLastSent=isMe&&(!nextMsg||nextMsg.fromId!==String(me?.id||""));
                     return (
-                      <div key={m.id} style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start" }}>
-                        <div style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
-                          <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{linkify(String(m.body||""))}</div>
+                      <React.Fragment key={m.id}>
+                        {showDateSep && (
+                          <div style={{ display:"flex", alignItems:"center", gap:10, margin:"12px 0 8px" }}>
+                            <div style={{ flex:1, height:1, background:"var(--weered-bd)" }} />
+                            <span style={{ fontSize:10, fontWeight:600, color:"var(--weered-muted)", letterSpacing:".04em", whiteSpace:"nowrap" }}>{msgDate}</span>
+                            <div style={{ flex:1, height:1, background:"var(--weered-bd)" }} />
+                          </div>
+                        )}
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start", marginTop:sameSender&&!showDateSep?1:8 }}>
+                          <div style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
+                            <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{linkify(String(m.body||""))}</div>
+                          </div>
+                          {showTime && (
+                            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:2, padding:"0 4px" }}>
+                              <span style={{ fontSize:10, color:"var(--weered-muted)" }}>{fmtTime(m.createdAt)}</span>
+                              {isLastSent && m.readAt && <span style={{ fontSize:9, color:"var(--weered-accent-text)", fontWeight:600 }}>Read</span>}
+                              {isLastSent && !m.readAt && <span style={{ fontSize:9, color:"var(--weered-muted)" }}>Sent</span>}
+                            </div>
+                          )}
                         </div>
-                        <span style={{ fontSize:10, color:"var(--weered-muted)", marginTop:3 }}>{fmtTime(m.createdAt)}</span>
-                      </div>
+                      </React.Fragment>
                     );
                   }) : (
-                    <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <span style={{ color:"var(--weered-muted)", fontSize:13 }}>Say hello 👋</span>
+                    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8 }}>
+                      <Avatar name={dmActive.peerName} size={56} />
+                      <span style={{ fontSize:14, fontWeight:700, color:"var(--weered-text)" }}>{dmActive.peerName}</span>
+                      <span style={{ color:"var(--weered-muted)", fontSize:12 }}>Start the conversation</span>
                     </div>
                   )}
                   <div ref={dmEndRef} />
                 </div>
 
-                {/* Input */}
-                <div style={{ padding:"10px 12px", borderTop:"1px solid var(--weered-bd)", display:"flex", gap:8, flexShrink:0 }}>
-                  <input ref={dmInputRef} value={dmDraft} onChange={e=>setDmDraft((e.target as any).value||"")} placeholder="Message..." style={inputStyle}
-                    onKeyDown={e=>{if((e as any).key==="Enter"){e.preventDefault();void dmSend();}}} />
-                  <button style={sendBtn} onClick={()=>void dmSend()}>↑</button>
+                {/* Pill input */}
+                <div style={{ padding:"8px 12px 10px", borderTop:"1px solid var(--weered-bd)", flexShrink:0 }}>
+                  <div style={{ position:"relative", display:"flex", alignItems:"center" }}>
+                    <input ref={dmInputRef} value={dmDraft} onChange={e=>setDmDraft((e.target as any).value||"")} placeholder="Message..."
+                      style={{ width:"100%", padding:"10px 42px 10px 16px", borderRadius:22, border:"1px solid var(--weered-bd2)", background:"rgba(255,255,255,.05)", color:"var(--weered-text)", outline:"none", fontSize:13, fontFamily:"inherit" }}
+                      onKeyDown={e=>{if((e as any).key==="Enter"){e.preventDefault();void dmSend();}}} />
+                    {dmDraft.trim() && (
+                      <button onClick={()=>void dmSend()} style={{ position:"absolute", right:6, width:30, height:30, borderRadius:999, border:"none", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </>
-            ) : dmThreads.length===0 ? (
-              <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, padding:24 }}>
-                <span style={{ fontSize:28 }}>💬</span>
-                <span style={{ fontSize:13, color:"var(--weered-muted)", textAlign:"center" as const }}>No conversations yet.<br/>Search for someone above.</span>
-              </div>
-            ) : null}
+            ) : (
+              <>
+                {/* Search / compose bar */}
+                <div style={{ padding:"10px 12px", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <div style={{ flex:1, position:"relative", display:"flex", alignItems:"center" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ position:"absolute", left:10, opacity:.4, pointerEvents:"none" }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
+                      <input value={dmPeer} onChange={e=>setDmPeer((e.target as any).value||"")} placeholder="Search or start new chat..."
+                        style={{ ...inputStyle, paddingLeft:32, borderRadius:22, fontSize:12 }}
+                        onKeyDown={e=>{if((e as any).key==="Enter") void dmCreateThread();}} />
+                    </div>
+                    <button style={{ width:36, height:36, borderRadius:999, border:"1px solid var(--weered-accent-ring)", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18, fontWeight:700 }} onClick={()=>void dmCreateThread()}>+</button>
+                  </div>
+                </div>
+
+                {/* Conversation list */}
+                {dmThreads.length>0 ? (
+                  <div style={{ flex:1, overflowY:"auto" }}>
+                    {[...dmThreads].sort((a,b)=>{
+                      const aTime=a.msgs.length?new Date(a.msgs[a.msgs.length-1].createdAt).getTime():0;
+                      const bTime=b.msgs.length?new Date(b.msgs[b.msgs.length-1].createdAt).getTime():0;
+                      return bTime-aTime;
+                    }).filter(t=>!dmPeer.trim()||t.peerName.toLowerCase().includes(dmPeer.toLowerCase())).map(t=>{
+                      const lastMsg=t.msgs.length?t.msgs[t.msgs.length-1]:null;
+                      const isMyLastMsg=lastMsg&&lastMsg.fromId===String(me?.id||"");
+                      const preview=lastMsg?(isMyLastMsg?"You: ":"")+lastMsg.body.slice(0,40)+(lastMsg.body.length>40?"...":""):"Tap to start chatting";
+                      const time=lastMsg?fmtRelative(lastMsg.createdAt):"";
+                      return (
+                        <button key={t.peerId} onClick={()=>setDmActivePeerId(t.peerId)} style={{ width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderBottom:"1px solid rgba(255,255,255,.04)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"background .1s" }}
+                          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
+                          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
+                        >
+                          <div style={{ position:"relative", flexShrink:0 }}>
+                            <Avatar name={t.peerName} size={42} />
+                            <span style={{ position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                              <span style={{ fontWeight:600, fontSize:13, color:"var(--weered-text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.peerName}</span>
+                              {time && <span style={{ fontSize:10, color:"var(--weered-muted)", flexShrink:0 }}>{time}</span>}
+                            </div>
+                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginTop:2 }}>
+                              <span style={{ fontSize:12, color:"var(--weered-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{preview}</span>
+                              {t.unread>0 && <UnreadBadge count={t.unread} />}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:24 }}>
+                    <img src="/brand/logo/weered-logo-64.png" alt="" style={{ width:48, height:48, opacity:.3, borderRadius:10 }} />
+                    <span style={{ fontSize:14, fontWeight:700, color:"var(--weered-text)", opacity:.5 }}>No messages yet</span>
+                    <span style={{ fontSize:12, color:"var(--weered-muted)", textAlign:"center" }}>Search for someone above to start a conversation</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
         ) : tab==="friends" ? (
