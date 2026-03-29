@@ -236,6 +236,31 @@ button:hover, [role="button"]:hover {
   display: flex !important;
 }
 
+/* Overlay close button — always visible so panel can be dismissed */
+.weered-overlay-close {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 8px 8px 0 auto;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  color: rgba(167,139,250,.6);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.weered-overlay-close:hover {
+  background: rgba(124,58,237,.15);
+  color: rgba(167,139,250,.95);
+  border-color: rgba(124,58,237,.3);
+}
+
 /* ── Overlay panels (slide-in from icon strip click) ───────── */
 .weered-overlay-backdrop {
   position: fixed;
@@ -358,6 +383,9 @@ button:hover, [role="button"]:hover {
 
   /* Touch-friendly targets */
   .weered-icon-strip-btn { width: 44px; height: 44px; }
+
+  /* Allow lobby/room pages to scroll on mobile */
+  .weered-center { overflow: auto !important; height: auto !important; }
 }
 
 @keyframes weeredSlideUp {
