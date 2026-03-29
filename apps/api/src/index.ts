@@ -149,6 +149,7 @@ const SEED_LOBBIES = [
   { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        keywords: ["reddit","news","world","worldnews"],   moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/worldnews" } },
   { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    keywords: ["weered","meta","official","hq"],       moduleType: ModuleType.NONE,    moduleConfig: null },
   { id: "destiny2", name: "Destiny 2 | Bungie.net", description: "Guardians, strikes, raids and loot. Powered by the Bungie API.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"] }, accentColor: "#4F88C6", logoUrl: "https://www.bungie.net/img/logos/bungie-saber-logo.png", bannerUrl: null, websiteUrl: "https://www.bungie.net" },
+  { id: "news", name: "News", description: "Breaking news and headlines from around the world. CBC, BBC, Reuters, and more.", keywords: ["news","breaking","headlines","world","canada","politics","tech","business","science"], moduleType: ModuleType.NEWS, moduleConfig: {}, accentColor: "#DC2626" },
 ];
 
 async function seedLobbies() {
