@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /staff
+Disallow: /onboarding
+Disallow: /auth/
+Disallow: /verify-email
+Disallow: /subscribe
+Disallow: /api/
+
+Sitemap: https://weered.ca/sitemap.xml

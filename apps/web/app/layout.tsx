@@ -14,11 +14,14 @@ import PushPrompt from "../components/PushPrompt";
 import InstallPrompt from "../components/InstallPrompt";
 
 export const metadata = {
-  title: "Weered",
-  description: "Enter the portal",
+  title: {
+    default: "Weered — Real-Time Community Platform",
+    template: "%s | Weered",
+  },
+  description: "Weered is a real-time community platform. Lobbies, rooms, presence, and modules — built for gaming communities and beyond.",
+  metadataBase: new URL("https://weered.ca"),
   icons: {
     icon: [
-      { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
       { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
     ],
     apple: "/brand/logo/weered-logo-128.png",
@@ -26,8 +29,8 @@ export const metadata = {
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "Weered",
-    description: "Enter the portal",
+    title: "Weered — Real-Time Community Platform",
+    description: "Lobbies, rooms, presence, and modules. A community platform that feels like a place, not a product.",
     url: "https://weered.ca",
     siteName: "Weered",
     images: [
@@ -35,21 +38,36 @@ export const metadata = {
         url: "https://weered.ca/brand/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Weered — Enter the portal",
+        alt: "Weered — Real-Time Community Platform",
       },
     ],
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Weered",
-    description: "Enter the portal",
-    images: ["https://weered.ca/og-image.png"],
+    title: "Weered — Real-Time Community Platform",
+    description: "Lobbies, rooms, presence, and modules. Built for gaming communities.",
+    images: ["https://weered.ca/brand/og-image.png"],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Weered",
+  },
+  alternates: {
+    canonical: "https://weered.ca",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -59,10 +77,37 @@ export const viewport = {
   initialScale: 1,
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Weered",
+  url: "https://weered.ca",
+  description: "Real-time community platform with lobbies, rooms, presence, and gaming integrations.",
+  applicationCategory: "SocialNetworkingApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "0",
+    highPrice: "14",
+    priceCurrency: "USD",
+    offerCount: 3,
+  },
+  creator: {
+    "@type": "Organization",
+    name: "Weered",
+    url: "https://weered.ca",
+    logo: "https://weered.ca/brand/logo/weered-logo-512.png",
+  },
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <OverlayProvider>
           <WeeredProvider>
             <ShellGate
