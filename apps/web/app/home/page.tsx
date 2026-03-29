@@ -698,8 +698,6 @@ export default function HomePage() {
       else router.push(`/lobby/${encodeURIComponent(clean)}`);
       return;
     }
-    const normalized = id.startsWith("room:") ? id : `room:${id}`;
-
     // Record visit server-side
     const token = localStorage.getItem("weered_token") ?? "";
     if (token) {
@@ -710,7 +708,7 @@ export default function HomePage() {
       }).catch(() => {});
     }
 
-    try { join?.(normalized); } catch {}
+    try { join?.(clean); } catch {}
     router.push(`/room/${encodeURIComponent(clean)}`);
   }
 

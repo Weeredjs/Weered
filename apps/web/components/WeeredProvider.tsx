@@ -584,7 +584,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     const ridRaw = activeRoomIdRef.current || joinedRoomId || activeRoomId;
     if (!ridRaw) return;
     let rid = ridRaw;
-    try { rid = decodeURIComponent(ridRaw); } catch {}
+    // Strip "room:" prefix for consistency
+    if (rid.startsWith("room:")) rid = rid.slice(5);
+    try { rid = decodeURIComponent(rid); } catch {}
     if (lastJoinedRidRef.current === rid) return;
     lastJoinedRidRef.current = rid;
     try {
@@ -634,8 +636,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }
 
   function join(roomId: string) {
-    const id = roomId.trim();
+    let id = roomId.trim();
     if (!id) return;
+    // Normalize: strip "room:" prefix so IDs are consistent with path-based activeRoomId
+    if (id.startsWith("room:")) id = id.slice(5);
     setActiveRoomId(id);
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
@@ -646,8 +650,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }
 
   function knock(roomId: string) {
-    const id = roomId.trim();
+    let id = roomId.trim();
     if (!id) return;
+    if (id.startsWith("room:")) id = id.slice(5);
     setActiveRoomId(id);
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
