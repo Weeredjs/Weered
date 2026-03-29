@@ -408,6 +408,18 @@ button:hover, [role="button"]:hover {
     flex: 1 1 100% !important;
     order: 10;
   }
+
+  /* Allow bare (non-shell) pages to scroll on mobile */
+  html, body {
+    height: auto !important;
+    overflow: auto !important;
+    overflow-x: hidden !important;
+  }
+  /* Re-contain the shell so it still manages its own scroll */
+  .weered-shell {
+    height: 100vh;
+    overflow: hidden;
+  }
 }
 
 @keyframes weeredSlideUp {
