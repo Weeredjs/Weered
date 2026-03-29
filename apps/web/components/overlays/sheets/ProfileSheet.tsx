@@ -4,6 +4,25 @@ import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
 
+// ─── Theme ──────────────────────────────────────────────────
+const WEERED_THEME_KEY = "weered_theme_v1";
+type WeeredThemeName = "slate" | "zinc" | "stone" | "gray";
+
+const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2: string; bd: string; bd2: string; text: string; muted: string; accentBg: string; accentRing: string; accentText: string; label: string; swatch: string }> = {
+  slate: { bg:"rgb(2,6,23)", panel:"rgba(15,23,42,.92)", panel2:"rgba(17,24,39,.94)", bd:"rgba(148,163,184,.14)", bd2:"rgba(148,163,184,.26)", text:"rgba(229,231,235,.96)", muted:"rgba(148,163,184,.75)", accentBg:"rgba(14,165,233,.18)", accentRing:"rgba(14,165,233,.35)", accentText:"rgba(56,189,248,.95)", label:"Slate", swatch:"#0ea5e9" },
+  zinc:  { bg:"rgb(9,9,11)", panel:"rgba(24,24,27,.92)", panel2:"rgba(24,24,27,.94)", bd:"rgba(161,161,170,.18)", bd2:"rgba(161,161,170,.28)", text:"rgba(244,244,245,.96)", muted:"rgba(161,161,170,.78)", accentBg:"rgba(34,197,94,.16)", accentRing:"rgba(34,197,94,.34)", accentText:"rgba(74,222,128,.95)", label:"Zinc", swatch:"#22c55e" },
+  stone: { bg:"rgb(12,10,9)", panel:"rgba(28,25,23,.92)", panel2:"rgba(28,25,23,.94)", bd:"rgba(168,162,158,.18)", bd2:"rgba(168,162,158,.28)", text:"rgba(245,245,244,.96)", muted:"rgba(168,162,158,.78)", accentBg:"rgba(245,158,11,.16)", accentRing:"rgba(245,158,11,.34)", accentText:"rgba(251,191,36,.95)", label:"Stone", swatch:"#f59e0b" },
+  gray:  { bg:"rgb(3,7,18)", panel:"rgba(17,24,39,.92)", panel2:"rgba(17,24,39,.94)", bd:"rgba(156,163,175,.18)", bd2:"rgba(156,163,175,.28)", text:"rgba(243,244,246,.96)", muted:"rgba(156,163,175,.78)", accentBg:"rgba(20,184,166,.16)", accentRing:"rgba(20,184,166,.34)", accentText:"rgba(45,212,191,.95)", label:"Gray", swatch:"#14b8a6" },
+};
+
+function applyWeeredTheme(name: WeeredThemeName) {
+  if (typeof document === "undefined") return;
+  const t = WEERED_THEMES[name] || WEERED_THEMES.slate;
+  const root = document.documentElement;
+  Object.entries({ "--weered-bg":t.bg,"--weered-panel":t.panel,"--weered-panel2":t.panel2,"--weered-bd":t.bd,"--weered-bd2":t.bd2,"--weered-text":t.text,"--weered-muted":t.muted,"--weered-accent-bg":t.accentBg,"--weered-accent-ring":t.accentRing,"--weered-accent-text":t.accentText }).forEach(([k,v]) => root.style.setProperty(k, v));
+  root.setAttribute("data-weered-theme", name);
+}
+
 // ─── Types ──────────────────────────────────────────────────
 type Profile = {
   id: string;
@@ -325,6 +344,21 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [activeTab,   setActiveTab  ] = useState<"gta" | "gallery" | "color" | "upload">("gta");
   const [uploading,   setUploading  ] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [theme,       setTheme      ] = useState<WeeredThemeName>("stone");
+
+  // Hydrate theme from localStorage
+  useEffect(() => {
+    try {
+      const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
+      if (["slate","zinc","stone","gray"].includes(v)) setTheme(v as WeeredThemeName);
+    } catch {}
+  }, []);
+
+  const changeTheme = (name: WeeredThemeName) => {
+    setTheme(name);
+    try { localStorage.setItem(WEERED_THEME_KEY, name); } catch {}
+    applyWeeredTheme(name);
+  };
 
   // Fetch profile
   useEffect(() => {
@@ -765,6 +799,47 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           <StatCard icon="📅" label="Member" value={joinDate} />
         </div>
       </div>
+
+      {/* ── Theme selector (own profile) ────────────────── */}
+      {isMe && (
+        <div style={section}>
+          <div style={sectionLabel}>Theme</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(Object.keys(WEERED_THEMES) as WeeredThemeName[]).map(name => {
+              const t = WEERED_THEMES[name];
+              const active = theme === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => changeTheme(name)}
+                  style={{
+                    flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    padding: "10px 0", borderRadius: 10,
+                    border: active ? `2px solid ${t.swatch}` : "2px solid rgba(255,255,255,.06)",
+                    background: active ? `${t.swatch}12` : "rgba(255,255,255,.03)",
+                    cursor: "pointer", fontFamily: "inherit",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%",
+                    background: t.swatch,
+                    boxShadow: active ? `0 0 10px ${t.swatch}66` : "none",
+                  }} />
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                    color: active ? t.swatch : "rgba(255,255,255,.35)",
+                  }}>
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Actions (other users) ───────────────────────── */}
       {!isMe && (
