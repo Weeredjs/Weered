@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
+import { useUserHover } from "./UserHoverCard";
 
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
@@ -70,6 +71,13 @@ export default function LobbyChatPanel(
 ) {
   const { replaceTop } = useOverlay();
   const ctx: any = useWeered();
+
+  const { openHover, scheduleClose: hoverClose, card: hoverCard } = useUserHover({
+    onViewProfile: (id) => replaceTop("profile", { userId: id }),
+    onMessage: (id, name) => {
+      try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", peer: { id, name } } })); } catch {}
+    },
+  });
 
   const activeRoomId = String(ctx?.activeRoomId || "");
   const joinedRoomId = String(ctx?.joinedRoomId || "");
@@ -163,6 +171,7 @@ export default function LobbyChatPanel(
   };
 
   return (
+    <>
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...props.style }}>
       {!props.embedded && (
         <div className="flex items-center justify-between mb-2">
@@ -210,7 +219,16 @@ export default function LobbyChatPanel(
                 );
               })()}
               <div style={{ minWidth: 0 }}>
-                <div data-chat-username style={{ fontWeight: 800, fontSize: 13 }}>
+                <div
+                  data-chat-username
+                  style={{ fontWeight: 800, fontSize: 13, cursor: "pointer" }}
+                  onMouseEnter={e => {
+                    const uid = String(m?.user?.id || m?.userId || m?.authorId || "");
+                    const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown");
+                    if (uid) openHover(uid, uname, e.currentTarget as HTMLElement);
+                  }}
+                  onMouseLeave={() => hoverClose(160)}
+                >
                   {String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}
                 </div>
                 <ChatBody text={m?.body || m?.text || ""} />
@@ -321,5 +339,7 @@ export default function LobbyChatPanel(
         </div>
       )}
     </div>
+    {hoverCard}
+    </>
   );
 }

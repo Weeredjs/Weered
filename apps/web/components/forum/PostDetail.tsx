@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./ForumHelpers";
 import { avatarBg } from "../../lib/avatarColor";
+import { useUserHover } from "../UserHoverCard";
+import { useOverlay } from "../overlays/OverlayProvider";
 
 type Author = { name: string; avatar?: string; avatarColor?: string; tier?: string; globalRole?: string } | null;
 type Post = {
@@ -19,11 +21,15 @@ type Comment = {
   author: Author; myVote: number;
 };
 
-function AuthorBadge({ name, author, size = 20 }: { name: string; author: Author; size?: number }) {
+function AuthorBadge({ name, author, size = 20, authorId, onHoverEnter, onHoverLeave }: { name: string; author: Author; size?: number; authorId?: string; onHoverEnter?: (e: React.MouseEvent) => void; onHoverLeave?: () => void }) {
   const aColor = author?.avatarColor || avatarBg(name);
   const tierColor = TIER_COLORS[author?.tier || "INNOCENT"] || "#94a3b8";
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <div
+      style={{ display: "flex", alignItems: "center", gap: 6, cursor: onHoverEnter ? "pointer" : "default" }}
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+    >
       <div style={{
         width: size, height: size, borderRadius: "50%", flexShrink: 0,
         background: author?.avatar ? "transparent" : aColor,
@@ -44,6 +50,14 @@ export default function PostDetail({ postId }: { postId: string }) {
   const router = useRouter();
   const w: any = useWeered();
   const me = w?.me;
+  const { replaceTop } = useOverlay();
+
+  const { openHover, scheduleClose: hoverClose, card: hoverCard } = useUserHover({
+    onViewProfile: (id) => replaceTop("profile", { userId: id }),
+    onMessage: (id, name) => {
+      try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", peer: { id, name } } })); } catch {}
+    },
+  });
 
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -193,7 +207,9 @@ export default function PostDetail({ postId }: { postId: string }) {
             {post.title}
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-            <AuthorBadge name={post.authorName} author={post.author} />
+            <AuthorBadge name={post.authorName} author={post.author} authorId={post.authorId}
+              onHoverEnter={e => openHover(post.authorId, post.authorName, e.currentTarget as HTMLElement)}
+              onHoverLeave={() => hoverClose(160)} />
             <span style={{ fontSize: 10, opacity: 0.35 }}>&middot; {timeAgo(post.createdAt)}</span>
           </div>
           <div style={{ fontSize: 13.5, lineHeight: 1.75, color: "rgba(229,231,235,.78)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
@@ -291,7 +307,9 @@ export default function PostDetail({ postId }: { postId: string }) {
             {/* Comment content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <AuthorBadge name={c.authorName} author={c.author} size={18} />
+                <AuthorBadge name={c.authorName} author={c.author} size={18} authorId={c.authorId}
+                  onHoverEnter={e => openHover(c.authorId, c.authorName, e.currentTarget as HTMLElement)}
+                  onHoverLeave={() => hoverClose(160)} />
                 <span style={{ fontSize: 10, opacity: 0.3 }}>&middot; {timeAgo(c.createdAt)}</span>
                 {(isMod || c.authorId === me?.id) && (
                   <button onClick={() => handleDeleteComment(c.id)} style={{
@@ -313,6 +331,7 @@ export default function PostDetail({ postId }: { postId: string }) {
           </div>
         )}
       </div>
+      {hoverCard}
     </div>
   );
 }
