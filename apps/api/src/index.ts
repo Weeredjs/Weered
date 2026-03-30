@@ -2225,21 +2225,26 @@ app.post("/dm/:peerId", async (req, reply) => {
 
   // ── News RSS ingestion worker ─────────────────────────────────────────────
   const NEWS_FEEDS = [
-    { url: "https://www.cbc.ca/webfeed/rss/rss-topstories",  category: "top",           source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-world",       category: "world",          source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-canada",      category: "canada",         source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-technology",   category: "tech",           source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-business",    category: "business",       source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-sports",      category: "sports",         source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-entertainment",category: "entertainment", source: "CBC News",   icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://feeds.bbci.co.uk/news/world/rss.xml",    category: "world",          source: "BBC World",  icon: "https://www.bbc.co.uk/favicon.ico" },
-    { url: "https://feeds.bbci.co.uk/news/technology/rss.xml",category: "tech",          source: "BBC Tech",   icon: "https://www.bbc.co.uk/favicon.ico" },
+    // CBC (top + world work; others blocked from server)
+    { url: "https://www.cbc.ca/webfeed/rss/rss-topstories",  category: "top",            source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-world",       category: "world",           source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-canada",      category: "canada",          source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-technology",   category: "tech",            source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-business",    category: "business",        source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-sports",      category: "sports",          source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    { url: "https://www.cbc.ca/webfeed/rss/rss-entertainment",category: "entertainment",  source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
+    // BBC (reliable, always works)
+    { url: "https://feeds.bbci.co.uk/news/world/rss.xml",    category: "world",           source: "BBC World",   icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/technology/rss.xml",category: "tech",           source: "BBC Tech",    icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", category: "science", source: "BBC Science", icon: "https://www.bbc.co.uk/favicon.ico" },
-    { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "business",       source: "BBC Business",icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "business",        source: "BBC Business",icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", category: "entertainment", source: "BBC Arts", icon: "https://www.bbc.co.uk/favicon.ico" },
-    { url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "sports",               source: "BBC Sport",  icon: "https://www.bbc.co.uk/favicon.ico" },
-    { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",    source: "Google News", icon: "https://news.google.com/favicon.ico" },
-    { url: "https://news.google.com/rss/topics/CAAqJQgKIh9DQkFTRVFvSUwyMHZNRFp0Y1RjU0JHVnVMVU5CS0FBUAE?hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/sport/rss.xml",         category: "sports",          source: "BBC Sport",   icon: "https://www.bbc.co.uk/favicon.ico" },
+    // Google News (aggregated, good for top + Canada)
+    { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",     source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    { url: "https://news.google.com/rss/search?q=canada+when:1d&hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    // Reuters
+    { url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best", category: "world", source: "Reuters", icon: "https://www.reuters.com/favicon.ico" },
   ];
 
   async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {
