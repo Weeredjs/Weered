@@ -195,7 +195,22 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
 
       {/* Drawer panel */}
       {mounted && open && (
-        <div className="lobby-chat-drawer">
+        <div
+          className="lobby-chat-drawer"
+          onTouchStart={e => { (e.currentTarget as any)._swipe = { x: e.touches[0].clientX, t: Date.now() }; }}
+          onTouchMove={e => {
+            const s = (e.currentTarget as any)._swipe; if (!s) return;
+            const dx = e.touches[0].clientX - s.x;
+            if (dx > 0) { (e.currentTarget as any)._swipeDx = dx; }
+          }}
+          onTouchEnd={e => {
+            const dx = (e.currentTarget as any)._swipeDx || 0;
+            const dt = Date.now() - ((e.currentTarget as any)._swipe?.t || Date.now());
+            if (dx > 60 || (dx > 20 && dx / Math.max(1, dt) > 0.3)) setOpen(false);
+            (e.currentTarget as any)._swipe = null;
+            (e.currentTarget as any)._swipeDx = 0;
+          }}
+        >
           <div className="lobby-drawer-header">
             <span className="lobby-drawer-title">{title}</span>
             <div className="lobby-drawer-close" onClick={() => setOpen(false)}>✕</div>
