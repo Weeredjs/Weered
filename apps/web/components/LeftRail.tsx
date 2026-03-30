@@ -3,11 +3,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createPortal } from "react-dom";
-
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
+import { useUserHover } from "./UserHoverCard";
 import RoleIcon, { getRoleDisplayName, TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 
@@ -431,52 +430,13 @@ export default function LeftRail() {
   };
 
   // ── Presence popover ───────────────────────────────────────────────────────
-  const [presenceHoverOpen, setPresenceHoverOpen] = useState(false);
-  const [presenceHoverXY, setPresenceHoverXY] = useState({ x: 0, y: 0 });
-  const [presenceHoverName, setPresenceHoverName] = useState("");
-  const [presenceHoverUser, setPresenceHoverUser] = useState<any>(null);
-  const [friendRequestNote, setFriendRequestNote] = useState("");
-
-  const presenceHoverTimer = useRef<any>(null);
-  const presencePopoverRef = useRef<HTMLDivElement | null>(null);
-  const presenceAnchorRef  = useRef<HTMLDivElement | null>(null);
-
-  const HOVER_W = 280;
-  const HOVER_H = 132;
-
-  const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
-  const computeHoverXY = (r: DOMRect) => {
-    const pad = 10;
-    const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-    let x = clamp(r.right + 12, pad, vw - HOVER_W - pad);
-    let y = clamp(r.top + r.height / 2 - HOVER_H / 2, pad, vh - HOVER_H - pad);
-    return { x, y };
-  };
-
-  useEffect(() => {
-    if (!presenceHoverOpen) return;
-    const onDown = (e: MouseEvent) => {
-      const pop = presencePopoverRef.current;
-      const row = presenceAnchorRef.current;
-      const target = e.target as any;
-      if (pop && target && pop.contains(target)) return;
-      if (row && target && row.contains(target)) return;
-      setPresenceHoverOpen(false); setPresenceHoverUser(null);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setPresenceHoverOpen(false); setPresenceHoverUser(null); }
-    };
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => { window.removeEventListener("mousedown", onDown); window.removeEventListener("keydown", onKey); };
-  }, [presenceHoverOpen]);
-
-  const scheduleClose = (ms = 140) => {
-    if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current);
-    presenceHoverTimer.current = setTimeout(() => { setPresenceHoverOpen(false); setPresenceHoverUser(null); }, ms);
-  };
-  const cancelClose = () => { if (presenceHoverTimer.current) clearTimeout(presenceHoverTimer.current); };
+  // User hover card (replaces old presence popover)
+  const { openHover, scheduleClose, cancelClose, card: hoverCard } = useUserHover({
+    onViewProfile: (id) => replaceTop("profile", { userId: id }),
+    onMessage: (id, name) => {
+      try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", peer: { id, name } } })); } catch {}
+    },
+  });
 
   // ── Active room info for favs/recents ─────────────────────────────────────
   const activeRoomNorm = normRoomKey(joinedRoomId || activeRoomId || "");
@@ -580,13 +540,8 @@ export default function LeftRail() {
                   const el = e.currentTarget as HTMLElement;
                   el.style.background = you ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.06)";
                   el.style.borderColor = "rgba(255,255,255,0.14)";
-                  const r = el.getBoundingClientRect();
-                  cancelClose();
-                  presenceAnchorRef.current = el as any;
-                  setPresenceHoverXY(computeHoverXY(r));
-                  setPresenceHoverName(nm);
-                  setPresenceHoverUser(u);
-                  setPresenceHoverOpen(true);
+                  const uid = String(u?.id || u?.userId || "");
+                  if (uid) openHover(uid, nm, el);
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLElement;
@@ -653,82 +608,7 @@ export default function LeftRail() {
       </div>
 
       {/* ── Presence popover ──────────────────────────────────────────────── */}
-      {presenceHoverOpen
-        ? createPortal(
-            <div
-              ref={presencePopoverRef}
-              style={{ position: "fixed", left: presenceHoverXY.x, top: presenceHoverXY.y, width: HOVER_W, zIndex: 20000 }}
-              className="rounded-2xl border border-white/10 bg-slate-950/90 shadow-[0_14px_40px_rgba(0,0,0,.45)] backdrop-blur px-3 py-3"
-              onMouseEnter={() => { cancelClose(); setPresenceHoverOpen(true); }}
-              onMouseLeave={() => scheduleClose(180)}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-extrabold tracking-tight leading-tight truncate">
-                    {pickFirstString(presenceHoverUser?.name, presenceHoverUser?.username, presenceHoverName, "User")}
-                  </div>
-                  <div className="text-xs opacity-70">Quick actions</div>
-                </div>
-                <button type="button" className="text-xs rounded-full border border-white/10 bg-white/5 px-2 py-1 hover:bg-white/10"
-                  onClick={() => { setPresenceHoverOpen(false); setPresenceHoverUser(null); }} title="Close">
-                  Esc
-                </button>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button type="button"
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 font-semibold"
-                  onClick={() => {
-                    const uid = String(presenceHoverUser?.id ?? presenceHoverUser?.userId ?? presenceHoverUser?.username ?? presenceHoverName ?? "");
-                    if (!uid) return;
-                    replaceTop("profile", { userId: uid });
-                    setPresenceHoverOpen(false); setPresenceHoverUser(null);
-                  }}>
-                  View profile
-                </button>
-                <button type="button"
-                  className="flex-1 rounded-xl border border-violet-300/25 bg-violet-500/10 px-3 py-2 text-sm hover:bg-violet-500/15 font-semibold text-violet-100"
-                  onClick={() => {
-                    try {
-                      const peerName = String(presenceHoverUser?.name ?? presenceHoverUser?.username ?? presenceHoverName ?? "").trim();
-                      const peerId   = String(presenceHoverUser?.id ?? presenceHoverUser?.userId ?? "").trim();
-                      window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", peer: { id: peerId, name: peerName } } }));
-                    } catch {}
-                    setPresenceHoverOpen(false); setPresenceHoverUser(null);
-                  }}>
-                  Message
-                </button>
-              </div>
-              <div className="mt-2 flex gap-2">
-                <button type="button"
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-                  onClick={() => {
-                    try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {}
-                    setPresenceHoverOpen(false); setPresenceHoverUser(null);
-                  }}>
-                  Dock
-                </button>
-                {presenceHoverUser?.id !== me?.id && (
-                  <button type="button"
-                    className="flex-1 rounded-xl border border-emerald-300/25 bg-emerald-500/10 px-3 py-2 text-sm hover:bg-emerald-500/15 font-semibold text-emerald-200"
-                    onClick={async () => {
-                      const uid = String(presenceHoverUser?.id ?? "").trim();
-                      if (!uid) return;
-                      try {
-                        const r = await fetch(`${API_BASE}/friends/request/${uid}`, { method: "POST", headers: { ...authHeaders() } });
-                        const j = await r.json();
-                        setFriendRequestNote(j.ok ? "Request sent!" : (j.error || "Failed"));
-                      } catch { setFriendRequestNote("Error"); }
-                      setTimeout(() => setFriendRequestNote(""), 3000);
-                    }}>
-                    + Friend
-                  </button>
-                )}
-              </div>
-              {friendRequestNote && <div className="mt-2 text-xs text-center opacity-70">{friendRequestNote}</div>}
-            </div>,
-            document.body
-          )
-        : null}
+      {hoverCard}
 
       {/* ── Favorites + Recents ───────────────────────────────────────────── */}
       <div className="weered-left-section">
