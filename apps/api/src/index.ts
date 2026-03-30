@@ -2427,22 +2427,35 @@ app.post("/dm/:peerId", async (req, reply) => {
         }
         body = blocks.join("\n\n");
 
-        // Extract inline images from the article
+        // Extract inline images — aggressively filter ads/trackers
+        const AD_PATTERNS = [
+          "logo", "icon", "avatar", "1x1", "tracking", "pixel", "beacon",
+          "doubleclick", "googlesyndication", "googleads", "adsystem", "adservice",
+          "amazon-adsystem", "facebook.com/tr", "chartbeat", "scorecardresearch",
+          "taboola", "outbrain", "sharethrough", "sponsor", "promo", "badge",
+          "widget", "button", "banner", "advert", "newsletter", "signup",
+          "data:image", "base64", ".gif", "spacer", "blank", "transparent",
+          "tinyimg", "placeholder", "lazy", "emoji", "smiley",
+        ];
         const imgRx = /<img[^>]+src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*?)["'])?[^>]*>/gi;
         const images: { src: string; alt: string }[] = [];
         let im: RegExpExecArray | null;
         while ((im = imgRx.exec(rawBody)) !== null) {
           const src = im[1];
-          if (src && !src.includes("logo") && !src.includes("icon") && !src.includes("avatar") && !src.includes("1x1") && !src.includes("tracking")) {
-            images.push({ src, alt: im[2] || "" });
-          }
+          if (!src || src.length < 20) continue;
+          const srcLower = src.toLowerCase();
+          if (AD_PATTERNS.some(p => srcLower.includes(p))) continue;
+          // Must be a proper image URL
+          if (!srcLower.startsWith("http") && !srcLower.startsWith("//")) continue;
+          // Skip tiny dimension hints in URL (e.g. 1x1, 2x2)
+          if (/\b[12]x[12]\b/.test(src)) continue;
+          images.push({ src, alt: im[2] || "" });
         }
-        // Inject images between paragraphs
+        // Inject up to 2 images between paragraphs
         if (images.length && body) {
           const paras = body.split("\n\n");
-          const insertAt = Math.min(2, Math.floor(paras.length / 3));
-          for (let i = 0; i < Math.min(images.length, 3); i++) {
-            const pos = insertAt + i * 3;
+          for (let i = 0; i < Math.min(images.length, 2); i++) {
+            const pos = Math.min(2 + i * 4, paras.length);
             if (pos < paras.length) {
               paras.splice(pos, 0, `![${images[i].alt}](${images[i].src})`);
             }
