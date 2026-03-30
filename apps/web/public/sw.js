@@ -1,5 +1,5 @@
 // Weered Service Worker — caching + push notifications
-const CACHE = "weered-v1";
+const CACHE = "weered-v2";
 const SHELL_URLS = ["/home", "/lobby"];
 
 // ── Install: pre-cache app shell ─────────────────────────────────────────
