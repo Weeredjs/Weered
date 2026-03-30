@@ -1,0 +1,348 @@
+"use client";
+
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { avatarBg } from "../lib/avatarColor";
+
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+type Profile = {
+  id: string; name: string; bio: string;
+  notoriety: number; notorietyRank?: string;
+  tier: string; globalRole: string;
+  joinedAt: string; lastSeen: string;
+  roomsHosted: number;
+  avatar?: string; avatarColor?: string;
+};
+
+type GuardianInfo = {
+  displayName: string;
+  characters: {
+    className: string; light: number; raceName: string;
+    emblemBackgroundPath: string | null;
+    dateLastPlayed: string; minutesPlayedTotal: number;
+  }[];
+};
+
+const TIER_CONFIG: Record<string, { color: string; label: string }> = {
+  INNOCENT: { color: "#94a3b8", label: "Innocent" },
+  INDICTED: { color: "#a78bfa", label: "Indicted" },
+  FELON:    { color: "#f97316", label: "Felon" },
+  KINGPIN:  { color: "#eab308", label: "Kingpin" },
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  GOD: "#facc15", ADMIN: "#f87171", STAFF: "#60a5fa", SUPPORT: "#34d399", MOD: "#a78bfa",
+};
+
+function lastSeenText(iso: string): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 2) return "Online now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+function formatPlaytime(mins: number): string {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
+// ── Cache to avoid re-fetching ──────────────────────────────────────────────
+const profileCache = new Map<string, { data: Profile; at: number }>();
+const guardianCache = new Map<string, { data: GuardianInfo | null; at: number }>();
+const CACHE_TTL = 60_000; // 1 min
+
+export type HoverCardPosition = { x: number; y: number };
+
+export interface UserHoverCardProps {
+  userId: string;
+  userName: string;
+  position: HoverCardPosition;
+  lobbyModuleType?: string; // "BUNGIE" to show guardian stats
+  onClose: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onViewProfile?: (userId: string) => void;
+  onMessage?: (userId: string, userName: string) => void;
+}
+
+export default function UserHoverCard({
+  userId, userName, position, lobbyModuleType,
+  onClose, onMouseEnter, onMouseLeave,
+  onViewProfile, onMessage,
+}: UserHoverCardProps) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [guardian, setGuardian] = useState<GuardianInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Fetch profile
+  useEffect(() => {
+    if (!userId) return;
+    const cached = profileCache.get(userId);
+    if (cached && Date.now() - cached.at < CACHE_TTL) {
+      setProfile(cached.data);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const token = localStorage.getItem("weered_token") || "";
+    fetch(`${API}/profile/${userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(d => {
+        if (d && !d.error) {
+          setProfile(d);
+          profileCache.set(userId, { data: d, at: Date.now() });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  // Fetch Bungie guardian if in Destiny lobby
+  useEffect(() => {
+    if (lobbyModuleType !== "BUNGIE" || !profile?.name) return;
+    const cached = guardianCache.get(profile.name);
+    if (cached && Date.now() - cached.at < CACHE_TTL) {
+      setGuardian(cached.data);
+      return;
+    }
+    fetch(`${API}/bungie/player/${encodeURIComponent(profile.name)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.ok && d.found && d.characters?.length) {
+          const info: GuardianInfo = { displayName: d.player?.displayName || profile.name, characters: d.characters };
+          setGuardian(info);
+          guardianCache.set(profile.name, { data: info, at: Date.now() });
+        } else {
+          guardianCache.set(profile.name, { data: null, at: Date.now() });
+        }
+      })
+      .catch(() => {});
+  }, [lobbyModuleType, profile?.name]);
+
+  // Clamp position to viewport
+  const [pos, setPos] = useState(position);
+  useEffect(() => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    let { x, y } = position;
+    if (x + rect.width > window.innerWidth - 12) x = window.innerWidth - rect.width - 12;
+    if (y + rect.height > window.innerHeight - 12) y = window.innerHeight - rect.height - 12;
+    if (x < 12) x = 12;
+    if (y < 12) y = 12;
+    setPos({ x, y });
+  }, [position, profile, guardian]);
+
+  const tier = TIER_CONFIG[profile?.tier || "INNOCENT"] || TIER_CONFIG.INNOCENT;
+  const roleColor = ROLE_COLORS[profile?.globalRole || ""] || null;
+  const aColor = profile?.avatarColor || avatarBg(userName);
+  const lastSeen = profile?.lastSeen ? lastSeenText(profile.lastSeen) : null;
+  const isOnline = lastSeen === "Online now";
+
+  return createPortal(
+    <div
+      ref={cardRef}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{
+        position: "fixed",
+        left: pos.x, top: pos.y,
+        width: 280,
+        background: "rgba(12,12,20,.95)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        border: `1px solid ${tier.color}25`,
+        borderRadius: 14,
+        boxShadow: `0 16px 48px rgba(0,0,0,.6), 0 0 20px ${tier.color}10`,
+        zIndex: 99999,
+        overflow: "hidden",
+        fontFamily: FONT,
+        color: "rgba(243,244,246,.92)",
+        animation: "hoverCardIn 0.15s ease",
+      }}
+    >
+      <style>{`@keyframes hoverCardIn { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
+
+      {/* Tier banner */}
+      <div style={{
+        height: 36, background: `linear-gradient(135deg, ${tier.color}12, transparent 60%)`,
+        borderBottom: `1px solid ${tier.color}15`,
+        position: "relative",
+      }}>
+        <div style={{
+          position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+          fontSize: 8, fontWeight: 900, letterSpacing: "2px", textTransform: "uppercase",
+          color: tier.color, opacity: 0.4,
+        }}>
+          {tier.label}
+        </div>
+      </div>
+
+      {/* Avatar + name */}
+      <div style={{ padding: "0 14px", marginTop: -18 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 8 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: profile?.avatar ? "transparent" : aColor,
+            border: `2px solid ${tier.color}`,
+            boxShadow: `0 0 10px ${tier.color}30`,
+            overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0,
+          }}>
+            {profile?.avatar ? (
+              <img src={profile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : userName[0]?.toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{profile?.name || userName}</span>
+              {isOnline && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />}
+            </div>
+            <div style={{ fontSize: 9, opacity: 0.35, marginTop: 1 }}>
+              {lastSeen && !isOnline && lastSeen}
+              {profile?.globalRole && profile.globalRole !== "USER" && (
+                <span style={{ color: roleColor || "inherit", fontWeight: 700, marginLeft: lastSeen && !isOnline ? 6 : 0 }}>
+                  {profile.globalRole}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bio */}
+        {profile?.bio && (
+          <div style={{
+            fontSize: 11, lineHeight: 1.5, opacity: 0.5, marginBottom: 8,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any,
+            overflow: "hidden",
+          }}>
+            {profile.bio}
+          </div>
+        )}
+
+        {/* Stats row */}
+        {profile && (
+          <div style={{
+            display: "flex", gap: 12, marginBottom: 10, fontSize: 10,
+            padding: "6px 0", borderTop: "1px solid rgba(255,255,255,.04)",
+          }}>
+            <div><span style={{ fontWeight: 800, color: "#D4A017" }}>{profile.notoriety}</span> <span style={{ opacity: 0.35 }}>XP</span></div>
+            <div><span style={{ fontWeight: 800 }}>{profile.roomsHosted}</span> <span style={{ opacity: 0.35 }}>rooms</span></div>
+            {profile.notorietyRank && (
+              <div style={{ marginLeft: "auto", fontWeight: 700, opacity: 0.4, fontStyle: "italic" }}>{(profile as any).notorietyRank}</div>
+            )}
+          </div>
+        )}
+
+        {/* Guardian stats (Destiny lobbies only) */}
+        {guardian && guardian.characters.length > 0 && (
+          <div style={{
+            marginBottom: 10, padding: "8px 10px", borderRadius: 8,
+            background: "rgba(79,136,198,.08)", border: "1px solid rgba(79,136,198,.15)",
+          }}>
+            <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", opacity: 0.4, marginBottom: 6, color: "#4F88C6" }}>
+              Guardian
+            </div>
+            {guardian.characters.slice(0, 3).map((c, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "3px 0",
+                borderBottom: i < Math.min(guardian.characters.length, 3) - 1 ? "1px solid rgba(255,255,255,.04)" : "none",
+              }}>
+                {c.emblemBackgroundPath && (
+                  <img src={c.emblemBackgroundPath} alt="" style={{ width: 32, height: 16, borderRadius: 3, objectFit: "cover" }} />
+                )}
+                <span style={{ fontSize: 11, fontWeight: 700, flex: 1 }}>{c.className}</span>
+                <span style={{ fontSize: 10, opacity: 0.5 }}>{c.raceName}</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 800, color: "#fcd34d",
+                  fontFamily: "monospace",
+                }}>
+                  {c.light}
+                </span>
+              </div>
+            ))}
+            <div style={{ fontSize: 9, opacity: 0.3, marginTop: 4 }}>
+              {formatPlaytime(guardian.characters.reduce((s, c) => s + c.minutesPlayedTotal, 0))} played
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 6, paddingBottom: 12 }}>
+          {onViewProfile && (
+            <button onClick={() => onViewProfile(userId)} style={{
+              flex: 1, padding: "6px 0", borderRadius: 6,
+              border: "1px solid rgba(167,139,250,.2)", background: "rgba(167,139,250,.08)",
+              color: "rgba(167,139,250,.8)", fontSize: 10, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+            }}>
+              Profile
+            </button>
+          )}
+          {onMessage && (
+            <button onClick={() => onMessage(userId, profile?.name || userName)} style={{
+              flex: 1, padding: "6px 0", borderRadius: 6,
+              border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)",
+              color: "rgba(255,255,255,.5)", fontSize: 10, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+            }}>
+              Message
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loading && !profile && (
+        <div style={{ padding: "20px 14px", opacity: 0.3, fontSize: 11 }}>Loading...</div>
+      )}
+    </div>,
+    document.body
+  );
+}
+
+// ── Hook for easy integration ───────────────────────────────────────────────
+
+export function useUserHover(opts?: { lobbyModuleType?: string; onViewProfile?: (id: string) => void; onMessage?: (id: string, name: string) => void }) {
+  const [hover, setHover] = useState<{ userId: string; userName: string; pos: HoverCardPosition } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openHover = useCallback((userId: string, userName: string, el: HTMLElement) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const r = el.getBoundingClientRect();
+    setHover({ userId, userName, pos: { x: r.right + 8, y: r.top } });
+  }, []);
+
+  const scheduleClose = useCallback((ms = 160) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setHover(null), ms);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+
+  const card = hover ? (
+    <UserHoverCard
+      userId={hover.userId}
+      userName={hover.userName}
+      position={hover.pos}
+      lobbyModuleType={opts?.lobbyModuleType}
+      onClose={() => setHover(null)}
+      onMouseEnter={cancelClose}
+      onMouseLeave={() => scheduleClose(180)}
+      onViewProfile={opts?.onViewProfile}
+      onMessage={opts?.onMessage}
+    />
+  ) : null;
+
+  return { openHover, scheduleClose, cancelClose, card };
+}
