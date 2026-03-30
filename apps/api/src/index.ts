@@ -2359,6 +2359,118 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, articles });
   });
 
+  // GET /news/reader?url=... — server-side article extraction (reader mode)
+  const readerCache = new Map<string, { data: any; cachedAt: number }>();
+  const READER_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+  app.get("/news/reader", async (req, reply) => {
+    const url = String((req as any).query?.url || "").trim();
+    if (!url || !url.startsWith("http")) return reply.code(400).send({ ok: false, error: "url required" });
+
+    // Check cache
+    const cached = readerCache.get(url);
+    if (cached && Date.now() - cached.cachedAt < READER_CACHE_TTL) {
+      return reply.send(cached.data);
+    }
+
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0; +https://weered.ca)" },
+        redirect: "follow",
+      });
+      if (!res.ok) return reply.code(502).send({ ok: false, error: "fetch_failed" });
+      const html = await res.text();
+
+      // Extract metadata
+      const ogTitle    = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1]
+                      || html.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/i)?.[1] || "";
+      const ogImage    = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)?.[1]
+                      || html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i)?.[1] || null;
+      const ogDesc     = html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)?.[1]
+                      || html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i)?.[1] || "";
+      const ogSiteName = html.match(/<meta[^>]+property="og:site_name"[^>]+content="([^"]+)"/i)?.[1] || "";
+      const pubDate    = html.match(/<meta[^>]+property="article:published_time"[^>]+content="([^"]+)"/i)?.[1]
+                      || html.match(/<time[^>]+datetime="([^"]+)"/i)?.[1] || null;
+      const author     = html.match(/<meta[^>]+name="author"[^>]+content="([^"]+)"/i)?.[1]
+                      || html.match(/<meta[^>]+property="article:author"[^>]+content="([^"]+)"/i)?.[1] || null;
+
+      // Extract article body — try <article>, then <main>, then largest content block
+      let body = "";
+      const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+      const mainMatch    = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+      const rawBody      = articleMatch?.[1] || mainMatch?.[1] || "";
+
+      if (rawBody) {
+        // Extract paragraphs and headers from the article body
+        const blocks: string[] = [];
+        const blockRx = /<(h[1-6]|p|figcaption|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi;
+        let bm: RegExpExecArray | null;
+        while ((bm = blockRx.exec(rawBody)) !== null) {
+          const tag  = bm[1].toLowerCase();
+          let text = bm[2]
+            .replace(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '$2')
+            .replace(/<[^>]+>/g, "")
+            .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+            .replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+          if (!text || text.length < 10) continue;
+          if (tag.startsWith("h")) {
+            blocks.push(`## ${text}`);
+          } else if (tag === "blockquote") {
+            blocks.push(`> ${text}`);
+          } else {
+            blocks.push(text);
+          }
+        }
+        body = blocks.join("\n\n");
+
+        // Extract inline images from the article
+        const imgRx = /<img[^>]+src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*?)["'])?[^>]*>/gi;
+        const images: { src: string; alt: string }[] = [];
+        let im: RegExpExecArray | null;
+        while ((im = imgRx.exec(rawBody)) !== null) {
+          const src = im[1];
+          if (src && !src.includes("logo") && !src.includes("icon") && !src.includes("avatar") && !src.includes("1x1") && !src.includes("tracking")) {
+            images.push({ src, alt: im[2] || "" });
+          }
+        }
+        // Inject images between paragraphs
+        if (images.length && body) {
+          const paras = body.split("\n\n");
+          const insertAt = Math.min(2, Math.floor(paras.length / 3));
+          for (let i = 0; i < Math.min(images.length, 3); i++) {
+            const pos = insertAt + i * 3;
+            if (pos < paras.length) {
+              paras.splice(pos, 0, `![${images[i].alt}](${images[i].src})`);
+            }
+          }
+          body = paras.join("\n\n");
+        }
+      }
+
+      // Decode HTML entities in extracted fields
+      const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").trim();
+
+      const data = {
+        ok: true,
+        title: decode(ogTitle),
+        description: decode(ogDesc),
+        image: ogImage,
+        siteName: decode(ogSiteName),
+        author: author ? decode(author) : null,
+        publishedAt: pubDate,
+        body: body || decode(ogDesc),
+        url,
+      };
+
+      readerCache.set(url, { data, cachedAt: Date.now() });
+      return reply.send(data);
+    } catch (e) {
+      console.warn("[news] reader failed:", url, e);
+      return reply.code(502).send({ ok: false, error: "extraction_failed" });
+    }
+  });
+
   // Start news worker on startup then every 15 minutes
   runNewsWorker();
   setInterval(runNewsWorker, 15 * 60 * 1000);
