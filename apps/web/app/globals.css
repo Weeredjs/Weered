@@ -465,6 +465,9 @@ button:hover, [role="button"]:hover {
   .weered-hero-content { flex-direction: column !important; min-height: auto !important; padding: 14px 12px !important; gap: 10px !important; }
   .weered-hero-stream { display: none !important; }
 
+  /* Lobby grid: 2 columns on mobile */
+  .weered-lobby-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+
   /* Touch-friendly targets */
   .weered-icon-strip-btn { width: 44px; height: 44px; }
 
