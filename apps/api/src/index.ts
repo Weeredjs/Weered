@@ -2268,7 +2268,7 @@ app.post("/dm/:peerId", async (req, reply) => {
         if (!title || !link) continue;
         const publishedAt = dateStr ? new Date(dateStr) : new Date();
         items.push({
-          guid: link,
+          guid: `${category}::${link}`,
           url: link,
           title,
           description: desc,
