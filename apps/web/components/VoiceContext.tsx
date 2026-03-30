@@ -40,7 +40,7 @@ interface VoiceContextValue {
   cameraOn:         boolean;
   screenShareOn:    boolean;
   errorMsg:         string;
-  connect:          (roomId: string) => Promise<void>;
+  connect:          (roomId: string, opts?: { mic?: boolean }) => Promise<void>;
   disconnect:       () => void;
   toggleMute:       () => void;
   toggleCamera:     () => void;
@@ -104,7 +104,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setTiles(next);
   }, []);
 
-  const connect = useCallback(async (roomId: string) => {
+  const connect = useCallback(async (roomId: string, opts?: { mic?: boolean }) => {
+    const enableMic = opts?.mic !== false; // default true for backward compat
     if (connState === "connected" && activeRoomId === roomId) return;
     if (roomRef.current) {
       roomRef.current.disconnect();
@@ -160,8 +161,23 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       room.on(RoomEvent.ActiveSpeakersChanged,   () => rebuildTiles(room));
       room.on(RoomEvent.TrackMuted,              () => rebuildTiles(room));
       room.on(RoomEvent.TrackUnmuted,            () => rebuildTiles(room));
-      room.on(RoomEvent.LocalTrackPublished,     () => rebuildTiles(room));
-      room.on(RoomEvent.LocalTrackUnpublished,   () => rebuildTiles(room));
+      room.on(RoomEvent.LocalTrackPublished, (pub) => {
+        if (pub.kind === Track.Kind.Video && pub.track) {
+          const el = pub.track.attach() as HTMLVideoElement;
+          el.autoplay = true; el.playsInline = true; el.muted = true;
+          el.style.display = "none";
+          document.body.appendChild(el);
+          videoRefs.current.set(pub.track.sid, el);
+        }
+        rebuildTiles(room);
+      });
+      room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
+        if (pub.kind === Track.Kind.Video && pub.track) {
+          const el = videoRefs.current.get(pub.track.sid);
+          if (el) { el.remove(); videoRefs.current.delete(pub.track.sid); }
+        }
+        rebuildTiles(room);
+      });
       room.on(RoomEvent.Disconnected,            () => {
         setConnState("idle"); setActiveRoomId(null); setTiles([]);
         setCameraOn(false); setScreenShareOn(false);
@@ -170,8 +186,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       });
 
       await room.connect(url, token);
-      try { await room.localParticipant.setMicrophoneEnabled(true); }
-      catch (e: any) { console.warn("Mic unavailable:", e?.message); setMuted(true); }
+      if (enableMic) {
+        try { await room.localParticipant.setMicrophoneEnabled(true); }
+        catch (e: any) { console.warn("Mic unavailable:", e?.message); setMuted(true); }
+      } else {
+        setMuted(true);
+      }
       setConnState("connected"); rebuildTiles(room);
     } catch (e: any) {
       setConnState("error"); setErrorMsg(String(e?.message || e));

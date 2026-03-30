@@ -546,8 +546,11 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
   const { connState, tiles, muted, cameraOn, toggleMute, toggleCamera, connect, disconnect, getVideoElement } = voice;
 
   useEffect(() => {
-    if (connState !== "connected") connect(roomId);
+    if (connState !== "connected") connect(roomId, { mic: false });
   }, [roomId]);
+
+  // Only show camera tiles (not screen share)
+  const cameraTiles = tiles.filter(t => t.hasVideo || !t.hasScreenShare);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", ...style }}>
@@ -569,13 +572,13 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
       <div style={{
         flex: 1, padding: 8, overflow: "auto",
         display: "grid",
-        gridTemplateColumns: tiles.length <= 1 ? "1fr" : tiles.length <= 4 ? "1fr 1fr" : "1fr 1fr 1fr",
+        gridTemplateColumns: cameraTiles.length <= 1 ? "1fr" : cameraTiles.length <= 4 ? "1fr 1fr" : "1fr 1fr 1fr",
         gap: 6, alignContent: "start",
       }}>
-        {tiles.map(t => (
-          <VideoTile key={t.sid} tile={t} getVideoElement={getVideoElement} />
+        {cameraTiles.map(t => (
+          <VideoTile key={t.sid} tile={{ ...t, hasScreenShare: false, screenTrackSid: null }} getVideoElement={getVideoElement} />
         ))}
-        {tiles.length === 0 && (
+        {cameraTiles.length === 0 && (
           <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 24, opacity: 0.3, fontSize: 12 }}>
             {connState === "connecting" ? "Connecting..." : "No participants yet"}
           </div>
@@ -592,7 +595,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
   const { connState, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
 
   useEffect(() => {
-    if (connState !== "connected") connect(roomId);
+    if (connState !== "connected") connect(roomId, { mic: false });
   }, [roomId]);
 
   // Find the screen share presenter
