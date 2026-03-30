@@ -36,6 +36,9 @@ function lobbyHref(id: string): string {
   if (clean.startsWith("room:")) clean = clean.slice(5);
   try { clean = decodeURIComponent(clean); } catch {}
   if (!clean) return "/lobby";
+  // Room prefixes: these are always rooms, never lobbies
+  const ROOM_PREFIXES = ["stream-", "news-", "article-", "watch-"];
+  if (ROOM_PREFIXES.some(p => clean.startsWith(p))) return `/room/${encodeURIComponent(clean)}`;
   // Lobby slugs: lowercase with hyphens/dots (e.g. cnc-generals, weered.ca, r/gaming)
   // Room hashes: mixed-case alphanumeric (e.g. XlKwIz, MwlnQa, 7AE05O)
   const isLobbySlug = /^[a-z][a-z0-9._/-]*$/.test(clean) || clean.includes(".") || clean.includes("/");
