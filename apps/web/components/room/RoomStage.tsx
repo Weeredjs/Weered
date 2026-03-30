@@ -493,7 +493,7 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
       el.style.display = "block";
       el.style.width = "100%";
       el.style.height = "100%";
-      el.style.objectFit = tile.screenTrackSid ? "contain" : "cover";
+      el.style.objectFit = "contain";
       el.style.borderRadius = "8px";
       ref.current.appendChild(el);
     }
@@ -508,7 +508,7 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
     <div style={{
       position: "relative", borderRadius: 10, overflow: "hidden",
       background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.06)",
-      aspectRatio: tile.hasScreenShare ? "16/9" : "4/3",
+      aspectRatio: tile.hasScreenShare ? "16/9" : "16/10",
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       {hasVideo ? (
@@ -544,10 +544,15 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
 function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const { connState, tiles, muted, cameraOn, toggleMute, toggleCamera, connect, disconnect, getVideoElement } = voice;
+  const didConnect = useRef(false);
 
   useEffect(() => {
-    if (connState !== "connected") connect(roomId, { mic: false });
-  }, [roomId]);
+    if (connState === "connected") {
+      didConnect.current = true;
+    } else if (!didConnect.current) {
+      connect(roomId, { mic: false });
+    }
+  }, [roomId, connState]);
 
   // Only show camera tiles (not screen share)
   const cameraTiles = tiles.filter(t => t.hasVideo || !t.hasScreenShare);
@@ -593,10 +598,15 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
 function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const { connState, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
+  const didConnect = useRef(false);
 
   useEffect(() => {
-    if (connState !== "connected") connect(roomId, { mic: false });
-  }, [roomId]);
+    if (connState === "connected") {
+      didConnect.current = true;
+    } else if (!didConnect.current) {
+      connect(roomId, { mic: false });
+    }
+  }, [roomId, connState]);
 
   // Find the screen share presenter
   const presenter = tiles.find(t => t.hasScreenShare);
