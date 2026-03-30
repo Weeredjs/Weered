@@ -810,7 +810,7 @@ export default function HomePage() {
         {lobbies.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
               {lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
 
               {/* Create Your Lobby CTA card */}
@@ -850,7 +850,7 @@ export default function HomePage() {
         {popularRooms.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#128293;" label="Popular Rooms" count={popularRooms.length} sub="active right now" />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
               {popularRooms.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={handleJoin} />)}
             </div>
           </div>
