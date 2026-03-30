@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
+const FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
 type ArticleData = {
   title: string;
   description: string;
@@ -28,11 +30,13 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
   const [article, setArticle] = useState<ArticleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imgOk, setImgOk] = useState(true);
 
   useEffect(() => {
     if (!url) return;
     setLoading(true);
     setError("");
+    setImgOk(true);
     fetch(`${API}/news/reader?url=${encodeURIComponent(url)}`)
       .then(r => r.json())
       .then(d => {
@@ -44,25 +48,21 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
   }, [url]);
 
   if (loading) return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 24, animation: "shimmer 1.5s ease-in-out infinite" }}>
-      <div style={{ height: 200, borderRadius: 12, background: "rgba(255,255,255,.04)" }} />
-      <div style={{ height: 28, width: "80%", borderRadius: 6, background: "rgba(255,255,255,.04)" }} />
-      <div style={{ height: 14, width: "40%", borderRadius: 4, background: "rgba(255,255,255,.03)" }} />
-      <div style={{ height: 14, width: "100%", borderRadius: 4, background: "rgba(255,255,255,.03)" }} />
-      <div style={{ height: 14, width: "95%", borderRadius: 4, background: "rgba(255,255,255,.03)" }} />
-      <div style={{ height: 14, width: "88%", borderRadius: 4, background: "rgba(255,255,255,.03)" }} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 20 }}>
+      {[85, 60, 100, 95, 80, 100, 90].map((w, i) => (
+        <div key={i} style={{ height: i === 0 ? 20 : 13, width: `${w}%`, borderRadius: 4, background: "rgba(255,255,255,.04)", animation: `shimmer 1.5s ease-in-out ${i * 0.1}s infinite` }} />
+      ))}
       <style>{`@keyframes shimmer{0%,100%{opacity:0.3}50%{opacity:0.6}}`}</style>
     </div>
   );
 
   if (error || !article) return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, gap: 12 }}>
-      <div style={{ fontSize: 13, opacity: 0.4 }}>{error || "Could not load article"}</div>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, gap: 10, fontFamily: FONT_STACK }}>
+      <div style={{ fontSize: 12, opacity: 0.4 }}>{error || "Could not load article"}</div>
       <a href={url} target="_blank" rel="noopener noreferrer" style={{
-        padding: "8px 16px", borderRadius: 8,
+        padding: "7px 14px", borderRadius: 8,
         background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)",
-        color: "rgba(167,139,250,.9)", fontSize: 12, fontWeight: 600,
-        textDecoration: "none",
+        color: "rgba(167,139,250,.9)", fontSize: 11, fontWeight: 600, textDecoration: "none",
       }}>
         Open in browser &rarr;
       </a>
@@ -73,74 +73,81 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
     <div style={{
       display: "flex", flexDirection: "column",
       height: "100%", overflow: "hidden",
+      fontFamily: FONT_STACK,
     }}>
-      {/* Top bar */}
+      {/* Compact top bar */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 14px",
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "6px 12px",
         borderBottom: "1px solid rgba(255,255,255,.06)",
-        flexShrink: 0,
-        background: "rgba(255,255,255,.02)",
+        flexShrink: 0, background: "rgba(255,255,255,.02)",
+        fontSize: 10,
       }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity=".5">
-          <rect x="3" y="3" width="18" height="18" rx="3" /><path d="M7 8h10M7 12h6M7 16h8" />
-        </svg>
-        <span style={{ flex: 1, fontSize: 11, fontWeight: 600, opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span style={{ opacity: 0.3 }}>📰</span>
+        <span style={{ flex: 1, opacity: 0.4, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {article.siteName || new URL(url).hostname}
         </span>
         <a href={url} target="_blank" rel="noopener noreferrer" style={{
-          padding: "3px 8px", borderRadius: 6,
+          padding: "2px 7px", borderRadius: 5,
           border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)",
-          color: "rgba(167,139,250,.7)", fontSize: 10, fontWeight: 600,
-          textDecoration: "none",
+          color: "rgba(167,139,250,.7)", fontSize: 10, fontWeight: 600, textDecoration: "none",
         }}>
           Source &rarr;
         </a>
         {onClose && (
           <button onClick={onClose} style={{
-            padding: "3px 8px", borderRadius: 6,
-            border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.04)",
-            color: "rgba(148,163,184,.6)", fontSize: 11, cursor: "pointer",
-            fontFamily: "inherit",
+            padding: "2px 6px", borderRadius: 5, border: "1px solid rgba(255,255,255,.08)",
+            background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.5)",
+            fontSize: 10, cursor: "pointer", fontFamily: "inherit",
           }}>
             &times;
           </button>
         )}
       </div>
 
-      {/* Scrollable article content */}
+      {/* Scrollable article */}
       <div style={{
-        flex: 1, overflowY: "auto", padding: "20px 24px 40px",
+        flex: 1, overflowY: "auto",
+        padding: "16px 20px 32px",
+        maxWidth: 680, width: "100%",
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(255,255,255,.08) transparent",
       }}>
-        {/* Hero image */}
-        {article.image && (
-          <div style={{ marginBottom: 20, borderRadius: 12, overflow: "hidden", maxHeight: 300 }}>
+        {/* Hero image — only if valid */}
+        {article.image && imgOk && (
+          <div style={{ marginBottom: 16, borderRadius: 10, overflow: "hidden" }}>
             <img
               src={article.image}
               alt=""
               referrerPolicy="no-referrer"
-              style={{ width: "100%", height: "auto", maxHeight: 300, objectFit: "cover", display: "block" }}
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+              style={{ width: "100%", height: "auto", maxHeight: 220, objectFit: "cover", display: "block" }}
+              onLoad={e => {
+                const img = e.target as HTMLImageElement;
+                // Hide if image is tiny (tracking pixel) or broken
+                if (img.naturalWidth < 100 || img.naturalHeight < 60) {
+                  setImgOk(false);
+                }
+              }}
+              onError={() => setImgOk(false)}
             />
           </div>
         )}
 
         {/* Title */}
         <h1 style={{
-          fontSize: 22, fontWeight: 900, lineHeight: 1.3,
-          letterSpacing: "-0.3px", margin: "0 0 12px",
+          fontSize: 19, fontWeight: 800, lineHeight: 1.35,
+          letterSpacing: "-0.2px", margin: "0 0 8px",
           color: "rgba(243,244,246,.95)",
+          fontFamily: FONT_STACK,
         }}>
           {article.title}
         </h1>
 
-        {/* Meta */}
+        {/* Meta line */}
         <div style={{
-          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-          fontSize: 11, opacity: 0.45, marginBottom: 24,
-          paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,.06)",
+          display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
+          fontSize: 10, opacity: 0.4, marginBottom: 16,
+          paddingBottom: 12, borderBottom: "1px solid rgba(255,255,255,.06)",
         }}>
           {article.siteName && <span style={{ fontWeight: 700 }}>{article.siteName}</span>}
           {article.author && <><span>&middot;</span><span>{article.author}</span></>}
@@ -148,64 +155,60 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
         </div>
 
         {/* Body */}
-        <div style={{ fontSize: 14, lineHeight: 1.85, color: "rgba(229,231,235,.82)" }}>
+        <div style={{
+          fontSize: 13.5, lineHeight: 1.75, color: "rgba(229,231,235,.78)",
+          fontFamily: FONT_STACK,
+          wordBreak: "break-word",
+        }}>
           {article.body.split("\n\n").map((block, i) => {
-            // Image block: ![alt](src)
+            // Image: ![alt](src)
             const imgMatch = block.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
             if (imgMatch) {
               return (
-                <div key={i} style={{ margin: "20px 0", borderRadius: 10, overflow: "hidden" }}>
+                <div key={i} style={{ margin: "14px 0", borderRadius: 8, overflow: "hidden" }}>
                   <img
-                    src={imgMatch[2]}
-                    alt={imgMatch[1]}
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                    style={{ width: "100%", height: "auto", display: "block", maxHeight: 360, objectFit: "cover" }}
+                    src={imgMatch[2]} alt={imgMatch[1]}
+                    referrerPolicy="no-referrer" loading="lazy"
+                    style={{ width: "100%", height: "auto", display: "block", maxHeight: 260, objectFit: "cover" }}
+                    onLoad={e => { const img = e.target as HTMLImageElement; if (img.naturalWidth < 100) img.parentElement!.style.display = "none"; }}
                     onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
                   />
-                  {imgMatch[1] && (
-                    <div style={{ fontSize: 11, opacity: 0.35, padding: "6px 0", fontStyle: "italic" }}>{imgMatch[1]}</div>
-                  )}
                 </div>
               );
             }
-            // Header block: ## text
             if (block.startsWith("## ")) {
-              return <h2 key={i} style={{ fontSize: 17, fontWeight: 800, margin: "28px 0 12px", color: "rgba(243,244,246,.9)" }}>{block.slice(3)}</h2>;
+              return <h2 key={i} style={{ fontSize: 15, fontWeight: 700, margin: "20px 0 8px", color: "rgba(243,244,246,.88)", fontFamily: FONT_STACK }}>{block.slice(3)}</h2>;
             }
-            // Blockquote: > text
             if (block.startsWith("> ")) {
               return (
                 <blockquote key={i} style={{
-                  margin: "16px 0", padding: "12px 16px",
-                  borderLeft: "3px solid rgba(167,139,250,.4)",
+                  margin: "12px 0", padding: "10px 14px",
+                  borderLeft: "3px solid rgba(167,139,250,.35)",
                   background: "rgba(167,139,250,.04)",
-                  borderRadius: "0 8px 8px 0",
-                  fontStyle: "italic", opacity: 0.8,
+                  borderRadius: "0 6px 6px 0", fontStyle: "italic", opacity: 0.8,
+                  fontSize: 13,
                 }}>
                   {block.slice(2)}
                 </blockquote>
               );
             }
-            // Normal paragraph
-            return <p key={i} style={{ margin: "0 0 16px" }}>{block}</p>;
+            return <p key={i} style={{ margin: "0 0 12px" }}>{block}</p>;
           })}
         </div>
 
         {/* Footer */}
         <div style={{
-          marginTop: 32, paddingTop: 16,
+          marginTop: 20, paddingTop: 12,
           borderTop: "1px solid rgba(255,255,255,.06)",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          <span style={{ fontSize: 10, opacity: 0.25 }}>
-            Extracted from {article.siteName || new URL(url).hostname}
+          <span style={{ fontSize: 9, opacity: 0.2 }}>
+            via {article.siteName || new URL(url).hostname}
           </span>
           <a href={url} target="_blank" rel="noopener noreferrer" style={{
-            padding: "6px 14px", borderRadius: 8,
-            background: "rgba(167,139,250,.1)", border: "1px solid rgba(167,139,250,.2)",
-            color: "rgba(167,139,250,.8)", fontSize: 11, fontWeight: 600,
-            textDecoration: "none",
+            padding: "5px 12px", borderRadius: 6,
+            background: "rgba(167,139,250,.08)", border: "1px solid rgba(167,139,250,.18)",
+            color: "rgba(167,139,250,.7)", fontSize: 10, fontWeight: 600, textDecoration: "none",
           }}>
             Read original &rarr;
           </a>
