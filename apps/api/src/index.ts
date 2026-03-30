@@ -2275,7 +2275,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#x27;/g, "'")
           .replace(/<[^>]+>/g, " ")
           .replace(/https?:\/\/\S+/g, "")
-          .replace(/\s+/g, " ").trim().slice(0, 250);
+          .replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim().slice(0, 250);
         const img   = imgRx4.exec(rawDesc)?.[1] || imgRx1.exec(block)?.[1] || imgRx2.exec(block)?.[1] || imgRx3.exec(block)?.[1] || null;
         if (!title || !link) continue;
         const publishedAt = dateStr ? new Date(dateStr) : new Date();
