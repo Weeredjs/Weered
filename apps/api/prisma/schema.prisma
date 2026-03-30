@@ -98,6 +98,7 @@ model Lobby {
   audit       LobbyAudit[]
   tiers       LobbyTier[]
   events      Event[]
+  forumPosts  ForumPost[]
 }
 
 model LobbyMember {
@@ -732,6 +733,7 @@ model ForumPost {
   title        String
   body         String
   category     ForumCategory @default(DISCUSSION)
+  lobbyId      String?
   authorId     String
   authorName   String        @default("")
   pinned       Boolean       @default(false)
@@ -741,9 +743,12 @@ model ForumPost {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  lobby    Lobby?         @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
   comments ForumComment[]
   votes    ForumVote[]    @relation("PostVotes")
 
+  @@index([lobbyId, createdAt])
+  @@index([lobbyId, score])
   @@index([category, createdAt])
   @@index([score])
   @@index([pinned, createdAt])

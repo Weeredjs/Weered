@@ -28,7 +28,8 @@ const CATS = [
   { id: "ANNOUNCEMENT", label: "News" },
 ];
 
-export default function ForumPage() {
+export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lobbyName?: string } = {}) {
+  const embedded = !!lobbyId;
   const router = useRouter();
   const w: any = useWeered();
   const me = w?.me;
@@ -45,11 +46,12 @@ export default function ForumPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = `sort=${sort}${category ? `&category=${category}` : ""}&limit=25`;
+    let params = `sort=${sort}${category ? `&category=${category}` : ""}&limit=25`;
+    if (lobbyId) params += `&lobbyId=${encodeURIComponent(lobbyId)}`;
     const data = await forumFetch(`/forum/posts?${params}`);
     if (data?.ok) setPosts(data.posts || []);
     setLoading(false);
-  }, [sort, category]);
+  }, [sort, category, lobbyId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -66,7 +68,7 @@ export default function ForumPage() {
     if (!title.trim() || !body.trim()) return;
     setSubmitting(true);
     const data = await forumFetch("/forum/posts", {
-      method: "POST", body: JSON.stringify({ title: title.trim(), body: body.trim(), category: postCat }),
+      method: "POST", body: JSON.stringify({ title: title.trim(), body: body.trim(), category: postCat, lobbyId: lobbyId || undefined }),
     });
     if (data?.ok) {
       setComposing(false);
@@ -77,12 +79,23 @@ export default function ForumPage() {
   }
 
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 16px 60px", fontFamily: FONT }}>
+    <div style={{
+      maxWidth: embedded ? undefined : 780,
+      margin: embedded ? 0 : "0 auto",
+      padding: embedded ? "12px 14px 40px" : "20px 16px 60px",
+      fontFamily: FONT,
+      height: embedded ? "100%" : undefined,
+      overflow: embedded ? "auto" : undefined,
+      scrollbarWidth: "thin" as any,
+      scrollbarColor: "rgba(255,255,255,.08) transparent",
+    }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: embedded ? 12 : 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0, letterSpacing: "-0.3px" }}>Forum</h1>
-          <div style={{ fontSize: 11, opacity: 0.35, marginTop: 2 }}>Bug reports, feature requests, and community discussion</div>
+          <h1 style={{ fontSize: embedded ? 15 : 22, fontWeight: 900, margin: 0, letterSpacing: "-0.3px" }}>
+            {embedded ? (lobbyName || "Community Feed") : "Forum"}
+          </h1>
+          {!embedded && <div style={{ fontSize: 11, opacity: 0.35, marginTop: 2 }}>Bug reports, feature requests, and community discussion</div>}
         </div>
         {me && (
           <button onClick={() => setComposing(true)} style={{

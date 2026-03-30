@@ -2245,7 +2245,10 @@ app.post("/dm/:peerId", async (req, reply) => {
 
     const u = authFromHeader((req as any).headers?.authorization);
 
+    const lobbyId = String((req as any).query?.lobbyId || "").trim() || undefined;
+
     const where: any = {};
+    if (lobbyId) where.lobbyId = lobbyId;
     if (cat && ["BUG_REPORT", "FEATURE_REQUEST", "DISCUSSION", "ANNOUNCEMENT"].includes(cat)) {
       where.category = cat;
     }
@@ -2291,7 +2294,7 @@ app.post("/dm/:peerId", async (req, reply) => {
   app.post("/forum/posts", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
-    const { title, body, category } = (req as any).body || {};
+    const { title, body, category, lobbyId } = (req as any).body || {};
     if (!title?.trim() || !body?.trim()) return reply.code(400).send({ error: "Title and body required" });
     if (title.trim().length > 200) return reply.code(400).send({ error: "Title too long" });
     if (body.trim().length > 10000) return reply.code(400).send({ error: "Body too long" });
@@ -2304,8 +2307,9 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
 
     const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+    const validLobbyId = lobbyId ? String(lobbyId).trim() : null;
     const post = await prisma.forumPost.create({
-      data: { title: title.trim(), body: body.trim(), category: cat as any, authorId: u.id, authorName: user?.name || "Unknown" },
+      data: { title: title.trim(), body: body.trim(), category: cat as any, authorId: u.id, authorName: user?.name || "Unknown", lobbyId: validLobbyId },
     });
     return reply.send({ ok: true, post });
   });

@@ -12,6 +12,7 @@ import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
 import MlbModulesPanel from "../../../components/MlbModulesPanel";
 import PgaModulesPanel from "../../../components/PgaModulesPanel";
 import NewsModulesPanel from "../../../components/NewsModulesPanel";
+import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
@@ -211,7 +212,7 @@ export default function LobbyIdPage() {
           ) : view === "events" ? (
             <LobbyEvents lobbyId={lobbyId} accent={accent} />
           ) : (
-            <LobbyContent lobbyId={lobbyId} />
+            <ForumPage lobbyId={lobbyId} lobbyName={lobbyInfo?.name} />
           )}
           <LobbyTierCards lobbyId={lobbyId} />
         </div>
