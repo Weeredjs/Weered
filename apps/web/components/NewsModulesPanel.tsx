@@ -78,7 +78,7 @@ function HeroStory({ article, accent }: { article: Article; accent: string }) {
       rel="noopener noreferrer"
       style={{
         display: "block", borderRadius: 14, overflow: "hidden",
-        position: "relative", aspectRatio: "16/9", marginBottom: 16,
+        position: "relative", height: 240, marginBottom: 14,
         background: "linear-gradient(135deg, rgba(20,20,30,1), rgba(30,20,40,1))",
         textDecoration: "none", color: "#fff",
         border: "1px solid rgba(255,255,255,.08)",
@@ -141,7 +141,7 @@ function PrimaryCard({ article, accent }: { article: Article; accent: string }) 
       target="_blank"
       rel="noopener noreferrer"
       style={{
-        display: "flex", gap: 12, padding: "12px 14px",
+        display: "flex", gap: 10, padding: "10px 12px",
         borderRadius: 10, background: "rgba(255,255,255,.03)",
         border: "1px solid rgba(255,255,255,.06)",
         textDecoration: "none", color: "inherit",
@@ -184,7 +184,7 @@ function PrimaryCard({ article, accent }: { article: Article; accent: string }) 
       {/* Thumbnail */}
       {article.imageUrl && (
         <div style={{
-          width: 100, height: 72, borderRadius: 8, overflow: "hidden", flexShrink: 0,
+          width: 88, height: 62, borderRadius: 8, overflow: "hidden", flexShrink: 0,
           background: "rgba(255,255,255,.05)",
         }}>
           <img

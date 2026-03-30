@@ -2240,11 +2240,14 @@ app.post("/dm/:peerId", async (req, reply) => {
     { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "business",        source: "BBC Business",icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", category: "entertainment", source: "BBC Arts", icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/sport/rss.xml",         category: "sports",          source: "BBC Sport",   icon: "https://www.bbc.co.uk/favicon.ico" },
-    // Google News (aggregated, good for top + Canada)
-    { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",     source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    // BBC Top Stories + Canada-relevant (these include <media:thumbnail>)
+    { url: "https://feeds.bbci.co.uk/news/rss.xml",              category: "top",            source: "BBC News",    icon: "https://www.bbc.co.uk/favicon.ico" },
+    // CTV + Global (Canadian sources with images)
+    { url: "https://www.ctvnews.ca/rss/ctvnews-ca-top-stories-public-rss-1.822009", category: "canada", source: "CTV News", icon: "https://www.ctvnews.ca/favicon.ico" },
+    { url: "https://globalnews.ca/feed/",                         category: "canada",         source: "Global News", icon: "https://globalnews.ca/favicon.ico" },
+    // Google News (no images but good for headlines)
+    { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",        source: "Google News", icon: "https://news.google.com/favicon.ico" },
     { url: "https://news.google.com/rss/search?q=canada+when:1d&hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "Google News", icon: "https://news.google.com/favicon.ico" },
-    // Reuters
-    { url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best", category: "world", source: "Reuters", icon: "https://www.reuters.com/favicon.ico" },
   ];
 
   async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {
