@@ -2236,6 +2236,25 @@ app.post("/dm/:peerId", async (req, reply) => {
     return map;
   }
 
+  // Forum mod check: global staff OR lobby owner/mod
+  async function canModForumPost(userId: string, post: { lobbyId: string | null; authorId: string }): Promise<{ canDelete: boolean; canLock: boolean; canPin: boolean; canAnnounce: boolean }> {
+    const globalRole = await getGlobalRole(userId);
+    if (canAccessStaff(globalRole)) return { canDelete: true, canLock: true, canPin: true, canAnnounce: true };
+    // Author can delete own posts
+    const isAuthor = post.authorId === userId;
+    if (!post.lobbyId) return { canDelete: isAuthor, canLock: false, canPin: false, canAnnounce: false };
+    // Check lobby role
+    const lobbyRole = await getLobbyRole(userId, post.lobbyId);
+    const isOwner = lobbyRole === LobbyRole.OWNER;
+    const isMod = lobbyRole === LobbyRole.MOD || isOwner;
+    return {
+      canDelete: isAuthor || isMod,
+      canLock: isMod,
+      canPin: isOwner || canAccessStaff(globalRole),
+      canAnnounce: isOwner || canAccessStaff(globalRole),
+    };
+  }
+
   // GET /forum/posts — list posts (paginated, sorted, filtered)
   app.get("/forum/posts", async (req, reply) => {
     const sort = String((req as any).query?.sort || "hot").toLowerCase();
@@ -2302,8 +2321,13 @@ app.post("/dm/:peerId", async (req, reply) => {
     let cat = String(category || "DISCUSSION").toUpperCase();
     if (!["BUG_REPORT", "FEATURE_REQUEST", "DISCUSSION", "ANNOUNCEMENT"].includes(cat)) cat = "DISCUSSION";
     if (cat === "ANNOUNCEMENT") {
-      const canMod = await canAccessStaff(await getGlobalRole(u.id));
-      if (!canMod) cat = "DISCUSSION";
+      const globalRole = await getGlobalRole(u.id);
+      let canAnnounce = canAccessStaff(globalRole);
+      if (!canAnnounce && lobbyId) {
+        const lr = await getLobbyRole(u.id, String(lobbyId).trim());
+        canAnnounce = lr === LobbyRole.OWNER;
+      }
+      if (!canAnnounce) cat = "DISCUSSION";
     }
 
     const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
@@ -2334,14 +2358,16 @@ app.post("/dm/:peerId", async (req, reply) => {
       for (const v of cvs) if (v.commentId) myCommentVotes[v.commentId] = v.value;
     }
 
-    // Check if user is mod
-    const isMod = u ? await canAccessStaff(await getGlobalRole(u.id)) : false;
+    // Check mod permissions (global staff + lobby owner/mod)
+    const modPerms = u ? await canModForumPost(u.id, post) : { canDelete: false, canLock: false, canPin: false, canAnnounce: false };
+    const isMod = modPerms.canLock || modPerms.canPin;
 
     return reply.send({
       ok: true,
       post: { ...post, comments: undefined, author: authorMap[post.authorId] || null, myVote: myPostVote },
       comments: post.comments.map(c => ({ ...c, author: authorMap[c.authorId] || null, myVote: myCommentVotes[c.id] || 0 })),
       isMod,
+      modPerms,
     });
   });
 
@@ -2422,18 +2448,26 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, score: comment?.score || 0 });
   });
 
-  // PATCH /forum/posts/:postId — pin/lock (mod only)
+  // PATCH /forum/posts/:postId — pin/lock (lobby mod/owner or global staff)
   app.patch("/forum/posts/:postId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
-    const canMod = await canAccessStaff(await getGlobalRole(u.id));
-    if (!canMod) return reply.code(403).send({ error: "Forbidden" });
 
     const postId = String((req as any).params?.postId || "");
+    const existing = await prisma.forumPost.findUnique({ where: { id: postId } });
+    if (!existing) return reply.code(404).send({ error: "Post not found" });
+
+    const perms = await canModForumPost(u.id, existing);
     const { pinned, locked } = (req as any).body || {};
     const data: any = {};
-    if (typeof pinned === "boolean") data.pinned = pinned;
-    if (typeof locked === "boolean") data.locked = locked;
+    if (typeof pinned === "boolean") {
+      if (!perms.canPin) return reply.code(403).send({ error: "Only lobby owners and staff can pin" });
+      data.pinned = pinned;
+    }
+    if (typeof locked === "boolean") {
+      if (!perms.canLock) return reply.code(403).send({ error: "Forbidden" });
+      data.locked = locked;
+    }
 
     const post = await prisma.forumPost.update({ where: { id: postId }, data });
     return reply.send({ ok: true, post });
@@ -2447,14 +2481,14 @@ app.post("/dm/:peerId", async (req, reply) => {
     const post = await prisma.forumPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ error: "Post not found" });
 
-    const canMod = await canAccessStaff(await getGlobalRole(u.id));
-    if (!canMod && post.authorId !== u.id) return reply.code(403).send({ error: "Forbidden" });
+    const perms = await canModForumPost(u.id, post);
+    if (!perms.canDelete) return reply.code(403).send({ error: "Forbidden" });
 
     await prisma.forumPost.delete({ where: { id: postId } });
     return reply.send({ ok: true });
   });
 
-  // DELETE /forum/comments/:commentId — delete comment (mod or author)
+  // DELETE /forum/comments/:commentId — delete comment (lobby mod/owner, global staff, or author)
   app.delete("/forum/comments/:commentId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -2462,8 +2496,10 @@ app.post("/dm/:peerId", async (req, reply) => {
     const comment = await prisma.forumComment.findUnique({ where: { id: commentId } });
     if (!comment) return reply.code(404).send({ error: "Comment not found" });
 
-    const canMod = await canAccessStaff(await getGlobalRole(u.id));
-    if (!canMod && comment.authorId !== u.id) return reply.code(403).send({ error: "Forbidden" });
+    // Check via the parent post's lobbyId
+    const parentPost = await prisma.forumPost.findUnique({ where: { id: comment.postId }, select: { lobbyId: true, authorId: true } });
+    const perms = await canModForumPost(u.id, { lobbyId: parentPost?.lobbyId || null, authorId: comment.authorId });
+    if (!perms.canDelete) return reply.code(403).send({ error: "Forbidden" });
 
     await prisma.forumComment.delete({ where: { id: commentId } });
     await prisma.forumPost.update({ where: { id: comment.postId }, data: { commentCount: { decrement: 1 } } });

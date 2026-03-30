@@ -33,6 +33,7 @@ const tiers = [
     features: [
       "Everything in Innocent",
       "Own 1 branded lobby",
+      "Forum moderation for your lobby",
       "Colored username + custom icon",
       "Custom fonts & text color in chat",
       "Unlimited video streaming",
@@ -53,6 +54,7 @@ const tiers = [
     features: [
       "Everything in Indicted",
       "Own up to 3 verified lobbies",
+      "Full forum moderation — pin, lock, delete",
       "Lobby mod tools + custom modules",
       "Verified badge on your lobbies",
       "Direct line to platform support",
