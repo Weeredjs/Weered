@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -70,12 +71,11 @@ const CATEGORIES = [
 
 // ── Hero Story ───────────────────────────────────────────────────────────────
 
-function HeroStory({ article, accent }: { article: Article; accent: string }) {
+function HeroStory({ article, accent, onClick }: { article: Article; accent: string; onClick: () => void }) {
   return (
     <a
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      href="#"
+      onClick={e => { e.preventDefault(); onClick(); }}
       style={{
         display: "block", borderRadius: 14, overflow: "hidden",
         position: "relative", height: 240, marginBottom: 14,
@@ -134,12 +134,11 @@ function HeroStory({ article, accent }: { article: Article; accent: string }) {
 
 // ── Primary Story Card ───────────────────────────────────────────────────────
 
-function PrimaryCard({ article, accent }: { article: Article; accent: string }) {
+function PrimaryCard({ article, accent, onClick }: { article: Article; accent: string; onClick: () => void }) {
   return (
     <a
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      href="#"
+      onClick={e => { e.preventDefault(); onClick(); }}
       style={{
         display: "flex", gap: 10, padding: "10px 12px",
         borderRadius: 10, background: "rgba(255,255,255,.03)",
@@ -203,12 +202,11 @@ function PrimaryCard({ article, accent }: { article: Article; accent: string }) 
 
 // ── Secondary Story Link ─────────────────────────────────────────────────────
 
-function SecondaryLink({ article, accent }: { article: Article; accent: string }) {
+function SecondaryLink({ article, accent, onClick }: { article: Article; accent: string; onClick: () => void }) {
   return (
     <a
-      href={article.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      href="#"
+      onClick={e => { e.preventDefault(); onClick(); }}
       style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "8px 12px", borderRadius: 8,
@@ -234,7 +232,7 @@ function SecondaryLink({ article, accent }: { article: Article; accent: string }
 
 // ── Trending Sidebar ─────────────────────────────────────────────────────────
 
-function TrendingSidebar({ articles, accent }: { articles: Article[]; accent: string }) {
+function TrendingSidebar({ articles, accent, onArticleClick }: { articles: Article[]; accent: string; onArticleClick: (a: Article) => void }) {
   if (!articles.length) return null;
   return (
     <div style={{
@@ -252,9 +250,8 @@ function TrendingSidebar({ articles, accent }: { articles: Article[]; accent: st
       {articles.map((a, i) => (
         <a
           key={a.id}
-          href={a.url}
-          target="_blank"
-          rel="noopener noreferrer"
+          href="#"
+          onClick={e => { e.preventDefault(); onArticleClick(a); }}
           style={{
             display: "flex", alignItems: "flex-start", gap: 10,
             padding: "10px 14px", textDecoration: "none", color: "inherit",
@@ -288,6 +285,86 @@ function TrendingSidebar({ articles, accent }: { articles: Article[]; accent: st
   );
 }
 
+// ── Article Intercept Modal ───────────────────────────────────────────────────
+
+function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
+  article: Article;
+  accent: string;
+  lobbyId: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  function handleReadInRoom() {
+    // Create a room keyed to this article URL hash
+    const hash = article.url.replace(/[^a-zA-Z0-9]/g, "").slice(-12);
+    const roomId = `news-${hash}`;
+    router.push(`/room/${encodeURIComponent(roomId)}?article=${encodeURIComponent(article.url)}&lobby=${encodeURIComponent(lobbyId)}`);
+    onClose();
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,.55)",
+        zIndex: 50000, animation: "fadeIn 0.15s ease",
+      }} />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+        width: "min(420px, 90vw)", background: "var(--weered-panel2, rgb(15,18,28))",
+        border: "1px solid rgba(255,255,255,.1)", borderRadius: 16,
+        padding: 0, zIndex: 50001, overflow: "hidden",
+        boxShadow: "0 24px 80px rgba(0,0,0,.6)",
+        animation: "slideUp 0.2s ease",
+      }}>
+        {/* Hero thumbnail */}
+        {article.imageUrl && (
+          <div style={{ height: 140, overflow: "hidden", position: "relative" }}>
+            <img src={article.imageUrl} alt="" referrerPolicy="no-referrer"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%)" }} />
+          </div>
+        )}
+        {/* Content */}
+        <div style={{ padding: "16px 20px 20px" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.3, marginBottom: 8 }}>
+            {stripHtml(article.title)}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.4, marginBottom: 16 }}>
+            {article.source} &middot; {timeAgo(article.publishedAt)}
+          </div>
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={handleReadInRoom} style={{
+              flex: 1, padding: "11px 0", borderRadius: 10, border: "none",
+              background: `linear-gradient(135deg, ${accent}cc, ${accent}99)`,
+              color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              fontFamily: "inherit", transition: "all 0.15s",
+            }}>
+              Read in Room
+            </button>
+            <a href={article.url} target="_blank" rel="noopener noreferrer" onClick={onClose} style={{
+              flex: 1, padding: "11px 0", borderRadius: 10,
+              border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)",
+              color: "rgba(255,255,255,.6)", fontSize: 13, fontWeight: 600,
+              textDecoration: "none", textAlign: "center",
+              fontFamily: "inherit",
+            }}>
+              Open Source
+            </a>
+          </div>
+        </div>
+      </div>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, -45%) } to { opacity: 1; transform: translate(-50%, -50%) } }
+      `}</style>
+    </>
+  );
+}
+
 // ── Loading skeleton ─────────────────────────────────────────────────────────
 
 function Skeleton() {
@@ -314,6 +391,7 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
   const [articles, setArticles] = useState<Article[]>([]);
   const [trending, setTrending] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [interceptArticle, setInterceptArticle] = useState<Article | null>(null);
 
   const loadFeed = useCallback(async (cat: string) => {
     setLoading(true);
@@ -412,11 +490,11 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
             {/* Main feed column */}
             <div style={{ flex: "1 1 340px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
               {/* Hero */}
-              {hero && <HeroStory article={hero} accent={accent} />}
+              {hero && <HeroStory article={hero} accent={accent} onClick={() => setInterceptArticle(hero)} />}
 
               {/* Primary cards */}
               {primary.map(a => (
-                <PrimaryCard key={a.id} article={a} accent={accent} />
+                <PrimaryCard key={a.id} article={a} accent={accent} onClick={() => setInterceptArticle(a)} />
               ))}
 
               {/* Secondary links */}
@@ -433,7 +511,7 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
                     More Headlines
                   </div>
                   {secondary.map(a => (
-                    <SecondaryLink key={a.id} article={a} accent={accent} />
+                    <SecondaryLink key={a.id} article={a} accent={accent} onClick={() => setInterceptArticle(a)} />
                   ))}
                 </div>
               )}
@@ -441,11 +519,21 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
 
             {/* Trending sidebar */}
             <div style={{ flex: "0 0 220px", minWidth: 180 }}>
-              <TrendingSidebar articles={trending} accent={accent} />
+              <TrendingSidebar articles={trending} accent={accent} onArticleClick={setInterceptArticle} />
             </div>
           </div>
         )}
       </div>
+
+      {/* Article intercept modal */}
+      {interceptArticle && (
+        <ArticleInterceptModal
+          article={interceptArticle}
+          accent={accent}
+          lobbyId={lobbyId}
+          onClose={() => setInterceptArticle(null)}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
+import ArticleReader from "./ArticleReader";
 
 // ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
 
@@ -46,6 +47,7 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
   { id: "youtube", icon: "__youtube__",  label: "YouTube", live: true  },
   { id: "twitch",  icon: "__twitch__", label: "Twitch",  live: true  },
   { id: "browser", icon: "🌐", label: "Browser", live: true  },
+  { id: "article", icon: "📰", label: "Article", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: false },
   { id: "video",   icon: "📹", label: "Video",   live: false },
 ];
@@ -134,6 +136,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       setBrowserInput(serverModule.url);
       setIframeBlocked(false);
     }
+    if (mode === "article" && serverModule.url) {
+      setArticleUrl(serverModule.url);
+    }
   }, [serverModule]);
 
   // ── Module sync: listen for live updates from other users ──
@@ -197,10 +202,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     if (art) {
       const decoded = decodeURIComponent(art);
       setArticleUrl(decoded);
-      setBrowserUrl(decoded);
-      setBrowserInput(decoded);
-      setIframeBlocked(false);
-      setStageMode("browser");
+      selfSetRef.current = true;
+      w?.setModuleState?.("article", { url: decoded });
+      setStageMode("article");
     }
     const twitch = params.get("twitch");
     if (twitch) {
@@ -487,7 +491,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : stageMode === "twitch" ? "clamp(320px, 52vh, 560px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
+        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : stageMode === "twitch" ? "clamp(320px, 52vh, 560px)" : stageMode === "article" ? "clamp(350px, 60vh, 700px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
       >
         {!stageActive && (
           <div className="flex items-center px-4 h-10">
@@ -563,6 +567,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               );
             })()}
           </div>
+        )}
+
+        {/* ── Article reader stage ── */}
+        {stageActive && stageMode === "article" && articleUrl && (
+          <ArticleReader
+            url={articleUrl}
+            onClose={() => { setStageMode(null); setArticleUrl(""); selfSetRef.current = true; w?.setModuleState?.(null); }}
+          />
         )}
 
         {/* ── Twitch stage ── */}
