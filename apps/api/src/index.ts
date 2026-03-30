@@ -2237,7 +2237,9 @@ app.post("/dm/:peerId", async (req, reply) => {
     { url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", category: "science", source: "BBC Science", icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "business",       source: "BBC Business",icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", category: "entertainment", source: "BBC Arts", icon: "https://www.bbc.co.uk/favicon.ico" },
+    { url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "sports",               source: "BBC Sport",  icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",    source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    { url: "https://news.google.com/rss/topics/CAAqJQgKIh9DQkFTRVFvSUwyMHZNRFp0Y1RjU0JHVnVMVU5CS0FBUAE?hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "Google News", icon: "https://news.google.com/favicon.ico" },
   ];
 
   async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {
@@ -2247,8 +2249,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       const items: any[] = [];
       const itemRx  = /<item[^>]*>([\s\S]*?)<\/item>/g;
       const titleRx = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/;
-      const linkRx  = /<link>(?:<!\[CDATA\[)?\s*(https?[^<\s?]*[^<\s]*)(?:\]\]>)?<\/link>/;
-      const linkRx2 = /<link>\s*(https?:\/\/[^<]+?)\s*<\/link>/;
+      const linkRx  = /<link>\s*(?:<!\[CDATA\[)?\s*(https?:\/\/[^<\s]+?)\s*(?:\]\]>)?\s*<\/link>/;
       const dateRx  = /<pubDate>(.*?)<\/pubDate>/;
       const descRx  = /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/;
       const imgRx1  = /<media:content[^>]+url=["']([^"']+)["']/;
@@ -2259,7 +2260,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       while ((m = itemRx.exec(xml)) !== null) {
         const block = m[1];
         const title = titleRx.exec(block)?.[1]?.trim();
-        const link  = linkRx.exec(block)?.[1]?.trim() || linkRx2.exec(block)?.[1]?.trim();
+        const link  = linkRx.exec(block)?.[1]?.trim();
         const dateStr = dateRx.exec(block)?.[1];
         const rawDesc = descRx.exec(block)?.[1] || "";
         const desc  = rawDesc.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/\s+/g, " ").trim().slice(0, 250);

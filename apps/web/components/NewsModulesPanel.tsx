@@ -78,7 +78,7 @@ function HeroStory({ article, accent }: { article: Article; accent: string }) {
       rel="noopener noreferrer"
       style={{
         display: "block", borderRadius: 14, overflow: "hidden",
-        position: "relative", minHeight: 220, marginBottom: 16,
+        position: "relative", aspectRatio: "16/9", marginBottom: 16,
         background: "linear-gradient(135deg, rgba(20,20,30,1), rgba(30,20,40,1))",
         textDecoration: "none", color: "#fff",
         border: "1px solid rgba(255,255,255,.08)",
@@ -340,9 +340,12 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
     return () => clearInterval(iv);
   }, [category, loadFeed, loadTrending]);
 
-  const hero = articles[0] || null;
-  const primary = articles.slice(1, 7);
-  const secondary = articles.slice(7);
+  // Hero = first article with an image; rest flow into primary/secondary
+  const heroIdx = articles.findIndex(a => !!a.imageUrl);
+  const hero = heroIdx >= 0 ? articles[heroIdx] : null;
+  const rest = hero ? [...articles.slice(0, heroIdx), ...articles.slice(heroIdx + 1)] : articles;
+  const primary = rest.slice(0, 6);
+  const secondary = rest.slice(6);
 
   return (
     <div style={{
