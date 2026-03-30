@@ -461,6 +461,10 @@ button:hover, [role="button"]:hover {
   .weered-overlay-panel-left  { left: 0; animation: weeredSlideUp 0.2s cubic-bezier(0.22,1,0.36,1); }
   .weered-overlay-panel-right { right: 0; animation: weeredSlideUp 0.2s cubic-bezier(0.22,1,0.36,1); }
 
+  /* Hero bar: stack vertically, hide stream preview */
+  .weered-hero-content { flex-direction: column !important; min-height: auto !important; padding: 14px 12px !important; gap: 10px !important; }
+  .weered-hero-stream { display: none !important; }
+
   /* Touch-friendly targets */
   .weered-icon-strip-btn { width: 44px; height: 44px; }
 

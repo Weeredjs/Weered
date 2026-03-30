@@ -90,7 +90,7 @@ export default function LobbyHeroBar({
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${accent}55, transparent)` }} />
 
       {/* Content */}
-      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "stretch", padding: "18px 16px", gap: 16, minHeight: hasFeatured ? 196 : 78 }}>
+      <div className="weered-hero-content" style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "stretch", padding: "18px 16px", gap: 16, minHeight: hasFeatured ? 196 : 78 }}>
 
         {/* Left: identity */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 12 }}>
@@ -146,9 +146,9 @@ export default function LobbyHeroBar({
           )}
         </div>
 
-        {/* Right: featured stream */}
+        {/* Right: featured stream — hidden on mobile */}
         {hasFeatured && (
-          <div style={{ width: 215, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div className="weered-hero-stream" style={{ width: 215, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             {streamLoading
               ? <StreamSkeleton accent={accent} />
               : stream
