@@ -718,3 +718,66 @@ model PushSubscription {
   @@index([userId])
 }
 
+// ── Forum ─────────────────────────────────────────────────────────────────────
+
+enum ForumCategory {
+  BUG_REPORT
+  FEATURE_REQUEST
+  DISCUSSION
+  ANNOUNCEMENT
+}
+
+model ForumPost {
+  id           String        @id @default(cuid())
+  title        String
+  body         String
+  category     ForumCategory @default(DISCUSSION)
+  authorId     String
+  authorName   String        @default("")
+  pinned       Boolean       @default(false)
+  locked       Boolean       @default(false)
+  score        Int           @default(0)
+  commentCount Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  comments ForumComment[]
+  votes    ForumVote[]    @relation("PostVotes")
+
+  @@index([category, createdAt])
+  @@index([score])
+  @@index([pinned, createdAt])
+  @@index([authorId])
+}
+
+model ForumComment {
+  id         String   @id @default(cuid())
+  postId     String
+  authorId   String
+  authorName String   @default("")
+  body       String
+  score      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  post  ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  votes ForumVote[] @relation("CommentVotes")
+
+  @@index([postId, createdAt])
+}
+
+model ForumVote {
+  id        String  @id @default(cuid())
+  userId    String
+  postId    String?
+  commentId String?
+  value     Int     // +1 or -1
+
+  post    ForumPost?    @relation("PostVotes", fields: [postId], references: [id], onDelete: Cascade)
+  comment ForumComment? @relation("CommentVotes", fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
+}
+
