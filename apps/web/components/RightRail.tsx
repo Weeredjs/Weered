@@ -652,7 +652,7 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
           <div style={{ fontWeight: 800, fontSize: 13 }}>Control Panel</div>
           <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>context: {resolvedLobbyId}</div>
         </div>
-        <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)", opacity: 0.7 }}>tools</span>
+        {/* tools pill removed — collapse button is in ShellGate */}
       </div>
       <LobbyModPanel globalRole={globalRole || ""} lobbyId={resolvedLobbyId} />
       <RoomsPanel currentRoomId={currentRoomId} lobbyId={resolvedLobbyId} />

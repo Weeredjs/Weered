@@ -308,27 +308,21 @@ export default function ShellGate({
             onClick={toggleRight}
             className="weered-rail-tab weered-rail-tab-glow"
           >
-            {ICO_EXPAND_LEFT}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M15 3v18" /><polyline points="10 8 7 12 10 16" /></svg>
+            <span className="weered-rail-tab-label">Panel</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="2" /><circle cx="12" cy="5" r="2" /><circle cx="12" cy="19" r="2" /></svg>
           </button>
         ) : (
           <aside className="weered-right">
-            {/* Collapse button inside the rail */}
+            {/* Collapse button — prominent, top-right */}
             <button
               type="button"
-              title="Collapse panel"
+              title="Hide panel"
               onClick={toggleRight}
-              style={{
-                position: "absolute", top: 10, right: 10, zIndex: 2,
-                width: 24, height: 24, borderRadius: 6,
-                border: "1px solid rgba(255,255,255,.08)",
-                background: "rgba(255,255,255,.04)",
-                color: "rgba(255,255,255,.4)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", transition: "all 0.15s",
-                padding: 0,
-              }}
+              className="weered-rail-close"
             >
               {ICO_COLLAPSE_RIGHT}
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px" }}>HIDE</span>
             </button>
             {right}
           </aside>
