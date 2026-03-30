@@ -2412,6 +2412,9 @@ app.post("/dm/:peerId", async (req, reply) => {
             .replace(/<[^>]+>/g, "")
             .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
             .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+            .replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/")
+            .replace(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(Number(n)))
+            .replace(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) => String.fromCharCode(parseInt(h, 16)))
             .replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
           if (!text || text.length < 10) continue;
           if (tag.startsWith("h")) {
@@ -2449,7 +2452,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       }
 
       // Decode HTML entities in extracted fields
-      const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").trim();
+      const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/").replace(/&#(\d+);/g, (_,n) => String.fromCharCode(Number(n))).replace(/&#x([0-9a-fA-F]+);/g, (_,h) => String.fromCharCode(parseInt(h,16))).replace(/&nbsp;/g, " ").trim();
 
       const data = {
         ok: true,
