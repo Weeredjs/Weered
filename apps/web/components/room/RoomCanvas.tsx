@@ -55,7 +55,8 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
 // Chat panel dimensions
-const CHAT_WIDTH  = 580;
+const CHAT_WIDTH_DESKTOP = 580;
+const CHAT_WIDTH_MOBILE  = 300;
 const CHAT_HEIGHT = 420;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -68,6 +69,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const { openSheet } = useOverlay();
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>(null);
+
+  // Responsive chat width
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setIsMobile(mq.matches);
+    apply();
+    try { mq.addEventListener("change", apply); return () => mq.removeEventListener("change", apply); }
+    catch { mq.addListener(apply); return () => mq.removeListener(apply); }
+  }, []);
+  const CHAT_WIDTH = isMobile ? CHAT_WIDTH_MOBILE : CHAT_WIDTH_DESKTOP;
 
   // Lobby context for this room
   const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string } | null>(null);
@@ -824,6 +837,19 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {/* Chat panel — fixed height, bottom-anchored, frosted glass, above everything */}
         <div
+          onTouchStart={e => { (e.currentTarget as any)._swipe = { x: e.touches[0].clientX, t: Date.now() }; }}
+          onTouchMove={e => {
+            const s = (e.currentTarget as any)._swipe; if (!s) return;
+            const dx = e.touches[0].clientX - s.x;
+            if (dx > 0) { (e.currentTarget as any)._swipeDx = dx; }
+          }}
+          onTouchEnd={e => {
+            const dx = (e.currentTarget as any)._swipeDx || 0;
+            const dt = Date.now() - ((e.currentTarget as any)._swipe?.t || Date.now());
+            if (dx > 60 || (dx > 20 && dx / Math.max(1, dt) > 0.3)) setChatOpen(false);
+            (e.currentTarget as any)._swipe = null;
+            (e.currentTarget as any)._swipeDx = 0;
+          }}
           style={{
             position: "absolute",
             bottom: 0,
