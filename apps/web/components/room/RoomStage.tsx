@@ -488,17 +488,29 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
 
     const trackSid = tile.videoTrackSid || tile.screenTrackSid;
     if (!trackSid) return;
-    const el = getVideoElement(trackSid);
-    if (el) {
+
+    let el = getVideoElement(trackSid);
+    let retryTimer: any;
+
+    const attach = () => {
+      if (!ref.current) return;
+      el = getVideoElement(trackSid);
+      if (!el) { retryTimer = setTimeout(attach, 200); return; }
       el.style.display = "block";
       el.style.width = "100%";
       el.style.height = "100%";
       el.style.objectFit = "contain";
       el.style.borderRadius = "8px";
       ref.current.appendChild(el);
-    }
+    };
+    attach();
+
     return () => {
-      if (el) { el.style.display = "none"; document.body.appendChild(el); }
+      if (retryTimer) clearTimeout(retryTimer);
+      if (el && el.parentElement === ref.current) {
+        el.style.display = "none";
+        document.body.appendChild(el);
+      }
     };
   }, [tile.videoTrackSid, tile.screenTrackSid, getVideoElement]);
 

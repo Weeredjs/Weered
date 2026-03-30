@@ -75,12 +75,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       const pubs = [...(p.trackPublications?.values() || [])] as TrackPublication[];
       for (const pub of pubs) {
         if (pub.kind === Track.Kind.Video) {
+          // Use track.sid if available (local tracks), fall back to pub.trackSid (remote)
+          const sid = (pub as any).track?.sid || pub.trackSid || null;
           if (pub.source === Track.Source.Camera) {
             hasVideo = !pub.isMuted;
-            videoTrackSid = pub.trackSid || null;
+            videoTrackSid = sid;
           } else if (pub.source === Track.Source.ScreenShare) {
             hasScreenShare = !pub.isMuted;
-            screenTrackSid = pub.trackSid || null;
+            screenTrackSid = sid;
           }
         }
       }
