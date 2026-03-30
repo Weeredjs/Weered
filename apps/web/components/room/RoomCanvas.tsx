@@ -48,8 +48,8 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
   { id: "twitch",  icon: "__twitch__", label: "Twitch",  live: true  },
   { id: "browser", icon: "🌐", label: "Browser", live: true  },
   { id: "article", icon: "📰", label: "Article", live: true  },
-  { id: "screen",  icon: "🖥", label: "Screen",  live: false },
-  { id: "video",   icon: "📹", label: "Video",   live: false },
+  { id: "screen",  icon: "🖥", label: "Screen",  live: true  },
+  { id: "video",   icon: "📹", label: "Video",   live: true  },
 ];
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";

@@ -476,11 +476,179 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
   );
 }
 
+// ─── Video tile ──────────────────────────────────────────────────────────────
+
+function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid: string) => HTMLVideoElement | null }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    // Clear previous
+    while (ref.current.firstChild) ref.current.removeChild(ref.current.firstChild);
+
+    const trackSid = tile.videoTrackSid || tile.screenTrackSid;
+    if (!trackSid) return;
+    const el = getVideoElement(trackSid);
+    if (el) {
+      el.style.display = "block";
+      el.style.width = "100%";
+      el.style.height = "100%";
+      el.style.objectFit = tile.screenTrackSid ? "contain" : "cover";
+      el.style.borderRadius = "8px";
+      ref.current.appendChild(el);
+    }
+    return () => {
+      if (el) { el.style.display = "none"; document.body.appendChild(el); }
+    };
+  }, [tile.videoTrackSid, tile.screenTrackSid, getVideoElement]);
+
+  const hasVideo = tile.hasVideo || tile.hasScreenShare;
+
+  return (
+    <div style={{
+      position: "relative", borderRadius: 10, overflow: "hidden",
+      background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.06)",
+      aspectRatio: tile.hasScreenShare ? "16/9" : "4/3",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {hasVideo ? (
+        <div ref={ref} style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }} />
+      ) : (
+        <div style={{
+          width: 48, height: 48, borderRadius: "50%",
+          background: "rgba(124,58,237,.2)", border: "1px solid rgba(124,58,237,.3)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, fontWeight: 900, color: "rgba(167,139,250,.7)",
+        }}>
+          {tile.name?.[0]?.toUpperCase() || "?"}
+        </div>
+      )}
+      {/* Name label */}
+      <div style={{
+        position: "absolute", bottom: 4, left: 6, right: 6,
+        display: "flex", alignItems: "center", gap: 4,
+        fontSize: 10, fontWeight: 700, color: "#fff",
+        textShadow: "0 1px 4px rgba(0,0,0,.8)",
+      }}>
+        {tile.isSpeaking && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />}
+        {tile.isMuted && <span style={{ opacity: 0.4 }}>🔇</span>}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tile.name}</span>
+        {tile.isLocal && <span style={{ opacity: 0.4 }}>(you)</span>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Video Stage ─────────────────────────────────────────────────────────────
+
+function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
+  const voice = useVoice();
+  const { connState, tiles, muted, cameraOn, toggleMute, toggleCamera, connect, disconnect, getVideoElement } = voice;
+
+  useEffect(() => {
+    if (connState !== "connected") connect(roomId);
+  }, [roomId]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", ...style }}>
+      {/* Controls bar */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+        borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>📹 Video</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>
+        <button onClick={toggleCamera} style={{ ...ctrlBtn, ...(cameraOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : {}) }}>
+          {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
+        </button>
+        <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
+      </div>
+
+      {/* Video grid */}
+      <div style={{
+        flex: 1, padding: 8, overflow: "auto",
+        display: "grid",
+        gridTemplateColumns: tiles.length <= 1 ? "1fr" : tiles.length <= 4 ? "1fr 1fr" : "1fr 1fr 1fr",
+        gap: 6, alignContent: "start",
+      }}>
+        {tiles.map(t => (
+          <VideoTile key={t.sid} tile={t} getVideoElement={getVideoElement} />
+        ))}
+        {tiles.length === 0 && (
+          <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 24, opacity: 0.3, fontSize: 12 }}>
+            {connState === "connecting" ? "Connecting..." : "No participants yet"}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen Share Stage ──────────────────────────────────────────────────────
+
+function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
+  const voice = useVoice();
+  const { connState, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
+
+  useEffect(() => {
+    if (connState !== "connected") connect(roomId);
+  }, [roomId]);
+
+  // Find the screen share presenter
+  const presenter = tiles.find(t => t.hasScreenShare);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", ...style }}>
+      {/* Controls bar */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+        borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>🖥 Screen Share</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>
+        <button onClick={toggleScreenShare} style={{ ...ctrlBtn, ...(screenShareOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : { background: "rgba(34,197,94,.12)", borderColor: "rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }) }}>
+          {screenShareOn ? "🖥 Stop Sharing" : "🖥 Share Screen"}
+        </button>
+        <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
+      </div>
+
+      {/* Screen share view */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
+        {presenter ? (
+          <VideoTile tile={{ ...presenter, hasVideo: false, hasScreenShare: true }} getVideoElement={getVideoElement} />
+        ) : (
+          <div style={{ textAlign: "center", opacity: 0.3 }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🖥</div>
+            <div style={{ fontSize: 13 }}>
+              {connState === "connecting" ? "Connecting..." : screenShareOn ? "You are sharing your screen" : "No one is sharing their screen"}
+            </div>
+            {!screenShareOn && connState === "connected" && (
+              <button onClick={toggleScreenShare} style={{ ...ctrlBtn, marginTop: 12, padding: "8px 20px" }}>
+                Share Your Screen
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const ctrlBtn: React.CSSProperties = {
+  padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,.1)",
+  background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.6)",
+  fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+};
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function RoomStage({ roomId, mode, onClose, style }: Props) {
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "voice")   return <VoiceStage   roomId={roomId} onClose={onClose} style={style} />;
+  if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
+  if (mode === "screen")  return <ScreenStage  roomId={roomId} onClose={onClose} style={style} />;
 
   // Placeholder for future modes
   return (
