@@ -573,7 +573,7 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
   const cameraTiles = tiles.filter(t => t.hasVideo || !t.hasScreenShare);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", ...style }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, ...style }}>
       {/* Controls bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
@@ -627,7 +627,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
   const presenter = tiles.find(t => t.hasScreenShare);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", ...style }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, ...style }}>
       {/* Controls bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
@@ -643,9 +643,9 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
       </div>
 
       {/* Screen share view */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 8, minHeight: 0 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 8, minHeight: 0, position: "relative" }}>
         {presenter ? (
-          <div style={{ width: "100%", height: "100%", maxWidth: "100%", maxHeight: "100%" }}>
+          <div style={{ position: "absolute", inset: 8 }}>
             <VideoTile tile={{ ...presenter, hasVideo: false, hasScreenShare: true }} getVideoElement={getVideoElement} />
           </div>
         ) : (
