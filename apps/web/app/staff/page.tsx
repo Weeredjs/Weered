@@ -1324,15 +1324,37 @@ export default function StaffPage() {
         </div>
       </div>
 
-      {/* Body */}
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}>
+      {/* Mobile nav tabs — horizontal scrollable, hidden on desktop */}
+      <div className="weered-ops-mobile-nav" style={{
+        display: "none", overflowX: "auto", gap: 4, padding: "8px 10px",
+        borderBottom: "1px solid rgba(255,255,255,.07)",
+        scrollbarWidth: "none", flexShrink: 0,
+      }}>
+        {visibleNav.map(item => (
+          <button key={item.id} onClick={() => setNav(item.id)}
+            style={{
+              display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+              borderRadius: 8, border: "none", cursor: "pointer", whiteSpace: "nowrap",
+              background: nav === item.id ? "rgba(124,58,237,.18)" : "transparent",
+              color: nav === item.id ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.6)",
+              fontWeight: nav === item.id ? 700 : 500, fontSize: 12,
+              fontFamily: "inherit", transition: "all .12s",
+            }}>
+            <span style={{ fontSize: 12 }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Left: nav + presence */}
-        <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+      {/* Body */}
+      <div className="weered-ops-body" style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}>
+
+        {/* Left: nav + presence — hidden on mobile */}
+        <div className="weered-ops-sidebar" style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Navigation</div>
           {visibleNav.map(item => (
             <button key={item.id} onClick={() => setNav(item.id)}
-              style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 9, border: "none", cursor: "pointer", textAlign: "left", width: "100%", background: nav === item.id ? "rgba(124,58,237,.15)" : "transparent", color: nav === item.id ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.75)", fontWeight: nav === item.id ? 700 : 400, fontSize: 13, transition: "background .1s" }}>
+              style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 9, border: "none", cursor: "pointer", textAlign: "left", width: "100%", background: nav === item.id ? "rgba(124,58,237,.15)" : "transparent", color: nav === item.id ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.75)", fontWeight: nav === item.id ? 700 : 400, fontSize: 13, fontFamily: "inherit", transition: "background .1s" }}>
               <span style={{ fontSize: 14 }}>{item.icon}</span>
               {item.label}
             </button>
@@ -1367,8 +1389,8 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {/* Right: ops chat */}
-        <div style={{ borderLeft: "1px solid rgba(255,255,255,.07)", display: "flex", flexDirection: "column", minHeight: 0 }}>
+        {/* Right: ops chat — hidden on mobile */}
+        <div className="weered-ops-chat" style={{ borderLeft: "1px solid rgba(255,255,255,.07)", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 13 }}>Ops Chat</div>
             <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>#ops · staff only</div>

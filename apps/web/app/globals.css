@@ -468,6 +468,12 @@ button:hover, [role="button"]:hover {
   /* Lobby grid: 2 columns on mobile */
   .weered-lobby-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
 
+  /* Ops/staff page: horizontal tabs, hide sidebar + chat */
+  .weered-ops-mobile-nav { display: flex !important; }
+  .weered-ops-sidebar { display: none !important; }
+  .weered-ops-chat { display: none !important; }
+  .weered-ops-body { grid-template-columns: 1fr !important; }
+
   /* Touch-friendly targets */
   .weered-icon-strip-btn { width: 44px; height: 44px; }
 
