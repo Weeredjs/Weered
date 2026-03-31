@@ -612,12 +612,13 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
   const { connState, activeRoomId, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
   const screenRef = useRef<HTMLDivElement>(null);
 
-  // Only connect if not already connected to this room
-  useEffect(() => {
+  // Don't auto-connect to voice — only connect when user clicks Share Screen
+  const handleShareScreen = useCallback(async () => {
     if (connState === "idle" || connState === "error") {
-      connect(roomId, { mic: false });
+      await connect(roomId, { mic: false });
     }
-  }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
+    toggleScreenShare();
+  }, [connState, roomId, connect, toggleScreenShare]);
 
   // Find the screen share presenter
   const presenter = tiles.find(t => t.hasScreenShare);
@@ -671,11 +672,13 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
       }}>
         <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>🖥 Screen Share</span>
         <div style={{ flex: 1 }} />
-        <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>
-        <button onClick={toggleScreenShare} style={{ ...ctrlBtn, ...(screenShareOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : { background: "rgba(34,197,94,.12)", borderColor: "rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }) }}>
+        {connState === "connected" && <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>}
+        <button onClick={handleShareScreen} style={{ ...ctrlBtn, ...(screenShareOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : { background: "rgba(34,197,94,.12)", borderColor: "rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }) }}>
           {screenShareOn ? "🖥 Stop Sharing" : "🖥 Share Screen"}
         </button>
-        <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
+        {connState === "connected" && (
+          <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
+        )}
       </div>
 
       {/* Screen share view — fills entire stage */}
