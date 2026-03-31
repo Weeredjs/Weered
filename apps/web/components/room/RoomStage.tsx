@@ -661,11 +661,13 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
   }, [screenSid, getVideoElement]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, ...style }}>
-      {/* Controls bar */}
+    <div style={{ height: "100%", position: "relative", ...style }}>
+      {/* Controls bar — absolute top */}
       <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, zIndex: 2,
         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
-        borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0,
+        borderBottom: "1px solid rgba(255,255,255,.06)",
+        background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
       }}>
         <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>🖥 Screen Share</span>
         <div style={{ flex: 1 }} />
@@ -676,19 +678,18 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
       </div>
 
-      {/* Screen share view — fills all remaining space */}
+      {/* Screen share view — fills entire stage */}
       {presenter ? (
         <div
           ref={screenRef}
           style={{
-            flex: 1, minHeight: 0, position: "relative",
-            background: "rgba(0,0,0,.4)", borderRadius: 10,
-            margin: 8, overflow: "hidden",
-            border: "3px solid blue",
+            position: "absolute", inset: 0,
+            background: "rgba(0,0,0,.4)",
+            overflow: "hidden",
           }}
         />
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", opacity: 0.3 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🖥</div>
             <div style={{ fontSize: 13 }}>
