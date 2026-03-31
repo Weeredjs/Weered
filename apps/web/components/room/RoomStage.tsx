@@ -614,6 +614,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
   const voice = useVoice();
   const { connState, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
   const didConnect = useRef(false);
+  const screenRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (connState === "connected") {
@@ -625,6 +626,42 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
 
   // Find the screen share presenter
   const presenter = tiles.find(t => t.hasScreenShare);
+  const screenSid = presenter?.screenTrackSid;
+
+  // Attach video element directly
+  useEffect(() => {
+    if (!screenRef.current || !screenSid) return;
+    // Clear previous
+    while (screenRef.current.firstChild) screenRef.current.removeChild(screenRef.current.firstChild);
+
+    let el: HTMLVideoElement | null = null;
+    let retryTimer: any;
+    let attempts = 0;
+
+    const attach = () => {
+      if (!screenRef.current) return;
+      el = getVideoElement(screenSid);
+      if (!el) {
+        if (attempts++ < 30) retryTimer = setTimeout(attach, 200);
+        return;
+      }
+      el.style.display = "block";
+      el.style.width = "100%";
+      el.style.height = "100%";
+      el.style.objectFit = "contain";
+      el.style.borderRadius = "8px";
+      screenRef.current.appendChild(el);
+    };
+    attach();
+
+    return () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      if (el && el.parentElement === screenRef.current) {
+        el.style.display = "none";
+        document.body.appendChild(el);
+      }
+    };
+  }, [screenSid, getVideoElement]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, ...style }}>
@@ -642,13 +679,18 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
       </div>
 
-      {/* Screen share view */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 8, minHeight: 0, position: "relative" }}>
-        {presenter ? (
-          <div style={{ position: "absolute", inset: 8 }}>
-            <VideoTile tile={{ ...presenter, hasVideo: false, hasScreenShare: true }} getVideoElement={getVideoElement} />
-          </div>
-        ) : (
+      {/* Screen share view — fills all remaining space */}
+      {presenter ? (
+        <div
+          ref={screenRef}
+          style={{
+            flex: 1, minHeight: 0, padding: 8,
+            background: "rgba(0,0,0,.4)", borderRadius: 10, margin: 8,
+            overflow: "hidden", position: "relative",
+          }}
+        />
+      ) : (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", opacity: 0.3 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🖥</div>
             <div style={{ fontSize: 13 }}>
@@ -660,8 +702,16 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
               </button>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Presenter name */}
+      {presenter && (
+        <div style={{ padding: "4px 16px 8px", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.5)" }}>
+          {presenter.isMuted && <span style={{ opacity: 0.4, marginRight: 4 }}>🔇</span>}
+          {presenter.name}{presenter.isLocal ? " (you)" : ""}
+        </div>
+      )}
     </div>
   );
 }
