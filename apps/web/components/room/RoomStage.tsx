@@ -641,10 +641,11 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         return;
       }
       el.style.display = "block";
+      el.style.position = "absolute";
+      el.style.inset = "0";
       el.style.width = "100%";
       el.style.height = "100%";
       el.style.objectFit = "contain";
-      el.style.borderRadius = "8px";
       screenRef.current.appendChild(el);
     };
     attach();
@@ -653,6 +654,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
       if (retryTimer) clearTimeout(retryTimer);
       if (el && el.parentElement === screenRef.current) {
         el.style.display = "none";
+        el.style.position = "";
         document.body.appendChild(el);
       }
     };
@@ -679,7 +681,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         <div
           ref={screenRef}
           style={{
-            flex: 1, minHeight: 0,
+            flex: 1, minHeight: 0, position: "relative",
             background: "rgba(0,0,0,.4)", borderRadius: 10,
             margin: 8, overflow: "hidden",
           }}
