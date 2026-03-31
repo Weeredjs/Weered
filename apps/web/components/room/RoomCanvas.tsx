@@ -504,7 +504,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           "flex-shrink-0 border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
-        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : stageMode === "twitch" ? "clamp(320px, 52vh, 560px)" : stageMode === "article" ? "clamp(350px, 60vh, 700px)" : "clamp(180px, 35vh, 320px)") : "40px" }}
+        style={{ height: stageActive ? (stageMode === "youtube" ? "clamp(320px, 52vh, 560px)" : stageMode === "browser" ? "clamp(300px, 55vh, 600px)" : stageMode === "twitch" ? "clamp(320px, 52vh, 560px)" : stageMode === "article" ? "clamp(350px, 60vh, 700px)" : undefined) : "40px", flex: stageActive && !["youtube","browser","twitch","article"].includes(stageMode!) ? 1 : undefined, minHeight: stageActive && !["youtube","browser","twitch","article"].includes(stageMode!) ? 0 : undefined }}
       >
         {!stageActive && (
           <div className="flex items-center px-4 h-10">
@@ -642,13 +642,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         clipped by the center column and always paint above the iframe.
         position:relative on this wrapper is the stacking root.
       */}
-      <div className="flex flex-1 min-h-0" style={{ position: "relative", overflow: "visible" }}>
+      <div className={stageActive && !["youtube","browser","twitch","article"].includes(stageMode!) ? "flex min-h-0" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible" }}>
 
         {/* ── Center column — no overflow:hidden so chat can escape ── */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0" style={{ position: "relative" }}>
 
-          {/* Spacer */}
-          <div className="flex-1 min-h-0" />
+          {/* Spacer — collapses when stage fills the space */}
+          {!(stageActive && !["youtube","browser","twitch","article"].includes(stageMode!)) && (
+            <div className="flex-1 min-h-0" />
+          )}
 
           {/* ── Bottom pills — always visible ── */}
           <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(0,0,0,0.15)" }}>
