@@ -681,16 +681,15 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
 
       {/* Screen share view — fills all remaining space */}
       {presenter ? (
-        <div style={{ flex: 1, minHeight: 0, position: "relative", margin: 8 }}>
-          <div
-            ref={screenRef}
-            style={{
-              position: "absolute", inset: 0,
-              background: "rgba(0,0,0,.4)", borderRadius: 10,
-              overflow: "hidden",
-            }}
-          />
-        </div>
+        <div
+          ref={screenRef}
+          style={{
+            width: "100%",
+            height: "calc(100vh - 280px)",
+            background: "rgba(0,0,0,.4)", borderRadius: 10,
+            margin: 8, overflow: "hidden",
+          }}
+        />
       ) : (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", opacity: 0.3 }}>
