@@ -559,15 +559,12 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
 function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const { connState, tiles, muted, cameraOn, toggleMute, toggleCamera, connect, disconnect, getVideoElement } = voice;
-  const didConnect = useRef(false);
 
   useEffect(() => {
-    if (connState === "connected") {
-      didConnect.current = true;
-    } else if (!didConnect.current) {
+    if (connState === "idle" || connState === "error") {
       connect(roomId, { mic: false });
     }
-  }, [roomId, connState]);
+  }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Only show camera tiles (not screen share)
   const cameraTiles = tiles.filter(t => t.hasVideo || !t.hasScreenShare);
@@ -612,17 +609,15 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
 
 function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
-  const { connState, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
-  const didConnect = useRef(false);
+  const { connState, activeRoomId, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
   const screenRef = useRef<HTMLDivElement>(null);
 
+  // Only connect if not already connected to this room
   useEffect(() => {
-    if (connState === "connected") {
-      didConnect.current = true;
-    } else if (!didConnect.current) {
+    if (connState === "idle" || connState === "error") {
       connect(roomId, { mic: false });
     }
-  }, [roomId, connState]);
+  }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Find the screen share presenter
   const presenter = tiles.find(t => t.hasScreenShare);
