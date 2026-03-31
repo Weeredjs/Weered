@@ -6291,14 +6291,10 @@ app.post("/dm/:peerId", async (req, reply) => {
         return reply.send({ ok: true, ...(acct.cardData as any) });
       }
 
-      // Fetch fresh from Bungie
-      const searchRes = await bungieGet(`/Destiny2/SearchDestinyPlayer/-1/${encodeURIComponent(acct.displayName)}/`);
-      const players = searchRes?.Response || [];
-      const player = players[0];
-      if (!player) return reply.send({ ok: false });
-
-      const memberType = player.membershipType;
-      const memberId = player.membershipId;
+      // Use stored membershipId + platform directly (no search needed)
+      if (!acct.externalId || !acct.platform) return reply.send({ ok: false });
+      const memberType = acct.platform;
+      const memberId = acct.externalId;
       const profileRes = await bungieGet(`/Destiny2/${memberType}/Profile/${memberId}/?components=200`);
       const chars = profileRes?.Response?.characters?.data || {};
 
