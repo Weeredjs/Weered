@@ -1574,6 +1574,12 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       // Count rooms hosted (owned)
       const roomsHosted = await prisma.room.count({ where: { ownerId: u.id } });
 
+      // Linked game accounts (public info only)
+      const gameAccounts = await prisma.userGameAccount.findMany({
+        where: { userId: u.id },
+        select: { gameType: true, displayName: true, platform: true, createdAt: true },
+      });
+
       const nRank = getNotorietyRank(u.notoriety ?? 0);
       return reply.send({
         id: u.id,
@@ -1589,6 +1595,12 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
         roomsHosted,
         avatar: u.avatar || null,
         avatarColor: u.avatarColor || null,
+        gameAccounts: gameAccounts.map(a => ({
+          gameType: a.gameType,
+          displayName: a.displayName,
+          platform: a.platform,
+          linkedAt: a.createdAt.toISOString(),
+        })),
       });
     } catch (e) {
       console.error("[profile GET]", e);
