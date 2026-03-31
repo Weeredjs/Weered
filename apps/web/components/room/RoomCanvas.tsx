@@ -502,12 +502,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       {/* ── Stage zone ── */}
       <div
         className={[
-          "border-b border-white/[0.07] transition-all duration-300 ease-in-out overflow-hidden",
+          "border-b border-white/[0.07] overflow-hidden",
+          isFullStageMode ? "" : "transition-all duration-300 ease-in-out",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={(() => {
-          const isFullStage = stageActive && !["youtube","browser","twitch","article"].includes(stageMode!);
-          if (isFullStage) return { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" as const };
+          if (isFullStageMode) return { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" as const };
           if (!stageActive) return { height: "40px", flexShrink: 0 };
           const heights: Record<string, string> = { youtube: "clamp(320px, 52vh, 560px)", browser: "clamp(300px, 55vh, 600px)", twitch: "clamp(320px, 52vh, 560px)", article: "clamp(350px, 60vh, 700px)" };
           return { height: heights[stageMode!] || "clamp(180px, 35vh, 320px)", flexShrink: 0 };
@@ -649,7 +649,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         clipped by the center column and always paint above the iframe.
         position:relative on this wrapper is the stacking root.
       */}
-      <div className={isFullStageMode ? "" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible" }}>
+      <div className={isFullStageMode ? "flex" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible" }}>
 
         {/* ── Center column — no overflow:hidden so chat can escape ── */}
         <div className={isFullStageMode ? "" : "flex flex-col flex-1 min-w-0 min-h-0"} style={{ position: "relative" }}>
