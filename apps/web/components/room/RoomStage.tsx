@@ -679,8 +679,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         <div
           ref={screenRef}
           style={{
-            width: "100%",
-            height: "calc(100vh - 280px)",
+            flex: 1, minHeight: 0,
             background: "rgba(0,0,0,.4)", borderRadius: 10,
             margin: 8, overflow: "hidden",
           }}
