@@ -341,6 +341,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   };
 
   const stageActive = stageMode !== null;
+  const isFullStageMode = stageActive && !["youtube","browser","twitch","article"].includes(stageMode!);
 
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/room/${encodeURIComponent(roomId)}`
@@ -648,13 +649,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         clipped by the center column and always paint above the iframe.
         position:relative on this wrapper is the stacking root.
       */}
-      <div className={stageActive && !["youtube","browser","twitch","article"].includes(stageMode!) ? "flex min-h-0" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible" }}>
+      <div className={isFullStageMode ? "" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible" }}>
 
         {/* ── Center column — no overflow:hidden so chat can escape ── */}
-        <div className="flex flex-col flex-1 min-w-0 min-h-0" style={{ position: "relative" }}>
+        <div className={isFullStageMode ? "" : "flex flex-col flex-1 min-w-0 min-h-0"} style={{ position: "relative" }}>
 
           {/* Spacer — collapses when stage fills the space */}
-          {!(stageActive && !["youtube","browser","twitch","article"].includes(stageMode!)) && (
+          {!isFullStageMode && (
             <div className="flex-1 min-h-0" />
           )}
 
