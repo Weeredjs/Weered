@@ -83,7 +83,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const CHAT_WIDTH = isMobile ? CHAT_WIDTH_MOBILE : CHAT_WIDTH_DESKTOP;
 
   // Lobby context for this room
-  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string } | null>(null);
+  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string } | null>(null);
   const currentLobbyId = w?.currentLobbyId || null;
   useEffect(() => {
     if (!currentLobbyId || currentLobbyId === "lobby") { setLobbyContext(null); return; }
@@ -95,6 +95,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             id: j.lobby.id,
             name: j.lobby.name || j.lobby.id,
             logoUrl: j.lobby.logoUrl || undefined,
+            moduleType: j.lobby.moduleType || undefined,
           });
         }
       })
@@ -523,7 +524,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
           <div style={{ height: "100%" }}>
-            <RoomStage roomId={roomId} mode={stageMode} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
+            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
           </div>
         )}
 

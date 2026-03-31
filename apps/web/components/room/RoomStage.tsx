@@ -19,6 +19,7 @@ export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "
 interface Props {
   roomId: string;
   mode: StageMode;
+  moduleType?: string;
   onClose: () => void;
   style?: React.CSSProperties;
 }
@@ -347,14 +348,154 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   );
 }
 
-// ─── Voice Stage (unchanged) ──────────────────────────────────────────────────
+// ─── Guardian cache for voice tiles ───────────────────────────────────────────
 
-function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
+const guardianTileCache = new Map<string, { data: any; at: number }>();
+const GUARDIAN_TTL = 120_000; // 2 min
+
+type GuardianChar = {
+  className: string; light: number; raceName: string;
+  emblemBackgroundPath: string | null;
+  dateLastPlayed: string; minutesPlayedTotal: number;
+};
+
+function useGuardianData(name: string, moduleType?: string) {
+  const [data, setData] = useState<{ displayName: string; characters: GuardianChar[] } | null>(null);
+
+  useEffect(() => {
+    if (moduleType !== "BUNGIE" || !name) { setData(null); return; }
+    const cached = guardianTileCache.get(name);
+    if (cached && Date.now() - cached.at < GUARDIAN_TTL) { setData(cached.data); return; }
+
+    fetch(`${API}/bungie/player/${encodeURIComponent(name)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.characters?.length) {
+          const info = { displayName: d.player?.displayName || name, characters: d.characters };
+          guardianTileCache.set(name, { data: info, at: Date.now() });
+          setData(info);
+        } else {
+          guardianTileCache.set(name, { data: null, at: Date.now() });
+          setData(null);
+        }
+      })
+      .catch(() => setData(null));
+  }, [name, moduleType]);
+
+  return data;
+}
+
+// ─── Voice Participant Card ───────────────────────────────────────────────────
+
+const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Titan: "🛡" };
+
+function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
+  const guardian = useGuardianData(tile.name, moduleType);
+  const mainChar = guardian?.characters?.[0]; // most recently played
+
+  const borderColor = tile.isSpeaking
+    ? "rgba(34,197,94,.5)"
+    : tile.isLocal ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.08)";
+  const bgColor = tile.isSpeaking
+    ? "rgba(34,197,94,.06)"
+    : tile.isLocal ? "rgba(124,58,237,.06)" : "rgba(255,255,255,.02)";
+
+  return (
+    <div style={{
+      width: 180, borderRadius: 12, overflow: "hidden",
+      border: `1.5px solid ${borderColor}`,
+      background: bgColor,
+      transition: "border-color .2s, background .2s",
+      position: "relative",
+    }}>
+      {/* Emblem banner */}
+      {mainChar?.emblemBackgroundPath ? (
+        <div style={{ height: 48, background: `url(${mainChar.emblemBackgroundPath}) center/cover`, opacity: 0.6 }} />
+      ) : (
+        <div style={{ height: 48, background: "linear-gradient(135deg, rgba(124,58,237,.15), rgba(79,136,198,.1))" }} />
+      )}
+
+      {/* Avatar overlapping the banner */}
+      <div style={{
+        width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
+        background: avatarColor(tile.name, tile.isLocal),
+        border: "2.5px solid rgba(10,10,20,.9)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 16, fontWeight: 900, color: "#fff",
+      }}>
+        {tile.name[0]?.toUpperCase() ?? "?"}
+      </div>
+
+      {/* Speaking indicator */}
+      {tile.isSpeaking && (
+        <div style={{
+          position: "absolute", top: 6, right: 8,
+          display: "flex", gap: 2, alignItems: "flex-end", height: 14,
+        }}>
+          {[4, 8, 5].map((h, i) => (
+            <div key={i} style={{
+              width: 3, height: h, borderRadius: 2, background: "#22c55e", opacity: 0.9,
+              animation: `waveBar .8s ease-in-out ${i * 0.15}s infinite alternate`,
+            }} />
+          ))}
+        </div>
+      )}
+
+      {/* Info section */}
+      <div style={{ padding: "20px 12px 10px" }}>
+        {/* Name + mute status */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{
+            fontSize: 13, fontWeight: 700, maxWidth: 120,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {tile.name}
+          </span>
+          {tile.isLocal && <span style={{ fontSize: 9, opacity: 0.35, fontWeight: 600 }}>(you)</span>}
+          {tile.isMuted && <span style={{ fontSize: 11, opacity: 0.4 }}>🔇</span>}
+        </div>
+
+        {/* Destiny info */}
+        {mainChar && (
+          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 5,
+              fontSize: 11, color: "rgba(226,232,240,.7)",
+            }}>
+              <span>{CLASS_ICONS[mainChar.className] || "⚔"}</span>
+              <span style={{ fontWeight: 600 }}>{mainChar.className}</span>
+              <span style={{ opacity: 0.3 }}>·</span>
+              <span style={{ fontSize: 10, opacity: 0.5 }}>{mainChar.raceName}</span>
+            </div>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              fontSize: 10, color: "rgba(148,163,184,.6)",
+            }}>
+              <span style={{ color: "#fcd34d", fontWeight: 800, fontFamily: "monospace", fontSize: 12 }}>
+                ✦ {mainChar.light}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Non-Destiny fallback info */}
+        {!mainChar && !moduleType?.includes("BUNGIE") && (
+          <div style={{ marginTop: 4, fontSize: 10, opacity: 0.3 }}>
+            {tile.isSpeaking ? "speaking" : tile.isMuted ? "muted" : "connected"}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Voice Stage ──────────────────────────────────────────────────────────────
+
+function VoiceStage({ roomId, moduleType, onClose, style }: { roomId: string; moduleType?: string; onClose: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
-  const [prompted, setPrompted] = useState(alreadyInRoom); // skip prompt if already connected here
+  const [prompted, setPrompted] = useState(alreadyInRoom);
 
-  // Re-render when the user changes their avatar color
   const [, forceUpdate] = useState(0);
   useEffect(() => {
     const handler = () => forceUpdate(n => n + 1);
@@ -375,14 +516,11 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
     voice.toggleMute();
   }, [voice]);
 
-  // Only auto-connect if user confirmed OR was already in this room
   useEffect(() => {
     if (!prompted) return;
     const alreadyHere = voice.connState === "connected" && voice.activeRoomId === roomId;
     const inProgress  = voice.connState === "connecting";
-    if (!alreadyHere && !inProgress) {
-      connect();
-    }
+    if (!alreadyHere && !inProgress) { connect(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompted, roomId]);
 
@@ -400,25 +538,16 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        <button
-          onClick={onClose}
-          style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-        >
-          Not now
-        </button>
-        <button
-          onClick={() => setPrompted(true)}
-          style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-        >
-          Join voice
-        </button>
+        <button onClick={onClose} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Not now</button>
+        <button onClick={() => setPrompted(true)} style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
       </div>
     </div>
   );
 
   return (
-    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, height: "100%", ...style }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, height: "100%", ...style }}>
+      {/* Header bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: live ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
           Voice
@@ -431,9 +560,7 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
               <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
                 {muted ? "🔇 Unmute" : "🎙 Mute"}
               </button>
-              <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>
-                Leave
-              </button>
+              <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
             </>
           )}
           {connState === "error" && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>Retry</button>}
@@ -442,35 +569,24 @@ function VoiceStage({ roomId, onClose, style }: { roomId: string; onClose: () =>
         </div>
       </div>
 
+      {/* Participant cards */}
       {tiles.length > 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
+        <div style={{
+          display: "flex", gap: 10, flexWrap: "wrap" as const,
+          alignContent: "start", flex: 1, overflow: "auto", padding: "4px 0",
+        }}>
           {tiles.map(t => (
-            <div key={t.sid} style={{
-              display: "flex", alignItems: "center", gap: 7, padding: "6px 10px", borderRadius: 10,
-              border: t.isSpeaking ? "1.5px solid rgba(34,197,94,.5)" : t.isLocal ? "1.5px solid rgba(124,58,237,.35)" : "1.5px solid rgba(255,255,255,.08)",
-              background: t.isSpeaking ? "rgba(34,197,94,.08)" : t.isLocal ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.03)",
-              transition: "border-color .15s, background .15s",
-            }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: avatarColor(t.name, t.isLocal), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>
-                {t.name[0]?.toUpperCase() ?? "?"}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                  {t.name}{t.isLocal ? " (you)" : ""}
-                </div>
-                {t.isMuted && <div style={{ fontSize: 10, opacity: 0.5 }}>muted</div>}
-              </div>
-              {t.isSpeaking && (
-                <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 14, marginLeft: 2 }}>
-                  {[4,7,5].map((h, i) => (
-                    <div key={i} style={{ width: 3, height: h, borderRadius: 2, background: "#22c55e", opacity: 0.8, animation: `waveBar .8s ease-in-out ${i*0.15}s infinite alternate` }} />
-                  ))}
-                </div>
-              )}
-            </div>
+            <VoiceCard key={t.sid} tile={t} moduleType={moduleType} />
           ))}
         </div>
       )}
+
+      {tiles.length === 0 && live && (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 12 }}>
+          Waiting for others to join…
+        </div>
+      )}
+
       <style>{`@keyframes waveBar { from { transform: scaleY(0.4); } to { transform: scaleY(1.2); } }`}</style>
     </div>
   );
@@ -726,9 +842,9 @@ const ctrlBtn: React.CSSProperties = {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function RoomStage({ roomId, mode, onClose, style }: Props) {
+export default function RoomStage({ roomId, mode, moduleType, onClose, style }: Props) {
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
-  if (mode === "voice")   return <VoiceStage   roomId={roomId} onClose={onClose} style={style} />;
+  if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} onClose={onClose} style={style} />;
   if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "screen")  return <ScreenStage  roomId={roomId} onClose={onClose} style={style} />;
 
