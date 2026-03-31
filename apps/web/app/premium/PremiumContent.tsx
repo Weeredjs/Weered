@@ -103,7 +103,7 @@ export default function PremiumContent() {
           padding: 60px 24px 80px;
           font-family: 'DM Mono', monospace;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
         }
         .prem-root::before {
           content: '';

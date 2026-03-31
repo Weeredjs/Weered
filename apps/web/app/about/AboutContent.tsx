@@ -32,7 +32,7 @@ export default function AboutContent() {
           padding: 60px 24px;
           font-family: 'DM Mono', monospace;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
         }
         .about-root::before {
           content: '';
