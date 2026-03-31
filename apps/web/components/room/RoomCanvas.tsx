@@ -507,7 +507,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={(() => {
-          if (isFullStageMode) return { height: "clamp(320px, 58vh, 640px)" };
+          if (isFullStageMode) return { height: "clamp(400px, 75vh, 900px)" };
           if (!stageActive) return { height: "40px", flexShrink: 0 };
           const heights: Record<string, string> = { youtube: "clamp(320px, 52vh, 560px)", browser: "clamp(300px, 55vh, 600px)", twitch: "clamp(320px, 52vh, 560px)", article: "clamp(350px, 60vh, 700px)" };
           return { height: heights[stageMode!] || "clamp(180px, 35vh, 320px)", flexShrink: 0 };
