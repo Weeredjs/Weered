@@ -522,7 +522,8 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
     <div style={{
       position: "relative", borderRadius: 10, overflow: "hidden",
       background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.06)",
-      aspectRatio: tile.hasScreenShare ? "16/9" : "16/10",
+      aspectRatio: tile.hasScreenShare ? undefined : "16/10",
+      width: "100%", height: tile.hasScreenShare ? "100%" : undefined,
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       {hasVideo ? (
@@ -642,9 +643,11 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
       </div>
 
       {/* Screen share view */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 8, minHeight: 0 }}>
         {presenter ? (
-          <VideoTile tile={{ ...presenter, hasVideo: false, hasScreenShare: true }} getVideoElement={getVideoElement} />
+          <div style={{ width: "100%", height: "100%", maxWidth: "100%", maxHeight: "100%" }}>
+            <VideoTile tile={{ ...presenter, hasVideo: false, hasScreenShare: true }} getVideoElement={getVideoElement} />
+          </div>
         ) : (
           <div style={{ textAlign: "center", opacity: 0.3 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🖥</div>
