@@ -487,9 +487,11 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
     while (ref.current.firstChild) ref.current.removeChild(ref.current.firstChild);
 
     const trackSid = tile.videoTrackSid || tile.screenTrackSid;
+    console.log("[VideoTile]", { name: tile.name, trackSid, videoTrackSid: tile.videoTrackSid, screenTrackSid: tile.screenTrackSid, hasVideo: tile.hasVideo, hasScreenShare: tile.hasScreenShare });
     if (!trackSid) return;
 
     let el = getVideoElement(trackSid);
+    console.log("[VideoTile] getVideoElement result:", el ? "FOUND" : "MISSING", "for SID:", trackSid);
     let retryTimer: any;
 
     const attach = () => {
