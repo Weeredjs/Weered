@@ -5,6 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useWeered } from "../../../components/WeeredProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+type GameAccount = {
+  gameType: string;
+  displayName: string;
+  platform: string;
+  linkedAt: string;
+};
+
 type Profile = {
   id: string;
   name: string;
@@ -15,6 +22,7 @@ type Profile = {
   joinedAt: string;
   roomsHosted: number;
   avatarColor: string;
+  gameAccounts?: GameAccount[];
 };
 
 // ── Tier config ───────────────────────────────────────────────────────────────
@@ -320,6 +328,73 @@ export default function ProfilePage() {
             <StatBox label="Rooms Hosted" value={profile.roomsHosted} />
             <StatBox label="Rank" value={rank} />
           </div>
+        </div>
+
+        {/* ── Linked Accounts ── */}
+        <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 24px" }} />
+        <div style={{ padding: "20px 24px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.4, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
+            Linked Accounts
+          </div>
+
+          {/* Existing linked accounts */}
+          {profile.gameAccounts && profile.gameAccounts.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {profile.gameAccounts.map((a, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+                  borderRadius: 10, background: "rgba(79,136,198,.08)", border: "1px solid rgba(79,136,198,.18)",
+                }}>
+                  <span style={{ fontSize: 18 }}>
+                    {a.gameType === "BUNGIE" ? "🔷" : a.gameType === "TWITCH" ? "🟣" : "🎮"}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(226,232,240,.9)" }}>
+                      {a.displayName}
+                    </div>
+                    <div style={{ fontSize: 10, opacity: 0.4 }}>
+                      {a.gameType === "BUNGIE" ? "Bungie.net" : a.gameType} · linked {new Date(a.linkedAt).toLocaleDateString("en-CA", { month: "short", year: "numeric" })}
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: "0.5px",
+                    padding: "2px 8px", borderRadius: 999,
+                    background: "rgba(34,197,94,.12)", color: "rgba(134,239,172,.8)",
+                    textTransform: "uppercase",
+                  }}>
+                    Connected
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Connect buttons (only show for own profile) */}
+          {isMe && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {!profile.gameAccounts?.some(a => a.gameType === "BUNGIE") && (
+                <a
+                  href={`${apiBase}/auth/bungie`}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "8px 16px", borderRadius: 8,
+                    background: "rgba(79,136,198,.12)", border: "1px solid rgba(79,136,198,.25)",
+                    color: "rgba(79,136,198,.9)", fontSize: 12, fontWeight: 700,
+                    textDecoration: "none", cursor: "pointer",
+                    transition: "background .15s",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(79,136,198,.2)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "rgba(79,136,198,.12)")}
+                >
+                  🔷 Connect Bungie Account
+                </a>
+              )}
+            </div>
+          )}
+
+          {!isMe && (!profile.gameAccounts || profile.gameAccounts.length === 0) && (
+            <div style={{ fontSize: 12, opacity: 0.3 }}>No linked accounts.</div>
+          )}
         </div>
 
         {/* ── Back button ── */}
