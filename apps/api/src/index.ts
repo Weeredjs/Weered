@@ -6273,6 +6273,60 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
+  // GET /bungie/card/:userId — Guardian card data for a Weered user (by their linked account)
+  app.get("/bungie/card/:userId", async (req, reply) => {
+    if (!BUNGIE_API_KEY) return reply.send({ ok: false });
+    const userId = String((req as any).params?.userId || "");
+    if (!userId) return reply.code(400).send({ ok: false });
+
+    try {
+      const acct = await prisma.userGameAccount.findFirst({
+        where: { userId, gameType: "BUNGIE" },
+        select: { displayName: true, platform: true, externalId: true, cardData: true, cardCachedAt: true },
+      });
+      if (!acct || !acct.displayName) return reply.send({ ok: false });
+
+      // Return cached card if fresh (5 min)
+      if (acct.cardData && acct.cardCachedAt && Date.now() - acct.cardCachedAt.getTime() < 300_000) {
+        return reply.send({ ok: true, ...(acct.cardData as any) });
+      }
+
+      // Fetch fresh from Bungie
+      const searchRes = await bungieGet(`/Destiny2/SearchDestinyPlayer/-1/${encodeURIComponent(acct.displayName)}/`);
+      const players = searchRes?.Response || [];
+      const player = players[0];
+      if (!player) return reply.send({ ok: false });
+
+      const memberType = player.membershipType;
+      const memberId = player.membershipId;
+      const profileRes = await bungieGet(`/Destiny2/${memberType}/Profile/${memberId}/?components=200`);
+      const chars = profileRes?.Response?.characters?.data || {};
+
+      const characters = Object.values(chars).map((c: any) => ({
+        className: ["","Titan","Hunter","Warlock"][c.classType + 1] || "Unknown",
+        light: c.light,
+        raceName: ["","Human","Awoken","Exo"][c.raceType + 1] || "Unknown",
+        emblemBackgroundPath: c.emblemBackgroundPath ? `https://www.bungie.net${c.emblemBackgroundPath}` : null,
+        dateLastPlayed: c.dateLastPlayed,
+        minutesPlayedTotal: parseInt(c.minutesPlayedTotal) || 0,
+      }));
+      characters.sort((a: any, b: any) => new Date(b.dateLastPlayed).getTime() - new Date(a.dateLastPlayed).getTime());
+
+      const card = { displayName: acct.displayName, characters };
+
+      // Cache it
+      await prisma.userGameAccount.update({
+        where: { userId_gameType: { userId, gameType: "BUNGIE" } },
+        data: { cardData: card as any, cardCachedAt: new Date() },
+      }).catch(() => {});
+
+      return reply.send({ ok: true, ...card });
+    } catch (e) {
+      console.error("[bungie card]", e);
+      return reply.send({ ok: false });
+    }
+  });
+
   // GET /auth/bungie — redirect to Bungie OAuth
   app.get("/auth/bungie", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization || (req as any).query?.token);

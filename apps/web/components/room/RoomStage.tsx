@@ -359,28 +359,28 @@ type GuardianChar = {
   dateLastPlayed: string; minutesPlayedTotal: number;
 };
 
-function useGuardianData(name: string, moduleType?: string) {
+function useGuardianData(userId: string, moduleType?: string) {
   const [data, setData] = useState<{ displayName: string; characters: GuardianChar[] } | null>(null);
 
   useEffect(() => {
-    if (moduleType !== "BUNGIE" || !name) { setData(null); return; }
-    const cached = guardianTileCache.get(name);
+    if (moduleType !== "BUNGIE" || !userId) { setData(null); return; }
+    const cached = guardianTileCache.get(userId);
     if (cached && Date.now() - cached.at < GUARDIAN_TTL) { setData(cached.data); return; }
 
-    fetch(`${API}/bungie/player/${encodeURIComponent(name)}`)
+    fetch(`${API}/bungie/card/${encodeURIComponent(userId)}`)
       .then(r => r.json())
       .then(d => {
-        if (d?.characters?.length) {
-          const info = { displayName: d.player?.displayName || name, characters: d.characters };
-          guardianTileCache.set(name, { data: info, at: Date.now() });
+        if (d?.ok && d?.characters?.length) {
+          const info = { displayName: d.displayName, characters: d.characters };
+          guardianTileCache.set(userId, { data: info, at: Date.now() });
           setData(info);
         } else {
-          guardianTileCache.set(name, { data: null, at: Date.now() });
+          guardianTileCache.set(userId, { data: null, at: Date.now() });
           setData(null);
         }
       })
       .catch(() => setData(null));
-  }, [name, moduleType]);
+  }, [userId, moduleType]);
 
   return data;
 }
@@ -390,7 +390,7 @@ function useGuardianData(name: string, moduleType?: string) {
 const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Titan: "🛡" };
 
 function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
-  const guardian = useGuardianData(tile.name, moduleType);
+  const guardian = useGuardianData(tile.identity, moduleType);
   const mainChar = guardian?.characters?.[0]; // most recently played
 
   const borderColor = tile.isSpeaking
