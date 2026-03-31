@@ -684,6 +684,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
             flex: 1, minHeight: 0, position: "relative",
             background: "rgba(0,0,0,.4)", borderRadius: 10,
             margin: 8, overflow: "hidden",
+            border: "3px solid blue",
           }}
         />
       ) : (
