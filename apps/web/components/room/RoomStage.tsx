@@ -568,25 +568,23 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   const { connState, errorMsg, muted, tiles } = voice;
   const live = connState === "connected";
 
-  // ── Join prompt ──
-  if (!prompted) return (
-    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, ...style }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0, display: "inline-block" }} />
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(226,232,240,0.9)" }}>Voice is active in this room</div>
-          <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", marginTop: 2 }}>Join to hear and speak with others</div>
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        <button onClick={onClose} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Not now</button>
-        <button onClick={() => setPrompted(true)} style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, height: "100%", ...style }}>
+
+      {/* Join prompt — shown when not yet in voice */}
+      {!prompted && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 8px", borderRadius: 10, background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.18)", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0, display: "inline-block" }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(226,232,240,0.9)" }}>Voice chat available</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", marginTop: 1 }}>Join to hear and speak with others</div>
+            </div>
+          </div>
+          <button onClick={() => setPrompted(true)} style={{ padding: "6px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Join voice</button>
+        </div>
+      )}
+
       {/* Header bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
