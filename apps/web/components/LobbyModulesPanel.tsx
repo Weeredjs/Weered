@@ -973,14 +973,249 @@ function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: 
 
 
 
+// ── Challenge Board ──────────────────────────────────────────────────────────
+
+const DIFFICULTY_STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
+const CATEGORY_COLORS: Record<string, string> = {
+  crucible: "#ef4444", pve: "#22c55e", raid: "#a855f7", seasonal: "#f59e0b", dungeon: "#6366f1",
+};
+
+function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
+  challenge: any;
+  enrollment: any;
+  onEnroll: () => void;
+  onAbandon: () => void;
+}) {
+  const def = challenge.definition;
+  const objectives = (def.objectives || []) as any[];
+  const progress = enrollment?.progress || {};
+  const isEnrolled = enrollment && enrollment.status === "ACTIVE";
+  const isCompleted = enrollment?.status === "COMPLETED";
+  const catColor = CATEGORY_COLORS[def.category] || ACCENT_DESTINY;
+  const timeLeft = challenge.endsAt ? Math.max(0, new Date(challenge.endsAt).getTime() - Date.now()) : null;
+  const daysLeft = timeLeft ? Math.ceil(timeLeft / 86400000) : null;
+
+  return (
+    <div style={{
+      ...S.card,
+      borderColor: isCompleted ? "rgba(34,197,94,.3)" : isEnrolled ? `${catColor}44` : "rgba(255,255,255,.08)",
+      background: isCompleted ? "rgba(34,197,94,.05)" : isEnrolled ? `${catColor}08` : "rgba(255,255,255,.03)",
+      display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+            <span style={{
+              fontSize: 8, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
+              padding: "1px 6px", borderRadius: 4,
+              background: `${catColor}20`, color: catColor,
+            }}>
+              {def.category || "general"}
+            </span>
+            <span style={{ fontSize: 10, color: "#fcd34d", letterSpacing: "1px" }}>
+              {DIFFICULTY_STARS[def.difficulty] || "★"}
+            </span>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.92)" }}>
+            {def.title}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
+            {def.description}
+          </div>
+        </div>
+        {/* Reward badge */}
+        <div style={{
+          textAlign: "center", padding: "6px 10px", borderRadius: 8,
+          background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.2)",
+          flexShrink: 0,
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 900, color: "#a78bfa" }}>{def.notorietyReward}</div>
+          <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.5px" }}>XP</div>
+        </div>
+      </div>
+
+      {/* Objectives with progress */}
+      {objectives.map((obj: any) => {
+        const p = progress[obj.id] || { current: 0, target: obj.target, completed: false };
+        const pct = Math.min(100, Math.round((p.current / p.target) * 100));
+        return (
+          <div key={obj.id}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+              <span style={{ opacity: 0.7 }}>{obj.description}</span>
+              {isEnrolled && (
+                <span style={{ fontWeight: 700, fontFamily: "monospace", color: p.completed ? "#22c55e" : "rgba(255,255,255,.6)" }}>
+                  {p.current}/{p.target}
+                </span>
+              )}
+            </div>
+            {isEnrolled && (
+              <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 2,
+                  width: `${pct}%`,
+                  background: p.completed ? "#22c55e" : catColor,
+                  transition: "width .3s ease",
+                }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Footer — time + action */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+        <div style={{ fontSize: 10, opacity: 0.35 }}>
+          {daysLeft != null ? `${daysLeft}d remaining` : "No deadline"}
+          {challenge._count?.enrollments > 0 && ` · ${challenge._count.enrollments} enrolled`}
+        </div>
+        {isCompleted ? (
+          <span style={{
+            padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700,
+            background: "rgba(34,197,94,.15)", color: "#86efac",
+          }}>
+            ✓ Completed
+          </span>
+        ) : isEnrolled ? (
+          <button onClick={onAbandon} style={{
+            ...S.btn, fontSize: 10, padding: "3px 10px",
+            borderColor: "rgba(239,68,68,.25)", color: "rgba(252,165,165,.7)",
+          }}>
+            Abandon
+          </button>
+        ) : (
+          <button onClick={onEnroll} style={{ ...S.btnPri, fontSize: 11, padding: "5px 14px" }}>
+            Enroll
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
+  const [challenges, setChallenges] = useState<any[]>([]);
+  const [myEnrollments, setMyEnrollments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [subTab, setSubTab] = useState<"active" | "mine" | "completed">("active");
+
+  const fetchAll = useCallback(async () => {
+    const [cRes, mRes] = await Promise.all([
+      apiFetch(`/challenges?lobbyId=${encodeURIComponent(lobbyId)}`),
+      apiFetch("/challenges/my"),
+    ]);
+    if (cRes?.challenges) setChallenges(cRes.challenges);
+    if (mRes?.enrollments) setMyEnrollments(mRes.enrollments);
+    setLoading(false);
+  }, [lobbyId]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const enroll = async (instanceId: string) => {
+    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "POST" });
+    fetchAll();
+  };
+  const abandon = async (instanceId: string) => {
+    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "DELETE" });
+    fetchAll();
+  };
+
+  // Build enrollment map by instanceId
+  const enrollMap = new Map<string, any>();
+  for (const e of myEnrollments) enrollMap.set(e.instanceId, e);
+
+  const activeChallenges = challenges.filter(c => c.status === "ACTIVE");
+  const myChallenges = myEnrollments.filter(e => e.status === "ACTIVE");
+  const completedChallenges = myEnrollments.filter(e => e.status === "COMPLETED");
+
+  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading challenges...</div>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Sub-tabs */}
+      <div style={{ display: "flex", gap: 6 }}>
+        {(["active", "mine", "completed"] as const).map(t => (
+          <button key={t} onClick={() => setSubTab(t)} style={{
+            padding: "5px 12px", borderRadius: 6,
+            border: subTab === t ? "1px solid rgba(79,136,198,.4)" : "1px solid rgba(255,255,255,.08)",
+            background: subTab === t ? "rgba(79,136,198,.12)" : "rgba(255,255,255,.03)",
+            color: subTab === t ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.6)",
+            fontSize: 11, fontWeight: subTab === t ? 700 : 400, cursor: "pointer",
+          }}>
+            {t === "active" ? `Challenges (${activeChallenges.length})` :
+             t === "mine" ? `My Active (${myChallenges.length})` :
+             `Completed (${completedChallenges.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Challenge list */}
+      {subTab === "active" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {activeChallenges.length === 0 ? (
+            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No active challenges right now.</div>
+          ) : activeChallenges.map(c => (
+            <ChallengeCard
+              key={c.id}
+              challenge={c}
+              enrollment={enrollMap.get(c.id)}
+              onEnroll={() => enroll(c.id)}
+              onAbandon={() => abandon(c.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {subTab === "mine" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {myChallenges.length === 0 ? (
+            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>You haven&apos;t enrolled in any challenges yet.</div>
+          ) : myChallenges.map(e => {
+            const c = challenges.find(ch => ch.id === e.instanceId) || { definition: e.instance?.definition, _count: { enrollments: 0 }, ...e.instance };
+            return (
+              <ChallengeCard
+                key={e.id}
+                challenge={c}
+                enrollment={e}
+                onEnroll={() => {}}
+                onAbandon={() => abandon(e.instanceId)}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {subTab === "completed" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {completedChallenges.length === 0 ? (
+            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No completed challenges yet. Get grinding!</div>
+          ) : completedChallenges.map(e => {
+            const c = challenges.find(ch => ch.id === e.instanceId) || { definition: e.instance?.definition, _count: { enrollments: 0 }, ...e.instance };
+            return (
+              <ChallengeCard
+                key={e.id}
+                challenge={c}
+                enrollment={e}
+                onEnroll={() => {}}
+                onAbandon={() => {}}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "streams",  label: "Live Streams", icon: "📺" },
-  { id: "lfg",      label: "Fireteams",    icon: "🔥" },
-  { id: "weekly",   label: "Weekly Reset",  icon: "📋" },
-  { id: "guardian",  label: "Guardian Lookup", icon: "🔍" },
-  { id: "myguardian", label: "My Guardian", icon: "⚔" },
+  { id: "streams",    label: "Live Streams",  icon: "📺" },
+  { id: "lfg",        label: "Fireteams",     icon: "🔥" },
+  { id: "challenges", label: "Challenges",    icon: "🎯" },
+  { id: "weekly",     label: "Weekly Reset",  icon: "📋" },
+  { id: "guardian",   label: "Guardian Lookup", icon: "🔍" },
+  { id: "myguardian", label: "My Guardian",   icon: "⚔" },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -1029,6 +1264,7 @@ export default function LobbyModulesPanel({
       <div style={{ flex: 1, minHeight: 0, overflowY: tab === "myguardian" ? "hidden" : "auto", padding: tab === "myguardian" ? 0 : "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"    && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"        && <LfgBoard lobbyId={lobbyId} />}
+        {tab === "challenges" && <ChallengeBoard lobbyId={lobbyId} />}
         {tab === "weekly"     && <BungieWeekly accentColor={accentColor} />}
         {tab === "guardian"   && <GuardianLookup />}
         {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}
