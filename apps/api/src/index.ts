@@ -6324,10 +6324,28 @@ app.post("/dm/:peerId", async (req, reply) => {
       if (!acct.externalId || !acct.platform) return reply.send({ ok: false });
       const memberType = acct.platform;
       const memberId = acct.externalId;
-      const profileRes = await bungieGet(`/Destiny2/${memberType}/Profile/${memberId}/?components=200`);
-      const chars = profileRes?.Response?.characters?.data || {};
 
+      // Fetch profile (characters + guardian rank + commendations)
+      const profileRes = await bungieGet(`/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,1400`);
+      const profileData = profileRes?.Response?.profile?.data;
+      const chars = profileRes?.Response?.characters?.data || {};
+      const commendations = profileRes?.Response?.profileCommendations?.data;
+
+      // Guardian Rank
+      const RANK_NAMES: Record<number, string> = {
+        1: "New Light", 2: "Explorer", 3: "Seeker", 4: "Pathfinder",
+        5: "Brave", 6: "Heroic", 7: "Fabled", 8: "Mythic",
+        9: "Vanquisher", 10: "Conqueror", 11: "Paragon",
+      };
+      const guardianRank = profileData?.currentGuardianRank ?? null;
+      const guardianRankName = guardianRank ? (RANK_NAMES[guardianRank] || `Rank ${guardianRank}`) : null;
+
+      // Commendations
+      const commendationScore = commendations?.totalScore ?? null;
+
+      // Characters — most recently played first
       const characters = Object.values(chars).map((c: any) => ({
+        characterId: c.characterId,
         className: ["","Titan","Hunter","Warlock"][c.classType + 1] || "Unknown",
         light: c.light,
         raceName: ["","Human","Awoken","Exo"][c.raceType + 1] || "Unknown",
@@ -6337,7 +6355,42 @@ app.post("/dm/:peerId", async (req, reply) => {
       }));
       characters.sort((a: any, b: any) => new Date(b.dateLastPlayed).getTime() - new Date(a.dateLastPlayed).getTime());
 
-      const card = { displayName: acct.displayName, characters };
+      // Last activity — fetch for most recent character only
+      let lastActivity: { name: string; mode: string; when: string } | null = null;
+      const mainChar = characters[0];
+      if (mainChar?.characterId) {
+        try {
+          const actRes = await bungieGet(`/Destiny2/${memberType}/Account/${memberId}/Character/${mainChar.characterId}/Stats/Activities/?count=1&mode=0`);
+          const act = actRes?.Response?.activities?.[0];
+          if (act) {
+            const { resolveActivity } = require("./manifest");
+            const actDef = resolveActivity(act.activityDetails?.referenceId);
+            const MODE_NAMES: Record<number, string> = {
+              0: "None", 2: "Story", 3: "Strike", 4: "Raid", 5: "PvP", 6: "Patrol",
+              7: "PvE", 10: "Control", 12: "Clash", 16: "Nightfall", 18: "Heroic",
+              19: "Mayhem", 25: "Rumble", 31: "Supremacy", 37: "Survival",
+              38: "Countdown", 39: "Trials", 43: "Iron Banner", 46: "Scorched",
+              48: "Gambit", 63: "Reckoning", 69: "Dungeon", 73: "Offensive",
+              75: "Dares", 84: "Quickplay",
+            };
+            const modeId = act.activityDetails?.mode || 0;
+            lastActivity = {
+              name: actDef?.name || "Unknown Activity",
+              mode: MODE_NAMES[modeId] || `Mode ${modeId}`,
+              when: act.period || "",
+            };
+          }
+        } catch {}
+      }
+
+      const card = {
+        displayName: acct.displayName,
+        characters,
+        guardianRank,
+        guardianRankName,
+        commendationScore,
+        lastActivity,
+      };
 
       // Cache it
       await prisma.userGameAccount.update({

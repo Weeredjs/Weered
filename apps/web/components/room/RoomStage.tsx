@@ -359,8 +359,17 @@ type GuardianChar = {
   dateLastPlayed: string; minutesPlayedTotal: number;
 };
 
+type GuardianCard = {
+  displayName: string;
+  characters: GuardianChar[];
+  guardianRank: number | null;
+  guardianRankName: string | null;
+  commendationScore: number | null;
+  lastActivity: { name: string; mode: string; when: string } | null;
+};
+
 function useGuardianData(userId: string, moduleType?: string) {
-  const [data, setData] = useState<{ displayName: string; characters: GuardianChar[] } | null>(null);
+  const [data, setData] = useState<GuardianCard | null>(null);
 
   useEffect(() => {
     if (moduleType !== "BUNGIE" || !userId) { setData(null); return; }
@@ -371,7 +380,14 @@ function useGuardianData(userId: string, moduleType?: string) {
       .then(r => r.json())
       .then(d => {
         if (d?.ok && d?.characters?.length) {
-          const info = { displayName: d.displayName, characters: d.characters };
+          const info: GuardianCard = {
+            displayName: d.displayName,
+            characters: d.characters,
+            guardianRank: d.guardianRank ?? null,
+            guardianRankName: d.guardianRankName ?? null,
+            commendationScore: d.commendationScore ?? null,
+            lastActivity: d.lastActivity ?? null,
+          };
           guardianTileCache.set(userId, { data: info, at: Date.now() });
           setData(info);
         } else {
@@ -402,7 +418,7 @@ function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
 
   return (
     <div style={{
-      width: 180, borderRadius: 12, overflow: "hidden",
+      width: 200, borderRadius: 12, overflow: "hidden",
       border: `1.5px solid ${borderColor}`,
       background: bgColor,
       transition: "border-color .2s, background .2s",
@@ -457,24 +473,46 @@ function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
 
         {/* Destiny info */}
         {mainChar && (
-          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 5,
-              fontSize: 11, color: "rgba(226,232,240,.7)",
-            }}>
-              <span>{CLASS_ICONS[mainChar.className] || "⚔"}</span>
-              <span style={{ fontWeight: 600 }}>{mainChar.className}</span>
-              <span style={{ opacity: 0.3 }}>·</span>
-              <span style={{ fontSize: 10, opacity: 0.5 }}>{mainChar.raceName}</span>
-            </div>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              fontSize: 10, color: "rgba(148,163,184,.6)",
-            }}>
+          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+            {/* Class + Light */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "rgba(226,232,240,.7)" }}>
+                <span>{CLASS_ICONS[mainChar.className] || "⚔"}</span>
+                <span style={{ fontWeight: 600 }}>{mainChar.className}</span>
+                <span style={{ fontSize: 10, opacity: 0.4 }}>{mainChar.raceName}</span>
+              </div>
               <span style={{ color: "#fcd34d", fontWeight: 800, fontFamily: "monospace", fontSize: 12 }}>
                 ✦ {mainChar.light}
               </span>
             </div>
+
+            {/* Guardian Rank + Commendations */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10 }}>
+              {guardian?.guardianRankName && (
+                <span style={{
+                  padding: "1px 6px", borderRadius: 4,
+                  background: "rgba(250,204,21,.1)", border: "1px solid rgba(250,204,21,.2)",
+                  color: "rgba(250,204,21,.8)", fontWeight: 700, fontSize: 9,
+                }}>
+                  ⟐ {guardian.guardianRank} {guardian.guardianRankName}
+                </span>
+              )}
+              {guardian?.commendationScore != null && (
+                <span style={{ color: "rgba(134,239,172,.6)", fontWeight: 600 }}>
+                  ★ {guardian.commendationScore.toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            {/* Last Activity */}
+            {guardian?.lastActivity && (
+              <div style={{
+                fontSize: 9, color: "rgba(148,163,184,.45)", marginTop: 1,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {guardian.lastActivity.mode} · {guardian.lastActivity.name}
+              </div>
+            )}
           </div>
         )}
 
