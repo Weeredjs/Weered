@@ -352,13 +352,16 @@ export function startChallengeWorker(prisma: PrismaClient, awardNotoriety: (user
             const objectives = (def.objectives as any[]) || [];
             const progress = (enrollment.progress as Record<string, ObjProgress>) || {};
 
-            // Filter to activities newer than watermark
+            // Filter: only activities after the challenge instance started
+            const instanceStart = new Date(enrollment.instance.startsAt).getTime();
+            let newActivities = activities.filter(a => new Date(a.period).getTime() >= instanceStart);
+
+            // Further filter by watermark (avoid double-counting)
             const watermark = enrollment.lastActivityInstanceId;
-            let newActivities = activities;
             if (watermark) {
-              const wmIdx = activities.findIndex(a => a.activityInstanceId === watermark);
+              const wmIdx = newActivities.findIndex(a => a.activityInstanceId === watermark);
               if (wmIdx >= 0) {
-                newActivities = activities.slice(0, wmIdx); // Activities are newest-first
+                newActivities = newActivities.slice(0, wmIdx); // Activities are newest-first
               }
             }
 
