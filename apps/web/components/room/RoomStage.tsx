@@ -20,6 +20,7 @@ interface Props {
   roomId: string;
   mode: StageMode;
   moduleType?: string;
+  roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[];
   onClose: () => void;
   style?: React.CSSProperties;
 }
@@ -408,6 +409,7 @@ const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Ti
 function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
   const guardian = useGuardianData(tile.identity, moduleType);
   const mainChar = guardian?.characters?.[0]; // most recently played
+  const notInVoice = tile._notInVoice === true;
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
@@ -421,8 +423,9 @@ function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
       width: 200, borderRadius: 12, overflow: "hidden",
       border: `1.5px solid ${borderColor}`,
       background: bgColor,
-      transition: "border-color .2s, background .2s",
+      transition: "border-color .2s, background .2s, opacity .2s",
       position: "relative",
+      opacity: notInVoice ? 0.5 : 1,
     }}>
       {/* Emblem banner */}
       {mainChar?.emblemBackgroundPath ? (
@@ -529,7 +532,7 @@ function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
 
 // ─── Voice Stage ──────────────────────────────────────────────────────────────
 
-function VoiceStage({ roomId, moduleType, onClose, style }: { roomId: string; moduleType?: string; onClose: () => void; style?: React.CSSProperties }) {
+function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId: string; moduleType?: string; roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[]; onClose: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
   const [prompted, setPrompted] = useState(alreadyInRoom);
@@ -607,23 +610,36 @@ function VoiceStage({ roomId, moduleType, onClose, style }: { roomId: string; mo
         </div>
       </div>
 
-      {/* Participant cards */}
-      {tiles.length > 0 && (
-        <div style={{
-          display: "flex", gap: 10, flexWrap: "wrap" as const,
-          alignContent: "start", flex: 1, overflow: "auto", padding: "4px 0",
-        }}>
-          {tiles.map(t => (
-            <VoiceCard key={t.sid} tile={t} moduleType={moduleType} />
-          ))}
-        </div>
-      )}
+      {/* Participant cards — voice participants + room members not in voice */}
+      {(() => {
+        // Build merged list: voice tiles first, then room members not in voice
+        const voiceIdentities = new Set(tiles.map(t => t.identity));
+        const nonVoiceUsers = (roomUsers || [])
+          .filter(u => !voiceIdentities.has(u.id))
+          .map(u => ({
+            sid: `room-${u.id}`, identity: u.id, name: u.name,
+            isSpeaking: false, isMuted: true, isLocal: false,
+            hasVideo: false, hasScreenShare: false,
+            videoTrackSid: null, screenTrackSid: null,
+            _notInVoice: true,
+          }));
+        const allTiles = [...tiles, ...nonVoiceUsers];
 
-      {tiles.length === 0 && live && (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 12 }}>
-          Waiting for others to join…
-        </div>
-      )}
+        return allTiles.length > 0 ? (
+          <div style={{
+            display: "flex", gap: 10, flexWrap: "wrap" as const,
+            alignContent: "start", flex: 1, overflow: "auto", padding: "4px 0",
+          }}>
+            {allTiles.map(t => (
+              <VoiceCard key={t.sid} tile={t} moduleType={moduleType} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 12 }}>
+            {live ? "Waiting for others to join…" : "No one in this room yet"}
+          </div>
+        );
+      })()}
 
       <style>{`@keyframes waveBar { from { transform: scaleY(0.4); } to { transform: scaleY(1.2); } }`}</style>
     </div>
@@ -880,9 +896,9 @@ const ctrlBtn: React.CSSProperties = {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function RoomStage({ roomId, mode, moduleType, onClose, style }: Props) {
+export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose, style }: Props) {
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
-  if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} onClose={onClose} style={style} />;
+  if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;
   if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "screen")  return <ScreenStage  roomId={roomId} onClose={onClose} style={style} />;
 

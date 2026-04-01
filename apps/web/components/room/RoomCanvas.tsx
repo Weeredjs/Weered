@@ -524,7 +524,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
           <div style={{ height: "100%" }}>
-            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
+            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} roomUsers={Array.isArray(w?.users) ? w.users : []} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
           </div>
         )}
 

@@ -2972,6 +2972,19 @@ app.post("/dm/:peerId", async (req, reply) => {
           // Only owner, mods, or staff can close
           if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
 
+          // Don't delete pinned rooms — just kick everyone and clear state
+          if (room.pinned) {
+            for (const s of room.sockets) {
+              send(s, { type: "room:closed", roomId, by: ws.user.name });
+              try { s.close(4004, "room:closed"); } catch {}
+            }
+            room.users.clear();
+            room.sockets.clear();
+            room.msgs = [];
+            room.activeModule = null;
+            return;
+          }
+
           // Kick everyone
           for (const s of room.sockets) {
             send(s, { type: "room:closed", roomId, by: ws.user.name });
