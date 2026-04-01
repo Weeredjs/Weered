@@ -57,7 +57,8 @@ const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 // Chat panel dimensions
 const CHAT_WIDTH_DESKTOP = 580;
 const CHAT_WIDTH_MOBILE  = 300;
-const CHAT_HEIGHT = 420;
+const CHAT_HEIGHT_DESKTOP = 420;
+const CHAT_HEIGHT_MOBILE  = "100%";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     catch { mq.addListener(apply); return () => mq.removeListener(apply); }
   }, []);
   const CHAT_WIDTH = isMobile ? CHAT_WIDTH_MOBILE : CHAT_WIDTH_DESKTOP;
+  const CHAT_HEIGHT = isMobile ? "100%" : CHAT_HEIGHT_DESKTOP;
 
   // Lobby context for this room
   const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string } | null>(null);
@@ -796,8 +798,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           style={{
             position: "absolute",
             right: chatOpen ? CHAT_WIDTH : 0,
-            bottom: CHAT_HEIGHT,
-            transform: "translateY(100%)",
+            bottom: isMobile ? 0 : CHAT_HEIGHT_DESKTOP,
+            transform: isMobile ? "none" : "translateY(100%)",
             writingMode: "vertical-rl",
             textOrientation: "mixed",
             padding: "14px 8px",
@@ -864,13 +866,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             position: "absolute",
             bottom: 0,
             right: 0,
-            height: CHAT_HEIGHT,
-            width: chatOpen ? CHAT_WIDTH : 0,
+            ...(isMobile
+              ? { top: 0, height: "100%", width: chatOpen ? "100%" : 0 }
+              : { height: CHAT_HEIGHT_DESKTOP, width: chatOpen ? CHAT_WIDTH : 0 }
+            ),
             overflow: "hidden",
-            borderLeft: chatOpen ? "1px solid rgba(124,58,237,0.22)" : "none",
-            borderTop: chatOpen ? "1px solid rgba(124,58,237,0.15)" : "none",
-            borderRadius: chatOpen ? "10px 0 0 0" : 0,
-            background: "rgba(8,8,20,0.52)",
+            borderLeft: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.22)" : "none",
+            borderTop: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.15)" : "none",
+            borderRadius: chatOpen && !isMobile ? "10px 0 0 0" : 0,
+            background: isMobile ? "rgba(8,8,20,0.95)" : "rgba(8,8,20,0.52)",
             backdropFilter: "blur(28px) saturate(1.6)",
             WebkitBackdropFilter: "blur(28px) saturate(1.6)",
             display: "flex",
