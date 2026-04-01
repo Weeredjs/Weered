@@ -3437,24 +3437,25 @@ app.post("/dm/:peerId", async (req, reply) => {
 
     try {
       if (lobbyId) {
-        // Lobby visit — get display name
         const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, select: { name: true } });
-        await prisma.recentVisit.upsert({
-          where: { userId_lobbyId: { userId: user.id, lobbyId } },
-          create: { userId: user.id, lobbyId, name: lobby?.name || lobbyId },
-          update: { visitedAt: new Date(), name: lobby?.name || lobbyId },
-        });
+        const existing = await prisma.recentVisit.findFirst({ where: { userId: user.id, lobbyId } });
+        if (existing) {
+          await prisma.recentVisit.update({ where: { id: existing.id }, data: { visitedAt: new Date(), name: lobby?.name || lobbyId } });
+        } else {
+          await prisma.recentVisit.create({ data: { userId: user.id, lobbyId, name: lobby?.name || lobbyId } });
+        }
       } else if (roomId) {
-        // Room visit — get display name + parent lobby
         const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true, lobbyId: true } });
-        await prisma.recentVisit.upsert({
-          where: { userId_roomId: { userId: user.id, roomId } },
-          create: { userId: user.id, roomId, lobbyId: room?.lobbyId || null, name: room?.name || roomId },
-          update: { visitedAt: new Date(), name: room?.name || roomId },
-        });
+        const existing = await prisma.recentVisit.findFirst({ where: { userId: user.id, roomId } });
+        if (existing) {
+          await prisma.recentVisit.update({ where: { id: existing.id }, data: { visitedAt: new Date(), name: room?.name || roomId } });
+        } else {
+          await prisma.recentVisit.create({ data: { userId: user.id, roomId, lobbyId: room?.lobbyId || null, name: room?.name || roomId } });
+        }
       }
       return reply.send({ ok: true });
     } catch (e: any) {
+      console.error("[recents POST]", e.message);
       return reply.code(500).send({ error: e.message });
     }
   });
@@ -3774,6 +3775,34 @@ app.post("/dm/:peerId", async (req, reply) => {
     });
     awardNotoriety(u.id, "LOBBY_CREATED").catch(() => {});
     return reply.send({ ok: true, lobby });
+  });
+
+  // GET /lobbies/:lobbyId/presence — all online users across rooms in this lobby
+  app.get("/lobbies/:lobbyId/presence", async (req, reply) => {
+    const lobbyId = String((req as any).params?.lobbyId || "");
+    if (!lobbyId) return reply.code(400).send({ ok: false, error: "missing lobbyId" });
+
+    const seen = new Map<string, any>();
+    for (const [, room] of rooms) {
+      if (room.lobbyId !== lobbyId) continue;
+      for (const [uid, u] of room.users) {
+        if (!seen.has(uid)) {
+          seen.set(uid, {
+            id: uid,
+            name: u.name,
+            role: u.role,
+            globalRole: u.globalRole,
+            tier: u.tier,
+            avatarColor: u.avatarColor,
+            avatar: u.avatar,
+            roomId: room.roomId,
+            roomName: room.name || room.roomId,
+          });
+        }
+      }
+    }
+
+    return reply.send({ ok: true, users: Array.from(seen.values()) });
   });
 
   app.get("/lobbies/:lobbyId/presence/:userId/game-card", async (req, reply) => {
