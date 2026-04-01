@@ -786,3 +786,253 @@ model ForumVote {
   @@index([commentId])
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DESTINY META-GAME LAUNCHER ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+enum ChallengeScope {
+  GLOBAL
+  LOBBY
+  CREW
+  TOURNAMENT
+}
+
+enum ChallengeStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  ABANDONED
+}
+
+enum TournamentFormat {
+  LEADERBOARD
+  BRACKET
+  ROUND_ROBIN
+}
+
+enum TournamentStatus {
+  REGISTRATION
+  ACTIVE
+  COMPLETED
+  CANCELED
+}
+
+enum TournamentEntryType {
+  SOLO
+  CREW
+}
+
+// ── Challenge definition — reusable template ────────────────────────────────
+
+model ChallengeDefinition {
+  id            String          @id @default(cuid())
+
+  title         String
+  description   String          @default("")
+  iconUrl       String?
+  category      String          @default("")     // crucible, pve, raid, seasonal
+  difficulty    Int             @default(1)       // 1-5
+
+  scope         ChallengeScope  @default(GLOBAL)
+  lobbyId       String?
+  crewId        String?
+  createdById   String
+
+  // Objective spec — JSON DSL array
+  objectives    Json                              // Array of ObjectiveSpec
+  requireAll    Boolean         @default(true)
+  requireCount  Int?
+
+  // Chain support
+  chainParentId String?
+  chainOrder    Int             @default(0)
+
+  // Recurrence
+  isRecurring   Boolean         @default(false)
+  recurSchedule String?                          // weekly_tuesday, daily
+
+  // Rewards
+  notorietyReward   Int         @default(0)
+  crewRepReward     Int         @default(0)
+  badgeId           String?
+
+  status        ChallengeStatus @default(DRAFT)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  instances     ChallengeInstance[]
+  chainParent   ChallengeDefinition?  @relation("ChallengeChain", fields: [chainParentId], references: [id])
+  chainSteps    ChallengeDefinition[] @relation("ChallengeChain")
+
+  @@index([scope, status])
+  @@index([lobbyId, status])
+  @@index([category, status])
+}
+
+// ── Challenge instance — time-bound run of a definition ─────────────────────
+
+model ChallengeInstance {
+  id              String           @id @default(cuid())
+  definitionId    String
+
+  startsAt        DateTime
+  endsAt          DateTime?
+  status          ChallengeStatus  @default(ACTIVE)
+
+  createdAt       DateTime         @default(now())
+
+  definition      ChallengeDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  enrollments     ChallengeEnrollment[]
+
+  @@index([definitionId, status])
+  @@index([status, startsAt])
+  @@index([status, endsAt])
+}
+
+// ── Challenge enrollment — player's progress on an instance ─────────────────
+
+model ChallengeEnrollment {
+  id            String           @id @default(cuid())
+  instanceId    String
+  userId        String
+
+  status        EnrollmentStatus @default(ACTIVE)
+
+  // Progress per objective: { "obj_1": { current: 35, target: 50, completed: false } }
+  progress      Json             @default("{}")
+
+  lastCheckedAt              DateTime?
+  lastActivityInstanceId     String?
+
+  completedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  instance      ChallengeInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, userId])
+  @@index([userId, status])
+  @@index([status, lastCheckedAt])
+}
+
+// ── Activity log — processed Bungie match history ───────────────────────────
+
+model BungieActivityLog {
+  id                 String   @id @default(cuid())
+  userId             String
+  membershipId       String
+  activityInstanceId String                       // Bungie PGCR instanceId
+
+  activityHash       String
+  activityName       String   @default("")
+  mode               Int
+  modeName           String   @default("")
+  period             DateTime
+
+  kills              Int      @default(0)
+  deaths             Int      @default(0)
+  assists            Int      @default(0)
+  score              Int      @default(0)
+  standing           Int      @default(0)         // 0=Victory, 1=Defeat
+  completed          Boolean  @default(false)
+  duration           Int      @default(0)         // seconds
+
+  weaponKills        Json     @default("[]")      // [{ hash, name, kills }]
+  subclassHash       String?
+  fireteamIds        String[] @default([])
+
+  createdAt          DateTime @default(now())
+
+  @@unique([userId, activityInstanceId])
+  @@index([userId, period])
+  @@index([userId, mode, period])
+}
+
+// ── Tournament ──────────────────────────────────────────────────────────────
+
+model Tournament {
+  id              String             @id @default(cuid())
+
+  title           String
+  description     String             @default("")
+  iconUrl         String?
+
+  format          TournamentFormat   @default(LEADERBOARD)
+  entryType       TournamentEntryType @default(SOLO)
+
+  lobbyId         String?
+  createdById     String
+
+  scoringRule     Json                             // { type, definitionId, stat, ... }
+
+  registrationOpensAt  DateTime
+  startsAt             DateTime
+  endsAt               DateTime
+  status               TournamentStatus @default(REGISTRATION)
+
+  maxEntries      Int              @default(100)
+  minEntries      Int              @default(2)
+
+  rewards         Json             @default("[]")
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  entries         TournamentEntry[]
+
+  @@index([status, startsAt])
+  @@index([lobbyId, status])
+}
+
+model TournamentEntry {
+  id            String   @id @default(cuid())
+  tournamentId  String
+
+  userId        String?
+  crewId        String?
+  displayName   String   @default("")
+
+  score         Float    @default(0)
+  rank          Int?
+
+  scoreBreakdown Json    @default("{}")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+  @@unique([tournamentId, crewId])
+  @@index([tournamentId, score])
+}
+
+// ── Badges ──────────────────────────────────────────────────────────────────
+
+model ChallengeBadge {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  iconUrl     String   @default("")
+  rarity      Int      @default(1)
+  createdAt   DateTime @default(now())
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
