@@ -68,7 +68,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   console.log("[knock debug]", { roomId, activeRid, joinStatus, statusByRoom: w?.statusByRoom });
   const { openSheet } = useOverlay();
   const voice = useVoice();
-  const [stageMode, setStageMode] = useState<StageMode>(null);
+  const [stageMode, setStageMode] = useState<StageMode>("voice");
 
   // Responsive chat width
   const [isMobile, setIsMobile] = useState(false);
@@ -460,8 +460,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         showDetails={showDetails}
       />
 
-      {/* ── Voice available prompt ── */}
-      {voicePrompt && voice.connState !== "connected" && voice.connState !== "connecting" && (
+      {/* ── Voice available prompt — hidden when Voice tab is active (VoiceStage has its own) ── */}
+      {voicePrompt && stageMode !== "voice" && voice.connState !== "connected" && voice.connState !== "connecting" && (
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
