@@ -10,6 +10,7 @@ import { OAuth2Client } from "google-auth-library";
 import { syncManifest, enrichProfile, enrichMilestones, enrichVendorSales, resolveItem, resolveBucket, resolveDamageType, isLoaded as manifestLoaded, manifestVersion, WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES } from "./manifest";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
+import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
 import webpush from "web-push";
 
 const prisma = new PrismaClient();
@@ -474,6 +475,8 @@ const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean; cooldo
   CHAT_MESSAGE:        { points: 2,    once: false, cooldown: 30000   },   // 30s cooldown
   ROOM_JOINED:         { points: 5,    once: false, cooldown: 60000   },   // 1min cooldown
   VOICE_JOINED:        { points: 15,   once: false, cooldown: 300000  },   // 5min cooldown
+  CHALLENGE_COMPLETED: { points: 200,  once: false, cooldown: 0       },   // Per challenge completion
+  FIRST_CHALLENGE:     { points: 100,  once: true                     },   // First ever challenge
   CREW_CREATED:        { points: 100,  once: true  },
   CREW_JOINED:         { points: 25,   once: false },
   FRIEND_ADDED:        { points: 15,   once: false },
@@ -6645,6 +6648,212 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── DESTINY CHALLENGES ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // GET /challenges — list active challenge instances
+  app.get("/challenges", async (req, reply) => {
+    const { scope, lobbyId, category } = req.query as any;
+    const where: any = {
+      status: "ACTIVE",
+      ...(scope ? { definition: { scope } } : {}),
+      ...(lobbyId ? { definition: { lobbyId } } : {}),
+      ...(category ? { definition: { category } } : {}),
+    };
+    const instances = await prisma.challengeInstance.findMany({
+      where,
+      include: { definition: true, _count: { select: { enrollments: true } } },
+      orderBy: { startsAt: "desc" },
+      take: 50,
+    });
+    return reply.send({ ok: true, challenges: instances });
+  });
+
+  // GET /challenges/:instanceId — single challenge with user's enrollment
+  app.get("/challenges/:instanceId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    const instanceId = String((req as any).params?.instanceId || "");
+    const instance = await prisma.challengeInstance.findUnique({
+      where: { id: instanceId },
+      include: { definition: true, _count: { select: { enrollments: true } } },
+    });
+    if (!instance) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    let enrollment = null;
+    if (u) {
+      enrollment = await prisma.challengeEnrollment.findUnique({
+        where: { instanceId_userId: { instanceId, userId: u.id } },
+      });
+    }
+    return reply.send({ ok: true, challenge: instance, enrollment });
+  });
+
+  // POST /challenges/:instanceId/enroll — enroll in a challenge
+  app.post("/challenges/:instanceId/enroll", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const instanceId = String((req as any).params?.instanceId || "");
+    const instance = await prisma.challengeInstance.findUnique({
+      where: { id: instanceId },
+      include: { definition: true },
+    });
+    if (!instance || instance.status !== "ACTIVE") return reply.code(400).send({ ok: false, error: "challenge_not_active" });
+    if (instance.endsAt && new Date() > instance.endsAt) return reply.code(400).send({ ok: false, error: "challenge_expired" });
+
+    // Check Bungie account linked
+    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "BUNGIE" } });
+    if (!acct) return reply.code(400).send({ ok: false, error: "bungie_not_linked" });
+
+    // Initialize progress
+    const objectives = (instance.definition.objectives as any[]) || [];
+    const progress: Record<string, any> = {};
+    for (const obj of objectives) {
+      progress[obj.id] = { current: 0, target: obj.target, completed: false };
+    }
+
+    try {
+      const enrollment = await prisma.challengeEnrollment.create({
+        data: { instanceId, userId: u.id, progress: progress as any },
+      });
+      return reply.send({ ok: true, enrollment });
+    } catch (e: any) {
+      if (e.code === "P2002") return reply.send({ ok: true, error: "already_enrolled" });
+      throw e;
+    }
+  });
+
+  // DELETE /challenges/:instanceId/enroll — abandon a challenge
+  app.delete("/challenges/:instanceId/enroll", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const instanceId = String((req as any).params?.instanceId || "");
+
+    await prisma.challengeEnrollment.updateMany({
+      where: { instanceId, userId: u.id, status: "ACTIVE" },
+      data: { status: "ABANDONED" },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // GET /challenges/my — user's active enrollments with progress
+  app.get("/challenges/my", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const enrollments = await prisma.challengeEnrollment.findMany({
+      where: { userId: u.id },
+      include: { instance: { include: { definition: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return reply.send({ ok: true, enrollments });
+  });
+
+  // GET /challenges/:instanceId/leaderboard — completion leaderboard
+  app.get("/challenges/:instanceId/leaderboard", async (req, reply) => {
+    const instanceId = String((req as any).params?.instanceId || "");
+    const enrollments = await prisma.challengeEnrollment.findMany({
+      where: { instanceId, status: "COMPLETED" },
+      orderBy: { completedAt: "asc" },
+      take: 50,
+    });
+    // Resolve usernames
+    const userIds = enrollments.map(e => e.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, tier: true },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
+    const leaderboard = enrollments.map((e, i) => ({
+      rank: i + 1,
+      userId: e.userId,
+      name: userMap.get(e.userId)?.name || "Unknown",
+      tier: userMap.get(e.userId)?.tier || "INNOCENT",
+      completedAt: e.completedAt,
+    }));
+    return reply.send({ ok: true, leaderboard });
+  });
+
+  // ── Challenge Admin (staff or lobby owner) ────────────────────────────────
+
+  // POST /challenges/definitions — create a challenge definition
+  app.post("/challenges/definitions", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    // Only staff+ can create challenges for now
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+
+    const body = req.body as any;
+    const def = await prisma.challengeDefinition.create({
+      data: {
+        title: String(body.title || "").trim(),
+        description: String(body.description || "").trim(),
+        iconUrl: body.iconUrl || null,
+        category: String(body.category || "").trim(),
+        difficulty: parseInt(body.difficulty) || 1,
+        scope: body.scope || "GLOBAL",
+        lobbyId: body.lobbyId || null,
+        crewId: body.crewId || null,
+        createdById: u.id,
+        objectives: body.objectives || [],
+        requireAll: body.requireAll !== false,
+        requireCount: body.requireCount || null,
+        notorietyReward: parseInt(body.notorietyReward) || 0,
+        crewRepReward: parseInt(body.crewRepReward) || 0,
+        isRecurring: body.isRecurring === true,
+        recurSchedule: body.recurSchedule || null,
+        status: "DRAFT",
+      },
+    });
+    return reply.send({ ok: true, definition: def });
+  });
+
+  // POST /challenges/definitions/:id/activate — create an active instance
+  app.post("/challenges/definitions/:id/activate", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+
+    const defId = String((req as any).params?.id || "");
+    const body = req.body as any;
+    const def = await prisma.challengeDefinition.findUnique({ where: { id: defId } });
+    if (!def) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    // Activate the definition
+    await prisma.challengeDefinition.update({ where: { id: defId }, data: { status: "ACTIVE" } });
+
+    // Create instance
+    const instance = await prisma.challengeInstance.create({
+      data: {
+        definitionId: defId,
+        startsAt: body.startsAt ? new Date(body.startsAt) : new Date(),
+        endsAt: body.endsAt ? new Date(body.endsAt) : null,
+        status: "ACTIVE",
+      },
+    });
+    return reply.send({ ok: true, instance });
+  });
+
+  // GET /challenges/definitions — list all definitions (admin)
+  app.get("/challenges/definitions", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const defs = await prisma.challengeDefinition.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return reply.send({ ok: true, definitions: defs });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── LFG / FIRETEAM BOARD ───────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
@@ -6796,6 +7005,12 @@ app.post("/dm/:peerId", async (req, reply) => {
       console.log(`[dissolution] Cleaned up ${toDelete.length} empty room(s)`);
     }
   }, DISSOLUTION_INTERVAL_MS);
+
+  // ── Challenge tracking worker ──────────────────────────────────────────────
+  if (BUNGIE_API_KEY) {
+    setBungieApiKey(BUNGIE_API_KEY);
+    startChallengeWorker(prisma, awardNotoriety);
+  }
 }
 
 main().catch((err) => {
