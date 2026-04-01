@@ -1112,11 +1112,11 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const enroll = async (instanceId: string) => {
-    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "POST" });
+    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "POST", body: JSON.stringify({}) });
     fetchAll();
   };
   const abandon = async (instanceId: string) => {
-    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "DELETE" });
+    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "DELETE", body: JSON.stringify({}) });
     fetchAll();
   };
 
