@@ -251,7 +251,8 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
           <input
             style={{ ...s.input, marginBottom: 10, borderColor: roomPassword ? "rgba(88,0,229,.30)" : "rgba(255,255,255,.10)" }}
             placeholder="Leave blank for open room…"
-            type="password"
+            type="text"
+            autoComplete="off"
             value={roomPassword}
             onChange={e => setRoomPassword(e.target.value)}
           />
