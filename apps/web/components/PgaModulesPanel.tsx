@@ -813,7 +813,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
 
 // -- YouTube ------------------------------------------------------------------
 
-const PGA_YOUTUBE_CHANNEL = "UCpmBTB_cfp9pRDKi3AZZHkA"; // PGA TOUR official
+const PGA_YOUTUBE_CHANNEL = "UCKwGZZMrhNYKzucCtTPY2Nw"; // PGA TOUR official
 
 function YouTubeIcon({ size = 14, color = "#FF0000" }: { size?: number; color?: string }) {
   return (
