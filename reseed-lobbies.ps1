@@ -238,7 +238,7 @@ $lobbies = @'
     "description": "Leaderboards, field intel, news, YouTube highlights, and streams. Every tournament.",
     "pinned": true,
     "moduleType": "PGA",
-    "moduleConfig": { "twitchCategory": "Golf", "subreddit": "r/golf", "youtubeChannelId": "UCpmBTB_cfp9pRDKi3AZZHkA" },
+    "moduleConfig": { "twitchCategory": "Golf", "subreddit": "r/golf", "youtubeChannelId": "UCKwGZZMrhNYKzucCtTPY2Nw" },
     "keywords": ["pga","golf","masters","pgatour","usopen","theopen","pga championship","ryder cup","tiger","scottie","rory"],
     "accentColor": "#003B2F",
     "bannerUrl": "https://a.espncdn.com/combiner/i?img=/photo/2024/0411/r1316927_1296x729_16-9.jpg&w=1140&cquality=40&format=jpg",
