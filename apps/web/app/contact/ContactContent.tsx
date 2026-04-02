@@ -51,7 +51,7 @@ export default function ContactContent() {
           padding: 60px 24px;
           font-family: 'DM Mono', monospace;
           position: relative;
-          overflow: hidden;
+          overflow-x: hidden;
         }
         .ct-root::before {
           content: '';
