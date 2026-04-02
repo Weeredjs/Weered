@@ -228,7 +228,19 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
             (e.currentTarget as any)._swipeDx = 0;
           }}
         >
-          <div className="lobby-drawer-header">
+          {/* Swipe hint watermark */}
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            pointerEvents: "none", opacity: 0.06,
+            flexDirection: "column", gap: 6,
+          }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: ac }}>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: ac }}>swipe to close</span>
+          </div>
+          <div className="lobby-drawer-header" style={{ position: "relative", zIndex: 1 }}>
             <span className="lobby-drawer-title">{title}</span>
             <div className="lobby-drawer-close" onClick={() => setOpen(false)}>✕</div>
           </div>

@@ -885,7 +885,21 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         >
           {chatOpen && (
             <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0 }}>
+              {/* Swipe hint — mobile only, faint watermark */}
+              {isMobile && (
+                <div style={{
+                  position: "absolute", inset: 0, zIndex: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  pointerEvents: "none", opacity: 0.06,
+                  flexDirection: "column", gap: 6,
+                }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#a78bfa" }}>
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#a78bfa" }}>swipe to close</span>
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0, position: "relative", zIndex: 1 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
                 <button
                   onClick={() => setChatOpen(false)}
@@ -896,7 +910,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               </div>
               <RoomChatPanel
                 roomId={roomId}
-                style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
+                style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative", zIndex: 1 }}
               />
             </>
           )}

@@ -187,6 +187,16 @@ const MOB_ICO_DOCK = (
   </svg>
 );
 
+const MOB_ICO_PANEL = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    <circle cx="17.5" cy="17.5" r="3.5" />
+    <path d="M17.5 15.5v4M15.5 17.5h4" opacity=".7" />
+  </svg>
+);
+
 function MobileNav({
   overlay,
   setOverlay,
@@ -206,13 +216,6 @@ function MobileNav({
       </button>
       <button
         type="button"
-        className={`weered-mobile-nav-btn ${overlay === "right" ? "weered-mobile-nav-btn-active" : ""}`}
-        onClick={() => setOverlay(o => o === "right" ? null : "right")}
-      >
-        {ICO_ROOMS}<span>Rooms</span>
-      </button>
-      <button
-        type="button"
         className="weered-mobile-nav-btn"
         onClick={() => { setOverlay(null); router.push("/home"); }}
       >
@@ -220,10 +223,10 @@ function MobileNav({
       </button>
       <button
         type="button"
-        className="weered-mobile-nav-btn"
-        onClick={() => setOverlay(o => o === "left" ? null : "left")}
+        className={`weered-mobile-nav-btn ${overlay === "right" ? "weered-mobile-nav-btn-active" : ""}`}
+        onClick={() => setOverlay(o => o === "right" ? null : "right")}
       >
-        {ICO_PRESENCE}<span>People</span>
+        {MOB_ICO_PANEL}<span>Panel</span>
       </button>
       <button
         type="button"
