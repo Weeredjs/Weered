@@ -796,9 +796,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         <div
           onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
           style={{
-            position: "absolute",
-            right: chatOpen ? CHAT_WIDTH : 0,
-            bottom: isMobile ? 0 : CHAT_HEIGHT_DESKTOP,
+            position: isMobile ? "fixed" : "absolute",
+            right: chatOpen ? (isMobile ? "100%" : CHAT_WIDTH) : 0,
+            bottom: isMobile ? 56 : CHAT_HEIGHT_DESKTOP,
             transform: isMobile ? "none" : "translateY(100%)",
             writingMode: "vertical-rl",
             textOrientation: "mixed",
@@ -863,18 +863,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             (e.currentTarget as any)._swipeDx = 0;
           }}
           style={{
-            position: "absolute",
-            bottom: 0,
+            position: isMobile ? "fixed" : "absolute",
+            bottom: isMobile ? 56 : 0,
             right: 0,
             ...(isMobile
-              ? { top: 0, height: "100%", width: chatOpen ? "100%" : 0 }
+              ? { top: 0, left: 0, width: chatOpen ? "100%" : 0 }
               : { height: CHAT_HEIGHT_DESKTOP, width: chatOpen ? CHAT_WIDTH : 0 }
             ),
             overflow: "hidden",
             borderLeft: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.22)" : "none",
             borderTop: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.15)" : "none",
             borderRadius: chatOpen && !isMobile ? "10px 0 0 0" : 0,
-            background: isMobile ? "rgba(8,8,20,0.95)" : "rgba(8,8,20,0.52)",
+            background: isMobile ? "rgba(8,8,20,0.97)" : "rgba(8,8,20,0.52)",
             backdropFilter: "blur(28px) saturate(1.6)",
             WebkitBackdropFilter: "blur(28px) saturate(1.6)",
             display: "flex",
