@@ -811,12 +811,141 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
   );
 }
 
+// -- YouTube ------------------------------------------------------------------
+
+const PGA_YOUTUBE_CHANNEL = "UCpmBTB_cfp9pRDKi3AZZHkA"; // PGA TOUR official
+
+function YouTubeIcon({ size = 14, color = "#FF0000" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}>
+      <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  );
+}
+
+function PgaYouTube({ accentColor }: { accentColor?: string }) {
+  const accent = accentColor || "#003B2F";
+  const [videos, setVideos]     = useState<any[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch(`/youtube/channel/${PGA_YOUTUBE_CHANNEL}`)
+      .then(j => { setVideos(j.videos || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading videos...</div>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Inline player */}
+      {activeId && (
+        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 4 }}>
+          <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${activeId}?autoplay=1&rel=0`}
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: `${accent}10` }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.85)", display: "flex", alignItems: "center", gap: 6 }}>
+              <YouTubeIcon size={14} /> Now Playing
+            </span>
+            <button onClick={() => setActiveId(null)} style={{ ...S.btn, fontSize: 11, padding: "4px 10px" }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Video grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+        {videos.map(v => {
+          const isActive = activeId === v.videoId;
+          const age = relativeTime(v.published);
+          return (
+            <div
+              key={v.videoId}
+              onClick={() => setActiveId(v.videoId)}
+              style={{
+                ...S.card,
+                cursor: "pointer",
+                transition: "border-color .15s, background .15s, transform .15s",
+                border: isActive ? `1px solid ${accent}50` : "1px solid rgba(255,255,255,.08)",
+                background: isActive ? `${accent}10` : "rgba(255,255,255,.03)",
+                padding: 0,
+                overflow: "hidden",
+              }}
+              onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.borderColor = `${accent}30`; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; } }}
+              onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; } }}
+            >
+              <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
+                <img src={v.thumbnailHq || v.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                {/* Play overlay */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(0,0,0,0.25)",
+                  opacity: 0.8,
+                  transition: "opacity .15s",
+                }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: "50%",
+                    background: "rgba(255,0,0,0.85)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
+                  </div>
+                </div>
+                {/* Views badge */}
+                {v.views > 0 && (
+                  <div style={{
+                    position: "absolute", bottom: 5, right: 5,
+                    fontSize: 10, fontWeight: 700, padding: "2px 7px",
+                    borderRadius: 5, background: "rgba(0,0,0,0.78)",
+                    color: "rgba(255,255,255,0.88)", backdropFilter: "blur(4px)",
+                  }}>
+                    {v.views >= 1000000 ? `${(v.views / 1000000).toFixed(1)}M` : v.views >= 1000 ? `${(v.views / 1000).toFixed(0)}K` : v.views} views
+                  </div>
+                )}
+              </div>
+              <div style={{ padding: "8px 10px" }}>
+                <div style={{
+                  fontWeight: 700, fontSize: 12, color: "rgba(243,244,246,.92)",
+                  overflow: "hidden", textOverflow: "ellipsis",
+                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                  lineHeight: 1.35, marginBottom: 4,
+                } as React.CSSProperties}>
+                  {v.title}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <YouTubeIcon size={11} color="rgba(255,0,0,0.6)" />
+                  <span style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>{v.channelName}</span>
+                  <span style={{ fontSize: 10, color: "rgba(148,163,184,.35)" }}>·</span>
+                  <span style={{ fontSize: 10, color: "rgba(148,163,184,.45)" }}>{age}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {videos.length === 0 && (
+        <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No videos found.</div>
+      )}
+    </div>
+  );
+}
+
 // -- Tabs ---------------------------------------------------------------------
 
 const TABS = [
   { id: "leaderboard", label: "Leaderboard", icon: "\u{1F3CC}" },
   { id: "field",       label: "Props & Picks", icon: "\u{1F3AF}" },
   { id: "news",        label: "News",         icon: "\u{1F4F0}" },
+  { id: "youtube",     label: "YouTube",      icon: "yt" },
   { id: "streams",     label: "Streams",      icon: "\u{1F4FA}" },
 ] as const;
 
@@ -856,7 +985,7 @@ export default function PgaModulesPanel({
               display: "flex", alignItems: "center", gap: 5,
             }}
           >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
+            <span style={{ fontSize: 13 }}>{t.icon === "yt" ? <YouTubeIcon size={13} color={tab === t.id ? "#FF0000" : "rgba(148,163,184,.5)"} /> : t.icon}</span>
             {t.label}
           </button>
         ))}
@@ -867,6 +996,7 @@ export default function PgaModulesPanel({
         {tab === "leaderboard" && <Leaderboard accentColor={accentColor} />}
         {tab === "field"       && <FieldIntel accentColor={accentColor} />}
         {tab === "news"        && <PgaNews accentColor={accentColor} />}
+        {tab === "youtube"     && <PgaYouTube accentColor={accentColor} />}
         {tab === "streams"     && <GolfTwitchStreams lobbyId={lobbyId} accentColor={accentColor} />}
       </div>
     </div>
