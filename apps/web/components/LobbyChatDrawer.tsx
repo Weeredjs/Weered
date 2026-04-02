@@ -98,6 +98,15 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           box-shadow: -8px 0 40px rgba(0,0,0,0.45), inset 1px 0 0 rgba(255,255,255,0.04);
           animation: drawerSlideIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
+        @media (max-width: 767px) {
+          .lobby-chat-drawer {
+            position: fixed !important;
+            top: 0 !important; right: 0 !important; bottom: 56px !important; left: 0 !important;
+            width: 100% !important;
+            border-radius: 0 !important;
+            background: rgba(10, 10, 18, 0.97) !important;
+          }
+        }
         .lobby-chat-tab {
           position: absolute;
           right: 0; top: 50%;
