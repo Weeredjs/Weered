@@ -5899,6 +5899,63 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── YOUTUBE RSS FEED ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // In-memory cache for YouTube RSS (avoids hammering YouTube)
+  const ytCache: Record<string, { data: any; ts: number }> = {};
+
+  app.get<{ Params: { channelId: string } }>("/youtube/channel/:channelId", async (req, reply) => {
+    const { channelId } = req.params;
+    if (!/^UC[\w-]{20,}$/.test(channelId)) return reply.code(400).send({ ok: false, error: "invalid_channel_id" });
+
+    const cached = ytCache[channelId];
+    if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return reply.send(cached.data);
+
+    try {
+      const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+      const res = await fetch(feedUrl);
+      if (!res.ok) return reply.code(502).send({ ok: false, error: "youtube_fetch_failed" });
+      const xml = await res.text();
+
+      // Parse XML entries — lightweight regex parse, no external XML lib needed
+      const entries: any[] = [];
+      const entryBlocks = xml.split("<entry>").slice(1); // skip first chunk (feed header)
+      for (const block of entryBlocks.slice(0, 20)) {
+        const tag = (name: string) => {
+          const m = block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`));
+          return m ? m[1].trim() : "";
+        };
+        const attr = (tagName: string, attrName: string) => {
+          const m = block.match(new RegExp(`<${tagName}[^>]*${attrName}="([^"]*)"[^>]*/?>`, "i"));
+          return m ? m[1] : "";
+        };
+        const videoId = tag("yt:videoId");
+        if (!videoId) continue;
+        entries.push({
+          videoId,
+          title: tag("title").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'").replace(/&quot;/g, '"'),
+          published: tag("published"),
+          updated: tag("updated"),
+          channelName: tag("name"),
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+          thumbnailHq: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          views: parseInt(attr("media:statistics", "views") || "0", 10),
+          starRating: parseFloat(attr("media:starRating", "average") || "0"),
+          description: tag("media:description").slice(0, 300).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'").replace(/&quot;/g, '"'),
+        });
+      }
+
+      const payload = { ok: true, channelId, videos: entries };
+      ytCache[channelId] = { data: payload, ts: Date.now() };
+      return reply.send(payload);
+    } catch (e) {
+      console.error("[youtube rss]", e);
+      return reply.code(500).send({ ok: false, error: "youtube_parse_failed" });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── BUNGIE API INTEGRATION ─────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 

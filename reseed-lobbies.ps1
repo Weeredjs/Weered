@@ -235,14 +235,14 @@ $lobbies = @'
   {
     "id": "pga",
     "name": "PGA Tour",
-    "description": "Leaderboards, field intel, news, and streams. Every tournament.",
+    "description": "Leaderboards, field intel, news, YouTube highlights, and streams. Every tournament.",
     "pinned": true,
     "moduleType": "PGA",
-    "moduleConfig": { "twitchCategory": "Golf", "subreddit": "r/golf" },
+    "moduleConfig": { "twitchCategory": "Golf", "subreddit": "r/golf", "youtubeChannelId": "UCpmBTB_cfp9pRDKi3AZZHkA" },
     "keywords": ["pga","golf","masters","pgatour","usopen","theopen","pga championship","ryder cup","tiger","scottie","rory"],
     "accentColor": "#003B2F",
-    "bannerUrl": "https://a.espncdn.com/photo/2025/0410/r1310123_1296x729_16-9.jpg",
-    "logoUrl": null
+    "bannerUrl": "https://a.espncdn.com/combiner/i?img=/photo/2024/0411/r1316927_1296x729_16-9.jpg&w=1140&cquality=40&format=jpg",
+    "logoUrl": "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/PGA_Tour_logo.svg/1200px-PGA_Tour_logo.svg.png"
   },
   {
     "id": "weered.ca",
