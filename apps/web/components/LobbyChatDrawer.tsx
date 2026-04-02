@@ -126,6 +126,14 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           user-select: none;
           backdrop-filter: blur(8px);
         }
+        @media (max-width: 767px) {
+          .lobby-chat-tab {
+            position: fixed !important;
+            right: 0 !important;
+            top: 40% !important;
+            z-index: 100 !important;
+          }
+        }
         .lobby-chat-tab:hover {
           background: ${ac}44;
         }
