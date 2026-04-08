@@ -252,7 +252,23 @@ async function fetchRecentActivities(
 const BATCH_SIZE = 50; // Enrollments per cycle
 const WORKER_INTERVAL = 30_000; // 30 seconds
 
-export function startChallengeWorker(prisma: PrismaClient, awardNotoriety: (userId: string, action: string) => Promise<any>) {
+// ── WS notification callback type ──────────────────────────────────────────
+
+type ChallengeNotify = (userId: string, event: {
+  type: "challenge:progress" | "challenge:completed";
+  enrollmentId: string;
+  instanceId: string;
+  challengeTitle: string;
+  progress: Record<string, ObjProgress>;
+  notorietyReward?: number;
+  badgeId?: string | null;
+}) => void;
+
+export function startChallengeWorker(
+  prisma: PrismaClient,
+  awardNotoriety: (userId: string, action: string) => Promise<any>,
+  notify?: ChallengeNotify,
+) {
   console.log("[challenges] Worker started — polling every 30s");
 
   async function cycle() {
@@ -404,7 +420,36 @@ export function startChallengeWorker(prisma: PrismaClient, awardNotoriety: (user
                 awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
               }
 
+              // Award badge if one is configured
+              if (def.badgeId) {
+                prisma.userBadge.create({
+                  data: { userId, badgeId: def.badgeId },
+                }).catch(() => {}); // Ignore dupes
+              }
+
               console.log(`[challenges] ${userId} completed "${def.title}"`);
+
+              // Notify via WebSocket
+              if (notify) {
+                notify(userId, {
+                  type: "challenge:completed",
+                  enrollmentId: enrollment.id,
+                  instanceId: enrollment.instanceId,
+                  challengeTitle: def.title,
+                  progress,
+                  notorietyReward: def.notorietyReward,
+                  badgeId: def.badgeId,
+                });
+              }
+            } else if (newActivities.length > 0 && notify) {
+              // Progress updated but not complete — send progress event
+              notify(userId, {
+                type: "challenge:progress",
+                enrollmentId: enrollment.id,
+                instanceId: enrollment.instanceId,
+                challengeTitle: def.title,
+                progress,
+              });
             }
 
             await prisma.challengeEnrollment.update({
@@ -421,7 +466,192 @@ export function startChallengeWorker(prisma: PrismaClient, awardNotoriety: (user
     }
   }
 
+  // ── Tournament scoring cycle ──────────────────────────────────────────────
+  // Runs every 60s, scores active LEADERBOARD tournaments
+  // scoringRule JSON: { type: "challenge_completions", definitionIds?: string[] }
+  //   or: { type: "total_kills" }, { type: "total_activities" }, { type: "fastest_clear" }
+
+  async function tournamentCycle() {
+    try {
+      const active = await prisma.tournament.findMany({
+        where: { status: "ACTIVE", format: "LEADERBOARD" },
+        include: { entries: true },
+      });
+      if (active.length === 0) return;
+
+      for (const tourney of active) {
+        // Auto-complete expired tournaments
+        if (new Date(tourney.endsAt).getTime() < Date.now()) {
+          const ranked = tourney.entries.sort((a, b) => b.score - a.score);
+          for (let i = 0; i < ranked.length; i++) {
+            await prisma.tournamentEntry.update({
+              where: { id: ranked[i].id },
+              data: { rank: i + 1 },
+            }).catch(() => {});
+          }
+          await prisma.tournament.update({
+            where: { id: tourney.id },
+            data: { status: "COMPLETED" },
+          });
+          console.log(`[tournaments] "${tourney.title}" completed — ${ranked.length} entries ranked`);
+          continue;
+        }
+
+        const rule = tourney.scoringRule as any;
+        if (!rule?.type) continue;
+
+        for (const entry of tourney.entries) {
+          if (!entry.userId) continue;
+          let score = 0;
+
+          if (rule.type === "challenge_completions") {
+            // Count completed challenge enrollments, optionally filtered by definitionId
+            const where: any = { userId: entry.userId, status: "COMPLETED" };
+            if (rule.definitionIds?.length) {
+              where.instance = { definitionId: { in: rule.definitionIds } };
+            }
+            score = await prisma.challengeEnrollment.count({ where });
+
+          } else if (rule.type === "total_kills") {
+            // Sum all kills from activity log during tournament window
+            const logs = await prisma.bungieActivityLog.findMany({
+              where: {
+                userId: entry.userId,
+                period: { gte: tourney.startsAt, lte: tourney.endsAt },
+              },
+              select: { kills: true },
+            });
+            score = logs.reduce((sum, l) => sum + l.kills, 0);
+
+          } else if (rule.type === "total_activities") {
+            score = await prisma.bungieActivityLog.count({
+              where: {
+                userId: entry.userId,
+                period: { gte: tourney.startsAt, lte: tourney.endsAt },
+                completed: true,
+              },
+            });
+
+          } else if (rule.type === "fastest_clear") {
+            // Lowest duration for matching activities
+            const actHash = rule.activityHash;
+            if (actHash) {
+              const fastest = await prisma.bungieActivityLog.findFirst({
+                where: {
+                  userId: entry.userId,
+                  activityHash: actHash,
+                  completed: true,
+                  period: { gte: tourney.startsAt, lte: tourney.endsAt },
+                },
+                orderBy: { duration: "asc" },
+                select: { duration: true },
+              });
+              // Invert: lower duration = higher score (max seconds minus actual)
+              score = fastest ? Math.max(0, 86400 - fastest.duration) : 0;
+            }
+          }
+
+          if (score !== entry.score) {
+            await prisma.tournamentEntry.update({
+              where: { id: entry.id },
+              data: { score },
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e: any) {
+      console.error("[tournaments] Scoring cycle error:", e.message);
+    }
+  }
+
   // Run immediately, then on interval
   setTimeout(cycle, 5000);
   setInterval(cycle, WORKER_INTERVAL);
+
+  // Tournament scoring — every 60s
+  setTimeout(tournamentCycle, 15000);
+  setInterval(tournamentCycle, 60_000);
+
+  // ── Recurring challenge instantiation ──────────────────────────────────────
+  // Checks every 5 minutes for recurring definitions that need a new instance.
+  // recurSchedule values: "daily", "weekly_tuesday", "weekly_friday", etc.
+
+  async function recurringCycle() {
+    try {
+      const recurring = await prisma.challengeDefinition.findMany({
+        where: { isRecurring: true, status: "ACTIVE" },
+        include: {
+          instances: {
+            orderBy: { startsAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+
+      const now = new Date();
+      const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const todayName = dayNames[now.getDay()];
+
+      for (const def of recurring) {
+        const schedule = (def.recurSchedule || "").toLowerCase().trim();
+        if (!schedule) continue;
+
+        const lastInstance = def.instances[0];
+        const lastStart = lastInstance ? new Date(lastInstance.startsAt).getTime() : 0;
+        const hoursSinceLast = (now.getTime() - lastStart) / 3600000;
+
+        let shouldCreate = false;
+        let durationHours = 24; // default: 1 day
+
+        if (schedule === "daily") {
+          shouldCreate = hoursSinceLast >= 20; // allow 4h overlap
+          durationHours = 24;
+        } else if (schedule.startsWith("weekly_")) {
+          const targetDay = schedule.replace("weekly_", "");
+          shouldCreate = todayName === targetDay && hoursSinceLast >= 144; // ~6 days
+          durationHours = 168; // 7 days
+        } else if (schedule === "weekly") {
+          // Default to Tuesday reset (Destiny weekly reset)
+          shouldCreate = todayName === "tuesday" && hoursSinceLast >= 144;
+          durationHours = 168;
+        }
+
+        if (shouldCreate) {
+          const startsAt = new Date();
+          const endsAt = new Date(startsAt.getTime() + durationHours * 3600000);
+
+          // Close previous instance
+          if (lastInstance && lastInstance.status === "ACTIVE") {
+            await prisma.challengeInstance.update({
+              where: { id: lastInstance.id },
+              data: { status: "COMPLETED" },
+            }).catch(() => {});
+
+            // Mark any active enrollments on old instance as FAILED (didn't finish in time)
+            await prisma.challengeEnrollment.updateMany({
+              where: { instanceId: lastInstance.id, status: "ACTIVE" },
+              data: { status: "FAILED" },
+            }).catch(() => {});
+          }
+
+          await prisma.challengeInstance.create({
+            data: {
+              definitionId: def.id,
+              startsAt,
+              endsAt,
+              status: "ACTIVE",
+            },
+          });
+
+          console.log(`[challenges] Recurring instance created for "${def.title}" (${schedule})`);
+        }
+      }
+    } catch (e: any) {
+      console.error("[challenges] Recurring cycle error:", e.message);
+    }
+  }
+
+  // Recurring — every 5 minutes
+  setTimeout(recurringCycle, 20000);
+  setInterval(recurringCycle, 300_000);
 }
