@@ -3748,11 +3748,18 @@ app.post("/dm/:peerId", async (req, reply) => {
         id: true, name: true, description: true, verified: true, pinned: true,
         moduleType: true, moduleConfig: true, keywords: true,
         accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
+        joinMode: true, ownerId: true,
+        enabledModules: true,
         rooms: {
           select: { id: true, name: true, description: true, locked: true, ownerId: true, _count: { select: { members: true } },},
           orderBy: { name: "asc" },
         },
         _count: { select: { rooms: true, members: true } },
+        tiers: {
+          where: { active: true },
+          select: { id: true, name: true, priceMonthly: true, color: true, grantLevel: true, sortOrder: true },
+          orderBy: { sortOrder: "asc" },
+        },
       },
     });
     if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
@@ -3770,7 +3777,236 @@ app.post("/dm/:peerId", async (req, reply) => {
       return { ...r, onlineCount: wsRoom?.users?.size ?? 0, onlineUsers };
     });
 
-    return reply.send({ ok: true, lobby: { ...lobby, rooms: enrichedRooms } });
+    // Check membership for authenticated user
+    let membership: any = null;
+    let joinRequest: any = null;
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (u) {
+      const member = await (prisma as any).lobbyMember.findUnique({
+        where: { lobbyId_userId: { lobbyId: id, userId: u.id } },
+        select: { role: true, roleLevel: true },
+      });
+      if (member) {
+        membership = { role: member.role, roleLevel: member.roleLevel };
+      } else if (lobby.joinMode === "APPROVAL") {
+        // Check for pending request
+        const req2 = await (prisma as any).lobbyJoinRequest.findUnique({
+          where: { lobbyId_userId: { lobbyId: id, userId: u.id } },
+          select: { status: true, createdAt: true, denyReason: true },
+        });
+        if (req2) joinRequest = req2;
+      }
+    }
+
+    return reply.send({
+      ok: true,
+      lobby: { ...lobby, rooms: enrichedRooms },
+      membership,
+      joinRequest,
+    });
+  });
+
+  // POST /lobbies/:id/join — join a lobby (handles all join modes)
+  app.post("/lobbies/:id/join", async (req, reply) => {
+    const lobbyId = (req.params as any).id as string;
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const lobby = await (prisma as any).lobby.findUnique({
+      where: { id: lobbyId },
+      select: { id: true, joinMode: true, joinPassword: true, name: true },
+    });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    // Check if banned
+    const ban = await (prisma as any).lobbyBan.findUnique({
+      where: { lobbyId_userId: { lobbyId, userId: u.id } },
+    });
+    if (ban) return reply.code(403).send({ ok: false, error: "banned", message: "You are banned from this lobby." });
+
+    // Check if already a member
+    const existing = await (prisma as any).lobbyMember.findUnique({
+      where: { lobbyId_userId: { lobbyId, userId: u.id } },
+    });
+    if (existing) return reply.send({ ok: true, already: true, role: existing.role, roleLevel: existing.roleLevel });
+
+    const body = (req.body || {}) as any;
+    const mode = lobby.joinMode || "OPEN";
+
+    if (mode === "PAID") {
+      return reply.code(403).send({ ok: false, error: "paid_required", message: "Subscribe to a lobby tier to join." });
+    }
+
+    if (mode === "PASSWORD") {
+      const pw = String(body.password || "").trim();
+      if (!pw || pw !== lobby.joinPassword) {
+        return reply.code(403).send({ ok: false, error: "wrong_password", message: "Incorrect lobby password." });
+      }
+    }
+
+    if (mode === "APPROVAL") {
+      // Check for existing request
+      const existingReq = await (prisma as any).lobbyJoinRequest.findUnique({
+        where: { lobbyId_userId: { lobbyId, userId: u.id } },
+      });
+      if (existingReq) {
+        if (existingReq.status === "PENDING") return reply.send({ ok: true, pending: true });
+        if (existingReq.status === "DENIED") {
+          // Allow re-request by resetting
+          await (prisma as any).lobbyJoinRequest.update({
+            where: { id: existingReq.id },
+            data: { status: "PENDING", message: String(body.message || "").slice(0, 500), reviewedAt: null, reviewedById: null, reviewedByName: null, denyReason: null },
+          });
+          return reply.send({ ok: true, pending: true, resubmitted: true });
+        }
+      }
+      // Create new request
+      const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+      await (prisma as any).lobbyJoinRequest.create({
+        data: {
+          lobbyId,
+          userId: u.id,
+          userName: user?.name || u.name || "Unknown",
+          message: String(body.message || "").slice(0, 500),
+        },
+      });
+      return reply.send({ ok: true, pending: true });
+    }
+
+    // OPEN or PASSWORD (verified above) — create membership
+    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+    const member = await (prisma as any).lobbyMember.create({
+      data: { lobbyId, userId: u.id, name: user?.name || u.name || "Unknown", role: "MEMBER", roleLevel: 1 },
+    });
+
+    // Audit
+    await (prisma as any).lobbyAudit.create({
+      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId, type: "member_join", actorId: u.id, actorName: user?.name || "Unknown", detail: `Joined lobby (${mode})`, ts: new Date() },
+    });
+
+    return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });
+  });
+
+  // POST /lobbies/:id/leave — leave a lobby (self-serve)
+  app.post("/lobbies/:id/leave", async (req, reply) => {
+    const lobbyId = (req.params as any).id as string;
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const member = await (prisma as any).lobbyMember.findUnique({
+      where: { lobbyId_userId: { lobbyId, userId: u.id } },
+      select: { id: true, role: true, roleLevel: true },
+    });
+    if (!member) return reply.code(404).send({ ok: false, error: "not_a_member" });
+
+    // Owners can't leave their own lobby
+    if (member.roleLevel >= 5) {
+      return reply.code(403).send({ ok: false, error: "owner_cannot_leave", message: "Transfer ownership before leaving." });
+    }
+
+    await (prisma as any).lobbyMember.delete({ where: { id: member.id } });
+
+    // Cancel any active lobby tier subs for this user
+    await (prisma as any).lobbyTierSub.updateMany({
+      where: { lobbyId, userId: u.id, status: "active" },
+      data: { status: "canceled", cancelAtPeriodEnd: true },
+    });
+
+    // Audit
+    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+    await (prisma as any).lobbyAudit.create({
+      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId, type: "member_leave", actorId: u.id, actorName: user?.name || "Unknown", detail: "Left lobby", ts: new Date() },
+    });
+
+    return reply.send({ ok: true });
+  });
+
+  // GET /lobbies/:id/admin/join-requests — pending join requests
+  app.get("/lobbies/:id/admin/join-requests", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3); // level 3+ (moderator)
+    if (!ctx) return;
+    const requests = await (prisma as any).lobbyJoinRequest.findMany({
+      where: { lobbyId: ctx.lobby.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return reply.send({ ok: true, requests });
+  });
+
+  // POST /lobbies/:id/admin/join-requests/:reqId/approve
+  app.post("/lobbies/:id/admin/join-requests/:reqId/approve", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const reqId = (req.params as any).reqId as string;
+    const jr = await (prisma as any).lobbyJoinRequest.findUnique({ where: { id: reqId } });
+    if (!jr || jr.lobbyId !== ctx.lobby.id) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (jr.status !== "PENDING") return reply.code(400).send({ ok: false, error: "already_reviewed" });
+
+    // Approve: update request + create membership
+    await (prisma as any).lobbyJoinRequest.update({
+      where: { id: reqId },
+      data: { status: "APPROVED", reviewedById: ctx.member.userId, reviewedByName: ctx.member.name, reviewedAt: new Date() },
+    });
+    await (prisma as any).lobbyMember.create({
+      data: { lobbyId: ctx.lobby.id, userId: jr.userId, name: jr.userName, role: "MEMBER", roleLevel: 1 },
+    });
+
+    // Audit
+    await (prisma as any).lobbyAudit.create({
+      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId: ctx.lobby.id, type: "join_request_approved", actorId: ctx.member.userId, actorName: ctx.member.name, detail: `Approved join request from ${jr.userName}`, ts: new Date() },
+    });
+
+    return reply.send({ ok: true });
+  });
+
+  // POST /lobbies/:id/admin/join-requests/:reqId/deny
+  app.post("/lobbies/:id/admin/join-requests/:reqId/deny", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const reqId = (req.params as any).reqId as string;
+    const jr = await (prisma as any).lobbyJoinRequest.findUnique({ where: { id: reqId } });
+    if (!jr || jr.lobbyId !== ctx.lobby.id) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (jr.status !== "PENDING") return reply.code(400).send({ ok: false, error: "already_reviewed" });
+
+    const body = (req.body || {}) as any;
+    await (prisma as any).lobbyJoinRequest.update({
+      where: { id: reqId },
+      data: { status: "DENIED", reviewedById: ctx.member.userId, reviewedByName: ctx.member.name, reviewedAt: new Date(), denyReason: String(body.reason || "").slice(0, 500) || null },
+    });
+
+    // Audit
+    await (prisma as any).lobbyAudit.create({
+      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId: ctx.lobby.id, type: "join_request_denied", actorId: ctx.member.userId, actorName: ctx.member.name, detail: `Denied join request from ${jr.userName}`, ts: new Date() },
+    });
+
+    return reply.send({ ok: true });
+  });
+
+  // PATCH /lobbies/:id/admin/join-mode — update lobby join mode + password
+  app.patch("/lobbies/:id/admin/join-mode", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 4); // level 4+ (admin/owner)
+    if (!ctx) return;
+    const body = (req.body || {}) as any;
+    const mode = String(body.joinMode || "OPEN");
+    if (!["OPEN", "APPROVAL", "PASSWORD", "PAID"].includes(mode)) {
+      return reply.code(400).send({ ok: false, error: "invalid_mode" });
+    }
+    const data: any = { joinMode: mode };
+    if (mode === "PASSWORD") {
+      const pw = String(body.password || "").trim();
+      if (!pw) return reply.code(400).send({ ok: false, error: "password_required" });
+      data.joinPassword = pw;
+    } else {
+      data.joinPassword = null;
+    }
+    await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data });
+
+    // Audit
+    await (prisma as any).lobbyAudit.create({
+      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId: ctx.lobby.id, type: "join_mode_changed", actorId: ctx.member.userId, actorName: ctx.member.name, detail: `Join mode set to ${mode}`, ts: new Date() },
+    });
+
+    return reply.send({ ok: true, joinMode: mode });
   });
 
   app.post("/lobbies", async (req, reply) => {
@@ -3958,6 +4194,7 @@ app.post("/dm/:peerId", async (req, reply) => {
         bannerUrl: lobby.bannerUrl, websiteUrl: lobby.websiteUrl,
         keywords: lobby.keywords, enabledModules: lobby.enabledModules,
         roleNames,
+        joinMode: lobby.joinMode || "OPEN", joinPassword: lobby.joinPassword || null,
       },
       members,
       rooms: roomList.map((r: any) => ({

@@ -19,6 +19,13 @@ enum LobbyRole {
   MEMBER
 }
 
+enum JoinMode {
+  OPEN       // Anyone can join instantly
+  APPROVAL   // Request to join, admin approves
+  PASSWORD   // Must enter lobby password
+  PAID       // Must subscribe to a lobby tier
+}
+
 enum GlobalRole {
   USER
   SUPPORT
@@ -88,6 +95,10 @@ model Lobby {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Membership gating
+  joinMode      JoinMode @default(OPEN)
+  joinPassword  String?  // only used when joinMode=PASSWORD
+
   // Revenue sharing — manual payout percentage for lobby owner (0-100)
   revenueSharePct Float @default(0)
 
@@ -97,9 +108,10 @@ model Lobby {
   messages    LobbyMessage[]
   adminMessages LobbyAdminMessage[]
   audit       LobbyAudit[]
-  tiers       LobbyTier[]
-  events      Event[]
-  forumPosts  ForumPost[]
+  tiers        LobbyTier[]
+  events       Event[]
+  forumPosts   ForumPost[]
+  joinRequests LobbyJoinRequest[]
 }
 
 model LobbyMember {
@@ -127,6 +139,25 @@ model LobbyBan {
   lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
 
   @@unique([lobbyId, userId])
+}
+
+model LobbyJoinRequest {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  userId    String
+  userName  String   @default("")
+  message   String   @default("")   // optional "why I want to join"
+  status    String   @default("PENDING")  // PENDING, APPROVED, DENIED
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  denyReason     String?
+  createdAt DateTime @default(now())
+
+  lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, userId])
+  @@index([lobbyId, status])
 }
 
 model LobbyMessage {

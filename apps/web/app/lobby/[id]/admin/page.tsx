@@ -23,6 +23,7 @@ type LobbyData = {
   bannerUrl: string | null; websiteUrl: string | null;
   keywords: string[]; enabledModules: string[];
   roleNames: Record<string, string>;
+  joinMode: string; joinPassword?: string | null;
 };
 
 type DashboardData = {
@@ -95,15 +96,16 @@ function OverrideBadge({ role }: { role: string }) {
 // ── Nav ──────────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { id: "branding",   label: "Branding",    icon: "🎨", minLevel: 4 },
-  { id: "modules",    label: "Modules",     icon: "🧩", minLevel: 4 },
-  { id: "rooms",      label: "Rooms",       icon: "🚪", minLevel: 3 },
-  { id: "challenges", label: "Challenges",  icon: "🎯", minLevel: 4 },
-  { id: "roles",      label: "Roles",       icon: "👑", minLevel: 5 },
-  { id: "tiers",      label: "Paid Tiers",  icon: "💎", minLevel: 5 },
-  { id: "events",     label: "Events",      icon: "📅", minLevel: 4 },
-  { id: "members",    label: "Members",     icon: "👥", minLevel: 2 },
-  { id: "audit",      label: "Audit Log",   icon: "📋", minLevel: 3 },
+  { id: "branding",      label: "Branding",       icon: "🎨", minLevel: 4 },
+  { id: "modules",       label: "Modules",        icon: "🧩", minLevel: 4 },
+  { id: "rooms",         label: "Rooms",          icon: "🚪", minLevel: 3 },
+  { id: "challenges",    label: "Challenges",     icon: "🎯", minLevel: 4 },
+  { id: "roles",         label: "Roles",          icon: "👑", minLevel: 5 },
+  { id: "tiers",         label: "Paid Tiers",     icon: "💎", minLevel: 5 },
+  { id: "join-requests", label: "Join Requests",  icon: "📬", minLevel: 3 },
+  { id: "events",        label: "Events",         icon: "📅", minLevel: 4 },
+  { id: "members",       label: "Members",        icon: "👥", minLevel: 2 },
+  { id: "audit",         label: "Audit Log",      icon: "📋", minLevel: 3 },
 ] as const;
 
 type NavId = typeof NAV_ITEMS[number]["id"];
@@ -147,6 +149,23 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
   const [keywords, setKeywords]       = useState(lobby.keywords.join(", "));
   const [saving, setSaving]           = useState(false);
   const [msg, setMsg]                 = useState("");
+
+  // Join mode
+  const [joinMode, setJoinMode]       = useState(lobby.joinMode || "OPEN");
+  const [joinPassword, setJoinPassword] = useState(lobby.joinPassword || "");
+  const [joinSaving, setJoinSaving]   = useState(false);
+  const [joinMsg, setJoinMsg]         = useState("");
+
+  async function saveJoinMode() {
+    setJoinSaving(true); setJoinMsg("");
+    const j = await apiFetch(`/lobbies/${encodeURIComponent(lobby.id)}/admin/join-mode`, {
+      method: "PATCH",
+      body: JSON.stringify({ joinMode, password: joinPassword }),
+    });
+    setJoinSaving(false);
+    setJoinMsg(j.ok ? "Saved." : j.error || "Failed.");
+    if (j.ok) onRefresh();
+  }
 
   async function save() {
     setSaving(true); setMsg("");
@@ -203,6 +222,45 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
         <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={save} disabled={saving}>{saving ? "Saving..." : "Save Branding"}</button>
         {msg && <span style={{ fontSize: 12, opacity: 0.7 }}>{msg}</span>}
+      </div>
+
+      {/* ── Join Mode ──────────────────────────────────────────── */}
+      <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+        <div style={{ ...S.label, marginBottom: 12 }}>MEMBERSHIP GATING</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {(["OPEN", "APPROVAL", "PASSWORD", "PAID"] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => setJoinMode(m)}
+              style={{
+                padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                border: joinMode === m ? "1px solid rgba(200,155,60,.45)" : "1px solid rgba(255,255,255,.08)",
+                background: joinMode === m ? "rgba(200,155,60,.12)" : "rgba(255,255,255,.03)",
+                color: joinMode === m ? "rgb(200,155,60)" : "rgba(148,163,184,.6)",
+              }}
+            >
+              {m === "OPEN" ? "Open" : m === "APPROVAL" ? "Approval" : m === "PASSWORD" ? "Password" : "Paid Tier"}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(148,163,184,.45)", marginBottom: 12, lineHeight: 1.5 }}>
+          {joinMode === "OPEN" && "Anyone can join this lobby instantly."}
+          {joinMode === "APPROVAL" && "Users submit a request. Moderators approve or deny from the Join Requests tab."}
+          {joinMode === "PASSWORD" && "Users must enter the correct password to join."}
+          {joinMode === "PAID" && "Users must subscribe to a paid tier to join. Configure tiers in the Paid Tiers tab."}
+        </div>
+        {joinMode === "PASSWORD" && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={S.label}>Lobby Password</div>
+            <input style={S.input} type="text" value={joinPassword} onChange={e => setJoinPassword(e.target.value)} placeholder="Enter password" />
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={saveJoinMode} disabled={joinSaving}>
+            {joinSaving ? "Saving..." : "Save Join Mode"}
+          </button>
+          {joinMsg && <span style={{ fontSize: 12, opacity: 0.7 }}>{joinMsg}</span>}
+        </div>
       </div>
     </div>
   );
@@ -1136,6 +1194,105 @@ function LobbyEventsTab({ lobbyId, myLevel, overrideRole, onRefresh }: { lobbyId
   );
 }
 
+// ── Join Requests Tab ────────────────────────────────────────────────────────
+
+function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<string | null>(null);
+
+  async function load() {
+    const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/admin/join-requests`);
+    if (j.ok) setRequests(j.requests || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [lobbyId]);
+
+  async function act(reqId: string, action: "approve" | "deny", reason?: string) {
+    setActing(reqId);
+    const body: any = {};
+    if (reason) body.reason = reason;
+    await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/admin/join-requests/${reqId}/${action}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    setActing(null);
+    load();
+  }
+
+  const pending = requests.filter(r => r.status === "PENDING");
+  const reviewed = requests.filter(r => r.status !== "PENDING");
+
+  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading...</div>;
+
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <div style={{ ...S.label, marginBottom: 12 }}>PENDING REQUESTS ({pending.length})</div>
+      {pending.length === 0 && (
+        <div style={{ padding: "16px 0", fontSize: 12, opacity: 0.4 }}>No pending requests.</div>
+      )}
+      {pending.map(r => (
+        <div key={r.id} style={{
+          ...S.card, marginBottom: 8,
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>{r.userName}</div>
+            {r.message && <div style={{ fontSize: 11, color: "rgba(148,163,184,.55)", marginTop: 3, fontStyle: "italic" }}>"{r.message}"</div>}
+            <div style={{ fontSize: 10, opacity: 0.35, marginTop: 3 }}>{fmtDate(r.createdAt)}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button
+              style={{ ...S.btnPri, padding: "5px 14px", fontSize: 11 }}
+              onClick={() => act(r.id, "approve")}
+              disabled={acting === r.id}
+            >
+              Approve
+            </button>
+            <button
+              style={{ ...S.btn, padding: "5px 14px", fontSize: 11, borderColor: "rgba(239,68,68,.2)", color: "rgba(239,68,68,.7)" }}
+              onClick={() => {
+                const reason = prompt("Deny reason (optional):");
+                act(r.id, "deny", reason || undefined);
+              }}
+              disabled={acting === r.id}
+            >
+              Deny
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {reviewed.length > 0 && (
+        <>
+          <div style={{ ...S.label, marginTop: 24, marginBottom: 12 }}>REVIEWED ({reviewed.length})</div>
+          {reviewed.map(r => (
+            <div key={r.id} style={{
+              ...S.card, marginBottom: 6, opacity: 0.6,
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>{r.userName}</div>
+                <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>
+                  {r.status === "APPROVED" ? "Approved" : "Denied"}{r.reviewedByName ? ` by ${r.reviewedByName}` : ""} · {fmtDate(r.reviewedAt || r.createdAt)}
+                </div>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                color: r.status === "APPROVED" ? "#22C55E" : "#EF4444",
+                background: r.status === "APPROVED" ? "rgba(34,197,94,.1)" : "rgba(239,68,68,.1)",
+              }}>
+                {r.status}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 function AuditTab({ lobbyId, initialLogs }: { lobbyId: string; initialLogs: AdminAudit[] }) {
   const [logs] = useState(initialLogs);
   const [filter, setFilter] = useState("");
@@ -1305,6 +1462,7 @@ export default function LobbyAdminPage() {
             {nav === "challenges" && <ChallengesTab lobbyId={lobbyId} />}
             {nav === "roles"    && <RolesTab lobby={lobby} onRefresh={load} />}
             {nav === "tiers"    && <TiersTab lobbyId={lobbyId} roleNames={roleNames} onRefresh={load} />}
+            {nav === "join-requests" && <JoinRequestsTab lobbyId={lobbyId} />}
             {nav === "events"   && <LobbyEventsTab lobbyId={lobbyId} myLevel={myLevel} overrideRole={overrideRole} onRefresh={load} />}
             {nav === "members"  && <MembersTab lobbyId={lobbyId} initialMembers={members} roleNames={roleNames} myLevel={myLevel} perms={perms} overrideRole={overrideRole} onRefresh={load} />}
             {nav === "audit"    && <AuditTab lobbyId={lobbyId} initialLogs={audit} />}
