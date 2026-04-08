@@ -621,6 +621,13 @@ export default function LeagueModulesPanel({
         {tab === "leaderboard" && <Leaderboard accent={accentColor} />}
         {tab === "rotation"    && <FreeRotation champions={champions} accent={accentColor} />}
       </div>
+
+      {/* Riot Games required legal disclaimer */}
+      <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
+        <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
+          Weered isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+        </p>
+      </div>
     </div>
   );
 }
