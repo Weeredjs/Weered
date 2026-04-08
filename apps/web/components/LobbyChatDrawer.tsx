@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentColor }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
   const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(0);
   const openRef = useRef(false);
@@ -232,7 +232,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           <div style={{
             position: "absolute", inset: 0, zIndex: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            pointerEvents: "none", opacity: 0.06,
+            pointerEvents: "none", opacity: 0.14,
             flexDirection: "column", gap: 6,
           }}>
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: ac }}>

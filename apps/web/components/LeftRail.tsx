@@ -449,40 +449,28 @@ export default function LeftRail() {
       <div className="weered-left-section">
         <div className="weered-left-title">Communities</div>
 
-        <Link
-          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " + (isLobbyActive ? " weered-left-link-active" : "")}
-          href={lobbyHrefMain}
-        >
-          <span>Lobby</span>
-          {isLobbyActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
-        </Link>
-
-        <Link
-          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " + (isHomeActive ? " weered-left-link-active" : "")}
-          href="/home"
-          onClick={(e) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); }}
-        >
-          <span>Home</span>
-          {isHomeActive ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
-        </Link>
-
-        <Link
-          className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " + (pathname.startsWith("/forum") ? " weered-left-link-active" : "")}
-          href="/forum"
-        >
-          <span>Forum</span>
-          {pathname.startsWith("/forum") ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
-        </Link>
-
-        {(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT") && (
+        {[
+          { href: lobbyHrefMain, label: "Lobby", icon: "🏠", active: isLobbyActive, onClick: undefined as any },
+          { href: "/home", label: "Home", icon: "📡", active: isHomeActive, onClick: (e: any) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); } },
+          { href: "/forum", label: "Forum", icon: "💬", active: pathname.startsWith("/forum"), onClick: undefined as any },
+          ...((globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT")
+            ? [{ href: "/staff", label: "Ops", icon: "⚙", active: pathname.startsWith("/staff"), onClick: undefined as any }]
+            : []),
+        ].map((item) => (
           <Link
-            className={"weered-left-link rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors flex items-center justify-between " + (pathname.startsWith("/staff") ? " weered-left-link-active" : "")}
-            href="/staff"
+            key={item.label}
+            className={"weered-left-link rounded-xl border px-3 py-2.5 transition-all flex items-center gap-2.5 " + (item.active
+              ? "weered-left-link-active border-violet-500/25 bg-violet-500/12"
+              : "border-white/[.06] bg-white/[.02] hover:bg-white/[.06] hover:border-white/[.12]"
+            )}
+            href={item.href}
+            onClick={item.onClick}
           >
-            <span>Ops</span>
-            {pathname.startsWith("/staff") ? <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_0_2px_rgba(124,58,237,.18)]" /> : null}
+            <span className="text-[15px] opacity-70">{item.icon}</span>
+            <span className="flex-1 font-semibold text-[13px]">{item.label}</span>
+            {item.active && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_6px_rgba(124,58,237,.4)]" />}
           </Link>
-        )}
+        ))}
 
         <div className="weered-left-hint mt-2">
           {sub ? <span className="text-[11px] rounded-full border border-white/10 bg-black/10 px-2 py-0.5 opacity-80">context: {sub}</span> : null}
