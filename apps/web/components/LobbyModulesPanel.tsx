@@ -1662,6 +1662,13 @@ export default function LobbyModulesPanel({
         {tab === "guardian"   && <GuardianLookup />}
         {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}
       </div>
+
+      {/* Bungie required legal disclaimer */}
+      <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
+        <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
+          Weered is not affiliated with, endorsed by, or sponsored by Bungie, Inc. Destiny, Destiny 2, and all related logos and trademarks are the property of Bungie, Inc.
+        </p>
+      </div>
     </div>
   );
 }
