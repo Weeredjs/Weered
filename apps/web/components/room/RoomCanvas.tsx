@@ -113,8 +113,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [twitchChannel, setTwitchChannel] = useState<string>("");
   const [twitchInput, setTwitchInput]     = useState<string>("");
 
-  // Chat state — open by default
-  const [chatOpen, setChatOpen]         = useState(true);
+  // Chat state — open on desktop, collapsed on mobile
+  const [chatOpen, setChatOpen]         = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
   const [chatUnread, setChatUnread]     = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
@@ -890,7 +890,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 <div style={{
                   position: "absolute", inset: 0, zIndex: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  pointerEvents: "none", opacity: 0.06,
+                  pointerEvents: "none", opacity: 0.14,
                   flexDirection: "column", gap: 6,
                 }}>
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#a78bfa" }}>
