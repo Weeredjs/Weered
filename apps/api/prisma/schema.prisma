@@ -38,6 +38,7 @@ enum ModuleType {
   PGA
   NEWS
   NONE
+  RIOT
 }
 
 model NewsArticle {

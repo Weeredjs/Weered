@@ -43,14 +43,14 @@ $lobbies = @'
   {
     "id": "league-of-legends",
     "name": "League of Legends",
-    "description": "The MOBA. 150+ champions. Infinite salt.",
+    "description": "The MOBA. 150+ champions. Infinite salt. Summoner lookup, ranked stats, and leaderboards.",
     "pinned": true,
-    "moduleType": "TWITCH",
+    "moduleType": "RIOT",
     "moduleConfig": { "twitchCategory": "League of Legends", "subreddit": "r/leagueoflegends" },
-    "keywords": ["league","lol","leagueoflegends","riot","moba","ranked"],
+    "keywords": ["league","lol","leagueoflegends","riot","moba","ranked","summoner","champion"],
     "accentColor": "#C89B3C",
     "bannerUrl": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/c4e40d8d530fc49e53e85aa1f47e0bc80dfbcb16-1920x1080.jpg",
-    "logoUrl": null
+    "logoUrl": "https://brand.riotgames.com/static/a91000434ed683571e88f4d51c6b73e3/8a20a/lol-logo.png"
   },
   {
     "id": "apex-legends",
