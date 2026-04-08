@@ -526,7 +526,7 @@ function Leaderboard({ accent }: { accent: string }) {
         {/* Header */}
         <div style={{ display: "flex", padding: "4px 10px", fontSize: 10, fontWeight: 700, opacity: 0.35, gap: 8 }}>
           <span style={{ width: 30 }}>#</span>
-          <span style={{ flex: 1 }}>Summoner</span>
+          <span style={{ flex: 1 }}>Player</span>
           <span style={{ width: 55, textAlign: "right" }}>LP</span>
           <span style={{ width: 45, textAlign: "right" }}>W</span>
           <span style={{ width: 45, textAlign: "right" }}>L</span>
@@ -544,7 +544,7 @@ function Leaderboard({ accent }: { accent: string }) {
               {e.rank}
             </span>
             <span style={{ flex: 1, fontWeight: 600, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {e.summonerName}
+              {e.gameName}{e.tagLine ? <span style={{ opacity: 0.35, fontWeight: 400 }}>#{e.tagLine}</span> : ""}
             </span>
             <span style={{ width: 55, textAlign: "right", fontWeight: 700, fontSize: 12, color: accent }}>{e.lp.toLocaleString()}</span>
             <span style={{ width: 45, textAlign: "right", fontSize: 11, color: "rgba(134,239,172,.7)" }}>{e.wins}</span>

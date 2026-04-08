@@ -7065,18 +7065,32 @@ app.post("/dm/:peerId", async (req, reply) => {
     const challenger = await riotGet(`${riotPlatformUrl(region)}/lol/league/v4/challengerleagues/by-queue/${queue}`);
     if (!challenger?.entries) return reply.send({ ok: false, error: "leaderboard_unavailable" });
 
-    const entries = (challenger.entries as any[])
+    const sorted = (challenger.entries as any[])
       .sort((a: any, b: any) => b.leaguePoints - a.leaguePoints)
-      .slice(0, 100)
-      .map((e: any, i: number) => ({
+      .slice(0, 50);
+
+    // Resolve Riot IDs for top 25 (rate-limit friendly)
+    const cluster = region === "kr" || region === "jp1" ? "asia" : region.startsWith("eu") ? "europe" : RIOT_CLUSTER;
+    const entries: any[] = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const e = sorted[i];
+      let gameName = e.summonerName || "";
+      let tagLine = "";
+      if (i < 25 && e.puuid) {
+        const acct = await riotGet(`${riotClusterUrl(cluster)}/riot/account/v1/accounts/by-puuid/${e.puuid}`);
+        if (acct?.gameName) { gameName = acct.gameName; tagLine = acct.tagLine || ""; }
+      }
+      entries.push({
         rank: i + 1,
-        summonerName: e.summonerName,
-        summonerId: e.summonerId,
+        gameName: gameName || `Player ${i + 1}`,
+        tagLine,
+        puuid: e.puuid,
         lp: e.leaguePoints,
         wins: e.wins,
         losses: e.losses,
         winRate: e.wins + e.losses > 0 ? Math.round(e.wins / (e.wins + e.losses) * 100) : 0,
-      }));
+      });
+    }
 
     const result = { ok: true, tier: "CHALLENGER", queue, region, entries };
     leagueCacheSet(cacheKey, result, 15 * 60 * 1000); // 15 min
