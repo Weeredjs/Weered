@@ -3705,7 +3705,39 @@ app.post("/dm/:peerId", async (req, reply) => {
       },
       orderBy: [{ pinned: "desc" }, { name: "asc" }],
     });
-    return reply.send({ ok: true, lobbies });
+    const enriched = lobbies.map((l: any) => ({
+      ...l,
+      onlineCount: rooms.get(l.id)?.users?.size ?? 0,
+    }));
+    return reply.send({ ok: true, lobbies: enriched });
+  });
+
+  // GET /me/lobbies — lobbies the current user is a member of
+  app.get("/me/lobbies", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.send({ ok: true, lobbies: [] }); // graceful for logged-out
+    const memberships = await (prisma as any).lobbyMember.findMany({
+      where: { userId: u.id },
+      select: { lobbyId: true, role: true, roleLevel: true },
+    });
+    if (memberships.length === 0) return reply.send({ ok: true, lobbies: [] });
+    const lobbyIds = memberships.map((m: any) => m.lobbyId);
+    const lobbies = await (prisma as any).lobby.findMany({
+      where: { id: { in: lobbyIds } },
+      select: {
+        id: true, name: true, description: true, verified: true, pinned: true,
+        accentColor: true, logoUrl: true, bannerUrl: true,
+        _count: { select: { rooms: true, members: true } },
+      },
+    });
+    const memberMap = new Map(memberships.map((m: any) => [m.lobbyId, m]));
+    const enriched = lobbies.map((l: any) => ({
+      ...l,
+      onlineCount: rooms.get(l.id)?.users?.size ?? 0,
+      role: memberMap.get(l.id)?.role || "MEMBER",
+      roleLevel: memberMap.get(l.id)?.roleLevel ?? 1,
+    }));
+    return reply.send({ ok: true, lobbies: enriched });
   });
 
   app.get("/lobbies/:id", async (req, reply) => {
