@@ -6674,7 +6674,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     try {
       // Fetch full profile: characters, equipment, inventories, vault, item instances, sockets, stats
       const profile = await bungieGet(
-        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300,302,304`,
+        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300,302,304,305`,
         accessToken
       );
 
