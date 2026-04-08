@@ -1037,3 +1037,46 @@ model UserBadge {
   @@index([userId])
 }
 
+// —— Outreach CRM ————————————————————————————————————————————————————————————
+
+enum OutreachStatus {
+  LEAD
+  CONTACTED
+  REPLIED
+  IN_PROGRESS
+  PARTNERED
+  DECLINED
+  STALE
+}
+
+enum OutreachCategory {
+  GAME_STUDIO
+  ESPORTS_ORG
+  CONTENT_CREATOR
+  BRAND_SPONSOR
+  MEDIA
+  COMMUNITY
+  PLATFORM
+  OTHER
+}
+
+model OutreachContact {
+  id          String           @id @default(cuid())
+  name        String
+  company     String
+  email       String           @default("")
+  role        String           @default("")
+  category    OutreachCategory @default(OTHER)
+  status      OutreachStatus   @default(LEAD)
+  notes       String           @default("")
+  lastContact DateTime?
+  nextFollowUp DateTime?
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+

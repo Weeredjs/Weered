@@ -5284,6 +5284,97 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── OUTREACH CRM ───────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // GET /staff/outreach — list all contacts
+  app.get("/staff/outreach", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const status   = (req as any).query?.status || undefined;
+    const category = (req as any).query?.category || undefined;
+    const where: any = {};
+    if (status) where.status = status;
+    if (category) where.category = category;
+
+    const contacts = await (prisma as any).outreachContact.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+    });
+    return reply.send({ ok: true, contacts });
+  });
+
+  // POST /staff/outreach — create contact
+  app.post("/staff/outreach", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const b = (req as any).body || {};
+    if (!b.name || !b.company) return reply.code(400).send({ ok: false, error: "name and company required" });
+
+    const contact = await (prisma as any).outreachContact.create({
+      data: {
+        name: b.name,
+        company: b.company,
+        email: b.email || "",
+        role: b.role || "",
+        category: b.category || "OTHER",
+        status: b.status || "LEAD",
+        notes: b.notes || "",
+        lastContact: b.lastContact ? new Date(b.lastContact) : null,
+        nextFollowUp: b.nextFollowUp ? new Date(b.nextFollowUp) : null,
+        createdById: u.id,
+      },
+    });
+    return reply.send({ ok: true, contact });
+  });
+
+  // PATCH /staff/outreach/:id — update contact
+  app.patch("/staff/outreach/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const id = (req as any).params.id;
+    const b = (req as any).body || {};
+    const data: any = {};
+    if (b.name !== undefined) data.name = b.name;
+    if (b.company !== undefined) data.company = b.company;
+    if (b.email !== undefined) data.email = b.email;
+    if (b.role !== undefined) data.role = b.role;
+    if (b.category !== undefined) data.category = b.category;
+    if (b.status !== undefined) data.status = b.status;
+    if (b.notes !== undefined) data.notes = b.notes;
+    if (b.lastContact !== undefined) data.lastContact = b.lastContact ? new Date(b.lastContact) : null;
+    if (b.nextFollowUp !== undefined) data.nextFollowUp = b.nextFollowUp ? new Date(b.nextFollowUp) : null;
+
+    try {
+      const contact = await (prisma as any).outreachContact.update({ where: { id }, data });
+      return reply.send({ ok: true, contact });
+    } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
+  });
+
+  // DELETE /staff/outreach/:id — remove contact
+  app.delete("/staff/outreach/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    try {
+      await (prisma as any).outreachContact.delete({ where: { id: (req as any).params.id } });
+    } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
+    return reply.send({ ok: true });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── TWITCH INTEGRATION ─────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
@@ -6910,6 +7001,225 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, definitions: defs });
   });
 
+  // ── BADGES ─────────────────────────────────────────────────────────────────
+
+  // GET /badges — all badge definitions
+  app.get("/badges", async (_req, reply) => {
+    const badges = await prisma.challengeBadge.findMany({ orderBy: { rarity: "desc" } });
+    return reply.send({ ok: true, badges });
+  });
+
+  // GET /badges/user/:userId — user's earned badges
+  app.get("/badges/user/:userId", async (req, reply) => {
+    const uid = String((req as any).params?.userId || "");
+    const userBadges = await prisma.userBadge.findMany({
+      where: { userId: uid },
+      orderBy: { earnedAt: "desc" },
+    });
+    const badgeIds = userBadges.map(ub => ub.badgeId);
+    const badges = badgeIds.length > 0
+      ? await prisma.challengeBadge.findMany({ where: { id: { in: badgeIds } } })
+      : [];
+    const badgeMap = new Map(badges.map(b => [b.id, b]));
+    const result = userBadges.map(ub => ({
+      ...badgeMap.get(ub.badgeId),
+      earnedAt: ub.earnedAt,
+    }));
+    return reply.send({ ok: true, badges: result });
+  });
+
+  // POST /badges — create badge definition (admin)
+  app.post("/badges", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const body = req.body as any;
+    const badge = await prisma.challengeBadge.create({
+      data: {
+        name: String(body.name || "").trim(),
+        description: String(body.description || "").trim(),
+        iconUrl: String(body.iconUrl || "").trim(),
+        rarity: parseInt(body.rarity) || 1,
+      },
+    });
+    return reply.send({ ok: true, badge });
+  });
+
+  // ── TOURNAMENTS ───────────────────────────────────────────────────────────
+
+  // GET /tournaments — list active/upcoming tournaments
+  app.get("/tournaments", async (req, reply) => {
+    const { lobbyId, status } = req.query as any;
+    const where: any = {};
+    if (lobbyId) where.lobbyId = lobbyId;
+    if (status) where.status = status;
+    else where.status = { in: ["REGISTRATION", "ACTIVE"] };
+    const tournaments = await prisma.tournament.findMany({
+      where,
+      include: { _count: { select: { entries: true } } },
+      orderBy: { startsAt: "asc" },
+      take: 50,
+    });
+    return reply.send({ ok: true, tournaments });
+  });
+
+  // GET /tournaments/:id — single tournament with entries
+  app.get("/tournaments/:id", async (req, reply) => {
+    const id = String((req as any).params?.id || "");
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      include: {
+        entries: { orderBy: { score: "desc" }, take: 100 },
+        _count: { select: { entries: true } },
+      },
+    });
+    if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
+    return reply.send({ ok: true, tournament });
+  });
+
+  // POST /tournaments — create tournament (admin)
+  app.post("/tournaments", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const body = req.body as any;
+    const tournament = await prisma.tournament.create({
+      data: {
+        title: String(body.title || "").trim(),
+        description: String(body.description || "").trim(),
+        iconUrl: body.iconUrl || null,
+        format: body.format || "LEADERBOARD",
+        entryType: body.entryType || "SOLO",
+        lobbyId: body.lobbyId || null,
+        createdById: u.id,
+        scoringRule: body.scoringRule || {},
+        registrationOpensAt: new Date(body.registrationOpensAt || Date.now()),
+        startsAt: new Date(body.startsAt),
+        endsAt: new Date(body.endsAt),
+        maxEntries: parseInt(body.maxEntries) || 100,
+        minEntries: parseInt(body.minEntries) || 2,
+        rewards: body.rewards || [],
+      },
+    });
+    return reply.send({ ok: true, tournament });
+  });
+
+  // POST /tournaments/:id/register — register for tournament
+  app.post("/tournaments/:id/register", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req as any).params?.id || "");
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      include: { _count: { select: { entries: true } } },
+    });
+    if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (tournament.status !== "REGISTRATION" && tournament.status !== "ACTIVE") {
+      return reply.code(400).send({ ok: false, error: "registration_closed" });
+    }
+    if (tournament._count.entries >= tournament.maxEntries) {
+      return reply.code(400).send({ ok: false, error: "tournament_full" });
+    }
+
+    // Check Bungie linked
+    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "BUNGIE" } });
+    if (!acct) return reply.code(400).send({ ok: false, error: "bungie_not_linked" });
+
+    const userName = (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name || "Unknown";
+
+    try {
+      const entry = await prisma.tournamentEntry.create({
+        data: {
+          tournamentId: id,
+          userId: u.id,
+          displayName: userName,
+        },
+      });
+      return reply.send({ ok: true, entry });
+    } catch (e: any) {
+      if (e.code === "P2002") return reply.send({ ok: true, error: "already_registered" });
+      throw e;
+    }
+  });
+
+  // DELETE /tournaments/:id/register — withdraw from tournament
+  app.delete("/tournaments/:id/register", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req as any).params?.id || "");
+    await prisma.tournamentEntry.deleteMany({
+      where: { tournamentId: id, userId: u.id },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // GET /tournaments/:id/leaderboard — ranked entries
+  app.get("/tournaments/:id/leaderboard", async (req, reply) => {
+    const id = String((req as any).params?.id || "");
+    const entries = await prisma.tournamentEntry.findMany({
+      where: { tournamentId: id },
+      orderBy: { score: "desc" },
+      take: 100,
+    });
+    const ranked = entries.map((e, i) => ({ ...e, rank: i + 1 }));
+    return reply.send({ ok: true, leaderboard: ranked });
+  });
+
+  // POST /tournaments/:id/activate — start tournament (admin)
+  app.post("/tournaments/:id/activate", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const id = String((req as any).params?.id || "");
+    const tournament = await prisma.tournament.update({
+      where: { id },
+      data: { status: "ACTIVE" },
+    });
+    return reply.send({ ok: true, tournament });
+  });
+
+  // POST /tournaments/:id/complete — end tournament (admin)
+  app.post("/tournaments/:id/complete", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const id = String((req as any).params?.id || "");
+    // Finalize ranks
+    const entries = await prisma.tournamentEntry.findMany({
+      where: { tournamentId: id },
+      orderBy: { score: "desc" },
+    });
+    for (let i = 0; i < entries.length; i++) {
+      await prisma.tournamentEntry.update({
+        where: { id: entries[i].id },
+        data: { rank: i + 1 },
+      });
+    }
+    const tournament = await prisma.tournament.update({
+      where: { id },
+      data: { status: "COMPLETED" },
+    });
+
+    // Award notoriety to top 3
+    const top3 = entries.slice(0, 3);
+    const rewards = [500, 300, 150];
+    for (let i = 0; i < top3.length; i++) {
+      if (top3[i].userId) {
+        awardNotoriety(top3[i].userId!, "CHALLENGE_COMPLETED").catch(() => {});
+      }
+    }
+
+    return reply.send({ ok: true, tournament });
+  });
+
   // ══════════════════════════════════════════════════════════════════════════════
   // ── RIOT / LEAGUE OF LEGENDS API INTEGRATION ───────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
@@ -7308,7 +7618,13 @@ app.post("/dm/:peerId", async (req, reply) => {
   // ── Challenge tracking worker ──────────────────────────────────────────────
   if (BUNGIE_API_KEY) {
     setBungieApiKey(BUNGIE_API_KEY);
-    startChallengeWorker(prisma, awardNotoriety);
+    startChallengeWorker(prisma, awardNotoriety, (userId, event) => {
+      for (const sock of wss.clients) {
+        if ((sock as any).user?.id === userId) {
+          send(sock as any, event);
+        }
+      }
+    });
   }
 }
 
