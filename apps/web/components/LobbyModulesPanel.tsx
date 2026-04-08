@@ -81,6 +81,65 @@ function ArmorStatBar({ stats }: { stats: any }) {
   );
 }
 
+// ── Perk Detail (expanded perk row with description + alternatives) ──────────
+
+function PerkDetail({ perk }: { perk: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasAlts = perk.availablePlugs?.length > 0;
+
+  return (
+    <div>
+      <div
+        onClick={() => hasAlts && setExpanded(v => !v)}
+        style={{
+          display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 8px", borderRadius: 6,
+          background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)",
+          cursor: hasAlts ? "pointer" : "default",
+        }}
+      >
+        <div style={{ width: 28, height: 28, borderRadius: 5, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
+          {perk.icon && <img src={perk.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+            {perk.name}
+            {hasAlts && (
+              <span style={{ fontSize: 8, opacity: 0.35, fontWeight: 400 }}>
+                {expanded ? "▲" : "▼"} {perk.availablePlugs.length} options
+              </span>
+            )}
+          </div>
+          {perk.description && (
+            <div style={{ fontSize: 10, opacity: 0.45, marginTop: 2, lineHeight: 1.4 }}>
+              {perk.description}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Available alternatives */}
+      {expanded && perk.availablePlugs && (
+        <div style={{ marginLeft: 36, display: "flex", flexDirection: "column", gap: 2, marginTop: 2, marginBottom: 2 }}>
+          {perk.availablePlugs.map((alt: any, j: number) => (
+            <div key={j} style={{
+              display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 6px", borderRadius: 4,
+              background: "rgba(124,58,237,.04)", border: "1px solid rgba(124,58,237,.08)",
+            }}>
+              <div style={{ width: 18, height: 18, borderRadius: 3, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
+                {alt.icon && <img src={alt.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(167,139,250,.8)" }}>{alt.name}</div>
+                {alt.description && <div style={{ fontSize: 9, opacity: 0.35, marginTop: 1, lineHeight: 1.3 }}>{alt.description}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Item Detail Panel (overlay when clicking an item) ───────────────────────
 
 function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, currentCharId }: {
@@ -124,24 +183,43 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
         {/* Description */}
         {item.description && <div style={{ fontSize: 12, opacity: 0.5, lineHeight: 1.5 }}>{item.description}</div>}
 
-        {/* Perks */}
-        {item.perks?.length > 0 && (
-          <div>
-            <div style={S.label}>Perks</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {item.perks.filter((p: any) => p.icon && p.name).map((p: any, i: number) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 5, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
-                    <img src={p.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700 }}>{p.name}</div>
+        {/* Perks — split into real perks and mods/cosmetics */}
+        {item.perks?.length > 0 && (() => {
+          const realPerks = item.perks.filter((p: any) => p.icon && p.name && !p.isJunk);
+          const junkPerks = item.perks.filter((p: any) => p.icon && p.name && p.isJunk);
+          return (
+            <>
+              {realPerks.length > 0 && (
+                <div>
+                  <div style={S.label}>Perks</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {realPerks.map((p: any, i: number) => (
+                      <PerkDetail key={i} perk={p} />
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              )}
+              {junkPerks.length > 0 && (
+                <div>
+                  <div style={{ ...S.label, opacity: 0.25 }}>Mod Slots</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {junkPerks.map((p: any, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 6, background: "rgba(255,255,255,.015)", border: "1px solid rgba(255,255,255,.03)" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px dashed rgba(255,255,255,.08)" }}>
+                          {p.icon && <img src={p.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3 }} />}
+                        </div>
+                        <span style={{ fontSize: 10, opacity: 0.3, fontStyle: "italic" }}>{p.name}</span>
+                        {p.availablePlugs?.length > 0 && (
+                          <span style={{ fontSize: 9, opacity: 0.35, marginLeft: "auto" }}>{p.availablePlugs.length} available</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* Armor Stats */}
         {item.armorStats && (

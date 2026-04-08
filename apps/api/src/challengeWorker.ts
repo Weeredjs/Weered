@@ -6,7 +6,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { resolveActivity } from "./manifest";
+import { resolveActivity, resolveItem } from "./manifest";
 
 // ── Rate Limiter ────────────────────────────────────────────────────────────
 
@@ -158,13 +158,21 @@ function evaluateObjective(
         break;
 
       case "weapon_kills": {
-        const weaponTypes = new Set(objective.filters.weaponSubTypes || []);
         const weaponHashes = new Set(objective.filters.weaponHashes || []);
+        const weaponSubTypes = new Set(objective.filters.weaponSubTypes || []);
         for (const w of act.weaponKills) {
-          if (weaponHashes.size > 0 && weaponHashes.has(w.hash)) current += w.kills;
-          // Note: weaponSubType matching requires PGCR + manifest lookup
-          // For now, count all weapon kills if no specific hashes given
-          else if (weaponTypes.size > 0) current += w.kills; // TODO: filter by subType
+          if (weaponHashes.size > 0 && weaponHashes.has(w.hash)) {
+            current += w.kills;
+          } else if (weaponSubTypes.size > 0) {
+            // Resolve weapon hash against manifest to check itemSubType
+            const wDef = resolveItem(w.hash);
+            if (wDef && weaponSubTypes.has(wDef.itemSubType)) {
+              current += w.kills;
+            }
+          } else if (weaponHashes.size === 0 && weaponSubTypes.size === 0) {
+            // No filter — count all weapon kills
+            current += w.kills;
+          }
         }
         break;
       }
@@ -242,9 +250,43 @@ async function fetchRecentActivities(
       standing: vals.standing?.basic?.value ?? 1,
       completed: vals.completed?.basic?.value === 1 || vals.completionReason?.basic?.value === 0,
       duration: vals.activityDurationSeconds?.basic?.value ?? 0,
-      weaponKills: [], // Populated from PGCR if needed
+      weaponKills: [], // Populated from PGCR below if needed
     };
   });
+}
+
+// ── PGCR (Post-Game Carnage Report) fetch for weapon kills ─────────────────
+
+async function fetchPGCR(activityInstanceId: string, membershipId: string): Promise<{ hash: string; kills: number }[]> {
+  try {
+    const res = await bungieGet(`/Destiny2/Stats/PostGameCarnageReport/${activityInstanceId}/`);
+    const entries = res?.Response?.entries || [];
+    // Find this player's entry
+    const playerEntry = entries.find((e: any) =>
+      String(e.player?.destinyUserInfo?.membershipId) === membershipId
+    );
+    if (!playerEntry) return [];
+
+    // Extract weapon kills from extended.weapons
+    const weapons = playerEntry.extended?.weapons || [];
+    return weapons.map((w: any) => ({
+      hash: String(w.referenceId || ""),
+      kills: w.values?.uniqueWeaponKills?.basic?.value ?? 0,
+    })).filter((w: any) => w.kills > 0);
+  } catch {
+    return [];
+  }
+}
+
+// Check if any enrollments need weapon kill data (lazy — only fetch PGCR when needed)
+function needsWeaponData(enrollments: any[]): boolean {
+  for (const e of enrollments) {
+    const objectives = (e.instance?.definition?.objectives as any[]) || [];
+    for (const obj of objectives) {
+      if (obj.type === "weapon_kills") return true;
+    }
+  }
+  return false;
 }
 
 // ── Main worker ─────────────────────────────────────────────────────────────
@@ -334,6 +376,24 @@ export function startChallengeWorker(
             continue;
           }
 
+          // 3.5 Lazy PGCR fetch — only when weapon_kills objectives exist
+          if (needsWeaponData(userEnrollments)) {
+            for (const act of activities) {
+              if (!act.activityInstanceId || act.weaponKills.length > 0) continue;
+              // Check if we already have weapon data logged
+              const existing = await prisma.bungieActivityLog.findUnique({
+                where: { userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId } },
+                select: { weaponKills: true },
+              });
+              if (existing && Array.isArray(existing.weaponKills) && (existing.weaponKills as any[]).length > 0) {
+                act.weaponKills = existing.weaponKills as any;
+                continue;
+              }
+              // Fetch from PGCR
+              act.weaponKills = await fetchPGCR(act.activityInstanceId, acct.externalId);
+            }
+          }
+
           // 4. Store activities in log (dedupe by instanceId)
           for (const act of activities) {
             if (!act.activityInstanceId) continue;
@@ -358,7 +418,7 @@ export function startChallengeWorker(
                 duration: act.duration,
                 weaponKills: act.weaponKills as any,
               },
-              update: {}, // No update — already logged
+              update: act.weaponKills.length > 0 ? { weaponKills: act.weaponKills as any } : {},
             }).catch(() => {}); // Ignore dupe errors
           }
 

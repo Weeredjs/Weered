@@ -183,13 +183,14 @@ export function enrichProfile(profileData: any) {
   const inventories = profileData?.characterInventories?.data || {};
   const instances  = profileData?.itemComponents?.instances?.data || {};
   const sockets    = profileData?.itemComponents?.sockets?.data || {};
+  const reusablePlugs = profileData?.itemComponents?.reusablePlugs?.data || {};
   const itemStats  = profileData?.itemComponents?.stats?.data || {};
   const vaultItems = profileData?.profileInventory?.data?.items || [];
 
   // Build enriched characters
   const enrichedChars = Object.entries(characters).map(([charId, char]: [string, any]) => {
-    const equippedItems = (equipment[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats));
-    const inventoryItems = (inventories[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats));
+    const equippedItems = (equipment[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
+    const inventoryItems = (inventories[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
 
     // Group equipped by slot
     const weapons = equippedItems.filter((i: any) => WEAPON_BUCKETS.has(i.bucketHash));
@@ -217,7 +218,7 @@ export function enrichProfile(profileData: any) {
   });
 
   // Enrich vault
-  const enrichedVault = vaultItems.map((item: any) => enrichItem(item, instances, sockets, itemStats));
+  const enrichedVault = vaultItems.map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
 
   return {
     characters: enrichedChars,
@@ -226,11 +227,20 @@ export function enrichProfile(profileData: any) {
   };
 }
 
+// Names of "junk" sockets that aren't interesting to display prominently
+const HIDDEN_PLUG_NAMES = new Set([
+  "Empty Mod Socket", "Empty Tuning Mod Socket", "Default Shader",
+  "Default Ornament", "Upgrade Armor", "Upgrade Weapon",
+  "Kill Tracker", "Crucible Tracker", "Memento Tracker",
+  "Empty Catalyst Socket", "Empty Activity Mod Socket",
+]);
+
 function enrichItem(
   item: any,
   instances: Record<string, any>,
   sockets?: Record<string, any>,
   itemStats?: Record<string, any>,
+  reusablePlugs?: Record<string, any>,
 ) {
   const def = resolveItem(item.itemHash);
   const instance = instances[item.itemInstanceId] || {};
@@ -239,29 +249,58 @@ function enrichItem(
   const bHash = item.bucketHash || def?.bucketHash || 0;
 
   // Resolve perks from component 304 socket data (live instance perks)
-  let perks: { hash: number; name: string; icon: string; isEnabled: boolean }[] = [];
+  let perks: { hash: number; name: string; icon: string; description: string; isEnabled: boolean; isJunk: boolean; socketIndex: number; availablePlugs?: { hash: number; name: string; icon: string; description: string }[] }[] = [];
   const socketData = sockets?.[item.itemInstanceId]?.sockets;
+  const reusableData = reusablePlugs?.[item.itemInstanceId]?.plugs;
+
   if (socketData && Array.isArray(socketData)) {
     perks = socketData
-      .filter((s: any) => s.plugHash && s.plugHash !== 0)
-      .map((s: any) => {
+      .map((s: any, idx: number) => {
+        if (!s.plugHash || s.plugHash === 0) return null;
+        if (s.isVisible === false) return null;
         const plugDef = resolveItem(s.plugHash);
         if (!plugDef || !plugDef.name) return null;
+        const isJunk = HIDDEN_PLUG_NAMES.has(plugDef.name);
+
+        // Get available plugs for this socket from component 305
+        let availablePlugs: { hash: number; name: string; icon: string; description: string }[] | undefined;
+        if (reusableData?.[String(idx)]) {
+          availablePlugs = reusableData[String(idx)]
+            .filter((rp: any) => rp.plugItemHash && rp.plugItemHash !== s.plugHash && rp.canInsert !== false)
+            .map((rp: any) => {
+              const rpDef = resolveItem(rp.plugItemHash);
+              if (!rpDef || !rpDef.name || HIDDEN_PLUG_NAMES.has(rpDef.name)) return null;
+              return {
+                hash: rp.plugItemHash,
+                name: rpDef.name,
+                icon: rpDef.icon ? `${BUNGIE_BASE}${rpDef.icon}` : "",
+                description: rpDef.description || "",
+              };
+            })
+            .filter(Boolean)
+            .slice(0, 12);
+          if (availablePlugs!.length === 0) availablePlugs = undefined;
+        }
+
         return {
           hash: s.plugHash,
           name: plugDef.name,
           icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "",
+          description: plugDef.description || "",
           isEnabled: s.isEnabled ?? true,
+          isJunk,
+          socketIndex: idx,
+          availablePlugs,
         };
       })
       .filter(Boolean) as any;
   } else if (def?.socketEntries) {
     // Fallback: use manifest default perks
     perks = def.socketEntries
-      .map(s => {
+      .map((s, idx) => {
         const plugDef = resolveItem(s.plugHash);
         if (!plugDef || !plugDef.name) return null;
-        return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "", isEnabled: true };
+        return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "", description: plugDef.description || "", isEnabled: true, isJunk: HIDDEN_PLUG_NAMES.has(plugDef.name), socketIndex: idx };
       })
       .filter(Boolean) as any;
   }
