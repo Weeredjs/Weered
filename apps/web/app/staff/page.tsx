@@ -87,6 +87,7 @@ const NAV_ITEMS = [
   { id: "events",    label: "Events",         icon: "📅", minRole: "STAFF" },
   { id: "broadcast", label: "Broadcast",     icon: "📢", minRole: "STAFF" },
   { id: "audit",     label: "Audit Log",     icon: "📋", minRole: "STAFF" },
+  { id: "outreach",  label: "Outreach",      icon: "📧", minRole: "STAFF" },
   { id: "files",     label: "Files",         icon: "🗂️", minRole: "GOD" },
   { id: "config",    label: "Config",        icon: "⚙️", minRole: "GOD" },
 ] as const;
@@ -1270,6 +1271,250 @@ function ConfigTab() {
   );
 }
 
+// ── Outreach CRM ─────────────────────────────────────────────────────────────
+
+const OUTREACH_STATUSES = ["LEAD","CONTACTED","REPLIED","IN_PROGRESS","PARTNERED","DECLINED","STALE"] as const;
+const OUTREACH_CATEGORIES = ["GAME_STUDIO","ESPORTS_ORG","CONTENT_CREATOR","BRAND_SPONSOR","MEDIA","COMMUNITY","PLATFORM","OTHER"] as const;
+
+const STATUS_COLORS: Record<string, string> = {
+  LEAD: "rgba(148,163,184,.8)", CONTACTED: "rgba(96,165,250,.8)", REPLIED: "rgba(253,230,138,.8)",
+  IN_PROGRESS: "rgba(129,140,248,.8)", PARTNERED: "rgba(110,231,183,.8)", DECLINED: "rgba(252,165,165,.8)", STALE: "rgba(148,163,184,.4)",
+};
+const STATUS_BG: Record<string, string> = {
+  LEAD: "rgba(148,163,184,.08)", CONTACTED: "rgba(96,165,250,.08)", REPLIED: "rgba(253,230,138,.08)",
+  IN_PROGRESS: "rgba(129,140,248,.08)", PARTNERED: "rgba(110,231,183,.08)", DECLINED: "rgba(252,165,165,.08)", STALE: "rgba(148,163,184,.04)",
+};
+
+function OutreachTab() {
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [filter, setFilter]     = useState<string>("");
+  const [catFilter, setCatFilter] = useState<string>("");
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing]   = useState<any>(null);
+  const [msg, setMsg]           = useState("");
+
+  // Form state
+  const [fName, setFName]       = useState("");
+  const [fCompany, setFCompany] = useState("");
+  const [fEmail, setFEmail]     = useState("");
+  const [fRole, setFRole]       = useState("");
+  const [fCategory, setFCategory] = useState<string>("OTHER");
+  const [fStatus, setFStatus]   = useState<string>("LEAD");
+  const [fNotes, setFNotes]     = useState("");
+  const [fFollowUp, setFFollowUp] = useState("");
+
+  const load = useCallback(() => {
+    const params = new URLSearchParams();
+    if (filter) params.set("status", filter);
+    if (catFilter) params.set("category", catFilter);
+    apiFetch(`/staff/outreach?${params.toString()}`)
+      .then(j => { if (j.ok) setContacts(j.contacts || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [filter, catFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function resetForm() {
+    setFName(""); setFCompany(""); setFEmail(""); setFRole("");
+    setFCategory("OTHER"); setFStatus("LEAD"); setFNotes(""); setFFollowUp("");
+    setEditing(null);
+  }
+
+  function editContact(c: any) {
+    setFName(c.name); setFCompany(c.company); setFEmail(c.email || ""); setFRole(c.role || "");
+    setFCategory(c.category); setFStatus(c.status); setFNotes(c.notes || "");
+    setFFollowUp(c.nextFollowUp ? c.nextFollowUp.slice(0, 10) : "");
+    setEditing(c); setShowForm(true);
+  }
+
+  async function save() {
+    const body: any = {
+      name: fName, company: fCompany, email: fEmail, role: fRole,
+      category: fCategory, status: fStatus, notes: fNotes,
+      nextFollowUp: fFollowUp || null,
+    };
+
+    if (editing) {
+      const j = await apiFetch(`/staff/outreach/${editing.id}`, { method: "PATCH", body: JSON.stringify(body) });
+      if (j.ok) { setMsg("Updated."); setShowForm(false); resetForm(); load(); }
+      else setMsg(j.error || "Failed.");
+    } else {
+      const j = await apiFetch("/staff/outreach", { method: "POST", body: JSON.stringify(body) });
+      if (j.ok) { setMsg("Added."); setShowForm(false); resetForm(); load(); }
+      else setMsg(j.error || "Failed.");
+    }
+  }
+
+  async function remove(id: string) {
+    const j = await apiFetch(`/staff/outreach/${id}`, { method: "DELETE" });
+    if (j.ok) load();
+  }
+
+  async function quickStatus(id: string, status: string) {
+    const j = await apiFetch(`/staff/outreach/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, lastContact: status !== "LEAD" ? new Date().toISOString() : undefined }),
+    });
+    if (j.ok) load();
+  }
+
+  if (loading) return <div style={{ opacity: 0.4 }}>Loading outreach...</div>;
+
+  // Stats
+  const total = contacts.length;
+  const byStatus: Record<string, number> = {};
+  contacts.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1; });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Stats row */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {OUTREACH_STATUSES.map(s => (
+          <button key={s} onClick={() => setFilter(filter === s ? "" : s)} style={{
+            padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer",
+            border: filter === s ? `1px solid ${STATUS_COLORS[s]}` : "1px solid rgba(255,255,255,.06)",
+            background: filter === s ? STATUS_BG[s] : "rgba(255,255,255,.02)",
+            color: STATUS_COLORS[s],
+          }}>
+            {s.replace("_", " ")} ({byStatus[s] || 0})
+          </button>
+        ))}
+      </div>
+
+      {/* Category filter */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
+          style={{ ...S.input, width: 180, fontSize: 11, cursor: "pointer" }}>
+          <option value="">All Categories</option>
+          {OUTREACH_CATEGORIES.map(c => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+        </select>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <span style={{ fontSize: 12, opacity: 0.4 }}>{total} contacts</span>
+          <button style={S.btnPri} onClick={() => { resetForm(); setShowForm(!showForm); }}>
+            {showForm && !editing ? "Cancel" : "+ Add Contact"}
+          </button>
+        </div>
+      </div>
+
+      {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+
+      {/* Add / Edit form */}
+      {showForm && (
+        <div style={{ ...S.card, border: "1px solid rgba(124,58,237,.25)", background: "rgba(124,58,237,.04)" }}>
+          <div style={{ ...S.label, marginBottom: 10 }}>{editing ? "Edit Contact" : "New Contact"}</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <div>
+              <div style={S.label}>Name *</div>
+              <input style={S.input} value={fName} onChange={e => setFName(e.target.value)} placeholder="Jane Smith" />
+            </div>
+            <div>
+              <div style={S.label}>Company *</div>
+              <input style={S.input} value={fCompany} onChange={e => setFCompany(e.target.value)} placeholder="Riot Games" />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <div>
+              <div style={S.label}>Email</div>
+              <input style={S.input} value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="jane@riot.com" />
+            </div>
+            <div>
+              <div style={S.label}>Role / Title</div>
+              <input style={S.input} value={fRole} onChange={e => setFRole(e.target.value)} placeholder="Community Manager" />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <div>
+              <div style={S.label}>Category</div>
+              <select style={{ ...S.input, cursor: "pointer" }} value={fCategory} onChange={e => setFCategory(e.target.value)}>
+                {OUTREACH_CATEGORIES.map(c => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={S.label}>Status</div>
+              <select style={{ ...S.input, cursor: "pointer" }} value={fStatus} onChange={e => setFStatus(e.target.value)}>
+                {OUTREACH_STATUSES.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={S.label}>Follow-up Date</div>
+              <input type="date" style={S.input} value={fFollowUp} onChange={e => setFFollowUp(e.target.value)} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <div style={S.label}>Notes</div>
+            <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} value={fNotes} onChange={e => setFNotes(e.target.value)}
+              placeholder="Context, thread links, what was discussed..." />
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={save}>{editing ? "Update" : "Save"}</button>
+            {editing && <button style={S.btn} onClick={() => { setShowForm(false); resetForm(); }}>Cancel</button>}
+          </div>
+        </div>
+      )}
+
+      {/* Contact list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {contacts.map(c => {
+          const sColor = STATUS_COLORS[c.status] || "rgba(255,255,255,.5)";
+          const overdue = c.nextFollowUp && new Date(c.nextFollowUp) < new Date();
+          return (
+            <div key={c.id} style={{
+              ...S.card, display: "flex", alignItems: "flex-start", gap: 12,
+              border: overdue ? "1px solid rgba(245,158,11,.25)" : "1px solid rgba(255,255,255,.08)",
+              background: overdue ? "rgba(245,158,11,.03)" : "rgba(255,255,255,.03)",
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{c.name}</span>
+                  <span style={{ fontSize: 11, opacity: 0.4 }}>{c.role}</span>
+                  <span style={{
+                    fontSize: 9, padding: "1px 6px", borderRadius: 999, fontWeight: 700,
+                    background: STATUS_BG[c.status], color: sColor, border: `1px solid ${sColor}33`,
+                  }}>
+                    {c.status.replace("_", " ")}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 2 }}>
+                  {c.company}
+                  {c.email && <> · <span style={{ opacity: 0.7 }}>{c.email}</span></>}
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.35 }}>
+                  {c.category.replace("_", " ")}
+                  {c.lastContact && <> · Last: {new Date(c.lastContact).toLocaleDateString()}</>}
+                  {c.nextFollowUp && (
+                    <span style={{ color: overdue ? "rgba(253,230,138,.9)" : "inherit" }}>
+                      {" "}· Follow-up: {new Date(c.nextFollowUp).toLocaleDateString()}
+                      {overdue && " (overdue)"}
+                    </span>
+                  )}
+                </div>
+                {c.notes && <div style={{ fontSize: 11, opacity: 0.45, marginTop: 4, whiteSpace: "pre-wrap" }}>{c.notes}</div>}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
+                <button style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }} onClick={() => editContact(c)}>Edit</button>
+                {c.status === "LEAD" && <button style={{ ...S.btnPri, fontSize: 10, padding: "3px 8px" }} onClick={() => quickStatus(c.id, "CONTACTED")}>Mark Contacted</button>}
+                {c.status === "CONTACTED" && <button style={{ ...S.success, fontSize: 10, padding: "3px 8px" }} onClick={() => quickStatus(c.id, "REPLIED")}>Got Reply</button>}
+                <button style={{ ...S.danger, fontSize: 10, padding: "3px 8px" }} onClick={() => remove(c.id)}>Delete</button>
+              </div>
+            </div>
+          );
+        })}
+        {contacts.length === 0 && (
+          <div style={{ textAlign: "center", padding: 24, opacity: 0.35, fontSize: 13 }}>
+            No outreach contacts yet. Add your first one above.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StaffPage() {
@@ -1384,6 +1629,7 @@ export default function StaffPage() {
             {nav === "events"    && <EventsTab myRole={myRole} />}
             {nav === "audit"     && <AuditTab />}
             {nav === "broadcast" && <BroadcastTab />}
+            {nav === "outreach"  && <OutreachTab />}
             {nav === "files"     && <FilesTab />}
             {nav === "config"  && <ConfigTab />}
           </div>
