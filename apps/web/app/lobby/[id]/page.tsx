@@ -12,6 +12,7 @@ import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
 import MlbModulesPanel from "../../../components/MlbModulesPanel";
 import PgaModulesPanel from "../../../components/PgaModulesPanel";
 import NewsModulesPanel from "../../../components/NewsModulesPanel";
+import LeagueModulesPanel from "../../../components/LeagueModulesPanel";
 import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
@@ -39,6 +40,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   BUNGIE: "Destiny 2",
   TWITCH: "Twitch",
   MARATHON: "Marathon",
+  RIOT: "League of Legends",
 };
 
 type LobbyInfo = {
@@ -86,7 +88,7 @@ export default function LobbyIdPage() {
             ownerId:        j.lobby.ownerId || null,
             _count:         j.lobby._count,
           });
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS") {
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT") {
             setView("modules");
           } else {
             setView("rooms");
@@ -96,7 +98,7 @@ export default function LobbyIdPage() {
       .catch(() => {});
   }, [lobbyId]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS";
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const isStaff    = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "ADMIN";
@@ -204,6 +206,8 @@ export default function LobbyIdPage() {
               <PgaModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
             ) : lobbyInfo?.moduleType === "NEWS" ? (
               <NewsModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+            ) : lobbyInfo?.moduleType === "RIOT" ? (
+              <LeagueModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
             ) : (
               <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
             )
