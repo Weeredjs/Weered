@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 
@@ -1093,11 +1093,67 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
   );
 }
 
+// ── Leaderboard Component ─────────────────────────────────────────────────
+
+function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: string; challengeTitle: string }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch(`/challenges/${instanceId}/leaderboard`).then(res => {
+      if (res?.leaderboard) setRows(res.leaderboard);
+      setLoading(false);
+    });
+  }, [instanceId]);
+
+  if (loading) return <div style={{ padding: 12, opacity: 0.4, fontSize: 11 }}>Loading...</div>;
+  if (rows.length === 0) return <div style={{ padding: 12, opacity: 0.3, fontSize: 11 }}>No completions yet.</div>;
+
+  const RANK_COLORS = ["#fcd34d", "#94a3b8", "#cd7f32"]; // gold, silver, bronze
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{challengeTitle}</div>
+      {rows.map((r: any) => (
+        <div key={r.rank} style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8,
+          background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
+          borderLeft: r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
+        }}>
+          <span style={{
+            width: 22, textAlign: "center", fontWeight: 900, fontSize: 13,
+            color: r.rank <= 3 ? RANK_COLORS[r.rank - 1] : "rgba(255,255,255,.3)",
+            fontFamily: "monospace",
+          }}>
+            {r.rank}
+          </span>
+          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
+            {r.name}
+          </span>
+          <span style={{
+            fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+            background: "rgba(124,58,237,.1)", color: "#a78bfa", textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}>
+            {r.tier}
+          </span>
+          <span style={{ fontSize: 10, opacity: 0.35, fontFamily: "monospace" }}>
+            {r.completedAt ? new Date(r.completedAt).toLocaleDateString() : ""}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   const [challenges, setChallenges] = useState<any[]>([]);
   const [myEnrollments, setMyEnrollments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [subTab, setSubTab] = useState<"active" | "mine" | "completed">("active");
+  const [subTab, setSubTab] = useState<"active" | "mine" | "completed" | "leaderboard">("active");
+  const [leaderboardId, setLeaderboardId] = useState<string | null>(null);
+  const enrollmentsRef = useRef(myEnrollments);
+  enrollmentsRef.current = myEnrollments;
 
   const fetchAll = useCallback(async () => {
     const [cRes, mRes] = await Promise.all([
@@ -1110,6 +1166,31 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // ── Live WS updates ──
+  useEffect(() => {
+    function onChallengeEvent(e: Event) {
+      const d = (e as CustomEvent).detail;
+      if (!d?.instanceId) return;
+
+      if (d.type === "challenge:progress") {
+        setMyEnrollments(prev => prev.map(en =>
+          en.instanceId === d.instanceId ? { ...en, progress: d.progress } : en
+        ));
+      }
+
+      if (d.type === "challenge:completed") {
+        setMyEnrollments(prev => prev.map(en =>
+          en.instanceId === d.instanceId
+            ? { ...en, progress: d.progress, status: "COMPLETED", completedAt: new Date().toISOString() }
+            : en
+        ));
+      }
+    }
+
+    window.addEventListener("weered:challenge", onChallengeEvent);
+    return () => window.removeEventListener("weered:challenge", onChallengeEvent);
+  }, []);
 
   const enroll = async (instanceId: string) => {
     await apiFetch(`/challenges/${instanceId}/enroll`, { method: "POST", body: JSON.stringify({}) });
@@ -1128,13 +1209,16 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   const myChallenges = myEnrollments.filter(e => e.status === "ACTIVE");
   const completedChallenges = myEnrollments.filter(e => e.status === "COMPLETED");
 
+  // Find leaderboard title
+  const lbChallenge = leaderboardId ? challenges.find(c => c.id === leaderboardId) : null;
+
   if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading challenges...</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Sub-tabs */}
-      <div style={{ display: "flex", gap: 6 }}>
-        {(["active", "mine", "completed"] as const).map(t => (
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {(["active", "mine", "completed", "leaderboard"] as const).map(t => (
           <button key={t} onClick={() => setSubTab(t)} style={{
             padding: "5px 12px", borderRadius: 6,
             border: subTab === t ? "1px solid rgba(79,136,198,.4)" : "1px solid rgba(255,255,255,.08)",
@@ -1144,7 +1228,8 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
           }}>
             {t === "active" ? `Challenges (${activeChallenges.length})` :
              t === "mine" ? `My Active (${myChallenges.length})` :
-             `Completed (${completedChallenges.length})`}
+             t === "completed" ? `Completed (${completedChallenges.length})` :
+             "🏆 Leaderboard"}
           </button>
         ))}
       </div>
@@ -1203,6 +1288,234 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
           })}
         </div>
       )}
+
+      {subTab === "leaderboard" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Challenge selector for leaderboard */}
+          {!leaderboardId ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>Select a challenge to view its leaderboard:</div>
+              {activeChallenges.map(c => (
+                <button key={c.id} onClick={() => setLeaderboardId(c.id)} style={{
+                  ...S.card, cursor: "pointer", textAlign: "left",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>{c.definition.title}</div>
+                    <div style={{ fontSize: 10, opacity: 0.4 }}>{c._count?.enrollments || 0} enrolled</div>
+                  </div>
+                  <span style={{ fontSize: 16, opacity: 0.3 }}>→</span>
+                </button>
+              ))}
+              {activeChallenges.length === 0 && (
+                <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No challenges available.</div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <button onClick={() => setLeaderboardId(null)} style={{
+                ...S.btn, fontSize: 10, marginBottom: 8, padding: "3px 10px",
+              }}>
+                ← Back
+              </button>
+              <ChallengeLeaderboard
+                instanceId={leaderboardId}
+                challengeTitle={lbChallenge?.definition?.title || "Challenge"}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tournament Board ────────────────────────────────────────────────────────
+
+const FORMAT_LABELS: Record<string, string> = { LEADERBOARD: "Leaderboard", BRACKET: "Bracket", ROUND_ROBIN: "Round Robin" };
+const STATUS_COLORS: Record<string, string> = { REGISTRATION: "#22c55e", ACTIVE: "#3b82f6", COMPLETED: "#94a3b8", CANCELED: "#ef4444" };
+
+function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }: {
+  tournament: any; myEntry: any; onRegister: () => void; onWithdraw: () => void; onView: () => void;
+}) {
+  const t = tournament;
+  const isRegistered = !!myEntry;
+  const statusColor = STATUS_COLORS[t.status] || "#94a3b8";
+  const startsAt = new Date(t.startsAt);
+  const endsAt = new Date(t.endsAt);
+  const now = Date.now();
+  const isLive = t.status === "ACTIVE";
+  const isOpen = t.status === "REGISTRATION";
+
+  return (
+    <div style={{
+      ...S.card,
+      borderColor: isLive ? "rgba(59,130,246,.3)" : isRegistered ? "rgba(34,197,94,.2)" : "rgba(255,255,255,.08)",
+      background: isLive ? "rgba(59,130,246,.05)" : "rgba(255,255,255,.03)",
+      display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+            <span style={{
+              fontSize: 8, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
+              padding: "1px 6px", borderRadius: 4,
+              background: `${statusColor}20`, color: statusColor,
+            }}>
+              {t.status}
+            </span>
+            <span style={{ fontSize: 9, opacity: 0.4 }}>{FORMAT_LABELS[t.format] || t.format}</span>
+            <span style={{ fontSize: 9, opacity: 0.4 }}>{t.entryType}</span>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.92)" }}>
+            {t.title}
+          </div>
+          {t.description && <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{t.description}</div>}
+        </div>
+        <div style={{
+          textAlign: "center", padding: "6px 10px", borderRadius: 8,
+          background: "rgba(59,130,246,.1)", border: "1px solid rgba(59,130,246,.2)",
+          flexShrink: 0,
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 900, color: "#93c5fd" }}>{t._count?.entries || 0}</div>
+          <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            /{t.maxEntries}
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div style={{ display: "flex", gap: 12, fontSize: 10, opacity: 0.4 }}>
+        <span>Starts: {startsAt.toLocaleDateString()} {startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+        <span>Ends: {endsAt.toLocaleDateString()}</span>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+        <button onClick={onView} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>
+          View Leaderboard
+        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          {isOpen && !isRegistered && (
+            <button onClick={onRegister} style={{ ...S.btnPri, fontSize: 11, padding: "5px 14px" }}>Register</button>
+          )}
+          {isOpen && isRegistered && (
+            <button onClick={onWithdraw} style={{
+              ...S.btn, fontSize: 10, padding: "3px 10px",
+              borderColor: "rgba(239,68,68,.25)", color: "rgba(252,165,165,.7)",
+            }}>Withdraw</button>
+          )}
+          {isRegistered && (
+            <span style={{
+              padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700,
+              background: "rgba(34,197,94,.12)", color: "#86efac",
+            }}>Registered</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TournamentLeaderboardView({ tournamentId, title, onBack }: { tournamentId: string; title: string; onBack: () => void }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch(`/tournaments/${tournamentId}/leaderboard`).then(res => {
+      if (res?.leaderboard) setRows(res.leaderboard);
+      setLoading(false);
+    });
+  }, [tournamentId]);
+
+  const RANK_COLORS = ["#fcd34d", "#94a3b8", "#cd7f32"];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <button onClick={onBack} style={{ ...S.btn, fontSize: 10, padding: "3px 10px", alignSelf: "flex-start" }}>
+        ← Back
+      </button>
+      <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.9)" }}>{title}</div>
+      {loading ? (
+        <div style={{ padding: 12, opacity: 0.4, fontSize: 11 }}>Loading...</div>
+      ) : rows.length === 0 ? (
+        <div style={{ padding: 12, opacity: 0.3, fontSize: 11 }}>No entries yet.</div>
+      ) : rows.map((r: any) => (
+        <div key={r.id} style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8,
+          background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
+          borderLeft: r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
+        }}>
+          <span style={{
+            width: 22, textAlign: "center", fontWeight: 900, fontSize: 13,
+            color: r.rank <= 3 ? RANK_COLORS[r.rank - 1] : "rgba(255,255,255,.3)",
+            fontFamily: "monospace",
+          }}>
+            {r.rank}
+          </span>
+          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
+            {r.displayName || "Unknown"}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 900, color: "#93c5fd", fontFamily: "monospace" }}>
+            {r.score.toLocaleString()}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TournamentBoard({ lobbyId }: { lobbyId: string }) {
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewId, setViewId] = useState<string | null>(null);
+
+  const fetchAll = useCallback(async () => {
+    const res = await apiFetch(`/tournaments?lobbyId=${encodeURIComponent(lobbyId)}`);
+    if (res?.tournaments) setTournaments(res.tournaments);
+    setLoading(false);
+  }, [lobbyId]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const register = async (id: string) => {
+    await apiFetch(`/tournaments/${id}/register`, { method: "POST", body: JSON.stringify({}) });
+    fetchAll();
+  };
+  const withdraw = async (id: string) => {
+    await apiFetch(`/tournaments/${id}/register`, { method: "DELETE", body: JSON.stringify({}) });
+    fetchAll();
+  };
+
+  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading tournaments...</div>;
+
+  if (viewId) {
+    const t = tournaments.find(t => t.id === viewId);
+    return (
+      <TournamentLeaderboardView
+        tournamentId={viewId}
+        title={t?.title || "Tournament"}
+        onBack={() => setViewId(null)}
+      />
+    );
+  }
+
+  if (tournaments.length === 0) {
+    return <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No tournaments right now. Check back soon.</div>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {tournaments.map(t => (
+        <TournamentCard
+          key={t.id}
+          tournament={t}
+          myEntry={null}
+          onRegister={() => register(t.id)}
+          onWithdraw={() => withdraw(t.id)}
+          onView={() => setViewId(t.id)}
+        />
+      ))}
     </div>
   );
 }
@@ -1213,6 +1526,7 @@ const TABS = [
   { id: "streams",    label: "Live Streams",  icon: "📺" },
   { id: "lfg",        label: "Fireteams",     icon: "🔥" },
   { id: "challenges", label: "Challenges",    icon: "🎯" },
+  { id: "tournaments", label: "Tournaments",  icon: "🏆" },
   { id: "weekly",     label: "Weekly Reset",  icon: "📋" },
   { id: "guardian",   label: "Guardian Lookup", icon: "🔍" },
   { id: "myguardian", label: "My Guardian",   icon: "⚔" },
@@ -1264,7 +1578,8 @@ export default function LobbyModulesPanel({
       <div style={{ flex: 1, minHeight: 0, overflowY: tab === "myguardian" ? "hidden" : "auto", padding: tab === "myguardian" ? 0 : "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"    && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"        && <LfgBoard lobbyId={lobbyId} />}
-        {tab === "challenges" && <ChallengeBoard lobbyId={lobbyId} />}
+        {tab === "challenges"  && <ChallengeBoard lobbyId={lobbyId} />}
+        {tab === "tournaments" && <TournamentBoard lobbyId={lobbyId} />}
         {tab === "weekly"     && <BungieWeekly accentColor={accentColor} />}
         {tab === "guardian"   && <GuardianLookup />}
         {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}

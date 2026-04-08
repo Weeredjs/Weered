@@ -521,6 +521,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // ── Challenge real-time progress / completion ──
+      if (msg.type === "challenge:progress" || msg.type === "challenge:completed") {
+        try { window.dispatchEvent(new CustomEvent("weered:challenge", { detail: msg })); } catch {}
+        return;
+      }
+
       // ── Module state sync — another user changed the active module ──
       if (msg.type === "module:state") {
         const rid = String(msg.roomId || "");

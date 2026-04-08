@@ -244,7 +244,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
             <span className="lobby-drawer-title">{title}</span>
             <div className="lobby-drawer-close" onClick={() => setOpen(false)}>✕</div>
           </div>
-          <div style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1, paddingBottom: 12 }}>
+          <div style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1, paddingBottom: 32 }}>
             <LobbyChatPanel roomId={roomId} embedded={true} />
           </div>
         </div>

@@ -55,9 +55,14 @@ function formatPlaytime(mins: number): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
+type UserBadgeDisplay = { id?: string; name?: string; description?: string; iconUrl?: string; rarity?: number; earnedAt?: string };
+
+const BADGE_RARITY_COLORS = ["#94a3b8", "#22c55e", "#3b82f6", "#a855f7", "#f59e0b"]; // common, uncommon, rare, epic, legendary
+
 // ── Cache to avoid re-fetching ──────────────────────────────────────────────
 const profileCache = new Map<string, { data: Profile; at: number }>();
 const guardianCache = new Map<string, { data: GuardianInfo | null; at: number }>();
+const badgeCache = new Map<string, { data: UserBadgeDisplay[]; at: number }>();
 const CACHE_TTL = 60_000; // 1 min
 
 export type HoverCardPosition = { x: number; y: number };
@@ -81,6 +86,7 @@ export default function UserHoverCard({
 }: UserHoverCardProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [guardian, setGuardian] = useState<GuardianInfo | null>(null);
+  const [badges, setBadges] = useState<UserBadgeDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +134,24 @@ export default function UserHoverCard({
       })
       .catch(() => {});
   }, [lobbyModuleType, profile?.name]);
+
+  // Fetch badges
+  useEffect(() => {
+    if (!userId) return;
+    const cached = badgeCache.get(userId);
+    if (cached && Date.now() - cached.at < CACHE_TTL) {
+      setBadges(cached.data);
+      return;
+    }
+    fetch(`${API}/badges/user/${userId}`)
+      .then(r => r.json())
+      .then(d => {
+        const list = d?.badges || [];
+        setBadges(list);
+        badgeCache.set(userId, { data: list, at: Date.now() });
+      })
+      .catch(() => {});
+  }, [userId]);
 
   // Clamp position to viewport
   const [pos, setPos] = useState(position);
@@ -272,6 +296,42 @@ export default function UserHoverCard({
             ))}
             <div style={{ fontSize: 9, opacity: 0.3, marginTop: 4 }}>
               {formatPlaytime(guardian.characters.reduce((s, c) => s + c.minutesPlayedTotal, 0))} played
+            </div>
+          </div>
+        )}
+
+        {/* Badges */}
+        {badges.length > 0 && (
+          <div style={{
+            marginBottom: 10, padding: "6px 10px", borderRadius: 8,
+            background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)",
+          }}>
+            <div style={{ fontSize: 9, fontWeight: 800, opacity: 0.35, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 5 }}>
+              Badges
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {badges.slice(0, 8).map((b, i) => {
+                const color = BADGE_RARITY_COLORS[Math.min((b.rarity || 1) - 1, 4)];
+                return (
+                  <div key={i} title={`${b.name || "Badge"} — ${b.description || ""}`} style={{
+                    display: "flex", alignItems: "center", gap: 3,
+                    padding: "2px 6px", borderRadius: 4,
+                    background: `${color}10`, border: `1px solid ${color}30`,
+                    fontSize: 9, fontWeight: 700, color,
+                    cursor: "default",
+                  }}>
+                    {b.iconUrl ? (
+                      <img src={b.iconUrl} alt="" style={{ width: 12, height: 12, borderRadius: 2 }} />
+                    ) : (
+                      <span style={{ fontSize: 10 }}>🏅</span>
+                    )}
+                    {b.name || "Badge"}
+                  </div>
+                );
+              })}
+              {badges.length > 8 && (
+                <span style={{ fontSize: 9, opacity: 0.3, alignSelf: "center" }}>+{badges.length - 8}</span>
+              )}
             </div>
           </div>
         )}
