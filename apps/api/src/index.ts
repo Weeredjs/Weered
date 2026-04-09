@@ -7943,6 +7943,219 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
+  // ── Fortnite Wishlist ─────────────────────────────────────────────────────
+
+  // GET /fortnite/wishlist — get current user's wishlist
+  app.get("/fortnite/wishlist", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const items = await (prisma as any).fortniteWishlist.findMany({
+      where: { userId: u.id },
+      orderBy: { createdAt: "desc" },
+    });
+    return reply.send({ ok: true, items });
+  });
+
+  // POST /fortnite/wishlist — add item to wishlist
+  app.post("/fortnite/wishlist", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const cosmeticId = String(body.cosmeticId || "").trim();
+    if (!cosmeticId) return reply.code(400).send({ ok: false, error: "cosmetic_id_required" });
+
+    // Check limit (max 50 wishlisted items)
+    const count = await (prisma as any).fortniteWishlist.count({ where: { userId: u.id } });
+    if (count >= 50) return reply.code(400).send({ ok: false, error: "wishlist_full", message: "Maximum 50 items." });
+
+    try {
+      const item = await (prisma as any).fortniteWishlist.upsert({
+        where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
+        update: { notified: false, notifiedAt: null },
+        create: {
+          userId: u.id,
+          cosmeticId,
+          name: String(body.name || "").slice(0, 100),
+          type: String(body.type || "").slice(0, 50),
+          rarity: String(body.rarity || "").slice(0, 30),
+          image: body.image ? String(body.image).slice(0, 500) : null,
+        },
+      });
+      return reply.send({ ok: true, item });
+    } catch (e: any) {
+      console.error("[fortnite/wishlist] add", e);
+      return reply.send({ ok: false, error: "failed" });
+    }
+  });
+
+  // DELETE /fortnite/wishlist/:cosmeticId — remove from wishlist
+  app.delete("/fortnite/wishlist/:cosmeticId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const cosmeticId = String((req as any).params?.cosmeticId || "");
+    try {
+      await (prisma as any).fortniteWishlist.delete({
+        where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
+      });
+    } catch {}
+    return reply.send({ ok: true });
+  });
+
+  // GET /fortnite/wishlist/friends/:cosmeticId — how many friends also want this item
+  app.get("/fortnite/wishlist/friends/:cosmeticId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.send({ ok: true, count: 0, friends: [] });
+    const cosmeticId = String((req as any).params?.cosmeticId || "");
+
+    // Get user's friends
+    const friendRows = await (prisma as any).friendship.findMany({
+      where: { OR: [{ senderId: u.id, status: "ACCEPTED" }, { receiverId: u.id, status: "ACCEPTED" }] },
+      select: { senderId: true, receiverId: true },
+    });
+    const friendIds = friendRows.map((f: any) => f.senderId === u.id ? f.receiverId : f.senderId);
+    if (friendIds.length === 0) return reply.send({ ok: true, count: 0, friends: [] });
+
+    // Check which friends have this on their wishlist
+    const matches = await (prisma as any).fortniteWishlist.findMany({
+      where: { cosmeticId, userId: { in: friendIds } },
+      select: { userId: true },
+    });
+    const matchedIds = matches.map((m: any) => m.userId);
+
+    // Resolve names
+    const users = matchedIds.length
+      ? await prisma.user.findMany({ where: { id: { in: matchedIds } }, select: { id: true, name: true } })
+      : [];
+
+    return reply.send({
+      ok: true,
+      count: matchedIds.length,
+      friends: users.map(u => ({ id: u.id, name: u.name })),
+    });
+  });
+
+  // ── Fortnite Shop Checker (background, called by interval) ─────────────
+
+  let lastShopCheck = 0;
+  const SHOP_CHECK_INTERVAL = 15 * 60 * 1000; // 15 min
+
+  async function checkFortniteShopWishlist() {
+    try {
+      const data = await fnGet("/v2/shop/br/combined");
+      if (!data || data.status !== 200) return;
+
+      // Extract all cosmetic IDs currently in shop
+      const shopIds = new Set<string>();
+      const shopNames = new Map<string, string>();
+      for (const section of [...(data.data?.featured?.entries || []), ...(data.data?.daily?.entries || [])]) {
+        for (const item of section.items || []) {
+          if (item.id) {
+            shopIds.add(item.id);
+            shopNames.set(item.id, item.name || item.id);
+          }
+        }
+      }
+      if (shopIds.size === 0) return;
+
+      // Find all wishlisted items that are now in shop and haven't been notified
+      const matches = await (prisma as any).fortniteWishlist.findMany({
+        where: {
+          cosmeticId: { in: Array.from(shopIds) },
+          notified: false,
+        },
+      });
+
+      if (matches.length === 0) return;
+      console.log(`[fortnite] Shop check: ${matches.length} wishlist matches found`);
+
+      // Group by user for batched notifications
+      const byUser = new Map<string, any[]>();
+      for (const m of matches) {
+        const list = byUser.get(m.userId) || [];
+        list.push(m);
+        byUser.set(m.userId, list);
+      }
+
+      for (const [userId, items] of byUser) {
+        const names = items.map((i: any) => shopNames.get(i.cosmeticId) || i.name).slice(0, 3);
+        const extra = items.length > 3 ? ` +${items.length - 3} more` : "";
+        await sendPush(userId, {
+          title: "Wishlist Alert!",
+          body: `${names.join(", ")}${extra} ${items.length === 1 ? "is" : "are"} in the Item Shop now!`,
+          url: "/lobby/fortnite",
+          tag: "fn-shop-wishlist",
+        });
+
+        // Mark as notified
+        await (prisma as any).fortniteWishlist.updateMany({
+          where: { userId, cosmeticId: { in: items.map((i: any) => i.cosmeticId) } },
+          data: { notified: true, notifiedAt: new Date() },
+        });
+      }
+    } catch (e) {
+      console.error("[fortnite] Shop wishlist check error:", e);
+    }
+  }
+
+  // Run shop check every 15 minutes
+  setInterval(() => {
+    const now = Date.now();
+    if (now - lastShopCheck < SHOP_CHECK_INTERVAL) return;
+    lastShopCheck = now;
+    checkFortniteShopWishlist();
+  }, 60_000); // tick every 60s, but only runs check every 15min
+
+  // ── Fortnite Ranked Stats (season snapshot) ─────────────────────────────
+
+  // GET /fortnite/stats/:name/ranked — ranked-specific stats with season comparison
+  app.get("/fortnite/stats/:name/ranked", async (req, reply) => {
+    const name = String((req as any).params?.name || "").trim();
+    if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
+
+    const cacheKey = `fn:ranked:${name}`;
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      // Fetch both lifetime and season stats in parallel
+      const [lifetimeData, seasonData] = await Promise.all([
+        fnGet(`/v2/stats/br/v2?name=${encodeURIComponent(name)}`),
+        fnGet(`/v2/stats/br/v2?name=${encodeURIComponent(name)}&timeWindow=season`),
+      ]);
+
+      if (!lifetimeData || lifetimeData.status !== 200) {
+        return reply.send({ ok: false, error: "player_not_found" });
+      }
+
+      const lifetime = lifetimeData.data?.stats?.all;
+      const season = seasonData?.data?.stats?.all;
+
+      const result = {
+        ok: true,
+        account: { id: lifetimeData.data?.account?.id, name: lifetimeData.data?.account?.name },
+        battlePass: lifetimeData.data?.battlePass,
+        lifetime: {
+          overall: lifetime?.overall || null,
+          solo: lifetime?.solo || null,
+          duo: lifetime?.duo || null,
+          squad: lifetime?.squad || null,
+        },
+        season: {
+          overall: season?.overall || null,
+          solo: season?.solo || null,
+          duo: season?.duo || null,
+          squad: season?.squad || null,
+        },
+      };
+
+      fnCacheSet(cacheKey, result, 5 * 60 * 1000);
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/ranked]", e);
+      return reply.send({ ok: false, error: "ranked_fetch_failed" });
+    }
+  });
+
   // ══════════════════════════════════════════════════════════════════════════════
   // ── LFG / FIRETEAM BOARD ───────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
@@ -7979,8 +8192,13 @@ app.post("/dm/:peerId", async (req, reply) => {
         userName: u.name,
         activity: String(body.activity || "").slice(0, 100),
         description: String(body.description || "").slice(0, 300),
-        maxPlayers: Math.min(Math.max(Number(body.maxPlayers) || 6, 2), 12),
+        maxPlayers: Math.min(Math.max(Number(body.maxPlayers) || 4, 2), 12),
         platform: String(body.platform || "crossplay").slice(0, 20),
+        gameMode: body.gameMode ? String(body.gameMode).slice(0, 30) : null,
+        rankTier: body.rankTier ? String(body.rankTier).slice(0, 30) : null,
+        region: body.region ? String(body.region).slice(0, 10) : null,
+        tags: Array.isArray(body.tags) ? body.tags.map((t: any) => String(t).slice(0, 30)).slice(0, 6) : [],
+        metadata: body.metadata || null,
         players: [u.id],
         playerNames: [u.name],
         status: "OPEN",
