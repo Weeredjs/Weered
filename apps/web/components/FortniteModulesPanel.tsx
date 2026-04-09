@@ -307,21 +307,32 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
 // ── Stats Lookup ─────────────────────────────────────────────────────────────
 
+const FEATURED_PLAYERS = ["Ninja", "Bugha", "MrSavage", "Mongraal", "Clix"];
+
 function StatsLookup({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");
   const [platform, setPlatform] = useState("");
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [preloaded, setPreloaded] = useState(false);
 
-  async function lookup() {
-    const name = query.trim(); if (!name) return;
+  async function lookup(name?: string) {
+    const n = (name || query).trim(); if (!n) return;
     setLoading(true); setError(""); setStats(null);
-    const url = `/fortnite/stats/${encodeURIComponent(name)}${platform ? `?platform=${platform}` : ""}`;
+    if (!name) setPreloaded(false);
+    const url = `/fortnite/stats/${encodeURIComponent(n)}${platform ? `?platform=${platform}` : ""}`;
     const j = await apiFetch(url);
-    if (j.ok) setStats(j); else setError(j.error === "player_not_found" ? "Player not found." : j.error || "Lookup failed");
+    if (j.ok) setStats(j); else if (!name) setError(j.error === "player_not_found" ? "Player not found." : j.error || "Lookup failed");
     setLoading(false);
   }
+
+  // Auto-load a featured player on mount
+  useEffect(() => {
+    const pick = FEATURED_PLAYERS[Math.floor(Math.random() * FEATURED_PLAYERS.length)];
+    setPreloaded(true);
+    lookup(pick);
+  }, []);
 
   function StatBox({ label, value }: { label: string; value: string | number }) {
     return (
@@ -350,7 +361,7 @@ function StatsLookup({ accent }: { accent: string }) {
         <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...S.select, width: 80 }}>
           <option value="">Any</option><option value="epic">Epic</option><option value="psn">PSN</option><option value="xbl">Xbox</option>
         </select>
-        <button style={S.btnPri} onClick={lookup} disabled={loading}>{loading ? "..." : "Search"}</button>
+        <button style={S.btnPri} onClick={() => lookup()} disabled={loading}>{loading ? "..." : "Search"}</button>
       </div>
       {error && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 12 }}>{error}</div>}
       {stats && (
@@ -358,7 +369,10 @@ function StatsLookup({ accent }: { accent: string }) {
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             {stats.image && <img src={stats.image} alt="" style={{ width: 64, height: 64, borderRadius: 10, border: `2px solid ${accent}44`, objectFit: "cover" }} />}
             <div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{stats.account?.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{stats.account?.name}</span>
+                {preloaded && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${accent}15`, color: accent, letterSpacing: ".3px" }}>FEATURED</span>}
+              </div>
               {stats.battlePass && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>BP Level {stats.battlePass.level}</div>}
             </div>
           </div>
@@ -392,13 +406,18 @@ function RankedTab({ accent }: { accent: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function lookup() {
-    const name = query.trim(); if (!name) return;
+  async function lookup(name?: string) {
+    const n = (name || query).trim(); if (!n) return;
     setLoading(true); setError(""); setData(null);
-    const j = await apiFetch(`/fortnite/stats/${encodeURIComponent(name)}/ranked`);
-    if (j.ok) setData(j); else setError(j.error || "Lookup failed");
+    const j = await apiFetch(`/fortnite/stats/${encodeURIComponent(n)}/ranked`);
+    if (j.ok) setData(j); else if (!name) setError(j.error || "Lookup failed");
     setLoading(false);
   }
+
+  useEffect(() => {
+    const pick = FEATURED_PLAYERS[Math.floor(Math.random() * FEATURED_PLAYERS.length)];
+    lookup(pick);
+  }, []);
 
   function CompareRow({ label, lifetime, season }: { label: string; lifetime: any; season: any }) {
     if (!lifetime && !season) return null;
@@ -442,7 +461,7 @@ function RankedTab({ accent }: { accent: string }) {
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input style={{ ...S.input, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder="Epic username" />
-        <button style={S.btnPri} onClick={lookup} disabled={loading}>{loading ? "..." : "Compare"}</button>
+        <button style={S.btnPri} onClick={() => lookup()} disabled={loading}>{loading ? "..." : "Compare"}</button>
       </div>
       {error && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 12 }}>{error}</div>}
       {data && (
@@ -550,10 +569,20 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [showingNew, setShowingNew] = useState(true);
+
+  // Preload newest cosmetics
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/fortnite/cosmetics/new").then(j => {
+      if (j.ok && j.items?.length) setItems(j.items);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   async function search() {
     if (query.trim().length < 2) return;
-    setLoading(true); setSearched(true);
+    setLoading(true); setSearched(true); setShowingNew(false);
     const j = await apiFetch(`/fortnite/cosmetics/search?query=${encodeURIComponent(query.trim())}`);
     if (j.ok) setItems(j.items || []);
     setLoading(false);
@@ -561,13 +590,17 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <input style={{ ...S.input, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} placeholder="Search skins, pickaxes, gliders..." />
         <button style={S.btnPri} onClick={search} disabled={loading}>{loading ? "..." : "Search"}</button>
       </div>
 
-      {loading && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Searching...</div>}
-      {!loading && searched && items.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No results found</div>}
+      {showingNew && items.length > 0 && !loading && (
+        <div style={{ ...S.label, marginBottom: 10 }}>NEWEST COSMETICS</div>
+      )}
+
+      {loading && items.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading...</div>}
+      {!loading && searched && !showingNew && items.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No results found</div>}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
         {items.map(item => {
