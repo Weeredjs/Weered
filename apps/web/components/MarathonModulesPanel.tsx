@@ -626,7 +626,13 @@ function ZoneMap() {
   // Thumbnail card (inline in tab)
   const thumbnail = (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={S.label}>UESC MARATHON — ZONE MAP</div>
+      <div style={{ ...S.label, display: "flex", alignItems: "center", gap: 8 }}>
+        UESC MARATHON — ZONE MAP
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 800, color: "#E8C547", letterSpacing: "0.5px", opacity: 1 }}>
+          <span style={{ fontSize: 12, filter: "drop-shadow(0 0 4px rgba(232,197,71,.5))" }}>&#9733;</span>
+          LordTT
+        </span>
+      </div>
       <div
         onClick={() => { setFullscreen(true); setZoom(1); setPan({ x: 0, y: 0 }); }}
         style={{
