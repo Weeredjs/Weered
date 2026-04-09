@@ -393,6 +393,38 @@ model NotorietyEvent {
   @@index([userId, action])
 }
 
+// —— Notifications ——————————————————————————————————————————————————————————
+
+enum NotificationType {
+  DM_RECEIVED
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  CREW_INVITE
+  MENTION
+  CHALLENGE_STARTED
+  CHALLENGE_COMPLETED
+  NOTORIETY_RANKUP
+  LOBBY_EVENT
+  SYSTEM
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  body        String           @default("")
+  actionUrl   String?
+  actorId     String?
+  actorName   String?
+  meta        Json?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
+}
+
 model DirectMessage {
   id        String    @id @default(cuid())
   fromId    String

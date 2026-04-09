@@ -302,6 +302,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:message") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
       }
+      // Forward notification events to DOM
+      if (msg.type === "notification:new") {
+        try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
+      }
       // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
       if (msg.type?.startsWith("youtube:")) {
         const rid = String(msg.roomId || "");

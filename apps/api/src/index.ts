@@ -535,6 +535,11 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
       if (existing) return null;
     }
 
+    // Get current score before awarding
+    const userBefore = await prisma.user.findUnique({ where: { id: userId }, select: { notoriety: true, name: true } });
+    const scoreBefore = userBefore?.notoriety || 0;
+    const rankBefore = getNotorietyRank(scoreBefore);
+
     await prisma.$transaction([
       prisma.notorietyEvent.create({ data: { userId, action, points: cfg.points } }),
       prisma.user.update({
@@ -543,11 +548,29 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
       }),
     ]);
 
+    const scoreAfter = scoreBefore + cfg.points;
+    const rankAfter = getNotorietyRank(scoreAfter);
+
     // Send realtime XP notification via WebSocket
     for (const sock of wss.clients) {
       if ((sock as any).user?.id === userId) {
         send(sock as any, { type: "notoriety:award", action, points: cfg.points });
+        // Rank-up event
+        if (rankAfter.title !== rankBefore.title) {
+          send(sock as any, { type: "notoriety:rankup", oldRank: rankBefore.title, newRank: rankAfter.title, score: scoreAfter });
+        }
       }
+    }
+
+    // Notification for rank-up
+    if (rankAfter.title !== rankBefore.title) {
+      createNotification({
+        userId,
+        type: "NOTORIETY_RANKUP",
+        title: `You are now a ${rankAfter.title}!`,
+        body: `Promoted from ${rankBefore.title} at ${scoreAfter.toLocaleString()} notoriety`,
+        actionUrl: `/profile/${userId}`,
+      }).catch(() => {});
     }
 
     return cfg.points;
@@ -591,6 +614,53 @@ async function sendPush(userId: string, data: { title: string; body: string; url
         await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
       }
     }
+  }
+}
+
+// ── Notification helper — creates in-app notification + WS push + browser push ──
+async function createNotification(opts: {
+  userId: string;
+  type: string;
+  title: string;
+  body?: string;
+  actionUrl?: string;
+  actorId?: string;
+  actorName?: string;
+  meta?: any;
+}) {
+  try {
+    const notif = await (prisma as any).notification.create({
+      data: {
+        userId: opts.userId,
+        type: opts.type,
+        title: opts.title,
+        body: opts.body || "",
+        actionUrl: opts.actionUrl || null,
+        actorId: opts.actorId || null,
+        actorName: opts.actorName || null,
+        meta: opts.meta || undefined,
+      },
+    });
+    // Push to user via WebSocket if online
+    for (const sock of wss.clients) {
+      if ((sock as any).user?.id === opts.userId) {
+        send(sock as Sock, {
+          type: "notification:new",
+          notification: { ...notif, createdAt: notif.createdAt?.toISOString?.() || notif.createdAt },
+        });
+      }
+    }
+    // Browser push if offline
+    if (!isUserOnline(opts.userId)) {
+      sendPush(opts.userId, {
+        title: opts.title,
+        body: opts.body || "",
+        url: opts.actionUrl || "/home",
+        tag: `notif:${opts.type}:${notif.id}`,
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error("[notification] create failed", e);
   }
 }
 
@@ -3033,6 +3103,17 @@ app.post("/dm/:peerId", async (req, reply) => {
           broadcast(room, { type: "chat:new", roomId, msg: m });
           room.lastActiveAt = Date.now();
           awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(() => {});
+          // @mention notifications
+          const mentions = body.match(/@([\w]+)/g);
+          if (mentions) {
+            const mentionedNames = new Set(mentions.map((m: string) => m.slice(1).toLowerCase()));
+            for (const [uid, ru] of room.users) {
+              if (uid === ws.user.id) continue;
+              if (mentionedNames.has(ru.name.toLowerCase())) {
+                createNotification({ userId: uid, type: "MENTION", title: `${ws.user.name} mentioned you in ${room.name || "a lobby"}`, body: body.slice(0, 120), actorId: ws.user.id, actorName: ws.user.name, actionUrl: `/lobby/${room.roomId}` }).catch(() => {});
+              }
+            }
+          }
           return;
         }
 
@@ -3306,6 +3387,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           if (!isUserOnline(toId)) {
             sendPush(toId, { title: `DM from ${ws.user?.name || "Someone"}`, body: body.slice(0, 120), url: "/home", tag: `dm:${fromId}` }).catch(() => {});
           }
+          createNotification({ userId: toId, type: "DM_RECEIVED", title: `${ws.user?.name || "Someone"} sent you a message`, body: body.slice(0, 120), actorId: fromId, actorName: ws.user?.name || undefined, actionUrl: "/home", meta: { fromId } }).catch(() => {});
           } catch (e) { console.error("[dm:send]", e); }
           return;
         }
@@ -3517,6 +3599,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       update: { status: "PENDING", updatedAt: new Date() },
       create: { fromId: u.id, toId, status: "PENDING" },
     });
+    createNotification({ userId: toId, type: "FRIEND_REQUEST", title: `${u.name} sent you a friend request`, actorId: u.id, actorName: u.name, actionUrl: "/home" }).catch(() => {});
     return reply.send({ ok: true, request: fr });
   });
 
@@ -3536,6 +3619,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     });
     awardNotoriety(u.id, "FRIEND_ADDED").catch(() => {});
     awardNotoriety(fr.fromId, "FRIEND_ADDED").catch(() => {});
+    createNotification({ userId: fr.fromId, type: "FRIEND_ACCEPTED", title: `${u.name} accepted your friend request`, actorId: u.id, actorName: u.name, actionUrl: "/home" }).catch(() => {});
     return reply.send({ ok: true });
   });
 
@@ -3628,6 +3712,8 @@ app.post("/dm/:peerId", async (req, reply) => {
       create: { crewId, userId, name: target.name, role: "MEMBER" },
     });
     awardNotoriety(userId, "CREW_JOINED").catch(() => {});
+    const crew = await db.crew.findUnique({ where: { id: crewId }, select: { name: true, tag: true } });
+    createNotification({ userId, type: "CREW_INVITE", title: `You were added to ${crew?.name || "a crew"}`, body: `${u.name} invited you`, actorId: u.id, actorName: u.name, actionUrl: "/home", meta: { crewId } }).catch(() => {});
     return reply.send({ ok: true });
   });
 
@@ -5550,6 +5636,84 @@ app.post("/dm/:peerId", async (req, reply) => {
       await (prisma as any).staffPost.delete({ where: { id: postId } });
     } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
     return reply.send({ ok: true });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // GET /notifications — recent notifications for the current user
+  app.get("/notifications", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const limit = Math.min(Number((req as any).query?.limit) || 50, 100);
+    const cursor = (req as any).query?.cursor || undefined;
+
+    const where: any = { userId: u.id };
+    if (cursor) where.createdAt = { lt: new Date(cursor) };
+
+    const [notifications, unreadCount] = await Promise.all([
+      (prisma as any).notification.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      }),
+      (prisma as any).notification.count({ where: { userId: u.id, read: false } }),
+    ]);
+
+    return reply.send({
+      ok: true,
+      notifications: notifications.map((n: any) => ({
+        ...n,
+        createdAt: n.createdAt?.toISOString?.() || n.createdAt,
+      })),
+      unreadCount,
+    });
+  });
+
+  // PATCH /notifications/read — mark notifications as read
+  app.patch("/notifications/read", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const body = (req as any).body || {};
+
+    if (body.all) {
+      await (prisma as any).notification.updateMany({
+        where: { userId: u.id, read: false },
+        data: { read: true },
+      });
+    } else if (Array.isArray(body.ids) && body.ids.length > 0) {
+      await (prisma as any).notification.updateMany({
+        where: { id: { in: body.ids }, userId: u.id },
+        data: { read: true },
+      });
+    }
+
+    return reply.send({ ok: true });
+  });
+
+  // DELETE /notifications/:id — delete a notification
+  app.delete("/notifications/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    try {
+      await (prisma as any).notification.deleteMany({
+        where: { id: (req as any).params.id, userId: u.id },
+      });
+    } catch {}
+    return reply.send({ ok: true });
+  });
+
+  // GET /notifications/unread-count — just the badge number
+  app.get("/notifications/unread-count", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const count = await (prisma as any).notification.count({ where: { userId: u.id, read: false } });
+    return reply.send({ ok: true, count });
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
