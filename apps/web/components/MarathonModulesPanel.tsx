@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 
 // ── Twitch Glitch icon ──────────────────────────────────────────────────────
@@ -573,6 +574,190 @@ function Leaderboards() {
   );
 }
 
+// ── Zone Map (full-screen zoomable) ────────────────────────────────────────
+
+function ZoneMap() {
+  const [fullscreen, setFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStart = React.useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  const MAP_SRC = "/brand/marathon-map.png";
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoom(z => Math.min(6, Math.max(0.5, z - e.deltaY * 0.002)));
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragging) return;
+    setPan({
+      x: dragStart.current.panX + (e.clientX - dragStart.current.x),
+      y: dragStart.current.panY + (e.clientY - dragStart.current.y),
+    });
+  }, [dragging]);
+
+  const handleMouseUp = useCallback(() => setDragging(false), []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    setDragging(true);
+    dragStart.current = { x: t.clientX, y: t.clientY, panX: pan.x, panY: pan.y };
+  }, [pan]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!dragging || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    setPan({
+      x: dragStart.current.panX + (t.clientX - dragStart.current.x),
+      y: dragStart.current.panY + (t.clientY - dragStart.current.y),
+    });
+  }, [dragging]);
+
+  const resetView = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
+
+  // Thumbnail card (inline in tab)
+  const thumbnail = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={S.label}>UESC MARATHON — ZONE MAP</div>
+      <div
+        onClick={() => { setFullscreen(true); setZoom(1); setPan({ x: 0, y: 0 }); }}
+        style={{
+          ...S.card, cursor: "pointer", position: "relative", overflow: "hidden",
+          padding: 0, border: `1px solid ${M.accentMid}`,
+          transition: "border-color .15s",
+        }}
+      >
+        <img
+          src={MAP_SRC}
+          alt="Marathon Zone Map by LordTT"
+          style={{ width: "100%", display: "block", borderRadius: 7 }}
+        />
+        {/* Overlay prompt */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(transparent 60%, rgba(0,0,0,.7))",
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          padding: 14,
+        }}>
+          <div style={{
+            padding: "8px 20px", borderRadius: 6,
+            background: M.accentDim, border: `1px solid ${M.accentMid}`,
+            fontFamily: "monospace", fontSize: 11, fontWeight: 800,
+            color: M.accent, letterSpacing: "1px",
+          }}>
+            OPEN FULL MAP
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 10, opacity: 0.3, fontFamily: "monospace", textAlign: "center" }}>
+        Map by <span style={{ color: M.accent, opacity: 1 }}>LordTT</span> — click to open full-screen interactive view
+      </div>
+    </div>
+  );
+
+  // Full-screen overlay
+  const fullscreenOverlay = fullscreen ? (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(2,2,6,.96)",
+        backdropFilter: "blur(8px)",
+        display: "flex", flexDirection: "column",
+      }}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchEnd={() => setDragging(false)}
+    >
+      {/* Toolbar */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 16px",
+        background: "rgba(0,0,0,.5)",
+        borderBottom: `1px solid ${M.border}`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 13, color: M.accent, letterSpacing: "1px" }}>
+            ZONE MAP
+          </span>
+          <span style={{ fontSize: 10, opacity: 0.35, fontFamily: "monospace" }}>
+            by LordTT
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, fontFamily: "monospace", opacity: 0.4 }}>{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(z => Math.min(6, z + 0.5))} style={{ ...S.btn, padding: "4px 10px", fontSize: 14, lineHeight: 1 }}>+</button>
+          <button onClick={() => setZoom(z => Math.max(0.5, z - 0.5))} style={{ ...S.btn, padding: "4px 10px", fontSize: 14, lineHeight: 1 }}>-</button>
+          <button onClick={resetView} style={{ ...S.btn, padding: "4px 10px", fontSize: 10 }}>RESET</button>
+          <button
+            onClick={() => setFullscreen(false)}
+            style={{
+              ...S.btn, padding: "4px 12px", fontSize: 11, fontWeight: 800,
+              color: "#FF4444", borderColor: "rgba(255,68,68,.25)",
+            }}
+          >
+            CLOSE
+          </button>
+        </div>
+      </div>
+
+      {/* Map viewport */}
+      <div
+        style={{
+          flex: 1, overflow: "hidden", cursor: dragging ? "grabbing" : "grab",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative",
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+      >
+        <img
+          src={MAP_SRC}
+          alt="Marathon Zone Map"
+          draggable={false}
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "center center",
+            transition: dragging ? "none" : "transform 0.15s ease-out",
+            maxWidth: "none", maxHeight: "none",
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
+
+      {/* Footer credit */}
+      <div style={{
+        padding: "6px 16px",
+        background: "rgba(0,0,0,.5)",
+        borderTop: `1px solid ${M.border}`,
+        fontSize: 10, fontFamily: "monospace", opacity: 0.35, textAlign: "center",
+        flexShrink: 0,
+      }}>
+        Map created by LordTT — scroll to zoom, drag to pan
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      {thumbnail}
+      {fullscreenOverlay && typeof document !== "undefined" && createPortal(fullscreenOverlay, document.body)}
+    </>
+  );
+}
+
 // ── Loading Pulse ───────────────────────────────────────────────────────────
 
 function LoadingPulse({ text }: { text: string }) {
@@ -595,7 +780,8 @@ function LoadingPulse({ text }: { text: string }) {
 const TABS = [
   { id: "streams",     label: "FEEDS",         icon: "__twitch__" },
   { id: "squads",      label: "SQUADS",        icon: "📡" },
-  { id: "zones",       label: "ZONE INTEL",    icon: "🗺" },
+  { id: "map",         label: "MAP",           icon: "🗺" },
+  { id: "zones",       label: "ZONE INTEL",    icon: "📋" },
   { id: "runners",     label: "RUNNERS",       icon: "🏃" },
   { id: "myrunner",    label: "MY RUNNER",     icon: "⚔" },
   { id: "leaderboards",label: "RANKED",        icon: "🏆" },
@@ -665,6 +851,7 @@ export default function MarathonModulesPanel({
       }}>
         {tab === "streams"      && <TwitchStreams lobbyId={lobbyId} accentColor={accent} />}
         {tab === "squads"       && <SquadFinder lobbyId={lobbyId} />}
+        {tab === "map"          && <ZoneMap />}
         {tab === "zones"        && <ZoneIntel />}
         {tab === "runners"      && <RunnerDatabase />}
         {tab === "myrunner"     && <MyRunner accentColor={accent} />}
