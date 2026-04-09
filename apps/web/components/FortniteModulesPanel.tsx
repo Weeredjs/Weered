@@ -88,7 +88,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
           <div
-            key={s.id}
+            key={s.userLogin}
             onClick={() => setInterceptStream(s)}
             style={{
               ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center",
