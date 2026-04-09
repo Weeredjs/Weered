@@ -307,7 +307,7 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
 // ── Stats Lookup ─────────────────────────────────────────────────────────────
 
-const FEATURED_PLAYERS = ["Ninja", "Bugha", "MrSavage", "Mongraal", "Clix"];
+const FEATURED_PLAYERS = ["Bugha", "MrSavage", "Tfue", "Mero", "EpikWhale", "Queasy"];
 
 function StatsLookup({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");

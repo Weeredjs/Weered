@@ -8039,15 +8039,15 @@ app.post("/dm/:peerId", async (req, reply) => {
     if (cached) return reply.send(cached);
 
     try {
-      const data = await fnGet("/v2/shop/br/combined");
+      const data = await fnGet("/v2/shop");
       if (!data || data.status !== 200) {
         return reply.send({ ok: false, error: "shop_fetch_failed" });
       }
 
-      // Flatten featured + daily into sections
+      // New API returns flat entries[] with brItems[] instead of featured/daily sections
       const sections: any[] = [];
-      for (const section of [...(data.data?.featured?.entries || []), ...(data.data?.daily?.entries || [])]) {
-        const item = section.items?.[0];
+      for (const entry of data.data?.entries || []) {
+        const item = entry.brItems?.[0] || entry.items?.[0];
         if (!item) continue;
         sections.push({
           id: item.id,
@@ -8056,9 +8056,9 @@ app.post("/dm/:peerId", async (req, reply) => {
           type: item.type?.displayValue || item.type?.value,
           rarity: item.rarity?.displayValue || item.rarity?.value,
           rarityColor: item.rarity?.value,
-          price: section.finalPrice ?? section.regularPrice,
-          regularPrice: section.regularPrice,
-          banner: section.banner?.value,
+          price: entry.finalPrice ?? entry.regularPrice,
+          regularPrice: entry.regularPrice,
+          banner: entry.banner?.value,
           image: item.images?.icon || item.images?.smallIcon || item.images?.featured,
           featured: item.images?.featured,
           added: item.added,
@@ -8298,14 +8298,14 @@ app.post("/dm/:peerId", async (req, reply) => {
 
   async function checkFortniteShopWishlist() {
     try {
-      const data = await fnGet("/v2/shop/br/combined");
+      const data = await fnGet("/v2/shop");
       if (!data || data.status !== 200) return;
 
       // Extract all cosmetic IDs currently in shop
       const shopIds = new Set<string>();
       const shopNames = new Map<string, string>();
-      for (const section of [...(data.data?.featured?.entries || []), ...(data.data?.daily?.entries || [])]) {
-        for (const item of section.items || []) {
+      for (const entry of data.data?.entries || []) {
+        for (const item of [...(entry.brItems || []), ...(entry.items || [])]) {
           if (item.id) {
             shopIds.add(item.id);
             shopNames.set(item.id, item.name || item.id);
