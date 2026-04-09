@@ -118,7 +118,7 @@ export default function CreateLobbyPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#050810", color: "rgba(255,255,255,.4)", fontSize: 13 }}>
+      <div style={{ height: "100%", display: "grid", placeItems: "center", background: "#050810", color: "rgba(255,255,255,.4)", fontSize: 13 }}>
         Loading...
       </div>
     );
@@ -126,7 +126,7 @@ export default function CreateLobbyPage() {
 
   if (tier === "INNOCENT") {
     return (
-      <div style={{ minHeight: "100vh", background: "#050810", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 }}>
+      <div style={{ height: "100%", background: "#050810", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>⚖️</div>
         <div style={{ fontWeight: 900, fontSize: 24, color: "rgba(243,244,246,.92)", marginBottom: 8, letterSpacing: "-0.5px" }}>Upgrade Required</div>
         <div style={{ fontSize: 14, color: "rgba(148,163,184,.55)", marginBottom: 28, textAlign: "center", maxWidth: 360 }}>
@@ -157,7 +157,7 @@ export default function CreateLobbyPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#050810", color: "rgba(243,244,246,.92)", padding: "40px 20px 80px" }}>
+    <div style={{ height: "100%", overflowY: "auto", background: "#050810", color: "rgba(243,244,246,.92)", padding: "40px 20px 80px" }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
 
         {/* Header */}
