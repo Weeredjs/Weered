@@ -192,18 +192,27 @@ export function NotificationBell() {
         type="button"
         onClick={toggleOpen}
         title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
+        className={unreadCount > 0 ? "weered-bell-hot" : ""}
         style={{
           display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "8px 10px",
-          background: open ? "rgba(88,0,229,.25)" : "rgba(255,255,255,.04)",
-          border: open ? "1px solid rgba(88,0,229,.45)" : "1px solid rgba(255,255,255,.08)",
-          borderRadius: 10, cursor: "pointer",
-          color: "rgba(255,255,255,.55)",
+          width: 30, height: 30, borderRadius: 8,
+          background: open
+            ? "rgba(88,0,229,.25)"
+            : unreadCount > 0
+              ? "rgba(245,158,11,.12)"
+              : "transparent",
+          border: open
+            ? "1px solid rgba(88,0,229,.45)"
+            : unreadCount > 0
+              ? "1px solid rgba(245,158,11,.30)"
+              : "1px solid rgba(255,255,255,.08)",
+          cursor: "pointer",
+          color: unreadCount > 0 ? "rgba(253,230,138,.9)" : "rgba(255,255,255,.4)",
           transition: "all 0.15s", position: "relative",
           flexShrink: 0,
         }}
-        onMouseEnter={e => { if (!open) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.20)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.80)"; }}}
-        onMouseLeave={e => { if (!open) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.55)"; }}}
+        onMouseEnter={e => { const el = e.currentTarget; el.style.background = unreadCount > 0 ? "rgba(245,158,11,.20)" : "rgba(255,255,255,.10)"; el.style.color = unreadCount > 0 ? "rgba(253,230,138,1)" : "rgba(255,255,255,.7)"; }}
+        onMouseLeave={e => { const el = e.currentTarget; el.style.background = open ? "rgba(88,0,229,.25)" : unreadCount > 0 ? "rgba(245,158,11,.12)" : "transparent"; el.style.color = unreadCount > 0 ? "rgba(253,230,138,.9)" : "rgba(255,255,255,.4)"; }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -213,19 +222,30 @@ export function NotificationBell() {
         {unreadCount > 0 && (
           <span style={{
             position: "absolute", top: -4, right: -4,
-            minWidth: 16, height: 16, borderRadius: 999,
+            minWidth: 14, height: 14, borderRadius: 999,
             background: "#f59e0b",
             border: "2px solid rgba(10,10,15,.95)",
-            fontSize: 9, fontWeight: 900, color: "#000",
+            fontSize: 8, fontWeight: 900, color: "#000",
             display: "flex", alignItems: "center", justifyContent: "center",
-            padding: unreadCount > 9 ? "0 3px" : "0",
+            padding: unreadCount > 9 ? "0 2px" : "0",
             lineHeight: 1,
-            boxShadow: "0 0 8px rgba(245,158,11,.5)",
+            boxShadow: "0 0 6px rgba(245,158,11,.5)",
           }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
+
+      {/* Bell glow animation */}
+      {unreadCount > 0 && (
+        <style>{`
+          @keyframes weered-bell-pulse {
+            0%, 100% { box-shadow: 0 0 4px rgba(245,158,11,.15); }
+            50% { box-shadow: 0 0 12px rgba(245,158,11,.35); }
+          }
+          .weered-bell-hot { animation: weered-bell-pulse 2s ease-in-out infinite; }
+        `}</style>
+      )}
 
       {/* Dropdown panel — portaled to body to avoid overflow clipping */}
       {open && typeof document !== "undefined" && createPortal(

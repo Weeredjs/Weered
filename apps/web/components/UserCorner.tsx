@@ -271,9 +271,12 @@ export default function UserCorner() {
         </div>
       </button>
 
-      {/* Notoriety XP bar */}
-      <div style={{ padding: "6px 12px 0" }}>
-        <NotorietyBar compact />
+      {/* Notoriety XP bar + notification bell */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px 0" }}>
+        <div style={{ flex: 1 }}>
+          <NotorietyBar compact />
+        </div>
+        <NotificationBell />
       </div>
 
       {/* Action strip */}
@@ -302,9 +305,6 @@ export default function UserCorner() {
           <IconSettings />
           <span>Settings</span>
         </button>
-
-        {/* Notifications bell */}
-        <NotificationBell />
 
         {/* Logout */}
         <button
