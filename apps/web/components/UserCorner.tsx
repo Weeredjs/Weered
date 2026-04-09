@@ -159,7 +159,6 @@ export default function UserCorner() {
         borderRadius: 16,
         border: "1px solid rgba(148,163,184,.13)",
         background: "rgba(255,255,255,.03)",
-        overflow: "hidden",
         marginBottom: 4,
       }}
     >
