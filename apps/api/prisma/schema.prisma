@@ -46,6 +46,7 @@ enum ModuleType {
   NEWS
   NONE
   RIOT
+  FORTNITE
 }
 
 model NewsArticle {
