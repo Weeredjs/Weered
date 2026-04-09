@@ -10,12 +10,13 @@ import React from "react";
  */
 
 const ROLE_MAP: Record<string, { file: string; color: string }> = {
-  GOD:     { file: "godfather",    color: "#D4A017" },
+  GOD:     { file: "godfather",   color: "#D4A017" },
   ADMIN:   { file: "lieutenant",  color: "#EF4444" },
-  STAFF:   { file: "enforcer",    color: "#60A5FA" },   // was brass knuckles, now MOD's icon
-  SUPPORT: { file: "backup",      color: "#60A5FA" },   // blue shield with +
-  MOD:     { file: "enforcer",    color: "#34D399" },   // brass knuckles
+  STAFF:   { file: "enforcer",    color: "#60A5FA" },
+  SUPPORT: { file: "backup",      color: "#60A5FA" },
+  MOD:     { file: "captain",     color: "#5800E5" },
   OWNER:   { file: "founder",     color: "#F97316" },
+  MEMBER:  { file: "member",      color: "#94A3B8" },
 };
 
 /* Tier badge icons (for premium chips in UserCorner/LeftRail) */
@@ -42,19 +43,12 @@ interface RoleIconProps {
   className?: string;
 }
 
-function pickPngSize(size: number): number {
-  if (size <= 32) return 32;
-  if (size <= 64) return 64;
-  return 128;
-}
-
 export default function RoleIcon({ role, size = 14, style, className }: RoleIconProps) {
   const info = ROLE_MAP[role];
   if (!info) return null;
-  const pngSize = pickPngSize(size);
   return (
     <img
-      src={`/brand/roles/role-${info.file}-${pngSize}.png`}
+      src={`/brand/roles/${info.file}.svg`}
       alt={DISPLAY_NAMES[role] || role}
       width={size}
       height={size}
@@ -73,10 +67,9 @@ export default function RoleIcon({ role, size = 14, style, className }: RoleIcon
 export function TierIcon({ tier, size = 14, style, className }: { tier: string; size?: number; style?: React.CSSProperties; className?: string }) {
   const info = TIER_MAP[tier.toUpperCase()];
   if (!info) return null;
-  const pngSize = pickPngSize(size);
   return (
     <img
-      src={`/brand/roles/role-${info.file}-${pngSize}.png`}
+      src={`/brand/roles/${info.file}.svg`}
       alt={tier}
       width={size}
       height={size}
