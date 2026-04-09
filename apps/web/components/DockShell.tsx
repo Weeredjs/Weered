@@ -7,14 +7,39 @@ import { avatarBg } from "../lib/avatarColor";
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
 
+const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
+const TENOR_DM_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
+
 function linkify(text: string): React.ReactNode {
   const urlRx = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRx);
-  return parts.map((p, i) =>
-    urlRx.test(p)
-      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "rgb(167,139,250)", textDecoration: "underline", wordBreak: "break-all" }}>{p}</a>
-      : p
-  );
+  const nodes: React.ReactNode[] = [];
+  const images: string[] = [];
+
+  parts.forEach((p, i) => {
+    if (urlRx.test(p)) {
+      nodes.push(<a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "rgb(167,139,250)", textDecoration: "underline", wordBreak: "break-all" }}>{p}</a>);
+      if (IMG_RE.test(p) || TENOR_DM_RE.test(p)) images.push(p);
+    } else {
+      nodes.push(p);
+    }
+  });
+
+  if (images.length > 0) {
+    return (
+      <>
+        <div>{nodes}</div>
+        {images.map((src, i) => (
+          <img key={`dm-img-${i}`} src={src} alt="" loading="lazy" style={{
+            maxWidth: 200, maxHeight: 160, borderRadius: 8, marginTop: 4,
+            border: "1px solid rgba(255,255,255,.1)", display: "block",
+          }} onError={e => (e.currentTarget.style.display = "none")} />
+        ))}
+      </>
+    );
+  }
+
+  return <>{nodes}</>;
 }
 
 const WEERED_THEME_KEY = "weered_theme_v1";

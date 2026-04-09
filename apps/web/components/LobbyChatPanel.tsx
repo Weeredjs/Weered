@@ -9,11 +9,50 @@ import { useUserHover } from "./UserHoverCard";
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
 const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
+const TENOR_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+function LinkPreviewCard({ url }: { url: string }) {
+  const [data, setData] = useState<any>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/unfurl?url=${encodeURIComponent(url)}`)
+      .then(r => r.json())
+      .then(j => { if (!cancelled && j.ok && (j.title || j.description)) setData(j); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (!data) return null;
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
+      <div style={{
+        borderRadius: 8, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)",
+        overflow: "hidden", maxWidth: 320, transition: "border-color .15s",
+      }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(124,58,237,.3)")}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+      >
+        {data.image && (
+          <img src={data.image} alt="" style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+            onError={e => (e.currentTarget.style.display = "none")} />
+        )}
+        <div style={{ padding: "8px 10px" }}>
+          {data.siteName && <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".5px", color: "rgba(124,58,237,.6)", marginBottom: 3 }}>{data.siteName}</div>}
+          {data.title && <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)", lineHeight: 1.3, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as any}>{data.title}</div>}
+          {data.description && <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" } as any}>{data.description}</div>}
+        </div>
+      </div>
+    </a>
+  );
+}
 
 function ChatBody({ text }: { text: string }) {
   if (!text) return null;
   const parts: React.ReactNode[] = [];
   const imageUrls: string[] = [];
+  const linkUrls: string[] = [];
   let last = 0;
   let match: RegExpExecArray | null;
   URL_RE.lastIndex = 0;
@@ -27,7 +66,8 @@ function ChatBody({ text }: { text: string }) {
         wordBreak: "break-all",
       }}>{url}</a>
     );
-    if (IMG_EXT.test(url)) imageUrls.push(url);
+    if (IMG_EXT.test(url) || TENOR_RE.test(url)) imageUrls.push(url);
+    else linkUrls.push(url);
     last = match.index + url.length;
   }
   if (last < text.length) parts.push(text.slice(last));
@@ -47,7 +87,89 @@ function ChatBody({ text }: { text: string }) {
           />
         </a>
       ))}
+      {linkUrls.slice(0, 1).map((url, i) => (
+        <LinkPreviewCard key={`lp-${i}`} url={url} />
+      ))}
     </>
+  );
+}
+
+// ── GIF Picker (Tenor) ──
+const TENOR_API_KEY = "AIza_REDACTED_TENOR_KEY"; // Tenor public/free key
+const TENOR_URL = "https://tenor.googleapis.com/v2";
+
+function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  // Load trending on mount
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${TENOR_URL}/featured?key=${TENOR_API_KEY}&limit=20&media_filter=tinygif,gif`)
+      .then(r => r.json())
+      .then(j => { setResults(j.results || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  function search() {
+    if (!query.trim()) return;
+    setLoading(true);
+    fetch(`${TENOR_URL}/search?key=${TENOR_API_KEY}&q=${encodeURIComponent(query)}&limit=20&media_filter=tinygif,gif`)
+      .then(r => r.json())
+      .then(j => { setResults(j.results || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }
+
+  return (
+    <div ref={ref} style={{
+      position: "absolute", bottom: "calc(100% + 6px)", right: 0,
+      width: 320, maxHeight: 360, background: "#1a1a2e", border: "1px solid rgba(255,255,255,.12)",
+      borderRadius: 12, padding: 8, zIndex: 50, boxShadow: "0 8px 32px rgba(0,0,0,.5)",
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+        <input
+          value={query} onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && search()}
+          placeholder="Search GIFs..."
+          style={{
+            flex: 1, padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,.1)",
+            background: "rgba(0,0,0,.3)", color: "rgba(243,244,246,.9)", fontSize: 12, outline: "none",
+          }}
+        />
+        <button onClick={search} style={{
+          padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(124,58,237,.3)",
+          background: "rgba(124,58,237,.12)", color: "rgba(216,180,254,.9)", fontSize: 11, cursor: "pointer",
+        }}>Go</button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
+        {loading && <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 16, opacity: 0.4, fontSize: 12 }}>Loading...</div>}
+        {results.map((r: any) => {
+          const tiny = r.media_formats?.tinygif?.url || r.media_formats?.gif?.url || "";
+          const full = r.media_formats?.gif?.url || tiny;
+          if (!tiny) return null;
+          return (
+            <img key={r.id} src={tiny} alt="" loading="lazy"
+              onClick={() => { onSelect(full); onClose(); }}
+              style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, cursor: "pointer", border: "1px solid rgba(255,255,255,.06)" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(124,58,237,.4)")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
+            />
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 9, textAlign: "right", opacity: 0.2, marginTop: 4 }}>Powered by Tenor</div>
+    </div>
   );
 }
 
@@ -122,6 +244,7 @@ export default function LobbyChatPanel(
   const [text, setText] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiCat, setEmojiCat] = useState(0);
+  const [gifOpen, setGifOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const emojiRef = useRef<HTMLDivElement | null>(null);
@@ -257,7 +380,20 @@ export default function LobbyChatPanel(
               onKeyDown={(e) => { if (e.key === "Enter" && canSend) onSend(); }}
             />
             <button
-              onClick={() => setEmojiOpen(v => !v)}
+              onClick={() => { setGifOpen(v => !v); setEmojiOpen(false); }}
+              disabled={!canType}
+              title="GIF"
+              style={{
+                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: gifOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                padding: "0 8px", fontSize: 11, fontWeight: 700, cursor: canType ? "pointer" : "not-allowed",
+                color: canType ? "rgba(216,180,254,.8)" : "rgba(255,255,255,.4)", transition: "background .15s",
+                letterSpacing: ".5px",
+              }}
+            >
+              GIF
+            </button>
+            <button
+              onClick={() => { setEmojiOpen(v => !v); setGifOpen(false); }}
               disabled={!canType}
               title="Emoji"
               style={{
@@ -317,6 +453,14 @@ export default function LobbyChatPanel(
                 ))}
               </div>
             </div>
+          )}
+
+          {/* GIF picker */}
+          {gifOpen && (
+            <GifPicker
+              onSelect={(url) => { ctx?.sendChat?.(effectiveRoomId, url); }}
+              onClose={() => setGifOpen(false)}
+            />
           )}
         </div>
       )}

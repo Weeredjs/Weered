@@ -5553,6 +5553,70 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── URL UNFURL (Open Graph link previews) ──────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const unfurlCache = new Map<string, { data: any; expiresAt: number }>();
+
+  app.get("/unfurl", async (req, reply) => {
+    const url = String((req as any).query?.url || "");
+    if (!url || !url.startsWith("http")) return reply.send({ ok: false });
+
+    // Check cache
+    const cached = unfurlCache.get(url);
+    if (cached && cached.expiresAt > Date.now()) return reply.send(cached.data);
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(url, {
+        headers: { "User-Agent": "WeeredBot/1.0 (link preview)" },
+        signal: controller.signal,
+        redirect: "follow",
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) return reply.send({ ok: false });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("text/html")) return reply.send({ ok: false });
+
+      const html = await res.text();
+      const first4k = html.slice(0, 8000); // only parse head
+
+      const og = (prop: string) => {
+        const m = first4k.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']+)["']`, "i"))
+                || first4k.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:${prop}["']`, "i"));
+        return m?.[1] || "";
+      };
+      const meta = (name: string) => {
+        const m = first4k.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"))
+                || first4k.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${name}["']`, "i"));
+        return m?.[1] || "";
+      };
+
+      const titleTag = first4k.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || "";
+
+      const result = {
+        ok: true,
+        title: og("title") || meta("title") || titleTag || "",
+        description: og("description") || meta("description") || "",
+        image: og("image") || "",
+        siteName: og("site_name") || "",
+        url: og("url") || url,
+      };
+
+      // Don't cache empty results
+      if (result.title || result.description) {
+        unfurlCache.set(url, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 }); // 30 min
+      }
+
+      return reply.send(result);
+    } catch {
+      return reply.send({ ok: false });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── OUTREACH CRM ───────────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
