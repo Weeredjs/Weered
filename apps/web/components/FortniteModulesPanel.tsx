@@ -114,7 +114,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
           </div>
         ))}
       </div>
-      <StreamInterceptModal stream={interceptStream} lobbyId={lobbyId} onClose={() => setInterceptStream(null)} />
+      <StreamInterceptModal stream={interceptStream} lobbyId={lobbyId} onClose={() => setInterceptStream(null)} onWatchHere={() => setInterceptStream(null)} />
     </>
   );
 }
