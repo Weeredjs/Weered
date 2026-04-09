@@ -5,7 +5,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 
@@ -21,6 +21,7 @@ const S = {
   btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
   btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(80,200,255,.35)", background: "rgba(80,200,255,.12)", fontSize: 12, cursor: "pointer", color: "rgb(80,200,255)", fontWeight: 600 } as React.CSSProperties,
   input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
@@ -29,41 +30,87 @@ const ACCENT_FN = "#00D4FF";
 // ── Rarity Colors ────────────────────────────────────────────────────────────
 
 const RARITY_COLORS: Record<string, string> = {
-  legendary: "#FF8C00",
-  epic: "#B15BFF",
-  rare: "#00AAFF",
-  uncommon: "#30B030",
-  common: "#8A8A8A",
-  marvel: "#C0392B",
-  dc: "#1E90FF",
-  icon: "#00CCCC",
-  gaming: "#117DFF",
-  dark: "#FF00FF",
-  frozen: "#ACE5FF",
-  lava: "#FF4500",
-  shadow: "#5E35B1",
-  slurp: "#00DDAA",
-  star: "#E57C00",
+  legendary: "#FF8C00", epic: "#B15BFF", rare: "#00AAFF", uncommon: "#30B030",
+  common: "#8A8A8A", marvel: "#C0392B", dc: "#1E90FF", icon: "#00CCCC",
+  gaming: "#117DFF", dark: "#FF00FF", frozen: "#ACE5FF", lava: "#FF4500",
+  shadow: "#5E35B1", slurp: "#00DDAA", star: "#E57C00",
 };
+function rarityColor(rarity?: string): string { return RARITY_COLORS[rarity?.toLowerCase() || ""] || "#8A8A8A"; }
 
-function rarityColor(rarity?: string): string {
-  if (!rarity) return "#8A8A8A";
-  return RARITY_COLORS[rarity.toLowerCase()] || "#8A8A8A";
+// ── Wishlist Hook ────────────────────────────────────────────────────────────
+
+function useWishlist() {
+  const [items, setItems] = useState<Map<string, any>>(new Map());
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    const j = await apiFetch("/fortnite/wishlist");
+    if (j.ok) {
+      const m = new Map<string, any>();
+      for (const i of j.items || []) m.set(i.cosmeticId, i);
+      setItems(m);
+    }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function toggle(cosmeticId: string, meta?: { name?: string; type?: string; rarity?: string; image?: string }) {
+    if (items.has(cosmeticId)) {
+      setItems(prev => { const n = new Map(prev); n.delete(cosmeticId); return n; });
+      await apiFetch(`/fortnite/wishlist/${encodeURIComponent(cosmeticId)}`, { method: "DELETE" });
+    } else {
+      const item = { cosmeticId, ...meta };
+      setItems(prev => new Map(prev).set(cosmeticId, item));
+      await apiFetch("/fortnite/wishlist", { method: "POST", body: JSON.stringify(item) });
+    }
+  }
+
+  return { items, loaded, toggle, reload: load };
+}
+
+// ── Wishlist Heart Button ────────────────────────────────────────────────────
+
+function WishlistHeart({ cosmeticId, wishlisted, onToggle, size = 16 }: {
+  cosmeticId: string; wishlisted: boolean; onToggle: () => void; size?: number;
+}) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onToggle(); }}
+      title={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+      style={{
+        background: "none", border: "none", cursor: "pointer", padding: 2,
+        fontSize: size, lineHeight: 1, color: wishlisted ? "#EF4444" : "rgba(148,163,184,.3)",
+        transition: "color .15s, transform .15s",
+        transform: wishlisted ? "scale(1.1)" : "scale(1)",
+      }}
+    >
+      {wishlisted ? "♥" : "♡"}
+    </button>
+  );
 }
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "streams" as const, label: "Streams", icon: "📺" },
-  { id: "lfg" as const,     label: "Find Team", icon: "🎮" },
-  { id: "stats" as const,   label: "Stats", icon: "📊" },
-  { id: "shop" as const,    label: "Item Shop", icon: "🛒" },
-  { id: "news" as const,    label: "News", icon: "📰" },
+  { id: "streams" as const,   label: "Streams",   icon: "📺" },
+  { id: "lfg" as const,       label: "Find Team", icon: "🎮" },
+  { id: "stats" as const,     label: "Stats",     icon: "📊" },
+  { id: "ranked" as const,    label: "Ranked",    icon: "🏆" },
+  { id: "shop" as const,      label: "Shop",      icon: "🛒" },
   { id: "cosmetics" as const, label: "Cosmetics", icon: "✨" },
+  { id: "news" as const,      label: "News",      icon: "📰" },
 ];
 type TabId = typeof TABS[number]["id"];
 
-// ── Twitch Streams (shared pattern) ─────────────────────────────────────────
+// ── Fortnite Constants ───────────────────────────────────────────────────────
+
+const FN_MODES = ["Any", "Solo", "Duo", "Squad", "Zero Build Solo", "Zero Build Duo", "Zero Build Squad", "Ranked", "Creative"];
+const FN_RANKS = ["Any", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Elite", "Champion", "Unreal"];
+const FN_REGIONS = ["Any", "NAE", "NAW", "EU", "OCE", "ASIA", "BR", "ME"];
+const FN_TAGS = ["casual", "competitive", "chill", "sweaty", "mic-required", "no-mic", "18+", "content-creator"];
+
+// ── Twitch Streams ──────────────────────────────────────────────────────────
 
 function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; lobbyId: string; accentColor: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -87,30 +134,16 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
-          <div
-            key={s.userLogin}
-            onClick={() => setInterceptStream(s)}
-            style={{
-              ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center",
-              transition: "border-color .12s",
-            }}
+          <div key={s.userLogin} onClick={() => setInterceptStream(s)} style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accentColor}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
-            {s.thumbnailUrl && (
-              <img
-                src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")}
-                alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
-              />
-            )}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
             </div>
-            <div style={{
-              width: 8, height: 8, borderRadius: "50%", background: "#EF4444",
-              boxShadow: "0 0 6px #EF444488", flexShrink: 0,
-            }} />
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444", boxShadow: "0 0 6px #EF444488", flexShrink: 0 }} />
           </div>
         ))}
       </div>
@@ -119,36 +152,155 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   );
 }
 
-// ── LFG Board (reuse existing) ──────────────────────────────────────────────
+// ── LFG Board (Fortnite-specific) ───────────────────────────────────────────
 
-function LfgBoard({ lobbyId }: { lobbyId: string }) {
+function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [activity, setActivity] = useState("");
+  const [description, setDescription] = useState("");
+  const [gameMode, setGameMode] = useState("Any");
+  const [rankTier, setRankTier] = useState("Any");
+  const [region, setRegion] = useState("Any");
+  const [maxPlayers, setMaxPlayers] = useState(4);
+  const [platform, setPlatform] = useState("crossplay");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
+  function load() {
     apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`)
       .then(j => { if (j.ok) setPosts(j.posts || []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [lobbyId]);
+  }
+  useEffect(() => { load(); }, [lobbyId]);
+
+  async function create() {
+    setCreating(true);
+    await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`, {
+      method: "POST",
+      body: JSON.stringify({
+        activity: activity || `${gameMode !== "Any" ? gameMode : "Fortnite"} LFG`,
+        description, maxPlayers, platform,
+        gameMode: gameMode !== "Any" ? gameMode : null,
+        rankTier: rankTier !== "Any" ? rankTier : null,
+        region: region !== "Any" ? region : null,
+        tags: selectedTags,
+      }),
+    });
+    setCreating(false);
+    setShowForm(false);
+    setActivity(""); setDescription("");
+    load();
+  }
+
+  function toggleTag(tag: string) {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag].slice(0, 4));
+  }
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading LFG...</div>;
-  if (posts.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No LFG posts yet. Be the first!</div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {posts.map(p => (
-        <div key={p.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600 }}>{p.title || "Looking for team"}</div>
-            <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{p.authorName} · {p.gameMode || "Any mode"}</div>
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={S.label}>LOOKING FOR GROUP ({posts.filter(p => p.status === "OPEN").length} open)</div>
+        <button style={S.btnPri} onClick={() => setShowForm(!showForm)}>{showForm ? "Cancel" : "+ Post"}</button>
+      </div>
+
+      {showForm && (
+        <div style={{ ...S.card, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${accent}33`, background: `${accent}06` }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Mode</div>
+              <select style={{ ...S.select, width: "100%" }} value={gameMode} onChange={e => setGameMode(e.target.value)}>
+                {FN_MODES.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Rank</div>
+              <select style={{ ...S.select, width: "100%" }} value={rankTier} onChange={e => setRankTier(e.target.value)}>
+                {FN_RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Region</div>
+              <select style={{ ...S.select, width: "100%" }} value={region} onChange={e => setRegion(e.target.value)}>
+                {FN_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
           </div>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-            background: p.status === "OPEN" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
-            color: p.status === "OPEN" ? "#22C55E" : "#EF4444",
-          }}>{p.status}</span>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Platform</div>
+              <select style={{ ...S.select, width: "100%" }} value={platform} onChange={e => setPlatform(e.target.value)}>
+                {["crossplay", "pc", "xbox", "psn", "switch", "mobile"].map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div style={{ width: 80 }}>
+              <div style={S.label}>Players</div>
+              <select style={{ ...S.select, width: "100%" }} value={maxPlayers} onChange={e => setMaxPlayers(Number(e.target.value))}>
+                {[2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div style={S.label}>Tags</div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {FN_TAGS.map(tag => (
+                <button key={tag} onClick={() => toggleTag(tag)} style={{
+                  ...S.btn, fontSize: 10, padding: "3px 8px",
+                  borderColor: selectedTags.includes(tag) ? `${accent}55` : undefined,
+                  background: selectedTags.includes(tag) ? `${accent}18` : undefined,
+                  color: selectedTags.includes(tag) ? accent : undefined,
+                }}>{tag}</button>
+              ))}
+            </div>
+          </div>
+
+          <input style={S.input} value={description} onChange={e => setDescription(e.target.value)} placeholder="Any extra details..." maxLength={300} />
+
+          <button style={{ ...S.btnPri, padding: "8px 20px", alignSelf: "flex-start" }} onClick={create} disabled={creating}>
+            {creating ? "Posting..." : "Post LFG"}
+          </button>
         </div>
-      ))}
+      )}
+
+      {posts.length === 0 ? (
+        <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No LFG posts yet. Be the first!</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {posts.map(p => (
+            <div key={p.id} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>{p.activity || "Looking for team"}</div>
+                  <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
+                    {p.userName} · {p.players?.length || 1}/{p.maxPlayers}
+                    {p.platform && p.platform !== "crossplay" ? ` · ${p.platform}` : ""}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                  background: p.status === "OPEN" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
+                  color: p.status === "OPEN" ? "#22C55E" : "#EF4444",
+                }}>{p.status}</span>
+              </div>
+              {/* Tags row */}
+              {((p.gameMode || p.rankTier || p.region || (p.tags && p.tags.length > 0))) && (
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {p.gameMode && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: `${accent}15`, color: accent, fontWeight: 700 }}>{p.gameMode}</span>}
+                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.rankTier}</span>}
+                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.6)", fontWeight: 600 }}>{p.region}</span>}
+                  {(p.tags || []).map((t: string) => <span key={t} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.45)", fontWeight: 500 }}>{t}</span>)}
+                </div>
+              )}
+              {p.description && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", lineHeight: 1.4 }}>{p.description}</div>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -163,34 +315,19 @@ function StatsLookup({ accent }: { accent: string }) {
   const [error, setError] = useState("");
 
   async function lookup() {
-    const name = query.trim();
-    if (!name) return;
+    const name = query.trim(); if (!name) return;
     setLoading(true); setError(""); setStats(null);
-    try {
-      let url = `/fortnite/stats/${encodeURIComponent(name)}`;
-      if (platform) url += `?platform=${platform}`;
-      const j = await apiFetch(url);
-      if (j.ok) {
-        setStats(j);
-      } else {
-        setError(j.error === "player_not_found" ? "Player not found. Check the Epic username." : j.error || "Lookup failed");
-      }
-    } catch {
-      setError("Network error");
-    }
+    const url = `/fortnite/stats/${encodeURIComponent(name)}${platform ? `?platform=${platform}` : ""}`;
+    const j = await apiFetch(url);
+    if (j.ok) setStats(j); else setError(j.error === "player_not_found" ? "Player not found." : j.error || "Lookup failed");
     setLoading(false);
   }
 
-  function StatBox({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  function StatBox({ label, value }: { label: string; value: string | number }) {
     return (
-      <div style={{
-        flex: "1 1 100px", padding: "10px 12px", borderRadius: 8,
-        border: `1px solid ${accent}20`, background: `${accent}06`,
-        textAlign: "center",
-      }}>
+      <div style={{ flex: "1 1 90px", padding: "10px 12px", borderRadius: 8, border: `1px solid ${accent}20`, background: `${accent}06`, textAlign: "center" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,.5)", letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{value}</div>
-        {sub && <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginTop: 2 }}>{sub}</div>}
       </div>
     );
   }
@@ -200,65 +337,31 @@ function StatsLookup({ accent }: { accent: string }) {
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,.04)" }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: accent, width: 50, flexShrink: 0 }}>{label}</span>
-        <span style={{ fontSize: 11, color: "rgba(243,244,246,.8)", flex: 1 }}>
-          {data.wins ?? 0} W · {data.kills ?? 0} K · {(data.kd ?? 0).toFixed(2)} K/D · {data.matches ?? 0} games
-        </span>
-        <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)" }}>
-          {data.winRate ? `${(data.winRate * 100).toFixed(1)}%` : "—"} WR
-        </span>
+        <span style={{ fontSize: 11, color: "rgba(243,244,246,.8)", flex: 1 }}>{data.wins ?? 0} W · {data.kills ?? 0} K · {(data.kd ?? 0).toFixed(2)} K/D · {data.matches ?? 0} games</span>
+        <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)" }}>{data.winRate ? `${(data.winRate * 100).toFixed(1)}%` : "—"} WR</span>
       </div>
     );
   }
 
   return (
     <div>
-      {/* Search bar */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input
-          style={{ ...S.input, flex: 1 }}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && lookup()}
-          placeholder="Epic username"
-        />
-        <select
-          value={platform}
-          onChange={e => setPlatform(e.target.value)}
-          style={{ ...S.input, width: 90, flex: "none", cursor: "pointer" }}
-        >
-          <option value="">Any</option>
-          <option value="epic">Epic</option>
-          <option value="psn">PSN</option>
-          <option value="xbl">Xbox</option>
+        <input style={{ ...S.input, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder="Epic username" />
+        <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...S.select, width: 80 }}>
+          <option value="">Any</option><option value="epic">Epic</option><option value="psn">PSN</option><option value="xbl">Xbox</option>
         </select>
-        <button style={S.btnPri} onClick={lookup} disabled={loading}>
-          {loading ? "..." : "Search"}
-        </button>
+        <button style={S.btnPri} onClick={lookup} disabled={loading}>{loading ? "..." : "Search"}</button>
       </div>
-
       {error && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 12 }}>{error}</div>}
-
       {stats && (
         <div>
-          {/* Player header */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            {stats.image && (
-              <img src={stats.image} alt="" style={{
-                width: 64, height: 64, borderRadius: 10,
-                border: `2px solid ${accent}44`, objectFit: "cover",
-              }} />
-            )}
+            {stats.image && <img src={stats.image} alt="" style={{ width: 64, height: 64, borderRadius: 10, border: `2px solid ${accent}44`, objectFit: "cover" }} />}
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{stats.account?.name}</div>
-              {stats.battlePass && (
-                <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                  Battle Pass Level {stats.battlePass.level}
-                </div>
-              )}
+              {stats.battlePass && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>BP Level {stats.battlePass.level}</div>}
             </div>
           </div>
-
-          {/* Overall stats */}
           {stats.stats?.all && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               <StatBox label="Wins" value={stats.stats.all.wins ?? 0} />
@@ -266,12 +369,9 @@ function StatsLookup({ accent }: { accent: string }) {
               <StatBox label="K/D" value={(stats.stats.all.kd ?? 0).toFixed(2)} />
               <StatBox label="Win Rate" value={stats.stats.all.winRate ? `${(stats.stats.all.winRate * 100).toFixed(1)}%` : "—"} />
               <StatBox label="Matches" value={(stats.stats.all.matches ?? 0).toLocaleString()} />
-              <StatBox label="Top 10" value={(stats.stats.all.top10 ?? stats.stats.all.top12 ?? 0).toLocaleString()} />
             </div>
           )}
-
-          {/* Mode breakdown */}
-          <div style={{ ...S.card }}>
+          <div style={S.card}>
             <div style={{ ...S.label, marginBottom: 8 }}>BY MODE</div>
             <ModeRow label="Solo" data={stats.stats?.solo} />
             <ModeRow label="Duo" data={stats.stats?.duo} />
@@ -284,121 +384,146 @@ function StatsLookup({ accent }: { accent: string }) {
   );
 }
 
+// ── Ranked Comparison ────────────────────────────────────────────────────────
+
+function RankedTab({ accent }: { accent: string }) {
+  const [query, setQuery] = useState("");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function lookup() {
+    const name = query.trim(); if (!name) return;
+    setLoading(true); setError(""); setData(null);
+    const j = await apiFetch(`/fortnite/stats/${encodeURIComponent(name)}/ranked`);
+    if (j.ok) setData(j); else setError(j.error || "Lookup failed");
+    setLoading(false);
+  }
+
+  function CompareRow({ label, lifetime, season }: { label: string; lifetime: any; season: any }) {
+    if (!lifetime && !season) return null;
+    const lk = lifetime?.kd ?? 0, sk = season?.kd ?? 0;
+    const lw = lifetime?.winRate ?? 0, sw = season?.winRate ?? 0;
+    const kdDelta = sk - lk;
+    const wrDelta = sw - lw;
+    return (
+      <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.04)" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 6 }}>{label}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 11 }}>
+          <div><span style={{ opacity: 0.4 }}>Stat</span></div>
+          <div style={{ textAlign: "center" }}><span style={{ opacity: 0.4 }}>Lifetime</span></div>
+          <div style={{ textAlign: "center" }}><span style={{ opacity: 0.4 }}>This Season</span></div>
+
+          <div style={{ color: "rgba(243,244,246,.7)" }}>K/D</div>
+          <div style={{ textAlign: "center", fontWeight: 600 }}>{lk.toFixed(2)}</div>
+          <div style={{ textAlign: "center", fontWeight: 700, color: kdDelta > 0 ? "#22C55E" : kdDelta < 0 ? "#EF4444" : "rgba(243,244,246,.7)" }}>
+            {sk.toFixed(2)} {kdDelta !== 0 && <span style={{ fontSize: 9 }}>{kdDelta > 0 ? "+" : ""}{kdDelta.toFixed(2)}</span>}
+          </div>
+
+          <div style={{ color: "rgba(243,244,246,.7)" }}>Win %</div>
+          <div style={{ textAlign: "center", fontWeight: 600 }}>{(lw * 100).toFixed(1)}%</div>
+          <div style={{ textAlign: "center", fontWeight: 700, color: wrDelta > 0 ? "#22C55E" : wrDelta < 0 ? "#EF4444" : "rgba(243,244,246,.7)" }}>
+            {(sw * 100).toFixed(1)}% {wrDelta !== 0 && <span style={{ fontSize: 9 }}>{wrDelta > 0 ? "+" : ""}{(wrDelta * 100).toFixed(1)}%</span>}
+          </div>
+
+          <div style={{ color: "rgba(243,244,246,.7)" }}>Wins</div>
+          <div style={{ textAlign: "center", fontWeight: 600 }}>{(lifetime?.wins ?? 0).toLocaleString()}</div>
+          <div style={{ textAlign: "center", fontWeight: 600 }}>{(season?.wins ?? 0).toLocaleString()}</div>
+
+          <div style={{ color: "rgba(243,244,246,.7)" }}>Matches</div>
+          <div style={{ textAlign: "center", fontWeight: 600 }}>{(lifetime?.matches ?? 0).toLocaleString()}</div>
+          <div style={{ textAlign: "center", fontWeight: 600 }}>{(season?.matches ?? 0).toLocaleString()}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <input style={{ ...S.input, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && lookup()} placeholder="Epic username" />
+        <button style={S.btnPri} onClick={lookup} disabled={loading}>{loading ? "..." : "Compare"}</button>
+      </div>
+      {error && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 12 }}>{error}</div>}
+      {data && (
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(243,244,246,.95)", marginBottom: 4 }}>{data.account?.name}</div>
+          {data.battlePass && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginBottom: 16 }}>Battle Pass Level {data.battlePass.level}</div>}
+          <div style={S.card}>
+            <div style={{ ...S.label, marginBottom: 4 }}>SEASON vs LIFETIME</div>
+            <CompareRow label="Overall" lifetime={data.lifetime?.overall} season={data.season?.overall} />
+            <CompareRow label="Solo" lifetime={data.lifetime?.solo} season={data.season?.solo} />
+            <CompareRow label="Duo" lifetime={data.lifetime?.duo} season={data.season?.duo} />
+            <CompareRow label="Squad" lifetime={data.lifetime?.squad} season={data.season?.squad} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Item Shop ────────────────────────────────────────────────────────────────
 
-function ItemShop({ accent }: { accent: string }) {
+function ItemShop({ accent, wishlist }: { accent: string; wishlist: ReturnType<typeof useWishlist> }) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    apiFetch("/fortnite/shop")
-      .then(j => { if (j.ok) setItems(j.sections || []); setLoading(false); })
-      .catch(() => setLoading(false));
+    apiFetch("/fortnite/shop").then(j => { if (j.ok) setItems(j.sections || []); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading shop...</div>;
 
-  const filtered = filter
-    ? items.filter(i => i.type?.toLowerCase().includes(filter))
-    : items;
-
+  const filtered = filter ? items.filter(i => i.type?.toLowerCase().includes(filter)) : items;
   const types = [...new Set(items.map(i => i.type).filter(Boolean))];
 
   return (
     <div>
-      {/* Type filter */}
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 12 }}>
-        <button
-          onClick={() => setFilter("")}
-          style={{
-            ...S.btn, fontSize: 10, padding: "3px 10px",
-            borderColor: !filter ? `${accent}55` : undefined,
-            background: !filter ? `${accent}18` : undefined,
-            color: !filter ? accent : undefined,
-          }}
-        >All ({items.length})</button>
+        <button onClick={() => setFilter("")} style={{ ...S.btn, fontSize: 10, padding: "3px 10px", borderColor: !filter ? `${accent}55` : undefined, background: !filter ? `${accent}18` : undefined, color: !filter ? accent : undefined }}>All ({items.length})</button>
         {types.map(t => (
-          <button
-            key={t}
-            onClick={() => setFilter(filter === t.toLowerCase() ? "" : t.toLowerCase())}
-            style={{
-              ...S.btn, fontSize: 10, padding: "3px 10px",
-              borderColor: filter === t.toLowerCase() ? `${accent}55` : undefined,
-              background: filter === t.toLowerCase() ? `${accent}18` : undefined,
-              color: filter === t.toLowerCase() ? accent : undefined,
-            }}
-          >{t}</button>
+          <button key={t} onClick={() => setFilter(filter === t.toLowerCase() ? "" : t.toLowerCase())} style={{ ...S.btn, fontSize: 10, padding: "3px 10px", borderColor: filter === t.toLowerCase() ? `${accent}55` : undefined, background: filter === t.toLowerCase() ? `${accent}18` : undefined, color: filter === t.toLowerCase() ? accent : undefined }}>{t}</button>
         ))}
       </div>
-
-      {/* Shop grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
         {filtered.map((item, i) => {
           const rc = rarityColor(item.rarityColor);
+          const wishlisted = wishlist.items.has(item.id);
           return (
-            <div key={item.id + i} style={{
-              borderRadius: 10, overflow: "hidden",
-              border: `1px solid ${rc}33`,
-              background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`,
-              display: "flex", flexDirection: "column",
-            }}>
+            <div key={item.id + i} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${rc}33`, background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`, position: "relative" }}>
+              {/* Wishlist heart */}
+              <div style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}>
+                <WishlistHeart cosmeticId={item.id} wishlisted={wishlisted} onToggle={() => wishlist.toggle(item.id, { name: item.name, type: item.type, rarity: item.rarity, image: item.image })} />
+              </div>
               <div style={{ position: "relative", paddingTop: "100%", background: `${rc}08` }}>
-                {item.image && (
-                  <img src={item.image} alt="" style={{
-                    position: "absolute", inset: 0, width: "100%", height: "100%",
-                    objectFit: "contain", padding: 8,
-                  }} />
-                )}
-                {item.banner && (
-                  <span style={{
-                    position: "absolute", top: 6, left: 6,
-                    fontSize: 8, fontWeight: 800, letterSpacing: ".5px",
-                    padding: "2px 6px", borderRadius: 3,
-                    background: rc, color: "#fff", textTransform: "uppercase",
-                  }}>{item.banner}</span>
-                )}
+                {item.image && <img src={item.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />}
+                {item.banner && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: ".5px", padding: "2px 6px", borderRadius: 3, background: rc, color: "#fff", textTransform: "uppercase" }}>{item.banner}</span>}
               </div>
               <div style={{ padding: "8px 10px" }}>
-                <div style={{
-                  fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.92)",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{item.name}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
                   <span style={{ fontSize: 10, color: "rgba(148,163,184,.5)" }}>{item.rarity}</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD700" }}>
-                    {item.price?.toLocaleString()} V
-                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#FFD700" }}>{item.price?.toLocaleString()} V</span>
                 </div>
-                {item.shopHistory > 0 && (
-                  <div style={{ fontSize: 9, color: "rgba(148,163,184,.35)", marginTop: 3 }}>
-                    Seen {item.shopHistory}x in shop
-                  </div>
-                )}
+                {item.shopHistory > 0 && <div style={{ fontSize: 9, color: "rgba(148,163,184,.35)", marginTop: 3 }}>Seen {item.shopHistory}x in shop</div>}
               </div>
             </div>
           );
         })}
       </div>
-
-      {filtered.length === 0 && (
-        <div style={{ padding: "20px 0", textAlign: "center", opacity: 0.4, fontSize: 12 }}>No items in this category</div>
-      )}
+      {filtered.length === 0 && <div style={{ padding: "20px 0", textAlign: "center", opacity: 0.4, fontSize: 12 }}>No items in this category</div>}
     </div>
   );
 }
 
 // ── News ─────────────────────────────────────────────────────────────────────
 
-function FnNews({ accent }: { accent: string }) {
+function FnNews() {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    apiFetch("/fortnite/news")
-      .then(j => { if (j.ok) setNews(j.news || []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+  useEffect(() => { apiFetch("/fortnite/news").then(j => { if (j.ok) setNews(j.news || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading news...</div>;
   if (news.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No news available</div>;
@@ -406,22 +531,11 @@ function FnNews({ accent }: { accent: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {news.map(n => (
-        <div key={n.id} style={{
-          borderRadius: 12, overflow: "hidden",
-          border: "1px solid rgba(255,255,255,.08)",
-          background: "rgba(255,255,255,.02)",
-        }}>
-          {(n.image || n.tileImage) && (
-            <div style={{
-              height: 140, background: `url(${n.image || n.tileImage}) center/cover no-repeat`,
-              borderBottom: "1px solid rgba(255,255,255,.06)",
-            }} />
-          )}
+        <div key={n.id} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)" }}>
+          {(n.image || n.tileImage) && <div style={{ height: 140, background: `url(${n.image || n.tileImage}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.06)" }} />}
           <div style={{ padding: "12px 14px" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(243,244,246,.95)", lineHeight: 1.3 }}>{n.title}</div>
-            {n.body && (
-              <div style={{ fontSize: 12, color: "rgba(148,163,184,.6)", marginTop: 6, lineHeight: 1.5 }}>{n.body}</div>
-            )}
+            {n.body && <div style={{ fontSize: 12, color: "rgba(148,163,184,.6)", marginTop: 6, lineHeight: 1.5 }}>{n.body}</div>}
           </div>
         </div>
       ))}
@@ -431,17 +545,16 @@ function FnNews({ accent }: { accent: string }) {
 
 // ── Cosmetic Search ──────────────────────────────────────────────────────────
 
-function CosmeticSearch({ accent }: { accent: string }) {
+function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: ReturnType<typeof useWishlist> }) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   async function search() {
-    const q = query.trim();
-    if (q.length < 2) return;
+    if (query.trim().length < 2) return;
     setLoading(true); setSearched(true);
-    const j = await apiFetch(`/fortnite/cosmetics/search?query=${encodeURIComponent(q)}`);
+    const j = await apiFetch(`/fortnite/cosmetics/search?query=${encodeURIComponent(query.trim())}`);
     if (j.ok) setItems(j.items || []);
     setLoading(false);
   }
@@ -449,50 +562,30 @@ function CosmeticSearch({ accent }: { accent: string }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input
-          style={{ ...S.input, flex: 1 }}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && search()}
-          placeholder="Search skins, pickaxes, gliders..."
-        />
-        <button style={S.btnPri} onClick={search} disabled={loading}>
-          {loading ? "..." : "Search"}
-        </button>
+        <input style={{ ...S.input, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} placeholder="Search skins, pickaxes, gliders..." />
+        <button style={S.btnPri} onClick={search} disabled={loading}>{loading ? "..." : "Search"}</button>
       </div>
 
       {loading && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Searching...</div>}
-
-      {!loading && searched && items.length === 0 && (
-        <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No results found</div>
-      )}
+      {!loading && searched && items.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No results found</div>}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
         {items.map(item => {
           const rc = rarityColor(item.rarityColor);
+          const wishlisted = wishlist.items.has(item.id);
           return (
-            <div key={item.id} style={{
-              borderRadius: 10, overflow: "hidden",
-              border: `1px solid ${rc}33`,
-              background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`,
-            }}>
+            <div key={item.id} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${rc}33`, background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`, position: "relative" }}>
+              <div style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}>
+                <WishlistHeart cosmeticId={item.id} wishlisted={wishlisted} onToggle={() => wishlist.toggle(item.id, { name: item.name, type: item.type, rarity: item.rarity, image: item.image })} />
+              </div>
               <div style={{ position: "relative", paddingTop: "100%", background: `${rc}08` }}>
-                {item.image && (
-                  <img src={item.image} alt="" style={{
-                    position: "absolute", inset: 0, width: "100%", height: "100%",
-                    objectFit: "contain", padding: 8,
-                  }} />
-                )}
+                {item.image && <img src={item.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />}
               </div>
               <div style={{ padding: "8px 10px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
                 <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>{item.type} · {item.rarity}</div>
                 {item.set && <div style={{ fontSize: 9, color: "rgba(148,163,184,.35)", marginTop: 2 }}>Set: {item.set}</div>}
-                {item.shopHistory > 0 && (
-                  <div style={{ fontSize: 9, color: "rgba(148,163,184,.35)", marginTop: 2 }}>
-                    Shop: {item.shopHistory}x{item.lastSeen ? ` · Last: ${new Date(item.lastSeen).toLocaleDateString()}` : ""}
-                  </div>
-                )}
+                {item.shopHistory > 0 && <div style={{ fontSize: 9, color: "rgba(148,163,184,.35)", marginTop: 2 }}>Shop: {item.shopHistory}x{item.lastSeen ? ` · Last: ${new Date(item.lastSeen).toLocaleDateString()}` : ""}</div>}
               </div>
             </div>
           );
@@ -518,26 +611,26 @@ export default function FortniteModulesPanel({
   style?: React.CSSProperties;
 }) {
   const [tab, setTab] = useState<TabId>("streams");
+  const wishlist = useWishlist();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
       {/* Tabs */}
       <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto" }}>
         {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-              background: tab === t.id ? `${accentColor}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-            }}
-          >
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
+            background: tab === t.id ? `${accentColor}20` : "transparent",
+            color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
+            fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
+            transition: "background .1s, color .1s",
+            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
+          }}>
             <span style={{ fontSize: 13 }}>{t.icon}</span>
             {t.label}
+            {t.id === "shop" && wishlist.items.size > 0 && (
+              <span style={{ fontSize: 9, fontWeight: 800, color: "#EF4444", marginLeft: 2 }}>♥{wishlist.items.size}</span>
+            )}
           </button>
         ))}
       </div>
@@ -545,11 +638,12 @@ export default function FortniteModulesPanel({
       {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"   && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
-        {tab === "lfg"       && <LfgBoard lobbyId={lobbyId} />}
+        {tab === "lfg"       && <LfgBoard lobbyId={lobbyId} accent={accentColor} />}
         {tab === "stats"     && <StatsLookup accent={accentColor} />}
-        {tab === "shop"      && <ItemShop accent={accentColor} />}
-        {tab === "news"      && <FnNews accent={accentColor} />}
-        {tab === "cosmetics" && <CosmeticSearch accent={accentColor} />}
+        {tab === "ranked"    && <RankedTab accent={accentColor} />}
+        {tab === "shop"      && <ItemShop accent={accentColor} wishlist={wishlist} />}
+        {tab === "cosmetics" && <CosmeticSearch accent={accentColor} wishlist={wishlist} />}
+        {tab === "news"      && <FnNews />}
       </div>
 
       {/* Epic Games legal disclaimer */}
