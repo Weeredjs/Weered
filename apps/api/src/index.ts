@@ -7943,6 +7943,35 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
+  // GET /fortnite/cosmetics/new — latest added cosmetics (no search needed)
+  app.get("/fortnite/cosmetics/new", async (req, reply) => {
+    const cacheKey = "fn:cosm:new";
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      const data = await fnGet("/v2/cosmetics/br/new");
+      if (!data || data.status !== 200) return reply.send({ ok: true, items: [] });
+
+      const items = (data.data?.items || []).slice(0, 24).map((i: any) => ({
+        id: i.id, name: i.name, description: i.description,
+        type: i.type?.displayValue, rarity: i.rarity?.displayValue,
+        rarityColor: i.rarity?.value,
+        image: i.images?.icon || i.images?.smallIcon,
+        set: i.set?.value || null,
+        shopHistory: i.shopHistory?.length || 0,
+        lastSeen: i.shopHistory?.[0] || null,
+      }));
+
+      const result = { ok: true, items };
+      fnCacheSet(cacheKey, result, 60 * 60 * 1000); // 1 hr
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/cosmetics/new]", e);
+      return reply.send({ ok: true, items: [] });
+    }
+  });
+
   // ── Fortnite Wishlist ─────────────────────────────────────────────────────
 
   // GET /fortnite/wishlist — get current user's wishlist
