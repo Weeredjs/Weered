@@ -629,11 +629,34 @@ model LfgPost {
   playerNames String[]  @default([])  // display names parallel array
   status      LfgStatus @default(OPEN)
   platform    String    @default("crossplay")  // pc, xbox, psn, crossplay
+  gameMode    String?   // e.g. "solo", "duo", "squad", "zero-build", "ranked", "creative"
+  rankTier    String?   // e.g. "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Elite", "Unreal", "Champion"
+  region      String?   // e.g. "NAE", "NAW", "EU", "OCE", "ASIA", "BR"
+  tags        String[]  @default([])  // ["casual", "competitive", "chill", "sweaty", "mic-required", "no-mic"]
+  metadata    Json?     // extensible game-specific data
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([lobbyId, status])
   @@index([lobbyId, createdAt])
+}
+
+// ── Fortnite Wishlist ──────────────────────────────────────────────────────
+model FortniteWishlist {
+  id          String   @id @default(cuid())
+  userId      String
+  cosmeticId  String   // fortnite-api.com item ID
+  name        String   @default("")
+  type        String   @default("")   // Outfit, Pickaxe, Glider, etc.
+  rarity      String   @default("")
+  image       String?
+  notified    Boolean  @default(false) // has user been notified it's in shop?
+  notifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, cosmeticId])
+  @@index([cosmeticId])
+  @@index([userId])
 }
 
 // ΓöÇΓöÇ Bungie Manifest Cache ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
