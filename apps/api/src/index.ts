@@ -7732,6 +7732,218 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── FORTNITE API INTEGRATION ───────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  const FN_API_BASE = "https://fortnite-api.com";
+  const FN_API_KEY  = process.env.FORTNITE_API_KEY || ""; // optional, raises rate limits
+  const fnCache = new Map<string, { data: any; expiresAt: number }>();
+
+  function fnCacheGet(key: string) {
+    const c = fnCache.get(key);
+    if (c && c.expiresAt > Date.now()) return c.data;
+    return null;
+  }
+  function fnCacheSet(key: string, data: any, ttlMs: number) {
+    fnCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  }
+
+  async function fnGet(path: string) {
+    const headers: Record<string, string> = {};
+    if (FN_API_KEY) headers["Authorization"] = FN_API_KEY;
+    const res = await fetch(`${FN_API_BASE}${path}`, { headers });
+    if (res.status === 429) { console.warn("[fortnite] Rate limited"); return null; }
+    if (res.status === 404) return null;
+    if (!res.ok) { console.error(`[fortnite] ${res.status} — ${path}`); return null; }
+    return res.json();
+  }
+
+  // GET /fortnite/stats/:name — player stats lookup
+  app.get("/fortnite/stats/:name", async (req, reply) => {
+    const name = String((req as any).params?.name || "").trim();
+    if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
+    const q = (req as any).query || {};
+    const platform = String(q.platform || "").toLowerCase() || null; // epic, psn, xbl
+    const timeWindow = String(q.timeWindow || "") || null; // season or lifetime
+
+    const cacheKey = `fn:stats:${name}:${platform || "all"}:${timeWindow || "lifetime"}`;
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      let url = `/v2/stats/br/v2?name=${encodeURIComponent(name)}`;
+      if (platform) url += `&accountType=${platform}`;
+      if (timeWindow) url += `&timeWindow=${timeWindow}`;
+      url += "&image=all";
+
+      const data = await fnGet(url);
+      if (!data || data.status !== 200) {
+        return reply.send({ ok: false, error: data?.error || "player_not_found" });
+      }
+
+      const s = data.data;
+      const result = {
+        ok: true,
+        account: { id: s.account?.id, name: s.account?.name },
+        battlePass: s.battlePass,
+        image: s.image,
+        stats: {
+          all: s.stats?.all?.overall || null,
+          solo: s.stats?.all?.solo || null,
+          duo: s.stats?.all?.duo || null,
+          squad: s.stats?.all?.squad || null,
+          ltm: s.stats?.all?.ltm || null,
+        },
+      };
+
+      fnCacheSet(cacheKey, result, 5 * 60 * 1000); // 5 min
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/stats]", e);
+      return reply.send({ ok: false, error: "stats_fetch_failed" });
+    }
+  });
+
+  // GET /fortnite/shop — current item shop
+  app.get("/fortnite/shop", async (req, reply) => {
+    const cacheKey = "fn:shop";
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      const data = await fnGet("/v2/shop/br/combined");
+      if (!data || data.status !== 200) {
+        return reply.send({ ok: false, error: "shop_fetch_failed" });
+      }
+
+      // Flatten featured + daily into sections
+      const sections: any[] = [];
+      for (const section of [...(data.data?.featured?.entries || []), ...(data.data?.daily?.entries || [])]) {
+        const item = section.items?.[0];
+        if (!item) continue;
+        sections.push({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          type: item.type?.displayValue || item.type?.value,
+          rarity: item.rarity?.displayValue || item.rarity?.value,
+          rarityColor: item.rarity?.value,
+          price: section.finalPrice ?? section.regularPrice,
+          regularPrice: section.regularPrice,
+          banner: section.banner?.value,
+          image: item.images?.icon || item.images?.smallIcon || item.images?.featured,
+          featured: item.images?.featured,
+          added: item.added,
+          shopHistory: item.shopHistory?.length || 0,
+          set: item.set?.value || null,
+        });
+      }
+
+      const result = { ok: true, date: data.data?.date, sections };
+      fnCacheSet(cacheKey, result, 15 * 60 * 1000); // 15 min
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/shop]", e);
+      return reply.send({ ok: false, error: "shop_fetch_failed" });
+    }
+  });
+
+  // GET /fortnite/news — Fortnite news/MOTD
+  app.get("/fortnite/news", async (req, reply) => {
+    const cacheKey = "fn:news";
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      const data = await fnGet("/v2/news/br");
+      if (!data || data.status !== 200) {
+        return reply.send({ ok: false, error: "news_fetch_failed" });
+      }
+
+      const motds = (data.data?.motds || []).map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        body: m.body,
+        image: m.image,
+        tileImage: m.tileImage,
+        sortingPriority: m.sortingPriority,
+      }));
+
+      const result = { ok: true, news: motds };
+      fnCacheSet(cacheKey, result, 30 * 60 * 1000); // 30 min
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/news]", e);
+      return reply.send({ ok: false, error: "news_fetch_failed" });
+    }
+  });
+
+  // GET /fortnite/map — current map POIs
+  app.get("/fortnite/map", async (req, reply) => {
+    const cacheKey = "fn:map";
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      const data = await fnGet("/v1/map");
+      if (!data || data.status !== 200) {
+        return reply.send({ ok: false, error: "map_fetch_failed" });
+      }
+
+      const result = {
+        ok: true,
+        images: data.data?.images || {},
+        pois: (data.data?.pois || []).map((p: any) => ({
+          id: p.id, name: p.name, x: p.location?.x, y: p.location?.y,
+        })),
+      };
+      fnCacheSet(cacheKey, result, 60 * 60 * 1000); // 1 hr
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/map]", e);
+      return reply.send({ ok: false, error: "map_fetch_failed" });
+    }
+  });
+
+  // GET /fortnite/cosmetics/search?query=... — search cosmetics
+  app.get("/fortnite/cosmetics/search", async (req, reply) => {
+    const q = String(((req as any).query || {}).query || "").trim();
+    if (!q || q.length < 2) return reply.code(400).send({ ok: false, error: "query_too_short" });
+
+    const cacheKey = `fn:cosm:${q.toLowerCase()}`;
+    const cached = fnCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+
+    try {
+      const data = await fnGet(`/v2/cosmetics/br/search/all?name=${encodeURIComponent(q)}&matchMethod=contains&language=en`);
+      if (!data || data.status !== 200) {
+        return reply.send({ ok: true, items: [] });
+      }
+
+      const items = (data.data || []).slice(0, 30).map((i: any) => ({
+        id: i.id,
+        name: i.name,
+        description: i.description,
+        type: i.type?.displayValue,
+        rarity: i.rarity?.displayValue,
+        rarityColor: i.rarity?.value,
+        image: i.images?.icon || i.images?.smallIcon,
+        set: i.set?.value || null,
+        introduction: i.introduction?.text || null,
+        shopHistory: i.shopHistory?.length || 0,
+        lastSeen: i.shopHistory?.[0] || null,
+      }));
+
+      const result = { ok: true, items };
+      fnCacheSet(cacheKey, result, 60 * 60 * 1000); // 1 hr
+      return reply.send(result);
+    } catch (e) {
+      console.error("[fortnite/cosmetics]", e);
+      return reply.send({ ok: true, items: [] });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── LFG / FIRETEAM BOARD ───────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
