@@ -936,25 +936,25 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                       const bg=m.avatarColor||avatarBg(m.name||"?");
                       return (
                         <div key={m.userId} style={{
-                          width:22,height:22,borderRadius:999,
+                          width:28,height:28,borderRadius:999,
                           border:"2px solid rgba(15,17,23,.9)",
                           marginLeft:i>0?-6:0,zIndex:6-i,
                           background:m.avatar?`url(${m.avatar}) center/cover`:(bg||"rgba(255,255,255,.1)"),
                           display:"flex",alignItems:"center",justifyContent:"center",
-                          fontSize:9,fontWeight:700,color:"#fff",
+                          fontSize:10,fontWeight:700,color:"#fff",
                           position:"relative" as const,
                         }}>
                           {!m.avatar&&(m.name||"?")[0]?.toUpperCase()}
-                          {m.online&&<span style={{position:"absolute",bottom:-1,right:-1,width:6,height:6,borderRadius:999,background:"#22c55e",border:"1.5px solid rgba(15,17,23,.9)"}} />}
+                          {m.online&&<span style={{position:"absolute",bottom:-1,right:-1,width:7,height:7,borderRadius:999,background:"#22c55e",border:"1.5px solid rgba(15,17,23,.9)"}} />}
                         </div>
                       );
                     })}
                     {members.length>6&&(
                       <div style={{
-                        width:22,height:22,borderRadius:999,marginLeft:-6,
+                        width:28,height:28,borderRadius:999,marginLeft:-6,
                         background:"rgba(255,255,255,.06)",border:"2px solid rgba(15,17,23,.9)",
                         display:"flex",alignItems:"center",justifyContent:"center",
-                        fontSize:8,fontWeight:700,color:"rgba(255,255,255,.35)",fontFamily:"monospace",
+                        fontSize:9,fontWeight:700,color:"rgba(255,255,255,.35)",fontFamily:"monospace",
                       }}>+{members.length-6}</div>
                     )}
                   </div>

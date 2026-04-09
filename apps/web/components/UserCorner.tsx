@@ -6,6 +6,7 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
+import { NotificationBell } from "./NotificationCenter";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -302,6 +303,9 @@ export default function UserCorner() {
           <IconSettings />
           <span>Settings</span>
         </button>
+
+        {/* Notifications bell */}
+        <NotificationBell />
 
         {/* Logout */}
         <button
