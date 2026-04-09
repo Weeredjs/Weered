@@ -8178,10 +8178,12 @@ app.post("/dm/:peerId", async (req, reply) => {
     if (cached) return reply.send(cached);
 
     try {
-      const data = await fnGet("/v2/cosmetics/br/new");
+      const data = await fnGet("/v2/cosmetics/new");
       if (!data || data.status !== 200) return reply.send({ ok: true, items: [] });
 
-      const items = (data.data?.items || []).slice(0, 24).map((i: any) => ({
+      // New API nests BR items under data.items.br instead of data.items
+      const raw = Array.isArray(data.data?.items) ? data.data.items : (data.data?.items?.br || []);
+      const items = raw.slice(0, 24).map((i: any) => ({
         id: i.id, name: i.name, description: i.description,
         type: i.type?.displayValue, rarity: i.rarity?.displayValue,
         rarityColor: i.rarity?.value,
