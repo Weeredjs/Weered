@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useWeered } from "./WeeredProvider";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
@@ -55,7 +56,9 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notif[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null);
 
   const fetchUnreadCount = useCallback(async () => {
     const tok = getToken();
@@ -107,13 +110,14 @@ export function NotificationBell() {
     if (open) fetchNotifications();
   }, [open, fetchNotifications]);
 
-  // Close on outside click
+  // Close on outside click (check both bell and portal panel)
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (bellRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -169,25 +173,39 @@ export function NotificationBell() {
     }
   };
 
+  // Compute dropdown position when opening
+  const toggleOpen = useCallback(() => {
+    setOpen(o => {
+      if (!o && bellRef.current) {
+        const rect = bellRef.current.getBoundingClientRect();
+        setDropPos({ top: rect.bottom + 8, left: rect.left });
+      }
+      return !o;
+    });
+  }, []);
+
   return (
-    <div ref={panelRef} style={{ position: "relative" }}>
+    <>
       {/* Bell button */}
       <button
+        ref={bellRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={toggleOpen}
         title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
         style={{
           display: "flex", alignItems: "center", justifyContent: "center",
-          width: 36, height: 36, borderRadius: 10,
-          background: open ? "rgba(88,0,229,.25)" : "rgba(255,255,255,.06)",
-          border: open ? "1px solid rgba(88,0,229,.45)" : "1px solid rgba(255,255,255,.10)",
-          cursor: "pointer", color: "rgba(255,255,255,.6)",
+          padding: "8px 10px",
+          background: open ? "rgba(88,0,229,.25)" : "rgba(255,255,255,.04)",
+          border: open ? "1px solid rgba(88,0,229,.45)" : "1px solid rgba(255,255,255,.08)",
+          borderRadius: 10, cursor: "pointer",
+          color: "rgba(255,255,255,.55)",
           transition: "all 0.15s", position: "relative",
+          flexShrink: 0,
         }}
-        onMouseEnter={e => { if (!open) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.20)"; }}}
-        onMouseLeave={e => { if (!open) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.10)"; }}}
+        onMouseEnter={e => { if (!open) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.20)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.80)"; }}}
+        onMouseLeave={e => { if (!open) { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,.55)"; }}}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
@@ -209,16 +227,18 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown panel */}
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 8px)", right: 0,
+      {/* Dropdown panel — portaled to body to avoid overflow clipping */}
+      {open && typeof document !== "undefined" && createPortal(
+        <div ref={panelRef} style={{
+          position: "fixed",
+          top: dropPos?.top ?? 0,
+          left: dropPos?.left ?? 0,
           width: 340, maxHeight: 440,
           background: "rgba(14,14,20,.97)",
           border: "1px solid rgba(88,0,229,.30)",
           borderRadius: 14,
           boxShadow: "0 12px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.3)",
-          zIndex: 9999,
+          zIndex: 99999,
           display: "flex", flexDirection: "column",
           overflow: "hidden",
           backdropFilter: "blur(16px)",
@@ -330,8 +350,9 @@ export function NotificationBell() {
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
