@@ -363,7 +363,7 @@ export default function LobbyChatPanel(
 
       {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
-        <div style={{ position: "relative", paddingBottom: 8 }}>
+        <div style={{ position: "relative", paddingBottom: 12, flexShrink: 0 }}>
           <div className="flex gap-2">
             <input
               ref={inputRef}
