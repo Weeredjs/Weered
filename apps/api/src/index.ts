@@ -4267,10 +4267,7 @@ app.post("/dm/:peerId", async (req, reply) => {
             return;
           }
 
-          // Broadcast the action to everyone
-          broadcastPokerState(tableId);
-
-          // Small delay then advance game logic
+          // Advance game logic (broadcasts state to all clients)
           advancePokerGame(table);
           return;
         }
