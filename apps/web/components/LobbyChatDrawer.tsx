@@ -86,7 +86,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         }
         .lobby-chat-drawer {
           position: absolute;
-          top: 0; right: 0; bottom: 0;
+          top: 0; right: 0; bottom: 4px;
           width: min(340px, 90%);
           display: flex; flex-direction: column;
           background: rgba(10, 10, 18, 0.82);
