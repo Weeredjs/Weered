@@ -47,6 +47,7 @@ enum ModuleType {
   NONE
   RIOT
   FORTNITE
+  TRADING
 }
 
 model NewsArticle {
@@ -1178,5 +1179,114 @@ model OutreachContact {
   @@index([status])
   @@index([category])
   @@index([createdAt])
+}
+
+// ── Paper Trading ────────────────────────────────────────────────────────────
+// Virtual trading engine: users paper-trade crypto with fake money in lobbies.
+// Competitions add time-bounded tournaments with leaderboards.
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+  STOP
+}
+
+enum OrderStatus {
+  PENDING    // limit/stop waiting to fill
+  FILLED
+  CANCELLED
+}
+
+enum PositionStatus {
+  OPEN
+  CLOSED
+}
+
+enum CompetitionStatus {
+  UPCOMING
+  ACTIVE
+  ENDED
+}
+
+model PaperAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  lobbyId      String
+  competitionId String?
+
+  cashBalance  Float    @default(100000) // starting + remaining cash
+  startBalance Float    @default(100000) // frozen at creation for P&L calc
+  realizedPnl  Float    @default(0)      // locked-in profit/loss from closed positions
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  positions    PaperPosition[]
+  orders       PaperOrder[]
+
+  @@unique([userId, lobbyId, competitionId])
+  @@index([lobbyId])
+  @@index([competitionId])
+  @@index([userId])
+}
+
+model PaperPosition {
+  id           String         @id @default(cuid())
+  accountId    String
+  account      PaperAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  symbol       String         // e.g. "BTCUSDT"
+  side         OrderSide      // BUY = long, SELL = short
+  quantity     Float          // amount of asset
+  entryPrice   Float          // average entry price
+  entryValue   Float          // quantity * entryPrice at open
+  exitPrice    Float?         // set when closed
+  realizedPnl  Float?         // profit/loss when closed
+  status       PositionStatus @default(OPEN)
+
+  openedAt     DateTime       @default(now())
+  closedAt     DateTime?
+
+  @@index([accountId, status])
+  @@index([symbol])
+}
+
+model PaperOrder {
+  id           String       @id @default(cuid())
+  accountId    String
+  account      PaperAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  symbol       String
+  side         OrderSide
+  orderType    OrderType    @default(MARKET)
+  quantity     Float        // asset quantity
+  price        Float?       // limit/stop price (null for market)
+  filledPrice  Float?       // actual execution price
+  filledAt     DateTime?
+  status       OrderStatus  @default(PENDING)
+  createdAt    DateTime     @default(now())
+
+  @@index([accountId])
+  @@index([symbol, status])
+}
+
+model TradingCompetition {
+  id           String            @id @default(cuid())
+  lobbyId      String
+  name         String            @default("Trading Competition")
+  description  String            @default("")
+  startBalance Float             @default(100000)
+  startTime    DateTime
+  endTime      DateTime
+  status       CompetitionStatus @default(UPCOMING)
+  createdById  String
+  createdAt    DateTime          @default(now())
+
+  @@index([lobbyId, status])
+  @@index([startTime])
 }
 
