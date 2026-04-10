@@ -2215,6 +2215,53 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     }
   });
 
+  // GET /dm/previews — 5 most recent DM conversations with last message preview
+  app.get("/dm/previews", async (req, reply) => {
+    const u = authFromHeader(req.headers.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+
+    // Get most recent DM per conversation partner
+    const recentDms = await (prisma as any).directMessage.findMany({
+      where: { OR: [{ fromId: u.id }, { toId: u.id }] },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true },
+    });
+
+    // Group by peer, keep latest per peer
+    const byPeer = new Map<string, any>();
+    for (const dm of recentDms) {
+      const peerId = dm.fromId === u.id ? dm.toId : dm.fromId;
+      if (!byPeer.has(peerId)) {
+        byPeer.set(peerId, {
+          peerId,
+          lastMessage: dm.body?.slice(0, 100),
+          lastTs: dm.createdAt,
+          isFromMe: dm.fromId === u.id,
+          unread: dm.toId === u.id && !dm.readAt,
+        });
+      }
+    }
+
+    const peers = [...byPeer.values()].slice(0, 5);
+
+    // Resolve peer names
+    const peerIds = peers.map((p: any) => p.peerId);
+    const users = peerIds.length > 0 ? await (prisma as any).user.findMany({
+      where: { id: { in: peerIds } },
+      select: { id: true, name: true, avatar: true },
+    }) : [];
+    const userMap = new Map(users.map((u: any) => [u.id, u]));
+
+    const previews = peers.map(p => ({
+      ...p,
+      peerName: userMap.get(p.peerId)?.name || "Unknown",
+      peerAvatar: userMap.get(p.peerId)?.avatar || null,
+    }));
+
+    return reply.send({ ok: true, previews });
+  });
+
   // GET /dm/:peerId — fetch thread history (last 50, oldest first)
 app.get("/dm/:peerId", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
@@ -3370,6 +3417,59 @@ app.post("/dm/:peerId", async (req, reply) => {
           return;
         }
 
+        // ── Crew Chat via WebSocket ──────────────────────────────────────────
+        if (msg.type === "crew:send") {
+          const crewId = String(msg.crewId || "").trim();
+          const body = String(msg.body || "").trim().slice(0, 2000);
+          const fromId = ws.user?.id;
+          if (!fromId || !crewId || !body) return;
+
+          try {
+            // Verify sender is a member of the crew
+            const membership = await (prisma as any).crewMember.findFirst({
+              where: { crewId, userId: fromId },
+            });
+            if (!membership) return;
+
+            // Save message
+            const message = await (prisma as any).crewMessage.create({
+              data: { crewId, userId: fromId, userName: ws.user?.name || "Unknown", body },
+              select: { id: true, crewId: true, userId: true, userName: true, body: true, createdAt: true },
+            });
+
+            // Get all crew members
+            const members = await (prisma as any).crewMember.findMany({
+              where: { crewId },
+              select: { userId: true },
+            });
+
+            // Broadcast to all online crew members
+            const payload = { type: "crew:message", crewId, message: { ...message, createdAt: message.createdAt.toISOString() } };
+            for (const sock of wss.clients) {
+              const sockUser = (sock as any).user;
+              if (sockUser && members.some((m: any) => m.userId === sockUser.id)) {
+                send(sock as any, payload);
+              }
+            }
+
+            // Notify offline members
+            for (const m of members) {
+              if (m.userId === fromId) continue;
+              if (!isUserOnline(m.userId)) {
+                sendPush(m.userId, {
+                  title: `Crew message from ${ws.user?.name}`,
+                  body: body.slice(0, 120),
+                  url: "/home",
+                  tag: `crew:${crewId}`,
+                }).catch(() => {});
+              }
+            }
+
+            awardNotoriety(fromId, "CHAT_MESSAGE").catch(() => {});
+          } catch (e) { console.error("[crew:send]", e); }
+          return;
+        }
+
         // ── DM via WebSocket ──────────────────────────────────────────────────
         if (msg.type === "dm:send") {
           const rawToId = String(msg.toId  || "").trim();
@@ -3744,6 +3844,30 @@ app.post("/dm/:peerId", async (req, reply) => {
     await db.crew.delete({ where: { id: crewId } });
     return reply.send({ ok: true });
   });
+
+  // GET /crews/:crewId/messages — crew chat history (last 50, oldest first)
+  app.get("/crews/:crewId/messages", async (req, reply) => {
+    const u = authFromHeader(req.headers.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+
+    const crewId = (req.params as any).crewId;
+
+    // Verify membership
+    const membership = await (prisma as any).crewMember.findFirst({
+      where: { crewId, userId: u.id },
+    });
+    if (!membership) return reply.code(403).send({ ok: false, error: "Not a crew member" });
+
+    const messages = await (prisma as any).crewMessage.findMany({
+      where: { crewId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { id: true, userId: true, userName: true, body: true, createdAt: true },
+    });
+
+    return reply.send({ ok: true, messages: messages.reverse() });
+  });
+
 // ── Lobby search ──────────────────────────────────────────────────────────
 
   app.get("/lobbies/search", async (req, reply) => {
@@ -5714,6 +5838,86 @@ app.post("/dm/:peerId", async (req, reply) => {
 
     const count = await (prisma as any).notification.count({ where: { userId: u.id, read: false } });
     return reply.send({ ok: true, count });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── ACTIVITY FEED ──────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  app.get("/activity-feed", async (req, reply) => {
+    const u = authFromHeader(req.headers.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+
+    const since = new Date(Date.now() - 3 * 86400000); // last 3 days
+
+    // Parallel queries
+    const [dms, notifs, notorietyEvents, friendships] = await Promise.all([
+      // Recent DMs received (last 3 days)
+      (prisma as any).directMessage.findMany({
+        where: { toId: u.id, createdAt: { gte: since } },
+        select: { id: true, fromId: true, body: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      // Recent notifications (last 3 days)
+      (prisma as any).notification.findMany({
+        where: { userId: u.id, createdAt: { gte: since } },
+        select: { id: true, type: true, title: true, body: true, actorName: true, actionUrl: true, createdAt: true, read: true },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      // Notoriety events (last 3 days)
+      (prisma as any).notorietyEvent.findMany({
+        where: { userId: u.id, createdAt: { gte: since } },
+        select: { id: true, action: true, points: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      // Recent friend additions
+      (prisma as any).friendship.findMany({
+        where: { OR: [{ fromId: u.id }, { toId: u.id }], status: "ACCEPTED", updatedAt: { gte: since } },
+        select: { id: true, fromId: true, toId: true, updatedAt: true },
+        take: 5,
+      }),
+    ]);
+
+    // Resolve DM sender names
+    const senderIds = [...new Set(dms.map((d: any) => d.fromId))];
+    const senders = senderIds.length > 0 ? await (prisma as any).user.findMany({
+      where: { id: { in: senderIds } },
+      select: { id: true, name: true },
+    }) : [];
+    const senderMap = new Map(senders.map((s: any) => [s.id, s.name]));
+
+    // Resolve friend names
+    const friendUserIds = [...new Set(friendships.flatMap((f: any) => [f.fromId, f.toId]).filter((id: string) => id !== u.id))];
+    const friendUsers = friendUserIds.length > 0 ? await (prisma as any).user.findMany({
+      where: { id: { in: friendUserIds } },
+      select: { id: true, name: true },
+    }) : [];
+    const friendMap = new Map(friendUsers.map((f: any) => [f.id, f.name]));
+
+    // Build unified feed
+    const feed: any[] = [];
+
+    for (const dm of dms) {
+      feed.push({ type: "dm", id: dm.id, text: `${senderMap.get(dm.fromId) || "Someone"} sent you a message`, preview: dm.body?.slice(0, 80), fromId: dm.fromId, fromName: senderMap.get(dm.fromId), ts: dm.createdAt });
+    }
+    for (const n of notifs) {
+      feed.push({ type: "notification", id: n.id, subType: n.type, text: n.title, body: n.body, actionUrl: n.actionUrl, actorName: n.actorName, read: n.read, ts: n.createdAt });
+    }
+    for (const ne of notorietyEvents) {
+      feed.push({ type: "notoriety", id: ne.id, text: `+${ne.points} XP — ${ne.action.replace(/_/g, " ").toLowerCase()}`, points: ne.points, action: ne.action, ts: ne.createdAt });
+    }
+    for (const f of friendships) {
+      const otherId = f.fromId === u.id ? f.toId : f.fromId;
+      feed.push({ type: "friend", id: f.id, text: `You and ${friendMap.get(otherId) || "someone"} became friends`, friendName: friendMap.get(otherId), ts: f.updatedAt });
+    }
+
+    // Sort by timestamp descending, limit 20
+    feed.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+
+    return reply.send({ ok: true, feed: feed.slice(0, 20) });
   });
 
   // ══════════════════════════════════════════════════════════════════════════════

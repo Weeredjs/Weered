@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { VoiceProvider } from "./VoiceContext";
 import NotorietyToast from "./NotorietyToast";
+import RankUpCelebration from "./RankUpCelebration";
 import SystemBroadcast from "./SystemBroadcast";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
@@ -306,6 +307,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "notification:new") {
         try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
       }
+      // Forward crew chat messages to DOM
+      if (msg.type === "crew:message") {
+        try { window.dispatchEvent(new CustomEvent("weered:crew:message", { detail: { crewId: msg.crewId, message: msg.message } })); } catch {}
+      }
       // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
       if (msg.type?.startsWith("youtube:")) {
         const rid = String(msg.roomId || "");
@@ -525,6 +530,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (msg.type === "notoriety:rankup") {
+        window.dispatchEvent(new CustomEvent("weered:notoriety:rankup", {
+          detail: { oldRank: msg.oldRank, newRank: msg.newRank, score: msg.score },
+        }));
+        return;
+      }
+
       // ── Challenge real-time progress / completion ──
       if (msg.type === "challenge:progress" || msg.type === "challenge:completed") {
         try { window.dispatchEvent(new CustomEvent("weered:challenge", { detail: msg })); } catch {}
@@ -612,6 +624,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   function canChat() {
     return Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && statusByRoom[activeRoomId] === "joined");
   }
+
+  // Listen for weered:ws:send events from components that need to send WS messages
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent).detail;
+      if (msg && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try { wsRef.current.send(JSON.stringify(msg)); } catch {}
+      }
+    };
+    window.addEventListener("weered:ws:send", handler);
+    return () => window.removeEventListener("weered:ws:send", handler);
+  }, []);
 
   // ─── Public API ───────────────────────────────────────────────────────────
   async function devLogin(username: string) {
@@ -765,6 +789,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
         <SystemBroadcast />
         {children}
         <NotorietyToast />
+        <RankUpCelebration />
         {/* Password prompt modal */}
         {passwordRoomId && (
           <div style={{
