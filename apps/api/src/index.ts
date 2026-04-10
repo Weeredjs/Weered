@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket as WsClient } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
@@ -8979,7 +8979,7 @@ app.post("/dm/:peerId", async (req, reply) => {
 
   // In-memory price cache: symbol → latest price + kline data
   const livePrices = new Map<string, { price: number; time: number }>();
-  const binanceSubs = new Map<string, WebSocket>(); // symbol → upstream WS
+  const binanceSubs = new Map<string, WsClient>(); // symbol → upstream WS
   const symbolSubscribers = new Map<string, Set<Sock>>(); // symbol → client sockets
 
   // Default symbols to always stream
@@ -8990,7 +8990,7 @@ app.post("/dm/:peerId", async (req, reply) => {
     if (binanceSubs.has(sym)) return;
 
     const wsUrl = `${BINANCE_WS_BASE}/ws/${sym}@kline_1m/${sym}@trade`;
-    const upstream = new (require("ws"))(wsUrl);
+    const upstream = new WsClient(wsUrl);
 
     upstream.on("open", () => {
       console.log(`[trading] Binance WS connected: ${sym}`);
