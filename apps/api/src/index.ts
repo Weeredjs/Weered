@@ -2941,6 +2941,21 @@ app.post("/dm/:peerId", async (req, reply) => {
           send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar } });
           // Award daily active notoriety (cooldown-gated, fires at most once per 24h)
           awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
+          // Crew presence: notify crew mates this user came online
+          (async () => {
+            try {
+              const memberships = await (prisma as any).crewMember.findMany({ where: { userId: ws.user!.id }, select: { crewId: true } });
+              if (!memberships.length) return;
+              const crewIds = memberships.map((m: any) => m.crewId);
+              const mates = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: ws.user!.id } }, select: { userId: true, crewId: true } });
+              const payload = { type: "crew:presence", userId: ws.user!.id, name: ws.user!.name, online: true };
+              for (const mate of mates) {
+                for (const sock of wss.clients) {
+                  if ((sock as any).user?.id === mate.userId) send(sock as Sock, payload);
+                }
+              }
+            } catch {}
+          })();
           return;
         }
 
@@ -3516,6 +3531,29 @@ app.post("/dm/:peerId", async (req, reply) => {
           if (set) set.delete(ws);
           if (set && set.size === 0) r.pending.delete(ws.user.id);
         }
+      }
+      // Crew presence: notify crew mates this user went offline (only if no other sockets)
+      if (ws.user) {
+        const closingUserId = ws.user.id;
+        const closingUserName = ws.user.name;
+        setTimeout(() => {
+          if (!isUserOnline(closingUserId)) {
+            (async () => {
+              try {
+                const memberships = await (prisma as any).crewMember.findMany({ where: { userId: closingUserId }, select: { crewId: true } });
+                if (!memberships.length) return;
+                const crewIds = memberships.map((m: any) => m.crewId);
+                const mates = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: closingUserId } }, select: { userId: true } });
+                const payload = { type: "crew:presence", userId: closingUserId, name: closingUserName, online: false };
+                for (const mate of mates) {
+                  for (const sock of wss.clients) {
+                    if ((sock as any).user?.id === mate.userId) send(sock as Sock, payload);
+                  }
+                }
+              } catch {}
+            })();
+          }
+        }, 2000); // 2s delay to avoid flicker on page navigation
       }
       leaveRoom(ws);
     });

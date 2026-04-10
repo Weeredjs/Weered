@@ -311,6 +311,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "crew:message") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:message", { detail: { crewId: msg.crewId, message: msg.message } })); } catch {}
       }
+      // Forward crew presence changes to DOM
+      if (msg.type === "crew:presence") {
+        try { window.dispatchEvent(new CustomEvent("weered:crew:presence", { detail: { userId: msg.userId, name: msg.name, online: msg.online } })); } catch {}
+      }
       // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
       if (msg.type?.startsWith("youtube:")) {
         const rid = String(msg.roomId || "");
