@@ -303,6 +303,7 @@ type ChallengeNotify = (userId: string, event: {
   challengeTitle: string;
   progress: Record<string, ObjProgress>;
   notorietyReward?: number;
+  paperReward?: number;
   badgeId?: string | null;
 }) => void;
 
@@ -310,6 +311,7 @@ export function startChallengeWorker(
   prisma: PrismaClient,
   awardNotoriety: (userId: string, action: string) => Promise<any>,
   notify?: ChallengeNotify,
+  awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<any>,
 ) {
   console.log("[challenges] Worker started — polling every 30s");
 
@@ -479,6 +481,9 @@ export function startChallengeWorker(
               if (def.notorietyReward > 0) {
                 awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
               }
+              if ((def as any).paperReward > 0 && awardPaper) {
+                awardPaper(userId, "EARN_CHALLENGE", (def as any).paperReward, `Challenge completed: ${def.title}`, enrollment.instanceId).catch(() => {});
+              }
 
               // Award badge if one is configured
               if (def.badgeId) {
@@ -498,6 +503,7 @@ export function startChallengeWorker(
                   challengeTitle: def.title,
                   progress,
                   notorietyReward: def.notorietyReward,
+                  paperReward: (def as any).paperReward || 0,
                   badgeId: def.badgeId,
                 });
               }

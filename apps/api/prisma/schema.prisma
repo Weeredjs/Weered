@@ -48,6 +48,7 @@ enum ModuleType {
   RIOT
   FORTNITE
   TRADING
+  POKER
 }
 
 model NewsArticle {
@@ -288,6 +289,7 @@ model User {
   avatar      String?
   avatarColor String?
   notoriety   Int        @default(0)
+  paper       Int        @default(0)   // spendable virtual currency
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
   onboardingComplete Boolean    @default(false)
@@ -310,6 +312,9 @@ model User {
   notorietyEvents  NotorietyEvent[]
   gameAccounts     UserGameAccount[]
   pushSubs         PushSubscription[]
+  paperTransactions PaperTransaction[]
+  inventory        UserItem[]
+  marketListings   MarketListing[]   @relation("MarketSeller")
 }
 
 // —— Site Config (key-value) ————————————————————————————————————————————————
@@ -961,6 +966,7 @@ model ChallengeDefinition {
 
   // Rewards
   notorietyReward   Int         @default(0)
+  paperReward       Int         @default(0)
   crewRepReward     Int         @default(0)
   badgeId           String?
 
@@ -1288,5 +1294,139 @@ model TradingCompetition {
 
   @@index([lobbyId, status])
   @@index([startTime])
+}
+
+// ── Paper Economy ────────────────────────────────────────────────────────────
+// Virtual currency earned through gameplay, spent in store/marketplace/tournaments.
+
+enum PaperTxType {
+  EARN_FAKEOUT        // profit from FakeOut paper trading
+  EARN_CHALLENGE      // challenge/tournament completion
+  EARN_DAILY          // daily login bonus
+  EARN_TRADE_SOLD     // sold item on marketplace
+  EARN_GIFT           // received from another user or system
+  EARN_COMPETITION    // competition prize payout
+  SPEND_STORE         // purchased from store
+  SPEND_MARKET        // purchased from marketplace
+  SPEND_TOURNAMENT    // tournament buy-in
+  SPEND_GIFT          // gifted to another user
+  SPEND_UNLOCK        // unlocked gated area/feature
+  ADJUSTMENT          // admin adjustment
+  POKER_BUYIN         // poker table buy-in
+  POKER_WIN           // poker hand winnings
+  POKER_CASHOUT       // poker table cash-out
+}
+
+model PaperTransaction {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        PaperTxType
+  amount      Int         // positive = earned, negative = spent
+  balance     Int         // balance AFTER this transaction (running total)
+  description String      @default("")
+  refId       String?     // optional reference (itemId, listingId, competitionId, etc.)
+  createdAt   DateTime    @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type])
+}
+
+// ── Store Items ─────────────────────────────────────────────────────────────
+// Items that can be purchased from the store or traded between users.
+
+enum ItemRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum ItemCategory {
+  AVATAR       // profile avatar/frame
+  BADGE        // profile badge
+  TITLE        // custom title display
+  KEY          // unlocks gated area or feature
+  CONSUMABLE   // one-time use (e.g. tournament entry token)
+  COLLECTIBLE  // purely collectible, tradeable
+  ORNAMENT     // lobby/room decoration
+}
+
+model StoreItem {
+  id            String       @id @default(cuid())
+  name          String
+  description   String       @default("")
+  category      ItemCategory
+  rarity        ItemRarity   @default(COMMON)
+  imageUrl      String?
+  price         Int          // Paper cost
+  maxSupply     Int?         // null = unlimited, number = limited mint
+  totalMinted   Int          @default(0)
+  available     Boolean      @default(true)
+  featured      Boolean      @default(false) // show in featured section
+  weeklyRotation Boolean     @default(false) // part of weekly rotating stock
+  rotationWeek  Int?         // which ISO week this item is available (null = always)
+  // Items with utility
+  unlockTarget  String?      // e.g. lobbyId, roomId, or feature flag this item unlocks
+  metadata      Json?        // flexible data: CSS styles, animation, duration, etc.
+  createdAt     DateTime     @default(now())
+
+  instances     UserItem[]
+
+  @@index([available, featured])
+  @@index([category])
+  @@index([rarity])
+}
+
+model UserItem {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        StoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  acquiredAt  DateTime  @default(now())
+  equipped    Boolean   @default(false)  // is this item currently active/displayed
+  consumed    Boolean   @default(false)  // for consumables: has it been used
+  consumedAt  DateTime?
+  // Trade provenance
+  acquiredFrom String?  // "store", "market", "drop", "gift", userId
+  acquiredPrice Int?    // what they paid (Paper)
+  mintNumber  Int?      // #37 of 50 — for limited items
+
+  @@index([userId, equipped])
+  @@index([itemId])
+  @@unique([userId, itemId, mintNumber])
+}
+
+// ── Marketplace ─────────────────────────────────────────────────────────────
+// User-to-user item trading with Paper currency.
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+  EXPIRED
+}
+
+model MarketListing {
+  id          String        @id @default(cuid())
+  sellerId    String
+  seller      User          @relation("MarketSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  userItemId  String        // the UserItem being sold
+  itemId      String        // denormalized StoreItem id for search
+  itemName    String        @default("")  // denormalized for display
+  itemRarity  ItemRarity    @default(COMMON)
+  price       Int           // asking price in Paper
+  status      ListingStatus @default(ACTIVE)
+  buyerId     String?       // who bought it
+  soldAt      DateTime?
+  expiresAt   DateTime?     // optional auto-expire
+  createdAt   DateTime      @default(now())
+
+  @@index([status, itemId])
+  @@index([sellerId])
+  @@index([status, createdAt])
+  @@index([itemRarity, status])
 }
 

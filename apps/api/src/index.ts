@@ -86,6 +86,577 @@ const rooms = new Map<string, RoomState>();
 const articleRoomMeta = new Map<string, { name: string; thumbnail?: string }>();
 let wss: WebSocketServer;
 
+// ── Poker Engine — Types & State ──────────────────────────────────────────────
+
+type Card = { rank: string; suit: string };
+
+type PokerSeat = {
+  userId: string;
+  name: string;
+  chips: number;
+  cards: Card[];
+  folded: boolean;
+  allIn: boolean;
+  bet: number;
+  seatIndex: number;
+};
+
+type SidePot = { amount: number; eligible: number[] };
+
+type PokerPhase = "waiting" | "preflop" | "flop" | "turn" | "river" | "showdown";
+
+type PokerTable = {
+  tableId: string;
+  seats: (PokerSeat | null)[];
+  spectators: Set<string>;
+  communityCards: Card[];
+  deck: Card[];
+  pot: number;
+  sidePots: SidePot[];
+  currentBet: number;
+  dealerIndex: number;
+  turnIndex: number;
+  phase: PokerPhase;
+  blinds: { small: number; big: number };
+  minBuyin: number;
+  maxBuyin: number;
+  lastShowdownResult: any | null;
+  handInProgress: boolean;
+  autoStartTimer: ReturnType<typeof setTimeout> | null;
+};
+
+const pokerTables = new Map<string, PokerTable>();
+
+// ── Poker Engine — Utility Functions ──────────────────────────────────────────
+
+const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const SUITS: ("h" | "d" | "c" | "s")[] = ["h", "d", "c", "s"];
+
+function createDeck(): Card[] {
+  const deck: Card[] = [];
+  for (const suit of SUITS) {
+    for (const rank of RANKS) {
+      deck.push({ rank, suit });
+    }
+  }
+  return shuffleDeck(deck);
+}
+
+function shuffleDeck(deck: Card[]): Card[] {
+  const d = [...deck];
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+function rankValue(r: string): number {
+  const idx = RANKS.indexOf(r);
+  return idx >= 0 ? idx + 2 : 0; // "2"=2 ... "A"=14
+}
+
+/** Returns all C(n,k) combinations of an array */
+function combinations<T>(arr: T[], k: number): T[][] {
+  if (k === 0) return [[]];
+  if (arr.length < k) return [];
+  const result: T[][] = [];
+  const first = arr[0];
+  const rest = arr.slice(1);
+  // combos that include first
+  for (const combo of combinations(rest, k - 1)) {
+    result.push([first, ...combo]);
+  }
+  // combos that don't include first
+  for (const combo of combinations(rest, k)) {
+    result.push(combo);
+  }
+  return result;
+}
+
+/**
+ * Evaluate the best 5-card poker hand from exactly 5 cards.
+ * Returns { rank, name, kickers } where kickers is used for tiebreaking.
+ */
+function evaluate5(cards: Card[]): { rank: number; name: string; kickers: number[]; best: Card[] } {
+  const vals = cards.map(c => rankValue(c.rank)).sort((a, b) => b - a);
+  const suits = cards.map(c => c.suit);
+
+  const isFlush = suits.every(s => s === suits[0]);
+
+  // Check straight (including A-2-3-4-5 wheel)
+  let isStraight = false;
+  let straightHigh = 0;
+  if (vals[0] - vals[4] === 4 && new Set(vals).size === 5) {
+    isStraight = true;
+    straightHigh = vals[0];
+  }
+  // Wheel: A-2-3-4-5
+  if (vals[0] === 14 && vals[1] === 5 && vals[2] === 4 && vals[3] === 3 && vals[4] === 2) {
+    isStraight = true;
+    straightHigh = 5; // 5-high straight
+  }
+
+  // Count occurrences
+  const counts = new Map<number, number>();
+  for (const v of vals) counts.set(v, (counts.get(v) || 0) + 1);
+  const groups = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+
+  if (isStraight && isFlush) {
+    return { rank: 8, name: straightHigh === 14 ? "Royal Flush" : "Straight Flush", kickers: [straightHigh], best: cards };
+  }
+  if (groups[0][1] === 4) {
+    const quad = groups[0][0];
+    const kicker = groups[1][0];
+    return { rank: 7, name: "Four of a Kind", kickers: [quad, kicker], best: cards };
+  }
+  if (groups[0][1] === 3 && groups[1][1] === 2) {
+    return { rank: 6, name: "Full House", kickers: [groups[0][0], groups[1][0]], best: cards };
+  }
+  if (isFlush) {
+    return { rank: 5, name: "Flush", kickers: vals, best: cards };
+  }
+  if (isStraight) {
+    return { rank: 4, name: "Straight", kickers: [straightHigh], best: cards };
+  }
+  if (groups[0][1] === 3) {
+    const trip = groups[0][0];
+    const kickers = vals.filter(v => v !== trip);
+    return { rank: 3, name: "Three of a Kind", kickers: [trip, ...kickers], best: cards };
+  }
+  if (groups[0][1] === 2 && groups[1][1] === 2) {
+    const high = Math.max(groups[0][0], groups[1][0]);
+    const low = Math.min(groups[0][0], groups[1][0]);
+    const kicker = groups[2][0];
+    return { rank: 2, name: "Two Pair", kickers: [high, low, kicker], best: cards };
+  }
+  if (groups[0][1] === 2) {
+    const pair = groups[0][0];
+    const kickers = vals.filter(v => v !== pair);
+    return { rank: 1, name: "Pair", kickers: [pair, ...kickers], best: cards };
+  }
+  return { rank: 0, name: "High Card", kickers: vals, best: cards };
+}
+
+/**
+ * Evaluate the best 5-card hand from 7 cards (2 hole + 5 community).
+ */
+function evaluateHand(cards: Card[]): { rank: number; name: string; best: Card[] ; kickers: number[] } {
+  let bestResult: { rank: number; name: string; best: Card[]; kickers: number[] } | null = null;
+
+  const combos = combinations(cards, 5);
+  for (const combo of combos) {
+    const result = evaluate5(combo);
+    if (!bestResult || compareHands(result, bestResult) > 0) {
+      bestResult = result;
+    }
+  }
+
+  return bestResult!;
+}
+
+/**
+ * Compare two evaluated hands. Returns 1 if a wins, -1 if b wins, 0 if tie.
+ */
+function compareHands(a: { rank: number; kickers: number[] }, b: { rank: number; kickers: number[] }): number {
+  if (a.rank !== b.rank) return a.rank > b.rank ? 1 : -1;
+  for (let i = 0; i < Math.max(a.kickers.length, b.kickers.length); i++) {
+    const ak = a.kickers[i] ?? 0;
+    const bk = b.kickers[i] ?? 0;
+    if (ak !== bk) return ak > bk ? 1 : -1;
+  }
+  return 0;
+}
+
+/**
+ * Given active (not folded) seats and community cards, returns indices of winners.
+ */
+function determineWinners(seats: (PokerSeat | null)[], communityCards: Card[]): number[] {
+  let bestEval: { rank: number; kickers: number[] } | null = null;
+  let winnerIndices: number[] = [];
+
+  for (let i = 0; i < seats.length; i++) {
+    const seat = seats[i];
+    if (!seat || seat.folded) continue;
+    const allCards = [...seat.cards, ...communityCards];
+    if (allCards.length < 5) continue;
+    const ev = evaluateHand(allCards);
+    if (!bestEval) {
+      bestEval = ev;
+      winnerIndices = [i];
+    } else {
+      const cmp = compareHands(ev, bestEval);
+      if (cmp > 0) {
+        bestEval = ev;
+        winnerIndices = [i];
+      } else if (cmp === 0) {
+        winnerIndices.push(i);
+      }
+    }
+  }
+
+  return winnerIndices;
+}
+
+// ── Poker Engine — Game Flow Helpers ──────────────────────────────────────────
+
+function getOrCreatePokerTable(tableId: string): PokerTable {
+  let table = pokerTables.get(tableId);
+  if (!table) {
+    table = {
+      tableId,
+      seats: new Array(6).fill(null),
+      spectators: new Set(),
+      communityCards: [],
+      deck: [],
+      pot: 0,
+      sidePots: [],
+      currentBet: 0,
+      dealerIndex: 0,
+      turnIndex: -1,
+      phase: "waiting" as PokerPhase,
+      blinds: { small: 5, big: 10 },
+      minBuyin: 200,
+      maxBuyin: 2000,
+      lastShowdownResult: null,
+      handInProgress: false,
+      autoStartTimer: null,
+    };
+    pokerTables.set(tableId, table);
+  }
+  return table;
+}
+
+function activeSeatCount(table: PokerTable): number {
+  return table.seats.filter(s => s !== null).length;
+}
+
+function activePlayersInHand(table: PokerTable): PokerSeat[] {
+  return table.seats.filter(s => s !== null && !s.folded) as PokerSeat[];
+}
+
+function nextActiveIndex(table: PokerTable, fromIndex: number): number {
+  for (let i = 1; i <= 6; i++) {
+    const idx = (fromIndex + i) % 6;
+    const seat = table.seats[idx];
+    if (seat && !seat.folded && !seat.allIn) return idx;
+  }
+  return -1;
+}
+
+function nextOccupiedIndex(table: PokerTable, fromIndex: number): number {
+  for (let i = 1; i <= 6; i++) {
+    const idx = (fromIndex + i) % 6;
+    if (table.seats[idx]) return idx;
+  }
+  return -1;
+}
+
+function resetForNewHand(table: PokerTable) {
+  table.communityCards = [];
+  table.deck = createDeck();
+  table.pot = 0;
+  table.sidePots = [];
+  table.currentBet = 0;
+  table.turnIndex = -1;
+  table.lastShowdownResult = null;
+  table.handInProgress = false;
+  for (const seat of table.seats) {
+    if (seat) {
+      seat.cards = [];
+      seat.folded = false;
+      seat.allIn = false;
+      seat.bet = 0;
+    }
+  }
+}
+
+/**
+ * Build a sanitized table state for broadcasting. Each player only sees their own cards.
+ * During showdown, all remaining players' cards are revealed.
+ */
+function buildPokerStateForUser(table: PokerTable, userId?: string): any {
+  const isShowdown = table.phase === "showdown";
+  return {
+    tableId: table.tableId,
+    seats: table.seats.map((s, i) => {
+      if (!s) return null;
+      const isMe = userId && s.userId === userId;
+      return {
+        seatIndex: i,
+        userId: s.userId,
+        name: s.name,
+        chips: s.chips,
+        folded: s.folded,
+        allIn: s.allIn,
+        bet: s.bet,
+        cards: (isMe || (isShowdown && !s.folded)) ? s.cards : s.cards.map(() => ({ rank: "?", suit: "?" })),
+      };
+    }),
+    communityCards: table.communityCards,
+    pot: table.pot,
+    sidePots: table.sidePots,
+    currentBet: table.currentBet,
+    dealerIndex: table.dealerIndex,
+    turnIndex: table.turnIndex,
+    phase: table.phase,
+    blinds: table.blinds,
+    minBuyin: table.minBuyin,
+    maxBuyin: table.maxBuyin,
+    lastShowdownResult: table.lastShowdownResult,
+  };
+}
+
+function broadcastPokerState(tableId: string) {
+  const table = pokerTables.get(tableId);
+  if (!table) return;
+
+  for (const sock of wss.clients) {
+    const su = (sock as any).user as AuthedUser | undefined;
+    if (!su) continue;
+    // Send to seated players and spectators
+    const isSeated = table.seats.some(s => s && s.userId === su.id);
+    const isSpectator = table.spectators.has(su.id);
+    if (isSeated || isSpectator) {
+      send(sock as any, {
+        type: "poker:state",
+        ...buildPokerStateForUser(table, su.id),
+      });
+    }
+  }
+}
+
+function collectBetsIntoPot(table: PokerTable) {
+  for (const seat of table.seats) {
+    if (seat) {
+      table.pot += seat.bet;
+      seat.bet = 0;
+    }
+  }
+  table.currentBet = 0;
+}
+
+function buildSidePots(table: PokerTable): SidePot[] {
+  // Gather all active bets from non-folded players who have bet this round
+  const activeBets: { seatIndex: number; totalBet: number }[] = [];
+  for (let i = 0; i < table.seats.length; i++) {
+    const s = table.seats[i];
+    if (s && !s.folded) {
+      activeBets.push({ seatIndex: i, totalBet: s.bet });
+    }
+  }
+  if (activeBets.length === 0) return [];
+
+  activeBets.sort((a, b) => a.totalBet - b.totalBet);
+  const pots: SidePot[] = [];
+  let prevBet = 0;
+
+  for (let i = 0; i < activeBets.length; i++) {
+    const bet = activeBets[i].totalBet;
+    if (bet > prevBet) {
+      const contrib = bet - prevBet;
+      const eligible = activeBets.filter((_, j) => j >= i).map(b => b.seatIndex);
+      // Each player at or above this level contributes
+      const amount = contrib * (activeBets.length - i);
+      // Also add contributions from folded players at this level
+      for (const seat of table.seats) {
+        if (seat && seat.folded && seat.bet > prevBet) {
+          const foldedContrib = Math.min(seat.bet - prevBet, contrib);
+          // Already collected; skip for side pot calculation
+        }
+      }
+      pots.push({ amount, eligible });
+      prevBet = bet;
+    }
+  }
+
+  return pots;
+}
+
+/** Deal the next community cards based on the phase transition */
+function dealCommunityCards(table: PokerTable, count: number) {
+  for (let i = 0; i < count; i++) {
+    const card = table.deck.pop();
+    if (card) table.communityCards.push(card);
+  }
+}
+
+/** Check if the betting round is complete */
+function isBettingRoundComplete(table: PokerTable): boolean {
+  const active = table.seats.filter(s => s && !s.folded && !s.allIn) as PokerSeat[];
+  if (active.length === 0) return true;
+  if (active.length === 1 && table.currentBet === 0) return true;
+  return active.every(s => s.bet === table.currentBet);
+}
+
+/** Advance to the next phase or next player after an action */
+function advancePokerGame(table: PokerTable) {
+  const activePlayers = activePlayersInHand(table);
+
+  // Only one player left — they win
+  if (activePlayers.length === 1) {
+    collectBetsIntoPot(table);
+    const winner = activePlayers[0];
+    winner.chips += table.pot;
+    table.lastShowdownResult = {
+      winners: [{ seatIndex: winner.seatIndex, name: winner.name, chips: table.pot, hand: null }],
+      pot: table.pot,
+    };
+    table.pot = 0;
+    table.phase = "showdown";
+    table.handInProgress = false;
+    broadcastPokerState(table.tableId);
+    scheduleAutoStart(table);
+    return;
+  }
+
+  // All remaining players are all-in (or only one non-all-in player) — run out community cards
+  const canAct = table.seats.filter(s => s && !s.folded && !s.allIn) as PokerSeat[];
+  if (canAct.length <= 1) {
+    collectBetsIntoPot(table);
+    // Deal remaining community cards
+    while (table.communityCards.length < 5) {
+      dealCommunityCards(table, 1);
+    }
+    resolveShowdown(table);
+    return;
+  }
+
+  // Check if the current betting round is done
+  if (isBettingRoundComplete(table)) {
+    collectBetsIntoPot(table);
+
+    if (table.phase === "preflop") {
+      table.phase = "flop";
+      dealCommunityCards(table, 3);
+    } else if (table.phase === "flop") {
+      table.phase = "turn";
+      dealCommunityCards(table, 1);
+    } else if (table.phase === "turn") {
+      table.phase = "river";
+      dealCommunityCards(table, 1);
+    } else if (table.phase === "river") {
+      resolveShowdown(table);
+      return;
+    }
+
+    // New betting round starts from first active player after dealer
+    table.currentBet = 0;
+    for (const seat of table.seats) {
+      if (seat) seat.bet = 0;
+    }
+    table.turnIndex = nextActiveIndex(table, table.dealerIndex);
+    broadcastPokerState(table.tableId);
+    return;
+  }
+
+  // Move to next player
+  table.turnIndex = nextActiveIndex(table, table.turnIndex);
+  broadcastPokerState(table.tableId);
+}
+
+async function resolveShowdown(table: PokerTable) {
+  table.phase = "showdown";
+
+  const winnerIndices = determineWinners(table.seats, table.communityCards);
+  const share = Math.floor(table.pot / winnerIndices.length);
+  const remainder = table.pot - share * winnerIndices.length;
+
+  const winners: any[] = [];
+  for (let i = 0; i < winnerIndices.length; i++) {
+    const idx = winnerIndices[i];
+    const seat = table.seats[idx]!;
+    const payout = share + (i === 0 ? remainder : 0); // first winner gets remainder
+    seat.chips += payout;
+    const handEval = evaluateHand([...seat.cards, ...table.communityCards]);
+    winners.push({
+      seatIndex: idx,
+      name: seat.name,
+      chips: payout,
+      hand: handEval.name,
+      bestCards: handEval.best,
+    });
+  }
+
+  table.lastShowdownResult = { winners, pot: table.pot };
+  table.pot = 0;
+  table.handInProgress = false;
+  broadcastPokerState(table.tableId);
+  scheduleAutoStart(table);
+}
+
+function scheduleAutoStart(table: PokerTable) {
+  if (table.autoStartTimer) clearTimeout(table.autoStartTimer);
+  table.autoStartTimer = setTimeout(() => {
+    table.autoStartTimer = null;
+    // Remove players with 0 chips
+    for (let i = 0; i < table.seats.length; i++) {
+      const s = table.seats[i];
+      if (s && s.chips <= 0) {
+        table.seats[i] = null;
+      }
+    }
+    if (activeSeatCount(table) >= 2) {
+      startPokerHand(table);
+    } else {
+      table.phase = "waiting";
+      broadcastPokerState(table.tableId);
+    }
+  }, 5000);
+}
+
+function startPokerHand(table: PokerTable) {
+  if (activeSeatCount(table) < 2) return;
+
+  resetForNewHand(table);
+  table.handInProgress = true;
+
+  // Move dealer
+  table.dealerIndex = nextOccupiedIndex(table, table.dealerIndex);
+
+  const sbIndex = nextOccupiedIndex(table, table.dealerIndex);
+  const bbIndex = nextOccupiedIndex(table, sbIndex);
+
+  // Post blinds
+  const sbSeat = table.seats[sbIndex]!;
+  const bbSeat = table.seats[bbIndex]!;
+
+  const sbAmount = Math.min(table.blinds.small, sbSeat.chips);
+  sbSeat.chips -= sbAmount;
+  sbSeat.bet = sbAmount;
+  if (sbSeat.chips === 0) sbSeat.allIn = true;
+
+  const bbAmount = Math.min(table.blinds.big, bbSeat.chips);
+  bbSeat.chips -= bbAmount;
+  bbSeat.bet = bbAmount;
+  if (bbSeat.chips === 0) bbSeat.allIn = true;
+
+  table.currentBet = bbAmount;
+
+  // Deal 2 cards to each player
+  for (let round = 0; round < 2; round++) {
+    for (let i = 0; i < 6; i++) {
+      const seat = table.seats[i];
+      if (seat) {
+        const card = table.deck.pop();
+        if (card) seat.cards.push(card);
+      }
+    }
+  }
+
+  table.phase = "preflop";
+  // Action starts at player after big blind
+  table.turnIndex = nextActiveIndex(table, bbIndex);
+  // Edge case: if turnIndex is -1 (all players all-in from blinds), advance directly
+  if (table.turnIndex === -1) {
+    collectBetsIntoPot(table);
+    while (table.communityCards.length < 5) dealCommunityCards(table, 1);
+    resolveShowdown(table);
+    return;
+  }
+  broadcastPokerState(table.tableId);
+}
+
 // ── Pinned lobbies now seeded from DB via seedLobbies() on startup ────────────
 
 
@@ -484,6 +1055,9 @@ const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean; cooldo
   LOBBY_CREATED:       { points: 200,  once: false },
   AVATAR_SET:          { points: 30,   once: true  },
   BUNGIE_LINKED:       { points: 75,   once: true  },
+  FIRST_FAKEOUT_TRADE: { points: 100,  once: true  },
+  FAKEOUT_TRADE:       { points: 5,    once: false, cooldown: 60000  },  // 1min cooldown
+  FAKEOUT_PROFIT:      { points: 25,   once: false, cooldown: 0      },  // Each profitable close
 };
 
 // Notoriety rank titles (cosmetic only — does NOT affect Stripe tier)
@@ -3430,6 +4004,274 @@ app.post("/dm/:peerId", async (req, reply) => {
             if (s === ws) continue;
             send(s, { ...msg, roomId, _from: ws.user.id });
           }
+          return;
+        }
+
+        // ── Poker Engine — WebSocket Handlers ─────────────────────────────────
+
+        if (msg.type === "poker:join") {
+          const tableId = String(msg.tableId || "").trim();
+          const buyin = Number(msg.buyin || 0);
+          if (!ws.user || !tableId || !buyin) return;
+
+          const table = getOrCreatePokerTable(tableId);
+
+          // Validate buyin range
+          if (buyin < table.minBuyin || buyin > table.maxBuyin) {
+            send(ws, { type: "poker:error", error: `Buy-in must be between ${table.minBuyin} and ${table.maxBuyin} Paper` });
+            return;
+          }
+
+          // Check if already seated
+          if (table.seats.some(s => s && s.userId === ws.user!.id)) {
+            send(ws, { type: "poker:error", error: "Already seated at this table" });
+            return;
+          }
+
+          // Find first empty seat
+          const emptySeatIndex = table.seats.findIndex(s => s === null);
+          if (emptySeatIndex === -1) {
+            send(ws, { type: "poker:error", error: "Table is full" });
+            return;
+          }
+
+          // Verify and deduct Paper balance
+          try {
+            const user = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { paper: true } });
+            if (!user || (user as any).paper < buyin) {
+              send(ws, { type: "poker:error", error: "Insufficient Paper balance" });
+              return;
+            }
+            const newBalance = (user as any).paper - buyin;
+            await prisma.$transaction([
+              (prisma as any).paperTransaction.create({
+                data: {
+                  userId: ws.user.id,
+                  type: "POKER_BUYIN",
+                  amount: -buyin,
+                  balance: newBalance,
+                  description: `Poker buy-in at table ${tableId}`,
+                  refId: tableId,
+                },
+              }),
+              prisma.user.update({ where: { id: ws.user.id }, data: { paper: newBalance } }),
+            ]);
+          } catch (e) {
+            console.error("[poker:join] Paper deduction failed:", e);
+            send(ws, { type: "poker:error", error: "Failed to process buy-in" });
+            return;
+          }
+
+          table.seats[emptySeatIndex] = {
+            userId: ws.user.id,
+            name: ws.user.name,
+            chips: buyin,
+            cards: [],
+            folded: false,
+            allIn: false,
+            bet: 0,
+            seatIndex: emptySeatIndex,
+          };
+
+          // Remove from spectators if present
+          table.spectators.delete(ws.user.id);
+
+          console.log(`[poker] ${ws.user.name} joined table ${tableId} seat ${emptySeatIndex} with ${buyin} chips`);
+          broadcastPokerState(tableId);
+          return;
+        }
+
+        if (msg.type === "poker:spectate") {
+          const tableId = String(msg.tableId || "").trim();
+          if (!ws.user || !tableId) return;
+          const table = getOrCreatePokerTable(tableId);
+          if (!table.seats.some(s => s && s.userId === ws.user!.id)) {
+            table.spectators.add(ws.user.id);
+          }
+          send(ws, { type: "poker:state", ...buildPokerStateForUser(table, ws.user.id) });
+          return;
+        }
+
+        if (msg.type === "poker:leave") {
+          const tableId = String(msg.tableId || "").trim();
+          if (!ws.user || !tableId) return;
+          const table = pokerTables.get(tableId);
+          if (!table) return;
+
+          const seatIdx = table.seats.findIndex(s => s && s.userId === ws.user!.id);
+          if (seatIdx === -1) {
+            table.spectators.delete(ws.user.id);
+            return;
+          }
+
+          const seat = table.seats[seatIdx]!;
+
+          // If mid-hand and they have cards, auto-fold
+          if (table.handInProgress && seat.cards.length > 0 && !seat.folded) {
+            seat.folded = true;
+            // If it was their turn, advance
+            if (table.turnIndex === seatIdx) {
+              // We'll handle chip return after fold processing
+            }
+          }
+
+          // Return remaining chips to Paper balance
+          if (seat.chips > 0) {
+            try {
+              const user = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { paper: true } });
+              if (user) {
+                const newBalance = (user as any).paper + seat.chips;
+                await prisma.$transaction([
+                  (prisma as any).paperTransaction.create({
+                    data: {
+                      userId: ws.user.id,
+                      type: "POKER_CASHOUT",
+                      amount: seat.chips,
+                      balance: newBalance,
+                      description: `Left poker table ${tableId} with ${seat.chips} chips`,
+                      refId: tableId,
+                    },
+                  }),
+                  prisma.user.update({ where: { id: ws.user.id }, data: { paper: newBalance } }),
+                ]);
+              }
+            } catch (e) {
+              console.error("[poker:leave] Chip return failed:", e);
+            }
+          }
+
+          const wasTheirTurn = table.turnIndex === seatIdx;
+          table.seats[seatIdx] = null;
+
+          console.log(`[poker] ${ws.user.name} left table ${tableId}`);
+
+          // If the game was waiting on them, advance
+          if (wasTheirTurn && table.handInProgress) {
+            advancePokerGame(table);
+          } else {
+            broadcastPokerState(tableId);
+          }
+
+          // If fewer than 2 players remain mid-hand, resolve
+          if (table.handInProgress && activePlayersInHand(table).length <= 1) {
+            advancePokerGame(table);
+          }
+          return;
+        }
+
+        if (msg.type === "poker:start") {
+          const tableId = String(msg.tableId || "").trim();
+          if (!ws.user || !tableId) return;
+          const table = pokerTables.get(tableId);
+          if (!table) { send(ws, { type: "poker:error", error: "Table not found" }); return; }
+
+          // Must be seated
+          if (!table.seats.some(s => s && s.userId === ws.user!.id)) {
+            send(ws, { type: "poker:error", error: "Not seated at this table" });
+            return;
+          }
+
+          if (table.handInProgress) {
+            send(ws, { type: "poker:error", error: "Hand already in progress" });
+            return;
+          }
+
+          if (activeSeatCount(table) < 2) {
+            send(ws, { type: "poker:error", error: "Need at least 2 players" });
+            return;
+          }
+
+          startPokerHand(table);
+          return;
+        }
+
+        if (msg.type === "poker:action") {
+          const tableId = String(msg.tableId || "").trim();
+          const action = String(msg.action || "").trim().toLowerCase();
+          const amount = Number(msg.amount || 0);
+          if (!ws.user || !tableId || !action) return;
+
+          const table = pokerTables.get(tableId);
+          if (!table || !table.handInProgress) {
+            send(ws, { type: "poker:error", error: "No active hand" });
+            return;
+          }
+
+          // Find player seat
+          const seatIdx = table.seats.findIndex(s => s && s.userId === ws.user!.id);
+          if (seatIdx === -1) { send(ws, { type: "poker:error", error: "Not seated" }); return; }
+
+          const seat = table.seats[seatIdx]!;
+
+          // Verify it's their turn
+          if (table.turnIndex !== seatIdx) {
+            send(ws, { type: "poker:error", error: "Not your turn" });
+            return;
+          }
+
+          if (seat.folded || seat.allIn) {
+            send(ws, { type: "poker:error", error: "Cannot act" });
+            return;
+          }
+
+          const toCall = table.currentBet - seat.bet;
+
+          if (action === "fold") {
+            seat.folded = true;
+          } else if (action === "check") {
+            if (toCall > 0) {
+              send(ws, { type: "poker:error", error: "Cannot check — must call, raise, or fold" });
+              return;
+            }
+            // Check is a no-op on bet
+          } else if (action === "call") {
+            if (toCall <= 0) {
+              // Treat as check
+            } else {
+              const callAmount = Math.min(toCall, seat.chips);
+              seat.chips -= callAmount;
+              seat.bet += callAmount;
+              if (seat.chips === 0) seat.allIn = true;
+            }
+          } else if (action === "raise") {
+            if (amount <= 0) { send(ws, { type: "poker:error", error: "Raise amount required" }); return; }
+
+            const totalBet = amount; // Total bet amount (not additional)
+            const raiseAmount = totalBet - seat.bet;
+
+            if (raiseAmount <= 0 || raiseAmount > seat.chips) {
+              send(ws, { type: "poker:error", error: "Invalid raise amount" });
+              return;
+            }
+
+            // Minimum raise is at least double the current bet (or all-in)
+            if (totalBet < table.currentBet * 2 && raiseAmount < seat.chips) {
+              send(ws, { type: "poker:error", error: `Minimum raise is ${table.currentBet * 2}` });
+              return;
+            }
+
+            seat.chips -= raiseAmount;
+            seat.bet = totalBet;
+            table.currentBet = totalBet;
+            if (seat.chips === 0) seat.allIn = true;
+          } else if (action === "allin") {
+            const allInAmount = seat.chips;
+            seat.bet += allInAmount;
+            seat.chips = 0;
+            seat.allIn = true;
+            if (seat.bet > table.currentBet) {
+              table.currentBet = seat.bet;
+            }
+          } else {
+            send(ws, { type: "poker:error", error: `Unknown action: ${action}` });
+            return;
+          }
+
+          // Broadcast the action to everyone
+          broadcastPokerState(tableId);
+
+          // Small delay then advance game logic
+          advancePokerGame(table);
           return;
         }
 
@@ -8971,6 +9813,498 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true });
   });
 
+  // ── Paper Economy ──────────────────────────────────────────────────────────
+  // Virtual currency system: earn Paper through gameplay, spend in store/marketplace.
+
+  // Core transaction function — all Paper movement goes through here
+  async function awardPaper(userId: string, type: string, amount: number, description: string, refId?: string): Promise<{ balance: number } | null> {
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { paper: true } });
+      if (!user) return null;
+
+      const newBalance = (user as any).paper + amount;
+      if (newBalance < 0) return null; // can't go negative
+
+      await prisma.$transaction([
+        (prisma as any).paperTransaction.create({
+          data: { userId, type, amount, balance: newBalance, description, refId: refId || null },
+        }),
+        prisma.user.update({ where: { id: userId }, data: { paper: newBalance } }),
+      ]);
+
+      return { balance: newBalance };
+    } catch (e) {
+      console.error("[paper] awardPaper error:", e);
+      return null;
+    }
+  }
+
+  // GET /paper/wallet — current balance + recent transactions
+  app.get("/paper/wallet", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+    const txns = await (prisma as any).paperTransaction.findMany({
+      where: { userId: u.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    return reply.send({
+      ok: true,
+      balance: (user as any)?.paper || 0,
+      transactions: txns.map((t: any) => ({ ...t, createdAt: t.createdAt?.toISOString() })),
+    });
+  });
+
+  // POST /paper/daily — claim daily Paper bonus
+  app.post("/paper/daily", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    // Check cooldown (24h)
+    const lastDaily = await (prisma as any).paperTransaction.findFirst({
+      where: { userId: u.id, type: "EARN_DAILY" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (lastDaily) {
+      const since = Date.now() - new Date(lastDaily.createdAt).getTime();
+      if (since < 86400000) {
+        const nextAt = new Date(new Date(lastDaily.createdAt).getTime() + 86400000);
+        return reply.send({ ok: false, error: "cooldown", nextAt: nextAt.toISOString() });
+      }
+    }
+
+    const result = await awardPaper(u.id, "EARN_DAILY", 25, "Daily login bonus");
+    if (!result) return reply.send({ ok: false, error: "failed" });
+    return reply.send({ ok: true, awarded: 25, balance: result.balance });
+  });
+
+  // ── Poker — REST Endpoints ────────────────────────────────────────────────
+
+  // GET /poker/:tableId — public table state (no hole cards)
+  app.get("/poker/:tableId", async (req, reply) => {
+    const tableId = String((req as any).params?.tableId || "").trim();
+    if (!tableId) return reply.code(400).send({ ok: false, error: "missing tableId" });
+
+    const table = pokerTables.get(tableId);
+    if (!table) return reply.send({ ok: true, table: null, message: "No active table" });
+
+    // Optionally auth to show the requester's own cards
+    const u = authFromHeader((req as any).headers?.authorization);
+    return reply.send({ ok: true, table: buildPokerStateForUser(table, u?.id) });
+  });
+
+  // POST /poker/:tableId/cashout — cash out remaining chips to Paper
+  app.post("/poker/:tableId/cashout", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const tableId = String((req as any).params?.tableId || "").trim();
+    if (!tableId) return reply.code(400).send({ ok: false, error: "missing tableId" });
+
+    const table = pokerTables.get(tableId);
+    if (!table) return reply.code(404).send({ ok: false, error: "Table not found" });
+
+    const seatIdx = table.seats.findIndex(s => s && s.userId === u.id);
+    if (seatIdx === -1) return reply.code(400).send({ ok: false, error: "Not seated at this table" });
+
+    const seat = table.seats[seatIdx]!;
+
+    // Can't cash out mid-hand
+    if (table.handInProgress && !seat.folded) {
+      return reply.code(400).send({ ok: false, error: "Cannot cash out during an active hand. Fold first or wait for the hand to end." });
+    }
+
+    const chips = seat.chips;
+    if (chips <= 0) {
+      table.seats[seatIdx] = null;
+      broadcastPokerState(tableId);
+      return reply.send({ ok: true, cashed: 0, balance: 0 });
+    }
+
+    try {
+      const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+      if (!user) return reply.code(404).send({ ok: false, error: "User not found" });
+
+      const newBalance = (user as any).paper + chips;
+      await prisma.$transaction([
+        (prisma as any).paperTransaction.create({
+          data: {
+            userId: u.id,
+            type: "POKER_CASHOUT",
+            amount: chips,
+            balance: newBalance,
+            description: `Cashed out ${chips} chips from poker table ${tableId}`,
+            refId: tableId,
+          },
+        }),
+        prisma.user.update({ where: { id: u.id }, data: { paper: newBalance } }),
+      ]);
+
+      table.seats[seatIdx] = null;
+      broadcastPokerState(tableId);
+
+      return reply.send({ ok: true, cashed: chips, balance: newBalance });
+    } catch (e) {
+      console.error("[poker:cashout] Error:", e);
+      return reply.code(500).send({ ok: false, error: "Cashout failed" });
+    }
+  });
+
+  // ── Store ─────────────────────────────────────────────────────────────────
+
+  // GET /store — list available items
+  app.get("/store", async (req, reply) => {
+    const q: any = (req as any).query || {};
+    const category = q.category || null;
+    const where: any = { available: true };
+    if (category) where.category = category;
+
+    // Filter weekly rotation items by current week
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const currentWeek = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+
+    const items = await (prisma as any).storeItem.findMany({
+      where,
+      orderBy: [{ featured: "desc" }, { rarity: "desc" }, { createdAt: "desc" }],
+      take: 100,
+    });
+
+    // Filter: show non-rotation items + items matching current week
+    const filtered = items.filter((i: any) => !i.weeklyRotation || i.rotationWeek === currentWeek || i.rotationWeek === null);
+
+    return reply.send({
+      ok: true,
+      items: filtered.map((i: any) => ({
+        ...i,
+        soldOut: i.maxSupply != null && i.totalMinted >= i.maxSupply,
+        remaining: i.maxSupply != null ? Math.max(0, i.maxSupply - i.totalMinted) : null,
+        createdAt: i.createdAt?.toISOString(),
+      })),
+      week: currentWeek,
+    });
+  });
+
+  // POST /store/buy/:itemId — purchase an item
+  app.post("/store/buy/:itemId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const itemId = String((req as any).params?.itemId || "");
+
+    const item = await (prisma as any).storeItem.findUnique({ where: { id: itemId } });
+    if (!item || !item.available) return reply.code(404).send({ ok: false, error: "item_not_found" });
+
+    // Check supply
+    if (item.maxSupply != null && item.totalMinted >= item.maxSupply) {
+      return reply.code(400).send({ ok: false, error: "sold_out" });
+    }
+
+    // Check balance
+    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+    if (!user || (user as any).paper < item.price) {
+      return reply.code(400).send({ ok: false, error: "insufficient_paper", need: item.price, have: (user as any)?.paper || 0 });
+    }
+
+    // Check if user already owns this item (unless it's consumable/collectible)
+    if (item.category !== "CONSUMABLE" && item.category !== "COLLECTIBLE") {
+      const existing = await (prisma as any).userItem.findFirst({
+        where: { userId: u.id, itemId, consumed: false },
+      });
+      if (existing) return reply.code(400).send({ ok: false, error: "already_owned" });
+    }
+
+    // Execute purchase
+    const mintNumber = item.maxSupply != null ? item.totalMinted + 1 : null;
+
+    try {
+      const [userItem] = await prisma.$transaction([
+        (prisma as any).userItem.create({
+          data: {
+            userId: u.id,
+            itemId,
+            acquiredFrom: "store",
+            acquiredPrice: item.price,
+            mintNumber,
+          },
+        }),
+        prisma.user.update({ where: { id: u.id }, data: { paper: { decrement: item.price } } }),
+        (prisma as any).storeItem.update({ where: { id: itemId }, data: { totalMinted: { increment: 1 } } }),
+        (prisma as any).paperTransaction.create({
+          data: {
+            userId: u.id,
+            type: "SPEND_STORE",
+            amount: -item.price,
+            balance: (user as any).paper - item.price,
+            description: `Purchased: ${item.name}`,
+            refId: itemId,
+          },
+        }),
+      ]);
+
+      return reply.send({
+        ok: true,
+        item: { id: userItem.id, name: item.name, rarity: item.rarity, mintNumber },
+        balance: (user as any).paper - item.price,
+      });
+    } catch (e) {
+      console.error("[store] purchase error:", e);
+      return reply.code(500).send({ ok: false, error: "purchase_failed" });
+    }
+  });
+
+  // ── Inventory ─────────────────────────────────────────────────────────────
+
+  // GET /inventory — user's items
+  app.get("/inventory", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    const items = await (prisma as any).userItem.findMany({
+      where: { userId: u.id },
+      include: { item: true },
+      orderBy: { acquiredAt: "desc" },
+    });
+
+    return reply.send({
+      ok: true,
+      items: items.map((ui: any) => ({
+        id: ui.id,
+        itemId: ui.itemId,
+        name: ui.item.name,
+        description: ui.item.description,
+        category: ui.item.category,
+        rarity: ui.item.rarity,
+        imageUrl: ui.item.imageUrl,
+        equipped: ui.equipped,
+        consumed: ui.consumed,
+        mintNumber: ui.mintNumber,
+        maxSupply: ui.item.maxSupply,
+        acquiredFrom: ui.acquiredFrom,
+        acquiredPrice: ui.acquiredPrice,
+        acquiredAt: ui.acquiredAt?.toISOString(),
+        unlockTarget: ui.item.unlockTarget,
+        metadata: ui.item.metadata,
+      })),
+    });
+  });
+
+  // POST /inventory/equip/:userItemId — equip/unequip an item
+  app.post("/inventory/equip/:userItemId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const userItemId = String((req as any).params?.userItemId || "");
+
+    const ui = await (prisma as any).userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
+    if (!ui || ui.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (ui.consumed) return reply.code(400).send({ ok: false, error: "consumed" });
+
+    // Unequip other items of same category first (only one title/badge/avatar at a time)
+    if (!ui.equipped) {
+      await (prisma as any).userItem.updateMany({
+        where: { userId: u.id, equipped: true, item: { category: ui.item.category } },
+        data: { equipped: false },
+      });
+    }
+
+    await (prisma as any).userItem.update({
+      where: { id: userItemId },
+      data: { equipped: !ui.equipped },
+    });
+
+    return reply.send({ ok: true, equipped: !ui.equipped });
+  });
+
+  // POST /inventory/consume/:userItemId — use a consumable item
+  app.post("/inventory/consume/:userItemId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const userItemId = String((req as any).params?.userItemId || "");
+
+    const ui = await (prisma as any).userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
+    if (!ui || ui.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (ui.item.category !== "CONSUMABLE") return reply.code(400).send({ ok: false, error: "not_consumable" });
+    if (ui.consumed) return reply.code(400).send({ ok: false, error: "already_consumed" });
+
+    await (prisma as any).userItem.update({
+      where: { id: userItemId },
+      data: { consumed: true, consumedAt: new Date() },
+    });
+
+    return reply.send({ ok: true, consumed: true, unlockTarget: ui.item.unlockTarget });
+  });
+
+  // ── Marketplace ───────────────────────────────────────────────────────────
+
+  // GET /market — browse active listings
+  app.get("/market", async (req, reply) => {
+    const q: any = (req as any).query || {};
+    const where: any = { status: "ACTIVE" };
+    if (q.rarity) where.itemRarity = q.rarity;
+    if (q.search) where.itemName = { contains: q.search, mode: "insensitive" };
+
+    const sort = q.sort === "price_asc" ? { price: "asc" as const }
+      : q.sort === "price_desc" ? { price: "desc" as const }
+      : { createdAt: "desc" as const };
+
+    const listings = await (prisma as any).marketListing.findMany({
+      where,
+      orderBy: sort,
+      take: 50,
+    });
+
+    // Fetch seller names
+    const sellerIds = [...new Set(listings.map((l: any) => l.sellerId))];
+    const sellers = sellerIds.length
+      ? await prisma.user.findMany({ where: { id: { in: sellerIds } }, select: { id: true, name: true, avatarColor: true } })
+      : [];
+    const sellerMap = new Map(sellers.map(s => [s.id, s]));
+
+    // Fetch item images
+    const itemIds = [...new Set(listings.map((l: any) => l.itemId))];
+    const items = itemIds.length
+      ? await (prisma as any).storeItem.findMany({ where: { id: { in: itemIds } }, select: { id: true, imageUrl: true, category: true, description: true } })
+      : [];
+    const itemMap = new Map(items.map((i: any) => [i.id, i]));
+
+    return reply.send({
+      ok: true,
+      listings: listings.map((l: any) => {
+        const seller = sellerMap.get(l.sellerId);
+        const item = itemMap.get(l.itemId);
+        return {
+          ...l,
+          sellerName: seller?.name || "Unknown",
+          sellerColor: seller?.avatarColor || null,
+          imageUrl: item?.imageUrl || null,
+          category: item?.category || null,
+          description: item?.description || null,
+          createdAt: l.createdAt?.toISOString(),
+          expiresAt: l.expiresAt?.toISOString(),
+        };
+      }),
+    });
+  });
+
+  // POST /market/list — create a listing (sell an item)
+  app.post("/market/list", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+
+    const userItemId = String(body.userItemId || "");
+    const price = parseInt(body.price);
+    if (!userItemId || !price || price < 1) return reply.code(400).send({ ok: false, error: "invalid_params" });
+
+    const ui = await (prisma as any).userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
+    if (!ui || ui.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (ui.consumed) return reply.code(400).send({ ok: false, error: "consumed" });
+
+    // Check not already listed
+    const existingListing = await (prisma as any).marketListing.findFirst({
+      where: { userItemId, status: "ACTIVE" },
+    });
+    if (existingListing) return reply.code(400).send({ ok: false, error: "already_listed" });
+
+    const listing = await (prisma as any).marketListing.create({
+      data: {
+        sellerId: u.id,
+        userItemId,
+        itemId: ui.itemId,
+        itemName: ui.item.name,
+        itemRarity: ui.item.rarity,
+        price,
+        expiresAt: new Date(Date.now() + 7 * 86400000), // 7 day expiry
+      },
+    });
+
+    // Unequip the item while listed
+    if (ui.equipped) {
+      await (prisma as any).userItem.update({ where: { id: userItemId }, data: { equipped: false } });
+    }
+
+    return reply.send({ ok: true, listing: { ...listing, createdAt: listing.createdAt?.toISOString() } });
+  });
+
+  // POST /market/buy/:listingId — purchase from marketplace
+  app.post("/market/buy/:listingId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const listingId = String((req as any).params?.listingId || "");
+
+    const listing = await (prisma as any).marketListing.findUnique({ where: { id: listingId } });
+    if (!listing || listing.status !== "ACTIVE") return reply.code(404).send({ ok: false, error: "not_found" });
+    if (listing.sellerId === u.id) return reply.code(400).send({ ok: false, error: "cant_buy_own" });
+
+    // Check buyer balance
+    const buyer = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+    if (!buyer || (buyer as any).paper < listing.price) {
+      return reply.code(400).send({ ok: false, error: "insufficient_paper" });
+    }
+
+    try {
+      const buyerNewBalance = (buyer as any).paper - listing.price;
+      const seller = await prisma.user.findUnique({ where: { id: listing.sellerId }, select: { paper: true } });
+      const sellerNewBalance = ((seller as any)?.paper || 0) + listing.price;
+
+      await prisma.$transaction([
+        // Transfer item ownership
+        (prisma as any).userItem.update({
+          where: { id: listing.userItemId },
+          data: { userId: u.id, acquiredFrom: listing.sellerId, acquiredPrice: listing.price, acquiredAt: new Date(), equipped: false },
+        }),
+        // Mark listing as sold
+        (prisma as any).marketListing.update({
+          where: { id: listingId },
+          data: { status: "SOLD", buyerId: u.id, soldAt: new Date() },
+        }),
+        // Deduct buyer Paper
+        prisma.user.update({ where: { id: u.id }, data: { paper: buyerNewBalance } }),
+        // Pay seller Paper
+        prisma.user.update({ where: { id: listing.sellerId }, data: { paper: sellerNewBalance } }),
+        // Transaction records
+        (prisma as any).paperTransaction.create({
+          data: { userId: u.id, type: "SPEND_MARKET", amount: -listing.price, balance: buyerNewBalance, description: `Bought: ${listing.itemName}`, refId: listingId },
+        }),
+        (prisma as any).paperTransaction.create({
+          data: { userId: listing.sellerId, type: "EARN_TRADE_SOLD", amount: listing.price, balance: sellerNewBalance, description: `Sold: ${listing.itemName}`, refId: listingId },
+        }),
+      ]);
+
+      return reply.send({ ok: true, balance: buyerNewBalance });
+    } catch (e) {
+      console.error("[market] purchase error:", e);
+      return reply.code(500).send({ ok: false, error: "purchase_failed" });
+    }
+  });
+
+  // POST /market/cancel/:listingId — cancel your own listing
+  app.post("/market/cancel/:listingId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const listingId = String((req as any).params?.listingId || "");
+
+    const listing = await (prisma as any).marketListing.findUnique({ where: { id: listingId } });
+    if (!listing || listing.sellerId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (listing.status !== "ACTIVE") return reply.code(400).send({ ok: false, error: "not_active" });
+
+    await (prisma as any).marketListing.update({ where: { id: listingId }, data: { status: "CANCELLED" } });
+    return reply.send({ ok: true });
+  });
+
+  // ── Marketplace expiry worker ─────────────────────────────────────────────
+  setInterval(async () => {
+    try {
+      await (prisma as any).marketListing.updateMany({
+        where: { status: "ACTIVE", expiresAt: { lte: new Date() } },
+        data: { status: "EXPIRED" },
+      });
+    } catch {}
+  }, 5 * 60 * 1000); // every 5 minutes
+
   // ── Paper Trading — Binance Market Data Bridge ─────────────────────────────
   // Server-side bridge: connects to Binance WebSocket for real-time crypto prices,
   // relays to connected clients. Also provides REST endpoints for historical candles.
@@ -9257,6 +10591,11 @@ app.post("/dm/:peerId", async (req, reply) => {
             where: { id: account.id },
             data: { cashBalance: { increment: shortPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
           });
+          if (pnl > 0) {
+            const paperEarned = Math.max(1, Math.floor(pnl / 100));
+            awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut short profit: $${pnl.toFixed(2)} on ${symbol}`, shortPos.id).catch(() => {});
+            awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+          }
           // If buying more than closing, open new long with remainder
           const remaining = quantity - shortPos.quantity;
           if (remaining > 0) {
@@ -9303,6 +10642,11 @@ app.post("/dm/:peerId", async (req, reply) => {
             where: { id: account.id },
             data: { cashBalance: { increment: longPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
           });
+          if (pnl > 0) {
+            const paperEarned = Math.max(1, Math.floor(pnl / 100));
+            awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut long profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
+            awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+          }
           // If selling more than closing, open short with remainder
           const remaining = quantity - longPos.quantity;
           if (remaining > 0) {
@@ -9327,6 +10671,11 @@ app.post("/dm/:peerId", async (req, reply) => {
             where: { id: account.id },
             data: { cashBalance: { increment: (longPos.entryPrice * quantity) + pnl }, realizedPnl: { increment: pnl } },
           });
+          if (pnl > 0) {
+            const paperEarned = Math.max(1, Math.floor(pnl / 100));
+            awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut partial profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
+            awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+          }
         }
       } else {
         // Open short position (or add to existing short)
@@ -9354,6 +10703,10 @@ app.post("/dm/:peerId", async (req, reply) => {
     await (prisma as any).paperOrder.create({
       data: { accountId: account.id, symbol, side, orderType: "MARKET", quantity, filledPrice: currentPrice, filledAt: new Date(), status: "FILLED" },
     });
+
+    // Award Notoriety for trading
+    awardNotoriety(u.id, "FIRST_FAKEOUT_TRADE").catch(() => {});
+    awardNotoriety(u.id, "FAKEOUT_TRADE").catch(() => {});
 
     // Broadcast trade to lobby room (everyone sees trades)
     const tradeEvent = { type: "trading:trade", userId: u.id, userName: u.name, symbol, side, quantity, price: currentPrice, time: Date.now() };
@@ -9395,6 +10748,13 @@ app.post("/dm/:peerId", async (req, reply) => {
       where: { id: pos.accountId },
       data: { cashBalance: { increment: pos.entryValue + pnl }, realizedPnl: { increment: pnl } },
     });
+
+    // Award Paper for profitable trades (1 Paper per $100 profit, min 1 if profitable)
+    if (pnl > 0) {
+      const paperEarned = Math.max(1, Math.floor(pnl / 100));
+      awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut profit: $${pnl.toFixed(2)} on ${pos.symbol}`, positionId).catch(() => {});
+      awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+    }
 
     return reply.send({ ok: true, pnl, exitPrice: currentPrice });
   });
@@ -9614,11 +10974,33 @@ app.post("/dm/:peerId", async (req, reply) => {
         where: { status: "UPCOMING", startTime: { lte: now } },
         data: { status: "ACTIVE" },
       });
-      // End expired competitions
-      await (prisma as any).tradingCompetition.updateMany({
+      // End expired competitions and award Paper to winners
+      const ending = await (prisma as any).tradingCompetition.findMany({
         where: { status: "ACTIVE", endTime: { lte: now } },
-        data: { status: "ENDED" },
       });
+      for (const comp of ending) {
+        await (prisma as any).tradingCompetition.update({ where: { id: comp.id }, data: { status: "ENDED" } });
+        // Calculate final standings and award Paper
+        const accounts = await (prisma as any).paperAccount.findMany({
+          where: { competitionId: comp.id },
+          include: { positions: { where: { status: "OPEN" } } },
+        });
+        const ranked = accounts.map((a: any) => {
+          let unrealizedPnl = 0;
+          for (const p of a.positions) {
+            const cp = getLivePrice(p.symbol);
+            if (cp) unrealizedPnl += p.side === "BUY" ? (cp - p.entryPrice) * p.quantity : (p.entryPrice - cp) * p.quantity;
+          }
+          return { userId: a.userId, totalPnl: (a.cashBalance + unrealizedPnl) - a.startBalance };
+        }).sort((a: any, b: any) => b.totalPnl - a.totalPnl);
+        const prizes = [500, 250, 100]; // 1st, 2nd, 3rd
+        for (let i = 0; i < Math.min(3, ranked.length); i++) {
+          if (ranked[i].totalPnl > 0) {
+            awardPaper(ranked[i].userId, "EARN_COMPETITION", prizes[i], `${i === 0 ? "1st" : i === 1 ? "2nd" : "3rd"} place: ${comp.name}`, comp.id).catch(() => {});
+          }
+        }
+        console.log(`[trading] Competition "${comp.name}" ended — ${ranked.length} participants`);
+      }
     } catch (e) { console.error("[trading] competition worker error:", e); }
   }, 60 * 1000); // check every minute
 
@@ -9781,7 +11163,7 @@ app.post("/dm/:peerId", async (req, reply) => {
           send(sock as any, event);
         }
       }
-    });
+    }, awardPaper);
   }
 }
 
