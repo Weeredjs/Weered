@@ -17,6 +17,7 @@
     "google-auth-library": "^10.6.1",
     "jsonwebtoken": "^9.0.2",
     "livekit-server-sdk": "^2.7.3",
+    "@anthropic-ai/sdk": "^0.39.0",
     "web-push": "^3.6.7",
     "ws": "^8.18.0"
   },
