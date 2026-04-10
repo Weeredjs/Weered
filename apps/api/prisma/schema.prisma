@@ -460,6 +460,17 @@ model Crew {
   members CrewMember[]
 }
 
+model CrewMessage {
+  id        String   @id @default(cuid())
+  crewId    String
+  userId    String
+  userName  String   @default("")
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([crewId, createdAt])
+}
+
 model CrewMember {
   id          String   @id @default(cuid())
   crewId      String

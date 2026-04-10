@@ -4,6 +4,8 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "../../components/WeeredProvider";
 import { avatarBg } from "../../lib/avatarColor";
+import DmPreviewStrip from "../../components/DmPreviewStrip";
+import ActivityFeed from "../../components/ActivityFeed";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -858,6 +860,16 @@ export default function HomePage() {
 
         {/* ACTIVE FRIENDS */}
         <FriendStrip friends={onlineFriends} onDm={handleDm} onJoin={u => { const rid = pickFirst(u?.room, u?.roomId, ""); if (rid) handleJoin(rid); }} />
+
+        {/* DM PREVIEWS */}
+        <div style={{ marginTop: 24 }}>
+          <DmPreviewStrip />
+        </div>
+
+        {/* ACTIVITY FEED */}
+        <div style={{ marginTop: 24 }}>
+          <ActivityFeed />
+        </div>
 
         {/* RECENTLY VISITED */}
         {recentRooms.length > 0 && (

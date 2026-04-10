@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
+import CrewChatPanel from "./CrewChatPanel";
 
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
@@ -1058,6 +1059,11 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                     </div>
                   )}
                   {inviteNote[crew.id]&&<div style={{fontSize:10,marginBottom:4,color:inviteNote[crew.id]==="Invited!"?"rgba(74,222,128,.7)":"rgba(252,165,165,.7)"}}>{inviteNote[crew.id]}</div>}
+
+                  {/* Crew Chat */}
+                  <div style={{marginBottom:8,borderRadius:10,border:"1px solid rgba(255,255,255,.06)",overflow:"hidden",height:260}}>
+                    <CrewChatPanel crewId={crew.id} crewName={crew.name} myId={myId} myName={myName} />
+                  </div>
 
                   {/* Actions */}
                   <div style={{display:"flex",gap:6}}>
