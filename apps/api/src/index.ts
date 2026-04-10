@@ -5872,6 +5872,191 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── STAFF ANALYTICS ────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  app.get("/staff/analytics", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const now = Date.now();
+    const todayStart = new Date(now - 1 * 86400000);
+    const weekStart = new Date(now - 7 * 86400000);
+    const monthStart = new Date(now - 30 * 86400000);
+
+    // ── Live data from in-memory rooms ──────────────────────────────────────
+    const onlineUserIds = new Set<string>();
+    const activeRoomsList: { roomId: string; name: string; users: number }[] = [];
+    for (const [roomId, room] of rooms) {
+      if (room.users.size === 0) continue;
+      for (const uid of room.users.keys()) onlineUserIds.add(uid);
+      activeRoomsList.push({ roomId, name: room.name || roomId, users: room.users.size });
+    }
+    activeRoomsList.sort((a, b) => b.users - a.users);
+    const topActiveRooms = activeRoomsList.slice(0, 10);
+    const onlineNow = onlineUserIds.size;
+
+    // ── Parallel DB queries ─────────────────────────────────────────────────
+    const [
+      totalUsers,
+      usersToday,
+      usersThisWeek,
+      usersThisMonth,
+      dmToday,
+      dmThisWeek,
+      chatToday,
+      chatThisWeek,
+      lfgPostsThisWeek,
+      notorietyEventsToday,
+      notificationsToday,
+      pushSubscribers,
+      lobbies,
+      recentSignups,
+      topUsersByNotoriety,
+    ] = await Promise.all([
+      // users
+      (prisma as any).user.count(),
+      (prisma as any).user.count({ where: { createdAt: { gte: todayStart } } }),
+      (prisma as any).user.count({ where: { createdAt: { gte: weekStart } } }),
+      (prisma as any).user.count({ where: { createdAt: { gte: monthStart } } }),
+      // direct messages
+      (prisma as any).directMessage.count({ where: { createdAt: { gte: todayStart } } }),
+      (prisma as any).directMessage.count({ where: { createdAt: { gte: weekStart } } }),
+      // room messages
+      (prisma as any).roomMessage.count({ where: { ts: { gte: todayStart } } }),
+      (prisma as any).roomMessage.count({ where: { ts: { gte: weekStart } } }),
+      // engagement
+      (prisma as any).lfgPost.count({ where: { createdAt: { gte: weekStart } } }),
+      (prisma as any).notorietyEvent.count({ where: { createdAt: { gte: todayStart } } }),
+      (prisma as any).notification.count({ where: { createdAt: { gte: todayStart } } }),
+      (prisma as any).pushSubscription.count(),
+      // lobbies with member counts
+      (prisma as any).lobby.findMany({
+        select: { id: true, name: true, _count: { select: { members: true } } },
+      }),
+      // recent signups for retention calc (id + createdAt only)
+      (prisma as any).user.findMany({
+        where: { createdAt: { gte: monthStart } },
+        select: { id: true, createdAt: true },
+      }),
+      // top 10 users by notoriety
+      (prisma as any).user.findMany({
+        orderBy: { notoriety: "desc" },
+        take: 10,
+        select: { id: true, name: true, notoriety: true },
+      }),
+    ]);
+
+    // ── Lobbies with online counts ──────────────────────────────────────────
+    const lobbyOnline = new Map<string, number>();
+    for (const [, room] of rooms) {
+      if (room.lobbyId && room.users.size > 0) {
+        lobbyOnline.set(room.lobbyId, (lobbyOnline.get(room.lobbyId) || 0) + room.users.size);
+      }
+    }
+    const lobbyList = (lobbies as any[]).map((l: any) => ({
+      id: l.id,
+      name: l.name,
+      members: l._count.members,
+      onlineNow: lobbyOnline.get(l.id) || 0,
+    }));
+    lobbyList.sort((a: any, b: any) => b.onlineNow - a.onlineNow || b.members - a.members);
+    const topLobbies = lobbyList.slice(0, 20);
+
+    // ── Retention ───────────────────────────────────────────────────────────
+    const signupsLast30d = (recentSignups as any[]).length;
+    let returnedAfter1d = 0;
+    let returnedAfter7d = 0;
+
+    if (signupsLast30d > 0) {
+      const userIds = (recentSignups as any[]).map((u: any) => u.id);
+      const userCreatedMap = new Map<string, Date>();
+      for (const su of recentSignups as any[]) userCreatedMap.set(su.id, new Date(su.createdAt));
+
+      // Find users who sent a DM or room message after their signup + N days
+      const [dmActivity, chatActivity] = await Promise.all([
+        (prisma as any).directMessage.findMany({
+          where: { fromId: { in: userIds }, createdAt: { gte: monthStart } },
+          select: { fromId: true, createdAt: true },
+        }),
+        (prisma as any).roomMessage.findMany({
+          where: { userId: { in: userIds }, ts: { gte: monthStart } },
+          select: { userId: true, ts: true },
+        }),
+      ]);
+
+      const returned1d = new Set<string>();
+      const returned7d = new Set<string>();
+
+      for (const dm of dmActivity as any[]) {
+        const created = userCreatedMap.get(dm.fromId);
+        if (!created) continue;
+        const msgTime = new Date(dm.createdAt).getTime();
+        if (msgTime > created.getTime() + 1 * 86400000) returned1d.add(dm.fromId);
+        if (msgTime > created.getTime() + 7 * 86400000) returned7d.add(dm.fromId);
+      }
+      for (const msg of chatActivity as any[]) {
+        const created = userCreatedMap.get(msg.userId);
+        if (!created) continue;
+        const msgTime = new Date(msg.ts).getTime();
+        if (msgTime > created.getTime() + 1 * 86400000) returned1d.add(msg.userId);
+        if (msgTime > created.getTime() + 7 * 86400000) returned7d.add(msg.userId);
+      }
+      returnedAfter1d = returned1d.size;
+      returnedAfter7d = returned7d.size;
+    }
+
+    // ── Top users messages this week ────────────────────────────────────────
+    const topUserIds = (topUsersByNotoriety as any[]).map((u: any) => u.id);
+    const dmCounts = await (prisma as any).directMessage.groupBy({
+      by: ["fromId"],
+      where: { fromId: { in: topUserIds }, createdAt: { gte: weekStart } },
+      _count: { id: true },
+    });
+    const dmCountMap = new Map<string, number>();
+    for (const row of dmCounts as any[]) dmCountMap.set(row.fromId, row._count.id);
+
+    const topUsers = (topUsersByNotoriety as any[]).map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      notoriety: u.notoriety,
+      messagesThisWeek: dmCountMap.get(u.id) || 0,
+    }));
+
+    return reply.send({
+      ok: true,
+      live: { onlineNow, activeRooms: topActiveRooms },
+      users: {
+        total: totalUsers,
+        today: usersToday,
+        thisWeek: usersThisWeek,
+        thisMonth: usersThisMonth,
+      },
+      messages: {
+        dmToday,
+        dmThisWeek,
+        chatToday,
+        chatThisWeek,
+      },
+      engagement: {
+        lfgPostsThisWeek,
+        notorietyEventsToday,
+        notificationsToday,
+        pushSubscribers,
+      },
+      lobbies: topLobbies,
+      retention: {
+        signupsLast30d,
+        returnedAfter1d,
+        returnedAfter7d,
+      },
+      topUsers,
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── TWITCH INTEGRATION ─────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 

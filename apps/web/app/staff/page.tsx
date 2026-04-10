@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "../../components/WeeredProvider";
 import LobbyChatPanel from "../../components/LobbyChatPanel";
+import AnalyticsTab from "../../components/AnalyticsTab";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -78,6 +79,7 @@ const S = {
 // ── Sidebar nav ───────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
+  { id: "analytics", label: "Analytics",     icon: "📊", minRole: "STAFF" },
   { id: "users",    label: "Users",         icon: "👤", minRole: "SUPPORT" },
   { id: "board",    label: "Board",         icon: "📌", minRole: "SUPPORT" },
   { id: "roster",   label: "Roster",        icon: "🪪", minRole: "SUPPORT" },
@@ -1622,6 +1624,7 @@ export default function StaffPage() {
           <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
             {nav === "users"   && <UsersTab myRole={myRole} />}
             {nav === "board"   && <BoardTab myRole={myRole} />}
+            {nav === "analytics" && <AnalyticsTab />}
             {nav === "roster"  && <RosterTab />}
             {nav === "subs"    && <SubsTab />}
             {nav === "rooms"   && <RoomsTab myRole={myRole} />}
