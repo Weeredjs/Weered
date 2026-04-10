@@ -13,6 +13,16 @@ import { join } from "path";
 import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
 import webpush from "web-push";
 
+// ── Anthropic AI SDK (optional) ──────────────────────────────────────────────
+let Anthropic: any = null;
+try { Anthropic = require("@anthropic-ai/sdk"); } catch {}
+
+function getAI(): any | null {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key || !Anthropic) return null;
+  return new Anthropic.default({ apiKey: key });
+}
+
 const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
@@ -3481,6 +3491,76 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
+  // ── AI Endpoints ────────────────────────────────────────────────────────────
+
+  app.get("/ai/status", async (_req, reply) => {
+    const available = Boolean(process.env.ANTHROPIC_API_KEY && Anthropic);
+    return reply.send({ ok: true, available });
+  });
+
+  app.get("/ai/search", async (req, reply) => {
+    const ai = getAI();
+    if (!ai) return reply.send({ ok: true, results: [], answer: null });
+
+    const q = String((req.query as any).q || "").trim();
+    if (!q) return reply.send({ ok: true, results: [], answer: null });
+
+    // Gather platform context
+    const [lobbyList, onlineCount] = await Promise.all([
+      (prisma as any).lobby.findMany({
+        select: { id: true, name: true, description: true, moduleType: true, pinned: true, verified: true },
+        orderBy: { name: "asc" },
+      }),
+      // Count online users from rooms map
+      Promise.resolve((() => {
+        const ids = new Set<string>();
+        for (const [, r] of rooms) {
+          for (const [uid] of r.users) ids.add(uid);
+        }
+        return ids.size;
+      })()),
+    ]);
+
+    const lobbyContext = lobbyList.map((l: any) => `${l.name} (${l.moduleType || "general"})${l.verified ? " [verified]" : ""}: ${l.description || "no description"}`).join("\n");
+
+    try {
+      const response = await ai.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 400,
+        system: `You are the search engine for Weered, a gaming/social platform. Given a user query, analyze their intent and return a JSON response with:
+- "answer": a short natural language answer (1-2 sentences, casual tone)
+- "lobbies": array of lobby IDs that match (from the available list)
+- "action": optional action suggestion — one of: "browse", "join_lobby", "open_dm", "go_home", "go_store", null
+
+Available lobbies:
+${lobbyContext}
+
+Currently ${onlineCount} users online.
+
+RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
+        messages: [{ role: "user", content: q }],
+      });
+
+      const text = response?.content?.[0]?.text || "{}";
+      let parsed: any = {};
+      try { parsed = JSON.parse(text); } catch { parsed = { answer: text.slice(0, 200) }; }
+
+      const matchedLobbies = Array.isArray(parsed.lobbies)
+        ? lobbyList.filter((l: any) => parsed.lobbies.includes(l.id))
+        : [];
+
+      return reply.send({
+        ok: true,
+        answer: parsed.answer || null,
+        lobbies: matchedLobbies,
+        action: parsed.action || null,
+      });
+    } catch (e: any) {
+      console.error("[ai/search]", e);
+      return reply.send({ ok: true, results: [], answer: "The Operator is offline right now." });
+    }
+  });
+
   // Start news worker on startup then every 15 minutes
   runNewsWorker();
   setInterval(runNewsWorker, 15 * 60 * 1000);
@@ -3748,6 +3828,37 @@ app.post("/dm/:peerId", async (req, reply) => {
               if (uid === ws.user.id) continue;
               if (mentionedNames.has(ru.name.toLowerCase())) {
                 createNotification({ userId: uid, type: "MENTION", title: `${ws.user.name} mentioned you in ${room.name || "a lobby"}`, body: body.slice(0, 120), actorId: ws.user.id, actorName: ws.user.name, actionUrl: `/lobby/${room.roomId}` }).catch(() => {});
+              }
+            }
+          }
+          // AI Operator bot detection
+          if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
+            const ai = getAI();
+            if (ai) {
+              const question = body.replace(/@operator/gi, "").replace(/^\/ask\s*/i, "").trim();
+              if (question.length > 0) {
+                (async () => {
+                  try {
+                    const response = await ai.messages.create({
+                      model: "claude-haiku-4-5-20251001",
+                      max_tokens: 300,
+                      system: `You are "The Operator" — the AI behind Weered, a lobby-based social gaming platform with a GTA street aesthetic. You're street-smart, slightly sarcastic, helpful but with attitude. Keep responses SHORT (1-3 sentences max). You know about: lobbies (gaming communities), Paper (virtual currency), notoriety (XP), FakeOut (paper trading), poker (Texas Hold'em with Paper stakes), crews, challenges, and game integrations (Destiny 2, League of Legends, Fortnite, Marathon). Never break character. Never be mean, just witty. If someone asks something you don't know, deflect with style.`,
+                      messages: [{ role: "user", content: question }],
+                    });
+                    const reply = response?.content?.[0]?.text || "";
+                    if (reply) {
+                      const botMsg = {
+                        id: randomUUID(),
+                        user: { id: "operator", name: "The Operator", role: "SYSTEM" as any, avatarColor: "#D4A017" },
+                        body: reply,
+                        ts: Date.now(),
+                      };
+                      room.msgs.push(botMsg);
+                      if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
+                      broadcast(room, { type: "chat:new", roomId, msg: botMsg });
+                    }
+                  } catch (e) { console.error("[operator]", e); }
+                })();
               }
             }
           }
