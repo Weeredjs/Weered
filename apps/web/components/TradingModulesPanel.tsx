@@ -408,7 +408,7 @@ function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId:
 
 // ── Account Summary ─────────────────────────────────────────────────────────
 
-function AccountSummary({ account, onReset }: { account: any; onReset: () => void }) {
+function AccountSummary({ account, paperBalance, onReset }: { account: any; paperBalance?: number; onReset: () => void }) {
   if (!account) return null;
   const isProfit = account.totalPnl >= 0;
   return (
@@ -443,6 +443,12 @@ function AccountSummary({ account, onReset }: { account: any; onReset: () => voi
           </div>
         </div>
       </div>
+      {paperBalance !== undefined && (
+        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(245,197,24,.12)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 10, color: "#F5C518", opacity: 0.7 }}>Paper Balance</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#F5C518", fontFamily: "monospace" }}>{(paperBalance ?? 0).toLocaleString()} 💵</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -567,6 +573,14 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
   const [account, setAccount] = useState<any>(null);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [history, setHistory] = useState<{ orders: any[]; closedPositions: any[] } | null>(null);
+  const [paperBalance, setPaperBalance] = useState<number | undefined>(undefined);
+
+  // Load Paper balance
+  useEffect(() => {
+    apiFetch("/paper/wallet").then(j => {
+      if (j.balance !== undefined) setPaperBalance(j.balance);
+    }).catch(() => {});
+  }, []);
 
   // Load symbols
   useEffect(() => {
@@ -668,7 +682,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
           <TradeFeed />
 
           {/* Account summary */}
-          <AccountSummary account={account} onReset={resetAccount} />
+          <AccountSummary account={account} paperBalance={paperBalance} onReset={resetAccount} />
 
           {/* Order entry */}
           <OrderEntry
@@ -682,7 +696,10 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
           {account?.positions?.length > 0 && (
             <div style={{ marginTop: 10 }}>
               <div style={S.label}>OPEN POSITIONS</div>
-              <Positions positions={account.positions} lobbyId={lobbyId} onClose={loadAccount} />
+              <Positions positions={account.positions} lobbyId={lobbyId} onClose={() => {
+                loadAccount();
+                apiFetch("/paper/wallet").then(j => { if (j.balance !== undefined) setPaperBalance(j.balance); }).catch(() => {});
+              }} />
             </div>
           )}
         </>

@@ -453,6 +453,7 @@ export default function LeftRail() {
           { href: lobbyHrefMain, label: "Lobby", icon: "🏠", active: isLobbyActive, onClick: undefined as any },
           { href: "/home", label: "Home", icon: "📡", active: isHomeActive, onClick: (e: any) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); } },
           { href: "/forum", label: "Forum", icon: "💬", active: pathname.startsWith("/forum"), onClick: undefined as any },
+          { href: "/store", label: "Paper", icon: "💵", active: pathname.startsWith("/store"), onClick: undefined as any },
           ...((globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT")
             ? [{ href: "/staff", label: "Ops", icon: "⚙", active: pathname.startsWith("/staff"), onClick: undefined as any }]
             : []),
