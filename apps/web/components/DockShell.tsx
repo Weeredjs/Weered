@@ -780,6 +780,19 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
   const [creating, setCreating] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [expandedCrew, setExpandedCrew] = React.useState<string|null>(null);
+  const [presenceToast, setPresenceToast] = React.useState<{name:string;online:boolean}|null>(null);
+
+  // Crew presence toast — show when a mate comes online/offline
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (!d?.name || d.userId === myId) return;
+      setPresenceToast({ name: d.name, online: Boolean(d.online) });
+      setTimeout(() => setPresenceToast(null), 3000);
+    };
+    window.addEventListener("weered:crew:presence", handler);
+    return () => window.removeEventListener("weered:crew:presence", handler);
+  }, [myId]);
 
   async function load() {
     if (!apiBase||!tokenMaybe) return;
@@ -861,6 +874,20 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
           color:"#D4A017",
         }}>⚔ Establish Crew</button>
       </div>
+      {/* Crew presence toast */}
+      {presenceToast&&(
+        <div style={{
+          padding:"6px 12px",display:"flex",alignItems:"center",gap:6,
+          background:presenceToast.online?"rgba(34,197,94,.08)":"rgba(255,255,255,.03)",
+          borderBottom:"1px solid rgba(255,255,255,.04)",
+          animation:"weeredFadeIn 0.2s ease-out",
+        }}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:presenceToast.online?"#22c55e":"rgba(255,255,255,.2)",boxShadow:presenceToast.online?"0 0 6px rgba(34,197,94,.5)":"none"}} />
+          <span style={{fontSize:11,color:presenceToast.online?"rgba(74,222,128,.8)":"rgba(255,255,255,.35)"}}>
+            <strong style={{fontWeight:700}}>{presenceToast.name}</strong> {presenceToast.online?"came online":"went offline"}
+          </span>
+        </div>
+      )}
       <div style={{flex:1,overflowY:"auto"}}>
         {!crews.length&&(
           <div style={{padding:32,textAlign:"center" as const,color:"var(--weered-muted)",fontSize:13}}>
