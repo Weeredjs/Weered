@@ -1155,6 +1155,8 @@ enum OutreachCategory {
   MEDIA
   COMMUNITY
   PLATFORM
+  TRADING
+  CRYPTO
   OTHER
 }
 
