@@ -4494,7 +4494,7 @@ app.post("/dm/:peerId", async (req, reply) => {
       return reply.code(403).send({ ok: false, error: "no_permission" });
     }
     const body: any = (req as any).body || {};
-    const valid = ["voice", "youtube", "video", "screen", "twitch", "custom", "reddit"];
+    const valid = ["voice", "youtube", "video", "screen", "twitch", "custom", "reddit", "fakeout"];
     const enabledModules = Array.isArray(body.enabledModules)
       ? body.enabledModules.filter((m: string) => valid.includes(m))
       : null;
