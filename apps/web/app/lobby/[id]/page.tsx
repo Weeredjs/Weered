@@ -48,7 +48,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   MARATHON: "Marathon",
   RIOT: "League of Legends",
   FORTNITE: "Fortnite",
-  TRADING: "Paper Trading",
+  TRADING: "FakeOut",
 };
 
 type LobbyInfo = {

@@ -760,7 +760,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
       {/* Disclaimer */}
       <div style={{ marginTop: 20, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
         <div style={{ fontSize: 9, opacity: 0.25, lineHeight: 1.5 }}>
-          Paper trading only — no real money is at risk. Market data provided by Binance. Prices are real-time but simulated trades have no market impact. Not financial advice.
+          FakeOut — paper trading only, no real money at risk. Market data provided by Binance. Prices are real-time but simulated trades have no market impact. Not financial advice.
         </div>
       </div>
     </div>
