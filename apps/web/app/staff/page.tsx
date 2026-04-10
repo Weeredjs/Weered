@@ -1295,6 +1295,8 @@ function OutreachTab() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<any>(null);
   const [msg, setMsg]           = useState("");
+  const [searchQ, setSearchQ]   = useState("");
+  const [expandedContact, setExpandedContact] = useState<string | null>(null);
 
   // Form state
   const [fName, setFName]       = useState("");
@@ -1367,6 +1369,12 @@ function OutreachTab() {
   const total = contacts.length;
   const byStatus: Record<string, number> = {};
   contacts.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1; });
+
+  const displayContacts = contacts.filter(c => {
+    if (!searchQ.trim()) return true;
+    const q = searchQ.toLowerCase();
+    return (c.name + " " + c.company + " " + (c.notes || "") + " " + (c.category || "")).toLowerCase().includes(q);
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1460,56 +1468,108 @@ function OutreachTab() {
         </div>
       )}
 
-      {/* Contact list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {contacts.map(c => {
+      {/* Search */}
+      <input
+        placeholder="Search contacts..."
+        value={searchQ}
+        onChange={e => setSearchQ(e.target.value)}
+        style={{ ...S.input, fontSize: 12 }}
+      />
+
+      {/* Compact table */}
+      <div style={{ borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
+        {/* Table header */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "2fr 1.2fr 90px 90px 40px",
+          gap: 0, padding: "8px 12px",
+          background: "rgba(255,255,255,.03)",
+          borderBottom: "1px solid rgba(255,255,255,.06)",
+          fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase" as const,
+          color: "rgba(255,255,255,.3)",
+        }}>
+          <span>Name / Company</span>
+          <span>Category</span>
+          <span>Status</span>
+          <span>Action</span>
+          <span></span>
+        </div>
+
+        {/* Rows */}
+        {displayContacts.map(c => {
           const sColor = STATUS_COLORS[c.status] || "rgba(255,255,255,.5)";
           const overdue = c.nextFollowUp && new Date(c.nextFollowUp) < new Date();
+          const isExpanded = expandedContact === c.id;
           return (
-            <div key={c.id} style={{
-              ...S.card, display: "flex", alignItems: "flex-start", gap: 12,
-              border: overdue ? "1px solid rgba(245,158,11,.25)" : "1px solid rgba(255,255,255,.08)",
-              background: overdue ? "rgba(245,158,11,.03)" : "rgba(255,255,255,.03)",
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>{c.name}</span>
-                  <span style={{ fontSize: 11, opacity: 0.4 }}>{c.role}</span>
-                  <span style={{
-                    fontSize: 9, padding: "1px 6px", borderRadius: 999, fontWeight: 700,
-                    background: STATUS_BG[c.status], color: sColor, border: `1px solid ${sColor}33`,
-                  }}>
-                    {c.status.replace("_", " ")}
-                  </span>
+            <div key={c.id}>
+              {/* Compact row */}
+              <div
+                onClick={() => setExpandedContact(isExpanded ? null : c.id)}
+                style={{
+                  display: "grid", gridTemplateColumns: "2fr 1.2fr 90px 90px 40px",
+                  gap: 0, padding: "7px 12px", cursor: "pointer",
+                  alignItems: "center",
+                  borderBottom: "1px solid rgba(255,255,255,.03)",
+                  background: overdue ? "rgba(245,158,11,.03)" : isExpanded ? "rgba(88,0,229,.04)" : "transparent",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={e => { if (!isExpanded) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
+                onMouseLeave={e => { if (!isExpanded) (e.currentTarget as HTMLElement).style.background = overdue ? "rgba(245,158,11,.03)" : "transparent"; }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.name}
+                    {overdue && <span style={{ marginLeft: 6, fontSize: 9, color: "rgba(253,230,138,.8)" }}>overdue</span>}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.company}</div>
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 2 }}>
-                  {c.company}
-                  {c.email && <> · <span style={{ opacity: 0.7 }}>{c.email}</span></>}
+                <span style={{ fontSize: 10, opacity: 0.45, fontFamily: "monospace" }}>{c.category.replace(/_/g, " ")}</span>
+                <span style={{
+                  fontSize: 9, padding: "2px 7px", borderRadius: 999, fontWeight: 700,
+                  background: STATUS_BG[c.status], color: sColor, border: `1px solid ${sColor}33`,
+                  justifySelf: "start", whiteSpace: "nowrap",
+                }}>
+                  {c.status.replace("_", " ")}
+                </span>
+                <div onClick={e => e.stopPropagation()}>
+                  {c.status === "LEAD" && <button style={{ ...S.btnPri, fontSize: 9, padding: "2px 7px" }} onClick={() => quickStatus(c.id, "CONTACTED")}>Contacted</button>}
+                  {c.status === "CONTACTED" && <button style={{ ...S.success, fontSize: 9, padding: "2px 7px" }} onClick={() => quickStatus(c.id, "REPLIED")}>Replied</button>}
+                  {c.status === "REPLIED" && <button style={{ ...S.btnPri, fontSize: 9, padding: "2px 7px" }} onClick={() => quickStatus(c.id, "IN_PROGRESS")}>In Progress</button>}
                 </div>
-                <div style={{ fontSize: 11, opacity: 0.35 }}>
-                  {c.category.replace("_", " ")}
-                  {c.lastContact && <> · Last: {new Date(c.lastContact).toLocaleDateString()}</>}
-                  {c.nextFollowUp && (
-                    <span style={{ color: overdue ? "rgba(253,230,138,.9)" : "inherit" }}>
-                      {" "}· Follow-up: {new Date(c.nextFollowUp).toLocaleDateString()}
-                      {overdue && " (overdue)"}
-                    </span>
-                  )}
-                </div>
-                {c.notes && <div style={{ fontSize: 11, opacity: 0.45, marginTop: 4, whiteSpace: "pre-wrap" }}>{c.notes}</div>}
+                <span style={{ fontSize: 10, opacity: 0.2, textAlign: "center", transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform .15s" }}>&#9654;</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
-                <button style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }} onClick={() => editContact(c)}>Edit</button>
-                {c.status === "LEAD" && <button style={{ ...S.btnPri, fontSize: 10, padding: "3px 8px" }} onClick={() => quickStatus(c.id, "CONTACTED")}>Mark Contacted</button>}
-                {c.status === "CONTACTED" && <button style={{ ...S.success, fontSize: 10, padding: "3px 8px" }} onClick={() => quickStatus(c.id, "REPLIED")}>Got Reply</button>}
-                <button style={{ ...S.danger, fontSize: 10, padding: "3px 8px" }} onClick={() => remove(c.id)}>Delete</button>
-              </div>
+
+              {/* Expanded detail */}
+              {isExpanded && (
+                <div style={{
+                  padding: "10px 12px 12px", background: "rgba(88,0,229,.03)",
+                  borderBottom: "1px solid rgba(88,0,229,.12)",
+                  display: "flex", gap: 16,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {c.email && <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 3 }}>Email: {c.email}</div>}
+                    {c.role && <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 3 }}>Role: {c.role}</div>}
+                    {c.contactInfo && <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 3 }}>Contact: {c.contactInfo}</div>}
+                    {c.lastContact && <div style={{ fontSize: 11, opacity: 0.4, marginBottom: 3 }}>Last contact: {new Date(c.lastContact).toLocaleDateString()}</div>}
+                    {c.nextFollowUp && <div style={{ fontSize: 11, color: overdue ? "rgba(253,230,138,.8)" : "rgba(255,255,255,.4)", marginBottom: 3 }}>Follow-up: {new Date(c.nextFollowUp).toLocaleDateString()}{overdue ? " (overdue)" : ""}</div>}
+                    {c.notes && <div style={{ fontSize: 11, opacity: 0.4, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{c.notes}</div>}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                    <button style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }} onClick={() => editContact(c)}>Edit</button>
+                    <button style={{ ...S.danger, fontSize: 10, padding: "4px 10px" }} onClick={() => { remove(c.id); setExpandedContact(null); }}>Delete</button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
         {contacts.length === 0 && (
           <div style={{ textAlign: "center", padding: 24, opacity: 0.35, fontSize: 13 }}>
             No outreach contacts yet. Add your first one above.
+          </div>
+        )}
+        {contacts.length > 0 && displayContacts.length === 0 && (
+          <div style={{ textAlign: "center", padding: 24, opacity: 0.35, fontSize: 13 }}>
+            No contacts match your search.
           </div>
         )}
       </div>
