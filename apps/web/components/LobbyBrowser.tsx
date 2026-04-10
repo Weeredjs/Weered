@@ -1,239 +1,807 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
+const API_BASE =
+  (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-type RoomRow = {
+const PURPLE = "#5800E5";
+const GREEN = "#22c55e";
+const BG = "rgba(6,6,12,.97)";
+const TEXT = "rgba(243,244,246,.95)";
+const TEXT_DIM = "rgba(243,244,246,.55)";
+const TEXT_MUTED = "rgba(243,244,246,.35)";
+const BORDER = "rgba(255,255,255,.08)";
+const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
+
+/* ---------- Types ---------- */
+
+type Lobby = {
   id: string;
   name: string;
-  locked: boolean;
-  users: number;
+  description: string | null;
+  verified: boolean;
+  pinned: boolean;
+  moduleType: string | null;
+  accentColor: string | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  _count: { rooms: number; members: number };
+  onlineCount: number;
 };
 
-function subredditFromRoom(id: string, name: string): string | null {
-  const s = (name || id || "").trim();
-  const m = s.match(/^r\/([a-zA-Z0-9_]+)$/i) || s.match(/^([a-zA-Z0-9_]+)$/i);
-  // Only treat as subreddit if it looks like a clean subreddit name
-  if (s.toLowerCase().startsWith("r/")) return s.replace(/^r\//i, "");
-  return null;
+/* ---------- Helpers ---------- */
+
+function hueFromId(id: string): number {
+  return (
+    Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360
+  );
 }
 
-function RoomIcon({ id, name }: { id: string; name: string }) {
-  const sub = subredditFromRoom(id, name);
-  const [imgOk, setImgOk] = useState(true);
+function InitialAvatar({
+  id,
+  name,
+  size,
+}: {
+  id: string;
+  name: string;
+  size: number;
+}) {
+  const hue = hueFromId(id);
   const initial = (name || id || "?").trim().slice(0, 1).toUpperCase();
-
-  if (sub && imgOk) {
-    return (
-      <img
-        src={`https://www.redditstatic.com/desktop2x/img/snoovatars/snoo.png`}
-        alt=""
-        width={36} height={36}
-        style={{ borderRadius: 10, objectFit: "cover", flexShrink: 0 }}
-        onError={() => setImgOk(false)}
-      />
-    );
-  }
-
-  // Fallback: generated initial avatar
-  const hue = Math.abs([...id].reduce((a: number, c: string) => a + c.charCodeAt(0), 0)) % 360;
   return (
-    <div style={{
-      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-      background: `hsl(${hue}, 55%, 28%)`,
-      border: `1px solid hsl(${hue}, 55%, 38%)`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontWeight: 900, fontSize: 15, color: `hsl(${hue}, 80%, 85%)`,
-    }}>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.28,
+        flexShrink: 0,
+        background: `hsl(${hue}, 55%, 22%)`,
+        border: `1.5px solid hsl(${hue}, 55%, 36%)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 900,
+        fontSize: size * 0.44,
+        color: `hsl(${hue}, 80%, 82%)`,
+        letterSpacing: "-0.02em",
+      }}
+    >
       {initial}
     </div>
   );
 }
 
+function LobbyLogo({
+  lobby,
+  size,
+}: {
+  lobby: Lobby;
+  size: number;
+}) {
+  const [ok, setOk] = useState(true);
+  if (lobby.logoUrl && ok) {
+    return (
+      <img
+        src={lobby.logoUrl}
+        alt=""
+        width={size}
+        height={size}
+        style={{
+          borderRadius: size * 0.28,
+          objectFit: "cover",
+          flexShrink: 0,
+          border: `1.5px solid rgba(255,255,255,.1)`,
+        }}
+        onError={() => setOk(false)}
+      />
+    );
+  }
+  return <InitialAvatar id={lobby.id} name={lobby.name} size={size} />;
+}
+
+/* Pulsing green dot */
+function PulseDot({ size = 8 }: { size?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: GREEN,
+        boxShadow: `0 0 6px ${GREEN}, 0 0 12px ${GREEN}55`,
+        animation: "weeredPulse 2s ease-in-out infinite",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+/* Module type badge */
+function ModuleBadge({ type }: { type: string }) {
+  return (
+    <span
+      style={{
+        fontFamily: MONO,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: ".06em",
+        textTransform: "uppercase",
+        padding: "2px 7px",
+        borderRadius: 4,
+        background: "rgba(88,0,229,.18)",
+        border: `1px solid rgba(88,0,229,.35)`,
+        color: "rgba(176,130,255,.9)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {type}
+    </span>
+  );
+}
+
+/* Verified badge */
+function VerifiedBadge() {
+  return (
+    <span
+      title="Verified"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        background: PURPLE,
+        flexShrink: 0,
+        fontSize: 11,
+        lineHeight: 1,
+        color: "#fff",
+      }}
+    >
+      &#10003;
+    </span>
+  );
+}
+
+/* ---------- Live Now Card (horizontal strip) ---------- */
+
+function LiveCard({
+  lobby,
+  onClick,
+}: {
+  lobby: Lobby;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        flex: "0 0 auto",
+        width: 180,
+        padding: "14px 14px 12px",
+        borderRadius: 14,
+        border: `1px solid ${hovered ? "rgba(88,0,229,.5)" : BORDER}`,
+        background: hovered
+          ? "rgba(88,0,229,.12)"
+          : "rgba(255,255,255,.03)",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 10,
+        transition: "all .2s ease",
+        color: TEXT,
+        textAlign: "center",
+        boxShadow: hovered
+          ? `0 0 20px rgba(88,0,229,.2)`
+          : "none",
+      }}
+    >
+      <LobbyLogo lobby={lobby} size={44} />
+      <div
+        style={{
+          fontWeight: 800,
+          fontSize: 13,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          width: "100%",
+        }}
+      >
+        {lobby.name}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 12,
+          color: GREEN,
+          fontWeight: 600,
+        }}
+      >
+        <PulseDot size={7} />
+        {lobby.onlineCount} online
+      </div>
+    </button>
+  );
+}
+
+/* ---------- Grid Lobby Card ---------- */
+
+function LobbyCard({
+  lobby,
+  onClick,
+}: {
+  lobby: Lobby;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const accent = lobby.accentColor || PURPLE;
+  const hasBanner = !!lobby.bannerUrl;
+
+  const bannerBg: React.CSSProperties = hasBanner
+    ? {
+        backgroundImage: `linear-gradient(180deg, rgba(6,6,12,.15) 0%, rgba(6,6,12,.85) 70%, rgba(6,6,12,.98) 100%), url(${lobby.bannerUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : {
+        background: `linear-gradient(135deg, ${accent}22 0%, rgba(6,6,12,.95) 100%)`,
+      };
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        width: "100%",
+        minHeight: 220,
+        borderRadius: 16,
+        border: `1px solid ${hovered ? `${accent}66` : BORDER}`,
+        overflow: "hidden",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        padding: 0,
+        textAlign: "left",
+        color: TEXT,
+        transition: "all .25s ease",
+        boxShadow: hovered
+          ? `0 8px 32px rgba(0,0,0,.5), 0 0 24px ${accent}22`
+          : "0 2px 12px rgba(0,0,0,.3)",
+        transform: hovered ? "translateY(-2px)" : "none",
+        ...bannerBg,
+      }}
+    >
+      {/* Content area at bottom */}
+      <div style={{ padding: "56px 16px 16px", position: "relative", zIndex: 1 }}>
+        {/* Logo + Name row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 8,
+          }}
+        >
+          <LobbyLogo lobby={lobby} size={38} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 800,
+                  fontSize: 15,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {lobby.name}
+              </span>
+              {lobby.verified && <VerifiedBadge />}
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        {lobby.description && (
+          <div
+            style={{
+              fontSize: 12.5,
+              lineHeight: "1.45",
+              color: TEXT_DIM,
+              marginBottom: 10,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {lobby.description}
+          </div>
+        )}
+
+        {/* Footer: badges + counts */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          {lobby.moduleType && <ModuleBadge type={lobby.moduleType} />}
+          <span
+            style={{
+              fontFamily: MONO,
+              fontSize: 11,
+              color: TEXT_MUTED,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            {lobby._count.members} members
+          </span>
+          {lobby.onlineCount > 0 && (
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 11,
+                color: GREEN,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontWeight: 600,
+              }}
+            >
+              <PulseDot size={6} />
+              {lobby.onlineCount} online
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* ---------- Keyframe injection (once) ---------- */
+
+let stylesInjected = false;
+function injectStyles() {
+  if (stylesInjected) return;
+  stylesInjected = true;
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes weeredPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .55; transform: scale(.85); }
+    }
+    @keyframes weeredFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes weeredSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .weered-discover-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .weered-discover-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .weered-discover-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.1);
+      border-radius: 3px;
+    }
+    .weered-live-strip::-webkit-scrollbar {
+      height: 4px;
+    }
+    .weered-live-strip::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .weered-live-strip::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.08);
+      border-radius: 2px;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+/* ========== Main Component ========== */
+
 export default function LobbyBrowser() {
   const router = useRouter();
-  const [open, setOpen]     = useState(false);
-  const [rooms, setRooms]   = useState<RoomRow[]>([]);
-  const [q, setQ]           = useState("");
+  const [open, setOpen] = useState(false);
+  const [lobbies, setLobbies] = useState<Lobby[]>([]);
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
-  const intervalRef         = useRef<any>(null);
+  const [visible, setVisible] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const r = await fetch(API_BASE + "/rooms", { cache: "no-store" });
-      const j = await r.json();
-      const list: RoomRow[] = (Array.isArray(j?.rooms) ? j.rooms : []).map((r: any) => ({
-        id:     String(r.id || ""),
-        name:   String(r.name || r.id || ""),
-        locked: Boolean(r.locked),
-        users:  Number(r.users ?? r.memberCount ?? 0),
-      })).filter((r: RoomRow) => r.id && r.id !== "@me" && r.id !== "lobby");
-      setRooms(list);
-    } catch {}
-    finally { setLoading(false); }
-  }
-
-  // Listen for browse event
+  /* Ensure portal target is available (client-only) */
   useEffect(() => {
-    const onBrowse = () => { setOpen(true); load(); };
-    window.addEventListener("weered:lobby:browse", onBrowse);
-    return () => window.removeEventListener("weered:lobby:browse", onBrowse);
+    setMounted(true);
+    injectStyles();
   }, []);
 
-  // Poll while open
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(API_BASE + "/lobbies", { cache: "no-store" });
+      const json = await res.json();
+      if (json?.ok && Array.isArray(json.lobbies)) {
+        setLobbies(
+          json.lobbies.map((l: any) => ({
+            id: String(l.id || ""),
+            name: String(l.name || l.id || ""),
+            description: l.description ?? null,
+            verified: Boolean(l.verified),
+            pinned: Boolean(l.pinned),
+            moduleType: l.moduleType ?? null,
+            accentColor: l.accentColor ?? null,
+            logoUrl: l.logoUrl ?? null,
+            bannerUrl: l.bannerUrl ?? null,
+            _count: {
+              rooms: Number(l._count?.rooms ?? 0),
+              members: Number(l._count?.members ?? 0),
+            },
+            onlineCount: Number(l.onlineCount ?? 0),
+          }))
+        );
+      }
+    } catch {
+      /* swallow */
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /* Listen for browse event */
+  useEffect(() => {
+    const onBrowse = () => {
+      setOpen(true);
+      // Trigger fade-in
+      requestAnimationFrame(() => setVisible(true));
+      load();
+    };
+    window.addEventListener("weered:lobby:browse", onBrowse);
+    return () => window.removeEventListener("weered:lobby:browse", onBrowse);
+  }, [load]);
+
+  /* Poll while open */
   useEffect(() => {
     if (open) {
       load();
-      intervalRef.current = setInterval(load, 6000);
+      intervalRef.current = setInterval(load, 8000);
     } else {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
-    return () => clearInterval(intervalRef.current);
-  }, [open]);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [open, load]);
 
-  // ESC to close
+  /* ESC to close */
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const filtered = rooms
-    .filter(r => {
-      if (!q.trim()) return true;
-      return (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase());
-    })
-    .sort((a, b) => b.users - a.users);
+  /* Focus search on open */
+  useEffect(() => {
+    if (open && searchRef.current) {
+      setTimeout(() => searchRef.current?.focus(), 80);
+    }
+  }, [open]);
 
-  const active  = filtered.filter(r => r.users > 0);
-  const inactive = filtered.filter(r => r.users === 0);
-
-  function goRoom(id: string) {
-    router.push("/room/" + encodeURIComponent(id));
-    setOpen(false);
+  function close() {
+    setVisible(false);
+    setTimeout(() => {
+      setOpen(false);
+      setQ("");
+    }, 200);
   }
 
-  return (
-    <>
-      {/* Backdrop */}
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 9000, backdropFilter: "blur(2px)" }}
-        />
-      )}
+  function goLobby(id: string) {
+    router.push("/lobby/" + encodeURIComponent(id));
+    close();
+  }
 
-      {/* Slideout panel */}
-      <div style={{
-        position: "fixed", top: 0, right: 0, bottom: 0,
-        width: "min(580px, 92vw)",
-        background: "var(--weered-panel, rgba(17,24,39,.97))",
-        borderLeft: "1px solid var(--weered-border)",
+  /* Filter */
+  const filtered = lobbies
+    .filter((l) => {
+      if (!q.trim()) return true;
+      const search = q.trim().toLowerCase();
+      return (
+        l.name.toLowerCase().includes(search) ||
+        (l.description || "").toLowerCase().includes(search)
+      );
+    })
+    .sort((a, b) => {
+      // Pinned first, then by online, then by members
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (b.onlineCount !== a.onlineCount)
+        return b.onlineCount - a.onlineCount;
+      return b._count.members - a._count.members;
+    });
+
+  const live = filtered.filter((l) => l.onlineCount > 0);
+
+  if (!open || !mounted) return null;
+
+  const overlay = (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
         zIndex: 9001,
-        display: "flex", flexDirection: "column",
-        transform: open ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.28s cubic-bezier(.22,.61,.36,1)",
-        boxShadow: open ? "-20px 0 60px rgba(0,0,0,.45)" : "none",
-      }}>
-        {/* Header */}
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--weered-border)", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div>
-              <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: "-.2px" }}>Browse Rooms</div>
-              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
-                {loading ? "Refreshing…" : `${rooms.length} rooms · ${active.length} active`}
-              </div>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{ padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.06)", fontSize: 13, cursor: "pointer", color: "rgba(243,244,246,.9)" }}
-            >
-              Close
-            </button>
-          </div>
+        background: BG,
+        backdropFilter: "blur(12px)",
+        color: TEXT,
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+        opacity: visible ? 1 : 0,
+        transition: "opacity .2s ease",
+      }}
+    >
+      {/* ===== Header ===== */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          padding: "18px 28px 14px",
+          borderBottom: `1px solid ${BORDER}`,
+          background: "rgba(6,6,12,.92)",
+          backdropFilter: "blur(16px)",
+          display: "flex",
+          alignItems: "center",
+          gap: 20,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 900,
+            fontSize: 22,
+            letterSpacing: "-.03em",
+            flexShrink: 0,
+          }}
+        >
+          Discover
+        </div>
 
+        {/* Search */}
+        <div style={{ flex: 1, maxWidth: 480 }}>
           <input
-            autoFocus={open}
-            placeholder="Search rooms…"
+            ref={searchRef}
+            placeholder="Search lobbies..."
             value={q}
-            onChange={e => setQ(e.target.value)}
-            style={{ width: "100%", padding: "9px 13px", borderRadius: 12, border: "1px solid rgba(255,255,255,.12)", background: "rgba(0,0,0,.35)", fontSize: 14, color: "rgba(243,244,246,.95)", outline: "none", boxSizing: "border-box" }}
+            onChange={(e) => setQ(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "9px 14px",
+              borderRadius: 10,
+              border: `1px solid rgba(255,255,255,.1)`,
+              background: "rgba(255,255,255,.04)",
+              fontSize: 14,
+              color: TEXT,
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border-color .15s",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = `${PURPLE}88`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,.1)";
+            }}
           />
         </div>
 
-        {/* Room list */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+        {/* Loading indicator */}
+        {loading && (
+          <span
+            style={{
+              fontSize: 12,
+              color: TEXT_MUTED,
+              fontFamily: MONO,
+              flexShrink: 0,
+            }}
+          >
+            loading...
+          </span>
+        )}
 
-          {active.length > 0 && (
-            <>
-              <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".8px", textTransform: "uppercase", marginBottom: 8 }}>
-                Active · {active.length}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
-                {active.map(r => <RoomCard key={r.id} room={r} onJoin={goRoom} />)}
-              </div>
-            </>
-          )}
+        {/* Close */}
+        <button
+          onClick={close}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            border: `1px solid rgba(255,255,255,.1)`,
+            background: "rgba(255,255,255,.04)",
+            fontSize: 18,
+            cursor: "pointer",
+            color: TEXT_DIM,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            transition: "all .15s",
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,.08)";
+            e.currentTarget.style.color = TEXT;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,.04)";
+            e.currentTarget.style.color = TEXT_DIM;
+          }}
+          aria-label="Close"
+        >
+          &#x2715;
+        </button>
+      </div>
 
-          {inactive.length > 0 && (
-            <>
-              <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".8px", textTransform: "uppercase", marginBottom: 8 }}>
-                Empty · {inactive.length}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {inactive.map(r => <RoomCard key={r.id} room={r} onJoin={goRoom} />)}
-              </div>
-            </>
-          )}
+      {/* ===== Scrollable body ===== */}
+      <div
+        className="weered-discover-scroll"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
+      >
+        {/* ---- Live Now strip ---- */}
+        {live.length > 0 && (
+          <div
+            style={{
+              padding: "24px 28px 8px",
+              animation: "weeredSlideUp .35s ease both",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
+              <PulseDot size={9} />
+              <span
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: ".1em",
+                  textTransform: "uppercase",
+                  color: GREEN,
+                }}
+              >
+                Live Now
+              </span>
+              <span
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  color: TEXT_MUTED,
+                }}
+              >
+                {live.length}
+              </span>
+            </div>
 
-          {!loading && filtered.length === 0 && (
-            <div style={{ opacity: 0.45, fontSize: 13, padding: "24px 0" }}>No rooms found.</div>
+            <div
+              className="weered-live-strip"
+              style={{
+                display: "flex",
+                gap: 12,
+                overflowX: "auto",
+                paddingBottom: 12,
+              }}
+            >
+              {live.map((lobby) => (
+                <LiveCard
+                  key={lobby.id}
+                  lobby={lobby}
+                  onClick={() => goLobby(lobby.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ---- All Lobbies grid ---- */}
+        <div
+          style={{
+            padding: "20px 28px 40px",
+            animation: "weeredSlideUp .4s ease .05s both",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: ".1em",
+              textTransform: "uppercase",
+              color: TEXT_MUTED,
+              marginBottom: 16,
+            }}
+          >
+            All Lobbies{" "}
+            <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>
+              {filtered.length}
+            </span>
+          </div>
+
+          {filtered.length > 0 ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                gap: 16,
+              }}
+            >
+              {filtered.map((lobby) => (
+                <LobbyCard
+                  key={lobby.id}
+                  lobby={lobby}
+                  onClick={() => goLobby(lobby.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: "48px 0",
+                textAlign: "center",
+                color: TEXT_MUTED,
+                fontSize: 14,
+              }}
+            >
+              {loading
+                ? "Loading lobbies..."
+                : q.trim()
+                  ? "No lobbies match your search."
+                  : "No lobbies found."}
+            </div>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
-}
 
-function RoomCard({ room, onJoin }: { room: RoomRow; onJoin: (id: string) => void }) {
-  const isActive = room.users > 0;
-  return (
-    <button
-      onClick={() => onJoin(room.id)}
-      style={{
-        width: "100%", textAlign: "left", cursor: "pointer",
-        padding: "11px 13px", borderRadius: 14,
-        border: `1px solid ${isActive ? "rgba(124,58,237,.30)" : "rgba(255,255,255,.07)"}`,
-        background: isActive ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.02)",
-        display: "flex", alignItems: "center", gap: 12,
-        transition: "background 0.12s, border-color 0.12s",
-        color: "rgba(243,244,246,.95)",
-      }}
-      onMouseEnter={e => { (e.currentTarget as any).style.background = isActive ? "rgba(124,58,237,.14)" : "rgba(255,255,255,.05)"; }}
-      onMouseLeave={e => { (e.currentTarget as any).style.background = isActive ? "rgba(124,58,237,.08)" : "rgba(255,255,255,.02)"; }}
-    >
-      <RoomIcon id={room.id} name={room.name} />
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {room.name || room.id}
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
-          {room.id !== room.name ? room.id + " · " : ""}
-          {room.locked ? "🔒 locked · " : ""}
-          {room.users > 0 ? `${room.users} online` : "empty"}
-        </div>
-      </div>
-
-      {isActive && (
-        <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 999, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.14)", color: "rgba(216,180,254,.90)", fontWeight: 700, flexShrink: 0 }}>
-          open
-        </span>
-      )}
-    </button>
-  );
+  return createPortal(overlay, document.body);
 }
