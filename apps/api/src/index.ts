@@ -3514,7 +3514,7 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   app.get("/ai/search", async (req, reply) => {
-    const ai = getAI();
+    const ai = await getAI();
     if (!ai) return reply.send({ ok: true, results: [], answer: null });
 
     const q = String((req.query as any).q || "").trim();
@@ -3848,13 +3848,13 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
           }
           // AI Operator bot detection
           if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
-            const ai = getAI();
-            if (ai) {
-              const question = body.replace(/@operator/gi, "").replace(/^\/ask\s*/i, "").trim();
-              if (question.length > 0) {
-                (async () => {
-                  try {
-                    const response = await ai.messages.create({
+            const question = body.replace(/@operator/gi, "").replace(/^\/ask\s*/i, "").trim();
+            if (question.length > 0) {
+              (async () => {
+                try {
+                  const ai = await getAI();
+                  if (!ai) return;
+                  const response = await ai.messages.create({
                       model: "claude-haiku-4-5-20251001",
                       max_tokens: 300,
                       system: `You are "The Operator" — the AI behind Weered, a lobby-based social gaming platform with a GTA street aesthetic. You're street-smart, slightly sarcastic, helpful but with attitude. Keep responses SHORT (1-3 sentences max). You know about: lobbies (gaming communities), Paper (virtual currency), notoriety (XP), FakeOut (paper trading), poker (Texas Hold'em with Paper stakes), crews, challenges, and game integrations (Destiny 2, League of Legends, Fortnite, Marathon). Never break character. Never be mean, just witty. If someone asks something you don't know, deflect with style.`,
@@ -3875,7 +3875,6 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
                   } catch (e) { console.error("[operator]", e); }
                 })();
               }
-            }
           }
           return;
         }
