@@ -1057,10 +1057,10 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   const handleBuyInConfirm = useCallback(
     (seatIndex: number, amount: number) => {
       wsSend({
-        type: "poker:sit",
+        type: "poker:join",
         tableId: state?.tableId || roomId,
         seatIndex,
-        buyIn: amount,
+        buyin: amount,
       });
       setBuyInSeat(null);
     },
