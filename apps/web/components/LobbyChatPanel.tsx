@@ -363,20 +363,22 @@ export default function LobbyChatPanel(
 
       {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
-        <div style={{ position: "relative", paddingBottom: 12, flexShrink: 0 }}>
-          <div className="flex gap-2">
+        <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <input
               ref={inputRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={canType ? "Message..." : chatBlocked ? "Chat is locked." : "Join/admit required..."}
               disabled={!canType}
-              className={
-                "flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors " +
-                (canType
-                  ? "border-white/10 bg-black/10 text-white/90 focus:border-white/20"
-                  : "border-white/10 bg-white/5 text-white/50 cursor-not-allowed")
-              }
+              style={{
+                flex: 1, minWidth: 0, padding: "8px 12px", borderRadius: 10,
+                border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.15)",
+                color: canType ? "rgba(243,244,246,.9)" : "rgba(255,255,255,.5)",
+                fontSize: 13, outline: "none", fontFamily: "inherit",
+                cursor: canType ? "text" : "not-allowed",
+                boxSizing: "border-box" as any,
+              }}
               onKeyDown={(e) => { if (e.key === "Enter" && canSend) onSend(); }}
             />
             <button
@@ -385,9 +387,9 @@ export default function LobbyChatPanel(
               title="GIF"
               style={{
                 borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: gifOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-                padding: "0 8px", fontSize: 11, fontWeight: 700, cursor: canType ? "pointer" : "not-allowed",
+                padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: canType ? "pointer" : "not-allowed",
                 color: canType ? "rgba(216,180,254,.8)" : "rgba(255,255,255,.4)", transition: "background .15s",
-                letterSpacing: ".5px",
+                letterSpacing: ".5px", flexShrink: 0,
               }}
             >
               GIF
@@ -398,8 +400,9 @@ export default function LobbyChatPanel(
               title="Emoji"
               style={{
                 borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: emojiOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-                padding: "0 10px", fontSize: 16, cursor: canType ? "pointer" : "not-allowed",
+                padding: "6px 10px", fontSize: 16, cursor: canType ? "pointer" : "not-allowed",
                 color: canType ? "#fff" : "rgba(255,255,255,.4)", transition: "background .15s",
+                flexShrink: 0,
               }}
             >
               😀
@@ -407,13 +410,14 @@ export default function LobbyChatPanel(
             <button
               onClick={onSend}
               disabled={!canSend}
-              className={
-                "rounded-lg border px-4 py-1.5 text-sm font-semibold transition-colors " +
-                (canSend
-                  ? "border-violet-300/25 bg-violet-500/10 hover:bg-violet-500/15 text-violet-100"
-                  : "border-white/10 bg-white/5 text-white/60 cursor-not-allowed")
-              }
-              style={canSend ? { background: "rgba(124,58,237,.18)", borderColor: "rgba(124,58,237,.35)" } : undefined}
+              style={{
+                borderRadius: 10, border: canSend ? "1px solid rgba(124,58,237,.35)" : "1px solid rgba(255,255,255,.10)",
+                background: canSend ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                color: canSend ? "rgba(216,180,254,.95)" : "rgba(255,255,255,.4)",
+                padding: "6px 14px", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+                cursor: canSend ? "pointer" : "not-allowed", transition: "all .15s",
+                flexShrink: 0,
+              }}
             >
               Send
             </button>
