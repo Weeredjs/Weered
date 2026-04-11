@@ -14,7 +14,7 @@ import { useVoice } from "../VoiceContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | null;
 
 interface Props {
   roomId: string;
@@ -48,6 +48,7 @@ function getToken(): string {
 }
 
 import { avatarBg as avatarColor } from "../../lib/avatarColor";
+import PokerTable from "../PokerTable";
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
@@ -895,6 +896,8 @@ const ctrlBtn: React.CSSProperties = {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose, style }: Props) {
+  const ctx = useWeered() as any;
+  if (mode === "poker") return <PokerTable roomId={roomId} myId={ctx?.me?.id || ""} myName={ctx?.me?.name || ""} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;
   if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
