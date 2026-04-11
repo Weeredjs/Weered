@@ -529,14 +529,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       {/* ── Stage zone ── */}
       <div
         className={[
-          "border-b border-white/[0.07] overflow-hidden",
+          `border-b border-white/[0.07] ${stageMode === "fakeout" || stageMode === "poker" ? "overflow-auto" : "overflow-hidden"}`,
           isFullStageMode ? "" : "transition-all duration-300 ease-in-out",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={(() => {
           if (isFullStageMode) return { height: "clamp(400px, 75vh, 900px)" };
           if (!stageActive) return { height: "40px", flexShrink: 0 };
-          const heights: Record<string, string> = { youtube: "clamp(380px, 68vh, 800px)", browser: "clamp(350px, 65vh, 780px)", twitch: "clamp(380px, 68vh, 800px)", article: "clamp(380px, 65vh, 780px)" };
+          const heights: Record<string, string> = { youtube: "clamp(380px, 68vh, 800px)", browser: "clamp(350px, 65vh, 780px)", twitch: "clamp(380px, 68vh, 800px)", article: "clamp(380px, 65vh, 780px)", fakeout: "clamp(500px, 85vh, 1200px)", poker: "clamp(500px, 85vh, 1000px)" };
           return { height: heights[stageMode!] || "clamp(180px, 35vh, 320px)", flexShrink: 0 };
         })()}
       >
