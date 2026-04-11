@@ -1418,8 +1418,8 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
       )}
 
       {/* Action bar */}
-      {isMyTurn && mySeat && ts.phase !== "waiting" && ts.phase !== "showdown" && (
-        <ActionBar state={state} mySeat={mySeat} />
+      {isSeated && mySeat && ts.phase !== "waiting" && ts.phase !== "showdown" && (
+        <ActionBar state={ts} mySeat={mySeat} />
       )}
 
       {/* Buy-in dialog */}
