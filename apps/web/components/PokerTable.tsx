@@ -1021,13 +1021,13 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   // Toast for last action
   useEffect(() => {
     if (!state?.lastAction) return;
-    const la = state.lastAction;
+    const la = ts.lastAction;
     const key = `${la.userId}-${la.action}-${la.amount ?? ""}`;
     if (key === lastActionRef.current) return;
     lastActionRef.current = key;
 
     // Find the player name
-    const seat = state.seats?.find((s) => s && s.userId === la.userId);
+    const seat = ts.seats?.find((s) => s && s.userId === la.userId);
     const name = seat?.name || "Player";
     let msg = `${name} ${la.action}`;
     if (la.amount !== undefined) msg += ` ${chipStr(la.amount)}`;
@@ -1037,16 +1037,30 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }, [state?.lastAction, state?.seats]);
 
+  // Default empty table state when no server state exists — ensures table always renders
+  const ts: TableState = useMemo(() => state || {
+    tableId: roomId,
+    seats: [null, null, null, null, null, null],
+    communityCards: [],
+    pot: 0,
+    currentBet: 0,
+    dealerIndex: 0,
+    turnIndex: -1,
+    phase: "waiting" as const,
+    blinds: { small: 5, big: 10 },
+    minBuyin: 200,
+    maxBuyin: 2000,
+  }, [state, roomId]);
+
   // Derived state
   const mySeat = useMemo(() => {
-    if (!state) return null;
-    return state.seats?.find((s) => s && s.userId === myId) || null;
-  }, [state, myId]);
+    return ts.seats?.find((s) => s && s.userId === myId) || null;
+  }, [ts, myId]);
 
   const mySeatIndex = mySeat?.seatIndex ?? -1;
   const isMyTurn =
-    state && mySeat && state.turnIndex === mySeatIndex && !mySeat.folded;
-  const isShowdown = state?.phase === "showdown";
+    mySeat && ts.turnIndex === mySeatIndex && !mySeat.folded;
+  const isShowdown = ts.phase === "showdown";
   const isSeated = !!mySeat;
 
   // Actions
@@ -1075,39 +1089,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   }, [state?.tableId, roomId]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
-  if (!state) {
-    return (
-      <div
-        style={{
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          height: "100%", minHeight: 500,
-          background: COLORS.bg,
-          color: "rgba(255,255,255,.5)",
-        }}
-      >
-        {!loaded ? (
-          <div style={{ fontSize: 14, fontWeight: 600 }}>Connecting to table...</div>
-        ) : (
-          <>
-            <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>&#9830;</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.gold, letterSpacing: "1px", marginBottom: 8 }}>POKER TABLE</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", marginBottom: 20 }}>Table activates when someone sits down.</div>
-            <button
-              onClick={() => wsSend({ type: "poker:join", tableId: roomId, buyin: 200 })}
-              style={{
-                padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(212,160,23,.4)",
-                background: "rgba(212,160,23,.12)", color: COLORS.gold,
-                fontSize: 13, fontWeight: 800, cursor: "pointer", letterSpacing: ".5px",
-              }}
-            >
-              Sit Down (200 Paper buy-in)
-            </button>
-          </>
-        )}
-      </div>
-    );
-  }
 
   const tableOuter: CSSProperties = {
     position: "relative",
@@ -1206,7 +1187,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
               letterSpacing: 1.5,
             }}
           >
-            {PHASE_LABELS[state.phase] || state.phase}
+            {PHASE_LABELS[ts.phase] || ts.phase}
           </div>
 
           {/* Blinds */}
@@ -1217,7 +1198,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
               fontWeight: 600,
             }}
           >
-            Blinds {chipStr(state.blinds.small)} / {chipStr(state.blinds.big)}
+            Blinds {chipStr(ts.blinds.small)} / {chipStr(ts.blinds.big)}
           </div>
 
           {/* Spectator label */}
@@ -1273,7 +1254,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
             <div style={feltStitch} />
 
             {/* Pot */}
-            {state.pot > 0 && (
+            {ts.pot > 0 && (
               <div
                 style={{
                   position: "absolute",
@@ -1321,7 +1302,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
                       flexShrink: 0,
                     }}
                   />
-                  {chipStr(state.pot)}
+                  {chipStr(ts.pot)}
                 </div>
               </div>
             )}
@@ -1339,7 +1320,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
               }}
             >
               {Array.from({ length: 5 }).map((_, i) => {
-                const card = state.communityCards[i];
+                const card = ts.communityCards[i];
                 if (card) {
                   return (
                     <CardView
@@ -1347,9 +1328,9 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
                       card={card}
                       large
                       flipping={
-                        (state.phase === "flop" && i < 3) ||
-                        (state.phase === "turn" && i === 3) ||
-                        (state.phase === "river" && i === 4)
+                        (ts.phase === "flop" && i < 3) ||
+                        (ts.phase === "turn" && i === 3) ||
+                        (ts.phase === "river" && i === 4)
                       }
                     />
                   );
@@ -1371,28 +1352,28 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
             </div>
 
             {/* Winner overlay */}
-            {isShowdown && state.winners && state.winners.length > 0 && (
-              <WinnerOverlay winners={state.winners} />
+            {isShowdown && ts.winners && ts.winners.length > 0 && (
+              <WinnerOverlay winners={ts.winners} />
             )}
           </div>
         </div>
 
         {/* Seats */}
-        {state.seats.map((seat, i) => (
+        {ts.seats.map((seat, i) => (
           <SeatView
             key={i}
             seat={seat}
             seatIndex={i}
             isMe={seat?.userId === myId}
-            isDealer={state.dealerIndex === i}
-            isTurn={state.turnIndex === i}
+            isDealer={ts.dealerIndex === i}
+            isTurn={ts.turnIndex === i}
             isShowdown={isShowdown}
             onSitDown={handleSitDown}
           />
         ))}
 
         {/* Bet chips in front of seats */}
-        {state.seats.map((seat, i) => {
+        {ts.seats.map((seat, i) => {
           if (!seat || !seat.bet) return null;
           const pos = BET_POSITIONS[i];
           return (
@@ -1437,15 +1418,15 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
       )}
 
       {/* Action bar */}
-      {isMyTurn && mySeat && state.phase !== "waiting" && state.phase !== "showdown" && (
+      {isMyTurn && mySeat && ts.phase !== "waiting" && ts.phase !== "showdown" && (
         <ActionBar state={state} mySeat={mySeat} />
       )}
 
       {/* Buy-in dialog */}
       {buyInSeat !== null && (
         <BuyInDialog
-          min={state.minBuyin}
-          max={state.maxBuyin}
+          min={ts.minBuyin}
+          max={ts.maxBuyin}
           seatIndex={buyInSeat}
           onConfirm={handleBuyInConfirm}
           onCancel={() => setBuyInSeat(null)}
