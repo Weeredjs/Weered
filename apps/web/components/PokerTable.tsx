@@ -1094,13 +1094,12 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     position: "relative",
     width: "100%",
     height: "100%",
-    minHeight: 600,
     background: COLORS.bg,
     display: "flex",
     flexDirection: "column",
     fontFamily:
       "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    overflow: "hidden",
+    overflow: "auto",
     userSelect: "none",
   };
 
