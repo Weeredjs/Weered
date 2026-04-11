@@ -231,12 +231,22 @@ function OrderEntry({ symbol, lobbyId, livePrice, onTrade }: {
   const quantity = livePrice && parseFloat(usdAmount) > 0 ? parseFloat(usdAmount) / livePrice : 0;
 
   async function placeOrder() {
-    if (!livePrice || quantity <= 0) return;
+    let price = livePrice;
+    // Fallback: fetch price if WS feed isn't connected
+    if (!price) {
+      try {
+        const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+        const j = await r.json();
+        price = parseFloat(j.price);
+      } catch {}
+    }
+    const qty = price && parseFloat(usdAmount) > 0 ? parseFloat(usdAmount) / price : 0;
+    if (!price || qty <= 0) return;
     setLoading(true);
     setResult(null);
     const j = await apiFetch(`/trading/order/${lobbyId}`, {
       method: "POST",
-      body: JSON.stringify({ symbol, side, orderType: "MARKET", quantity }),
+      body: JSON.stringify({ symbol, side, orderType: "MARKET", quantity: qty }),
     });
     setLoading(false);
     if (j.ok) {
@@ -316,7 +326,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, onTrade }: {
 
       <button
         onClick={placeOrder}
-        disabled={loading || !livePrice || quantity <= 0}
+        disabled={loading || parseFloat(usdAmount) <= 0}
         style={{
           width: "100%", padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer",
           fontWeight: 700, fontSize: 14, letterSpacing: ".3px",
@@ -324,7 +334,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, onTrade }: {
             ? "linear-gradient(135deg, #22c55e, #16a34a)"
             : "linear-gradient(135deg, #ef4444, #dc2626)",
           color: "#fff",
-          opacity: loading || !livePrice ? 0.5 : 1,
+          opacity: loading ? 0.5 : 1,
         }}
       >
         {loading ? "Executing..." : `${side === "BUY" ? "LONG" : "SHORT"} ${symbol.replace("USDT", "")}`}
