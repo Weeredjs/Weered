@@ -152,7 +152,7 @@ function useApi() {
     const r = await fetch(`${apiBase}${path}`, {
       method: "POST",
       headers: headers(),
-      body: body ? JSON.stringify(body) : undefined,
+      body: JSON.stringify(body || {}),
     });
     return r.json();
   }, [apiBase, headers]);
