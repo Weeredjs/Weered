@@ -450,7 +450,7 @@ export default function LobbyIdPage() {
             </div>
 
             {/* Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
               {view === "modules" && hasModules ? (
                 lobbyInfo?.moduleType === "MARATHON" ? (
                   <MarathonModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
