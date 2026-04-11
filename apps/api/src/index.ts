@@ -4203,6 +4203,17 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
 
           console.log(`[poker] ${ws.user.name} joined table ${tableId} seat ${emptySeatIndex} with ${buyin} chips`);
           broadcastPokerState(tableId);
+
+          // Auto-start when 2+ players seated and not already in a hand
+          const seatedCount = table.seats.filter(s => s !== null).length;
+          if (seatedCount >= 2 && table.phase === "waiting") {
+            setTimeout(() => {
+              const t = pokerTables.get(tableId);
+              if (t && t.phase === "waiting" && t.seats.filter(s => s !== null).length >= 2) {
+                startPokerHand(t);
+              }
+            }, 2000);
+          }
           return;
         }
 
