@@ -361,7 +361,7 @@ function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId:
 
   async function closePosition(posId: string) {
     setClosing(posId);
-    await apiFetch(`/trading/close/${lobbyId}/${posId}`, { method: "POST" });
+    await apiFetch(`/trading/close/${lobbyId}/${posId}`, { method: "POST", body: JSON.stringify({}) });
     setClosing(null);
     onClose();
   }
