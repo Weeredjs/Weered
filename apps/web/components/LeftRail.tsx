@@ -154,6 +154,18 @@ export default function LeftRail() {
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
   const [q, setQ] = useState("");
+  const [paperBal, setPaperBal] = useState<number | null>(null);
+  useEffect(() => {
+    const tok = typeof localStorage !== "undefined" ? localStorage.getItem("weered_token") : null;
+    if (!tok) return;
+    fetch("https://api.weered.ca/paper/wallet", { headers: { Authorization: `Bearer ${tok}` } })
+      .then(r => r.json()).then(j => { if (typeof j.balance === "number") setPaperBal(j.balance); }).catch(() => {});
+    const iv = setInterval(() => {
+      fetch("https://api.weered.ca/paper/wallet", { headers: { Authorization: `Bearer ${tok}` } })
+        .then(r => r.json()).then(j => { if (typeof j.balance === "number") setPaperBal(j.balance); }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(iv);
+  }, []);
 
   const sub = useMemo(() => {
     const m = pathname.match(/^\/r\/([^\/?#]+)/i);
@@ -469,6 +481,11 @@ export default function LeftRail() {
           >
             <span className="text-[15px] opacity-70">{item.icon}</span>
             <span className="flex-1 font-semibold text-[13px]">{item.label}</span>
+            {item.label === "Paper" && paperBal !== null && (
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#D4A017", fontFamily: "monospace" }}>
+                {paperBal.toLocaleString()}
+              </span>
+            )}
             {item.active && <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_6px_rgba(124,58,237,.4)]" />}
           </Link>
         ))}
