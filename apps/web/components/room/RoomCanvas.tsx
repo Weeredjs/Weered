@@ -42,7 +42,7 @@ function safeJsonParse<T>(s: string | null, fallback: T): T {
 
 // ─── Module pill definitions ──────────────────────────────────────────────────
 
-const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
+const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
   { id: "youtube", icon: "__youtube__",  label: "YouTube", live: true  },
   { id: "twitch",  icon: "__twitch__", label: "Twitch",  live: true  },
@@ -51,7 +51,22 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
   { id: "screen",  icon: "🖥", label: "Screen",  live: true  },
   { id: "video",   icon: "📹", label: "Video",   live: true  },
   { id: "poker",   icon: "♦",  label: "Poker",   live: true  },
+  { id: "fakeout", icon: "📈", label: "FakeOut", live: true  },
 ];
+
+// Module type → which special modules are available in rooms of that lobby
+const LOBBY_MODULE_MAP: Record<string, string[]> = {
+  POKER:   ["voice", "poker"],
+  TRADING: ["voice", "fakeout", "video", "screen"],
+  // Game lobbies get standard media modules, no poker/trading
+  BUNGIE:  ["voice", "youtube", "twitch", "video", "screen"],
+  RIOT:    ["voice", "youtube", "twitch", "video", "screen"],
+  FORTNITE:["voice", "youtube", "twitch", "video", "screen"],
+  MARATHON:["voice", "youtube", "twitch", "video", "screen"],
+};
+
+// Default modules for lobbies without a specific mapping
+const DEFAULT_ROOM_MODULES = ["voice", "youtube", "twitch", "browser", "video", "screen"];
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
@@ -86,7 +101,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const CHAT_HEIGHT = isMobile ? "100%" : CHAT_HEIGHT_DESKTOP;
 
   // Lobby context for this room
-  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string } | null>(null);
+  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string; enabledModules?: string[] } | null>(null);
   const currentLobbyId = w?.currentLobbyId || null;
   useEffect(() => {
     if (!currentLobbyId || currentLobbyId === "lobby") { setLobbyContext(null); return; }
@@ -99,11 +114,19 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             name: j.lobby.name || j.lobby.id,
             logoUrl: j.lobby.logoUrl || undefined,
             moduleType: j.lobby.moduleType || undefined,
+            enabledModules: j.lobby.enabledModules || undefined,
           });
         }
       })
       .catch(() => {});
   }, [currentLobbyId]);
+
+  // Filter modules based on lobby context
+  const MODULES = useMemo(() => {
+    if (!lobbyContext?.moduleType) return ALL_MODULES.filter(m => DEFAULT_ROOM_MODULES.includes(m.id));
+    const allowed = LOBBY_MODULE_MAP[lobbyContext.moduleType] || DEFAULT_ROOM_MODULES;
+    return ALL_MODULES.filter(m => allowed.includes(m.id));
+  }, [lobbyContext?.moduleType]);
 
   const [articleUrl, setArticleUrl]     = useState<string>("");
   const [browserUrl, setBrowserUrl]     = useState<string>("");
