@@ -999,7 +999,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
         return null;
       })
       .then((data) => {
-        if (data) setState(data);
+        if (data?.table) setState(data.table);
       })
       .catch(() => {});
   }, [roomId]);
@@ -1025,7 +1025,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     lastActionRef.current = key;
 
     // Find the player name
-    const seat = state.seats.find((s) => s && s.userId === la.userId);
+    const seat = state.seats?.find((s) => s && s.userId === la.userId);
     const name = seat?.name || "Player";
     let msg = `${name} ${la.action}`;
     if (la.amount !== undefined) msg += ` ${chipStr(la.amount)}`;
@@ -1038,7 +1038,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   // Derived state
   const mySeat = useMemo(() => {
     if (!state) return null;
-    return state.seats.find((s) => s && s.userId === myId) || null;
+    return state.seats?.find((s) => s && s.userId === myId) || null;
   }, [state, myId]);
 
   const mySeatIndex = mySeat?.seatIndex ?? -1;
@@ -1155,6 +1155,18 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     border: "1px dashed rgba(212,160,23,.12)",
     pointerEvents: "none",
   };
+
+  if (!state) {
+    return (
+      <div style={{ ...tableOuter, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>&#9830;</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.gold, letterSpacing: "1px", marginBottom: 8 }}>POKER TABLE</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)" }}>Waiting for players. Table activates when someone sits down.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={tableOuter}>
