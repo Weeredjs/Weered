@@ -978,6 +978,7 @@ function ActionBar({
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function PokerTable({ roomId, myId, myName }: Props) {
   const [state, setState] = useState<TableState | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [buyInSeat, setBuyInSeat] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1000,8 +1001,9 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
       })
       .then((data) => {
         if (data?.table) setState(data.table);
+        setLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setLoaded(true); });
   }, [roomId]);
 
   // Listen for WS state updates
@@ -1077,18 +1079,32 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     return (
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          minHeight: 500,
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          height: "100%", minHeight: 500,
           background: COLORS.bg,
-          color: COLORS.textDim,
-          fontSize: 15,
-          fontWeight: 600,
+          color: "rgba(255,255,255,.5)",
         }}
       >
-        Connecting to table...
+        {!loaded ? (
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Connecting to table...</div>
+        ) : (
+          <>
+            <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>&#9830;</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.gold, letterSpacing: "1px", marginBottom: 8 }}>POKER TABLE</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)", marginBottom: 20 }}>Table activates when someone sits down.</div>
+            <button
+              onClick={() => wsSend({ type: "poker:join", tableId: roomId, buyin: 200 })}
+              style={{
+                padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(212,160,23,.4)",
+                background: "rgba(212,160,23,.12)", color: COLORS.gold,
+                fontSize: 13, fontWeight: 800, cursor: "pointer", letterSpacing: ".5px",
+              }}
+            >
+              Sit Down (200 Paper buy-in)
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -1155,18 +1171,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     border: "1px dashed rgba(212,160,23,.12)",
     pointerEvents: "none",
   };
-
-  if (!state) {
-    return (
-      <div style={{ ...tableOuter, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>&#9830;</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.gold, letterSpacing: "1px", marginBottom: 8 }}>POKER TABLE</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,.4)" }}>Waiting for players. Table activates when someone sits down.</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={tableOuter}>
