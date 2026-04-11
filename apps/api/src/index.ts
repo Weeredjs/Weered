@@ -14,13 +14,28 @@ import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
 import webpush from "web-push";
 
 // ── Anthropic AI SDK (optional) ──────────────────────────────────────────────
-let Anthropic: any = null;
-try { Anthropic = require("@anthropic-ai/sdk"); } catch {}
+let _anthropicModule: any = null;
+let _anthropicLoaded = false;
 
-function getAI(): any | null {
+async function getAI(): Promise<any | null> {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || !Anthropic) return null;
-  return new Anthropic.default({ apiKey: key });
+  if (!key) return null;
+  if (!_anthropicLoaded) {
+    _anthropicLoaded = true;
+    try {
+      _anthropicModule = await import("@anthropic-ai/sdk");
+    } catch (e) {
+      console.error("[ai] Failed to load @anthropic-ai/sdk:", e);
+      _anthropicModule = null;
+    }
+  }
+  if (!_anthropicModule) return null;
+  const Cls = _anthropicModule.default || _anthropicModule.Anthropic || _anthropicModule;
+  return new Cls({ apiKey: key });
+}
+
+function isAIAvailable(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
 const prisma = new PrismaClient();
@@ -3494,7 +3509,7 @@ app.post("/dm/:peerId", async (req, reply) => {
   // ── AI Endpoints ────────────────────────────────────────────────────────────
 
   app.get("/ai/status", async (_req, reply) => {
-    const available = Boolean(process.env.ANTHROPIC_API_KEY && Anthropic);
+    const available = isAIAvailable();
     return reply.send({ ok: true, available });
   });
 
