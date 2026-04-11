@@ -6889,7 +6889,7 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
         take: 10,
       }),
       // Recent friend additions
-      (prisma as any).friendship.findMany({
+      (prisma as any).friendRequest.findMany({
         where: { OR: [{ fromId: u.id }, { toId: u.id }], status: "ACCEPTED", updatedAt: { gte: since } },
         select: { id: true, fromId: true, toId: true, updatedAt: true },
         take: 5,
@@ -9671,7 +9671,7 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
     const cosmeticId = String((req as any).params?.cosmeticId || "");
 
     // Get user's friends
-    const friendRows = await (prisma as any).friendship.findMany({
+    const friendRows = await (prisma as any).friendRequest.findMany({
       where: { OR: [{ senderId: u.id, status: "ACCEPTED" }, { receiverId: u.id, status: "ACCEPTED" }] },
       select: { senderId: true, receiverId: true },
     });
