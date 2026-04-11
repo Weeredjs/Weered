@@ -50,6 +50,7 @@ const MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: 
   { id: "article", icon: "📰", label: "Article", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: true  },
   { id: "video",   icon: "📹", label: "Video",   live: true  },
+  { id: "poker",   icon: "♦",  label: "Poker",   live: true  },
 ];
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
