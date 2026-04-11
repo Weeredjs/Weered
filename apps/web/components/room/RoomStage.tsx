@@ -408,10 +408,12 @@ function useGuardianData(userId: string, moduleType?: string) {
 
 const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Titan: "🛡" };
 
-function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
+function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: string; roomUsers?: any[] }) {
   const guardian = useGuardianData(tile.identity, moduleType);
   const mainChar = guardian?.characters?.[0]; // most recently played
   const notInVoice = tile._notInVoice === true;
+  const userInfo = roomUsers?.find((u: any) => u.id === tile.identity || u.userId === tile.identity);
+  const userAvatar = userInfo?.avatar || null;
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
@@ -439,12 +441,13 @@ function VoiceCard({ tile, moduleType }: { tile: any; moduleType?: string }) {
       {/* Avatar overlapping the banner */}
       <div style={{
         width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
-        background: avatarColor(tile.name, tile.isLocal),
+        background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
         border: "2.5px solid rgba(10,10,20,.9)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 16, fontWeight: 900, color: "#fff",
+        overflow: "hidden",
       }}>
-        {tile.name[0]?.toUpperCase() ?? "?"}
+        {userAvatar ? <img src={userAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
       </div>
 
       {/* Speaking indicator */}
@@ -631,7 +634,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
             alignContent: "start", flex: 1, overflow: "auto", padding: "4px 0",
           }}>
             {allTiles.map(t => (
-              <VoiceCard key={t.sid} tile={t} moduleType={moduleType} />
+              <VoiceCard key={t.sid} tile={t} moduleType={moduleType} roomUsers={roomUsers} />
             ))}
           </div>
         ) : (
