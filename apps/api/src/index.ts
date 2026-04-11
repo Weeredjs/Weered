@@ -3872,7 +3872,7 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
                     if (reply) {
                       const botMsg = {
                         id: randomUUID(),
-                        user: { id: "operator", name: "The Operator", role: "SYSTEM" as any, avatarColor: "#D4A017" },
+                        user: { id: "operator", name: "The Operator", role: "SYSTEM" as any, avatarColor: "#D4A017", avatar: "/brand/roles/operator.svg" },
                         body: reply,
                         ts: Date.now(),
                       };
