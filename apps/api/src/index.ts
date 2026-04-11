@@ -993,10 +993,18 @@ function buildStatePayload(room: RoomState) {
     avatarColor: (u.id ? colorMap.get(u.id) : undefined) ?? (u as any).avatarColor ?? undefined,
     avatar:      (u.id ? avatarMap.get(u.id) : undefined) ?? (u as any).avatar ?? undefined,
   }));
+  // Inject The Operator as a virtual presence if AI is available
+  if (isAIAvailable()) {
+    users.push({
+      id: "operator", name: "The Operator",
+      role: "SYSTEM", globalRole: "GOD",
+      avatarColor: "#D4A017", avatar: "/brand/roles/operator.svg",
+    } as any);
+  }
   return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
     thumbnail: room.thumbnail || null, lobbyId: room.lobbyId || null,
-    users, count: users.length, locked: Boolean(room.locked),
+    users, count: users.length - (isAIAvailable() ? 1 : 0), locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
     activeModule: room.activeModule || null,

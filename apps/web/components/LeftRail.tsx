@@ -564,8 +564,8 @@ export default function LeftRail() {
                     {nm}
                     {f.icon && <span style={{ opacity: 0.85, lineHeight: 1 }}>{f.icon}</span>}
                   </div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", marginTop: 1, fontFamily: "monospace" }}>
-                    {you ? "you" : isLobbyActive && u?.roomName ? `in ${u.roomName}` : roleDisplay(f.badge || "member")}
+                  <div style={{ fontSize: 10, color: (u?.id || u?.userId) === "operator" ? "rgba(212,160,23,.5)" : "rgba(255,255,255,0.28)", marginTop: 1, fontFamily: "monospace" }}>
+                    {(u?.id || u?.userId) === "operator" ? "AI \u00b7 @operator" : you ? "you" : isLobbyActive && u?.roomName ? `in ${u.roomName}` : roleDisplay(f.badge || "member")}
                   </div>
                 </div>
                 {f.badge && (() => {
