@@ -3847,9 +3847,7 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
             }
           }
           // AI Operator bot detection
-          console.log("[operator-debug] checking body:", JSON.stringify(body.slice(0, 50)), "includes @operator:", body.toLowerCase().includes("@operator"));
           if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
-            console.log("[operator-debug] TRIGGERED, getting AI...");
             const question = body.replace(/@operator/gi, "").replace(/^\/ask\s*/i, "").trim();
             if (question.length > 0) {
               (async () => {
