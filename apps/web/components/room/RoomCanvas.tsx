@@ -52,6 +52,9 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "video",   icon: "📹", label: "Video",   live: true  },
   { id: "poker",   icon: "♦",  label: "Poker",   live: true  },
   { id: "fakeout", icon: "📈", label: "FakeOut", live: true  },
+  { id: "destiny", icon: "⚔",  label: "Destiny",  live: true  },
+  { id: "league",  icon: "🏆", label: "League",   live: true  },
+  { id: "fortnite",icon: "🎯", label: "Fortnite", live: true  },
 ];
 
 // Module type → which special modules are available in rooms of that lobby
@@ -59,9 +62,9 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   POKER:   ["voice", "poker"],
   TRADING: ["voice", "fakeout", "video", "screen"],
   // Game lobbies get standard media modules, no poker/trading
-  BUNGIE:  ["voice", "youtube", "twitch", "video", "screen"],
-  RIOT:    ["voice", "youtube", "twitch", "video", "screen"],
-  FORTNITE:["voice", "youtube", "twitch", "video", "screen"],
+  BUNGIE:  ["voice", "destiny", "youtube", "twitch", "video", "screen"],
+  RIOT:    ["voice", "league", "youtube", "twitch", "video", "screen"],
+  FORTNITE:["voice", "fortnite", "youtube", "twitch", "video", "screen"],
   MARATHON:["voice", "youtube", "twitch", "video", "screen"],
 };
 
@@ -529,14 +532,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       {/* ── Stage zone ── */}
       <div
         className={[
-          `border-b border-white/[0.07] ${stageMode === "fakeout" || stageMode === "poker" ? "overflow-auto" : "overflow-hidden"}`,
+          `border-b border-white/[0.07] ${["fakeout","poker","destiny","league","fortnite"].includes(stageMode || "") ? "overflow-auto" : "overflow-hidden"}`,
           isFullStageMode ? "" : "transition-all duration-300 ease-in-out",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={(() => {
           if (isFullStageMode) return { height: "clamp(400px, 75vh, 900px)" };
           if (!stageActive) return { height: "40px", flexShrink: 0 };
-          const heights: Record<string, string> = { youtube: "clamp(380px, 68vh, 800px)", browser: "clamp(350px, 65vh, 780px)", twitch: "clamp(380px, 68vh, 800px)", article: "clamp(380px, 65vh, 780px)", fakeout: "clamp(500px, 85vh, 1200px)", poker: "clamp(500px, 85vh, 1000px)" };
+          const heights: Record<string, string> = { youtube: "clamp(380px, 68vh, 800px)", browser: "clamp(350px, 65vh, 780px)", twitch: "clamp(380px, 68vh, 800px)", article: "clamp(380px, 65vh, 780px)", fakeout: "clamp(500px, 85vh, 1200px)", poker: "clamp(500px, 85vh, 1000px)", destiny: "clamp(500px, 85vh, 1200px)", league: "clamp(500px, 85vh, 1200px)", fortnite: "clamp(500px, 85vh, 1200px)" };
           return { height: heights[stageMode!] || "clamp(180px, 35vh, 320px)", flexShrink: 0 };
         })()}
       >
