@@ -1345,8 +1345,9 @@ export default function LobbyAdminPage() {
 
   const adminRoomId = `@admin-${lobbyId}`;
 
-  // Join the admin room for presence
+  // Join the admin room for presence + chat
   useEffect(() => {
+    try { ctx?.join?.(adminRoomId); } catch {}
     try { ctx?.setActiveRoomId?.(adminRoomId); } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminRoomId]);
