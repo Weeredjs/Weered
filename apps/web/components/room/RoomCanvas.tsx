@@ -690,7 +690,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           )}
 
           {/* ── Bottom pills — always visible ── */}
-          <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(0,0,0,0.15)" }}>
+          <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(10,10,18,0.95)", position: "sticky", bottom: 0, zIndex: 20 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
               {MODULES.map((m) => {
                 const isActive = stageMode === m.id;
