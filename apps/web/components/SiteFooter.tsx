@@ -86,6 +86,8 @@ export default function SiteFooter() {
           <Link href="/guidelines">guidelines</Link>
           <div className="site-footer-divider" />
           <Link href="/contact">contact</Link>
+          <div className="site-footer-divider" />
+          <Link href="/apply">apply to mod</Link>
         </nav>
       </footer>
     </>
