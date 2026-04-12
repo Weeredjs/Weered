@@ -275,6 +275,31 @@ export default function LobbyIdPage() {
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
   const [memberChecked, setMemberChecked] = useState(false);
   const [view, setView] = useState<"rooms" | "feed" | "modules" | "events">("rooms");
+  const [feedHasNew, setFeedHasNew] = useState(false);
+
+  // Check for new feed posts
+  useEffect(() => {
+    const key = `weered:feedSeen:${lobbyId}`;
+    fetch(`${API}/forum/posts?lobbyId=${encodeURIComponent(lobbyId)}&sort=new&limit=1`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(j => {
+        const latest = j?.posts?.[0];
+        if (!latest) return;
+        const seen = localStorage.getItem(key);
+        if (!seen || new Date(latest.createdAt).getTime() > Number(seen)) {
+          setFeedHasNew(true);
+        }
+      })
+      .catch(() => {});
+  }, [lobbyId]);
+
+  // Mark feed as seen when viewing
+  useEffect(() => {
+    if (view === "feed") {
+      setFeedHasNew(false);
+      try { localStorage.setItem(`weered:feedSeen:${lobbyId}`, String(Date.now())); } catch {}
+    }
+  }, [view, lobbyId]);
 
   const isStaff = globalRole === "GOD" || globalRole === "STAFF" || globalRole === "ADMIN";
   const isOwner = !!(me?.id && lobbyInfo?.ownerId && me.id === lobbyInfo.ownerId);
@@ -405,7 +430,12 @@ export default function LobbyIdPage() {
                   Modules
                 </TabBtn>
               )}
-              <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>Feed</TabBtn>
+              <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>
+                Feed
+                {feedHasNew && view !== "feed" && (
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e", display: "inline-block", marginLeft: 5, verticalAlign: "middle" }} />
+                )}
+              </TabBtn>
               <TabBtn active={view === "events"} accent={accent} onClick={() => setView("events")}>Events</TabBtn>
 
               {/* Leave button */}
