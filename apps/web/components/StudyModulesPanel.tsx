@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import StudyQuiz from "./StudyQuiz";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -33,6 +34,7 @@ const S = {
 
 const TABS = [
   { id: "timer" as const,   label: "Focus Timer", icon: "⏱" },
+  { id: "quiz" as const,    label: "Practice Test", icon: "🧠" },
   { id: "rooms" as const,   label: "Study Rooms", icon: "📚" },
   { id: "lfg" as const,     label: "Find Partners", icon: "🤝" },
   { id: "ambient" as const, label: "Ambient",       icon: "🎧" },
@@ -843,6 +845,7 @@ export default function StudyModulesPanel({ lobbyId, accentColor = ACCENT, style
         position: "relative", zIndex: 1,
       }}>
         {tab === "timer"   && <FocusTimer accent={accentColor} />}
+        {tab === "quiz"    && <StudyQuiz />}
         {tab === "rooms"   && <StudyRooms lobbyId={lobbyId} accent={accentColor} />}
         {tab === "lfg"     && <FindPartners lobbyId={lobbyId} accent={accentColor} />}
         {tab === "ambient" && <AmbientTab accent={accentColor} onSceneChange={setAmbientGradient} />}
