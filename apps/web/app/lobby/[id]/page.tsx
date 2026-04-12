@@ -18,6 +18,7 @@ import TradingModulesPanel from "../../../components/TradingModulesPanel";
 import PokerTable from "../../../components/PokerTable";
 import HeadquartersModulesPanel from "../../../components/HeadquartersModulesPanel";
 import CS2ModulesPanel from "../../../components/CS2ModulesPanel";
+import Dota2ModulesPanel from "../../../components/Dota2ModulesPanel";
 import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
@@ -55,6 +56,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   POKER: "Poker",
   HEADQUARTERS: "Headquarters",
   CS2: "Counter-Strike 2",
+  DOTA2: "Dota 2",
 };
 
 type LobbyInfo = {
@@ -327,7 +329,7 @@ export default function LobbyIdPage() {
             _count:         j.lobby._count,
             tiers:          j.lobby.tiers || [],
           });
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2") {
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2") {
             setView("modules");
           } else {
             setView("rooms");
@@ -347,7 +349,7 @@ export default function LobbyIdPage() {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2";
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const showAdmin  = isStaff || isOwner || (membership && membership.roleLevel >= 3);
@@ -506,6 +508,8 @@ export default function LobbyIdPage() {
                   <HeadquartersModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "CS2" ? (
                   <CS2ModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+                ) : lobbyInfo?.moduleType === "DOTA2" ? (
+                  <Dota2ModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : (
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 )

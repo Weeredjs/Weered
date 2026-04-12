@@ -51,6 +51,7 @@ enum ModuleType {
   POKER
   HEADQUARTERS
   CS2
+  DOTA2
 }
 
 model NewsArticle {
