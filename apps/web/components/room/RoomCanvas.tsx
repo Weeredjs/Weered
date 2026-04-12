@@ -438,7 +438,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-w-0 h-full overflow-hidden" style={{ position: "relative" }}>
+    <div className="flex flex-col min-w-0 h-full overflow-auto" style={{ position: "relative" }}>
 
       {/* ── Knock waiting overlay ── */}
       {joinStatus === "knocking" && (
