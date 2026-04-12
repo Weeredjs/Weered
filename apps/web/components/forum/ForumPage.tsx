@@ -84,8 +84,8 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
       margin: embedded ? 0 : "0 auto",
       padding: embedded ? "12px 14px 40px" : "20px 16px 60px",
       fontFamily: FONT,
-      height: embedded ? "100%" : undefined,
-      overflow: embedded ? "auto" : undefined,
+      height: "100%",
+      overflow: "auto",
       scrollbarWidth: "thin" as any,
       scrollbarColor: "rgba(255,255,255,.08) transparent",
     }}>
