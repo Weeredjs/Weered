@@ -48,6 +48,18 @@ export default function LobbyHeroBar({
   const accent  = accentColor || "#7C3AED";
   const initial = (lobbyName || lobbyId || "L").charAt(0).toUpperCase();
 
+  // Banner rotation for STUDY lobbies (4 gorgeous university quad images)
+  const STUDY_BANNERS = ["/brand/lobbies/study-banner-1.png", "/brand/lobbies/study-banner-2.png", "/brand/lobbies/study-banner-3.png", "/brand/lobbies/study-banner-4.png"];
+  const [rotatingBanner, setRotatingBanner] = useState<string | null>(null);
+  useEffect(() => {
+    if (moduleType !== "STUDY") return;
+    const pick = () => STUDY_BANNERS[Math.floor(Math.random() * STUDY_BANNERS.length)];
+    setRotatingBanner(pick());
+    const iv = setInterval(() => setRotatingBanner(pick()), 30000); // rotate every 30s
+    return () => clearInterval(iv);
+  }, [moduleType]);
+  const effectiveBanner = moduleType === "STUDY" && rotatingBanner ? rotatingBanner : bannerUrl;
+
   const twitchGame = gameName || MODULE_GAME[moduleType || ""] || "";
 
   const [stream, setStream]           = useState<FeaturedStream | null>(null);
@@ -80,9 +92,9 @@ export default function LobbyHeroBar({
     <div style={{ position: "relative", flexShrink: 0, overflow: "hidden", minHeight: hasFeatured ? 196 : 78 }}>
 
       {/* Background */}
-      {bannerUrl ? (
+      {effectiveBanner ? (
         <>
-          <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.55 }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${effectiveBanner})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.55, transition: "background-image 1s ease" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,18,0.25) 0%, rgba(10,10,18,0.75) 100%)" }} />
         </>
       ) : (
