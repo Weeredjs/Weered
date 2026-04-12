@@ -539,7 +539,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         style={(() => {
           if (isFullStageMode) return { height: "clamp(400px, 75vh, 900px)" };
           if (!stageActive) return { height: "40px", flexShrink: 0 };
-          const heights: Record<string, string> = { youtube: "clamp(380px, 68vh, 800px)", browser: "clamp(350px, 65vh, 780px)", twitch: "clamp(380px, 68vh, 800px)", article: "clamp(380px, 65vh, 780px)", fakeout: "clamp(500px, 85vh, 1200px)", poker: "clamp(500px, 85vh, 1000px)", destiny: "clamp(500px, 85vh, 1200px)", league: "clamp(500px, 85vh, 1200px)", fortnite: "clamp(500px, 85vh, 1200px)" };
+          const heights: Record<string, string> = { youtube: "clamp(300px, calc(100vh - 220px), 800px)", browser: "clamp(300px, calc(100vh - 220px), 780px)", twitch: "clamp(300px, calc(100vh - 220px), 800px)", article: "clamp(300px, calc(100vh - 220px), 780px)", fakeout: "clamp(400px, calc(100vh - 180px), 1200px)", poker: "clamp(400px, calc(100vh - 180px), 1000px)", destiny: "clamp(400px, calc(100vh - 180px), 1200px)", league: "clamp(400px, calc(100vh - 180px), 1200px)", fortnite: "clamp(400px, calc(100vh - 180px), 1200px)" };
           return { height: heights[stageMode!] || "clamp(180px, 35vh, 320px)", flexShrink: 0 };
         })()}
       >
