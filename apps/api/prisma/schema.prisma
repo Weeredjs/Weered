@@ -52,6 +52,7 @@ enum ModuleType {
   HEADQUARTERS
   CS2
   DOTA2
+  STUDY
 }
 
 model NewsArticle {
