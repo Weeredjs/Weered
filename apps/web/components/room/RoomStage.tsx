@@ -14,7 +14,7 @@ import { useVoice } from "../VoiceContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "hq" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "hq" | "cs2" | null;
 
 interface Props {
   roomId: string;
@@ -54,6 +54,7 @@ import LobbyModulesPanel from "../LobbyModulesPanel";
 import LeagueModulesPanel from "../LeagueModulesPanel";
 import FortniteModulesPanel from "../FortniteModulesPanel";
 import HeadquartersModulesPanel from "../HeadquartersModulesPanel";
+import CS2ModulesPanel from "../CS2ModulesPanel";
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
@@ -911,6 +912,7 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   if (mode === "league") return <LeagueModulesPanel lobbyId={ctx?.currentLobbyId || "league-of-legends"} gameName="League of Legends" accentColor="#C89B3C" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "fortnite") return <FortniteModulesPanel lobbyId={ctx?.currentLobbyId || "fortnite"} gameName="Fortnite" accentColor="#00D4FF" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "hq") return <HeadquartersModulesPanel lobbyId={ctx?.currentLobbyId || roomId} accentColor="#3B82F6" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "cs2") return <CS2ModulesPanel lobbyId={ctx?.currentLobbyId || "counter-strike-2"} gameName="Counter-Strike 2" accentColor="#DE9B35" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;
   if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
