@@ -7,6 +7,13 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 const MODULE_GAME: Record<string, string> = {
   BUNGIE: "Destiny 2",
+  MARATHON: "Marathon",
+  RIOT: "League of Legends",
+  FORTNITE: "Fortnite",
+  CS2: "Counter-Strike",
+  DOTA2: "Dota 2",
+  TRADING: "Just Chatting",
+  POKER: "Poker",
   MLB: "MLB The Show 25",
   PGA: "Golf",
 };
