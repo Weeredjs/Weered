@@ -5162,7 +5162,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
     // Audit
     await (prisma as any).lobbyAudit.create({
-      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId, type: "member_join", actorId: u.id, actorName: user?.name || "Unknown", detail: `Joined lobby (${mode})`, ts: new Date() },
+      data: { id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, lobbyId, type: "member_join", actorId: u.id, actorName: user?.name || "Unknown", note: `Joined lobby (${mode})`, ts: new Date() },
     });
 
     return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });
