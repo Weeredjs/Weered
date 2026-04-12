@@ -342,7 +342,7 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                 )}
 
                 {/* Actions */}
-                <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   {!isFull && (
                     <button
                       style={{ ...S.btnPri, fontSize: 11, padding: "5px 14px" }}
@@ -353,6 +353,14 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                     style={{ ...S.btn, fontSize: 11, padding: "5px 14px" }}
                     onClick={() => leave(p.id)}
                   >Leave</button>
+                  <a
+                    href="steam://run/730"
+                    style={{
+                      ...S.btn, fontSize: 10, padding: "5px 12px", textDecoration: "none",
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      color: "#22c55e", borderColor: "rgba(34,197,94,.25)",
+                    }}
+                  >&#9654; Launch CS2</a>
                 </div>
               </div>
             );
@@ -373,7 +381,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
 
   const load = useCallback(async () => {
     try {
-      const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent(gameName)}&first=20`);
+      const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent("Counter-Strike")}&first=20`);
       if (j.ok) setStreams(j.streams || []);
     } catch {}
     setLoading(false);
