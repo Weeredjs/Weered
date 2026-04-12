@@ -438,7 +438,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-w-0 h-full" style={{ position: "relative", overflow: "hidden" }}>
+    <div className="flex flex-col min-w-0" style={{ position: "relative", overflow: "hidden", height: "calc(100vh - 32px)" }}>
 
       {/* ── Knock waiting overlay ── */}
       {joinStatus === "knocking" && (
@@ -537,10 +537,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={(() => {
-          if (isFullStageMode) return { height: "clamp(400px, 75vh, 900px)" };
           if (!stageActive) return { height: "40px", flexShrink: 0 };
-          const heights: Record<string, string> = { youtube: "clamp(300px, calc(100vh - 220px), 800px)", browser: "clamp(300px, calc(100vh - 220px), 780px)", twitch: "clamp(300px, calc(100vh - 220px), 800px)", article: "clamp(300px, calc(100vh - 220px), 780px)", fakeout: "clamp(400px, calc(100vh - 180px), 1200px)", poker: "clamp(400px, calc(100vh - 180px), 1000px)", destiny: "clamp(400px, calc(100vh - 180px), 1200px)", league: "clamp(400px, calc(100vh - 180px), 1200px)", fortnite: "clamp(400px, calc(100vh - 180px), 1200px)" };
-          return { height: heights[stageMode!] || "clamp(180px, 35vh, 320px)", flexShrink: 0 };
+          return { flex: 1, minHeight: 0, overflow: "auto" };
         })()}
       >
         {!stageActive && (
