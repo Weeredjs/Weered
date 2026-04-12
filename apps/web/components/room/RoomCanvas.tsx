@@ -55,6 +55,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "destiny", icon: "⚔",  label: "Destiny",  live: true  },
   { id: "league",  icon: "🏆", label: "League",   live: true  },
   { id: "fortnite",icon: "🎯", label: "Fortnite", live: true  },
+  { id: "hq",      icon: "🏢", label: "HQ",       live: true  },
 ];
 
 // Module type → which special modules are available in rooms of that lobby
@@ -66,6 +67,7 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   RIOT:    ["voice", "league", "youtube", "twitch", "video", "screen"],
   FORTNITE:["voice", "fortnite", "youtube", "twitch", "video", "screen"],
   MARATHON:["voice", "youtube", "twitch", "video", "screen"],
+  HEADQUARTERS:["voice", "hq", "video", "screen"],
 };
 
 // Default modules for lobbies without a specific mapping

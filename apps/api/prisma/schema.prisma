@@ -49,6 +49,7 @@ enum ModuleType {
   FORTNITE
   TRADING
   POKER
+  HEADQUARTERS
 }
 
 model NewsArticle {
