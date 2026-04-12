@@ -640,6 +640,27 @@ export default function LobbyBrowser() {
           </span>
         )}
 
+        {/* Create Lobby CTA */}
+        <button
+          onClick={() => { close(); router.push("/lobby/create"); }}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 20px", borderRadius: 12,
+            background: "linear-gradient(135deg, rgba(88,0,229,.15), rgba(212,160,23,.10))",
+            border: "1px solid rgba(212,160,23,.30)",
+            cursor: "pointer", flexShrink: 0,
+            transition: "all .2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(88,0,229,.25), rgba(212,160,23,.18))"; e.currentTarget.style.borderColor = "rgba(212,160,23,.50)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(88,0,229,.15), rgba(212,160,23,.10))"; e.currentTarget.style.borderColor = "rgba(212,160,23,.30)"; }}
+        >
+          <span style={{ fontSize: 18 }}>+</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#D4A017", letterSpacing: "-.2px" }}>Create Your Lobby</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 1 }}>Your game. Your rules.</div>
+          </div>
+        </button>
+
         {/* Close */}
         <button
           onClick={close}
