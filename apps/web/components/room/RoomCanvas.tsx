@@ -438,7 +438,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-w-0 h-full overflow-auto" style={{ position: "relative" }}>
+    <div className="flex flex-col min-w-0 h-full" style={{ position: "relative", overflow: "hidden" }}>
 
       {/* ── Knock waiting overlay ── */}
       {joinStatus === "knocking" && (
@@ -532,7 +532,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       {/* ── Stage zone ── */}
       <div
         className={[
-          `border-b border-white/[0.07] ${["fakeout","poker","destiny","league","fortnite"].includes(stageMode || "") ? "overflow-auto" : "overflow-hidden"}`,
+          `border-b border-white/[0.07] overflow-auto`,
           isFullStageMode ? "" : "transition-all duration-300 ease-in-out",
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
@@ -689,8 +689,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             <div className="flex-1 min-h-0" />
           )}
 
-          {/* ── Bottom pills — always visible ── */}
-          <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(10,10,18,0.95)", position: "sticky", bottom: 0, zIndex: 20 }}>
+          {/* ── Bottom pills — rendered here but also duplicated at root level for visibility ── */}
+          <div style={{ display: "none" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
               {MODULES.map((m) => {
                 const isActive = stageMode === m.id;
@@ -943,6 +943,38 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           )}
         </div>
 
+      </div>
+
+      {/* ── Bottom module pills — root level so never clipped ── */}
+      <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(10,10,18,0.95)", zIndex: 20 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+          {MODULES.map((m) => {
+            const isActive = stageMode === m.id;
+            const isLive = m.live;
+            const isTwitch = m.icon === "__twitch__";
+            const isYT = m.icon === "__youtube__";
+            const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#38bdf8" : "#7C3AED";
+            return (
+              <button key={m.id} type="button" disabled={!isLive} onClick={() => isLive && handleModuleClick(m.id)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "6px 14px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+                  letterSpacing: "0.04em", fontFamily: "monospace", cursor: isLive ? "pointer" : "default",
+                  transition: "all 0.15s ease",
+                  border: isActive ? `1px solid ${accent}66` : "1px solid rgba(255,255,255,0.06)",
+                  background: isActive ? `${accent}22` : "rgba(255,255,255,0.02)",
+                  color: isActive ? accent : isLive ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)",
+                }}
+              >
+                {isTwitch ? <TwitchIcon size={13} color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.75)" : "rgba(255,255,255,0.18)"} />
+                  : isYT ? <YouTubeIcon size={15} color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.6)" : "rgba(255,255,255,0.18)"} />
+                  : <span style={{ fontSize: 12, lineHeight: 1 }}>{m.icon}</span>}
+                {m.label}
+                {isActive && <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.1em", padding: "1px 5px", borderRadius: 4, background: `${accent}44`, color: accent, textTransform: "uppercase" }}>ON</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Floating voice pill — connected to a DIFFERENT room ── */}
