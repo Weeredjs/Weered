@@ -159,7 +159,7 @@ export default function PostDetail({ postId }: { postId: string }) {
   const cat = CATEGORY_CONFIG[post.category];
 
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 16px 60px", fontFamily: FONT }}>
+    <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 16px 60px", fontFamily: FONT, height: "100%", overflow: "auto" }}>
       {/* Back link */}
       <button onClick={() => router.push("/forum")} style={{
         background: "none", border: "none", color: "rgba(167,139,250,.6)",
