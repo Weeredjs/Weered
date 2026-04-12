@@ -124,7 +124,8 @@ export default function ApplyPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
 
         .mod-root {
-          min-height: 100vh;
+          height: 100%;
+          overflow-y: auto;
           background: #050810;
           display: flex;
           align-items: flex-start;
