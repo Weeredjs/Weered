@@ -127,15 +127,13 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     return () => clearInterval(poll);
   }, []);
 
-  // ── Create player when videoId + API ready ──
+  // ── Create player once when API ready, load videos into it ──
+  const currentVideoRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!videoId || !ytReady || !playerDivRef.current) return;
-    if (playerRef.current) {
-      playerRef.current.loadVideoById(videoId);
-      return;
-    }
+    if (!ytReady || !playerDivRef.current || playerRef.current) return;
+    // Create a placeholder player (no video yet)
     playerRef.current = new window.YT.Player(playerDivRef.current, {
-      videoId,
       width: "100%",
       height: "100%",
       playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
@@ -153,9 +151,13 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
           }
         },
         onReady: () => {
-          // If joining late, seek to buffered position and auto-play if room is playing
+          // If we already have a videoId queued, load it now
+          if (currentVideoRef.current) {
+            playerRef.current?.loadVideoById?.(currentVideoRef.current);
+          }
+          // If joining late, seek to buffered position
           const buf = ytStateByRoom?.[roomId];
-          if (buf?.videoId && buf.videoId === videoId) {
+          if (buf?.videoId && buf.videoId === currentVideoRef.current) {
             const drift = (Date.now() - (buf.updatedAt || Date.now())) / 1000;
             const target = (buf.position || 0) + (buf.playing ? drift : 0);
             if (target > 2) {
@@ -174,8 +176,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     return () => {
       const p = playerRef.current;
       playerRef.current = null;
-      // Defer destroy to next tick so React finishes its unmount first
-      // This prevents "Failed to execute 'removeChild' on 'Node'" errors
       setTimeout(() => {
         try {
           try { const iframe = p?.getIframe?.(); iframe?.parentNode?.removeChild(iframe); } catch {}
@@ -183,7 +183,16 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         } catch {}
       }, 0);
     };
-  }, [videoId, ytReady]);
+  }, [ytReady]);
+
+  // ── Load video into existing player when videoId changes ──
+  useEffect(() => {
+    currentVideoRef.current = videoId;
+    if (!videoId || !playerRef.current) return;
+    try {
+      playerRef.current.loadVideoById(videoId);
+    } catch {}
+  }, [videoId]);
 
   // ── Listen for WS youtube events ──
   useEffect(() => {
@@ -316,8 +325,10 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
 
   const stopVideo = () => {
     sendRaw?.({ type: "youtube:stop", roomId });
+    try { playerRef.current?.stopVideo?.(); } catch {}
     setVideoId(null);
     setPlaying(false);
+    setSearchMode(true);
   };
 
   return (
@@ -336,19 +347,13 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, color: "#fff", padding: "2px 4px", marginLeft: videoId ? 0 : "auto" }}>✕</button>
       </div>
 
-      {/* Player or load prompt */}
-      {videoId ? (
-        <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 0, overflow: "hidden" }}>
-          {/* Player */}
-          <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0, overflow: "hidden" }}>
-            <style>{`.yt-stage-player iframe { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }`}</style>
-            <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
-            {!ytReady && (
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, opacity: 0.5 }}>
-                Loading player…
-              </div>
-            )}
-          </div>
+      {/* Player div always in DOM — never unmounted */}
+      <style>{`.yt-stage-player iframe { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }`}</style>
+      <div style={{ display: videoId ? "flex" : "none", flex: 1, minHeight: 0, gap: 0, overflow: "hidden" }}>
+        {/* Player */}
+        <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0, overflow: "hidden" }}>
+          <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+        </div>
           {/* Search / Queue sidebar */}
           <div style={{ width: 220, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, overflow: "hidden" }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35 }}>Now Playing</div>
@@ -394,7 +399,8 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
             </div>
           </div>
         </div>
-      ) : (
+      </div>
+      {!videoId && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 16, overflow: "hidden" }}>
           {/* Search bar */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
