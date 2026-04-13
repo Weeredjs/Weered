@@ -6,6 +6,7 @@ import { useWeered } from "../../components/WeeredProvider";
 import { avatarBg } from "../../lib/avatarColor";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
+import FeatureShowcase from "../../components/FeatureShowcase";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -510,6 +511,7 @@ export default function HomePage() {
   const router = useRouter();
   const { rooms, usersByRoom, me, join } = useWeered() as any;
   const [search, setSearch] = useState("");
+  const [showShowcase, setShowShowcase] = useState(false);
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
   // Aggregated lobby presence counts (live users across all rooms)
@@ -747,6 +749,19 @@ export default function HomePage() {
         </div>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,.25)", fontSize: 14, pointerEvents: "none" }}>&#8981;</span>
+          <button
+            onClick={() => setShowShowcase(true)}
+            style={{
+              background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
+              border: "1px solid rgba(124,58,237,0.25)", borderRadius: 8, padding: "7px 14px",
+              color: "#a78bfa", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+              letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", marginRight: 6,
+            }}
+            onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.15))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.4)"; }}
+            onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.25)"; }}
+          >
+            What can you do here?
+          </button>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby..."
             style={{
               background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
@@ -897,6 +912,8 @@ export default function HomePage() {
         @keyframes weered-ripple{0%{transform:scale(.5);opacity:.5}100%{transform:scale(2);opacity:0}}
         div::-webkit-scrollbar{display:none}
       `}</style>
+
+      <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
     </div>
   );
 }
