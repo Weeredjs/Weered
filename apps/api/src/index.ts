@@ -2381,8 +2381,8 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
   app.get("/me/location", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
-    const u = await prisma.user.findUnique({ where: { id: viewer.id }, select: { locationOptIn: true, locationH3: true, locationUpdatedAt: true } });
-    return reply.send({ optIn: u?.locationOptIn || false, h3: u?.locationH3 || null, updatedAt: u?.locationUpdatedAt || null });
+    const u = await prisma.user.findUnique({ where: { id: viewer.id }, select: { locationOptIn: true, latitude: true, longitude: true, locationH3: true, locationUpdatedAt: true } });
+    return reply.send({ optIn: u?.locationOptIn || false, latitude: u?.latitude || null, longitude: u?.longitude || null, h3: u?.locationH3 || null, updatedAt: u?.locationUpdatedAt || null });
   });
 
   // GET /map/hexes — aggregated hex grid cells with user counts (public)
