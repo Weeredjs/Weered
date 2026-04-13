@@ -116,20 +116,24 @@ export default function MapContent() {
     import("leaflet").then(L => {
       hexLayer.current.clearLayers();
 
+      // Scale intensity logarithmically so 1 user isn't a solid block
       const maxCount = Math.max(1, ...hexes.map(h => h.count));
 
       for (const hex of hexes) {
-        const intensity = Math.min(1, hex.count / maxCount);
+        // Log scale: 1 user = subtle, 10+ users = vivid
+        const raw = hex.count / Math.max(maxCount, 10);
+        const intensity = Math.min(1, Math.log(1 + hex.count) / Math.log(1 + Math.max(maxCount, 10)));
         const color = intensityColor(intensity);
-        const opacity = 0.15 + intensity * 0.55;
+        const fillOpacity = 0.08 + intensity * 0.30; // 0.08 to 0.38 range
+        const borderOpacity = 0.15 + intensity * 0.35;
 
         // h3 boundary is [[lat,lng],...] — Leaflet wants [lat,lng]
         const polygon = L.polygon(hex.boundary as [number, number][], {
           color: color,
           weight: 1,
           fillColor: color,
-          fillOpacity: opacity,
-          opacity: 0.6,
+          fillOpacity,
+          opacity: borderOpacity,
         });
 
         polygon.bindPopup(
