@@ -24,6 +24,7 @@ export default function MapContent() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const [clickToPlace, setClickToPlace] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   // Check opt-in status on mount + restore saved position
   useEffect(() => {
@@ -158,23 +159,16 @@ export default function MapContent() {
     });
   }, [hexes, mapReady, userPos]);
 
-  // Enable location — checks permission state first
-  const enableLocation = async () => {
+  // Enable location — always attempt GPS directly
+  const enableLocation = () => {
     setLocating(true);
-    // Check if GPS is already denied by the browser
-    let permState = "prompt";
-    try {
-      if (navigator.permissions) {
-        const perm = await navigator.permissions.query({ name: "geolocation" as PermissionName });
-        permState = perm.state; // "granted" | "denied" | "prompt"
-      }
-    } catch {}
+    setGpsError(null);
 
-    if (permState === "denied") {
-      // Browser won't re-prompt — go straight to manual
+    if (!navigator.geolocation) {
       setLocating(false);
       setShowConsent(false);
       setClickToPlace(true);
+      setGpsError("Your browser does not support geolocation.");
       return;
     }
 
@@ -194,6 +188,7 @@ export default function MapContent() {
         } catch {}
         setLocating(false);
         setShowConsent(false);
+        setGpsError(null);
         if (leafletMap.current) {
           leafletMap.current.setView([lat, lng], 10, { animate: true });
         }
@@ -202,10 +197,16 @@ export default function MapContent() {
         setLocating(false);
         setShowConsent(false);
         setClickToPlace(true);
-        // Log for debugging — err.code 1=denied, 2=unavailable, 3=timeout
+        const reasons: Record<number, string> = {
+          1: "Permission denied — check browser AND device location settings",
+          2: "Position unavailable — turn on Location Services in your device settings",
+          3: "GPS timed out — try again or place manually",
+        };
+        const msg = reasons[err.code] || `Unknown error (code ${err.code})`;
+        setGpsError(msg);
         console.log(`[map] GPS failed: code=${err.code} msg=${err.message}`);
       },
-      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }
     );
   };
 
@@ -377,9 +378,12 @@ export default function MapContent() {
             <span style={{ fontSize: 20 }}>📍</span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Click the map to set your location</div>
-              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)" }}>GPS unavailable — drop your pin manually instead</div>
+              <div style={{ fontSize: 11, color: gpsError ? "#f87171" : "rgba(148,163,184,0.5)" }}>
+                {gpsError || "GPS unavailable — drop your pin manually instead"}
+              </div>
             </div>
-            <button className="map-btn map-btn-ghost" style={{ marginLeft: 8 }} onClick={() => setClickToPlace(false)}>Cancel</button>
+            <button className="map-btn map-btn-primary" style={{ marginLeft: 8, fontSize: 11 }} onClick={() => { setClickToPlace(false); setGpsError(null); enableLocation(); }}>Try GPS</button>
+            <button className="map-btn map-btn-ghost" style={{ marginLeft: 4 }} onClick={() => { setClickToPlace(false); setGpsError(null); }}>Cancel</button>
           </div>
         )}
 
