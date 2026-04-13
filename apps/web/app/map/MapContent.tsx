@@ -25,13 +25,18 @@ export default function MapContent() {
   const [mapReady, setMapReady] = useState(false);
   const [clickToPlace, setClickToPlace] = useState(false);
 
-  // Check opt-in status on mount
+  // Check opt-in status on mount + restore saved position
   useEffect(() => {
     const h = authHeaders();
     if (!h.Authorization) { setOptIn(false); return; }
     fetch(`${API}/me/location`, { headers: h })
       .then(r => r.json())
-      .then(j => setOptIn(j.optIn || false))
+      .then(j => {
+        setOptIn(j.optIn || false);
+        if (j.optIn && j.latitude && j.longitude) {
+          setUserPos([j.latitude, j.longitude]);
+        }
+      })
       .catch(() => setOptIn(false));
   }, []);
 
@@ -98,6 +103,12 @@ export default function MapContent() {
     return () => { cancelled = true; };
   }, []);
 
+  // Pan to saved position once map + position are both ready
+  useEffect(() => {
+    if (!mapReady || !userPos || !leafletMap.current) return;
+    leafletMap.current.setView(userPos, Math.max(leafletMap.current.getZoom(), 8), { animate: true });
+  }, [mapReady, userPos]);
+
   // Draw hex polygons when data or map changes
   useEffect(() => {
     if (!mapReady || !hexLayer.current) return;
@@ -147,15 +158,31 @@ export default function MapContent() {
     });
   }, [hexes, mapReady, userPos]);
 
-  // Enable location
-  const enableLocation = () => {
+  // Enable location — checks permission state first
+  const enableLocation = async () => {
     setLocating(true);
+    // Check if GPS is already denied by the browser
+    let permState = "prompt";
+    try {
+      if (navigator.permissions) {
+        const perm = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+        permState = perm.state; // "granted" | "denied" | "prompt"
+      }
+    } catch {}
+
+    if (permState === "denied") {
+      // Browser won't re-prompt — go straight to manual
+      setLocating(false);
+      setShowConsent(false);
+      setClickToPlace(true);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setUserPos([lat, lng]);
-        // Send to API
         try {
           await fetch(`${API}/me/location`, {
             method: "POST",
@@ -167,7 +194,6 @@ export default function MapContent() {
         } catch {}
         setLocating(false);
         setShowConsent(false);
-        // Pan to user
         if (leafletMap.current) {
           leafletMap.current.setView([lat, lng], 10, { animate: true });
         }
@@ -177,7 +203,7 @@ export default function MapContent() {
         setShowConsent(false);
         setClickToPlace(true);
       },
-      { enableHighAccuracy: false, maximumAge: 300000 }
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
     );
   };
 
