@@ -3514,6 +3514,30 @@ app.post("/dm/:peerId", async (req, reply) => {
     }
   });
 
+  // ── Persistent Banner ──────────────────────────────────────────────────────
+  let siteBanner: { message: string; level: string; from: string; ts: number } | null = {
+    message: "Early access build — things may break. Report bugs in the Forum. New features ship daily. Type @operator in any chat for help.",
+    level: "info",
+    from: "Weered",
+    ts: 1,
+  };
+
+  app.get("/banner", async (_req, reply) => {
+    return reply.send({ ok: true, banner: siteBanner });
+  });
+
+  app.post("/staff/banner", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false });
+    const { message, level, clear } = (req as any).body || {};
+    if (clear) { siteBanner = null; return reply.send({ ok: true, banner: null }); }
+    if (!message) return reply.code(400).send({ ok: false, error: "message required" });
+    siteBanner = { message, level: level || "info", from: u.name, ts: 1 };
+    return reply.send({ ok: true, banner: siteBanner });
+  });
+
   // ── AI Endpoints ────────────────────────────────────────────────────────────
 
   app.get("/ai/status", async (_req, reply) => {
