@@ -53,6 +53,7 @@ enum ModuleType {
   CS2
   DOTA2
   STUDY
+  PUBG
 }
 
 model NewsArticle {

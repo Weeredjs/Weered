@@ -38,6 +38,7 @@ const SECTIONS = [
       { label: "Destiny 2", desc: "Bungie API — character viewer, exotic collection, raid stats, vendor sales. Full guardian profile." },
       { label: "League of Legends", desc: "Riot API — summoner lookup, ranked stats, champion rotation, leaderboards." },
       { label: "Fortnite", desc: "Player stats, item shop, cosmetics browser, in-game news feed." },
+      { label: "PUBG", desc: "Krafton API — player stats, weapon mastery, match history with full telemetry, seasonal leaderboards." },
       { label: "CS2 & Dota 2", desc: "Squad finders with rank/region filters. Stack up with people who actually play your role." },
       { label: "LFG (Looking for Group)", desc: "Every game lobby has a built-in squad finder. Filter by rank, region, playstyle. No more solo queue." },
     ],
