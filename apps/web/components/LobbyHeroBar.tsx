@@ -49,16 +49,20 @@ export default function LobbyHeroBar({
   const initial = (lobbyName || lobbyId || "L").charAt(0).toUpperCase();
 
   // Banner rotation for STUDY lobbies (4 gorgeous university quad images)
-  const STUDY_BANNERS = ["/brand/lobbies/study-banner-1.png", "/brand/lobbies/study-banner-2.png", "/brand/lobbies/study-banner-3.png", "/brand/lobbies/study-banner-4.png"];
+  const ROTATING_BANNERS: Record<string, string[]> = {
+    STUDY: ["/brand/lobbies/study-banner-1.png", "/brand/lobbies/study-banner-2.png", "/brand/lobbies/study-banner-3.png", "/brand/lobbies/study-banner-4.png"],
+    NHL: ["/brand/lobbies/nhl-banner-1.png", "/brand/lobbies/nhl-banner-2.png", "/brand/lobbies/nhl-banner-3.png", "/brand/lobbies/nhl-banner-4.png"],
+  };
   const [rotatingBanner, setRotatingBanner] = useState<string | null>(null);
   useEffect(() => {
-    if (moduleType !== "STUDY") return;
-    const pick = () => STUDY_BANNERS[Math.floor(Math.random() * STUDY_BANNERS.length)];
+    const pool = ROTATING_BANNERS[moduleType || ""] || (lobbyId === "nhl" ? ROTATING_BANNERS.NHL : null);
+    if (!pool) return;
+    const pick = () => pool[Math.floor(Math.random() * pool.length)];
     setRotatingBanner(pick());
-    const iv = setInterval(() => setRotatingBanner(pick()), 30000); // rotate every 30s
+    const iv = setInterval(() => setRotatingBanner(pick()), 30000);
     return () => clearInterval(iv);
-  }, [moduleType]);
-  const effectiveBanner = moduleType === "STUDY" && rotatingBanner ? rotatingBanner : bannerUrl;
+  }, [moduleType, lobbyId]);
+  const effectiveBanner = rotatingBanner || bannerUrl;
 
   const twitchGame = gameName || MODULE_GAME[moduleType || ""] || "";
 
