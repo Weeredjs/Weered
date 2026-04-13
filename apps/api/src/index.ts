@@ -10231,21 +10231,29 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
   });
 
   // GET /pubg/leaderboard/:platform/:mode — season leaderboard
-  app.get("/pubg/leaderboard/:platform/:mode", async (req, reply) => {
-    const platform = String((req as any).params?.platform || "steam");
-    const mode = String((req as any).params?.mode || "squad-fpp");
+  // Leaderboard API uses region-specific shards (pc-na, xbox-na, psn-na), not "steam"
+  const LEADERBOARD_SHARD_MAP: Record<string, string> = {
+    steam: "pc-na", pc: "pc-na", xbox: "xbox-na", psn: "psn-na",
+    "pc-na": "pc-na", "pc-eu": "pc-eu", "pc-as": "pc-as", "pc-oc": "pc-oc",
+    "xbox-na": "xbox-na", "xbox-eu": "xbox-eu", "psn-na": "psn-na", "psn-eu": "psn-eu",
+  };
 
-    const cacheKey = `pubg:lb:${platform}:${mode}`;
+  app.get("/pubg/leaderboard/:platform/:mode", async (req, reply) => {
+    const rawPlatform = String((req as any).params?.platform || "steam");
+    const mode = String((req as any).params?.mode || "squad-fpp");
+    const lbShard = LEADERBOARD_SHARD_MAP[rawPlatform] || "pc-na";
+
+    const cacheKey = `pubg:lb:${lbShard}:${mode}`;
     const cached = pubgCacheGet(cacheKey);
     if (cached) return reply.send(cached);
 
     try {
-      // Get current season first
-      const seasonsData = await pubgGet(`/shards/${platform}/seasons`);
+      // Get current season (use "steam" shard for season list — it's universal)
+      const seasonsData = await pubgGet(`/shards/steam/seasons`);
       const currentSeason = seasonsData?.data?.find((s: any) => s.attributes?.isCurrentSeason) || seasonsData?.data?.[seasonsData.data.length - 1];
       if (!currentSeason) return reply.send({ ok: false, error: "no_season" });
 
-      const data = await pubgGet(`/shards/${platform}/leaderboards/${currentSeason.id}/${mode}?page[number]=0`);
+      const data = await pubgGet(`/shards/${lbShard}/leaderboards/${currentSeason.id}/${mode}`);
       if (!data?.included) return reply.send({ ok: false, error: "leaderboard_unavailable" });
 
       const players = (data.included || [])
@@ -10256,10 +10264,13 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           stats: {
             wins: p.attributes?.stats?.wins || 0,
             kills: p.attributes?.stats?.kills || 0,
-            kd: p.attributes?.stats?.killDeathRatio ? +p.attributes.stats.killDeathRatio.toFixed(2) : 0,
+            kd: p.attributes?.stats?.kda ? +p.attributes.stats.kda.toFixed(2) : 0,
             avgDmg: p.attributes?.stats?.averageDamage ? Math.round(p.attributes.stats.averageDamage) : 0,
             games: p.attributes?.stats?.games || 0,
             winRate: p.attributes?.stats?.winRatio ? +(p.attributes.stats.winRatio).toFixed(4) : 0,
+            tier: p.attributes?.stats?.tier || null,
+            subTier: p.attributes?.stats?.subTier || null,
+            rankPoints: p.attributes?.stats?.rankPoints || 0,
           },
         }))
         .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))

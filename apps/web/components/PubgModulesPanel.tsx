@@ -591,7 +591,9 @@ function Leaderboard({ accent }: { accent: string }) {
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
         <select value={platform} onChange={e => setPlatform(e.target.value)} style={S.select}>
-          <option value="steam">Steam</option><option value="xbox">Xbox</option><option value="psn">PSN</option>
+          <option value="steam">PC - NA</option><option value="pc-eu">PC - EU</option><option value="pc-as">PC - Asia</option>
+          <option value="xbox-na">Xbox - NA</option><option value="xbox-eu">Xbox - EU</option>
+          <option value="psn-na">PSN - NA</option><option value="psn-eu">PSN - EU</option>
         </select>
         <select value={mode} onChange={e => setMode(e.target.value)} style={S.select}>
           <option value="squad-fpp">Squad FPP</option>
@@ -628,6 +630,7 @@ function Leaderboard({ accent }: { accent: string }) {
               </span>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {p.name}
+                {p.stats?.tier && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: `${accent}15`, color: accent }}>{p.stats.tier}{p.stats.subTier ? ` ${p.stats.subTier}` : ""}</span>}
               </span>
               <span style={{ width: 50, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#22C55E" }}>{p.stats?.wins}</span>
               <span style={{ width: 50, textAlign: "center", fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.8)" }}>{p.stats?.kd}</span>
