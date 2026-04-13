@@ -10280,7 +10280,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         ok: true,
         season: currentSeason.id,
         mode,
-        platform,
+        platform: lbShard,
         players,
       };
 
