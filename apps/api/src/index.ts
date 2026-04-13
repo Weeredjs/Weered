@@ -10054,10 +10054,22 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     const res = await fetch(`${PUBG_API_BASE}${path}`, {
       headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: "application/vnd.api+json" },
     });
-    if (res.status === 429) { console.warn("[pubg] Rate limited"); return null; }
+    if (res.status === 429) { console.warn("[pubg] Rate limited on", path); return null; }
     if (res.status === 404) return null;
     if (!res.ok) { console.error(`[pubg] ${res.status} — ${path}`); return null; }
     return res.json();
+  }
+
+  // Cached season resolver — avoids burning a rate-limited call on every request
+  async function pubgGetCurrentSeason(shard = "steam"): Promise<string | null> {
+    const cacheKey = `pubg:season:${shard}`;
+    const cached = pubgCacheGet(cacheKey);
+    if (cached) return cached;
+    const seasonsData = await pubgGet(`/shards/${shard}/seasons`);
+    const cur = seasonsData?.data?.find((s: any) => s.attributes?.isCurrentSeason) || seasonsData?.data?.[seasonsData.data.length - 1];
+    if (!cur?.id) return null;
+    pubgCacheSet(cacheKey, cur.id, 60 * 60 * 1000); // 1 hour
+    return cur.id;
   }
 
   // GET /pubg/stats/:name — player stats lookup (Steam default)
@@ -10079,10 +10091,8 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       const accountId = player.id;
       const playerName = player.attributes?.name || name;
 
-      // Step 2: Get current season
-      const seasonsData = await pubgGet(`/shards/${platform}/seasons`);
-      const currentSeason = seasonsData?.data?.find((s: any) => s.attributes?.isCurrentSeason) || seasonsData?.data?.[seasonsData.data.length - 1];
-      const seasonId = currentSeason?.id;
+      // Step 2: Get current season (cached)
+      const seasonId = await pubgGetCurrentSeason(platform);
 
       // Step 3: Get season stats
       let seasonStats: any = null;
@@ -10248,12 +10258,11 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     if (cached) return reply.send(cached);
 
     try {
-      // Get current season (use "steam" shard for season list — it's universal)
-      const seasonsData = await pubgGet(`/shards/steam/seasons`);
-      const currentSeason = seasonsData?.data?.find((s: any) => s.attributes?.isCurrentSeason) || seasonsData?.data?.[seasonsData.data.length - 1];
-      if (!currentSeason) return reply.send({ ok: false, error: "no_season" });
+      // Get current season (cached — avoids burning rate limit)
+      const seasonId = await pubgGetCurrentSeason("steam");
+      if (!seasonId) return reply.send({ ok: false, error: "no_season" });
 
-      const data = await pubgGet(`/shards/${lbShard}/leaderboards/${currentSeason.id}/${mode}`);
+      const data = await pubgGet(`/shards/${lbShard}/leaderboards/${seasonId}/${mode}`);
       if (!data?.included) return reply.send({ ok: false, error: "leaderboard_unavailable" });
 
       const players = (data.included || [])
@@ -10278,7 +10287,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
       const result = {
         ok: true,
-        season: currentSeason.id,
+        season: seasonId,
         mode,
         platform: lbShard,
         players,
