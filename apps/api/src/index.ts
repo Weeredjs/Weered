@@ -9,6 +9,7 @@ import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@pris
 import { OAuth2Client } from "google-auth-library";
 import { syncManifest, enrichProfile, enrichMilestones, enrichVendorSales, resolveItem, resolveBucket, resolveDamageType, isLoaded as manifestLoaded, manifestVersion, WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES } from "./manifest";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { latLngToCell, cellToBoundary, gridDisk, getResolution } from "h3-js";
 import { join } from "path";
 import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
 import webpush from "web-push";
@@ -2342,6 +2343,85 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       console.error("[profile PATCH]", e);
       return reply.code(500).send({ error: "Server error" });
     }
+  });
+
+  // ── GPS Location (opt-in) ─────────────────────────────────────────────────
+  const H3_RES = 7; // ~5.16 km edge length
+
+  // POST /me/location — opt-in and store approximate location
+  app.post("/me/location", async (req, reply) => {
+    const viewer = authFromHeader((req as any).headers?.authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const body: any = (req as any).body || {};
+    const lat = Number(body.latitude);
+    const lng = Number(body.longitude);
+    if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return reply.code(400).send({ error: "Invalid coordinates" });
+    }
+    const h3Index = latLngToCell(lat, lng, H3_RES);
+    await prisma.user.update({
+      where: { id: viewer.id },
+      data: { locationOptIn: true, latitude: lat, longitude: lng, locationH3: h3Index, locationUpdatedAt: new Date() },
+    });
+    return reply.send({ ok: true, h3: h3Index });
+  });
+
+  // DELETE /me/location — opt-out, wipe stored location
+  app.delete("/me/location", async (req, reply) => {
+    const viewer = authFromHeader((req as any).headers?.authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    await prisma.user.update({
+      where: { id: viewer.id },
+      data: { locationOptIn: false, latitude: null, longitude: null, locationH3: null, locationUpdatedAt: null },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // GET /me/location — get own location opt-in status
+  app.get("/me/location", async (req, reply) => {
+    const viewer = authFromHeader((req as any).headers?.authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const u = await prisma.user.findUnique({ where: { id: viewer.id }, select: { locationOptIn: true, locationH3: true, locationUpdatedAt: true } });
+    return reply.send({ optIn: u?.locationOptIn || false, h3: u?.locationH3 || null, updatedAt: u?.locationUpdatedAt || null });
+  });
+
+  // GET /map/hexes — aggregated hex grid cells with user counts (public)
+  app.get("/map/hexes", async (_req, reply) => {
+    const users = await prisma.user.findMany({
+      where: { locationOptIn: true, locationH3: { not: null } },
+      select: { locationH3: true },
+    });
+    // Aggregate counts per hex
+    const hexCounts = new Map<string, number>();
+    for (const u of users) {
+      if (!u.locationH3) continue;
+      hexCounts.set(u.locationH3, (hexCounts.get(u.locationH3) || 0) + 1);
+    }
+    // Convert to array with boundary polygons
+    const hexes = Array.from(hexCounts.entries()).map(([h3, count]) => {
+      const boundary = cellToBoundary(h3); // [[lat,lng], ...]
+      return { h3, count, boundary };
+    });
+    return reply.send({ hexes });
+  });
+
+  // GET /map/nearby?lat=&lng= — users in your hex + neighbors (auth required)
+  app.get("/map/nearby", async (req, reply) => {
+    const viewer = authFromHeader((req as any).headers?.authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const q: any = (req as any).query || {};
+    const lat = Number(q.lat);
+    const lng = Number(q.lng);
+    if (!isFinite(lat) || !isFinite(lng)) return reply.code(400).send({ error: "lat/lng required" });
+    const center = latLngToCell(lat, lng, H3_RES);
+    const ring = gridDisk(center, 1); // center + 6 neighbors
+    const nearby = await prisma.user.findMany({
+      where: { locationOptIn: true, locationH3: { in: ring } },
+      select: { id: true, usernameKey: true, name: true, avatar: true, avatarColor: true, tier: true, locationH3: true },
+    });
+    // Don't return the requesting user in results
+    const others = nearby.filter(u => u.id !== viewer.id);
+    return reply.send({ hex: center, nearbyCount: others.length, users: others.slice(0, 50) });
   });
 
   // ── Avatar upload (Indicted+ only) ────────────────────────────────────────

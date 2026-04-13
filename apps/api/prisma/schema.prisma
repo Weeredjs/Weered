@@ -304,6 +304,13 @@ model User {
   bannedAt    DateTime?
   bannedBy    String?    // userId of staff member who banned
 
+  // GPS location (opt-in only)
+  locationOptIn     Boolean    @default(false)
+  latitude          Float?
+  longitude         Float?
+  locationH3        String?    // H3 hex index (resolution 7 ≈ 5km)
+  locationUpdatedAt DateTime?
+
   createdAt         DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
