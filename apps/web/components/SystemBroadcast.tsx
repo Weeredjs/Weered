@@ -15,8 +15,25 @@ const LEVEL_STYLES: Record<string, { bg: string; border: string; color: string; 
   urgent:  { bg: "rgba(239,68,68,.10)", border: "rgba(239,68,68,.35)", color: "rgba(252,165,165,.95)", icon: "🚨" },
 };
 
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
 export default function SystemBroadcast() {
   const [msgs, setMsgs] = useState<BroadcastMsg[]>([]);
+
+  // Fetch persistent banner on mount
+  useEffect(() => {
+    const dismissed = localStorage.getItem("weered:banner:dismissed");
+    fetch(`${API}/banner`).then(r => r.json()).then(j => {
+      if (j?.ok && j?.banner?.message) {
+        const b = j.banner;
+        if (dismissed === b.message) return; // user already dismissed this exact message
+        setMsgs(prev => {
+          if (prev.some(m => m.message === b.message)) return prev;
+          return [{ message: b.message, level: b.level || "info", from: b.from || "Weered", ts: b.ts || 1 }, ...prev];
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     function onBroadcast(ev: any) {
@@ -33,6 +50,11 @@ export default function SystemBroadcast() {
   }, []);
 
   function dismiss(ts: number) {
+    const msg = msgs.find(m => m.ts === ts);
+    if (msg && ts === 1) {
+      // Persistent banner — remember dismissal
+      try { localStorage.setItem("weered:banner:dismissed", msg.message); } catch {}
+    }
     setMsgs(prev => prev.filter(m => m.ts !== ts));
   }
 
