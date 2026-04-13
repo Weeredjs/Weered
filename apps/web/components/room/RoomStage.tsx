@@ -93,6 +93,13 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   const [playing,   setPlaying  ] = useState(false);
   const didInitFromBuffer = useRef(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchMode, setSearchMode] = useState(true); // start in search mode
+  const searchTimer = useRef<any>(null);
+
   // ── Initialize from buffered server state on mount (handles late-join race) ──
   useEffect(() => {
     if (didInitFromBuffer.current) return;
@@ -278,6 +285,33 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     setVideoId(id);
     sendRaw?.({ type: "youtube:load", roomId, videoId: id });
     setInputVal("");
+    setSearchMode(false);
+  };
+
+  const loadFromSearch = (id: string) => {
+    setVideoId(id);
+    sendRaw?.({ type: "youtube:load", roomId, videoId: id });
+    setSearchMode(false);
+    setSearchResults([]);
+    setSearchQuery("");
+  };
+
+  const API_BASE = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_BASE) || "http://127.0.0.1:4000";
+
+  const doSearch = (q: string) => {
+    if (!q.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    fetch(`${API_BASE}/youtube/search?q=${encodeURIComponent(q.trim())}`)
+      .then(r => r.json())
+      .then(j => { setSearchResults(j.results || []); setSearching(false); })
+      .catch(() => setSearching(false));
+  };
+
+  const onSearchInput = (val: string) => {
+    setSearchQuery(val);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (!val.trim()) { setSearchResults([]); return; }
+    searchTimer.current = setTimeout(() => doSearch(val), 400);
   };
 
   const stopVideo = () => {
@@ -315,43 +349,132 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
               </div>
             )}
           </div>
-          {/* Queue sidebar */}
-          <div style={{ width: 160, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginBottom: 2 }}>Queue</div>
-            <div style={{ fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "#c4bef8" }}>
+          {/* Search / Queue sidebar */}
+          <div style={{ width: 220, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, overflow: "hidden" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35 }}>Now Playing</div>
+            <div style={{ fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "#c4bef8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               ▶ {videoId}
             </div>
-            <div style={{ marginTop: "auto" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginBottom: 6 }}>Load another</div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginTop: 6 }}>Search / Load Next</div>
+            <input
+              value={searchQuery}
+              onChange={e => onSearchInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && doSearch(searchQuery)}
+              placeholder="Search YouTube..."
+              style={{ width: "100%", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 6, padding: "5px 8px", fontSize: 11, color: "#fff", outline: "none" }}
+            />
+            <div style={{ flex: 1, overflow: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.2) transparent" }}>
+              {searching && <div style={{ fontSize: 10, opacity: 0.4, padding: 8 }}>Searching...</div>}
+              {searchResults.map((r: any) => (
+                <button
+                  key={r.videoId}
+                  onClick={() => loadFromSearch(r.videoId)}
+                  style={{ display: "flex", gap: 6, padding: 5, borderRadius: 6, border: "1px solid transparent", background: "transparent", cursor: "pointer", textAlign: "left", width: "100%", marginBottom: 4 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.25)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.borderColor = "transparent"; }}
+                >
+                  {r.thumbnail && <img src={r.thumbnail} alt="" style={{ width: 64, height: 36, objectFit: "cover", borderRadius: 4, flexShrink: 0, background: "#111" }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(243,244,246,.85)", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
+                      dangerouslySetInnerHTML={{ __html: r.title }}
+                    />
+                    <div style={{ fontSize: 9, color: "rgba(148,163,184,.4)", marginTop: 1 }}>{r.channel}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 6 }}>
               <input
                 value={inputVal}
                 onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
                 onKeyDown={e => e.key === "Enter" && loadVideo()}
-                placeholder="YouTube URL…"
-                style={{ width: "100%", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 6, padding: "5px 8px", fontSize: 11, color: "#fff", outline: "none" }}
+                placeholder="Or paste URL..."
+                style={{ width: "100%", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#fff", outline: "none" }}
               />
-              <button onClick={loadVideo} style={{ marginTop: 5, width: "100%", padding: "5px 0", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.12)", color: "#c4bef8", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                Load
-              </button>
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, padding: 24 }}>
-          <div style={{ fontSize: 13, opacity: 0.5 }}>Paste a YouTube URL to sync for everyone in the room</div>
-          <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 400 }}>
-            <input
-              value={inputVal}
-              onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
-              onKeyDown={e => e.key === "Enter" && loadVideo()}
-              placeholder="https://youtube.com/watch?v=…"
-              style={{ flex: 1, background: "rgba(255,255,255,.05)", border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: "#fff", outline: "none" }}
-            />
-            <button onClick={loadVideo} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(124,106,245,.35)", background: "rgba(124,106,245,.15)", color: "#c4bef8", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              Load
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 16, overflow: "hidden" }}>
+          {/* Search bar */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <input
+                value={searchQuery}
+                onChange={e => onSearchInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && doSearch(searchQuery)}
+                placeholder="Search YouTube..."
+                style={{ width: "100%", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "9px 14px 9px 34px", fontSize: 13, color: "#fff", outline: "none" }}
+              />
+              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, opacity: 0.35 }}>🔍</span>
+            </div>
+            <button onClick={() => setSearchMode(!searchMode)} style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: searchMode ? "transparent" : "rgba(124,106,245,.15)", color: searchMode ? "rgba(255,255,255,.5)" : "#c4bef8", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {searchMode ? "Paste URL" : "Search"}
             </button>
           </div>
-          {inputErr && <div style={{ fontSize: 12, color: "#fca5a5" }}>{inputErr}</div>}
+
+          {!searchMode ? (
+            /* URL paste mode */
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 12 }}>
+              <div style={{ fontSize: 12, opacity: 0.4 }}>Paste a YouTube URL</div>
+              <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 400 }}>
+                <input
+                  value={inputVal}
+                  onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
+                  onKeyDown={e => e.key === "Enter" && loadVideo()}
+                  placeholder="https://youtube.com/watch?v=…"
+                  style={{ flex: 1, background: "rgba(255,255,255,.05)", border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: "#fff", outline: "none" }}
+                />
+                <button onClick={loadVideo} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(124,106,245,.35)", background: "rgba(124,106,245,.15)", color: "#c4bef8", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Load
+                </button>
+              </div>
+              {inputErr && <div style={{ fontSize: 12, color: "#fca5a5" }}>{inputErr}</div>}
+            </div>
+          ) : (
+            /* Search results */
+            <div style={{ flex: 1, overflow: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.2) transparent" }}>
+              {searching && <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.5 }}>Searching...</div>}
+              {!searching && searchResults.length === 0 && searchQuery.trim() && (
+                <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.4 }}>No results found</div>
+              )}
+              {!searching && searchResults.length === 0 && !searchQuery.trim() && (
+                <div style={{ textAlign: "center", padding: 40, fontSize: 13, opacity: 0.35 }}>
+                  Search for music, videos, or anything on YouTube<br />
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>Syncs for everyone in the room</span>
+                </div>
+              )}
+              <div style={{ display: "grid", gap: 8 }}>
+                {searchResults.map((r: any) => (
+                  <button
+                    key={r.videoId}
+                    onClick={() => loadFromSearch(r.videoId)}
+                    style={{
+                      display: "flex", gap: 10, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,.06)",
+                      background: "rgba(255,255,255,.03)", cursor: "pointer", textAlign: "left", width: "100%",
+                      transition: "all 0.12s",
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.3)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; }}
+                  >
+                    {r.thumbnail && (
+                      <img
+                        src={r.thumbnail}
+                        alt=""
+                        style={{ width: 120, height: 68, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "#111" }}
+                      />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
+                        dangerouslySetInnerHTML={{ __html: r.title }}
+                      />
+                      <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>{r.channel}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
