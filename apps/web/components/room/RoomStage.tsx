@@ -398,7 +398,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
               />
             </div>
           </div>
-        </div>
       </div>
       {!videoId && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 16, overflow: "hidden" }}>
