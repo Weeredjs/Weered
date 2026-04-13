@@ -23,12 +23,13 @@ export default function AboutContent() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
         .about-root {
-          min-height: 100vh;
+          height: 100%;
+          overflow-y: auto;
           background: #050810;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
           padding: 60px 24px;
           font-family: 'DM Mono', monospace;
           position: relative;
@@ -158,15 +159,16 @@ export default function AboutContent() {
             <div className="about-text">
               Weered is a <em>real-time community platform</em>.<br />
               Think lobbies, not servers. Rooms, not channels. Presence, not status dots.<br /><br />
-              <em>Lobbies</em> are living spaces — communities built around games, creators, topics, whatever pulls people in.
-              Each one has its own identity, roles, events, and modules.<br /><br />
-              <em>Rooms</em> are where things happen. Watch parties. Live feeds. Conversations.
+              <em>Lobbies</em> are living spaces — communities built around games, trading, studying, business, whatever pulls people in.
+              Each one has its own identity, roles, events, and deep integrations.<br /><br />
+              <em>Rooms</em> are where things happen. Voice chat, video, screen share, watch parties, poker tables, study sessions.
               Drop into a room and you&apos;re there — not lurking in a sidebar, actually <em>present</em>.<br /><br />
               <em>Modules</em> plug directly into the things you care about.
-              Destiny 2 stats and LFG boards. Live Twitch streams. Marathon intel.
-              The lobby becomes the game&apos;s living room.<br /><br />
-              <em>Events</em> give communities a pulse — scheduled moments that bring people together.
-              Raid nights, watch parties, tournaments, whatever the lobby is built for.<br /><br />
+              Destiny 2 guardian lookup. League of Legends leaderboards. CS2 squad finder. Fortnite stats.
+              Dota 2 player search. Live Twitch streams. Paper trading with real Binance prices.
+              Poker with virtual currency. AI-powered practice tests. Pomodoro focus timers.<br /><br />
+              <em>The Operator</em> — our AI — lives in every chat. Type @operator and ask anything. It knows the platform, and it&apos;s got attitude.<br /><br />
+              <em>Paper</em> — virtual currency. Earn it from trading profits, challenges, daily bonuses. Spend it in the Store, use it at the poker table, trade items with other users.<br /><br />
               The feed, the chat, the rooms — they all orbit <em>presence</em>.
               Who is here. What they&apos;re doing. Right now.
             </div>
@@ -200,8 +202,9 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">// status</div>
             <div className="about-text">
-              Early. Intentionally.<br />
-              The rough edges are features.<br />
+              Early access. Growing fast.<br />
+              30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator. Focus rooms.<br />
+              New features ship daily. The rough edges are temporary. The vision isn&apos;t.<br />
               <em>If you&apos;re here now, you were supposed to find it.</em>
             </div>
           </div>
