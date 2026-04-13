@@ -23,6 +23,7 @@ export default function MapContent() {
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [totalUsers, setTotalUsers] = useState(0);
   const [mapReady, setMapReady] = useState(false);
+  const [clickToPlace, setClickToPlace] = useState(false);
 
   // Check opt-in status on mount
   useEffect(() => {
@@ -173,11 +174,42 @@ export default function MapContent() {
       },
       () => {
         setLocating(false);
-        alert("Location access denied. Please enable location in your browser settings.");
+        setShowConsent(false);
+        setClickToPlace(true);
       },
       { enableHighAccuracy: false, maximumAge: 300000 }
     );
   };
+
+  // Save a manually picked location
+  const saveManualLocation = async (lat: number, lng: number) => {
+    setUserPos([lat, lng]);
+    setClickToPlace(false);
+    try {
+      await fetch(`${API}/me/location`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      });
+      setOptIn(true);
+      loadHexes();
+    } catch {}
+  };
+
+  // Map click handler for manual placement
+  useEffect(() => {
+    if (!mapReady || !leafletMap.current) return;
+    const map = leafletMap.current;
+    const container = map.getContainer();
+    if (clickToPlace) container.classList.add("click-to-place");
+    else container.classList.remove("click-to-place");
+    const handler = (e: any) => {
+      if (!clickToPlace) return;
+      saveManualLocation(e.latlng.lat, e.latlng.lng);
+    };
+    map.on("click", handler);
+    return () => { map.off("click", handler); container.classList.remove("click-to-place"); };
+  }, [mapReady, clickToPlace]);
 
   // Disable location
   const disableLocation = async () => {
@@ -198,6 +230,7 @@ export default function MapContent() {
         }
         .weered-map-container { height: 100%; width: 100%; }
         .leaflet-container { background: #050810 !important; }
+        .leaflet-container.click-to-place { cursor: crosshair !important; }
         .leaflet-popup-content-wrapper { background: transparent !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; }
         .leaflet-popup-content { margin: 0 !important; }
         .leaflet-popup-tip { display: none !important; }
@@ -305,6 +338,23 @@ export default function MapContent() {
           )}
         </div>
 
+        {/* Click-to-place banner */}
+        {clickToPlace && (
+          <div style={{
+            position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1500,
+            background: "rgba(10,10,18,0.92)", border: "1px solid rgba(124,58,237,0.4)", borderRadius: 12,
+            padding: "12px 20px", display: "flex", alignItems: "center", gap: 12, backdropFilter: "blur(12px)",
+            fontFamily: "'DM Mono', monospace", cursor: "crosshair",
+          }}>
+            <span style={{ fontSize: 20 }}>📍</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Click the map to set your location</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)" }}>GPS unavailable — drop your pin manually instead</div>
+            </div>
+            <button className="map-btn map-btn-ghost" style={{ marginLeft: 8 }} onClick={() => setClickToPlace(false)}>Cancel</button>
+          </div>
+        )}
+
         {/* Consent modal */}
         {showConsent && (
           <div className="consent-overlay">
@@ -322,6 +372,15 @@ export default function MapContent() {
                 <button className="map-btn map-btn-ghost" onClick={() => setShowConsent(false)}>Cancel</button>
                 <button className="map-btn map-btn-primary" onClick={enableLocation} disabled={locating}>
                   {locating ? "Locating..." : "Enable Location"}
+                </button>
+              </div>
+              <div style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 12 }}>
+                <button
+                  className="map-btn map-btn-ghost"
+                  style={{ fontSize: 11, width: "100%" }}
+                  onClick={() => { setShowConsent(false); setClickToPlace(true); }}
+                >
+                  Or click the map to set your location manually
                 </button>
               </div>
             </div>
