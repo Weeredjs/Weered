@@ -198,10 +198,12 @@ export default function MapContent() {
           leafletMap.current.setView([lat, lng], 10, { animate: true });
         }
       },
-      () => {
+      (err) => {
         setLocating(false);
         setShowConsent(false);
         setClickToPlace(true);
+        // Log for debugging — err.code 1=denied, 2=unavailable, 3=timeout
+        console.log(`[map] GPS failed: code=${err.code} msg=${err.message}`);
       },
       { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
     );
@@ -296,7 +298,7 @@ export default function MapContent() {
         }
       `}</style>
 
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <link rel="stylesheet" href="/leaflet.css" />
 
       <div className="weered-map-root">
         <div ref={mapRef} className="weered-map-container" />
