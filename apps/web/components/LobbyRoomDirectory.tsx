@@ -36,6 +36,11 @@ function authHeaders() {
 
 function roomIcon(name: string): string {
   const n = name.toLowerCase();
+  if (n.includes("tavern"))   return "🍺";
+  if (n.includes("campaign") || n.includes("table")) return "🎲";
+  if (n.includes("dm") || n.includes("workshop") || n.includes("dungeon master")) return "📜";
+  if (n.includes("forge") || n.includes("character")) return "⚔️";
+  if (n.includes("lore"))     return "📖";
   if (n.includes("voice"))    return "🎙";
   if (n.includes("lfg") || n.includes("squad"))  return "🔥";
   if (n.includes("trading") || n.includes("trade"))  return "💱";
@@ -54,6 +59,11 @@ function roomIcon(name: string): string {
 
 function roomSubtitle(name: string): string {
   const n = name.toLowerCase();
+  if (n.includes("tavern"))   return "General gathering hall";
+  if (n.includes("campaign") || n.includes("table")) return "Play table";
+  if (n.includes("dm") || n.includes("workshop")) return "Dungeon Master prep";
+  if (n.includes("forge") || n.includes("character")) return "Character building";
+  if (n.includes("lore"))     return "Lore & discussion";
   if (n.includes("voice"))    return "Voice channel";
   if (n.includes("lfg") || n.includes("squad"))  return "Looking for group";
   if (n.includes("trading") || n.includes("trade"))  return "Trading post";
@@ -81,15 +91,26 @@ function meshAngle(id: string): number {
 
 /* ── Component ────────────────────────────────────────────────────────────── */
 
+/* ── Themed labels per module type ──────────────────────────────────────── */
+
+const CREATE_LABELS: Record<string, { btn: string; title: string; placeholder: string; icon: string }> = {
+  DND:   { btn: "Open a Table",   title: "Open a Table",    placeholder: "e.g. Curse of Strahd — Session 4",  icon: "🎲" },
+  POKER: { btn: "Start a Table",  title: "Start a Table",   placeholder: "e.g. $500 Buy-In NLH",             icon: "♠️" },
+  STUDY: { btn: "Open a Room",    title: "Create Study Room", placeholder: "e.g. Organic Chem Finals Grind",  icon: "📚" },
+};
+const DEFAULT_LABEL = { btn: "Create Room", title: "Create Room", placeholder: "Room name…", icon: "+" };
+
 export default function LobbyRoomDirectory({
   lobbyId,
   accentColor,
   bannerUrl,
+  moduleType,
   style,
 }: {
   lobbyId: string;
   accentColor?: string;
   bannerUrl?: string;
+  moduleType?: string;
   style?: React.CSSProperties;
 }) {
   const router = useRouter();
@@ -98,8 +119,15 @@ export default function LobbyRoomDirectory({
   const [loading, setLoading] = useState(true);
   const [lobbyBanner, setLobbyBanner] = useState<string | null>(bannerUrl || null);
 
+  /* ── Create room state ─────────────────────────────────────────────────── */
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+
   const accent = accentColor || "#5800E5";
   const LIVE_COLOR = "#22c55e";
+  const labels = CREATE_LABELS[moduleType || ""] || DEFAULT_LABEL;
 
   useEffect(() => {
     setLoading(true);
@@ -116,6 +144,34 @@ export default function LobbyRoomDirectory({
   function handleJoin(room: RoomData) {
     try { join?.(`room:${room.id}`); } catch {}
     router.push(`/room/${encodeURIComponent(room.id)}`);
+  }
+
+  async function handleCreate() {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setCreating(true);
+    setCreateError("");
+    try {
+      const res = await fetch(`${API}/rooms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ name: trimmed, lobbyId }),
+      });
+      const j = await res.json();
+      if (j.ok) {
+        setNewName("");
+        setShowCreate(false);
+        // Navigate into the new room
+        try { join?.(`room:${j.id}`); } catch {}
+        router.push(`/room/${encodeURIComponent(j.id)}`);
+      } else {
+        setCreateError(j.message || j.error || "Failed to create");
+      }
+    } catch {
+      setCreateError("Network error");
+    } finally {
+      setCreating(false);
+    }
   }
 
   /* ── Loading ───────────────────────────────────────────────────────────── */
@@ -137,10 +193,57 @@ export default function LobbyRoomDirectory({
   /* ── Empty ─────────────────────────────────────────────────────────────── */
   if (rooms.length === 0) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 10, position: "relative", ...style }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 14, position: "relative", ...style }}>
         <div style={{ fontSize: 40, opacity: 0.15, zIndex: 2 }}>🚪</div>
         <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,.25)", zIndex: 2 }}>No rooms yet</div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,.15)", zIndex: 2 }}>Create one from the right panel</div>
+        <button
+          onClick={() => setShowCreate(true)}
+          style={{
+            zIndex: 2, padding: "8px 22px", borderRadius: 10, cursor: "pointer",
+            border: `1px solid ${accent}44`, background: `${accent}18`,
+            color: "rgba(243,244,246,.7)", fontSize: 12, fontWeight: 700,
+            display: "flex", alignItems: "center", gap: 6,
+          }}
+        >
+          <span>{labels.icon}</span> {labels.btn}
+        </button>
+        {showCreate && (
+          <div style={{
+            zIndex: 2, width: "100%", maxWidth: 400, marginTop: 8, padding: "14px 16px",
+            borderRadius: 12, border: `1px solid ${accent}28`, background: `${accent}08`,
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                autoFocus
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleCreate(); }}
+                placeholder={labels.placeholder}
+                maxLength={64}
+                style={{
+                  flex: 1, padding: "8px 12px", borderRadius: 8,
+                  border: `1px solid ${accent}22`, background: "rgba(0,0,0,.3)",
+                  color: "rgba(243,244,246,.9)", fontSize: 12, outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+              <button
+                onClick={handleCreate}
+                disabled={creating || !newName.trim()}
+                style={{
+                  padding: "8px 20px", borderRadius: 8, cursor: creating || !newName.trim() ? "default" : "pointer",
+                  border: `1px solid ${accent}44`, background: `${accent}22`,
+                  color: "rgba(243,244,246,.9)", fontSize: 12, fontWeight: 700,
+                  opacity: creating || !newName.trim() ? 0.4 : 1,
+                }}
+              >
+                {creating ? "…" : "Go"}
+              </button>
+            </div>
+            {createError && <div style={{ fontSize: 11, color: "#ef4444" }}>{createError}</div>}
+          </div>
+        )}
       </div>
     );
   }
@@ -200,7 +303,64 @@ export default function LobbyRoomDirectory({
             {rooms.length}
           </span>
           <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
+
+          <button
+            onClick={() => { setShowCreate(v => !v); setCreateError(""); }}
+            style={{
+              padding: "4px 14px", borderRadius: 8, cursor: "pointer",
+              border: `1px solid ${accent}33`, background: showCreate ? `${accent}22` : `${accent}0c`,
+              color: showCreate ? "rgba(243,244,246,.9)" : "rgba(243,244,246,.55)",
+              fontSize: 11, fontWeight: 700, letterSpacing: "0.02em",
+              transition: "all .15s", display: "flex", alignItems: "center", gap: 5, flexShrink: 0,
+            }}
+            onMouseEnter={e => { if (!showCreate) { e.currentTarget.style.background = `${accent}18`; e.currentTarget.style.color = "rgba(243,244,246,.8)"; } }}
+            onMouseLeave={e => { if (!showCreate) { e.currentTarget.style.background = `${accent}0c`; e.currentTarget.style.color = "rgba(243,244,246,.55)"; } }}
+          >
+            <span style={{ fontSize: 13 }}>{showCreate ? "✕" : labels.icon}</span>
+            {showCreate ? "Cancel" : labels.btn}
+          </button>
         </div>
+
+        {/* ── Create room form ─────────────────────────────────────────── */}
+        {showCreate && (
+          <div style={{
+            marginBottom: 18, padding: "14px 16px", borderRadius: 12,
+            border: `1px solid ${accent}28`, background: `${accent}08`,
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.8)" }}>{labels.title}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                autoFocus
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleCreate(); }}
+                placeholder={labels.placeholder}
+                maxLength={64}
+                style={{
+                  flex: 1, padding: "8px 12px", borderRadius: 8,
+                  border: `1px solid ${accent}22`, background: "rgba(0,0,0,.3)",
+                  color: "rgba(243,244,246,.9)", fontSize: 12, outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+              <button
+                onClick={handleCreate}
+                disabled={creating || !newName.trim()}
+                style={{
+                  padding: "8px 20px", borderRadius: 8, cursor: creating || !newName.trim() ? "default" : "pointer",
+                  border: `1px solid ${accent}44`, background: `${accent}22`,
+                  color: "rgba(243,244,246,.9)", fontSize: 12, fontWeight: 700,
+                  opacity: creating || !newName.trim() ? 0.4 : 1,
+                  transition: "all .15s", flexShrink: 0,
+                }}
+              >
+                {creating ? "…" : "Go"}
+              </button>
+            </div>
+            {createError && <div style={{ fontSize: 11, color: "#ef4444" }}>{createError}</div>}
+          </div>
+        )}
 
         {/* Grid */}
         <div style={{

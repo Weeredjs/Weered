@@ -752,6 +752,13 @@ const SEED_LOBBIES = [
   { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
 ];
 
+const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: string }[] = [
+  { id: "dnd-tavern",    name: "The Tavern",      description: "Pull up a chair. General voice & chat for adventurers, DMs, and spectators alike.",           lobbyId: "dnd" },
+  { id: "dnd-table",     name: "Campaign Table",   description: "Open play table — roll initiative, share maps, run encounters. Bring your character sheet.", lobbyId: "dnd" },
+  { id: "dnd-workshop",  name: "DM's Workshop",    description: "Behind the screen. Prep sessions, world-building tips, and DM war stories.",                 lobbyId: "dnd" },
+  { id: "dnd-forge",     name: "Character Forge",  description: "Build, theorycraft, and show off your characters. Multiclass debates welcome.",              lobbyId: "dnd" },
+];
+
 async function seedLobbies() {
   for (const l of SEED_LOBBIES) {
     try {
@@ -763,6 +770,17 @@ async function seedLobbies() {
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
   }
   console.log("[weered] lobbies seeded");
+
+  // Seed rooms (skip if already exist)
+  for (const r of SEED_ROOMS) {
+    try {
+      const exists = await prisma.room.findUnique({ where: { id: r.id } });
+      if (!exists) {
+        await prisma.room.create({ data: { id: r.id, name: r.name, description: r.description, lobbyId: r.lobbyId, locked: false } });
+        console.log(`[weered] seeded room: ${r.id}`);
+      }
+    } catch (e) { console.warn("seedRooms:", r.id, e); }
+  }
 }
 
 async function globalAudit(actorId: string, actorName: string, action: string, targetId?: string, targetName?: string, meta?: any) {
