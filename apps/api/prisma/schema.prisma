@@ -1219,6 +1219,7 @@ model OutreachContact {
   category    OutreachCategory @default(OTHER)
   status      OutreachStatus   @default(LEAD)
   notes       String           @default("")
+  postUrl     String           @default("")
   lastContact DateTime?
   nextFollowUp DateTime?
   createdById String

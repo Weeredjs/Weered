@@ -1306,6 +1306,7 @@ function OutreachTab() {
   const [fCategory, setFCategory] = useState<string>("OTHER");
   const [fStatus, setFStatus]   = useState<string>("LEAD");
   const [fNotes, setFNotes]     = useState("");
+  const [fPostUrl, setFPostUrl] = useState("");
   const [fFollowUp, setFFollowUp] = useState("");
 
   const load = useCallback(() => {
@@ -1321,13 +1322,13 @@ function OutreachTab() {
 
   function resetForm() {
     setFName(""); setFCompany(""); setFEmail(""); setFRole("");
-    setFCategory("OTHER"); setFStatus("LEAD"); setFNotes(""); setFFollowUp("");
+    setFCategory("OTHER"); setFStatus("LEAD"); setFNotes(""); setFPostUrl(""); setFFollowUp("");
     setEditing(null);
   }
 
   function editContact(c: any) {
     setFName(c.name); setFCompany(c.company); setFEmail(c.email || ""); setFRole(c.role || "");
-    setFCategory(c.category); setFStatus(c.status); setFNotes(c.notes || "");
+    setFCategory(c.category); setFStatus(c.status); setFNotes(c.notes || ""); setFPostUrl(c.postUrl || "");
     setFFollowUp(c.nextFollowUp ? c.nextFollowUp.slice(0, 10) : "");
     setEditing(c); setShowForm(true);
   }
@@ -1335,7 +1336,7 @@ function OutreachTab() {
   async function save() {
     const body: any = {
       name: fName, company: fCompany, email: fEmail, role: fRole,
-      category: fCategory, status: fStatus, notes: fNotes,
+      category: fCategory, status: fStatus, notes: fNotes, postUrl: fPostUrl,
       nextFollowUp: fFollowUp || null,
     };
 
@@ -1455,10 +1456,15 @@ function OutreachTab() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 10 }}>
+          <div style={{ marginBottom: 8 }}>
             <div style={S.label}>Notes</div>
             <textarea style={{ ...S.input, minHeight: 60, resize: "vertical" }} value={fNotes} onChange={e => setFNotes(e.target.value)}
               placeholder="Context, thread links, what was discussed..." />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <div style={S.label}>Post / Thread URL</div>
+            <input style={S.input} value={fPostUrl} onChange={e => setFPostUrl(e.target.value)} placeholder="https://reddit.com/r/DnD/comments/..." />
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>
@@ -1551,6 +1557,7 @@ function OutreachTab() {
                     {c.contactInfo && <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 3 }}>Contact: {c.contactInfo}</div>}
                     {c.lastContact && <div style={{ fontSize: 11, opacity: 0.4, marginBottom: 3 }}>Last contact: {new Date(c.lastContact).toLocaleDateString()}</div>}
                     {c.nextFollowUp && <div style={{ fontSize: 11, color: overdue ? "rgba(253,230,138,.8)" : "rgba(255,255,255,.4)", marginBottom: 3 }}>Follow-up: {new Date(c.nextFollowUp).toLocaleDateString()}{overdue ? " (overdue)" : ""}</div>}
+                    {c.postUrl && <div style={{ fontSize: 11, marginBottom: 3 }}><span style={{ opacity: 0.4 }}>Post: </span><a href={c.postUrl} target="_blank" rel="noopener noreferrer" style={{ color: "rgba(96,165,250,.8)", textDecoration: "none" }}>{c.postUrl.length > 60 ? c.postUrl.slice(0, 60) + "..." : c.postUrl}</a></div>}
                     {c.notes && <div style={{ fontSize: 11, opacity: 0.4, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{c.notes}</div>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
