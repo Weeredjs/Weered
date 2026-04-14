@@ -749,7 +749,7 @@ const SEED_LOBBIES = [
   { id: "destiny2", name: "Destiny 2 | Bungie.net", description: "Guardians, strikes, raids and loot. Powered by the Bungie API.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"] }, accentColor: "#4F88C6", logoUrl: "https://www.bungie.net/img/logos/bungie-saber-logo.png", bannerUrl: null, websiteUrl: "https://www.bungie.net" },
   { id: "news", name: "News", description: "Breaking news and headlines from around the world. CBC, BBC, Reuters, and more.", keywords: ["news","breaking","headlines","world","canada","politics","tech","business","science"], moduleType: ModuleType.NEWS, moduleConfig: {}, accentColor: "#DC2626" },
   { id: "fakeout", name: "FakeOut", description: "Paper trade crypto with fake money against real Binance prices. Live candlestick charts, instant orders, public leaderboards. All the thrill, none of the risk.", keywords: ["fakeout","trading","crypto","bitcoin","paper","stocks","market","btc","eth","finance","investing","fake"], moduleType: ModuleType.TRADING, moduleConfig: {}, accentColor: "#F5C518" },
-  { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A" },
+  { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
 ];
 
 async function seedLobbies() {
@@ -757,7 +757,7 @@ async function seedLobbies() {
     try {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords },
+        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? undefined, logoUrl: (l as any).logoUrl ?? undefined, bannerUrl: (l as any).bannerUrl ?? undefined, websiteUrl: (l as any).websiteUrl ?? undefined },
         create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
       });
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
