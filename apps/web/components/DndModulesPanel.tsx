@@ -1,0 +1,1207 @@
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+const OPEN5E = "https://api.open5e.com/v1";
+
+function authHeaders(): Record<string, string> {
+  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+}
+async function apiFetch(path: string, opts?: RequestInit) {
+  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+  return r.json();
+}
+
+// ── Style ────────────────────────────────────────────────────────────────────
+
+const S = {
+  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(196,165,90,.35)", background: "rgba(196,165,90,.12)", fontSize: 12, cursor: "pointer", color: "rgb(196,165,90)", fontWeight: 600, fontFamily: "inherit" } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" },
+  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties,
+  label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
+};
+
+const ACCENT = "#C4A55A";
+
+// ── Color Maps ──────────────────────────────────────────────────────────────
+
+const CLASS_COLORS: Record<string, string> = {
+  Barbarian: "#E7623E", Bard: "#AB6DAC", Cleric: "#91A1B2", Druid: "#7A853B",
+  Fighter: "#7F513E", Monk: "#51A5C5", Paladin: "#B59E54", Ranger: "#507F62",
+  Rogue: "#555752", Sorcerer: "#992E2E", Warlock: "#7B469B", Wizard: "#2A50A1",
+};
+
+const CLASS_ICONS: Record<string, string> = {
+  Barbarian: "⚔", Bard: "🎵", Cleric: "✝", Druid: "🌿",
+  Fighter: "🗡", Monk: "👊", Paladin: "🛡", Ranger: "🏹",
+  Rogue: "🗡", Sorcerer: "🔮", Warlock: "👁", Wizard: "📖",
+};
+
+const SCHOOL_COLORS: Record<string, string> = {
+  Abjuration: "#4FC3F7", Conjuration: "#FFB74D", Divination: "#CE93D8",
+  Enchantment: "#F48FB1", Evocation: "#EF5350", Illusion: "#AB47BC",
+  Necromancy: "#66BB6A", Transmutation: "#FDD835",
+};
+
+const RARITY_COLORS: Record<string, string> = {
+  common: "rgba(255,255,255,.55)", uncommon: "#1FC219", rare: "#4FC3F7",
+  "very rare": "#7B1FA2", legendary: "#FF8F00", artifact: "#C62828",
+};
+
+function crColor(cr: number): string {
+  if (cr <= 4) return "#66BB6A";
+  if (cr <= 10) return "#FDD835";
+  if (cr <= 16) return "#FF8F00";
+  return "#EF5350";
+}
+
+// ── Dice Engine ─────────────────────────────────────────────────────────────
+
+type DiceResult = {
+  id: string; expr: string; rolls: number[]; modifier: number; total: number;
+  advantage?: boolean; disadvantage?: boolean; kept?: number[]; dropped?: number[];
+  sides: number; roller: string; ts: number; isNat20?: boolean; isNat1?: boolean;
+};
+
+function parseDice(expr: string): { count: number; sides: number; modifier: number; advantage?: boolean; disadvantage?: boolean } | null {
+  const clean = expr.toLowerCase().trim().replace(/\s+/g, "");
+  let adv = false, dis = false;
+  let working = clean;
+  if (working.includes("adv")) { adv = true; working = working.replace(/adv(antage)?/, ""); }
+  if (working.includes("dis")) { dis = true; working = working.replace(/dis(advantage)?/, ""); }
+  const m = working.match(/^(\d*)d(\d+)([+-]\d+)?$/);
+  if (!m) return null;
+  return { count: m[1] ? parseInt(m[1]) : 1, sides: parseInt(m[2]), modifier: m[3] ? parseInt(m[3]) : 0, advantage: adv, disadvantage: dis };
+}
+
+function rollDice(parsed: { count: number; sides: number; modifier: number; advantage?: boolean; disadvantage?: boolean }): Omit<DiceResult, "id" | "expr" | "roller" | "ts"> {
+  if (parsed.advantage || parsed.disadvantage) {
+    const r1 = Math.floor(Math.random() * parsed.sides) + 1;
+    const r2 = Math.floor(Math.random() * parsed.sides) + 1;
+    const keep = parsed.advantage ? Math.max(r1, r2) : Math.min(r1, r2);
+    const drop = parsed.advantage ? Math.min(r1, r2) : Math.max(r1, r2);
+    const isNat20 = parsed.sides === 20 && keep === 20;
+    const isNat1 = parsed.sides === 20 && keep === 1;
+    return { rolls: [r1, r2], kept: [keep], dropped: [drop], modifier: parsed.modifier, total: keep + parsed.modifier, sides: parsed.sides, advantage: parsed.advantage, disadvantage: parsed.disadvantage, isNat20, isNat1 };
+  }
+  const rolls: number[] = [];
+  for (let i = 0; i < parsed.count; i++) rolls.push(Math.floor(Math.random() * parsed.sides) + 1);
+  const sum = rolls.reduce((a, b) => a + b, 0);
+  const isNat20 = parsed.sides === 20 && parsed.count === 1 && rolls[0] === 20;
+  const isNat1 = parsed.sides === 20 && parsed.count === 1 && rolls[0] === 1;
+  return { rolls, kept: rolls, dropped: [], modifier: parsed.modifier, total: sum + parsed.modifier, sides: parsed.sides, isNat20, isNat1 };
+}
+
+// ── Open5e Cache ────────────────────────────────────────────────────────────
+
+const o5eCache = new Map<string, { data: any; ts: number }>();
+const O5E_TTL = 300000; // 5 min
+
+async function o5eFetch(path: string) {
+  const cached = o5eCache.get(path);
+  if (cached && Date.now() - cached.ts < O5E_TTL) return cached.data;
+  const r = await fetch(`${OPEN5E}${path}`);
+  const j = await r.json();
+  o5eCache.set(path, { data: j, ts: Date.now() });
+  return j;
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: "compendium" as const, label: "Compendium", icon: "📜" },
+  { id: "lfg" as const,        label: "Tavern Board", icon: "🍺" },
+  { id: "dice" as const,       label: "Dice Tower", icon: "🎲" },
+  { id: "streams" as const,    label: "Streams", icon: "📺" },
+];
+type TabId = typeof TABS[number]["id"];
+
+const COMP_TABS = [
+  { id: "spells" as const,     label: "Spells", icon: "✨" },
+  { id: "monsters" as const,   label: "Bestiary", icon: "🐉" },
+  { id: "classes" as const,    label: "Classes", icon: "⚔" },
+  { id: "magicitems" as const, label: "Magic Items", icon: "💎" },
+  { id: "conditions" as const, label: "Conditions", icon: "⚡" },
+];
+type CompTabId = typeof COMP_TABS[number]["id"];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SPELL BROWSER
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SPELL_LEVELS = ["All", "Cantrip", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const SPELL_SCHOOLS = ["All", "Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];
+const SPELL_CLASSES = ["All", "Bard", "Cleric", "Druid", "Paladin", "Ranger", "Sorcerer", "Warlock", "Wizard"];
+
+function SpellBrowser() {
+  const [spells, setSpells] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [level, setLevel] = useState("All");
+  const [school, setSchool] = useState("All");
+  const [dndClass, setDndClass] = useState("All");
+  const [selected, setSelected] = useState<any | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const debounce = useRef<any>(null);
+
+  const load = useCallback(async (pg = 1) => {
+    setLoading(true);
+    let q = `/spells/?format=json&page=${pg}&limit=20`;
+    if (search) q += `&search=${encodeURIComponent(search)}`;
+    if (level !== "All") q += `&level_int=${level === "Cantrip" ? 0 : level}`;
+    if (school !== "All") q += `&school=${encodeURIComponent(school)}`;
+    if (dndClass !== "All") q += `&dnd_class=${encodeURIComponent(dndClass)}`;
+    q += `&document__slug=wotc-srd`;
+    try {
+      const j = await o5eFetch(q);
+      setSpells(j.results || []);
+      setTotal(j.count || 0);
+      setPage(pg);
+    } catch {}
+    setLoading(false);
+  }, [search, level, school, dndClass]);
+
+  useEffect(() => {
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => load(1), search ? 350 : 0);
+    return () => clearTimeout(debounce.current);
+  }, [load]);
+
+  if (selected) {
+    const s = selected;
+    return (
+      <div>
+        <button onClick={() => setSelected(null)} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Spells</button>
+        <div style={{ ...S.card, border: `1px solid ${SCHOOL_COLORS[s.school] || ACCENT}33`, background: `${SCHOOL_COLORS[s.school] || ACCENT}06` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{s.name}</span>
+            {s.concentration === "yes" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 700 }}>CONC</span>}
+            {s.ritual === "yes" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(171,109,172,.15)", color: "#AB6DAC", fontWeight: 700 }}>RITUAL</span>}
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", marginBottom: 12, fontStyle: "italic" }}>
+            {s.level_int === 0 ? `${s.school} cantrip` : `${s.level} ${s.school?.toLowerCase()}`}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            <div><span style={S.label}>Casting Time</span><div style={{ fontSize: 12, color: "rgba(243,244,246,.85)" }}>{s.casting_time}</div></div>
+            <div><span style={S.label}>Range</span><div style={{ fontSize: 12, color: "rgba(243,244,246,.85)" }}>{s.range}</div></div>
+            <div><span style={S.label}>Duration</span><div style={{ fontSize: 12, color: "rgba(243,244,246,.85)" }}>{s.duration}</div></div>
+            <div>
+              <span style={S.label}>Components</span>
+              <div style={{ display: "flex", gap: 4 }}>
+                {(s.components || "").split(",").map((c: string) => c.trim()).filter(Boolean).map((c: string) => (
+                  <span key={c} style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: c === "M" ? "rgba(255,215,0,.12)" : "rgba(255,255,255,.06)", color: c === "M" ? "#FFD700" : "rgba(243,244,246,.7)", fontWeight: 600 }}>{c}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          {s.material && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginBottom: 10, fontStyle: "italic" }}>Material: {s.material}</div>}
+          <div style={{ fontSize: 13, color: "rgba(243,244,246,.82)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{s.desc}</div>
+          {s.higher_level && (
+            <div style={{ marginTop: 12, padding: "8px 10px", borderRadius: 6, background: "rgba(196,165,90,.06)", border: "1px solid rgba(196,165,90,.12)" }}>
+              <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 4 }}>At Higher Levels</div>
+              <div style={{ fontSize: 12, color: "rgba(243,244,246,.75)", lineHeight: 1.5 }}>{s.higher_level}</div>
+            </div>
+          )}
+          <div style={{ fontSize: 10, color: "rgba(148,163,184,.35)", marginTop: 12 }}>Classes: {s.dnd_class || "—"}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Search + Filters */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search spells..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        {/* Level pills */}
+        {SPELL_LEVELS.map(l => (
+          <button key={l} onClick={() => setLevel(l)} style={{
+            ...S.btn, fontSize: 10, padding: "3px 8px",
+            borderColor: level === l ? `${ACCENT}55` : undefined,
+            background: level === l ? `${ACCENT}18` : undefined,
+            color: level === l ? ACCENT : undefined,
+          }}>{l === "Cantrip" ? "C" : l === "All" ? "All Lvl" : l}</button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        <select style={S.select} value={school} onChange={e => setSchool(e.target.value)}>
+          {SPELL_SCHOOLS.map(s => <option key={s} value={s}>{s === "All" ? "All Schools" : s}</option>)}
+        </select>
+        <select style={S.select} value={dndClass} onChange={e => setDndClass(e.target.value)}>
+          {SPELL_CLASSES.map(c => <option key={c} value={c}>{c === "All" ? "All Classes" : c}</option>)}
+        </select>
+        <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", alignSelf: "center", marginLeft: "auto" }}>{total} spells</span>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Consulting the arcane library...</div>
+      ) : spells.length === 0 ? (
+        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No spells found</div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {spells.map(s => {
+              const schoolClr = SCHOOL_COLORS[s.school] || ACCENT;
+              return (
+                <div key={s.slug} onClick={() => setSelected(s)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", borderColor: "rgba(255,255,255,.08)" }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = `${schoolClr}44`)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                    {s.concentration === "yes" && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 700, flexShrink: 0 }}>C</span>}
+                    {s.ritual === "yes" && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(171,109,172,.12)", color: "#AB6DAC", fontWeight: 700, flexShrink: 0 }}>R</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${schoolClr}15`, color: schoolClr, fontWeight: 700 }}>{s.school}</span>
+                    <span style={{ fontSize: 10, color: "rgba(148,163,184,.5)" }}>{s.level_int === 0 ? "Cantrip" : `Level ${s.level_int}`}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.casting_time} · {s.range}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {total > 20 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+              <button style={S.btn} disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</button>
+              <span style={{ fontSize: 11, color: "rgba(148,163,184,.5)", alignSelf: "center" }}>Page {page} of {Math.ceil(total / 20)}</span>
+              <button style={S.btn} disabled={page >= Math.ceil(total / 20)} onClick={() => load(page + 1)}>Next →</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MONSTER BROWSER (BESTIARY)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MONSTER_TYPES = ["All", "aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
+const MONSTER_CRS = ["All", "0", "1/8", "1/4", "1/2", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "30"];
+
+function MonsterBrowser() {
+  const [monsters, setMonsters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("All");
+  const [cr, setCr] = useState("All");
+  const [selected, setSelected] = useState<any | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const debounce = useRef<any>(null);
+
+  const load = useCallback(async (pg = 1) => {
+    setLoading(true);
+    let q = `/monsters/?format=json&page=${pg}&limit=20&document__slug=wotc-srd`;
+    if (search) q += `&search=${encodeURIComponent(search)}`;
+    if (type !== "All") q += `&type=${encodeURIComponent(type)}`;
+    if (cr !== "All") q += `&cr=${encodeURIComponent(cr)}`;
+    try {
+      const j = await o5eFetch(q);
+      setMonsters(j.results || []);
+      setTotal(j.count || 0);
+      setPage(pg);
+    } catch {}
+    setLoading(false);
+  }, [search, type, cr]);
+
+  useEffect(() => {
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => load(1), search ? 350 : 0);
+    return () => clearTimeout(debounce.current);
+  }, [load]);
+
+  function AbilityScore({ label, val }: { label: string; val: number }) {
+    const mod = Math.floor((val - 10) / 2);
+    return (
+      <div style={{ textAlign: "center", padding: "6px 0" }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(148,163,184,.5)", letterSpacing: ".5px", textTransform: "uppercase" }}>{label}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{val}</div>
+        <div style={{ fontSize: 10, color: ACCENT }}>{mod >= 0 ? `+${mod}` : mod}</div>
+      </div>
+    );
+  }
+
+  if (selected) {
+    const m = selected;
+    const numCr = parseFloat(m.challenge_rating) || 0;
+    const cc = crColor(numCr);
+    return (
+      <div>
+        <button onClick={() => setSelected(null)} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Bestiary</button>
+        <div style={{ ...S.card, border: `1px solid ${cc}33`, background: `${cc}06` }}>
+          {/* Header */}
+          <div style={{ borderBottom: `2px solid ${cc}44`, paddingBottom: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{m.name}</div>
+            <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", fontStyle: "italic" }}>
+              {m.size} {m.type}{m.subtype ? ` (${m.subtype})` : ""}, {m.alignment}
+            </div>
+          </div>
+
+          {/* AC / HP / Speed */}
+          <div style={{ display: "flex", gap: 16, marginBottom: 14, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+            <div><span style={S.label}>Armor Class</span><div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.9)" }}>{m.armor_class}</div></div>
+            <div><span style={S.label}>Hit Points</span><div style={{ fontSize: 14, fontWeight: 800, color: "#EF5350" }}>{m.hit_points} <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(148,163,184,.5)" }}>({m.hit_dice})</span></div></div>
+            <div><span style={S.label}>Speed</span><div style={{ fontSize: 12, color: "rgba(243,244,246,.8)" }}>
+              {typeof m.speed === "object" ? Object.entries(m.speed).map(([k, v]) => `${k} ${v} ft.`).join(", ") : m.speed}
+            </div></div>
+          </div>
+
+          {/* Ability Scores */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, marginBottom: 14, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+            <AbilityScore label="STR" val={m.strength} />
+            <AbilityScore label="DEX" val={m.dexterity} />
+            <AbilityScore label="CON" val={m.constitution} />
+            <AbilityScore label="INT" val={m.intelligence} />
+            <AbilityScore label="WIS" val={m.wisdom} />
+            <AbilityScore label="CHA" val={m.charisma} />
+          </div>
+
+          {/* Defensive info */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14, fontSize: 12 }}>
+            {m.damage_immunities && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Damage Immunities</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.damage_immunities}</span></div>}
+            {m.damage_resistances && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Damage Resistances</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.damage_resistances}</span></div>}
+            {m.damage_vulnerabilities && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Damage Vulnerabilities</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.damage_vulnerabilities}</span></div>}
+            {m.condition_immunities && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Condition Immunities</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.condition_immunities}</span></div>}
+            {m.senses && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Senses</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.senses}</span></div>}
+            {m.languages && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Languages</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.languages}</span></div>}
+            <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Challenge</strong> <span style={{ color: cc, fontWeight: 700 }}>{m.challenge_rating}</span></div>
+          </div>
+
+          {/* Special Abilities */}
+          {m.special_abilities?.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ ...S.label, marginBottom: 8, color: cc, opacity: 1 }}>Traits</div>
+              {m.special_abilities.map((a: any, i: number) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.9)", fontStyle: "italic" }}>{a.name}.</div>
+                  <div style={{ fontSize: 12, color: "rgba(243,244,246,.72)", lineHeight: 1.55 }}>{a.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          {m.actions?.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ ...S.label, marginBottom: 8, color: "#EF5350", opacity: 1, borderTop: `2px solid ${cc}44`, paddingTop: 10 }}>Actions</div>
+              {m.actions.map((a: any, i: number) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.9)", fontStyle: "italic" }}>{a.name}.</div>
+                  <div style={{ fontSize: 12, color: "rgba(243,244,246,.72)", lineHeight: 1.55 }}>{a.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Legendary Actions */}
+          {m.legendary_actions?.length > 0 && (
+            <div>
+              <div style={{ ...S.label, marginBottom: 8, color: "#FF8F00", opacity: 1, borderTop: `2px solid ${cc}44`, paddingTop: 10 }}>Legendary Actions</div>
+              <div style={{ fontSize: 12, color: "rgba(148,163,184,.5)", marginBottom: 8, fontStyle: "italic" }}>{m.legendary_desc}</div>
+              {m.legendary_actions.map((a: any, i: number) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.9)", fontStyle: "italic" }}>{a.name}.</div>
+                  <div style={{ fontSize: 12, color: "rgba(243,244,246,.72)", lineHeight: 1.55 }}>{a.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search monsters..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        <select style={S.select} value={type} onChange={e => setType(e.target.value)}>
+          {MONSTER_TYPES.map(t => <option key={t} value={t}>{t === "All" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+        </select>
+        <select style={S.select} value={cr} onChange={e => setCr(e.target.value)}>
+          {MONSTER_CRS.map(c => <option key={c} value={c}>{c === "All" ? "All CRs" : `CR ${c}`}</option>)}
+        </select>
+        <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", alignSelf: "center", marginLeft: "auto" }}>{total} creatures</span>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Scouting the dungeon...</div>
+      ) : monsters.length === 0 ? (
+        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No monsters found</div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {monsters.map(m => {
+              const numCr = parseFloat(m.challenge_rating) || 0;
+              const cc = crColor(numCr);
+              return (
+                <div key={m.slug} onClick={() => setSelected(m)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s" }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = `${cc}44`)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                    <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: `${cc}18`, color: cc, fontWeight: 700, flexShrink: 0 }}>CR {m.challenge_rating}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", fontStyle: "italic" }}>{m.size} {m.type}</div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 10 }}>
+                    <span style={{ color: "rgba(148,163,184,.5)" }}>AC <strong style={{ color: "rgba(243,244,246,.8)" }}>{m.armor_class}</strong></span>
+                    <span style={{ color: "rgba(148,163,184,.5)" }}>HP <strong style={{ color: "#EF5350" }}>{m.hit_points}</strong></span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {total > 20 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+              <button style={S.btn} disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</button>
+              <span style={{ fontSize: 11, color: "rgba(148,163,184,.5)", alignSelf: "center" }}>Page {page} of {Math.ceil(total / 20)}</span>
+              <button style={S.btn} disabled={page >= Math.ceil(total / 20)} onClick={() => load(page + 1)}>Next →</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLASS BROWSER
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CLASS_DATA: { name: string; hitDie: string; primary: string; saves: string; desc: string }[] = [
+  { name: "Barbarian", hitDie: "d12", primary: "Strength", saves: "STR, CON", desc: "A fierce warrior who channels primal rage to devastate enemies on the battlefield." },
+  { name: "Bard", hitDie: "d8", primary: "Charisma", saves: "DEX, CHA", desc: "A master of song, speech, and magic who inspires allies and manipulates foes." },
+  { name: "Cleric", hitDie: "d8", primary: "Wisdom", saves: "WIS, CHA", desc: "A divine champion who wields the power of their deity to heal, protect, and smite." },
+  { name: "Druid", hitDie: "d8", primary: "Wisdom", saves: "INT, WIS", desc: "A priest of the Old Faith who draws power from nature and can assume animal forms." },
+  { name: "Fighter", hitDie: "d10", primary: "STR or DEX", saves: "STR, CON", desc: "A master of martial combat, skilled with weapons and armor of every kind." },
+  { name: "Monk", hitDie: "d8", primary: "DEX & WIS", saves: "STR, DEX", desc: "A martial artist who harnesses the body's inner ki to perform extraordinary feats." },
+  { name: "Paladin", hitDie: "d10", primary: "STR & CHA", saves: "WIS, CHA", desc: "A holy warrior bound by a sacred oath to fight evil and protect the innocent." },
+  { name: "Ranger", hitDie: "d10", primary: "DEX & WIS", saves: "STR, DEX", desc: "A warrior of the wilderness who hunts monsters that threaten civilization." },
+  { name: "Rogue", hitDie: "d8", primary: "Dexterity", saves: "DEX, INT", desc: "A scoundrel who uses stealth and trickery to overcome obstacles and enemies." },
+  { name: "Sorcerer", hitDie: "d6", primary: "Charisma", saves: "CON, CHA", desc: "A spellcaster who draws on inherent magic from a gift or bloodline." },
+  { name: "Warlock", hitDie: "d8", primary: "Charisma", saves: "WIS, CHA", desc: "A wielder of magic granted by an otherworldly patron through a dark pact." },
+  { name: "Wizard", hitDie: "d6", primary: "Intelligence", saves: "INT, WIS", desc: "A scholarly magic-user who commands arcane power through study and mastery." },
+];
+
+function ClassBrowser() {
+  const [selected, setSelected] = useState<any | null>(null);
+  const [classDetail, setClassDetail] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function loadClass(slug: string) {
+    setLoading(true);
+    try {
+      const j = await o5eFetch(`/classes/${slug}/?format=json`);
+      setClassDetail(j);
+    } catch {}
+    setLoading(false);
+  }
+
+  if (selected) {
+    const c = selected;
+    const cc = CLASS_COLORS[c.name] || ACCENT;
+    return (
+      <div>
+        <button onClick={() => { setSelected(null); setClassDetail(null); }} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Classes</button>
+        <div style={{ ...S.card, border: `1px solid ${cc}33`, background: `${cc}06` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 24 }}>{CLASS_ICONS[c.name] || "⚔"}</span>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{c.name}</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", fontStyle: "italic" }}>{c.desc}</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+            <div style={{ textAlign: "center", padding: 10, borderRadius: 8, background: `${cc}10`, border: `1px solid ${cc}22` }}>
+              <div style={{ ...S.label, color: cc, opacity: 1 }}>Hit Die</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{c.hitDie}</div>
+            </div>
+            <div style={{ textAlign: "center", padding: 10, borderRadius: 8, background: `${cc}10`, border: `1px solid ${cc}22` }}>
+              <div style={{ ...S.label, color: cc, opacity: 1 }}>Primary</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>{c.primary}</div>
+            </div>
+            <div style={{ textAlign: "center", padding: 10, borderRadius: 8, background: `${cc}10`, border: `1px solid ${cc}22` }}>
+              <div style={{ ...S.label, color: cc, opacity: 1 }}>Saves</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>{c.saves}</div>
+            </div>
+          </div>
+
+          {/* API-sourced class details */}
+          {loading && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading class features...</div>}
+          {classDetail && (
+            <div>
+              {classDetail.desc && <div style={{ fontSize: 13, color: "rgba(243,244,246,.78)", lineHeight: 1.65, marginBottom: 14, whiteSpace: "pre-wrap" }}>{classDetail.desc}</div>}
+              {classDetail.hit_dice && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ ...S.label, color: cc, opacity: 1 }}>Hit Points</div>
+                  <div style={{ fontSize: 12, color: "rgba(243,244,246,.75)", lineHeight: 1.5 }}>
+                    <strong>Hit Dice:</strong> {classDetail.hit_dice}<br />
+                    <strong>HP at 1st Level:</strong> {classDetail.hp_at_1st_level}<br />
+                    <strong>HP at Higher Levels:</strong> {classDetail.hp_at_higher_levels}
+                  </div>
+                </div>
+              )}
+              {classDetail.prof_armor && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ ...S.label, color: cc, opacity: 1 }}>Proficiencies</div>
+                  <div style={{ fontSize: 12, color: "rgba(243,244,246,.75)", lineHeight: 1.5 }}>
+                    <strong>Armor:</strong> {classDetail.prof_armor}<br />
+                    <strong>Weapons:</strong> {classDetail.prof_weapons}<br />
+                    <strong>Tools:</strong> {classDetail.prof_tools || "None"}<br />
+                    <strong>Saving Throws:</strong> {classDetail.prof_saving_throws}<br />
+                    <strong>Skills:</strong> {classDetail.prof_skills}
+                  </div>
+                </div>
+              )}
+              {classDetail.equipment && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ ...S.label, color: cc, opacity: 1 }}>Starting Equipment</div>
+                  <div style={{ fontSize: 12, color: "rgba(243,244,246,.72)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{classDetail.equipment}</div>
+                </div>
+              )}
+              {classDetail.table && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ ...S.label, color: cc, opacity: 1 }}>Class Table</div>
+                  <div style={{ fontSize: 11, color: "rgba(243,244,246,.7)", lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "monospace", overflow: "auto" }}>{classDetail.table}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      {CLASS_DATA.map(c => {
+        const cc = CLASS_COLORS[c.name] || ACCENT;
+        return (
+          <div key={c.name} onClick={() => { setSelected(c); loadClass(c.name.toLowerCase()); }} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "flex-start" }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = `${cc}44`)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{CLASS_ICONS[c.name] || "⚔"}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: cc, marginBottom: 3 }}>{c.name}</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,.55)", lineHeight: 1.4, marginBottom: 6 }}>{c.desc}</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${cc}12`, color: cc, fontWeight: 700 }}>{c.hitDie}</span>
+                <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "rgba(255,255,255,.05)", color: "rgba(148,163,184,.55)", fontWeight: 600 }}>{c.saves}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAGIC ITEM BROWSER
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RARITY_OPTIONS = ["All", "common", "uncommon", "rare", "very rare", "legendary", "artifact"];
+
+function MagicItemBrowser() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [rarity, setRarity] = useState("All");
+  const [selected, setSelected] = useState<any | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const debounce = useRef<any>(null);
+
+  const load = useCallback(async (pg = 1) => {
+    setLoading(true);
+    let q = `/magicitems/?format=json&page=${pg}&limit=20&document__slug=wotc-srd`;
+    if (search) q += `&search=${encodeURIComponent(search)}`;
+    if (rarity !== "All") q += `&rarity=${encodeURIComponent(rarity)}`;
+    try {
+      const j = await o5eFetch(q);
+      setItems(j.results || []);
+      setTotal(j.count || 0);
+      setPage(pg);
+    } catch {}
+    setLoading(false);
+  }, [search, rarity]);
+
+  useEffect(() => {
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => load(1), search ? 350 : 0);
+    return () => clearTimeout(debounce.current);
+  }, [load]);
+
+  if (selected) {
+    const it = selected;
+    const rc = RARITY_COLORS[it.rarity?.toLowerCase()] || "rgba(255,255,255,.6)";
+    return (
+      <div>
+        <button onClick={() => setSelected(null)} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Items</button>
+        <div style={{ ...S.card, border: `1px solid ${rc}33` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{it.name}</span>
+            <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: `${rc}18`, color: rc, fontWeight: 700, textTransform: "capitalize" }}>{it.rarity}</span>
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", fontStyle: "italic", marginBottom: 12 }}>{it.type}, {it.requires_attunement || "no attunement"}</div>
+          <div style={{ fontSize: 13, color: "rgba(243,244,246,.82)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{it.desc}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search magic items..." value={search} onChange={e => setSearch(e.target.value)} />
+        <select style={S.select} value={rarity} onChange={e => setRarity(e.target.value)}>
+          {RARITY_OPTIONS.map(r => <option key={r} value={r}>{r === "All" ? "All Rarities" : r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+        </select>
+      </div>
+      <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginBottom: 8, display: "block" }}>{total} items</span>
+
+      {loading ? (
+        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Rummaging through the hoard...</div>
+      ) : items.length === 0 ? (
+        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No magic items found</div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {items.map(it => {
+              const rc = RARITY_COLORS[it.rarity?.toLowerCase()] || "rgba(255,255,255,.6)";
+              return (
+                <div key={it.slug} onClick={() => setSelected(it)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s" }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = `${rc}44`)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</span>
+                    <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 3, background: `${rc}18`, color: rc, fontWeight: 700, flexShrink: 0, textTransform: "capitalize" }}>{it.rarity}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.45)" }}>{it.type}</div>
+                </div>
+              );
+            })}
+          </div>
+          {total > 20 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+              <button style={S.btn} disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</button>
+              <span style={{ fontSize: 11, color: "rgba(148,163,184,.5)", alignSelf: "center" }}>Page {page} of {Math.ceil(total / 20)}</span>
+              <button style={S.btn} disabled={page >= Math.ceil(total / 20)} onClick={() => load(page + 1)}>Next →</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONDITIONS REFERENCE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CONDITIONS_DATA = [
+  { name: "Blinded", desc: "Can't see. Auto-fail sight checks. Attacks have disadvantage. Attacks against have advantage.", icon: "🙈" },
+  { name: "Charmed", desc: "Can't attack charmer or target them with harmful abilities. Charmer has advantage on social checks.", icon: "💘" },
+  { name: "Deafened", desc: "Can't hear. Auto-fail hearing checks.", icon: "🔇" },
+  { name: "Exhaustion", desc: "Cumulative levels (1-6). Disadvantage on checks, speed halved, HP max halved, speed 0, then death.", icon: "😩" },
+  { name: "Frightened", desc: "Disadvantage on ability checks and attack rolls while source of fear is in line of sight. Can't willingly move closer.", icon: "😨" },
+  { name: "Grappled", desc: "Speed becomes 0. Ends if grappler is incapacitated or effect moves creature out of reach.", icon: "🤼" },
+  { name: "Incapacitated", desc: "Can't take actions or reactions.", icon: "💫" },
+  { name: "Invisible", desc: "Impossible to see without special sense. Attacks have advantage. Attacks against have disadvantage.", icon: "👻" },
+  { name: "Paralyzed", desc: "Incapacitated, can't move or speak. Auto-fail STR and DEX saves. Attacks have advantage. Melee hits are crits.", icon: "⚡" },
+  { name: "Petrified", desc: "Transformed to stone. Weight x10. Incapacitated, can't move or speak. Resistance to all damage. Immune to poison/disease.", icon: "🪨" },
+  { name: "Poisoned", desc: "Disadvantage on attack rolls and ability checks.", icon: "☠️" },
+  { name: "Prone", desc: "Can only crawl. Disadvantage on attacks. Melee attacks against have advantage. Ranged attacks against have disadvantage.", icon: "🔽" },
+  { name: "Restrained", desc: "Speed 0. Attacks have disadvantage. Attacks against have advantage. Disadvantage on DEX saves.", icon: "⛓" },
+  { name: "Stunned", desc: "Incapacitated, can't move, can only speak falteringly. Auto-fail STR and DEX saves. Attacks against have advantage.", icon: "💥" },
+  { name: "Unconscious", desc: "Incapacitated, can't move or speak. Drops what it's holding, falls prone. Auto-fail STR/DEX. Attacks have advantage. Melee crits.", icon: "💤" },
+];
+
+function ConditionsReference() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      {CONDITIONS_DATA.map(c => (
+        <div key={c.name} style={{ ...S.card, display: "flex", gap: 8 }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{c.icon}</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: ACCENT, marginBottom: 3 }}>{c.name}</div>
+            <div style={{ fontSize: 11, color: "rgba(243,244,246,.65)", lineHeight: 1.45 }}>{c.desc}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DICE TOWER
+// ═══════════════════════════════════════════════════════════════════════════
+
+const QUICK_DICE = [
+  { label: "d4", expr: "d4" }, { label: "d6", expr: "d6" }, { label: "d8", expr: "d8" },
+  { label: "d10", expr: "d10" }, { label: "d12", expr: "d12" }, { label: "d20", expr: "d20" },
+  { label: "d100", expr: "d100" }, { label: "2d6", expr: "2d6" }, { label: "4d6", expr: "4d6" },
+];
+
+function DiceTower() {
+  const [history, setHistory] = useState<DiceResult[]>([]);
+  const [customExpr, setCustomExpr] = useState("");
+  const [lastRoll, setLastRoll] = useState<DiceResult | null>(null);
+  const [showFlash, setShowFlash] = useState(false);
+
+  function doRoll(expr: string) {
+    const parsed = parseDice(expr);
+    if (!parsed) return;
+    const result = rollDice(parsed);
+    const roll: DiceResult = {
+      ...result,
+      id: Math.random().toString(36).slice(2),
+      expr: expr.toLowerCase(),
+      roller: "You",
+      ts: Date.now(),
+    };
+    setLastRoll(roll);
+    setHistory(prev => [roll, ...prev].slice(0, 50));
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 600);
+  }
+
+  const advRoll = (adv: boolean) => {
+    doRoll(adv ? "d20adv" : "d20dis");
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Big result display */}
+      <div style={{
+        textAlign: "center", padding: "28px 20px", borderRadius: 14,
+        border: `1px solid ${ACCENT}33`,
+        background: lastRoll?.isNat20 ? "rgba(34,197,94,.08)" : lastRoll?.isNat1 ? "rgba(239,68,68,.08)" : `${ACCENT}06`,
+        transition: "all .3s",
+        boxShadow: showFlash ? `0 0 40px ${lastRoll?.isNat20 ? "rgba(34,197,94,.3)" : lastRoll?.isNat1 ? "rgba(239,68,68,.3)" : `${ACCENT}20`}` : "none",
+      }}>
+        {lastRoll ? (
+          <>
+            <div style={{ fontSize: 48, fontWeight: 900, color: lastRoll.isNat20 ? "#22C55E" : lastRoll.isNat1 ? "#EF5350" : "rgba(243,244,246,.95)", lineHeight: 1, marginBottom: 8, transition: "color .3s" }}>
+              {lastRoll.total}
+            </div>
+            {lastRoll.isNat20 && <div style={{ fontSize: 14, fontWeight: 800, color: "#22C55E", marginBottom: 6, letterSpacing: 2 }}>NATURAL 20!</div>}
+            {lastRoll.isNat1 && <div style={{ fontSize: 14, fontWeight: 800, color: "#EF5350", marginBottom: 6, letterSpacing: 2 }}>CRITICAL FAIL</div>}
+            <div style={{ fontSize: 12, color: "rgba(148,163,184,.6)" }}>
+              {lastRoll.expr}
+              {(lastRoll.advantage || lastRoll.disadvantage) && (
+                <span style={{ color: lastRoll.advantage ? "#22C55E" : "#EF5350", fontWeight: 600 }}>
+                  {" "}({lastRoll.advantage ? "ADV" : "DIS"})
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 4 }}>
+              [{lastRoll.rolls.join(", ")}]
+              {lastRoll.dropped && lastRoll.dropped.length > 0 && (
+                <span style={{ textDecoration: "line-through", opacity: 0.4 }}> dropped: {lastRoll.dropped.join(", ")}</span>
+              )}
+              {lastRoll.modifier !== 0 && <span> {lastRoll.modifier > 0 ? "+" : ""}{lastRoll.modifier}</span>}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🎲</div>
+            <div style={{ fontSize: 14, color: "rgba(148,163,184,.4)" }}>Roll the dice</div>
+          </>
+        )}
+      </div>
+
+      {/* Quick dice buttons */}
+      <div>
+        <div style={S.label}>Quick Roll</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {QUICK_DICE.map(d => (
+            <button key={d.label} onClick={() => doRoll(d.expr)} style={{
+              ...S.btnPri, padding: "8px 14px", fontSize: 13, fontWeight: 800, flex: "1 1 60px",
+              minWidth: 50, textAlign: "center",
+            }}>{d.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Advantage / Disadvantage */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => advRoll(true)} style={{
+          ...S.btn, flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700,
+          borderColor: "rgba(34,197,94,.25)", background: "rgba(34,197,94,.08)", color: "#22C55E",
+        }}>d20 Advantage</button>
+        <button onClick={() => advRoll(false)} style={{
+          ...S.btn, flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700,
+          borderColor: "rgba(239,68,68,.25)", background: "rgba(239,68,68,.08)", color: "#EF5350",
+        }}>d20 Disadvantage</button>
+      </div>
+
+      {/* Custom roll */}
+      <div>
+        <div style={S.label}>Custom Roll</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            style={{ ...S.input, flex: 1 }}
+            placeholder="e.g. 2d8+5, d20adv, 4d6..."
+            value={customExpr}
+            onChange={e => setCustomExpr(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
+          />
+          <button style={S.btnPri} onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}>Roll</button>
+        </div>
+      </div>
+
+      {/* Roll history */}
+      {history.length > 0 && (
+        <div>
+          <div style={{ ...S.label, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Roll History</span>
+            <button style={{ ...S.btn, fontSize: 9, padding: "2px 6px" }} onClick={() => setHistory([])}>Clear</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflow: "auto" }}>
+            {history.map(r => (
+              <div key={r.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px" }}>
+                <span style={{
+                  fontSize: 16, fontWeight: 800, minWidth: 40, textAlign: "center",
+                  color: r.isNat20 ? "#22C55E" : r.isNat1 ? "#EF5350" : "rgba(243,244,246,.9)",
+                }}>{r.total}</span>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 11, color: "rgba(243,244,246,.7)" }}>{r.expr}</span>
+                  {(r.advantage || r.disadvantage) && (
+                    <span style={{ fontSize: 9, marginLeft: 4, color: r.advantage ? "#22C55E" : "#EF5350", fontWeight: 600 }}>
+                      {r.advantage ? "ADV" : "DIS"}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginLeft: 6 }}>[{r.rolls.join(",")}]{r.modifier ? (r.modifier > 0 ? `+${r.modifier}` : r.modifier) : ""}</span>
+                </div>
+                <span style={{ fontSize: 9, color: "rgba(148,163,184,.3)" }}>{new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAVERN BOARD (D&D LFG)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DND_SYSTEMS = ["D&D 5e", "D&D 5.5e (2024)", "Pathfinder 2e", "Call of Cthulhu", "OSR", "Other"];
+const DND_SESSION_TYPES = ["One-Shot", "Campaign", "West Marches", "Drop-in", "Tutorial"];
+const DND_EXPERIENCE = ["Any", "New to TTRPGs", "Familiar", "Experienced", "Veteran"];
+const DND_VTTS = ["Any", "Roll20", "Foundry VTT", "TaleSpire", "Owlbear Rodeo", "Theater of the Mind", "In-Person"];
+const DND_ROLES = ["Looking for Players", "Looking for DM"];
+const DND_TAGS = ["RP-heavy", "combat-focused", "homebrew-friendly", "RAW", "beginner-friendly", "voice-required", "18+", "LGBTQ+ friendly", "PBP", "long-running"];
+
+function TavernBoard({ lobbyId }: { lobbyId: string }) {
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [activity, setActivity] = useState("");
+  const [description, setDescription] = useState("");
+  const [sessionType, setSessionType] = useState("One-Shot");
+  const [system, setSystem] = useState("D&D 5e");
+  const [role, setRole] = useState("Looking for Players");
+  const [experience, setExperience] = useState("Any");
+  const [vtt, setVtt] = useState("Any");
+  const [maxPlayers, setMaxPlayers] = useState(5);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+
+  function load() {
+    apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`)
+      .then(j => { if (j.ok) setPosts(j.posts || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }
+  useEffect(() => { load(); }, [lobbyId]);
+
+  async function create() {
+    setCreating(true);
+    await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`, {
+      method: "POST",
+      body: JSON.stringify({
+        activity: activity || `${system} ${sessionType}`,
+        description,
+        maxPlayers,
+        platform: "crossplay",
+        gameMode: sessionType,
+        rankTier: experience !== "Any" ? experience : null,
+        region: vtt !== "Any" ? vtt : null,
+        tags: [role, system, ...selectedTags],
+        metadata: { system, sessionType, role, experience, vtt },
+      }),
+    });
+    setCreating(false);
+    setShowForm(false);
+    setActivity(""); setDescription("");
+    load();
+  }
+
+  function toggleTag(tag: string) {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag].slice(0, 5));
+  }
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Checking the notice board...</div>;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={S.label}>TAVERN BOARD ({posts.filter(p => p.status === "OPEN").length} quests posted)</div>
+        <button style={S.btnPri} onClick={() => setShowForm(!showForm)}>{showForm ? "Cancel" : "+ Post Quest"}</button>
+      </div>
+
+      {showForm && (
+        <div style={{ ...S.card, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${ACCENT}33`, background: `${ACCENT}06` }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Role</div>
+              <select style={{ ...S.select, width: "100%" }} value={role} onChange={e => setRole(e.target.value)}>
+                {DND_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>System</div>
+              <select style={{ ...S.select, width: "100%" }} value={system} onChange={e => setSystem(e.target.value)}>
+                {DND_SYSTEMS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Session Type</div>
+              <select style={{ ...S.select, width: "100%" }} value={sessionType} onChange={e => setSessionType(e.target.value)}>
+                {DND_SESSION_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>Experience</div>
+              <select style={{ ...S.select, width: "100%" }} value={experience} onChange={e => setExperience(e.target.value)}>
+                {DND_EXPERIENCE.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={S.label}>VTT / Platform</div>
+              <select style={{ ...S.select, width: "100%" }} value={vtt} onChange={e => setVtt(e.target.value)}>
+                {DND_VTTS.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <div style={{ width: 80 }}>
+              <div style={S.label}>Party Size</div>
+              <select style={{ ...S.select, width: "100%" }} value={maxPlayers} onChange={e => setMaxPlayers(Number(e.target.value))}>
+                {[2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div style={S.label}>Tags</div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {DND_TAGS.map(tag => (
+                <button key={tag} onClick={() => toggleTag(tag)} style={{
+                  ...S.btn, fontSize: 10, padding: "3px 8px",
+                  borderColor: selectedTags.includes(tag) ? `${ACCENT}55` : undefined,
+                  background: selectedTags.includes(tag) ? `${ACCENT}18` : undefined,
+                  color: selectedTags.includes(tag) ? ACCENT : undefined,
+                }}>{tag}</button>
+              ))}
+            </div>
+          </div>
+
+          <input style={S.input} value={activity} onChange={e => setActivity(e.target.value)} placeholder="Quest title (e.g. 'Lost Mine of Phandelver — Session 0')" maxLength={200} />
+          <textarea
+            style={{ ...S.input, minHeight: 60, resize: "vertical" } as React.CSSProperties}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Describe your quest, setting, expectations, schedule..."
+            maxLength={1000}
+          />
+
+          <button style={{ ...S.btnPri, padding: "8px 20px", alignSelf: "flex-start" }} onClick={create} disabled={creating}>
+            {creating ? "Posting..." : "Post to Tavern Board"}
+          </button>
+        </div>
+      )}
+
+      {posts.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 30 }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🍺</div>
+          <div style={{ fontSize: 13, color: "rgba(148,163,184,.4)" }}>The tavern board is empty. Be the first to post a quest!</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {posts.map(p => {
+            const meta = p.metadata || {};
+            const isLFDM = (p.tags || []).includes("Looking for DM");
+            return (
+              <div key={p.id} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 6, borderLeft: `3px solid ${isLFDM ? "#EF5350" : ACCENT}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(243,244,246,.92)" }}>{p.activity || "Seeking Adventurers"}</div>
+                    <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
+                      {p.userName} · {p.players?.length || 1}/{p.maxPlayers} adventurers
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                    background: p.status === "OPEN" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
+                    color: p.status === "OPEN" ? "#22C55E" : "#EF4444",
+                  }}>{p.status}</span>
+                </div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {(p.tags || []).map((t: string) => {
+                    const isSystem = DND_SYSTEMS.includes(t);
+                    const isRole = DND_ROLES.includes(t);
+                    return (
+                      <span key={t} style={{
+                        fontSize: 9, padding: "2px 6px", borderRadius: 4, fontWeight: 700,
+                        background: isRole ? (isLFDM ? "rgba(239,68,68,.12)" : `${ACCENT}15`) : isSystem ? "rgba(100,102,241,.12)" : "rgba(255,255,255,.04)",
+                        color: isRole ? (isLFDM ? "#EF5350" : ACCENT) : isSystem ? "#818CF8" : "rgba(148,163,184,.5)",
+                      }}>{t}</span>
+                    );
+                  })}
+                  {p.gameMode && !DND_ROLES.includes(p.gameMode) && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.gameMode}</span>}
+                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.55)", fontWeight: 600 }}>{p.rankTier}</span>}
+                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.55)", fontWeight: 600 }}>{p.region}</span>}
+                </div>
+                {p.description && <div style={{ fontSize: 12, color: "rgba(148,163,184,.55)", lineHeight: 1.45 }}>{p.description}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TWITCH STREAMS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function TwitchStreams({ lobbyId }: { lobbyId: string }) {
+  const [streams, setStreams] = useState<StreamInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent("Dungeons & Dragons")}&first=20`);
+      if (j.ok) setStreams(j.streams || []);
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Scrying for live streams...</div>;
+  if (streams.length === 0) return (
+    <div style={{ textAlign: "center", padding: 30 }}>
+      <div style={{ fontSize: 32, marginBottom: 8 }}>📺</div>
+      <div style={{ fontSize: 13, color: "rgba(148,163,184,.4)" }}>No D&D streams live right now</div>
+    </div>
+  );
+
+  return (
+    <>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {streams.map(s => (
+          <div key={s.userLogin} onClick={() => setInterceptStream(s)} style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = `${ACCENT}44`)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
+          >
+            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
+            </div>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444", boxShadow: "0 0 6px #EF444488", flexShrink: 0 }} />
+          </div>
+        ))}
+      </div>
+      <StreamInterceptModal stream={interceptStream} lobbyId={lobbyId} onClose={() => setInterceptStream(null)} onWatchHere={() => setInterceptStream(null)} />
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN PANEL
+// ═══════════════════════════════════════════════════════════════════════════
+
+export default function DndModulesPanel({
+  lobbyId, accentColor, gameName, style,
+}: {
+  lobbyId: string; accentColor?: string; gameName?: string; style?: React.CSSProperties;
+}) {
+  const accent = accentColor || ACCENT;
+  const [tab, setTab] = useState<TabId>("compendium");
+  const [compTab, setCompTab] = useState<CompTabId>("spells");
+
+  return (
+    <div style={{ padding: "14px 16px", overflow: "auto", ...style }}>
+      {/* Main tabs */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            ...S.btn, fontSize: 12, padding: "7px 14px", display: "flex", alignItems: "center", gap: 5,
+            borderColor: tab === t.id ? `${accent}55` : undefined,
+            background: tab === t.id ? `${accent}18` : undefined,
+            color: tab === t.id ? accent : undefined,
+            fontWeight: tab === t.id ? 700 : 500,
+          }}>
+            <span>{t.icon}</span> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Compendium */}
+      {tab === "compendium" && (
+        <>
+          <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
+            {COMP_TABS.map(ct => (
+              <button key={ct.id} onClick={() => setCompTab(ct.id)} style={{
+                ...S.btn, fontSize: 11, padding: "5px 10px",
+                borderColor: compTab === ct.id ? `${accent}44` : undefined,
+                background: compTab === ct.id ? `${accent}12` : undefined,
+                color: compTab === ct.id ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
+                fontWeight: compTab === ct.id ? 700 : 500,
+              }}>
+                <span style={{ marginRight: 4 }}>{ct.icon}</span>{ct.label}
+              </button>
+            ))}
+          </div>
+          {compTab === "spells" && <SpellBrowser />}
+          {compTab === "monsters" && <MonsterBrowser />}
+          {compTab === "classes" && <ClassBrowser />}
+          {compTab === "magicitems" && <MagicItemBrowser />}
+          {compTab === "conditions" && <ConditionsReference />}
+        </>
+      )}
+
+      {tab === "lfg" && <TavernBoard lobbyId={lobbyId} />}
+      {tab === "dice" && <DiceTower />}
+      {tab === "streams" && <TwitchStreams lobbyId={lobbyId} />}
+    </div>
+  );
+}
