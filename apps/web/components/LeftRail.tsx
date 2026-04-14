@@ -587,11 +587,19 @@ export default function LeftRail() {
                   </div>
                 </div>
                 {f.badge && (() => {
+                  // INDICTED (free tier) — faded text, no pill
+                  if (label === "indicted") {
+                    return (
+                      <span style={{
+                        fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
+                        color: "rgba(148,163,184,0.22)", flexShrink: 0,
+                      }}>Indicted</span>
+                    );
+                  }
                   // Badge colors by type
                   const tierColors: Record<string, { border: string; bg: string; color: string }> = {
                     "weered-tier-kingpin":  { border: "rgba(252,211,77,0.4)",  bg: "rgba(252,211,77,0.12)", color: "#fde68a" },
                     "weered-tier-felon":    { border: "rgba(249,115,22,0.4)",  bg: "rgba(249,115,22,0.12)", color: "#fdba74" },
-                    "weered-tier-indicted": { border: "rgba(88,0,229,0.35)",   bg: "rgba(88,0,229,0.12)",   color: "rgba(243,244,246,0.8)" },
                     "weered-mod":           { border: "rgba(88,0,229,0.35)",   bg: "rgba(88,0,229,0.12)",   color: "rgba(243,244,246,0.8)" },
                   };
                   const roleColors: Record<string, { border: string; bg: string; color: string }> = {
@@ -604,7 +612,7 @@ export default function LeftRail() {
                       fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
                       padding: "2px 6px", borderRadius: 999, flexShrink: 0,
                       border: `1px solid ${tc.border}`, background: tc.bg, color: tc.color,
-                    }}>{label === "kingpin" || label === "felon" || label === "indicted" ? label.toUpperCase() : roleDisplay(f.badge || label)}</span>
+                    }}>{label === "kingpin" || label === "felon" ? label.toUpperCase() : roleDisplay(f.badge || label)}</span>
                   );
                 })()}
               </div>

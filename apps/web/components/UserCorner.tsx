@@ -225,26 +225,22 @@ export default function UserCorner() {
             {name}
           </div>
           <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
-            {gRole && (
-              <span style={{
-                fontSize: 10, fontWeight: 900, padding: "2px 7px",
-                borderRadius: 999, border: "1px solid rgba(148,163,184,.22)",
-                background: "rgba(255,255,255,.06)",
-                ...chipStyle(gRole),
-              }}>
-                {roleDisplay(gRole)}
-              </span>
-            )}
-            {roomRole && roomRole !== gRole && (
-              <span style={{
-                fontSize: 10, fontWeight: 900, padding: "2px 7px",
-                borderRadius: 999, border: "1px solid rgba(148,163,184,.22)",
-                background: "rgba(255,255,255,.06)",
-                ...chipStyle(roomRole),
-              }}>
-                {roleDisplay(roomRole)}
-              </span>
-            )}
+            {/* Pill 1: Best contextual role (global > room) */}
+            {(() => {
+              const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
+              if (!bestRole) return null;
+              return (
+                <span style={{
+                  fontSize: 10, fontWeight: 900, padding: "2px 7px",
+                  borderRadius: 999, border: "1px solid rgba(148,163,184,.22)",
+                  background: "rgba(255,255,255,.06)",
+                  ...chipStyle(bestRole),
+                }}>
+                  {roleDisplay(bestRole)}
+                </span>
+              );
+            })()}
+            {/* Pill 2: Paid tier */}
             {(() => {
               const tier = String(me?.tier || "").toUpperCase();
               if (!tier || tier === "INNOCENT") return null;
