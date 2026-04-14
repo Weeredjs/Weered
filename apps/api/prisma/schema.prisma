@@ -226,6 +226,7 @@ model Room {
   bans     RoomBan[]
   messages RoomMessage[]
   audit    RoomAudit[]
+  npcs     RoomNpc[]
 
   @@unique([lobbyId, name])
 }
@@ -282,6 +283,35 @@ model RoomAudit {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@index([roomId, ts])
+}
+
+model RoomNpc {
+  id        String   @id @default(cuid())
+  roomId    String
+  name      String
+  portrait  String   @default("")
+  config    Json     @default("{}")
+  createdBy String
+  createdAt DateTime @default(now())
+
+  room     Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  messages NpcMessage[]
+
+  @@index([roomId])
+}
+
+model NpcMessage {
+  id        String   @id @default(cuid())
+  npcId     String
+  userId    String?
+  userName  String   @default("")
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  npc RoomNpc @relation(fields: [npcId], references: [id], onDelete: Cascade)
+
+  @@index([npcId, createdAt])
 }
 
 model User {
