@@ -47,6 +47,34 @@ const SCHOOL_COLORS: Record<string, string> = {
   Necromancy: "#66BB6A", Transmutation: "#FDD835",
 };
 
+const SCHOOL_ICONS: Record<string, string> = {
+  Abjuration: "/brand/dnd-icons/spell-abjuration.svg",
+  Conjuration: "/brand/dnd-icons/spell-conjuration.svg",
+  Divination: "/brand/dnd-icons/spell-divination.svg",
+  Enchantment: "/brand/dnd-icons/spell-enchantment.svg",
+  Evocation: "/brand/dnd-icons/spell-evocation.svg",
+  Illusion: "/brand/dnd-icons/spell-illusion.svg",
+  Necromancy: "/brand/dnd-icons/spell-necromancy.svg",
+  Transmutation: "/brand/dnd-icons/spell-transmutation.svg",
+};
+
+const MONSTER_ICONS: Record<string, string> = {
+  aberration: "/brand/dnd-icons/monster-aberration.svg",
+  beast: "/brand/dnd-icons/monster-beast.svg",
+  celestial: "/brand/dnd-icons/monster-celestial.svg",
+  construct: "/brand/dnd-icons/monster-construct.svg",
+  dragon: "/brand/dnd-icons/monster-dragon.svg",
+  elemental: "/brand/dnd-icons/monster-elemental.svg",
+  fey: "/brand/dnd-icons/monster-fey.svg",
+  fiend: "/brand/dnd-icons/monster-fiend.svg",
+  giant: "/brand/dnd-icons/monster-giant.svg",
+  humanoid: "/brand/dnd-icons/monster-humanoid.svg",
+  monstrosity: "/brand/dnd-icons/monster-monstrosity.svg",
+  ooze: "/brand/dnd-icons/monster-ooze.svg",
+  plant: "/brand/dnd-icons/monster-plant.svg",
+  undead: "/brand/dnd-icons/monster-undead.svg",
+};
+
 const RARITY_COLORS: Record<string, string> = {
   common: "rgba(255,255,255,.55)", uncommon: "#1FC219", rare: "#4FC3F7",
   "very rare": "#7B1FA2", legendary: "#FF8F00", artifact: "#C62828",
@@ -178,7 +206,12 @@ function SpellBrowser() {
       <div>
         <button onClick={() => setSelected(null)} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Spells</button>
         <div style={{ ...S.card, border: `1px solid ${SCHOOL_COLORS[s.school] || ACCENT}33`, background: `${SCHOOL_COLORS[s.school] || ACCENT}06` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            {SCHOOL_ICONS[s.school] && (
+              <div style={{ width: 42, height: 42, borderRadius: 8, background: `${SCHOOL_COLORS[s.school] || ACCENT}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <img src={SCHOOL_ICONS[s.school]} alt="" style={{ width: 26, height: 26, opacity: 0.8, filter: `drop-shadow(0 0 6px ${SCHOOL_COLORS[s.school] || ACCENT}55)` }} />
+              </div>
+            )}
             <span style={{ fontSize: 20, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{s.name}</span>
             {s.concentration === "yes" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 700 }}>CONC</span>}
             {s.ritual === "yes" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(171,109,172,.15)", color: "#AB6DAC", fontWeight: 700 }}>RITUAL</span>}
@@ -249,21 +282,29 @@ function SpellBrowser() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
             {spells.map(s => {
               const schoolClr = SCHOOL_COLORS[s.school] || ACCENT;
+              const schoolIcon = SCHOOL_ICONS[s.school];
               return (
-                <div key={s.slug} onClick={() => setSelected(s)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", borderColor: "rgba(255,255,255,.08)" }}
+                <div key={s.slug} onClick={() => setSelected(s)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", borderColor: "rgba(255,255,255,.08)", display: "flex", gap: 10, alignItems: "center" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${schoolClr}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
-                    {s.concentration === "yes" && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 700, flexShrink: 0 }}>C</span>}
-                    {s.ritual === "yes" && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(171,109,172,.12)", color: "#AB6DAC", fontWeight: 700, flexShrink: 0 }}>R</span>}
+                  {schoolIcon && (
+                    <div style={{ width: 32, height: 32, borderRadius: 6, background: `${schoolClr}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <img src={schoolIcon} alt="" style={{ width: 20, height: 20, opacity: 0.7, filter: `drop-shadow(0 0 4px ${schoolClr}44)` }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                      {s.concentration === "yes" && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 700, flexShrink: 0 }}>C</span>}
+                      {s.ritual === "yes" && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(171,109,172,.12)", color: "#AB6DAC", fontWeight: 700, flexShrink: 0 }}>R</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${schoolClr}15`, color: schoolClr, fontWeight: 700 }}>{s.school}</span>
+                      <span style={{ fontSize: 10, color: "rgba(148,163,184,.5)" }}>{s.level_int === 0 ? "Cantrip" : `Level ${s.level_int}`}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.casting_time} · {s.range}</div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${schoolClr}15`, color: schoolClr, fontWeight: 700 }}>{s.school}</span>
-                    <span style={{ fontSize: 10, color: "rgba(148,163,184,.5)" }}>{s.level_int === 0 ? "Cantrip" : `Level ${s.level_int}`}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.casting_time} · {s.range}</div>
                 </div>
               );
             })}
@@ -342,10 +383,17 @@ function MonsterBrowser() {
         <button onClick={() => setSelected(null)} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Bestiary</button>
         <div style={{ ...S.card, border: `1px solid ${cc}33`, background: `${cc}06` }}>
           {/* Header */}
-          <div style={{ borderBottom: `2px solid ${cc}44`, paddingBottom: 10, marginBottom: 12 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{m.name}</div>
-            <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", fontStyle: "italic" }}>
-              {m.size} {m.type}{m.subtype ? ` (${m.subtype})` : ""}, {m.alignment}
+          <div style={{ borderBottom: `2px solid ${cc}44`, paddingBottom: 10, marginBottom: 12, display: "flex", gap: 12, alignItems: "center" }}>
+            {MONSTER_ICONS[(m.type || "").toLowerCase()] && (
+              <div style={{ width: 48, height: 48, borderRadius: 8, background: `${cc}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <img src={MONSTER_ICONS[(m.type || "").toLowerCase()]} alt="" style={{ width: 30, height: 30, opacity: 0.75, filter: `drop-shadow(0 0 6px ${cc}55)` }} />
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{m.name}</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)", fontStyle: "italic" }}>
+                {m.size} {m.type}{m.subtype ? ` (${m.subtype})` : ""}, {m.alignment}
+              </div>
             </div>
           </div>
 
@@ -448,19 +496,28 @@ function MonsterBrowser() {
             {monsters.map(m => {
               const numCr = parseFloat(m.challenge_rating) || 0;
               const cc = crColor(numCr);
+              const typeKey = (m.type || "").toLowerCase();
+              const typeIcon = MONSTER_ICONS[typeKey];
               return (
-                <div key={m.slug} onClick={() => setSelected(m)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s" }}
+                <div key={m.slug} onClick={() => setSelected(m)} style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "center" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${cc}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
-                    <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: `${cc}18`, color: cc, fontWeight: 700, flexShrink: 0 }}>CR {m.challenge_rating}</span>
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", fontStyle: "italic" }}>{m.size} {m.type}</div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 10 }}>
-                    <span style={{ color: "rgba(148,163,184,.5)" }}>AC <strong style={{ color: "rgba(243,244,246,.8)" }}>{m.armor_class}</strong></span>
-                    <span style={{ color: "rgba(148,163,184,.5)" }}>HP <strong style={{ color: "#EF5350" }}>{m.hit_points}</strong></span>
+                  {typeIcon && (
+                    <div style={{ width: 36, height: 36, borderRadius: 6, background: `${cc}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <img src={typeIcon} alt="" style={{ width: 22, height: 22, opacity: 0.6, filter: `drop-shadow(0 0 4px ${cc}44)` }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
+                      <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: `${cc}18`, color: cc, fontWeight: 700, flexShrink: 0 }}>CR {m.challenge_rating}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", fontStyle: "italic" }}>{m.size} {m.type}</div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 10 }}>
+                      <span style={{ color: "rgba(148,163,184,.5)" }}>AC <strong style={{ color: "rgba(243,244,246,.8)" }}>{m.armor_class}</strong></span>
+                      <span style={{ color: "rgba(148,163,184,.5)" }}>HP <strong style={{ color: "#EF5350" }}>{m.hit_points}</strong></span>
+                    </div>
                   </div>
                 </div>
               );

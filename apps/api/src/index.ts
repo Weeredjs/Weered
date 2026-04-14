@@ -749,7 +749,7 @@ const SEED_LOBBIES = [
   { id: "destiny2", name: "Destiny 2 | Bungie.net", description: "Guardians, strikes, raids and loot. Powered by the Bungie API.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"] }, accentColor: "#4F88C6", logoUrl: "https://www.bungie.net/img/logos/bungie-saber-logo.png", bannerUrl: null, websiteUrl: "https://www.bungie.net" },
   { id: "news", name: "News", description: "Breaking news and headlines from around the world. CBC, BBC, Reuters, and more.", keywords: ["news","breaking","headlines","world","canada","politics","tech","business","science"], moduleType: ModuleType.NEWS, moduleConfig: {}, accentColor: "#DC2626" },
   { id: "fakeout", name: "FakeOut", description: "Paper trade crypto with fake money against real Binance prices. Live candlestick charts, instant orders, public leaderboards. All the thrill, none of the risk.", keywords: ["fakeout","trading","crypto","bitcoin","paper","stocks","market","btc","eth","finance","investing","fake"], moduleType: ModuleType.TRADING, moduleConfig: {}, accentColor: "#F5C518" },
-  { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
+  { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, AI NPCs, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
 ];
 
 const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: string }[] = [
@@ -7421,6 +7421,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         category: b.category || "OTHER",
         status: b.status || "LEAD",
         notes: b.notes || "",
+        postUrl: b.postUrl || "",
         lastContact: b.lastContact ? new Date(b.lastContact) : null,
         nextFollowUp: b.nextFollowUp ? new Date(b.nextFollowUp) : null,
         createdById: u.id,
@@ -7446,6 +7447,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     if (b.category !== undefined) data.category = b.category;
     if (b.status !== undefined) data.status = b.status;
     if (b.notes !== undefined) data.notes = b.notes;
+    if (b.postUrl !== undefined) data.postUrl = b.postUrl;
     if (b.lastContact !== undefined) data.lastContact = b.lastContact ? new Date(b.lastContact) : null;
     if (b.nextFollowUp !== undefined) data.nextFollowUp = b.nextFollowUp ? new Date(b.nextFollowUp) : null;
 
