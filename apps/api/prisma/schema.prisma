@@ -54,6 +54,7 @@ enum ModuleType {
   DOTA2
   STUDY
   PUBG
+  DND
 }
 
 model NewsArticle {

@@ -60,6 +60,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "cs2",     icon: "💀", label: "CS2",      live: true  },
   { id: "dota2",   icon: "⚔",  label: "Dota 2",   live: true  },
   { id: "study",   icon: "📚", label: "Focus",    live: true  },
+  { id: "dnd",     icon: "🐉", label: "D&D",      live: true  },
 ];
 
 // Module type → which special modules are available in rooms of that lobby
@@ -76,6 +77,7 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   CS2:         ["voice", "cs2", "youtube", "twitch", "video", "screen"],
   DOTA2:       ["voice", "dota2", "youtube", "twitch", "video", "screen"],
   STUDY:       ["voice", "study", "video", "screen"],
+  DND:         ["voice", "dnd", "youtube", "browser", "video", "screen"],
 };
 
 // Default modules for lobbies without a specific mapping
