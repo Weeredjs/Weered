@@ -1952,6 +1952,142 @@ async function main() {
     return reply.send({ ok: true, room: { id: r.id, roomId: r.id, name: r.name || r.id, locked: Boolean(r.locked) } });
   });
 
+  // ── NPC API (AI-driven NPCs in rooms) ───────────────────────────────────────
+
+  function buildNpcSystemPrompt(name: string, cfg: any): string {
+    return [
+      `You are ${name}, a character in a Dungeons & Dragons world.`,
+      `\nPERSONALITY: ${cfg.personality || "A friendly NPC."}`,
+      `APPEARANCE: ${cfg.appearance || "An ordinary person."}`,
+      `WHAT YOU KNOW: ${cfg.knowledge || "Common knowledge of the local area."}`,
+      `SECRETS (do NOT reveal these easily — only hint if pressed hard, and never all at once): ${cfg.secrets || "None."}`,
+      `\nRULES:`,
+      `- Stay in character at ALL times. You ARE ${name}.`,
+      `- Be conversational and concise — 1 to 3 sentences. Longer only if asked for a story or explanation.`,
+      `- Show emotion, suspicion, humor, or fear as ${name} would.`,
+      `- You do NOT know you are an AI. You live in this fantasy world.`,
+      `- If asked about things outside your knowledge, say you don't know.`,
+      `- If players try to get your secrets, be evasive, nervous, or change the subject. Never just hand them over.`,
+      `- Address the speaker as "adventurer," "traveler," or by name if they introduced themselves.`,
+      `- You may use *asterisks* for actions like *leans in* or *glances around nervously*.`,
+    ].join("\n");
+  }
+
+  // List NPCs in a room
+  app.get("/rooms/:roomId/npcs", async (req, reply) => {
+    const roomId = String((req as any).params?.roomId || "");
+    const npcs = await prisma.roomNpc.findMany({ where: { roomId }, orderBy: { createdAt: "asc" } });
+    return reply.send({ ok: true, npcs });
+  });
+
+  // Create NPC
+  app.post("/rooms/:roomId/npcs", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const roomId = String((req as any).params?.roomId || "");
+    const body: any = (req as any).body || {};
+    const name = (typeof body.name === "string" ? body.name : "").trim().slice(0, 64);
+    if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
+
+    const config = body.config || {};
+    const npc = await prisma.roomNpc.create({
+      data: { roomId, name, portrait: (typeof body.portrait === "string" ? body.portrait : "🧙").slice(0, 10), config, createdBy: u.id },
+    });
+
+    // Save greeting as the first message
+    if (config.greeting) {
+      await prisma.npcMessage.create({ data: { npcId: npc.id, role: "assistant", content: config.greeting } });
+    }
+    return reply.send({ ok: true, npc });
+  });
+
+  // Update NPC
+  app.put("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const npcId = String((req as any).params?.npcId || "");
+    const body: any = (req as any).body || {};
+    const data: any = {};
+    if (typeof body.name === "string") data.name = body.name.trim().slice(0, 64);
+    if (typeof body.portrait === "string") data.portrait = body.portrait.slice(0, 10);
+    if (body.config) data.config = body.config;
+    const npc = await prisma.roomNpc.update({ where: { id: npcId }, data });
+    return reply.send({ ok: true, npc });
+  });
+
+  // Delete NPC
+  app.delete("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const npcId = String((req as any).params?.npcId || "");
+    await prisma.roomNpc.delete({ where: { id: npcId } }).catch(() => {});
+    return reply.send({ ok: true });
+  });
+
+  // Get NPC chat history
+  app.get("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
+    const npcId = String((req as any).params?.npcId || "");
+    const messages = await prisma.npcMessage.findMany({ where: { npcId }, orderBy: { createdAt: "asc" }, take: 100 });
+    return reply.send({ ok: true, messages });
+  });
+
+  // Chat with NPC — sends to Claude, returns AI response
+  const npcCooldowns = new Map<string, number>();
+  app.post("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+    // Rate limit: 1 msg per 3s per user
+    const cdKey = u.id;
+    const now = Date.now();
+    if ((npcCooldowns.get(cdKey) || 0) > now - 3000) return reply.code(429).send({ ok: false, error: "slow_down" });
+    npcCooldowns.set(cdKey, now);
+
+    const npcId = String((req as any).params?.npcId || "");
+    const body: any = (req as any).body || {};
+    const content = (typeof body.content === "string" ? body.content : "").trim().slice(0, 1000);
+    if (!content) return reply.code(400).send({ ok: false, error: "content_required" });
+
+    const npc = await prisma.roomNpc.findUnique({ where: { id: npcId } });
+    if (!npc) return reply.code(404).send({ ok: false, error: "npc_not_found" });
+
+    const cfg = (npc.config as any) || {};
+
+    // Save user message
+    await prisma.npcMessage.create({ data: { npcId, userId: u.id, userName: u.name || "", role: "user", content } });
+
+    // Get recent conversation (last 30 messages for context window)
+    const history = await prisma.npcMessage.findMany({ where: { npcId }, orderBy: { createdAt: "asc" }, take: 30 });
+    const claudeMessages = history.map((m: any) => ({
+      role: m.role as "user" | "assistant",
+      content: m.role === "user" ? `[${m.userName || "Adventurer"}]: ${m.content}` : m.content,
+    }));
+
+    const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!ANTHROPIC_KEY) return reply.code(500).send({ ok: false, error: "ai_not_configured" });
+
+    try {
+      const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 400,
+          system: buildNpcSystemPrompt(npc.name, cfg),
+          messages: claudeMessages,
+        }),
+      });
+      const aiData: any = await aiRes.json();
+      const aiText = aiData?.content?.[0]?.text || "*says nothing*";
+
+      const saved = await prisma.npcMessage.create({ data: { npcId, role: "assistant", content: aiText } });
+      return reply.send({ ok: true, message: saved });
+    } catch (e: any) {
+      console.error("NPC chat error:", e?.message || e);
+      return reply.code(500).send({ ok: false, error: "ai_error" });
+    }
+  });
+
   // ── Staff API ───────────────────────────────────────────────────────────────
 
   // GET /staff/me
