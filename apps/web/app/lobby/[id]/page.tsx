@@ -526,7 +526,7 @@ export default function LobbyIdPage() {
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 )
               ) : view === "rooms" ? (
-                <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} bannerUrl={lobbyInfo?.bannerUrl} style={{ flex: 1, minHeight: 0 }} />
+                <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} bannerUrl={lobbyInfo?.bannerUrl} moduleType={lobbyInfo?.moduleType} style={{ flex: 1, minHeight: 0 }} />
               ) : view === "events" ? (
                 <LobbyEvents lobbyId={lobbyId} accent={accent} />
               ) : (
