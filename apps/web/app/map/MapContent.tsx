@@ -356,7 +356,7 @@ export default function MapContent() {
                   <div key={u.id} className="nearby-user">
                     <div className="nearby-avatar" style={{ background: u.avatarColor || "#7C3AED22", color: u.avatarColor || "#a78bfa" }}>
                       {u.avatar
-                        ? <img src={u.avatar} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} alt="" />
+                        ? <img src={u.avatar} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} alt={`${u.name || u.usernameKey || "User"} avatar`} />
                         : (u.name || u.usernameKey || "?").charAt(0).toUpperCase()
                       }
                     </div>

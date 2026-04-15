@@ -197,7 +197,7 @@ function ItemModal({
           <div style={{ position: "relative", height: 220, overflow: "hidden" }}>
             <img
               src={item.thumbnail}
-              alt=""
+              alt={item.title + " thumbnail"}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
             <div
@@ -459,7 +459,7 @@ function FeedCard({
       {item.thumbnail ? (
         <img
           src={item.thumbnail}
-          alt=""
+          alt={item.title + " thumbnail"}
           style={{
             width: 72,
             height: 52,

@@ -116,7 +116,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
             ...S.card, cursor: "pointer", transition: "border-color .15s, background .15s",
             border: activeStream === s.userLogin ? `1px solid ${M.accentMid}` : `1px solid ${M.border}`,
           }}>
-            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt="" style={{ width: "100%", borderRadius: 4, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 4, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
             <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>{s.userName}</div>
             <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{s.title}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

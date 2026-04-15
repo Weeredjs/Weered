@@ -144,7 +144,7 @@ export default function StreamInterceptModal({
               overflow: "hidden",
             }}>
               {meAvatar
-                ? <img src={meAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ? <img src={meAvatar} alt={meUser + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : meUser[0]?.toUpperCase()
               }
             </div>

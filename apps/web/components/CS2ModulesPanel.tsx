@@ -434,7 +434,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
             {s.thumbnailUrl && (
               <img
                 src={(s.thumbnailUrl || "").replace("{width}", "80").replace("{height}", "45")}
-                alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
+                alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
               />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>

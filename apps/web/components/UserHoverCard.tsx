@@ -223,7 +223,7 @@ export default function UserHoverCard({
             fontSize: 16, fontWeight: 900, color: "#fff", flexShrink: 0,
           }}>
             {profile?.avatar ? (
-              <img src={profile.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img src={profile.avatar} alt={userName + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : userName[0]?.toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
@@ -282,7 +282,7 @@ export default function UserHoverCard({
                 borderBottom: i < Math.min(guardian.characters.length, 3) - 1 ? "1px solid rgba(255,255,255,.04)" : "none",
               }}>
                 {c.emblemBackgroundPath && (
-                  <img src={c.emblemBackgroundPath} alt="" style={{ width: 32, height: 16, borderRadius: 3, objectFit: "cover" }} />
+                  <img src={c.emblemBackgroundPath} alt={c.className + " emblem"} style={{ width: 32, height: 16, borderRadius: 3, objectFit: "cover" }} />
                 )}
                 <span style={{ fontSize: 11, fontWeight: 700, flex: 1 }}>{c.className}</span>
                 <span style={{ fontSize: 10, opacity: 0.5 }}>{c.raceName}</span>
@@ -321,7 +321,7 @@ export default function UserHoverCard({
                     cursor: "default",
                   }}>
                     {b.iconUrl ? (
-                      <img src={b.iconUrl} alt="" style={{ width: 12, height: 12, borderRadius: 2 }} />
+                      <img src={b.iconUrl} alt={(b.name || "Badge") + " icon"} style={{ width: 12, height: 12, borderRadius: 2 }} />
                     ) : (
                       <span style={{ fontSize: 10 }}>🏅</span>
                     )}

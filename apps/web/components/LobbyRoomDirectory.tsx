@@ -533,7 +533,7 @@ export default function LobbyRoomDirectory({
                                 }}
                               >
                                 {u.avatar
-                                  ? <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  ? <img src={u.avatar} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                   : name[0]?.toUpperCase() ?? "?"
                                 }
                               </div>

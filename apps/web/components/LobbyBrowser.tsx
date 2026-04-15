@@ -86,7 +86,7 @@ function LobbyLogo({
     return (
       <img
         src={lobby.logoUrl}
-        alt=""
+        alt={lobby.name + " logo"}
         width={size}
         height={size}
         style={{

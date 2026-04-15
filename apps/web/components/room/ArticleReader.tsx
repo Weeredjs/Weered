@@ -118,7 +118,7 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
           <div style={{ marginBottom: 16, borderRadius: 10, overflow: "hidden" }}>
             <img
               src={article.image}
-              alt=""
+              alt={article.title + " image"}
               referrerPolicy="no-referrer"
               style={{ width: "100%", height: "auto", maxHeight: 220, objectFit: "cover", display: "block" }}
               onLoad={e => {

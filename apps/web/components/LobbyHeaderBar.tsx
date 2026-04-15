@@ -204,7 +204,7 @@ export default function LobbyHeaderBar({
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}>
-            <img src={logoUrl} alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
+            <img src={logoUrl} alt={title + " logo"} style={{ width: 20, height: 20, objectFit: "contain" }} />
           </div>
         ) : (
           <div style={{

@@ -173,7 +173,7 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
           {/* ── Hero thumbnail strip ── */}
           <div style={{ position: "relative", height: 160, overflow: "hidden" }}>
             {item.thumbnail
-              ? <img src={item.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.35) saturate(0.7)" }} />
+              ? <img src={item.thumbnail} alt={item.title + " thumbnail"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.35) saturate(0.7)" }} />
               : <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, ${color}22, rgba(0,0,0,0.8))` }} />
             }
             {/* Gradient fade to card bg */}

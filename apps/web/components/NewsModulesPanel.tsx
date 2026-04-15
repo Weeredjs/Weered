@@ -88,7 +88,7 @@ function HeroStory({ article, accent, onClick }: { article: Article; accent: str
       {article.imageUrl && (
         <img
           src={article.imageUrl}
-          alt=""
+          alt={article.title}
           referrerPolicy="no-referrer"
           loading="eager"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
@@ -188,7 +188,7 @@ function PrimaryCard({ article, accent, onClick }: { article: Article; accent: s
         }}>
           <img
             src={article.imageUrl}
-            alt=""
+            alt={article.title}
             referrerPolicy="no-referrer"
             loading="lazy"
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -320,7 +320,7 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
         {/* Hero thumbnail */}
         {article.imageUrl && (
           <div style={{ height: 140, overflow: "hidden", position: "relative" }}>
-            <img src={article.imageUrl} alt="" referrerPolicy="no-referrer"
+            <img src={article.imageUrl} alt={article.title} referrerPolicy="no-referrer"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />

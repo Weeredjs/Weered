@@ -68,7 +68,7 @@ function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
             }}
           >
             {avatar
-              ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ? <img src={avatar} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : name[0]?.toUpperCase() ?? "?"
             }
           </div>
@@ -203,7 +203,7 @@ export default function RoomHeader({
                 display: "flex", alignItems: "center", justifyContent: "center",
                 overflow: "hidden",
               }}>
-                <img src={lobbyLogo} alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
+                <img src={lobbyLogo} alt={(lobbyName || "Lobby") + " logo"} style={{ width: 22, height: 22, objectFit: "contain" }} />
               </div>
             ) : (
               <div style={{

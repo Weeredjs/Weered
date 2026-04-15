@@ -35,7 +35,7 @@ function LinkPreviewCard({ url }: { url: string }) {
         onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
       >
         {data.image && (
-          <img src={data.image} alt="" style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+          <img src={data.image} alt={data.title || "Link preview"} style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
             onError={e => (e.currentTarget.style.display = "none")} />
         )}
         <div style={{ padding: "8px 10px" }}>
@@ -78,7 +78,7 @@ function ChatBody({ text }: { text: string }) {
       {imageUrls.map((src, i) => (
         <a key={`img-${i}`} href={src} target="_blank" rel="noopener noreferrer">
           <img
-            src={src} alt="" loading="lazy"
+            src={src} alt="Chat image" loading="lazy"
             style={{
               maxWidth: 280, maxHeight: 200, borderRadius: 8, marginTop: 4,
               border: "1px solid rgba(255,255,255,.1)", display: "block",
@@ -159,7 +159,7 @@ function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onC
           const full = r.media_formats?.gif?.url || tiny;
           if (!tiny) return null;
           return (
-            <img key={r.id} src={tiny} alt="" loading="lazy"
+            <img key={r.id} src={tiny} alt="GIF" loading="lazy"
               onClick={() => { onSelect(full); onClose(); }}
               style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, cursor: "pointer", border: "1px solid rgba(255,255,255,.06)" }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(124,58,237,.4)")}
@@ -334,7 +334,7 @@ export default function LobbyChatPanel(
                     overflow: "hidden",
                   }}>
                     {msgAvatar ? (
-                      <img src={msgAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={msgAvatar} alt={uname + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       uname.slice(0, 1).toUpperCase()
                     )}

@@ -279,7 +279,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                       fontSize: 8, fontWeight: 900, color: "#fff",
                     }}>
                       {post.author?.avatar ? (
-                        <img src={post.author.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={post.author.avatar} alt={post.authorName + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : post.authorName[0]?.toUpperCase()}
                     </div>
                     <span style={{ fontWeight: 600 }}>{post.authorName}</span>

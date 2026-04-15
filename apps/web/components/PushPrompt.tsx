@@ -111,7 +111,7 @@ export default function PushPrompt() {
         animation: "weeredSlideUp 0.3s ease-out",
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <img src="/brand/logo/weered-logo-128.png" alt="" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
+          <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 900, color: "rgba(243,244,246,.95)", marginBottom: 4 }}>
               Install Weered
