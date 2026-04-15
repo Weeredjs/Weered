@@ -1,8 +1,37 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
+
+function LeftRailScroll({ children }: { children: React.ReactNode }) {
+  const [hovered, setHovered] = useState(false);
+  const id = "weered-left-scroll-style";
+
+  return (
+    <aside
+      className="weered-left"
+      data-hovered={hovered ? "1" : "0"}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <style>{`
+        .weered-left[data-hovered="0"],
+        .weered-left[data-hovered="0"] * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .weered-left[data-hovered="0"]::-webkit-scrollbar,
+        .weered-left[data-hovered="0"] *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+      `}</style>
+      {children}
+    </aside>
+  );
+}
 
 const NO_SHELL_ROUTES = ["/login", "/register", "/staff", "/about", "/premium", "/contact"];
 
@@ -291,7 +320,7 @@ export default function ShellGate({
     <>
       <div className="weered-shell">
         {/* Full left rail — hidden by CSS at mid/narrow breakpoints */}
-        <aside className="weered-left">{left}</aside>
+        <LeftRailScroll>{left}</LeftRailScroll>
 
         {/* Left icon strip — shown by CSS at mid/narrow breakpoints */}
         <IconStrip
