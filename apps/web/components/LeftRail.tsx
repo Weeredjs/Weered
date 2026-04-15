@@ -505,7 +505,7 @@ export default function LeftRail() {
 
         <input className="weered-presence-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users..." />
 
-        <div className="weered-presence-list" style={{ maxHeight:"calc(100vh - 440px)", overflowY:"auto", scrollbarWidth:"thin", scrollbarColor:"rgba(148,163,184,.2) transparent" }}>
+        <div className="weered-presence-list" style={{ maxHeight:"calc(100vh - 440px)", overflowY:"auto" }}>
           {listed.map((u: any) => {
             const nm  = pickFirstString(u?.name, u?.username, "Unknown");
             const rid = pickFirstString(u?.id, nm);
