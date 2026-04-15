@@ -173,7 +173,7 @@ export default function UserCorner() {
         }}>
           <img
             src={lobbyLogo}
-            alt=""
+            alt="Lobby logo"
             style={{ width: "100%", height: "100%", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(0,0,0,.4))" }}
           />
         </div>
@@ -209,7 +209,7 @@ export default function UserCorner() {
           overflow: "hidden",
         }}>
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={avatarUrl} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             initial
           )}

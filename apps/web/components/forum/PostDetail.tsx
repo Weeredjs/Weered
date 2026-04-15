@@ -37,7 +37,7 @@ function AuthorBadge({ name, author, size = 20, authorId, onHoverEnter, onHoverL
         fontSize: size * 0.45, fontWeight: 900, color: "#fff",
       }}>
         {author?.avatar ? (
-          <img src={author.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={author.avatar} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : name[0]?.toUpperCase()}
       </div>
       <span style={{ fontWeight: 700, fontSize: 12 }}>{name}</span>
@@ -248,7 +248,7 @@ export default function PostDetail({ postId }: { postId: string }) {
             overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 12, fontWeight: 900, color: "#fff",
           }}>
-            {me?.avatar ? <img src={me.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (me?.name || "?")[0]?.toUpperCase()}
+            {me?.avatar ? <img src={me.avatar} alt={(me?.name || "User") + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (me?.name || "?")[0]?.toUpperCase()}
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
             <textarea

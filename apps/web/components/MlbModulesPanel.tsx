@@ -754,7 +754,7 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
                 {pid && (
                   <img
                     src={headshot(pid)}
-                    alt=""
+                    alt={(p.name || p.fullName || "Player") + " headshot"}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
@@ -854,7 +854,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
             }}
           >
             {(s.thumbnailUrl || s.thumbnail_url) && (
-              <img src={s.thumbnailUrl || s.thumbnail_url} alt="" style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img src={s.thumbnailUrl || s.thumbnail_url} alt={(s.userName || s.user_name) + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
             )}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.userName || s.user_name}
@@ -943,7 +943,7 @@ function Highlights({ accentColor }: { accentColor: string }) {
               {h.thumbnailUrl && (
                 <img
                   src={h.thumbnailUrl}
-                  alt=""
+                  alt={(h.headline || "Highlight") + " thumbnail"}
                   style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
                 />
               )}

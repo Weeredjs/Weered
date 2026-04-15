@@ -202,7 +202,7 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
           <div style={{ height: 80, background: `url(${bannerUrl}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.08)" }} />
         )}
         <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, background: accentColor ? `${accentColor}10` : "rgba(255,255,255,.02)" }}>
-          {logoUrl && <img src={logoUrl} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", border: "1px solid rgba(255,255,255,.10)" }} />}
+          {logoUrl && <img src={logoUrl} alt={`${name || "Lobby"} logo`} style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", border: "1px solid rgba(255,255,255,.10)" }} />}
           <div>
             <div style={{ fontWeight: 800, fontSize: 14 }}>{name || "Unnamed"}</div>
             <div style={{ fontSize: 11, opacity: 0.5, marginTop: 1 }}>{description || "No description"}</div>
@@ -1389,7 +1389,7 @@ export default function LobbyAdminPage() {
       {/* Header */}
       <div style={{ borderBottom: `1px solid ${accent}25`, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, background: `${accent}08` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {lobby.logoUrl && <img src={lobby.logoUrl} alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover" }} />}
+          {lobby.logoUrl && <img src={lobby.logoUrl} alt={`${lobby.name || lobbyId} logo`} style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover" }} />}
           <div style={{ width: 8, height: 8, borderRadius: 999, background: "rgba(16,185,129,.85)", boxShadow: "0 0 6px rgba(16,185,129,.5)" }} />
           <div>
             <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-.3px" }}>{lobby.name || lobbyId}</span>

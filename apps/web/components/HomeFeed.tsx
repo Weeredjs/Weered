@@ -180,7 +180,7 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         position: "relative",
       }}>
         {item.thumbnail && (
-          <img src={item.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <img src={item.thumbnail} alt={item.title + " thumbnail"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         )}
         {/* Category pip */}
         <div style={{

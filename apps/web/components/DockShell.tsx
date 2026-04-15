@@ -31,7 +31,7 @@ function linkify(text: string): React.ReactNode {
       <>
         <div>{nodes}</div>
         {images.map((src, i) => (
-          <img key={`dm-img-${i}`} src={src} alt="" loading="lazy" style={{
+          <img key={`dm-img-${i}`} src={src} alt="Chat image" loading="lazy" style={{
             maxWidth: 200, maxHeight: 160, borderRadius: 8, marginTop: 4,
             border: "1px solid rgba(255,255,255,.1)", display: "block",
           }} onError={e => (e.currentTarget.style.display = "none")} />
@@ -620,7 +620,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                   </div>
                 ) : (
                   <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:24 }}>
-                    <img src="/brand/logo/weered-logo-64.png" alt="" style={{ width:48, height:48, opacity:.3, borderRadius:10 }} />
+                    <img src="/brand/logo/weered-logo-64.png" alt="Weered logo" style={{ width:48, height:48, opacity:.3, borderRadius:10 }} />
                     <span style={{ fontSize:14, fontWeight:700, color:"var(--weered-text)", opacity:.5 }}>No messages yet</span>
                     <span style={{ fontSize:12, color:"var(--weered-muted)", textAlign:"center" }}>Search for someone above to start a conversation</span>
                   </div>
@@ -1020,7 +1020,7 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                               fontSize:11,fontWeight:700,color:"#fff",
                             }}>
                               {m.avatar
-                                ?<img src={m.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                                ?<img src={m.avatar} alt={(m.name || "User") + " avatar"} style={{width:"100%",height:"100%",objectFit:"cover"}} />
                                 :(m.name||"?")[0]?.toUpperCase()
                               }
                             </div>

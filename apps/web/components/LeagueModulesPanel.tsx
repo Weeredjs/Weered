@@ -132,7 +132,7 @@ function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }:
             border: activeStream === s.userLogin ? `1px solid ${ACCENT_LEAGUE}50` : "1px solid rgba(255,255,255,.08)",
             background: activeStream === s.userLogin ? `${ACCENT_LEAGUE}10` : "rgba(255,255,255,.03)",
           }}>
-            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt="" style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.userName}</div>
             <div style={{ fontSize: 11, opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{s.title}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -324,7 +324,7 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
           {/* Summoner Card */}
           <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, border: `1px solid ${accent}30`, background: `${accent}08` }}>
             <div style={{ position: "relative" }}>
-              <img src={data.summoner.profileIconUrl} alt="" style={{ width: 56, height: 56, borderRadius: 10, border: `2px solid ${accent}50` }} />
+              <img src={data.summoner.profileIconUrl} alt={data.summoner.name + " summoner icon"} style={{ width: 56, height: 56, borderRadius: 10, border: `2px solid ${accent}50` }} />
               <div style={{
                 position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)",
                 background: "rgba(0,0,0,.85)", border: `1px solid ${accent}40`, borderRadius: 4,
@@ -360,7 +360,7 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
                       ...S.card, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
                       border: `1px solid rgba(255,255,255,.06)`, minWidth: 130,
                     }}>
-                      {img && <img src={img} alt="" style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${accent}30` }} />}
+                      {img && <img src={img} alt={name + " champion icon"} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${accent}30` }} />}
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 11 }}>{name}</div>
                         <div style={{ fontSize: 10, opacity: 0.4 }}>
@@ -406,7 +406,7 @@ function RankedCard({ label, data, accent }: { label: string; data: any; accent:
   return (
     <div style={{ ...S.card, border: `1px solid ${tierColor}40`, background: `${tierColor}08`, textAlign: "center" }}>
       <div style={{ fontSize: 10, opacity: 0.5, marginBottom: 4 }}>{label}</div>
-      <img src={tierBadgeUrl(data.tier)} alt="" style={{ width: 48, height: 48, margin: "0 auto 4px", display: "block", filter: "drop-shadow(0 2px 8px rgba(0,0,0,.5))" }}
+      <img src={tierBadgeUrl(data.tier)} alt={data.tier + " rank badge"} style={{ width: 48, height: 48, margin: "0 auto 4px", display: "block", filter: "drop-shadow(0 2px 8px rgba(0,0,0,.5))" }}
         onError={e => (e.currentTarget.style.display = "none")}
       />
       <div style={{ fontWeight: 800, fontSize: 14, color: tierColor }}>
@@ -431,7 +431,7 @@ function MatchRow({ match: m, champions, version, accent }: { match: any; champi
       background: m.win ? "rgba(34,197,94,.04)" : "rgba(239,68,68,.04)",
     }}>
       {/* Champion icon */}
-      <img src={champImg} alt="" style={{ width: 32, height: 32, borderRadius: 6, border: m.win ? "1px solid rgba(34,197,94,.3)" : "1px solid rgba(239,68,68,.3)" }} />
+      <img src={champImg} alt={m.championName + " champion icon"} style={{ width: 32, height: 32, borderRadius: 6, border: m.win ? "1px solid rgba(34,197,94,.3)" : "1px solid rgba(239,68,68,.3)" }} />
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -453,7 +453,7 @@ function MatchRow({ match: m, champions, version, accent }: { match: any; champi
       {/* Items */}
       <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
         {m.items?.filter((id: number) => id > 0).slice(0, 6).map((id: number, i: number) => (
-          <img key={i} src={itemImgUrl(id, version)} alt="" style={{ width: 22, height: 22, borderRadius: 3, border: "1px solid rgba(255,255,255,.08)" }} />
+          <img key={i} src={itemImgUrl(id, version)} alt="Item icon" style={{ width: 22, height: 22, borderRadius: 3, border: "1px solid rgba(255,255,255,.08)" }} />
         ))}
       </div>
 
@@ -490,7 +490,7 @@ function FreeRotation({ champions, accent }: { champions: any[]; accent: string 
               ...S.card, textAlign: "center", padding: 8,
               border: `1px solid ${accent}20`, background: `${accent}06`,
             }}>
-              {img && <img src={img} alt="" style={{ width: 40, height: 40, borderRadius: 8, margin: "0 auto 4px", display: "block", border: `1px solid ${accent}25` }} />}
+              {img && <img src={img} alt={name + " champion icon"} style={{ width: 40, height: 40, borderRadius: 8, margin: "0 auto 4px", display: "block", border: `1px solid ${accent}25` }} />}
               <div style={{ fontSize: 10, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
             </div>
           );

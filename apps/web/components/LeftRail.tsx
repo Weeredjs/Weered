@@ -571,7 +571,7 @@ export default function LeftRail() {
                       position: "relative",
                     }}>
                       <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {userAvatar ? <img src={userAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase() ?? "?"}
+                        {userAvatar ? <img src={userAvatar} alt={nm + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase() ?? "?"}
                       </div>
                       <div style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: "50%", background: "#22c55e", border: "2px solid var(--weered-bg, #0f1117)", boxShadow: "0 0 4px #22c55e" }} />
                     </div>
@@ -675,7 +675,7 @@ export default function LeftRail() {
                       {(() => {
                         const logo = getLobbyLogo(room);
                         return logo ? (
-                          <img src={logo} alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: "contain", flexShrink: 0, background: "rgba(0,0,0,.3)" }} />
+                          <img src={logo} alt={label + " logo"} style={{ width: 16, height: 16, borderRadius: 4, objectFit: "contain", flexShrink: 0, background: "rgba(0,0,0,.3)" }} />
                         ) : null;
                       })()}
                       <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, color: isActive ? "rgba(243,244,246,.98)" : "rgba(203,213,225,.82)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.35 }}>
@@ -773,7 +773,7 @@ export default function LeftRail() {
                       {(() => {
                         const logo = getLobbyLogo(room);
                         return logo ? (
-                          <img src={logo} alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: "contain", flexShrink: 0, background: "rgba(0,0,0,.3)" }} />
+                          <img src={logo} alt={label + " logo"} style={{ width: 16, height: 16, borderRadius: 4, objectFit: "contain", flexShrink: 0, background: "rgba(0,0,0,.3)" }} />
                         ) : (
                           <div style={{ width:5, height:5, borderRadius:"50%", flexShrink:0, background: isLive ? "#22c55e" : "rgba(255,255,255,.12)", boxShadow: isLive ? "0 0 4px #22c55e" : "none" }} />
                         );

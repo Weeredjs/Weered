@@ -56,7 +56,7 @@ function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
             fontSize: size * 0.45, fontWeight: 700, color: "#fff",
             overflow: "hidden", zIndex: shown.length - i,
           }}>
-            {u?.avatar ? <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase()}
+            {u?.avatar ? <img src={u.avatar} alt={nm + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase()}
           </div>
         );
       })}
@@ -508,7 +508,7 @@ function FriendsPanel() {
       >
         <div style={{ position: "relative", flexShrink: 0 }}>
           <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatar ? "rgba(255,255,255,.08)" : (f.avatarColor || "rgba(88,0,229,.3)"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden" }}>
-            {f.avatar ? <img src={f.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (f.name || "?").slice(0, 1).toUpperCase()}
+            {f.avatar ? <img src={f.avatar} alt={(f.name || "User") + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (f.name || "?").slice(0, 1).toUpperCase()}
           </div>
           <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
           {hasUnread && (
@@ -593,7 +593,7 @@ function CrewPanel() {
               >
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <div style={{ width: 26, height: 26, borderRadius: 999, background: m.avatar ? "rgba(255,255,255,.08)" : "rgba(245,158,11,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "rgb(251,191,36)", overflow: "hidden" }}>
-                    {m.avatar ? <img src={m.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (m.name || "?").slice(0, 1).toUpperCase()}
+                    {m.avatar ? <img src={m.avatar} alt={(m.name || "User") + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (m.name || "?").slice(0, 1).toUpperCase()}
                   </div>
                   <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
                 </div>

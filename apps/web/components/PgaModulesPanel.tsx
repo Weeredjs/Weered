@@ -659,7 +659,7 @@ function PgaNews({ accentColor }: { accentColor: string }) {
               }}>
                 <img
                   src={a.image}
-                  alt=""
+                  alt={(a.headline || a.title || "Article") + " thumbnail"}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
@@ -778,7 +778,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
             }}
           >
             {(s.thumbnailUrl || s.thumbnail_url) && (
-              <img src={s.thumbnailUrl || s.thumbnail_url} alt="" style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img src={s.thumbnailUrl || s.thumbnail_url} alt={(s.userName || s.user_name) + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
             )}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.userName || s.user_name}
@@ -881,7 +881,7 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
               onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; } }}
             >
               <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
-                <img src={v.thumbnailHq || v.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <img src={v.thumbnailHq || v.thumbnail} alt={(v.title || "Video") + " thumbnail"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 {/* Play overlay */}
                 <div style={{
                   position: "absolute", inset: 0,

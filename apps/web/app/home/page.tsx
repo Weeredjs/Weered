@@ -144,7 +144,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
       {banner && (
         <img
           src={banner}
-          alt=""
+          alt={`${roomName(lobby)} lobby banner`}
           style={{
             position: "absolute", inset: 0, width: "100%", height: "100%",
             objectFit: "cover", opacity: 0.55, pointerEvents: "none",
@@ -163,7 +163,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
       {/* Top bar */}
       <div style={{ position: "absolute", top: 14, left: 18, right: 18, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 2 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {logo && <img src={logo} alt="" style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />}
+          {logo && <img src={logo} alt={`${roomName(lobby)} logo`} style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />}
           <span style={{
             display: "flex", alignItems: "center", gap: 6,
             background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
@@ -249,7 +249,7 @@ function LiveTicker({ rooms, onJoin }: { rooms: any[]; onJoin: (id: string, pinn
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}18`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
             >
-              {r?.logoUrl && <img src={r.logoUrl} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain" }} />}
+              {r?.logoUrl && <img src={r.logoUrl} alt={`${roomName(r)} logo`} style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain" }} />}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
                 <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{name}</span>
                 {parentLobby && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)", whiteSpace: "nowrap" }}>{parentLobby}</span>}
@@ -293,7 +293,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
       {banner && (
         <img
           src={banner}
-          alt=""
+          alt={`${roomName(room)} banner`}
           style={{
             position: "absolute", inset: 0, width: "100%", height: "100%",
             objectFit: "cover", opacity: 0.12, pointerEvents: "none",
@@ -310,7 +310,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             {logo ? (
-              <img src={logo} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />
+              <img src={logo} alt={`${roomName(room)} logo`} style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />
             ) : (
               <div style={{
                 width: 32, height: 32, borderRadius: 8,
@@ -408,7 +408,7 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontWeight: 800, fontSize: 14, color: "#fff", overflow: "hidden",
                 }}>
-                  {avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initial}
+                  {avatar ? <img src={avatar} alt={`${name} avatar`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initial}
                 </div>
                 <span style={{
                   position: "absolute", bottom: 0, right: 0,
@@ -450,7 +450,7 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
     >
       {logo ? (
-        <img src={logo} alt="" style={{ width: 30, height: 30, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
+        <img src={logo} alt={`${name} logo`} style={{ width: 30, height: 30, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
       ) : (
         <div style={{
           width: 30, height: 30, borderRadius: 8,
@@ -799,7 +799,7 @@ export default function HomePage() {
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)"; }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <img src="/brand/logo/weered-logo-128.png" alt="" style={{ width: 36, height: 36, objectFit: "contain" }} />
+              <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
                   Get Indicted. Own a lobby.
@@ -899,7 +899,7 @@ export default function HomePage() {
         {/* EMPTY STATE */}
         {lobbies.length === 0 && popularRooms.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,.25)" }}>
-            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><img src="/brand/logo/weered-shieldlogo-512.png" alt="" style={{ width: 80, height: 80, opacity: 0.5 }} /></div>
+            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered logo" style={{ width: 80, height: 80, opacity: 0.5 }} /></div>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Nothing here yet</div>
             <div style={{ fontSize: 13, opacity: 0.7 }}>Head to Lobby to browse and join rooms.</div>
           </div>

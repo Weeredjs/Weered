@@ -209,7 +209,7 @@ function SpellBrowser() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
             {SCHOOL_ICONS[s.school] && (
               <div style={{ width: 42, height: 42, borderRadius: 8, background: `${SCHOOL_COLORS[s.school] || ACCENT}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <img src={SCHOOL_ICONS[s.school]} alt="" style={{ width: 26, height: 26, opacity: 0.8, filter: `drop-shadow(0 0 6px ${SCHOOL_COLORS[s.school] || ACCENT}55)` }} />
+                <img src={SCHOOL_ICONS[s.school]} alt={s.school + " school icon"} style={{ width: 26, height: 26, opacity: 0.8, filter: `drop-shadow(0 0 6px ${SCHOOL_COLORS[s.school] || ACCENT}55)` }} />
               </div>
             )}
             <span style={{ fontSize: 20, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{s.name}</span>
@@ -290,7 +290,7 @@ function SpellBrowser() {
                 >
                   {schoolIcon && (
                     <div style={{ width: 32, height: 32, borderRadius: 6, background: `${schoolClr}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <img src={schoolIcon} alt="" style={{ width: 20, height: 20, opacity: 0.7, filter: `drop-shadow(0 0 4px ${schoolClr}44)` }} />
+                      <img src={schoolIcon} alt={s.school + " school icon"} style={{ width: 20, height: 20, opacity: 0.7, filter: `drop-shadow(0 0 4px ${schoolClr}44)` }} />
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -386,7 +386,7 @@ function MonsterBrowser() {
           <div style={{ borderBottom: `2px solid ${cc}44`, paddingBottom: 10, marginBottom: 12, display: "flex", gap: 12, alignItems: "center" }}>
             {MONSTER_ICONS[(m.type || "").toLowerCase()] && (
               <div style={{ width: 48, height: 48, borderRadius: 8, background: `${cc}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <img src={MONSTER_ICONS[(m.type || "").toLowerCase()]} alt="" style={{ width: 30, height: 30, opacity: 0.75, filter: `drop-shadow(0 0 6px ${cc}55)` }} />
+                <img src={MONSTER_ICONS[(m.type || "").toLowerCase()]} alt={(m.type || "Monster") + " type icon"} style={{ width: 30, height: 30, opacity: 0.75, filter: `drop-shadow(0 0 6px ${cc}55)` }} />
               </div>
             )}
             <div>
@@ -505,7 +505,7 @@ function MonsterBrowser() {
                 >
                   {typeIcon && (
                     <div style={{ width: 36, height: 36, borderRadius: 6, background: `${cc}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <img src={typeIcon} alt="" style={{ width: 22, height: 22, opacity: 0.6, filter: `drop-shadow(0 0 4px ${cc}44)` }} />
+                      <img src={typeIcon} alt={(m.type || "Monster") + " type icon"} style={{ width: 22, height: 22, opacity: 0.6, filter: `drop-shadow(0 0 4px ${cc}44)` }} />
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1188,7 +1188,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${ACCENT}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
-            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>

@@ -192,7 +192,7 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
           overflow: "hidden",
         }}>
           {lobby.logoUrl ? (
-            <img src={lobby.logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={lobby.logoUrl} alt={`${lobby.name} logo`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             <span style={{ fontSize: 18, fontWeight: 800, color: ac }}>{(lobby.name || "?")[0].toUpperCase()}</span>
           )}

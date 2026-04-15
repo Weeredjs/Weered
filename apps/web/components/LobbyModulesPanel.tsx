@@ -43,7 +43,7 @@ function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
     <div style={{ display: "flex", gap: 2, marginTop: 2 }}>
       {visible.map((p: any, i: number) => (
         <div key={i} title={p.name} style={{ width: 16, height: 16, borderRadius: 3, overflow: "hidden", background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)", flexShrink: 0 }}>
-          <img src={p.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={p.icon} alt={p.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       ))}
     </div>
@@ -98,7 +98,7 @@ function PerkDetail({ perk }: { perk: any }) {
         }}
       >
         <div style={{ width: 28, height: 28, borderRadius: 5, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
-          {perk.icon && <img src={perk.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+          {perk.icon && <img src={perk.icon} alt={perk.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
@@ -126,7 +126,7 @@ function PerkDetail({ perk }: { perk: any }) {
               background: "rgba(124,58,237,.04)", border: "1px solid rgba(124,58,237,.08)",
             }}>
               <div style={{ width: 18, height: 18, borderRadius: 3, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
-                {alt.icon && <img src={alt.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                {alt.icon && <img src={alt.icon} alt={alt.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(167,139,250,.8)" }}>{alt.name}</div>
@@ -161,7 +161,7 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
         {/* Icon + Name */}
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
           <div style={{ width: 80, height: 80, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: `2px solid ${borderColor}`, position: "relative", background: "rgba(0,0,0,.5)" }}>
-            {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+            {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
             {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, pointerEvents: "none" }} />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -171,7 +171,7 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
               {item.slotName && <span>{item.slotName}</span>}
               {item.damageType && item.damageType !== "None" && (
                 <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  {item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 11, height: 11, opacity: 0.7 }} />}
+                  {item.damageIcon && <img src={item.damageIcon} alt={item.damageType + " damage icon"} style={{ width: 11, height: 11, opacity: 0.7 }} />}
                   {item.damageType}
                 </span>
               )}
@@ -206,7 +206,7 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
                     {junkPerks.map((p: any, i: number) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 6, background: "rgba(255,255,255,.015)", border: "1px solid rgba(255,255,255,.03)" }}>
                         <div style={{ width: 20, height: 20, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px dashed rgba(255,255,255,.08)" }}>
-                          {p.icon && <img src={p.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3 }} />}
+                          {p.icon && <img src={p.icon} alt={p.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3 }} />}
                         </div>
                         <span style={{ fontSize: 10, opacity: 0.3, fontStyle: "italic" }}>{p.name}</span>
                         {p.availablePlugs?.length > 0 && (
@@ -268,7 +268,7 @@ function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; on
         width: 44, height: 44, borderRadius: 8, background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
         border: `1.5px solid ${borderColor}`, overflow: "hidden", position: "relative", ...clickStyle,
       }}>
-        {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         {item.primaryStat && (
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,.75)", textAlign: "center",
             fontSize: 9, fontWeight: 800, color: tier === "Exotic" ? "#ceae33" : "#fff", padding: "1px 0" }}>{item.primaryStat}</div>
@@ -281,14 +281,14 @@ function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; on
   return (
     <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: `1px solid ${borderColor}`, background: `${bgColor}18`, ...clickStyle }}>
       <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: item.icon ? "rgba(0,0,0,.5)" : bgColor, border: `1px solid ${borderColor}`, position: "relative" }}>
-        {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.3, pointerEvents: "none" }} />}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tier === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown Item"}</div>
         <div style={{ fontSize: 10, opacity: 0.4, display: "flex", alignItems: "center", gap: 6 }}>
           {item.slotName && <span>{item.slotName}</span>}
-          {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>·</span>{item.damageIcon && <img src={item.damageIcon} alt="" style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
+          {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>·</span>{item.damageIcon && <img src={item.damageIcon} alt={item.damageType + " damage icon"} style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
         </div>
         <PerkRow perks={item.perks} max={5} />
       </div>
@@ -365,7 +365,7 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
             }}
           >
             {s.thumbnailUrl && (
-              <img src={s.thumbnailUrl} alt="" style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
             )}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.userName}
@@ -574,7 +574,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
             {xur.items.map((item: any, i: number) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 8, border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, background: `${TIER_COLORS[item.tierName] || "rgba(255,255,255,.03)"}18` }}>
                 <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.5)", border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, position: "relative" }}>
-                  {item.icon && <img src={item.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                  {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: item.tierName === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown"}</div>
@@ -596,7 +596,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
             <div key={ms.hash} style={{ ...S.card }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: ms.activities?.length ? 8 : 0 }}>
                 {ms.icon ? (
-                  <img src={ms.icon} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                  <img src={ms.icon} alt={ms.name + " icon"} style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
                 ) : (
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>📋</div>
                 )}
@@ -610,7 +610,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {ms.activities.slice(0, 5).map((act: any, i: number) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
-                      {act.icon && <img src={act.icon} alt="" style={{ width: 24, height: 24, borderRadius: 5, objectFit: "cover", flexShrink: 0 }} />}
+                      {act.icon && <img src={act.icon} alt={act.name + " icon"} style={{ width: 24, height: 24, borderRadius: 5, objectFit: "cover", flexShrink: 0 }} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, fontWeight: 600 }}>{act.name}</div>
                         {act.lightLevel > 0 && <span style={{ fontSize: 9, opacity: 0.4 }}>{act.lightLevel} Power</span>}
@@ -619,7 +619,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
                         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                           {act.modifiers.slice(0, 6).map((mod: any, mi: number) => (
                             <div key={mi} title={`${mod.name}: ${mod.description || ""}`} style={{ width: 20, height: 20, borderRadius: 4, overflow: "hidden", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
-                              {mod.icon && <img src={mod.icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                              {mod.icon && <img src={mod.icon} alt={mod.name + " modifier icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                             </div>
                           ))}
                         </div>
@@ -690,7 +690,7 @@ function GuardianLookup() {
           {/* Player card */}
           <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, border: `1px solid ${ACCENT_DESTINY}30`, background: `${ACCENT_DESTINY}08` }}>
             {result.player?.iconPath && (
-              <img src={result.player.iconPath} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover" }} />
+              <img src={result.player.iconPath} alt="Player emblem" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover" }} />
             )}
             <div>
               <div style={{ fontWeight: 800, fontSize: 15 }}>

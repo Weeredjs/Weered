@@ -202,7 +202,7 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
                 overflow: "hidden",
               }}>
                 {detailIcon ? (
-                  <img src={detailIcon} alt="" style={{ width: 26, height: 26, objectFit: "contain" }}
+                  <img src={detailIcon} alt={item.currencyTypeName + " icon"} style={{ width: 26, height: 26, objectFit: "contain" }}
                     onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 ) : (
@@ -326,7 +326,7 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
                     flexShrink: 0, overflow: "hidden",
                   }}>
                     {item.icon ? (
-                      <img src={item.icon} alt="" style={{ width: 32, height: 32, objectFit: "contain" }}
+                      <img src={item.icon} alt={item.name + " icon"} style={{ width: 32, height: 32, objectFit: "contain" }}
                         onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (
@@ -441,7 +441,7 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
                     flexShrink: 0, overflow: "hidden",
                   }}>
                     {card.icon ? (
-                      <img src={card.icon} alt="" style={{ width: 32, height: 32, objectFit: "contain" }}
+                      <img src={card.icon} alt={card.name + " icon"} style={{ width: 32, height: 32, objectFit: "contain" }}
                         onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (
@@ -592,7 +592,7 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
                     flexShrink: 0, overflow: "hidden",
                   }}>
                     {gem.icon ? (
-                      <img src={gem.icon} alt="" style={{ width: 30, height: 30, objectFit: "contain" }}
+                      <img src={gem.icon} alt={gem.name + " icon"} style={{ width: 30, height: 30, objectFit: "contain" }}
                         onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (
@@ -913,7 +913,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
             {s.thumbnailUrl && (
               <img
                 src={(s.thumbnailUrl || "").replace("{width}", "80").replace("{height}", "45")}
-                alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
+                alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
               />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>

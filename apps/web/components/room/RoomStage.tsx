@@ -380,7 +380,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.25)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.borderColor = "transparent"; }}
                 >
-                  {r.thumbnail && <img src={r.thumbnail} alt="" style={{ width: 64, height: 36, objectFit: "cover", borderRadius: 4, flexShrink: 0, background: "#111" }} />}
+                  {r.thumbnail && <img src={r.thumbnail} alt="Video thumbnail" style={{ width: 64, height: 36, objectFit: "cover", borderRadius: 4, flexShrink: 0, background: "#111" }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(243,244,246,.85)", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
                       dangerouslySetInnerHTML={{ __html: r.title }}
@@ -467,7 +467,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                     {r.thumbnail && (
                       <img
                         src={r.thumbnail}
-                        alt=""
+                        alt="Video thumbnail"
                         style={{ width: 120, height: 68, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "#111" }}
                       />
                     )}
@@ -584,7 +584,7 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
         fontSize: 16, fontWeight: 900, color: "#fff",
         overflow: "hidden",
       }}>
-        {userAvatar ? <img src={userAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
+        {userAvatar ? <img src={userAvatar} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
       </div>
 
       {/* Speaking indicator */}

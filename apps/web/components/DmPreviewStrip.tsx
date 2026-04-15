@@ -142,7 +142,7 @@ function DmCard({ preview }: { preview: DmPreview }) {
       {preview.peerAvatar ? (
         <img
           src={preview.peerAvatar}
-          alt=""
+          alt={preview.peerName + " avatar"}
           style={{
             width: 40, height: 40, borderRadius: "50%",
             objectFit: "cover",

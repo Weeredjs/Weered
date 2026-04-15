@@ -138,7 +138,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accentColor}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
-            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt="" style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
@@ -367,7 +367,7 @@ function StatsLookup({ accent }: { accent: string }) {
       {stats && (
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            {stats.image && <img src={stats.image} alt="" style={{ width: 64, height: 64, borderRadius: 10, border: `2px solid ${accent}44`, objectFit: "cover" }} />}
+            {stats.image && <img src={stats.image} alt={(stats.account?.name || "Player") + " avatar"} style={{ width: 64, height: 64, borderRadius: 10, border: `2px solid ${accent}44`, objectFit: "cover" }} />}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{stats.account?.name}</span>
@@ -516,7 +516,7 @@ function ItemShop({ accent, wishlist }: { accent: string; wishlist: ReturnType<t
                 <WishlistHeart cosmeticId={item.id} wishlisted={wishlisted} onToggle={() => wishlist.toggle(item.id, { name: item.name, type: item.type, rarity: item.rarity, image: item.image })} />
               </div>
               <div style={{ position: "relative", paddingTop: "100%", background: `${rc}08` }}>
-                {item.image && <img src={item.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />}
+                {item.image && <img src={item.image} alt={item.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />}
                 {item.banner && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: ".5px", padding: "2px 6px", borderRadius: 3, background: rc, color: "#fff", textTransform: "uppercase" }}>{item.banner}</span>}
               </div>
               <div style={{ padding: "8px 10px" }}>
@@ -612,7 +612,7 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
                 <WishlistHeart cosmeticId={item.id} wishlisted={wishlisted} onToggle={() => wishlist.toggle(item.id, { name: item.name, type: item.type, rarity: item.rarity, image: item.image })} />
               </div>
               <div style={{ position: "relative", paddingTop: "100%", background: `${rc}08` }}>
-                {item.image && <img src={item.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />}
+                {item.image && <img src={item.image} alt={item.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 8 }} />}
               </div>
               <div style={{ padding: "8px 10px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
