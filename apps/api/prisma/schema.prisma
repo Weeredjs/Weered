@@ -55,6 +55,7 @@ enum ModuleType {
   STUDY
   PUBG
   DND
+  POE
 }
 
 model NewsArticle {
