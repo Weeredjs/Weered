@@ -183,7 +183,7 @@ button:hover, [role="button"]:hover {
   position: sticky;
   top: 12px;
   max-height: calc(100vh - 24px);
-  overflow: auto;
+  overflow: overlay;
   border: 1px solid var(--weered-border);
   border-radius: 16px;
   background: var(--weered-panel);
