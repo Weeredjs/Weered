@@ -1366,15 +1366,8 @@ main {
    USER CORNER
    ============================================= */
 .weered-usercorner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.05);
+  /* Layout handled inline by UserCorner component - class is for theming hook only */
   color: var(--weered-text);
-  font-weight: 900;
   text-decoration: none;
 }
 .weered-usercorner:hover {
