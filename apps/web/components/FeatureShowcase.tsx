@@ -82,7 +82,7 @@ const SECTIONS = [
     items: [
       { label: "Crews", desc: "Private group chats that persist across rooms. Your squad, always connected." },
       { label: "DMs & Friends", desc: "Direct messages, friend requests, online status. The basics, done right." },
-      { label: "Live Map", desc: "Opt-in GPS map showing where users are active worldwide. ~5km hex grid — privacy first." },
+      { label: "Locator", desc: "Opt-in GPS map showing where users are active worldwide. ~5km hex grid — privacy first." },
       { label: "Forum", desc: "Community board for long-form posts, announcements, and mod applications." },
       { label: "Activity Feed", desc: "See what's happening — who joined, who's streaming, who hit a new tier." },
     ],

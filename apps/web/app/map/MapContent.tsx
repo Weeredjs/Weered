@@ -312,7 +312,7 @@ export default function MapContent() {
         <div className="map-hud">
           {/* Title + stats */}
           <div className="map-panel">
-            <div className="map-title">Live Map</div>
+            <div className="map-title">Locator</div>
             <div className="map-stat">
               <strong>{totalUsers}</strong> user{totalUsers !== 1 ? "s" : ""} sharing location
               {hexes.length > 0 && <> across <strong>{hexes.length}</strong> zone{hexes.length !== 1 ? "s" : ""}</>}
@@ -398,7 +398,7 @@ export default function MapContent() {
               <div className="consent-icon">📍</div>
               <div className="consent-title">Share Your Location</div>
               <div className="consent-text">
-                Weered uses your <em>approximate location</em> to show you on the Live Map
+                Weered uses your <em>approximate location</em> to show you on the Locator
                 and help you find nearby users.<br /><br />
                 Your position is snapped to a <em>~5 km grid cell</em> — your exact coordinates
                 are <em>never</em> shared with other users.<br /><br />

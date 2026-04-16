@@ -466,7 +466,7 @@ export default function LeftRail() {
           { href: "/home", label: "Home", icon: "📡", active: isHomeActive, onClick: (e: any) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); } },
           { href: "/forum", label: "Forum", icon: "💬", active: pathname.startsWith("/forum"), onClick: undefined as any },
           { href: "/store", label: "Paper", icon: "💵", active: pathname.startsWith("/store"), onClick: undefined as any },
-          { href: "/map", label: "Live Map", icon: "📍", active: pathname.startsWith("/map"), onClick: undefined as any },
+          { href: "/map", label: "Locator", icon: "📍", active: pathname.startsWith("/map"), onClick: undefined as any },
           ...((globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT")
             ? [{ href: "/staff", label: "Ops", icon: "⚙", active: pathname.startsWith("/staff"), onClick: undefined as any }]
             : []),
@@ -828,6 +828,37 @@ export default function LeftRail() {
             Join a room to build your history
           </div>
         )}
+      </div>
+
+      {/* ── Rail footer ─────────────────────────────────────────────── */}
+      <div style={{
+        marginTop: "auto",
+        padding: "12px 0 4px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+      }}>
+        <div style={{
+          width: "100%",
+          height: 1,
+          background: "linear-gradient(90deg, transparent, var(--weered-border) 20%, var(--weered-border) 80%, transparent)",
+        }} />
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          opacity: 0.25,
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase" as const,
+          color: "var(--weered-muted)",
+        }}>
+          <span>Weered</span>
+          <span style={{ opacity: 0.4 }}>&middot;</span>
+          <span style={{ fontWeight: 500, letterSpacing: "0.02em", textTransform: "none" as const }}>est. 2025</span>
+        </div>
       </div>
 
       {/* Pending pill animation */}
