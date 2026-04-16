@@ -44,13 +44,14 @@ function linkify(text: string): React.ReactNode {
 }
 
 const WEERED_THEME_KEY = "weered_theme_v1";
-type WeeredThemeName = "slate" | "zinc" | "stone" | "gray";
+type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura";
 
 const WEERED_THEMES: Record<WeeredThemeName, any> = {
   slate: { bg:"rgb(2,6,23)", panel:"rgba(15,23,42,.92)", panel2:"rgba(17,24,39,.94)", bd:"rgba(148,163,184,.14)", bd2:"rgba(148,163,184,.26)", text:"rgba(229,231,235,.96)", muted:"rgba(148,163,184,.75)", accentBg:"rgba(14,165,233,.18)", accentRing:"rgba(14,165,233,.35)", accentText:"rgba(56,189,248,.95)" },
   zinc:  { bg:"rgb(9,9,11)", panel:"rgba(24,24,27,.92)", panel2:"rgba(24,24,27,.94)", bd:"rgba(161,161,170,.18)", bd2:"rgba(161,161,170,.28)", text:"rgba(244,244,245,.96)", muted:"rgba(161,161,170,.78)", accentBg:"rgba(34,197,94,.16)", accentRing:"rgba(34,197,94,.34)", accentText:"rgba(74,222,128,.95)" },
   stone: { bg:"rgb(12,10,9)", panel:"rgba(28,25,23,.92)", panel2:"rgba(28,25,23,.94)", bd:"rgba(168,162,158,.18)", bd2:"rgba(168,162,158,.28)", text:"rgba(245,245,244,.96)", muted:"rgba(168,162,158,.78)", accentBg:"rgba(245,158,11,.16)", accentRing:"rgba(245,158,11,.34)", accentText:"rgba(251,191,36,.95)" },
   gray:  { bg:"rgb(3,7,18)", panel:"rgba(17,24,39,.92)", panel2:"rgba(17,24,39,.94)", bd:"rgba(156,163,175,.18)", bd2:"rgba(156,163,175,.28)", text:"rgba(243,244,246,.96)", muted:"rgba(156,163,175,.78)", accentBg:"rgba(20,184,166,.16)", accentRing:"rgba(20,184,166,.34)", accentText:"rgba(45,212,191,.95)" },
+  ishimura: { bg:"rgb(10,8,6)", panel:"rgba(14,12,10,.94)", panel2:"rgba(10,8,6,.95)", bd:"rgba(212,146,10,.18)", bd2:"rgba(212,146,10,.28)", text:"rgba(243,234,220,.96)", muted:"rgba(180,165,140,.72)", accentBg:"rgba(212,146,10,.14)", accentRing:"rgba(212,146,10,.30)", accentText:"rgba(212,146,10,.95)" },
 };
 
 function applyWeeredTheme(name: WeeredThemeName) {
@@ -167,7 +168,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   useEffect(() => {
     try {
       const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
-      if (["slate","zinc","stone","gray"].includes(v)) setTheme(v as WeeredThemeName);
+      if (["slate","zinc","stone","gray","ishimura"].includes(v)) setTheme(v as WeeredThemeName);
     } catch {}
   }, []);
 
