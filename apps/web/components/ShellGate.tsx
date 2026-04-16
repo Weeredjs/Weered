@@ -10,19 +10,34 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
   return (
     <aside
       className="weered-left"
+      data-rail-hover={hovered ? "1" : "0"}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{
-        height: "100%",
-        overflowY: hovered ? "auto" : "hidden",
-        overflowX: "hidden",
-        scrollbarWidth: "thin",
-        scrollbarColor: "rgba(148,163,184,.2) transparent",
-        paddingRight: hovered ? 0 : undefined,
-      }}>
-        {children}
-      </div>
+      <style>{`
+        .weered-left {
+          overflow-y: scroll !important;
+          overflow-x: hidden !important;
+          scrollbar-gutter: stable !important;
+        }
+        .weered-left::-webkit-scrollbar {
+          width: 6px !important;
+        }
+        .weered-left::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .weered-left::-webkit-scrollbar-thumb {
+          background: transparent !important;
+          border-radius: 999px;
+        }
+        .weered-left[data-rail-hover="1"]::-webkit-scrollbar-thumb {
+          background: rgba(148,163,184,.2) !important;
+        }
+        .weered-left[data-rail-hover="1"]::-webkit-scrollbar-thumb:hover {
+          background: rgba(148,163,184,.38) !important;
+        }
+      `}</style>
+      {children}
     </aside>
   );
 }
