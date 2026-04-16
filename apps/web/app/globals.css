@@ -293,6 +293,29 @@ html[data-weered-theme="ishimura"] .weered-rail-close:hover {
   border-color: rgba(212,146,10,0.25);
 }
 
+/* Footer bar */
+html[data-weered-theme="ishimura"] .site-footer {
+  background:
+    linear-gradient(rgba(10,8,6,0.80), rgba(10,8,6,0.80)),
+    url('/themes/ishimura/header-strip.png') center/cover no-repeat !important;
+  border-top: 1px solid rgba(212,146,10,0.18) !important;
+}
+html[data-weered-theme="ishimura"] .site-footer-dot {
+  background: rgba(212,146,10,0.5) !important;
+}
+html[data-weered-theme="ishimura"] .site-footer-left {
+  color: rgba(212,146,10,0.25) !important;
+}
+html[data-weered-theme="ishimura"] .site-footer-nav a {
+  color: rgba(212,146,10,0.25) !important;
+}
+html[data-weered-theme="ishimura"] .site-footer-nav a:hover {
+  color: rgba(212,146,10,0.70) !important;
+}
+html[data-weered-theme="ishimura"] .site-footer-divider {
+  background: rgba(212,146,10,0.12) !important;
+}
+
 /* REDUCE MOTION */
 html[data-weered-reduce-motion="1"] *,
 html[data-weered-reduce-motion="1"] *::before,
