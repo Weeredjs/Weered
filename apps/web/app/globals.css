@@ -126,27 +126,70 @@ html[data-weered-theme="ishimura"] .weered-right {
   box-shadow: 0 0 20px rgba(212,146,10,0.06), inset 0 0 30px rgba(0,0,0,0.3);
 }
 
-/* Lobby pills — 9-slice bezel frame (corners stay crisp, center button discarded) */
+/* Lobby pills — pure CSS bezel (rivets, metal sheen, amber rim; zero images) */
 html[data-weered-theme="ishimura"] .weered-left-link {
   position: relative;
-  background: linear-gradient(180deg, rgba(30,22,14,0.55), rgba(14,11,8,0.85)) !important;
   border: 0 !important;
-  border-image-source: url('/themes/ishimura/button-bezel.png') !important;
-  border-image-slice: 50 90 !important;
-  border-image-width: 14px 22px !important;
-  border-image-outset: 0 !important;
-  border-image-repeat: stretch !important;
-  border-style: solid !important;
+  border-radius: 5px !important;
+  background:
+    /* left rivet */
+    radial-gradient(circle 2.5px at 10px 50%,
+      rgba(255,210,120,0.9) 0%,
+      rgba(212,146,10,0.7) 30%,
+      rgba(60,40,15,0.9) 60%,
+      transparent 70%),
+    /* right rivet */
+    radial-gradient(circle 2.5px at calc(100% - 10px) 50%,
+      rgba(255,210,120,0.9) 0%,
+      rgba(212,146,10,0.7) 30%,
+      rgba(60,40,15,0.9) 60%,
+      transparent 70%),
+    /* brushed metal surface */
+    linear-gradient(180deg,
+      rgba(50,36,22,0.95) 0%,
+      rgba(22,16,10,0.95) 45%,
+      rgba(16,11,7,0.95) 55%,
+      rgba(36,26,16,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 12px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(212,146,10,0.28),
+    0 1px 2px rgba(0,0,0,0.6) !important;
+  transition: box-shadow 0.2s, background 0.2s, filter 0.2s;
 }
 html[data-weered-theme="ishimura"] .weered-left-link:hover {
-  background: linear-gradient(180deg, rgba(40,28,16,0.65), rgba(20,14,10,0.90)) !important;
-  filter: brightness(1.08);
-  box-shadow: 0 0 12px rgba(212,146,10,0.18);
+  filter: brightness(1.12) saturate(1.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 14px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(212,146,10,0.5),
+    0 0 14px rgba(212,146,10,0.22) !important;
 }
 html[data-weered-theme="ishimura"] .weered-left-link-active {
-  background: linear-gradient(180deg, rgba(212,146,10,0.22), rgba(120,80,20,0.08)) !important;
-  filter: brightness(1.15) saturate(1.1);
-  box-shadow: 0 0 18px rgba(212,146,10,0.25) !important;
+  background:
+    radial-gradient(circle 2.5px at 10px 50%,
+      rgba(255,230,150,1) 0%,
+      rgba(232,166,20,0.9) 30%,
+      rgba(80,50,15,0.9) 60%,
+      transparent 70%),
+    radial-gradient(circle 2.5px at calc(100% - 10px) 50%,
+      rgba(255,230,150,1) 0%,
+      rgba(232,166,20,0.9) 30%,
+      rgba(80,50,15,0.9) 60%,
+      transparent 70%),
+    linear-gradient(180deg,
+      rgba(90,62,20,0.95) 0%,
+      rgba(50,32,12,0.95) 45%,
+      rgba(40,26,10,0.95) 55%,
+      rgba(70,46,16,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.35),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 18px rgba(212,146,10,0.18),
+    0 0 0 1px rgba(232,170,40,0.7),
+    0 0 20px rgba(212,146,10,0.30) !important;
 }
 
 /* Section titles — header strip texture */
