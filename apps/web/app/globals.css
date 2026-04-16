@@ -190,9 +190,6 @@ button:hover, [role="button"]:hover {
   backdrop-filter: blur(10px);
   overflow-x: hidden;
 }
-.weered-left {
-  overflow: hidden;
-}
 
 /* ── Icon strips — hidden by default (wide screens) ────────── */
 .weered-icon-strip {
