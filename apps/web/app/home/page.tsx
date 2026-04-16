@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useWeered } from "../../components/WeeredProvider";
 import { avatarBg } from "../../lib/avatarColor";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
@@ -142,13 +143,14 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
     >
       {/* Banner image */}
       {banner && (
-        <img
+        <Image
           src={banner}
           alt={`${roomName(lobby)} lobby banner`}
-          style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%",
-            objectFit: "cover", opacity: 0.55, pointerEvents: "none",
-          }}
+          fill
+          sizes="(max-width: 1024px) 100vw, 720px"
+          priority
+          style={{ objectFit: "cover", opacity: 0.55, pointerEvents: "none" }}
+          unoptimized={banner.startsWith("/")}
         />
       )}
 
@@ -291,13 +293,14 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
     >
       {/* Banner background */}
       {banner && (
-        <img
+        <Image
           src={banner}
           alt={`${roomName(room)} banner`}
-          style={{
-            position: "absolute", inset: 0, width: "100%", height: "100%",
-            objectFit: "cover", opacity: 0.12, pointerEvents: "none",
-          }}
+          fill
+          sizes="(max-width: 768px) 100vw, 400px"
+          loading="lazy"
+          style={{ objectFit: "cover", opacity: 0.12, pointerEvents: "none" }}
+          unoptimized={banner.startsWith("/")}
         />
       )}
 
