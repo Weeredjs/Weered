@@ -740,6 +740,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 100%;
 }
 
 .weered-left-section {
