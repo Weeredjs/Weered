@@ -6,29 +6,23 @@ import SiteFooter from "./SiteFooter";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
-  const id = "weered-left-scroll-style";
 
   return (
     <aside
       className="weered-left"
-      data-hovered={hovered ? "1" : "0"}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <style>{`
-        .weered-left[data-hovered="0"],
-        .weered-left[data-hovered="0"] * {
-          scrollbar-width: none !important;
-          -ms-overflow-style: none !important;
-        }
-        .weered-left[data-hovered="0"]::-webkit-scrollbar,
-        .weered-left[data-hovered="0"] *::-webkit-scrollbar {
-          display: none !important;
-          width: 0 !important;
-          height: 0 !important;
-        }
-      `}</style>
-      {children}
+      <div style={{
+        height: "100%",
+        overflowY: hovered ? "auto" : "hidden",
+        overflowX: "hidden",
+        scrollbarWidth: "thin",
+        scrollbarColor: "rgba(148,163,184,.2) transparent",
+        paddingRight: hovered ? 0 : undefined,
+      }}>
+        {children}
+      </div>
     </aside>
   );
 }
