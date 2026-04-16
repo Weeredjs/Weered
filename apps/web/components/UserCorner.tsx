@@ -154,6 +154,7 @@ export default function UserCorner() {
 
   return (
     <div
+      className="weered-usercorner"
       style={{
         position: "relative",
         borderRadius: 16,
@@ -283,6 +284,7 @@ export default function UserCorner() {
         {/* Settings — visible, with label */}
         <button
           type="button"
+          className="weered-uc-action"
           onClick={() => openSheet("settings")}
           title="Settings"
           style={{
@@ -305,6 +307,7 @@ export default function UserCorner() {
         {/* Logout */}
         <button
           type="button"
+          className="weered-uc-action"
           onClick={() => { if (logout) logout(); else { try { localStorage.removeItem("weered_token"); window.location.href = "/login"; } catch {} } }}
           title="Log out"
           style={{
@@ -328,7 +331,7 @@ export default function UserCorner() {
           type="button"
           onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
           title={dockUnread > 0 ? `${dockUnread} unread` : "Messages, friends, crew"}
-          className={dockUnread > 0 ? "weered-burner-hot" : ""}
+          className={`weered-uc-action${dockUnread > 0 ? " weered-burner-hot" : ""}`}
           style={{
             flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
             gap: 7, padding: "9px 14px",
