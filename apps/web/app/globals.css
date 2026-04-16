@@ -183,12 +183,15 @@ button:hover, [role="button"]:hover {
   position: sticky;
   top: 12px;
   max-height: calc(100vh - 24px);
-  overflow: overlay;
+  overflow: auto;
   border: 1px solid var(--weered-border);
   border-radius: 16px;
   background: var(--weered-panel);
   backdrop-filter: blur(10px);
   overflow-x: hidden;
+}
+.weered-left {
+  overflow: hidden;
 }
 
 /* ── Icon strips — hidden by default (wide screens) ────────── */
