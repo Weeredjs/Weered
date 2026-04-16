@@ -126,23 +126,20 @@ html[data-weered-theme="ishimura"] .weered-right {
   box-shadow: 0 0 20px rgba(212,146,10,0.06), inset 0 0 30px rgba(0,0,0,0.3);
 }
 
-/* Lobby pills — button bezel texture */
+/* Lobby pills — subtle amber gradient (bezel image caused aspect-ratio artifacts) */
 html[data-weered-theme="ishimura"] .weered-left-link {
-  background:
-    linear-gradient(rgba(10,8,6,0.55), rgba(10,8,6,0.55)),
-    url('/themes/ishimura/button-bezel.png') center/cover no-repeat !important;
+  background: linear-gradient(180deg, rgba(30,22,14,0.65), rgba(14,11,8,0.85)) !important;
   border-color: rgba(212,146,10,0.22) !important;
 }
 html[data-weered-theme="ishimura"] .weered-left-link:hover {
+  background: linear-gradient(180deg, rgba(40,28,16,0.75), rgba(20,14,10,0.90)) !important;
   border-color: rgba(212,146,10,0.40) !important;
   box-shadow: 0 0 12px rgba(212,146,10,0.12);
 }
 html[data-weered-theme="ishimura"] .weered-left-link-active {
+  background: linear-gradient(180deg, rgba(212,146,10,0.18), rgba(120,80,20,0.08)) !important;
   border-color: rgba(212,146,10,0.50) !important;
   box-shadow: 0 0 16px rgba(212,146,10,0.18) !important;
-  background:
-    linear-gradient(rgba(212,146,10,0.12), rgba(212,146,10,0.06)),
-    url('/themes/ishimura/button-bezel.png') center/cover no-repeat !important;
 }
 
 /* Section titles — header strip texture */
