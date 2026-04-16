@@ -2542,26 +2542,68 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
   });
 
   // GET /map/hexes — aggregated hex grid cells with user counts (public)
-  app.get("/map/hexes", async (_req, reply) => {
-    const users = await prisma.user.findMany({
-      where: { locationOptIn: true, locationH3: { not: null } },
-      select: { locationH3: true },
-    });
-    // Aggregate counts per hex
+  // Optional ?game= filter to show only users in a specific lobby moduleType
+  app.get("/map/hexes", async (req, reply) => {
+    const q: any = (req as any).query || {};
+    const gameFilter = typeof q.game === "string" ? q.game.trim().toUpperCase() : "";
+
+    // If filtering by game, join through LobbyMember → Lobby
+    let users: { locationH3: string | null }[];
+    if (gameFilter) {
+      const members = await prisma.lobbyMember.findMany({
+        where: { lobby: { moduleType: gameFilter as any } },
+        select: { userId: true },
+      });
+      const memberIds = [...new Set(members.map(m => m.userId))];
+      if (!memberIds.length) return reply.send({ hexes: [], games: [] });
+      users = await prisma.user.findMany({
+        where: { locationOptIn: true, locationH3: { not: null }, id: { in: memberIds } },
+        select: { locationH3: true },
+      });
+    } else {
+      users = await prisma.user.findMany({
+        where: { locationOptIn: true, locationH3: { not: null } },
+        select: { locationH3: true },
+      });
+    }
+
     const hexCounts = new Map<string, number>();
     for (const u of users) {
       if (!u.locationH3) continue;
       hexCounts.set(u.locationH3, (hexCounts.get(u.locationH3) || 0) + 1);
     }
-    // Convert to array with boundary polygons
     const hexes = Array.from(hexCounts.entries()).map(([h3, count]) => {
-      const boundary = cellToBoundary(h3); // [[lat,lng], ...]
+      const boundary = cellToBoundary(h3);
       return { h3, count, boundary };
     });
-    return reply.send({ hexes });
+
+    // Build game breakdown for filter UI
+    const allLocUsers = await prisma.user.findMany({
+      where: { locationOptIn: true, locationH3: { not: null } },
+      select: { id: true },
+    });
+    const locUserIds = new Set(allLocUsers.map(u => u.id));
+    const lobbies = await prisma.lobby.findMany({
+      select: { id: true, name: true, moduleType: true, members: { select: { userId: true } } },
+    });
+    const gameMap = new Map<string, { name: string; count: number }>();
+    for (const l of lobbies) {
+      const locMembers = l.members.filter(m => locUserIds.has(m.userId));
+      if (!locMembers.length) continue;
+      const key = l.moduleType;
+      const existing = gameMap.get(key);
+      if (existing) { existing.count += locMembers.length; }
+      else { gameMap.set(key, { name: l.moduleType, count: locMembers.length }); }
+    }
+    const games = Array.from(gameMap.entries())
+      .map(([id, g]) => ({ id, name: g.name, count: g.count }))
+      .sort((a, b) => b.count - a.count);
+
+    return reply.send({ hexes, games });
   });
 
   // GET /map/nearby?lat=&lng= — users in your hex + neighbors (auth required)
+  // Enriched with current lobby membership info
   app.get("/map/nearby", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -2570,14 +2612,63 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     const lng = Number(q.lng);
     if (!isFinite(lat) || !isFinite(lng)) return reply.code(400).send({ error: "lat/lng required" });
     const center = latLngToCell(lat, lng, H3_RES);
-    const ring = gridDisk(center, 1); // center + 6 neighbors
+    const ring = gridDisk(center, 1);
     const nearby = await prisma.user.findMany({
       where: { locationOptIn: true, locationH3: { in: ring } },
       select: { id: true, usernameKey: true, name: true, avatar: true, avatarColor: true, tier: true, locationH3: true },
     });
-    // Don't return the requesting user in results
-    const others = nearby.filter(u => u.id !== viewer.id);
-    return reply.send({ hex: center, nearbyCount: others.length, users: others.slice(0, 50) });
+    const others = nearby.filter(u => u.id !== viewer.id).slice(0, 50);
+    // Enrich with most recent lobby membership
+    const userIds = others.map(u => u.id);
+    const memberships = userIds.length ? await prisma.lobbyMember.findMany({
+      where: { userId: { in: userIds } },
+      select: { userId: true, lobbyId: true, lobby: { select: { name: true } }, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }) : [];
+    const lobbyMap = new Map<string, { lobbyId: string; lobbyName: string }>();
+    for (const m of memberships) {
+      if (!lobbyMap.has(m.userId)) lobbyMap.set(m.userId, { lobbyId: m.lobbyId, lobbyName: m.lobby.name });
+    }
+    const enriched = others.map(u => {
+      const lm = lobbyMap.get(u.id);
+      return { ...u, lobbyId: lm?.lobbyId || null, lobbyName: lm?.lobbyName || null };
+    });
+    return reply.send({ hex: center, nearbyCount: enriched.length, users: enriched });
+  });
+
+  // GET /map/lobbies — lobby pins with geographic center of their members
+  app.get("/map/lobbies", async (_req, reply) => {
+    // Get all users with location opted in
+    const locUsers = await prisma.user.findMany({
+      where: { locationOptIn: true, latitude: { not: null }, longitude: { not: null } },
+      select: { id: true, latitude: true, longitude: true },
+    });
+    const locMap = new Map<string, { lat: number; lng: number }>();
+    for (const u of locUsers) {
+      if (u.latitude != null && u.longitude != null) locMap.set(u.id, { lat: u.latitude, lng: u.longitude });
+    }
+
+    const lobbies = await prisma.lobby.findMany({
+      select: {
+        id: true, name: true, logoUrl: true, accentColor: true, moduleType: true,
+        members: { select: { userId: true } },
+        _count: { select: { members: true } },
+      },
+    });
+
+    const pins = lobbies.map(l => {
+      const membersWithLoc = l.members.map(m => locMap.get(m.userId)).filter(Boolean) as { lat: number; lng: number }[];
+      if (!membersWithLoc.length) return null;
+      let sumLat = 0, sumLng = 0;
+      for (const m of membersWithLoc) { sumLat += m.lat; sumLng += m.lng; }
+      return {
+        id: l.id, name: l.name, logoUrl: l.logoUrl, accentColor: l.accentColor,
+        moduleType: l.moduleType, memberCount: l._count.members,
+        lat: sumLat / membersWithLoc.length, lng: sumLng / membersWithLoc.length,
+      };
+    }).filter(Boolean);
+
+    return reply.send({ lobbies: pins });
   });
 
   // ── Avatar upload (Indicted+ only) ────────────────────────────────────────
