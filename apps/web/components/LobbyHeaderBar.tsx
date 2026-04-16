@@ -242,14 +242,14 @@ export default function LobbyHeaderBar({
         </div>
 
         {/* Mode tabs */}
-        <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-0.5" style={{ flexShrink: 0 }}>
+        <div className="weered-lobby-tabs flex gap-1 rounded-xl border border-white/10 bg-white/5 p-0.5" style={{ flexShrink: 0 }}>
           {(["rooms", "people"] as Mode[]).map(m => (
             <button
               key={m}
               type="button"
               className={
-                "rounded-lg px-2 py-1 text-xs font-semibold " +
-                (mode === m ? "bg-white/15" : "opacity-70 hover:bg-white/10")
+                "weered-lobby-tab rounded-lg px-2 py-1 text-xs font-semibold " +
+                (mode === m ? "weered-lobby-tab-active bg-white/15" : "opacity-70 hover:bg-white/10")
               }
               style={mode === m && accent ? { background: `${accent}25`, color: accent } : undefined}
               onClick={() => setMode(m)}
