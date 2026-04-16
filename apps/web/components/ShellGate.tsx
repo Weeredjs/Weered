@@ -19,31 +19,18 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
           overflow-y: scroll !important;
           overflow-x: hidden !important;
           scrollbar-gutter: stable !important;
-          scrollbar-width: none !important;
-        }
-        .weered-left::-webkit-scrollbar {
-          width: 0px !important;
-          display: none !important;
-        }
-        .weered-left[data-rail-hover="1"] {
           scrollbar-width: thin !important;
-          scrollbar-color: rgba(148,163,184,.2) transparent !important;
+          scrollbar-color: transparent transparent !important;
         }
-        .weered-left[data-rail-hover="1"]::-webkit-scrollbar {
-          width: 6px !important;
-          display: block !important;
-        }
-        .weered-left[data-rail-hover="1"]::-webkit-scrollbar-track {
-          background: transparent !important;
+        .weered-left::-webkit-scrollbar { width: 6px !important; }
+        .weered-left::-webkit-scrollbar-track { background: transparent !important; }
+        .weered-left::-webkit-scrollbar-thumb { background: transparent !important; border: none !important; background-clip: unset !important; }
+        .weered-left[data-rail-hover="1"] {
+          scrollbar-color: rgba(148,163,184,.25) transparent !important;
         }
         .weered-left[data-rail-hover="1"]::-webkit-scrollbar-thumb {
-          background: rgba(148,163,184,.2) !important;
+          background: rgba(148,163,184,.25) !important;
           border-radius: 999px !important;
-          border: none !important;
-          background-clip: unset !important;
-        }
-        .weered-left[data-rail-hover="1"]::-webkit-scrollbar-thumb:hover {
-          background: rgba(148,163,184,.38) !important;
         }
       `}</style>
       {children}
