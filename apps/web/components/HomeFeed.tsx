@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import StoryInterceptModal from "./StoryInterceptModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -180,7 +181,15 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         position: "relative",
       }}>
         {item.thumbnail && (
-          <img src={item.thumbnail} alt={item.title + " thumbnail"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <Image
+            src={item.thumbnail}
+            alt={item.title + " thumbnail"}
+            fill
+            sizes="88px"
+            loading="lazy"
+            style={{ objectFit: "cover", display: "block" }}
+            unoptimized={item.thumbnail.startsWith("/")}
+          />
         )}
         {/* Category pip */}
         <div style={{
