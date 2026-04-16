@@ -18,7 +18,7 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
 
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
-  const t = WEERED_THEMES[name] || WEERED_THEMES.slate;
+  const t = WEERED_THEMES[name] || WEERED_THEMES.ishimura;
   const root = document.documentElement;
   Object.entries({ "--weered-bg":t.bg,"--weered-panel":t.panel,"--weered-panel2":t.panel2,"--weered-bd":t.bd,"--weered-bd2":t.bd2,"--weered-text":t.text,"--weered-muted":t.muted,"--weered-accent-bg":t.accentBg,"--weered-accent-ring":t.accentRing,"--weered-accent-text":t.accentText }).forEach(([k,v]) => root.style.setProperty(k, v));
   root.setAttribute("data-weered-theme", name);
@@ -345,7 +345,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [activeTab,   setActiveTab  ] = useState<"gta" | "gallery" | "color" | "upload">("gta");
   const [uploading,   setUploading  ] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [theme,       setTheme      ] = useState<WeeredThemeName>("stone");
+  const [theme,       setTheme      ] = useState<WeeredThemeName>("ishimura");
 
   // Hydrate theme from localStorage
   useEffect(() => {

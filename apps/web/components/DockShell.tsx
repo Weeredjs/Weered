@@ -56,7 +56,7 @@ const WEERED_THEMES: Record<WeeredThemeName, any> = {
 
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
-  const t = WEERED_THEMES[name] || WEERED_THEMES.slate;
+  const t = WEERED_THEMES[name] || WEERED_THEMES.ishimura;
   const root = document.documentElement;
   Object.entries({ "--weered-bg":t.bg,"--weered-panel":t.panel,"--weered-panel2":t.panel2,"--weered-bd":t.bd,"--weered-bd2":t.bd2,"--weered-text":t.text,"--weered-muted":t.muted,"--weered-accent-bg":t.accentBg,"--weered-accent-ring":t.accentRing,"--weered-accent-text":t.accentText }).forEach(([k,v]) => root.style.setProperty(k, v));
   root.setAttribute("data-weered-theme", name);
@@ -162,7 +162,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("dms");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
-  const [theme, setTheme] = useState<WeeredThemeName>("stone");
+  const [theme, setTheme] = useState<WeeredThemeName>("ishimura");
 
   // Hydrate theme from localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
