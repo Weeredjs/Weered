@@ -126,33 +126,27 @@ html[data-weered-theme="ishimura"] .weered-right {
   box-shadow: 0 0 20px rgba(212,146,10,0.06), inset 0 0 30px rgba(0,0,0,0.3);
 }
 
-/* Lobby pills — button bezel texture, stretched to fill (no crop) */
+/* Lobby pills — 9-slice bezel frame (corners stay crisp, center button discarded) */
 html[data-weered-theme="ishimura"] .weered-left-link {
-  background-color: rgba(14,11,8,0.85) !important;
-  background-image:
-    linear-gradient(rgba(10,8,6,0.45), rgba(10,8,6,0.55)),
-    url('/themes/ishimura/button-bezel.png') !important;
-  background-size: 100% 100%, 100% 100% !important;
-  background-repeat: no-repeat, no-repeat !important;
-  background-position: center, center !important;
-  border-color: rgba(212,146,10,0.22) !important;
+  position: relative;
+  background: linear-gradient(180deg, rgba(30,22,14,0.55), rgba(14,11,8,0.85)) !important;
+  border: 0 !important;
+  border-image-source: url('/themes/ishimura/button-bezel.png') !important;
+  border-image-slice: 50 90 !important;
+  border-image-width: 14px 22px !important;
+  border-image-outset: 0 !important;
+  border-image-repeat: stretch !important;
+  border-style: solid !important;
 }
 html[data-weered-theme="ishimura"] .weered-left-link:hover {
-  background-image:
-    linear-gradient(rgba(10,8,6,0.30), rgba(10,8,6,0.45)),
-    url('/themes/ishimura/button-bezel.png') !important;
-  border-color: rgba(212,146,10,0.40) !important;
-  box-shadow: 0 0 12px rgba(212,146,10,0.12);
+  background: linear-gradient(180deg, rgba(40,28,16,0.65), rgba(20,14,10,0.90)) !important;
+  filter: brightness(1.08);
+  box-shadow: 0 0 12px rgba(212,146,10,0.18);
 }
 html[data-weered-theme="ishimura"] .weered-left-link-active {
-  background-image:
-    linear-gradient(rgba(212,146,10,0.22), rgba(212,146,10,0.08)),
-    url('/themes/ishimura/button-bezel.png') !important;
-  background-size: 100% 100%, 100% 100% !important;
-  background-repeat: no-repeat, no-repeat !important;
-  background-position: center, center !important;
-  border-color: rgba(212,146,10,0.50) !important;
-  box-shadow: 0 0 16px rgba(212,146,10,0.18) !important;
+  background: linear-gradient(180deg, rgba(212,146,10,0.22), rgba(120,80,20,0.08)) !important;
+  filter: brightness(1.15) saturate(1.1);
+  box-shadow: 0 0 18px rgba(212,146,10,0.25) !important;
 }
 
 /* Section titles — header strip texture */
