@@ -192,28 +192,22 @@ html[data-weered-theme="ishimura"] .weered-left-link-active {
     0 0 20px rgba(212,146,10,0.30) !important;
 }
 
-/* Section titles — header strip texture */
+/* Section titles — pure CSS metal strip (image overridden) */
 html[data-weered-theme="ishimura"] .weered-left-title {
-  background:
-    linear-gradient(rgba(10,8,6,0.50), rgba(10,8,6,0.50)),
-    url('/themes/ishimura/header-strip.png') center/cover no-repeat;
-  border-color: rgba(212,146,10,0.12);
+  background: linear-gradient(180deg,
+    rgba(40,28,18,0.85) 0%,
+    rgba(16,12,8,0.95) 50%,
+    rgba(28,20,12,0.88) 100%) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    inset 0 0 14px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.28) !important;
 }
 
-/* User corner card — frame texture */
-html[data-weered-theme="ishimura"] .weered-usercorner {
-  background:
-    linear-gradient(rgba(10,8,6,0.65), rgba(10,8,6,0.65)),
-    url('/themes/ishimura/frame.png') center/cover no-repeat;
-  border-color: rgba(212,146,10,0.25);
-  box-shadow: 0 0 12px rgba(212,146,10,0.08);
-}
-html[data-weered-theme="ishimura"] .weered-usercorner:hover {
-  background:
-    linear-gradient(rgba(212,146,10,0.08), rgba(212,146,10,0.04)),
-    url('/themes/ishimura/frame.png') center/cover no-repeat;
-  border-color: rgba(212,146,10,0.38);
-}
+/* (User corner card styling handled in production block below) */
 
 /* Left-rail sections */
 html[data-weered-theme="ishimura"] .weered-left-section {
@@ -432,22 +426,32 @@ html[data-weered-theme="ishimura"] body::after {
       rgba(0,0,0,0.6) 100%);
 }
 
-/* Rolling scan line beam */
+/* Rolling scan line beam — sits BEHIND panels, only visible in negative space */
+html[data-weered-theme="ishimura"] .weered-shell {
+  position: relative;
+  isolation: isolate;
+}
 html[data-weered-theme="ishimura"] .weered-shell::before {
   content: '';
   position: fixed;
   left: 0; right: 0;
-  height: 80px;
+  height: 140px;
   pointer-events: none;
-  z-index: 9997;
+  z-index: 0;
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(212,146,10,0.04) 45%,
-    rgba(212,146,10,0.08) 50%,
-    rgba(212,146,10,0.04) 55%,
+    rgba(212,146,10,0.05) 45%,
+    rgba(232,170,40,0.14) 50%,
+    rgba(212,146,10,0.05) 55%,
     transparent 100%);
-  animation: ishimuraScan 8s linear infinite;
+  animation: ishimuraScan 10s linear infinite;
+  mix-blend-mode: screen;
+}
+/* Ensure shell direct children stack above the beam */
+html[data-weered-theme="ishimura"] .weered-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Text CRT glow ------------------------------------------------ */
