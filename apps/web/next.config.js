@@ -52,6 +52,9 @@ const nextConfig = {
       // Weered's own domain (safety)
       { protocol: 'https', hostname: 'weered.ca' },
       { protocol: 'https', hostname: '**.weered.ca' },
+      // Wildcard — allow any HTTPS host for user-submitted banner/logo URLs
+      // (lobby admins can reference images from any source; optimizer still caches locally)
+      { protocol: 'https', hostname: '**' },
     ],
   },
   async headers() {
