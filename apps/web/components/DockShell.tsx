@@ -43,7 +43,7 @@ function linkify(text: string): React.ReactNode {
   return <>{nodes}</>;
 }
 
-const WEERED_THEME_KEY = "weered_theme_v1";
+const WEERED_THEME_KEY = "weered_theme_v2";
 type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura";
 
 const WEERED_THEMES: Record<WeeredThemeName, any> = {

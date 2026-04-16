@@ -5,7 +5,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
 
 // ─── Theme ──────────────────────────────────────────────────
-const WEERED_THEME_KEY = "weered_theme_v1";
+const WEERED_THEME_KEY = "weered_theme_v2";
 type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura";
 
 const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2: string; bd: string; bd2: string; text: string; muted: string; accentBg: string; accentRing: string; accentText: string; label: string; swatch: string }> = {
