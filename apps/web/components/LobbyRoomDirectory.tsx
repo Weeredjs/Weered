@@ -23,6 +23,8 @@ interface RoomData {
   _count?: { members: number };
   onlineCount?: number;
   onlineUsers?: RoomUser[];
+  pinned?: boolean;
+  isEvent?: boolean;
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -395,7 +397,7 @@ export default function LobbyRoomDirectory({
                 role="button"
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleJoin(room); } }}
-                className="weered-room-card"
+                className={`weered-room-card${room.isEvent ? " weered-room-card-event" : ""}`}
                 style={{
                   position: "relative", overflow: "hidden",
                   borderRadius: 14, cursor: "pointer",
@@ -457,8 +459,18 @@ export default function LobbyRoomDirectory({
                         fontWeight: 800, fontSize: 15, lineHeight: 1.25,
                         color: "rgba(243,244,246,.95)", letterSpacing: "-0.3px",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        display: "flex", alignItems: "center", gap: 8,
                       }}>
-                        {room.name}
+                        {room.isEvent && (
+                          <span className="weered-event-badge" style={{
+                            flexShrink: 0, fontSize: 9, fontWeight: 900, letterSpacing: ".14em",
+                            padding: "3px 7px", borderRadius: 4,
+                            background: "linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%)",
+                            color: "white", textTransform: "uppercase",
+                            boxShadow: "0 0 10px rgba(139,92,246,0.55)",
+                          }}>EVENT</span>
+                        )}
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</span>
                       </div>
                       <div style={{
                         fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 3,

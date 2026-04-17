@@ -217,6 +217,7 @@ model Room {
   description  String   @default("")
   locked       Boolean  @default(false)
   pinned       Boolean  @default(false)
+  isEvent      Boolean  @default(false)
   passwordHash String?
   ownerId   String?
   lobbyId   String?
