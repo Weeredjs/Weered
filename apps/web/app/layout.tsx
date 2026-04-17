@@ -100,9 +100,28 @@ const jsonLd = {
   },
 };
 
+const themeBootScript = `
+try {
+  var d = document.documentElement;
+  var v2 = localStorage.getItem('weered_theme_v2');
+  var sraw = localStorage.getItem('weered:settings:v0');
+  var s = sraw ? JSON.parse(sraw) : null;
+  var valid = ['slate','zinc','stone','gray','ishimura'];
+  var theme = (v2 && valid.indexOf(v2) >= 0) ? v2
+            : (s && s.theme && valid.indexOf(s.theme) >= 0) ? s.theme
+            : 'ishimura';
+  d.setAttribute('data-weered-theme', theme);
+  if (s && s.density) d.setAttribute('data-weered-density', s.density);
+  if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
+} catch(e) {}
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>
         <script
           type="application/ld+json"
