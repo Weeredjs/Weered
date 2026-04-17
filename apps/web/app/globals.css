@@ -2320,6 +2320,688 @@ html[data-weered-theme="broadcast"] .weered-usercorner *[style*="border"][style*
 }
 
 /* =============================================
+   PRESS THEME — editorial charcoal + brass
+   Fresh but old: layered depth, amber topper strips,
+   crosshatch paper texture, bold condensed caps
+   ============================================= */
+html[data-weered-theme="press"] {
+  --weered-bg:       #1a1a1c;
+  --weered-panel:    rgba(32, 32, 34, 0.96);
+  --weered-panel2:   rgba(22, 22, 24, 0.97);
+  --weered-border:   rgba(217, 169, 66, 0.16);
+  --weered-border2:  rgba(217, 169, 66, 0.30);
+  --weered-text:     rgba(240, 232, 214, 0.96);
+  --weered-muted:    rgba(198, 188, 168, 0.65);
+
+  --weered-accent-1:    #d9a942;
+  --weered-accent-2:    #b78a28;
+  --weered-accent-bg:   rgba(217, 169, 66, 0.14);
+  --weered-accent-ring: rgba(217, 169, 66, 0.32);
+  --weered-accent-grad: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
+}
+
+html[data-weered-theme="press"] body {
+  background: #1a1a1c !important;
+  color: rgba(240,232,214,0.96);
+}
+
+/* PANELS — charcoal with crosshatch paper texture + layered depth */
+html[data-weered-theme="press"] .weered-panel,
+html[data-weered-theme="press"] .weered-panel2,
+html[data-weered-theme="press"] .weered-presence,
+html[data-weered-theme="press"] .weered-left,
+html[data-weered-theme="press"] .weered-right,
+html[data-weered-theme="press"] .weered-overlay-panel {
+  position: relative;
+  background:
+    url('/themes/press/crosshatch.png') repeat,
+    linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.97) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.18),
+    0 2px 0 rgba(0,0,0,0.25),
+    0 6px 18px rgba(0,0,0,0.45) !important;
+}
+
+/* SECTION TITLES — bold condensed caps with editorial slash accent */
+html[data-weered-theme="press"] .weered-left-title,
+html[data-weered-theme="press"] .weered-presence-title,
+html[data-weered-theme="press"] .weered-rr-section-title {
+  color: rgba(240,232,214,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', 'Arial Narrow', ui-sans-serif, sans-serif !important;
+  font-weight: 900 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  opacity: 1 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Editorial slash before section titles */
+html[data-weered-theme="press"] .weered-left-title::before,
+html[data-weered-theme="press"] .weered-presence-title::before,
+html[data-weered-theme="press"] .weered-rr-section-title::before {
+  content: '/' !important;
+  display: inline-block !important;
+  color: rgba(217,169,66,1) !important;
+  font-weight: 900 !important;
+  font-size: 15px !important;
+  margin-right: 4px !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6), 0 0 6px rgba(217,169,66,0.35) !important;
+  animation: none !important;
+  vertical-align: baseline !important;
+}
+
+/* Horizontal rule under titles — editorial weight */
+html[data-weered-theme="press"] .weered-left-title::after,
+html[data-weered-theme="press"] .weered-presence-title::after,
+html[data-weered-theme="press"] .weered-rr-section-title::after {
+  content: '' !important;
+  flex: 1;
+  height: 1px !important;
+  background: linear-gradient(90deg, rgba(217,169,66,0.35) 0%, rgba(217,169,66,0.08) 100%) !important;
+  display: block !important;
+  margin-left: 4px;
+}
+
+/* LEFT RAIL LINKS — layered flat cards */
+html[data-weered-theme="press"] .weered-left-link {
+  position: relative;
+  background: linear-gradient(180deg, #222224 0%, #18181a 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.80) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  padding: 8px 12px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 0 rgba(0,0,0,0.3),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="press"] .weered-left-link:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #26262a 0%, #1c1c1e 100%) !important;
+  color: rgba(245,238,220,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(217,169,66,0.30),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* ACTIVE STATE — amber topper strip + lifted */
+html[data-weered-theme="press"] .weered-left-link-active,
+html[data-weered-theme="press"] .weered-dock-tab-active,
+html[data-weered-theme="press"] .weered-rr-module-btn-active,
+html[data-weered-theme="press"] .weered-rr-room-card-active,
+html[data-weered-theme="press"] .weered-lobby-tab-active {
+  position: relative;
+  background: linear-gradient(180deg, #2a2a2c 0%, #1e1e20 100%) !important;
+  color: rgba(245,238,220,0.98) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.10),
+    0 0 0 1px rgba(217,169,66,0.50),
+    0 0 12px rgba(217,169,66,0.18),
+    0 4px 8px rgba(0,0,0,0.5) !important;
+  animation: none !important;
+}
+/* The signature amber topper strip */
+html[data-weered-theme="press"] .weered-left-link-active::before,
+html[data-weered-theme="press"] .weered-dock-tab-active::before,
+html[data-weered-theme="press"] .weered-rr-module-btn-active::before,
+html[data-weered-theme="press"] .weered-rr-room-card-active::before,
+html[data-weered-theme="press"] .weered-lobby-tab-active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
+  box-shadow: 0 0 8px rgba(217,169,66,0.6);
+  border-radius: 3px 3px 0 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* BUTTONS — editorial keys */
+html[data-weered-theme="press"] .weered-btn {
+  background: linear-gradient(180deg, #222224 0%, #18181a 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.88) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  padding: 8px 16px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 0 rgba(0,0,0,0.3),
+    0 2px 4px rgba(0,0,0,0.35) !important;
+  transition: all 0.12s !important;
+}
+html[data-weered-theme="press"] .weered-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 0 1px rgba(217,169,66,0.40),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+html[data-weered-theme="press"] .weered-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+
+/* USER CORNER — editorial pull quote box */
+html[data-weered-theme="press"] .weered-usercorner {
+  background:
+    url('/themes/press/crosshatch.png') repeat,
+    linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.28),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 6px 14px rgba(0,0,0,0.4) !important;
+}
+
+html[data-weered-theme="press"] .weered-uc-action {
+  background: linear-gradient(180deg, #222224 0%, #18181a 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.85) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.22) !important;
+}
+html[data-weered-theme="press"] .weered-uc-action:hover {
+  color: rgba(230,190,110,0.95) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.50),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* LOBBY TABS */
+html[data-weered-theme="press"] .weered-lobby-tabs {
+  background: linear-gradient(180deg, #141416, #1c1c1e) !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  padding: 3px !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.18) !important;
+}
+html[data-weered-theme="press"] .weered-lobby-tab {
+  background: transparent !important;
+  color: rgba(198,188,168,0.60) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+}
+html[data-weered-theme="press"] .weered-lobby-tab:hover {
+  color: rgba(230,190,110,0.85) !important;
+}
+
+/* BURNER DOCK */
+html[data-weered-theme="press"] .weered-dock {
+  position: relative;
+  background:
+    url('/themes/press/crosshatch.png') repeat,
+    linear-gradient(180deg, rgba(36,36,38,0.97) 0%, rgba(20,20,22,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.06),
+    0 0 0 1px rgba(217,169,66,0.28),
+    0 0 0 2px rgba(0,0,0,0.4),
+    0 8px 20px rgba(0,0,0,0.6) !important;
+}
+html[data-weered-theme="press"] .weered-dock::before,
+html[data-weered-theme="press"] .weered-dock::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Dock title — editorial masthead */
+html[data-weered-theme="press"] .weered-dock-title {
+  color: rgba(240,232,214,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', 'Arial Narrow', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.16em !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.7);
+}
+
+/* Dock tabs */
+html[data-weered-theme="press"] .weered-dock-tabs {
+  background: linear-gradient(180deg, #141416, #1c1c1e) !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.18) !important;
+}
+html[data-weered-theme="press"] .weered-dock-tab {
+  background: transparent !important;
+  color: rgba(198,188,168,0.60) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+  font-size: 11px !important;
+}
+html[data-weered-theme="press"] .weered-dock-tab:hover {
+  color: rgba(230,190,110,0.85) !important;
+}
+
+/* Dock bubbles — clean editorial blocks */
+html[data-weered-theme="press"] .weered-dock-bubble {
+  background: linear-gradient(180deg, #1e1e20, #16161a) !important;
+  border: 0 !important;
+  border-radius: 3px 3px 3px 1px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 0 1px rgba(217,169,66,0.14) !important;
+}
+html[data-weered-theme="press"] .weered-dock-bubble div {
+  color: rgba(240,232,214,0.92) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  text-shadow: none;
+}
+html[data-weered-theme="press"] .weered-dock-bubble-me {
+  background: linear-gradient(180deg, #3a2e12, #241c08) !important;
+  border-radius: 3px 3px 1px 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,140,0.10),
+    0 0 0 1px rgba(217,169,66,0.38) !important;
+}
+html[data-weered-theme="press"] .weered-dock-bubble-me div {
+  color: rgba(242,222,180,0.95) !important;
+}
+
+html[data-weered-theme="press"] .weered-dock-close,
+html[data-weered-theme="press"] .weered-dock-compose,
+html[data-weered-theme="press"] .weered-dock-send {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(217,169,66,0.85) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.28) !important;
+}
+html[data-weered-theme="press"] .weered-dock-compose:hover,
+html[data-weered-theme="press"] .weered-dock-send:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  color: rgba(20,14,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.50),
+    0 0 0 1px rgba(217,169,66,0.60),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* Dock conversation header */
+html[data-weered-theme="press"] .weered-dock-conv-header {
+  background: linear-gradient(180deg, rgba(48,40,16,0.3), rgba(22,22,24,0.25)) !important;
+  border-bottom: 1px solid rgba(217,169,66,0.20) !important;
+}
+
+/* RIGHT RAIL ID CHIP */
+html[data-weered-theme="press"] .weered-rr-id-chip {
+  background: linear-gradient(180deg, #141418, #1c1c20) !important;
+  border: 0 !important;
+  color: rgba(217,169,66,0.85) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+
+/* RIGHT RAIL primary + join */
+html[data-weered-theme="press"] .weered-rr-primary,
+html[data-weered-theme="press"] .weered-rr-join {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(230,190,110,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.32) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="press"] .weered-rr-primary:hover,
+html[data-weered-theme="press"] .weered-rr-join:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  color: rgba(20,14,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.50),
+    0 0 0 1px rgba(217,169,66,0.55),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+}
+html[data-weered-theme="press"] .weered-rr-primary-solid {
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  color: rgba(20,14,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.55),
+    0 0 0 1px rgba(217,169,66,0.55),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* RIGHT RAIL create panel */
+html[data-weered-theme="press"] .weered-rr-create-panel {
+  background: linear-gradient(180deg, #1a1a1e, #12121a) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+html[data-weered-theme="press"] .weered-rr-create-title {
+  color: rgba(240,232,214,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  padding: 0 !important;
+}
+
+/* Module buttons */
+html[data-weered-theme="press"] .weered-rr-module-btn {
+  background: linear-gradient(180deg, #1a1a1e, #12121a) !important;
+  border: 0 !important;
+  color: rgba(198,188,168,0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    0 0 0 1px rgba(217,169,66,0.16) !important;
+}
+html[data-weered-theme="press"] .weered-rr-module-btn:hover {
+  color: rgba(230,190,110,0.90) !important;
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.38) !important;
+}
+
+/* RIGHT RAIL cards + rows */
+html[data-weered-theme="press"] .weered-rr-room-card,
+html[data-weered-theme="press"] .weered-rr-friend-row,
+html[data-weered-theme="press"] .weered-rr-crew-row,
+html[data-weered-theme="press"] .weered-dock-thread {
+  background: linear-gradient(180deg, #1e1e22, #16161a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 0 rgba(0,0,0,0.25),
+    0 0 0 1px rgba(217,169,66,0.14) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="press"] .weered-rr-room-card:hover,
+html[data-weered-theme="press"] .weered-rr-friend-row:hover,
+html[data-weered-theme="press"] .weered-rr-crew-row:hover,
+html[data-weered-theme="press"] .weered-dock-thread:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #22222a, #1a1a1e) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(217,169,66,0.38),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* Mod panel */
+html[data-weered-theme="press"] .weered-rr-mod-panel {
+  background: linear-gradient(180deg, #1a1a1e, #12121a) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.26) !important;
+}
+html[data-weered-theme="press"] .weered-rr-mod-panel button {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(230,190,110,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+html[data-weered-theme="press"] .weered-rr-status-chip {
+  background: linear-gradient(180deg, #3a2e12, #241c08) !important;
+  border: 0 !important;
+  color: rgba(230,190,110,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.14em !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,140,0.12),
+    0 0 0 1px rgba(217,169,66,0.42) !important;
+}
+
+/* INPUTS */
+html[data-weered-theme="press"] input,
+html[data-weered-theme="press"] textarea,
+html[data-weered-theme="press"] .weered-input,
+html[data-weered-theme="press"] .weered-presence-search {
+  background: linear-gradient(180deg, #141418, #1c1c20) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.95) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(217,169,66,0.26) !important;
+}
+html[data-weered-theme="press"] input:focus,
+html[data-weered-theme="press"] textarea:focus {
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(217,169,66,0.58),
+    0 0 10px rgba(217,169,66,0.20) !important;
+}
+html[data-weered-theme="press"] input::placeholder,
+html[data-weered-theme="press"] textarea::placeholder {
+  color: rgba(198,188,168,0.40) !important;
+}
+
+/* Icon strip */
+html[data-weered-theme="press"] .weered-icon-strip-btn {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.20) !important;
+}
+html[data-weered-theme="press"] .weered-icon-strip-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.48),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+html[data-weered-theme="press"] .weered-icon-strip-btn-active {
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.55),
+    0 0 0 1px rgba(217,169,66,0.55),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* LOBBY CARDS — editorial tiles */
+html[data-weered-theme="press"] .weered-lobby-grid > * {
+  position: relative;
+  background:
+    url('/themes/press/crosshatch.png') repeat,
+    linear-gradient(180deg, rgba(36,36,38,0.95) 0%, rgba(22,22,24,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.20),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 6px 14px rgba(0,0,0,0.4) !important;
+  transition: all 0.2s !important;
+}
+html[data-weered-theme="press"] .weered-lobby-grid > *:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.08),
+    0 0 0 1px rgba(217,169,66,0.48),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 8px 20px rgba(0,0,0,0.5) !important;
+}
+
+/* FEATURED HERO — editorial masthead with topper strip */
+html[data-weered-theme="press"] .weered-hero-content {
+  position: relative;
+  background:
+    url('/themes/press/crosshatch.png') repeat,
+    linear-gradient(180deg, rgba(42,36,24,0.95) 0%, rgba(22,22,24,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.08),
+    0 0 0 1px rgba(217,169,66,0.32),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 8px 20px rgba(0,0,0,0.5) !important;
+}
+html[data-weered-theme="press"] .weered-hero-content::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #d9a942 20%, #e6bd6e 50%, #d9a942 80%, transparent 100%);
+  box-shadow: 0 0 10px rgba(217,169,66,0.6);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* SCROLLBAR */
+html[data-weered-theme="press"] *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(217,169,66,0.42), rgba(130,90,20,0.52)) !important;
+}
+html[data-weered-theme="press"] *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(230,190,110,0.62), rgba(170,115,40,0.68)) !important;
+}
+html[data-weered-theme="press"] *::-webkit-scrollbar-track {
+  background: rgba(14,14,16,0.6) !important;
+}
+
+/* TEXT links */
+html[data-weered-theme="press"] a {
+  color: rgba(230,190,110,0.92);
+  transition: color 0.15s;
+}
+html[data-weered-theme="press"] a:hover {
+  color: rgba(255,222,160,1);
+}
+
+/* Retints — purple/green/pink → brass */
+html[data-weered-theme="press"] *[style*="rgba(88,0,229"],
+html[data-weered-theme="press"] *[style*="rgba(124,58,237"],
+html[data-weered-theme="press"] *[style*="rgba(139,92,246"],
+html[data-weered-theme="press"] *[style*="rgba(167,139,250"],
+html[data-weered-theme="press"] *[style*="rgba(216,180,254"],
+html[data-weered-theme="press"] *[style*="#5800E5"],
+html[data-weered-theme="press"] *[style*="#5800e5"],
+html[data-weered-theme="press"] *[style*="#7C3AED"],
+html[data-weered-theme="press"] *[style*="#7c3aed"] {
+  color: rgba(230,190,110,0.95) !important;
+  border-color: rgba(217,169,66,0.32) !important;
+}
+html[data-weered-theme="press"] *[style*="background: rgba(88,0,229"],
+html[data-weered-theme="press"] *[style*="background:rgba(88,0,229"],
+html[data-weered-theme="press"] *[style*="background: rgba(124,58,237"],
+html[data-weered-theme="press"] *[style*="background:rgba(124,58,237"] {
+  background: rgba(217,169,66,0.12) !important;
+}
+html[data-weered-theme="press"] button[style*="rgba(88,0,229"] {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  color: rgba(230,190,110,0.95) !important;
+  border: 0 !important;
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.32),
+    0 1px 2px rgba(0,0,0,0.3) !important;
+}
+/* Green → brass */
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.16"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.18"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.20"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.10"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.08"] {
+  background: rgba(217,169,66,0.14) !important;
+  border-color: rgba(217,169,66,0.38) !important;
+  color: rgba(230,190,110,0.95) !important;
+}
+html[data-weered-theme="press"] *[style*="background: #22c55e"],
+html[data-weered-theme="press"] *[style*="background:#22c55e"],
+html[data-weered-theme="press"] *[style*="background: #22C55E"],
+html[data-weered-theme="press"] *[style*="background:#22C55E"] {
+  background: rgba(217,169,66,0.95) !important;
+  box-shadow: 0 0 4px rgba(217,169,66,0.6) !important;
+}
+/* Pink/magenta → brass */
+html[data-weered-theme="press"] *[style*="#EC4899"],
+html[data-weered-theme="press"] *[style*="#ec4899"],
+html[data-weered-theme="press"] *[style*="#DB2777"],
+html[data-weered-theme="press"] *[style*="#db2777"],
+html[data-weered-theme="press"] *[style*="rgba(236,72,153"],
+html[data-weered-theme="press"] *[style*="rgba(244,114,182"] {
+  color: rgba(217,169,66,0.95) !important;
+}
+
+/* =============================================
    BASE RESET
    ============================================= */
 *, *::before, *::after { box-sizing: border-box; }
