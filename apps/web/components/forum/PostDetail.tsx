@@ -326,8 +326,9 @@ export default function PostDetail({ postId }: { postId: string }) {
         ))}
 
         {comments.length === 0 && (
-          <div style={{ textAlign: "center", padding: "24px 0", opacity: 0.25, fontSize: 12 }}>
-            No comments yet. Be the first to reply.
+          <div style={{ textAlign: "center", padding: "28px 0", fontSize: 12 }}>
+            <div style={{ fontWeight: 700, color: "rgba(243,244,246,.65)" }}>No replies yet.</div>
+            <div style={{ marginTop: 2, color: "rgba(148,163,184,.5)" }}>Be the first voice on this thread.</div>
           </div>
         )}
       </div>

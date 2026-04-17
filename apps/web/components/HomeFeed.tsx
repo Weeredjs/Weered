@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import StoryInterceptModal from "./StoryInterceptModal";
+import EmptyState from "./EmptyState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface FeedItem {
@@ -400,9 +401,7 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
           ))}
 
           {!loading && filtered.length === 0 && (
-            <div style={{ padding: "40px 20px", textAlign: "center", color: "rgba(100,116,139,0.4)", fontSize: 13 }}>
-              No content in this category yet.
-            </div>
+            <EmptyState title="Nothing's hot right now." hint="The feed updates every minute. Check back soon." />
           )}
 
           {/* Footer hint */}

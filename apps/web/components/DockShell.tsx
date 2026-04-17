@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
 import CrewChatPanel from "./CrewChatPanel";
+import EmptyState from "./EmptyState";
 
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
@@ -436,9 +437,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                   </div>
                 );
               }) : (
-                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <span style={{ fontSize:13, color:"var(--weered-muted)" }}>No messages yet</span>
-                </div>
+                <EmptyState title="Quiet in here." hint="Be the one who breaks the silence." />
               )}
             </div>
 
@@ -622,11 +621,11 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     })}
                   </div>
                 ) : (
-                  <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, padding:24 }}>
-                    <img src="/brand/logo/weered-logo-64.png" alt="Weered logo" style={{ width:48, height:48, opacity:.3, borderRadius:10 }} />
-                    <span style={{ fontSize:14, fontWeight:700, color:"var(--weered-text)", opacity:.5 }}>No messages yet</span>
-                    <span style={{ fontSize:12, color:"var(--weered-muted)", textAlign:"center" }}>Search for someone above to start a conversation</span>
-                  </div>
+                  <EmptyState
+                    icon={<img src="/brand/logo/weered-logo-64.png" alt="" style={{ width:44, height:44, opacity:.35, borderRadius:10 }} />}
+                    title="Nobody on the line."
+                    hint="Search a username up top to start a thread."
+                  />
                 )}
               </>
             )}
@@ -726,7 +725,7 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
       <div style={{ flex:1, overflowY:"auto" }}>
         {loading&&!friends.length&&!requests.length&&<div style={{ padding:20, textAlign:"center" as const, color:"var(--weered-muted)", fontSize:13 }}>Loading…</div>}
         {subTab==="requests"&&(requests.length===0
-          ?<div style={{ padding:24, textAlign:"center" as const, color:"var(--weered-muted)", fontSize:13 }}>No pending requests</div>
+          ?<EmptyState title="Inbox is clean." hint="When someone wants to connect, they'll land here." />
           :requests.map(r=>(
             <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:"1px solid var(--weered-bd)" }}>
               <Avatar name={r.fromName||"?"} size={34} />
@@ -742,7 +741,7 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
           ))
         )}
         {subTab==="friends"&&(friends.length===0
-          ?<div style={{ padding:24, textAlign:"center" as const, color:"var(--weered-muted)", fontSize:13 }}>No friends yet.<br/>Search by username above.</div>
+          ?<EmptyState title="Riding solo." hint="Search a name up top to pull someone in." />
           :<>
             {online.length>0&&<div style={{ padding:"10px 14px 4px", fontSize:10, fontWeight:700, color:"var(--weered-muted)", textTransform:"uppercase" as const, letterSpacing:.5 }}>Online · {online.length}</div>}
             {online.map(f=><FriendRow key={f.id} f={f} onMessage={onMessage} onJoin={onJoin} onRemove={remove} />)}
@@ -893,11 +892,7 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
       )}
       <div style={{flex:1,overflowY:"auto"}}>
         {!crews.length&&(
-          <div style={{padding:32,textAlign:"center" as const,color:"var(--weered-muted)",fontSize:13}}>
-            <div style={{fontSize:32,marginBottom:10,opacity:0.3}}>⚔</div>
-            <div style={{fontWeight:700,marginBottom:4,color:"rgba(243,244,246,.6)"}}>No crew yet</div>
-            <div style={{fontSize:11,opacity:0.4,lineHeight:1.5}}>Establish your crew and<br/>build your reputation together.</div>
-          </div>
+          <EmptyState icon="⚔" title="No crew yet." hint="Start one, or get invited. Reputation compounds." />
         )}
         {crews.map(crew=>{
           const isLeader=crew.myRole==="LEADER";

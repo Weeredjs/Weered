@@ -168,12 +168,9 @@ export default function ActivityFeed() {
 
       {/* Feed list */}
       {feed.length === 0 ? (
-        <div style={{
-          padding: "24px 16px", textAlign: "center",
-          color: "rgba(243,244,246,.25)", fontSize: 12,
-          letterSpacing: ".04em",
-        }}>
-          No recent activity
+        <div style={{ padding: "28px 16px", textAlign: "center" }}>
+          <div style={{ color: "rgba(243,244,246,.55)", fontSize: 12, fontWeight: 700 }}>Nothing moved recently.</div>
+          <div style={{ color: "rgba(148,163,184,.45)", fontSize: 11, marginTop: 3 }}>When the feed picks up, you'll see it here.</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

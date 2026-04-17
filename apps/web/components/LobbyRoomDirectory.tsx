@@ -197,7 +197,8 @@ export default function LobbyRoomDirectory({
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 14, position: "relative", ...style }}>
         <div style={{ fontSize: 40, opacity: 0.15, zIndex: 2 }}>🚪</div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,.25)", zIndex: 2 }}>No rooms yet</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,.55)", zIndex: 2 }}>No rooms open here.</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.35)", zIndex: 2, marginTop: -6 }}>Be the first to start one.</div>
         <button
           onClick={() => setShowCreate(true)}
           style={{

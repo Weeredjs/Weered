@@ -8,6 +8,7 @@ import { avatarBg } from "../../lib/avatarColor";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
 import FeatureShowcase from "../../components/FeatureShowcase";
+import EmptyState from "../../components/EmptyState";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -901,11 +902,11 @@ export default function HomePage() {
 
         {/* EMPTY STATE */}
         {lobbies.length === 0 && popularRooms.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,.25)" }}>
-            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered logo" style={{ width: 80, height: 80, opacity: 0.5 }} /></div>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Nothing here yet</div>
-            <div style={{ fontSize: 13, opacity: 0.7 }}>Head to Lobby to browse and join rooms.</div>
-          </div>
+          <EmptyState
+            icon={<img src="/brand/logo/weered-shieldlogo-512.png" alt="" style={{ width: 72, height: 72, opacity: 0.45 }} />}
+            title="Nothing's happening yet."
+            hint="Head over to Lobby to find a room — or be the first to start something."
+          />
         )}
 
       </div>

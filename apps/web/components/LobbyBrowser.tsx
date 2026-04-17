@@ -813,10 +813,10 @@ export default function LobbyBrowser() {
               }}
             >
               {loading
-                ? "Loading lobbies..."
+                ? "Tuning in..."
                 : q.trim()
-                  ? "No lobbies match your search."
-                  : "No lobbies found."}
+                  ? "Nothing matches that search."
+                  : "No lobbies yet. Be the first to start one."}
             </div>
           )}
         </div>
