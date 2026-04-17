@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { avatarBg } from "../lib/avatarColor";
+import EmptyState from "./EmptyState";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -208,13 +209,7 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
         )}
 
         {!loading && messages.length === 0 && (
-          <div style={{
-            padding: "40px 20px", textAlign: "center",
-            color: "rgba(243,244,246,.25)", fontSize: 12,
-            letterSpacing: ".04em",
-          }}>
-            No messages yet. Say something!
-          </div>
+          <EmptyState title="Crew's quiet." hint="Say something — they're probably listening." />
         )}
 
         {!loading && messages.map((msg, i) => {

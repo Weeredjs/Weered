@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
+import EmptyState from "./EmptyState";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -343,7 +344,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 360, overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.15) transparent" }}>
         {loading && !rows.length && <div style={{ fontSize: 12, opacity: 0.5 }}>Loading…</div>}
         {!loading && !filtered.length && (
-          <div style={{ fontSize: 12, opacity: 0.4, padding: "8px 0" }}>{lobbyId ? `No rooms in ${lobbyId} yet.` : "No rooms."}</div>
+          <EmptyState compact title={lobbyId ? "No rooms open here." : "No rooms."} hint={canPin ? "Hit + Room to start one." : "Check back in a minute."} />
         )}
         {filtered.slice(0, 40).map(rm => {
           const active      = rm.id === currentRoomId;
@@ -677,7 +678,7 @@ function CrewPanel() {
       </div>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {allMembers.length === 0 && <div style={{ fontSize: 12, opacity: 0.4, padding: "6px 0" }}>No crew members yet.</div>}
+          {allMembers.length === 0 && <EmptyState compact title="Nobody riding with you yet." />}
           {allMembers.map((m: any) => {
             const userId     = String(m.userId ?? m.id ?? "");
             const rawRoomId  = String(m.roomId || "").replace(/^room:/, "");

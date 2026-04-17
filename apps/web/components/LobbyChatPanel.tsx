@@ -5,6 +5,7 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
 import { useUserHover } from "./UserHoverCard";
+import EmptyState from "./EmptyState";
 
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
@@ -317,7 +318,7 @@ export default function LobbyChatPanel(
         }}
       >
         {msgs.length === 0 ? (
-          <div style={{ opacity: 0.7 }}>No messages yet.</div>
+          <EmptyState title="Crickets." hint="Be the one who drops the first line." />
         ) : (
           msgs.map((m: any, i: number) => (
             <div key={i} data-chat-message style={{ display: "flex", gap: 10, marginBottom: 8 }}>

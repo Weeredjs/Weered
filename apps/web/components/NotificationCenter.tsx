@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useWeered } from "./WeeredProvider";
+import EmptyState from "./EmptyState";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -297,9 +298,7 @@ export function NotificationBell() {
               </div>
             )}
             {!loading && notifications.length === 0 && (
-              <div style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,.25)", fontSize: 12 }}>
-                No notifications yet
-              </div>
+              <EmptyState title="All quiet." hint="You'll know when something moves." />
             )}
             {notifications.map(n => {
               const info = TYPE_ICONS[n.type] || TYPE_ICONS.SYSTEM;

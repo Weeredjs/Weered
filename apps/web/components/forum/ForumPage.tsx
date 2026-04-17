@@ -208,10 +208,10 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
           <style>{`@keyframes shimmer{0%,100%{opacity:0.3}50%{opacity:0.6}}`}</style>
         </div>
       ) : posts.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 0", opacity: 0.3 }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>&#9998;</div>
-          <div style={{ fontSize: 14, fontWeight: 600 }}>No posts yet</div>
-          <div style={{ fontSize: 12, marginTop: 4 }}>Be the first to start a discussion</div>
+        <div style={{ textAlign: "center", padding: "56px 20px" }}>
+          <div style={{ fontSize: 26, marginBottom: 10, opacity: 0.35 }}>&#9998;</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(243,244,246,.75)" }}>The board's empty.</div>
+          <div style={{ fontSize: 12, marginTop: 4, color: "rgba(148,163,184,.55)" }}>Post the first thread. Someone will pile in.</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
