@@ -6,7 +6,7 @@ import { useWeered } from "../../WeeredProvider";
 
 // ─── Theme ──────────────────────────────────────────────────
 const WEERED_THEME_KEY = "weered_theme_v2";
-type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura";
+type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura" | "broadcast";
 
 const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2: string; bd: string; bd2: string; text: string; muted: string; accentBg: string; accentRing: string; accentText: string; label: string; swatch: string }> = {
   slate: { bg:"rgb(2,6,23)", panel:"rgba(15,23,42,.92)", panel2:"rgba(17,24,39,.94)", bd:"rgba(148,163,184,.14)", bd2:"rgba(148,163,184,.26)", text:"rgba(229,231,235,.96)", muted:"rgba(148,163,184,.75)", accentBg:"rgba(14,165,233,.18)", accentRing:"rgba(14,165,233,.35)", accentText:"rgba(56,189,248,.95)", label:"Slate", swatch:"#0ea5e9" },
@@ -14,6 +14,7 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
   stone: { bg:"rgb(12,10,9)", panel:"rgba(28,25,23,.92)", panel2:"rgba(28,25,23,.94)", bd:"rgba(168,162,158,.18)", bd2:"rgba(168,162,158,.28)", text:"rgba(245,245,244,.96)", muted:"rgba(168,162,158,.78)", accentBg:"rgba(245,158,11,.16)", accentRing:"rgba(245,158,11,.34)", accentText:"rgba(251,191,36,.95)", label:"Stone", swatch:"#f59e0b" },
   gray:  { bg:"rgb(3,7,18)", panel:"rgba(17,24,39,.92)", panel2:"rgba(17,24,39,.94)", bd:"rgba(156,163,175,.18)", bd2:"rgba(156,163,175,.28)", text:"rgba(243,244,246,.96)", muted:"rgba(156,163,175,.78)", accentBg:"rgba(20,184,166,.16)", accentRing:"rgba(20,184,166,.34)", accentText:"rgba(45,212,191,.95)", label:"Gray", swatch:"#14b8a6" },
   ishimura: { bg:"rgb(10,8,6)", panel:"rgba(14,12,10,.94)", panel2:"rgba(10,8,6,.95)", bd:"rgba(212,146,10,.18)", bd2:"rgba(212,146,10,.28)", text:"rgba(243,234,220,.96)", muted:"rgba(180,165,140,.72)", accentBg:"rgba(212,146,10,.14)", accentRing:"rgba(212,146,10,.30)", accentText:"rgba(212,146,10,.95)", label:"Ishimura", swatch:"#d4920a" },
+  broadcast: { bg:"rgb(14,14,16)", panel:"rgba(20,20,22,.95)", panel2:"rgba(14,14,16,.96)", bd:"rgba(232,168,60,.18)", bd2:"rgba(232,168,60,.32)", text:"rgba(240,234,216,.96)", muted:"rgba(200,190,170,.65)", accentBg:"rgba(232,168,60,.14)", accentRing:"rgba(232,168,60,.35)", accentText:"rgba(240,196,120,.95)", label:"Broadcast", swatch:"#e8a83c" },
 };
 
 function applyWeeredTheme(name: WeeredThemeName) {
@@ -351,7 +352,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   useEffect(() => {
     try {
       const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
-      if (["slate","zinc","stone","gray","ishimura"].includes(v)) setTheme(v as WeeredThemeName);
+      if (["slate","zinc","stone","gray","ishimura","broadcast"].includes(v)) setTheme(v as WeeredThemeName);
     } catch {}
   }, []);
 
