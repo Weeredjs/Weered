@@ -2236,6 +2236,89 @@ html[data-weered-theme="broadcast"] button[style*="rgba(88,0,229"] {
     0 0 0 1px rgba(232,168,60,0.35) !important;
 }
 
+/* ── Broader purple variations — catches indigo/violet across the app ── */
+html[data-weered-theme="broadcast"] *[style*="rgba(124,58,237"],
+html[data-weered-theme="broadcast"] *[style*="rgba(139,92,246"],
+html[data-weered-theme="broadcast"] *[style*="rgba(167,139,250"],
+html[data-weered-theme="broadcast"] *[style*="rgba(196,181,253"],
+html[data-weered-theme="broadcast"] *[style*="rgba(192,132,252"],
+html[data-weered-theme="broadcast"] *[style*="#7C3AED"],
+html[data-weered-theme="broadcast"] *[style*="#7c3aed"],
+html[data-weered-theme="broadcast"] *[style*="#8B5CF6"],
+html[data-weered-theme="broadcast"] *[style*="#8b5cf6"],
+html[data-weered-theme="broadcast"] *[style*="#A855F7"],
+html[data-weered-theme="broadcast"] *[style*="#a855f7"] {
+  color: rgba(240,196,120,0.95) !important;
+  border-color: rgba(232,168,60,0.35) !important;
+}
+
+/* Purple bg patterns → matte amber-bordered */
+html[data-weered-theme="broadcast"] *[style*="background: rgba(124,58,237"],
+html[data-weered-theme="broadcast"] *[style*="background:rgba(124,58,237"],
+html[data-weered-theme="broadcast"] *[style*="background: rgba(139,92,246"],
+html[data-weered-theme="broadcast"] *[style*="background:rgba(139,92,246"] {
+  background: rgba(232,168,60,0.12) !important;
+}
+
+/* ── Pink / magenta (favorite stars etc.) → amber ── */
+/* Tailwind pink-500/600 and common hex pinks */
+html[data-weered-theme="broadcast"] *[style*="#EC4899"],
+html[data-weered-theme="broadcast"] *[style*="#ec4899"],
+html[data-weered-theme="broadcast"] *[style*="#DB2777"],
+html[data-weered-theme="broadcast"] *[style*="#db2777"],
+html[data-weered-theme="broadcast"] *[style*="#F472B6"],
+html[data-weered-theme="broadcast"] *[style*="#f472b6"],
+html[data-weered-theme="broadcast"] *[style*="#BE185D"],
+html[data-weered-theme="broadcast"] *[style*="#be185d"],
+html[data-weered-theme="broadcast"] *[style*="rgba(236,72,153"],
+html[data-weered-theme="broadcast"] *[style*="rgba(219,39,119"],
+html[data-weered-theme="broadcast"] *[style*="rgba(244,114,182"],
+html[data-weered-theme="broadcast"] *[style*="rgb(236,72,153"],
+html[data-weered-theme="broadcast"] *[style*="rgb(244,114,182"] {
+  color: rgba(232,168,60,0.95) !important;
+}
+html[data-weered-theme="broadcast"] *[style*="background: #EC4899"],
+html[data-weered-theme="broadcast"] *[style*="background:#EC4899"],
+html[data-weered-theme="broadcast"] *[style*="background: #ec4899"],
+html[data-weered-theme="broadcast"] *[style*="background:#ec4899"],
+html[data-weered-theme="broadcast"] *[style*="background: #DB2777"],
+html[data-weered-theme="broadcast"] *[style*="background:#DB2777"] {
+  background: rgba(232,168,60,0.95) !important;
+  box-shadow: 0 0 4px rgba(232,168,60,0.6) !important;
+}
+
+/* ── Any remaining green online dots / indicators we missed ── */
+html[data-weered-theme="broadcast"] *[style*="#22c55e"],
+html[data-weered-theme="broadcast"] *[style*="#22C55E"],
+html[data-weered-theme="broadcast"] *[style*="#16a34a"],
+html[data-weered-theme="broadcast"] *[style*="#16A34A"],
+html[data-weered-theme="broadcast"] *[style*="rgb(34,197,94"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94"] {
+  background-color: rgba(232,168,60,0.95);
+}
+html[data-weered-theme="broadcast"] *[style*="background: #22c55e"],
+html[data-weered-theme="broadcast"] *[style*="background:#22c55e"],
+html[data-weered-theme="broadcast"] *[style*="background: #22C55E"],
+html[data-weered-theme="broadcast"] *[style*="background:#22C55E"] {
+  background: rgba(232,168,60,0.95) !important;
+  box-shadow: 0 0 4px rgba(232,168,60,0.6) !important;
+}
+
+/* ── Red "VERIFIED" variants (some may use red-500) ── */
+html[data-weered-theme="broadcast"] *[style*="rgba(239,68,68,.1"],
+html[data-weered-theme="broadcast"] *[style*="rgba(239,68,68,.2"],
+html[data-weered-theme="broadcast"] *[style*="rgba(248,113,113"],
+html[data-weered-theme="broadcast"] *[style*="rgb(248,113,113"] {
+  /* leave red alone — usually reserved for destructive actions / errors */
+}
+
+/* ── Indicted / user corner badges — catch-all for remaining borders ── */
+html[data-weered-theme="broadcast"] .weered-usercorner *[style*="border"][style*="rgba(88,0,229"],
+html[data-weered-theme="broadcast"] .weered-usercorner *[style*="border"][style*="rgba(124,58,237"] {
+  border-color: rgba(232,168,60,0.45) !important;
+  color: rgba(240,196,120,0.95) !important;
+}
+
 /* =============================================
    BASE RESET
    ============================================= */
