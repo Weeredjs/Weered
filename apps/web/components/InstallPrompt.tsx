@@ -143,11 +143,22 @@ export default function InstallPrompt() {
         .install-banner-btn-primary {
           background: linear-gradient(135deg, #7C3AED, #5B21B6);
           color: #fff;
-          box-shadow: 0 2px 8px rgba(124,58,237,0.3);
+          box-shadow: 0 2px 8px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+          animation: installBreath 2.8s ease-in-out infinite;
         }
         .install-banner-btn-primary:hover {
           background: linear-gradient(135deg, #8B5CF6, #6D28D9);
-          box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+          box-shadow: 0 4px 16px rgba(124,58,237,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+          animation: none;
+          transform: translateY(-1px);
+        }
+        .install-banner-btn-primary:active {
+          transform: translateY(0);
+          box-shadow: 0 1px 4px rgba(124,58,237,0.3), inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+        @keyframes installBreath {
+          0%, 100% { box-shadow: 0 2px 8px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.15); }
+          50%      { box-shadow: 0 2px 16px rgba(124,58,237,0.55), inset 0 1px 0 rgba(255,255,255,0.25); }
         }
         .install-banner-close {
           width: 24px;
@@ -182,11 +193,11 @@ export default function InstallPrompt() {
           className="install-banner-icon"
         />
         <div className="install-banner-text">
-          <div className="install-banner-title">Install Weered</div>
+          <div className="install-banner-title">Keep Weered close.</div>
           <div className="install-banner-sub">
             {isIOS
-              ? "Tap Share then \"Add to Home Screen\""
-              : "Add to your home screen for the full experience"}
+              ? "Tap Share \u2192 Add to Home Screen."
+              : "Pin it to your home screen. Opens faster, stays out of the browser."}
           </div>
         </div>
         {!isIOS && (
@@ -194,10 +205,10 @@ export default function InstallPrompt() {
             className="install-banner-btn install-banner-btn-primary"
             onClick={handleInstall}
           >
-            Install
+            Pin it
           </button>
         )}
-        <button className="install-banner-close" onClick={handleDismiss}>
+        <button className="install-banner-close" onClick={handleDismiss} aria-label="Dismiss">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
