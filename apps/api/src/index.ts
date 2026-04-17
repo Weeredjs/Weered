@@ -104,6 +104,7 @@ type RoomState = {
   ytState: { videoId: string; playing: boolean; position: number; updatedAt: number } | null;
   lastActiveAt: number;
   pinned: boolean;
+  isEvent: boolean;
   passwordHash?: string;
   };
 
@@ -827,7 +828,7 @@ function makeEmptyRoom(roomId: string): RoomState {
     roomId, name: "",
     users: new Map(), sockets: new Set(), msgs: [],
     ownerId: undefined, mods: new Set(), banned: new Set(), muted: new Set(),
-    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null, ytState: null, lastActiveAt: Date.now(), pinned: false,
+    locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null, ytState: null, lastActiveAt: Date.now(), pinned: false, isEvent: false,
   };
 }
 
@@ -874,6 +875,7 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.name = dbRoom.name || "";
     r.locked = Boolean(dbRoom.locked);
     r.pinned = Boolean((dbRoom as any).pinned);
+    r.isEvent = Boolean((dbRoom as any).isEvent);
     r.ownerId = dbRoom.ownerId || undefined;
     r.lobbyId = (dbRoom as any).lobbyId || undefined;
     r.passwordHash = (dbRoom as any).passwordHash || undefined;
@@ -1822,8 +1824,8 @@ async function main() {
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
     const list = await prisma.room.findMany({
       where: { lobbyId },
-      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
-      select: { id: true, name: true, description: true, locked: true, pinned: true, ownerId: true, _count: { select: { members: true } } },
+      orderBy: [{ isEvent: "desc" }, { pinned: "desc" }, { updatedAt: "desc" }],
+      select: { id: true, name: true, description: true, locked: true, pinned: true, isEvent: true, ownerId: true, _count: { select: { members: true } } },
     });
     const out = list.map(r => {
       const wsRoom = rooms.get(r.id);
@@ -1838,6 +1840,7 @@ async function main() {
         id: r.id, roomId: r.id, name: r.name || r.id, description: r.description || "",
         onlineCount: wsRoom?.users?.size ?? 0, onlineUsers,
         locked: Boolean(r.locked), pinned: Boolean((r as any).pinned),
+        isEvent: Boolean((r as any).isEvent),
         lobbyId, ownerId: r.ownerId,
         hasPassword: !!(wsRoom?.passwordHash || (r as any).passwordHash),
         _count: r._count,
@@ -1929,7 +1932,17 @@ async function main() {
     const ownerId = u?.id ?? null;
     const rawPassword = typeof body.password === "string" ? body.password.trim() : "";
     const passwordHash = rawPassword ? await bcrypt.hash(rawPassword, 10) : null;
-    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId } });
+
+    // Event rooms: only staff or lobby owner may create
+    let isEvent = Boolean(body.isEvent);
+    if (isEvent) {
+      const actorRole = u ? await getGlobalRole(u.id) : "USER";
+      const isStaff = canAccessStaff(actorRole);
+      const isLobbyOwner = !!u && !!lobby.ownerId && lobby.ownerId === u.id;
+      if (!isStaff && !isLobbyOwner) isEvent = false;
+    }
+
+    await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, isEvent } as any });
 
     // Make creator the owner in RoomMember
     if (ownerId) {
@@ -1942,10 +1955,11 @@ async function main() {
 
     const r = await ensureRoomLoaded(id);
     r.name = name;
+    r.isEvent = isEvent;
     if (ownerId) r.ownerId = ownerId;
     if (passwordHash) r.passwordHash = passwordHash;
     rooms.set(id, r);
-    return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash } });
+    return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash, isEvent } });
   });
 
   app.get("/rooms/:roomId", async (req, reply) => {
@@ -2934,6 +2948,30 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
 
     await globalAudit(u.id, u.name, pinned ? "room_pin" : "room_unpin", roomId);
     return reply.send({ ok: true, pinned });
+  });
+
+  // POST /staff/rooms/:roomId/event — toggle event room flag
+  app.post("/staff/rooms/:roomId/event", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+
+    const roomId = String((req as any).params?.roomId || "");
+    const body: any = (req as any).body || {};
+    const isEvent = body.isEvent !== false;
+
+    const room = rooms.get(roomId);
+    if (room) room.isEvent = isEvent;
+
+    try {
+      await (prisma as any).room.update({ where: { id: roomId }, data: { isEvent } });
+    } catch (e) {
+      console.error("[staff event] db update failed", e);
+    }
+
+    await globalAudit(u.id, u.name, isEvent ? "room_event_on" : "room_event_off", roomId);
+    return reply.send({ ok: true, isEvent });
   });
 
   // POST /staff/rooms/:roomId/close — staff force-close a room
@@ -6102,6 +6140,36 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: pinned ? "room_pinned" : "room_unpinned", actorId: ctx.user.id, actorName: ctx.user.name, targetId: roomId },
     });
     return reply.send({ ok: true, roomId, pinned });
+  });
+
+  // POST /lobbies/:id/admin/rooms/:roomId/event — toggle event flag for this room
+  app.post("/lobbies/:id/admin/rooms/:roomId/event", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 3);
+    if (!ctx) return;
+    const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+    if (!hasLobbyPerm(myLevel, "pin_rooms", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
+    const roomId = String((req as any).params?.roomId || "");
+    const body: any = (req as any).body || {};
+    const isEvent = body.isEvent !== false;
+
+    const roomRow = await (prisma as any).room.findUnique({ where: { id: roomId } });
+    if (!roomRow || roomRow.lobbyId !== ctx.lobby.id) {
+      return reply.code(404).send({ ok: false, error: "room_not_in_lobby" });
+    }
+
+    const room = rooms.get(roomId);
+    if (room) room.isEvent = isEvent;
+
+    try {
+      await (prisma as any).room.update({ where: { id: roomId }, data: { isEvent } });
+    } catch (e) {
+      console.error("[lobby event] db update failed", e);
+    }
+
+    await (prisma as any).lobbyAudit.create({
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: isEvent ? "room_event_on" : "room_event_off", actorId: ctx.user.id, actorName: ctx.user.name, targetId: roomId },
+    });
+    return reply.send({ ok: true, roomId, isEvent });
   });
 
   // DELETE /lobbies/:id/admin/rooms/:roomId

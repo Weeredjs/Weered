@@ -9,7 +9,7 @@ import { avatarBg } from "../lib/avatarColor";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean; pinned?: boolean };
+type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean; pinned?: boolean; isEvent?: boolean };
 
 function authHeaders() {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
@@ -113,6 +113,25 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     }
   }
 
+  async function toggleEvent(roomId: string, currentlyEvent: boolean) {
+    const target = !currentlyEvent;
+    setRows(cur => cur.map(r => r.id === roomId ? { ...r, isEvent: target } : r));
+    try {
+      const endpoint = isLobbyOwner && !isStaff
+        ? `${API_BASE}/lobbies/${encodeURIComponent(lobbyId)}/admin/rooms/${encodeURIComponent(roomId)}/event`
+        : `${API_BASE}/staff/rooms/${encodeURIComponent(roomId)}/event`;
+      const res = await fetch(endpoint, {
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ isEvent: target }),
+      }).then(r => r.json());
+      if (!res?.ok) {
+        setRows(cur => cur.map(r => r.id === roomId ? { ...r, isEvent: currentlyEvent } : r));
+      }
+    } catch {
+      setRows(cur => cur.map(r => r.id === roomId ? { ...r, isEvent: currentlyEvent } : r));
+    }
+  }
+
   const ROOM_MODULES = [
     { id: "voice",   label: "Voice",   icon: "🎙", desc: "Voice chat room" },
     { id: "youtube", label: "YouTube", icon: "▶️", desc: "Watch together" },
@@ -144,6 +163,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         id: String(r.id || ""), name: String(r.name || r.id || ""),
         locked: Boolean(r.locked), users: Number(r.onlineCount ?? r.users ?? r.memberCount ?? 0), hasPassword: Boolean(r.hasPassword),
         pinned: Boolean(r.pinned),
+        isEvent: Boolean(r.isEvent),
         lobbyId: r.lobbyId ?? lobbyId,
       })).filter((r: RoomRow) => r.id));
     } catch (e: any) { setErr(String(e?.message || e)); }
@@ -186,7 +206,8 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   const filtered = rows
     .filter(r => !q.trim() || (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => {
-      // Pinned first, then by user count
+      // Events first, then pinned, then by user count
+      if (!!a.isEvent !== !!b.isEvent) return a.isEvent ? -1 : 1;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.users - a.users;
     });
@@ -345,7 +366,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
           return (
             <Link key={rm.id} href={`/room/${encodeURIComponent(rm.id)}`}
-              className={`weered-rr-room-card${active?" weered-rr-room-card-active":""}${isLive?" weered-rr-room-card-live":""}`}
+              className={`weered-rr-room-card${active?" weered-rr-room-card-active":""}${isLive?" weered-rr-room-card-live":""}${rm.isEvent?" weered-rr-room-card-event":""}`}
               style={{
                 display: "block", textDecoration: "none", padding: "9px 10px", borderRadius: 10,
                 border: `1px solid ${borderColor}`,
@@ -396,6 +417,15 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     color: "rgba(243,244,246,.92)",
                   }}>
+                    {rm.isEvent && (
+                      <span title="Event room" className="weered-event-badge" style={{
+                        marginRight: 6, fontSize: 8, fontWeight: 900, letterSpacing: ".12em",
+                        padding: "2px 5px", borderRadius: 3,
+                        background: "linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%)",
+                        color: "white", textTransform: "uppercase",
+                        boxShadow: "0 0 8px rgba(139,92,246,0.5)",
+                      }}>EVENT</span>
+                    )}
                     {rm.pinned && <span title="Pinned room — survives cleanup" style={{ marginRight: 4, fontSize: 10, color: "#f59e0b" }}>📌</span>}
                     {rm.name || rm.id}
                     {rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔒</span>}
@@ -425,20 +455,36 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,.10)" }} />
                   )}
                   {canPin && (
-                    <button
-                      title={rm.pinned ? "Unpin room" : "Pin room (survives cleanup)"}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); void togglePin(rm.id, Boolean(rm.pinned)); }}
-                      style={{
-                        marginLeft: 4, width: 22, height: 22, borderRadius: 4,
-                        border: "none", cursor: "pointer",
-                        background: rm.pinned ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.04)",
-                        color: rm.pinned ? "#f59e0b" : "rgba(148,163,184,0.6)",
-                        fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center",
-                        transition: "all 0.12s",
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = rm.pinned ? "rgba(245,158,11,0.30)" : "rgba(255,255,255,0.10)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = rm.pinned ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.04)"; }}
-                    >📌</button>
+                    <>
+                      <button
+                        title={rm.isEvent ? "Remove event flag" : "Mark as event room"}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); void toggleEvent(rm.id, Boolean(rm.isEvent)); }}
+                        style={{
+                          marginLeft: 4, width: 22, height: 22, borderRadius: 4,
+                          border: "none", cursor: "pointer",
+                          background: rm.isEvent ? "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.25))" : "rgba(255,255,255,0.04)",
+                          color: rm.isEvent ? "#c4b5fd" : "rgba(148,163,184,0.6)",
+                          fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 0.12s",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = rm.isEvent ? "linear-gradient(135deg, rgba(139,92,246,0.45), rgba(236,72,153,0.45))" : "rgba(255,255,255,0.10)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = rm.isEvent ? "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.25))" : "rgba(255,255,255,0.04)"; }}
+                      >✦</button>
+                      <button
+                        title={rm.pinned ? "Unpin room" : "Pin room (survives cleanup)"}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); void togglePin(rm.id, Boolean(rm.pinned)); }}
+                        style={{
+                          marginLeft: 4, width: 22, height: 22, borderRadius: 4,
+                          border: "none", cursor: "pointer",
+                          background: rm.pinned ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.04)",
+                          color: rm.pinned ? "#f59e0b" : "rgba(148,163,184,0.6)",
+                          fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "all 0.12s",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = rm.pinned ? "rgba(245,158,11,0.30)" : "rgba(255,255,255,0.10)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = rm.pinned ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.04)"; }}
+                      >📌</button>
+                    </>
                   )}
                 </div>
               </div>
