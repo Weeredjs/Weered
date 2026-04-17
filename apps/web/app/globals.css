@@ -859,6 +859,297 @@ html[data-weered-theme="ishimura"] .weered-rail-tab {
   animation: ishimuraFlicker 8s steps(30) infinite;
 }
 
+/* ── BURNER DOCK — Comms Terminal Module ─────────────────────── */
+
+/* Dock container — sealed comms module */
+html[data-weered-theme="ishimura"] .weered-dock {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(36,26,16,0.96) 0%,
+      rgba(14,10,7,0.98) 40%,
+      rgba(10,7,5,0.98) 60%,
+      rgba(26,18,12,0.96) 100%) !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 30px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.30),
+    0 0 0 3px rgba(10,7,4,0.9),
+    0 0 0 4px rgba(212,146,10,0.12),
+    0 0 30px rgba(212,146,10,0.08),
+    0 4px 16px rgba(0,0,0,0.7) !important;
+  backdrop-filter: none !important;
+}
+
+/* Corner rivets on dock */
+html[data-weered-theme="ishimura"] .weered-dock::before,
+html[data-weered-theme="ishimura"] .weered-dock::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,220,140,1) 0%, rgba(212,146,10,0.7) 35%, rgba(40,26,10,0.9) 70%, transparent 80%);
+  box-shadow: 0 0 5px rgba(212,146,10,0.6);
+  pointer-events: none;
+  z-index: 10;
+}
+html[data-weered-theme="ishimura"] .weered-dock::before { left: 10px; }
+html[data-weered-theme="ishimura"] .weered-dock::after  { right: 10px; }
+
+/* Header — command bar */
+html[data-weered-theme="ishimura"] .weered-dock-header {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.6) 0%,
+      rgba(22,16,10,0.4) 100%) !important;
+  border-bottom: 1px solid rgba(212,146,10,0.20) !important;
+  border-top: 1px solid rgba(255,210,120,0.06) !important;
+}
+
+/* "Burner" title — CRT text */
+html[data-weered-theme="ishimura"] .weered-dock-title {
+  text-shadow:
+    0 0 6px rgba(212,146,10,0.65),
+    0 0 14px rgba(212,146,10,0.30);
+  color: rgba(255,220,140,0.95) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+}
+
+/* Close button — physical switch */
+html[data-weered-theme="ishimura"] .weered-dock-close {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.9) 0%,
+      rgba(22,16,10,0.95) 100%) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.15),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.25) !important;
+  color: rgba(212,146,10,0.7) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-close:hover {
+  background:
+    linear-gradient(180deg,
+      rgba(60,42,26,0.95) 0%,
+      rgba(30,22,14,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.25),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 8px rgba(212,146,10,0.25) !important;
+  color: rgba(255,210,120,0.95) !important;
+}
+
+/* Segmented tabs — toggle switch bank */
+html[data-weered-theme="ishimura"] .weered-dock-tabs {
+  background:
+    linear-gradient(180deg,
+      rgba(10,7,4,0.9) 0%,
+      rgba(18,13,8,0.85) 100%) !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(212,146,10,0.12) !important;
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(0,0,0,0.4) !important;
+  padding: 2px !important;
+  gap: 1px !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-tab {
+  background: transparent !important;
+  color: rgba(180,140,80,0.5) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase;
+  border-radius: 4px !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-tab:hover {
+  background: rgba(212,146,10,0.08) !important;
+  color: rgba(255,210,120,0.75) !important;
+  text-shadow: 0 0 6px rgba(212,146,10,0.4);
+}
+html[data-weered-theme="ishimura"] .weered-dock-tab-active {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.9) 0%,
+      rgba(28,20,12,0.95) 100%) !important;
+  color: rgba(255,220,140,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.30) !important;
+  text-shadow:
+    0 0 4px rgba(212,146,10,0.55),
+    0 0 10px rgba(212,146,10,0.20);
+}
+
+/* Thread rows — scanline sweep on hover */
+html[data-weered-theme="ishimura"] .weered-dock-thread {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(212,146,10,0.06) !important;
+  transition: background 0.18s, box-shadow 0.18s !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-thread:hover {
+  background: linear-gradient(90deg,
+    rgba(212,146,10,0.04) 0%,
+    rgba(212,146,10,0.10) 50%,
+    rgba(212,146,10,0.04) 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(212,146,10,0.12) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-thread:hover::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255,210,120,0.08),
+    transparent);
+  animation: weeredRowSweep 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* Conversation header — sub-panel bar */
+html[data-weered-theme="ishimura"] .weered-dock-conv-header {
+  background:
+    linear-gradient(180deg,
+      rgba(40,28,18,0.4) 0%,
+      rgba(18,13,8,0.3) 100%) !important;
+  border-bottom: 1px solid rgba(212,146,10,0.18) !important;
+}
+
+/* Message bubbles — terminal readout */
+html[data-weered-theme="ishimura"] .weered-dock-bubble {
+  background:
+    linear-gradient(180deg,
+      rgba(20,15,10,0.9) 0%,
+      rgba(14,10,7,0.95) 100%) !important;
+  border: 1px solid rgba(212,146,10,0.12) !important;
+  border-radius: 6px 6px 6px 2px !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(0,0,0,0.3) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-bubble div {
+  color: rgba(200,185,160,0.90) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  text-shadow: 0 0 2px rgba(200,180,140,0.15);
+  font-size: 12px !important;
+  letter-spacing: 0.01em;
+}
+
+/* Sent bubbles — amber terminal screen */
+html[data-weered-theme="ishimura"] .weered-dock-bubble-me {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,18,0.85) 0%,
+      rgba(30,22,12,0.92) 100%) !important;
+  border: 1px solid rgba(212,146,10,0.25) !important;
+  border-radius: 6px 6px 2px 6px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.10),
+    inset 0 -1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.20),
+    0 0 8px rgba(212,146,10,0.06) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-bubble-me div {
+  color: rgba(255,220,140,0.92) !important;
+  text-shadow:
+    0 0 4px rgba(212,146,10,0.35),
+    0 0 8px rgba(212,146,10,0.12);
+}
+
+/* Compose + button — rocker switch */
+html[data-weered-theme="ishimura"] .weered-dock-compose {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.95) 0%,
+      rgba(22,16,10,0.95) 100%) !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.20),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.30) !important;
+  color: rgba(255,220,140,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  text-shadow: 0 0 6px rgba(212,146,10,0.5);
+}
+html[data-weered-theme="ishimura"] .weered-dock-compose:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.30),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 12px rgba(212,146,10,0.30) !important;
+  filter: brightness(1.15);
+}
+
+/* Send button — glowing dispatch */
+html[data-weered-theme="ishimura"] .weered-dock-send {
+  background:
+    linear-gradient(180deg,
+      rgba(60,42,18,0.95) 0%,
+      rgba(40,28,12,0.95) 100%) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.25),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.35),
+    0 0 10px rgba(212,146,10,0.15) !important;
+  color: rgba(255,220,140,1) !important;
+  border-radius: 6px !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-send:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.35),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,170,40,0.65),
+    0 0 18px rgba(212,146,10,0.35) !important;
+  filter: brightness(1.2);
+}
+html[data-weered-theme="ishimura"] .weered-dock-send:active {
+  transform: scale(0.92);
+  filter: brightness(0.9);
+}
+
+/* Date separators — amber scan line */
+html[data-weered-theme="ishimura"] .weered-dock-bubble ~ div > span {
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+}
+
+/* Unread badge — amber warning indicator */
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background:#ef4444"],
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background: #ef4444"] {
+  background: rgba(212,146,10,0.9) !important;
+  color: rgba(10,7,4,1) !important;
+  box-shadow: 0 0 6px rgba(212,146,10,0.5), 0 0 12px rgba(212,146,10,0.2) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  font-weight: 800 !important;
+  animation: ishimuraBreathe 2s ease-in-out infinite;
+}
+
+/* Online dots — amber instead of green */
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background:#22c55e"],
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background: #22c55e"] {
+  background: rgba(212,146,10,0.9) !important;
+  box-shadow: 0 0 4px rgba(212,146,10,0.6), 0 0 8px rgba(212,146,10,0.25) !important;
+}
+
+/* Empty state text glow */
+html[data-weered-theme="ishimura"] .weered-dock img[alt="Weered logo"] {
+  filter: sepia(1) saturate(2.5) hue-rotate(-10deg) brightness(0.6);
+}
+
 /* Scrollbar — amber */
 html[data-weered-theme="ishimura"] *::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(212,146,10,0.5), rgba(120,80,20,0.6)) !important;

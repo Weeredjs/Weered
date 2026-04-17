@@ -136,9 +136,9 @@ function UnreadBadge({ count }: { count: number }) {
 
 function SegmentedControl({ tabs, active, onChange }: { tabs: {id:string;label:string;badge?:number}[]; active:string; onChange:(id:string)=>void }) {
   return (
-    <div style={{ display:"flex", background:"rgba(255,255,255,.06)", borderRadius:10, padding:3, gap:2 }}>
+    <div className="weered-dock-tabs" style={{ display:"flex", background:"rgba(255,255,255,.06)", borderRadius:10, padding:3, gap:2 }}>
       {tabs.map(t => (
-        <button key={t.id} onClick={() => onChange(t.id)} style={{
+        <button key={t.id} className={`weered-dock-tab${active===t.id?" weered-dock-tab-active":""}`} onClick={() => onChange(t.id)} style={{
           flex:1, padding:"5px 8px", borderRadius:8, border:"none",
           background: active===t.id ? "rgba(255,255,255,.12)" : "transparent",
           color: active===t.id ? "var(--weered-text)" : "var(--weered-muted)",
@@ -376,17 +376,17 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   };
 
   return (
-    <div style={{...panel, display:"flex", flexDirection:"column"}}>
+    <div className="weered-dock" style={{...panel, display:"flex", flexDirection:"column"}}>
 
       {/* ── Header ── */}
-      <div style={{ padding:"10px 14px 0", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
+      <div className="weered-dock-header" style={{ padding:"10px 14px 0", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
         {/* App bar */}
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
           <img src="/brand/logo/weered-logo-32.png" alt="Weered" style={{ width:22, height:22, borderRadius:5 }} />
-          <span style={{ fontWeight:800, fontSize:15, letterSpacing:".02em", color:"var(--weered-text)" }}>Burner</span>
+          <span className="weered-dock-title" style={{ fontWeight:800, fontSize:15, letterSpacing:".02em", color:"var(--weered-text)" }}>Burner</span>
           <StatusDot online={wsUp} />
           <span style={{ flex:1 }} />
-          <button onClick={()=>{try{window.dispatchEvent(new CustomEvent("weered:dock:close"));}catch{}}} style={{ width:28,height:28,borderRadius:8,border:"1px solid rgba(255,255,255,.08)",background:"rgba(255,255,255,.04)",color:"var(--weered-muted)",cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
+          <button className="weered-dock-close" onClick={()=>{try{window.dispatchEvent(new CustomEvent("weered:dock:close"));}catch{}}} style={{ width:28,height:28,borderRadius:8,border:"1px solid rgba(255,255,255,.08)",background:"rgba(255,255,255,.04)",color:"var(--weered-muted)",cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.1)";}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
           >×</button>
@@ -488,7 +488,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
             {dmActive ? (
               <>
                 {/* Conversation header */}
-                <div style={{ padding:"8px 12px", borderBottom:"1px solid var(--weered-bd)", display:"flex", alignItems:"center", gap:10, flexShrink:0, background:"rgba(255,255,255,.02)" }}>
+                <div className="weered-dock-conv-header" style={{ padding:"8px 12px", borderBottom:"1px solid var(--weered-bd)", display:"flex", alignItems:"center", gap:10, flexShrink:0, background:"rgba(255,255,255,.02)" }}>
                   <button onClick={()=>setDmActivePeerId("")} style={{ background:"none",border:"none",color:"var(--weered-muted)",cursor:"pointer",fontSize:20,padding:"0 4px",lineHeight:1,display:"flex",alignItems:"center" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                   </button>
@@ -532,7 +532,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                           </div>
                         )}
                         <div style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start", marginTop:sameSender&&!showDateSep?1:8 }}>
-                          <div style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
+                          <div className={`weered-dock-bubble${isMe?" weered-dock-bubble-me":""}`} style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
                             <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{linkify(String(m.body||""))}</div>
                           </div>
                           {showTime && (
@@ -562,7 +562,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                       style={{ width:"100%", padding:"10px 42px 10px 16px", borderRadius:22, border:"1px solid var(--weered-bd2)", background:"rgba(255,255,255,.05)", color:"var(--weered-text)", outline:"none", fontSize:13, fontFamily:"inherit" }}
                       onKeyDown={e=>{if((e as any).key==="Enter"){e.preventDefault();void dmSend();}}} />
                     {dmDraft.trim() && (
-                      <button onClick={()=>void dmSend()} style={{ position:"absolute", right:6, width:30, height:30, borderRadius:999, border:"none", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s" }}>
+                      <button className="weered-dock-send" onClick={()=>void dmSend()} style={{ position:"absolute", right:6, width:30, height:30, borderRadius:999, border:"none", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s" }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></svg>
                       </button>
                     )}
@@ -580,7 +580,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                         style={{ ...inputStyle, paddingLeft:32, borderRadius:22, fontSize:12 }}
                         onKeyDown={e=>{if((e as any).key==="Enter") void dmCreateThread();}} />
                     </div>
-                    <button style={{ width:36, height:36, borderRadius:999, border:"1px solid var(--weered-accent-ring)", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18, fontWeight:700 }} onClick={()=>void dmCreateThread()}>+</button>
+                    <button className="weered-dock-compose" style={{ width:36, height:36, borderRadius:999, border:"1px solid var(--weered-accent-ring)", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18, fontWeight:700 }} onClick={()=>void dmCreateThread()}>+</button>
                   </div>
                 </div>
 
@@ -597,7 +597,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                       const preview=lastMsg?(isMyLastMsg?"You: ":"")+lastMsg.body.slice(0,40)+(lastMsg.body.length>40?"...":""):"Tap to start chatting";
                       const time=lastMsg?fmtRelative(lastMsg.createdAt):"";
                       return (
-                        <button key={t.peerId} onClick={()=>setDmActivePeerId(t.peerId)} style={{ width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderBottom:"1px solid rgba(255,255,255,.04)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"background .1s" }}
+                        <button key={t.peerId} className="weered-dock-thread" onClick={()=>setDmActivePeerId(t.peerId)} style={{ width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderBottom:"1px solid rgba(255,255,255,.04)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"background .1s" }}
                           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
                           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
                         >
