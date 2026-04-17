@@ -2354,9 +2354,7 @@ html[data-weered-theme="press"] .weered-right,
 html[data-weered-theme="press"] .weered-overlay-panel {
   position: relative;
   background:
-    url('/themes/press/crosshatch.png') repeat,
     linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.97) 100%) !important;
-  background-blend-mode: overlay !important;
   border: 0 !important;
   border-radius: 4px !important;
   box-shadow:
@@ -2513,9 +2511,7 @@ html[data-weered-theme="press"] .weered-btn:active {
 /* USER CORNER — editorial pull quote box */
 html[data-weered-theme="press"] .weered-usercorner {
   background:
-    url('/themes/press/crosshatch.png') repeat,
     linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.98) 100%) !important;
-  background-blend-mode: overlay !important;
   border: 0 !important;
   border-radius: 4px !important;
   box-shadow:
@@ -2576,9 +2572,7 @@ html[data-weered-theme="press"] .weered-lobby-tab:hover {
 html[data-weered-theme="press"] .weered-dock {
   position: relative;
   background:
-    url('/themes/press/crosshatch.png') repeat,
     linear-gradient(180deg, rgba(36,36,38,0.97) 0%, rgba(20,20,22,0.98) 100%) !important;
-  background-blend-mode: overlay !important;
   border: 0 !important;
   border-radius: 5px !important;
   box-shadow:
@@ -2879,9 +2873,7 @@ html[data-weered-theme="press"] .weered-icon-strip-btn-active {
 html[data-weered-theme="press"] .weered-lobby-grid > * {
   position: relative;
   background:
-    url('/themes/press/crosshatch.png') repeat,
     linear-gradient(180deg, rgba(36,36,38,0.95) 0%, rgba(22,22,24,0.98) 100%) !important;
-  background-blend-mode: overlay !important;
   border: 0 !important;
   border-radius: 4px !important;
   box-shadow:
@@ -2905,9 +2897,7 @@ html[data-weered-theme="press"] .weered-lobby-grid > *:hover {
 html[data-weered-theme="press"] .weered-hero-content {
   position: relative;
   background:
-    url('/themes/press/crosshatch.png') repeat,
     linear-gradient(180deg, rgba(42,36,24,0.95) 0%, rgba(22,22,24,0.98) 100%) !important;
-  background-blend-mode: overlay !important;
   border: 0 !important;
   border-radius: 4px !important;
   box-shadow:
