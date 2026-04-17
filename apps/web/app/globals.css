@@ -2893,18 +2893,13 @@ html[data-weered-theme="press"] .weered-lobby-grid > *:hover {
     0 8px 20px rgba(0,0,0,0.5) !important;
 }
 
-/* FEATURED HERO — editorial masthead with topper strip */
+/* FEATURED HERO — transparent, only the amber topper strip on top */
 html[data-weered-theme="press"] .weered-hero-content {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(42,36,24,0.95) 0%, rgba(22,22,24,0.98) 100%) !important;
+  background: transparent !important;
   border: 0 !important;
   border-radius: 4px !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,248,220,0.08),
-    0 0 0 1px rgba(217,169,66,0.32),
-    0 2px 0 rgba(0,0,0,0.3),
-    0 8px 20px rgba(0,0,0,0.5) !important;
+  box-shadow: none !important;
 }
 html[data-weered-theme="press"] .weered-hero-content::before {
   content: '';
