@@ -106,7 +106,7 @@ try {
   var v2 = localStorage.getItem('weered_theme_v2');
   var sraw = localStorage.getItem('weered:settings:v0');
   var s = sraw ? JSON.parse(sraw) : null;
-  var valid = ['slate','zinc','stone','gray','ishimura','broadcast'];
+  var valid = ['slate','zinc','stone','gray','ishimura','broadcast','press'];
   var theme = (v2 && valid.indexOf(v2) >= 0) ? v2
             : (s && s.theme && valid.indexOf(s.theme) >= 0) ? s.theme
             : 'ishimura';
