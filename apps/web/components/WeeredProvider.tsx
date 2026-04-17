@@ -74,7 +74,9 @@ function normalizeInbound(msg: any) {
 function applySettingsToDom(s: any) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.setAttribute("data-weered-theme",        String(s?.theme        ?? "stone"));
+  // Only set theme if settings has one; otherwise leave whatever the boot
+  // script / ProfileSheet put there (prevents clobbering ishimura with "stone").
+  if (s?.theme) root.setAttribute("data-weered-theme", String(s.theme));
   root.setAttribute("data-weered-density",      String(s?.density      ?? "comfortable"));
   root.setAttribute("data-weered-reduce-motion", s?.reduceMotion ? "1" : "0");
 }

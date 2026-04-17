@@ -358,6 +358,11 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const changeTheme = (name: WeeredThemeName) => {
     setTheme(name);
     try { localStorage.setItem(WEERED_THEME_KEY, name); } catch {}
+    try {
+      const raw = localStorage.getItem("weered:settings:v0");
+      const cur = raw ? JSON.parse(raw) : {};
+      localStorage.setItem("weered:settings:v0", JSON.stringify({ ...cur, theme: name }));
+    } catch {}
     applyWeeredTheme(name);
   };
 
