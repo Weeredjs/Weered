@@ -114,10 +114,10 @@ export default function PushPrompt() {
           <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 900, color: "rgba(243,244,246,.95)", marginBottom: 4 }}>
-              Install Weered
+              Keep Weered close.
             </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", lineHeight: 1.5, marginBottom: 12 }}>
-              Add to your Home Screen to get push notifications for DMs, mentions, and crew activity.
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", lineHeight: 1.5, marginBottom: 12 }}>
+              Pin it to your Home Screen. You'll get a ping for DMs, mentions, and crew moves.
             </div>
 
             {/* Steps */}
@@ -158,7 +158,7 @@ export default function PushPrompt() {
                   fontSize: 11, fontWeight: 900, color: "rgba(88,0,229,.8)",
                 }}>3</div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)" }}>
-                  Open from Home Screen — notifications enabled
+                  Launch from Home Screen — pings enabled
                 </div>
               </div>
             </div>
@@ -184,28 +184,63 @@ export default function PushPrompt() {
   return (
     <div style={{
       position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)",
-      zIndex: 800, background: "#1a1a2e", border: "1px solid rgba(124,58,237,.3)",
-      borderRadius: 14, padding: "12px 18px", display: "flex", alignItems: "center", gap: 14,
-      boxShadow: "0 8px 32px rgba(0,0,0,.5)", maxWidth: 400,
-      animation: "weeredFadeIn 0.3s ease-out",
+      zIndex: 800, background: "rgba(15,10,30,0.94)",
+      backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+      border: "1px solid rgba(124,58,237,.35)",
+      borderRadius: 14, padding: "12px 14px 12px 12px",
+      display: "flex", alignItems: "center", gap: 12,
+      boxShadow: "0 12px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(124,58,237,0.10)",
+      maxWidth: 420, width: "calc(100vw - 24px)",
+      animation: "weeredPushSlideUp 0.4s cubic-bezier(0.22,1,0.36,1)",
     }}>
-      <div style={{ fontSize: 13, color: "rgba(230,235,240,.85)", flex: 1 }}>
-        Get notified about DMs and mentions?
+      <div style={{
+        width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+        background: "linear-gradient(135deg, rgba(124,58,237,.25), rgba(91,33,182,.35))",
+        border: "1px solid rgba(124,58,237,.35)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,.95)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", lineHeight: 1.3 }}>
+          Stay in the loop.
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(148,163,184,.65)", marginTop: 2, lineHeight: 1.4 }}>
+          Want a ping for DMs, mentions, and crew activity?
+        </div>
       </div>
       <button onClick={handleEnable} style={{
-        padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
-        background: "rgba(124,58,237,.25)", color: "rgba(167,139,250,.95)",
-        fontSize: 12, fontWeight: 700, fontFamily: "inherit",
-      }}>
-        Enable
+        padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer",
+        background: "linear-gradient(135deg, #7C3AED, #5B21B6)",
+        color: "#fff", fontSize: 12, fontWeight: 800, fontFamily: "inherit", flexShrink: 0,
+        boxShadow: "0 2px 8px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+        animation: "weeredPushBreath 2.8s ease-in-out infinite",
+        transition: "transform 0.12s",
+      }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; }}
+      >
+        Turn it on
       </button>
-      <button onClick={handleLater} style={{
-        padding: "6px 10px", borderRadius: 8, border: "none", cursor: "pointer",
-        background: "transparent", color: "rgba(148,163,184,.5)",
-        fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-      }}>
-        Later
+      <button onClick={handleLater} aria-label="Not now" style={{
+        width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(255,255,255,.08)",
+        background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.55)",
+        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, transition: "all 0.15s",
+      }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.8)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; (e.currentTarget as HTMLElement).style.color = "rgba(148,163,184,.55)"; }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
       </button>
+      <style>{`
+        @keyframes weeredPushSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes weeredPushBreath { 0%, 100% { box-shadow: 0 2px 8px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.15); } 50% { box-shadow: 0 2px 16px rgba(124,58,237,0.55), inset 0 1px 0 rgba(255,255,255,0.25); } }
+      `}</style>
     </div>
   );
 }
