@@ -161,16 +161,17 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   };
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Rooms</div>
+        <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Rooms</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {lobbyId && (
-            <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.70)", background: "rgba(88,0,229,.10)", border: "1px solid rgba(88,0,229,.20)", borderRadius: 6, padding: "2px 7px" }}>
+            <div className="weered-rr-id-chip" style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.70)", background: "rgba(88,0,229,.10)", border: "1px solid rgba(88,0,229,.20)", borderRadius: 6, padding: "2px 7px" }}>
               {lobbyId}
             </div>
           )}
           <button
+            className="weered-rr-primary"
             onClick={() => setShowCreate(o => !o)}
             style={{
               padding: "3px 9px", borderRadius: 7, fontSize: 11, fontWeight: 700,
@@ -186,11 +187,11 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
       {/* ── Create Room Overlay ── */}
       {showCreate && (
-        <div style={{
+        <div className="weered-rr-create-panel" style={{
           marginBottom: 10, padding: "12px", borderRadius: 12,
           border: "1px solid rgba(88,0,229,.25)", background: "rgba(88,0,229,.05)",
         }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".7px", textTransform: "uppercase", color: "rgba(167,139,250,.7)", marginBottom: 8 }}>
+          <div className="weered-rr-create-title" style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".7px", textTransform: "uppercase", color: "rgba(167,139,250,.7)", marginBottom: 8 }}>
             Create Room
           </div>
 
@@ -215,6 +216,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 <button
                   key={m.id}
                   type="button"
+                  className={`weered-rr-module-btn${active?" weered-rr-module-btn-active":""}`}
                   onClick={() => setSelectedModule(m.id)}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
@@ -259,6 +261,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
           {/* Create button */}
           <button
+            className="weered-rr-primary weered-rr-primary-solid"
             onClick={createRoom}
             disabled={creating || !newRoom.trim()}
             style={{
@@ -277,7 +280,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         </div>
       )}
 
-      <input style={{ ...s.input, marginBottom: 8 }} placeholder="Search rooms…" value={q} onChange={e => setQ(e.target.value)} />
+      <input className="weered-rr-search" style={{ ...s.input, marginBottom: 8 }} placeholder="Search rooms…" value={q} onChange={e => setQ(e.target.value)} />
       {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.80)", marginBottom: 6 }}>{err}</div>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 360, overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.15) transparent" }}>
@@ -306,6 +309,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
           return (
             <Link key={rm.id} href={`/room/${encodeURIComponent(rm.id)}`}
+              className={`weered-rr-room-card${active?" weered-rr-room-card-active":""}${isLive?" weered-rr-room-card-live":""}`}
               style={{
                 display: "block", textDecoration: "none", padding: "9px 10px", borderRadius: 10,
                 border: `1px solid ${borderColor}`,
@@ -439,16 +443,16 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   }
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Lobby Controls</div>
+        <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Lobby Controls</div>
         {chatLocked !== null && (
-          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, letterSpacing: ".4px", background: isLocked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${isLocked ? "rgba(245,158,11,.35)" : "rgba(16,185,129,.30)"}`, color: isLocked ? "rgb(253,230,138)" : "rgb(167,243,208)" }}>
+          <span className="weered-rr-status-chip" style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, letterSpacing: ".4px", background: isLocked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${isLocked ? "rgba(245,158,11,.35)" : "rgba(16,185,129,.30)"}`, color: isLocked ? "rgb(253,230,138)" : "rgb(167,243,208)" }}>
             {isLocked ? "CHAT LOCKED" : "CHAT OPEN"}
           </span>
         )}
       </div>
-      <div style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "10px 12px" }}>
+      <div className="weered-rr-mod-panel" style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "10px 12px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <button disabled={loading} onClick={() => action("lock")} style={{ padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer", border: isLocked ? "1px solid rgba(245,158,11,.50)" : "1px solid rgba(245,158,11,.25)", background: isLocked ? "rgba(245,158,11,.18)" : "rgba(245,158,11,.08)", color: "rgb(253,230,138)", fontWeight: isLocked ? 700 : 400 }}>{isLocked ? "🔒 Locked" : "Lock Chat"}</button>
           <button disabled={loading} onClick={() => action("unlock")} style={{ padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer", border: !isLocked ? "1px solid rgba(16,185,129,.50)" : "1px solid rgba(16,185,129,.25)", background: !isLocked ? "rgba(16,185,129,.18)" : "rgba(16,185,129,.08)", color: "rgb(167,243,208)", fontWeight: !isLocked ? 700 : 400 }}>{!isLocked ? "✓ Unlocked" : "Unlock Chat"}</button>
@@ -501,6 +505,7 @@ function FriendsPanel() {
 
     return (
       <div key={f.id}
+        className="weered-rr-friend-row"
         style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", cursor: "pointer", transition: "background 0.12s" }}
         onClick={() => userId && openSheet("profile", { userId })}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
@@ -522,7 +527,7 @@ function FriendsPanel() {
           {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
         </div>
         {f.online && joinHref && (
-          <Link href={joinHref} onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}>
+          <Link href={joinHref} className="weered-rr-join" onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}>
             join
           </Link>
         )}
@@ -531,10 +536,10 @@ function FriendsPanel() {
   };
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Friends · {online.length} online</div>
+          <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Friends · {online.length} online</div>
           {friends.some(f => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
             <span style={{ width: 7, height: 7, borderRadius: 999, background: "#f59e0b", boxShadow: "0 0 5px #f59e0b88", flexShrink: 0 }} />
           )}
@@ -566,9 +571,9 @@ function CrewPanel() {
   const online = allMembers.filter((m: any) => m.online);
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
-        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Crew · {online.length} online</div>
+        <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Crew · {online.length} online</div>
         <span style={{ fontSize: 10, opacity: 0.4 }}>{open ? "▲" : "▼"}</span>
       </div>
       {open && (
@@ -586,6 +591,7 @@ function CrewPanel() {
             const joinHref   = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
             return (
               <div key={m.userId}
+                className="weered-rr-crew-row"
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", cursor: "pointer", transition: "background 0.12s" }}
                 onClick={() => userId && openSheet("profile", { userId })}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
@@ -606,7 +612,7 @@ function CrewPanel() {
                   {m.online && m.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.roomName}</div>}
                 </div>
                 {m.online && joinHref && (
-                  <Link href={joinHref} onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none", flexShrink: 0 }}>
+                  <Link href={joinHref} className="weered-rr-join" onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none", flexShrink: 0 }}>
                     join
                   </Link>
                 )}
