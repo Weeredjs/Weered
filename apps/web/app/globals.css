@@ -2177,6 +2177,65 @@ html[data-weered-theme="broadcast"] a:hover {
   color: rgba(255,220,150,1);
 }
 
+/* ── Broadcast retint: purple (#5800E5, rgba(88,0,229)) → amber ── */
+/* Border retints */
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.5"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.4"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.3"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.2"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.1"] {
+  border-color: rgba(232,168,60,0.35) !important;
+}
+/* Background retints */
+html[data-weered-theme="broadcast"] *[style*="background: rgba(88,0,229"],
+html[data-weered-theme="broadcast"] *[style*="background:rgba(88,0,229"] {
+  background: rgba(232,168,60,0.12) !important;
+}
+/* Solid purple */
+html[data-weered-theme="broadcast"] *[style*="#5800E5"],
+html[data-weered-theme="broadcast"] *[style*="#5800e5"] {
+  color: rgba(232,168,60,0.95) !important;
+}
+/* Lavender/violet text retints (167,139,250 and 216,180,254) */
+html[data-weered-theme="broadcast"] *[style*="rgba(167,139,250"],
+html[data-weered-theme="broadcast"] *[style*="rgba(216,180,254"] {
+  color: rgba(240,196,120,0.95) !important;
+}
+
+/* ── Verified badge — green → amber ── */
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.16"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.18"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.20"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.10"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.08"] {
+  background: rgba(232,168,60,0.14) !important;
+  border-color: rgba(232,168,60,0.40) !important;
+  color: rgba(240,196,120,0.95) !important;
+}
+html[data-weered-theme="broadcast"] *[style*="rgb(134,239,172"],
+html[data-weered-theme="broadcast"] *[style*="#22C55E"],
+html[data-weered-theme="broadcast"] *[style*="#22c55e"] {
+  color: rgba(240,196,120,0.95) !important;
+}
+
+/* ── LOBBY tag on lobby cards — retint ── */
+html[data-weered-theme="broadcast"] .weered-lobby-grid *[style*="rgba(34,197,94"],
+html[data-weered-theme="broadcast"] .weered-lobby-grid *[style*="rgba(88,0,229"] {
+  background: rgba(232,168,60,0.14) !important;
+  border-color: rgba(232,168,60,0.40) !important;
+  color: rgba(240,196,120,0.95) !important;
+}
+
+/* ── "What can you do here?" button — matte-ify any purple-bordered buttons ── */
+html[data-weered-theme="broadcast"] button[style*="rgba(88,0,229"] {
+  background: linear-gradient(180deg, #18181a, #0e0e10) !important;
+  color: rgba(232,168,60,0.95) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(232,168,60,0.35) !important;
+}
+
 /* =============================================
    BASE RESET
    ============================================= */
