@@ -873,6 +873,7 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
   } else {
     r.name = dbRoom.name || "";
     r.locked = Boolean(dbRoom.locked);
+    r.pinned = Boolean((dbRoom as any).pinned);
     r.ownerId = dbRoom.ownerId || undefined;
     r.lobbyId = (dbRoom as any).lobbyId || undefined;
     r.passwordHash = (dbRoom as any).passwordHash || undefined;
@@ -1821,8 +1822,8 @@ async function main() {
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
     const list = await prisma.room.findMany({
       where: { lobbyId },
-      orderBy: { updatedAt: "desc" },
-      select: { id: true, name: true, description: true, locked: true, ownerId: true, _count: { select: { members: true } } },
+      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+      select: { id: true, name: true, description: true, locked: true, pinned: true, ownerId: true, _count: { select: { members: true } } },
     });
     const out = list.map(r => {
       const wsRoom = rooms.get(r.id);
@@ -1836,7 +1837,8 @@ async function main() {
       return {
         id: r.id, roomId: r.id, name: r.name || r.id, description: r.description || "",
         onlineCount: wsRoom?.users?.size ?? 0, onlineUsers,
-        locked: Boolean(r.locked), lobbyId, ownerId: r.ownerId,
+        locked: Boolean(r.locked), pinned: Boolean((r as any).pinned),
+        lobbyId, ownerId: r.ownerId,
         hasPassword: !!(wsRoom?.passwordHash || (r as any).passwordHash),
         _count: r._count,
       };
@@ -2921,6 +2923,13 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     const room = rooms.get(roomId);
     if (room) {
       room.pinned = pinned;
+    }
+
+    // Persist to DB so it survives restart
+    try {
+      await prisma.room.update({ where: { id: roomId }, data: { pinned } });
+    } catch (e) {
+      console.error("[staff pin] db update failed", e);
     }
 
     await globalAudit(u.id, u.name, pinned ? "room_pin" : "room_unpin", roomId);
@@ -6062,18 +6071,37 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     return reply.send({ ok: true });
   });
 
-  // POST /lobbies/:id/admin/rooms/:roomId/pin
+  // POST /lobbies/:id/admin/rooms/:roomId/pin — toggle pin; pinned rooms survive cleanup
   app.post("/lobbies/:id/admin/rooms/:roomId/pin", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 3);
     if (!ctx) return;
     const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
     if (!hasLobbyPerm(myLevel, "pin_rooms", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
     const roomId = String((req as any).params?.roomId || "");
-    // Pin is stored as a special field — for now we just audit it; pinning logic will be added to room display
+    const body: any = (req as any).body || {};
+    const pinned = body.pinned !== false;
+
+    // Verify room belongs to this lobby
+    const roomRow = await (prisma as any).room.findUnique({ where: { id: roomId } });
+    if (!roomRow || roomRow.lobbyId !== ctx.lobby.id) {
+      return reply.code(404).send({ ok: false, error: "room_not_in_lobby" });
+    }
+
+    // Update in-memory
+    const room = rooms.get(roomId);
+    if (room) room.pinned = pinned;
+
+    // Persist to DB
+    try {
+      await (prisma as any).room.update({ where: { id: roomId }, data: { pinned } });
+    } catch (e) {
+      console.error("[lobby pin] db update failed", e);
+    }
+
     await (prisma as any).lobbyAudit.create({
-      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "room_pinned", actorId: ctx.user.id, actorName: ctx.user.name, targetId: roomId },
+      data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: pinned ? "room_pinned" : "room_unpinned", actorId: ctx.user.id, actorName: ctx.user.name, targetId: roomId },
     });
-    return reply.send({ ok: true, roomId });
+    return reply.send({ ok: true, roomId, pinned });
   });
 
   // DELETE /lobbies/:id/admin/rooms/:roomId
