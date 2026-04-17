@@ -9,7 +9,7 @@ import { avatarBg } from "../lib/avatarColor";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean };
+type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean; pinned?: boolean };
 
 function authHeaders() {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
@@ -81,6 +81,37 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   const w = useWeered() as any;
   const navRouter = useRouter();
   const wsUsers: any[] = React.useMemo(() => Array.isArray(w?.users) ? w.users : [], [w?.users]);
+  const globalRole = String(w?.globalRole || "").toUpperCase();
+  const isStaff = ["GOD", "ADMIN", "STAFF", "SUPPORT"].includes(globalRole);
+  const [lobbyOwnerId, setLobbyOwnerId] = React.useState<string>("");
+  React.useEffect(() => {
+    if (!lobbyId) { setLobbyOwnerId(""); return; }
+    fetch(`${API_BASE}/lobbies/${encodeURIComponent(lobbyId)}`, { cache: "no-store" })
+      .then(r => r.json()).then(j => setLobbyOwnerId(String(j?.lobby?.ownerId || ""))).catch(() => {});
+  }, [lobbyId]);
+  const isLobbyOwner = !!lobbyOwnerId && lobbyOwnerId === String(w?.me?.id || "");
+  const canPin = isStaff || isLobbyOwner;
+
+  async function togglePin(roomId: string, currentlyPinned: boolean) {
+    const target = !currentlyPinned;
+    // Optimistic
+    setRows(cur => cur.map(r => r.id === roomId ? { ...r, pinned: target } : r));
+    try {
+      const endpoint = isLobbyOwner && !isStaff
+        ? `${API_BASE}/lobbies/${encodeURIComponent(lobbyId)}/admin/rooms/${encodeURIComponent(roomId)}/pin`
+        : `${API_BASE}/staff/rooms/${encodeURIComponent(roomId)}/pin`;
+      const res = await fetch(endpoint, {
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ pinned: target }),
+      }).then(r => r.json());
+      if (!res?.ok) {
+        // Revert
+        setRows(cur => cur.map(r => r.id === roomId ? { ...r, pinned: currentlyPinned } : r));
+      }
+    } catch {
+      setRows(cur => cur.map(r => r.id === roomId ? { ...r, pinned: currentlyPinned } : r));
+    }
+  }
 
   const ROOM_MODULES = [
     { id: "voice",   label: "Voice",   icon: "🎙", desc: "Voice chat room" },
@@ -112,6 +143,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       setRows(raw.map((r: any) => ({
         id: String(r.id || ""), name: String(r.name || r.id || ""),
         locked: Boolean(r.locked), users: Number(r.onlineCount ?? r.users ?? r.memberCount ?? 0), hasPassword: Boolean(r.hasPassword),
+        pinned: Boolean(r.pinned),
         lobbyId: r.lobbyId ?? lobbyId,
       })).filter((r: RoomRow) => r.id));
     } catch (e: any) { setErr(String(e?.message || e)); }
@@ -153,7 +185,11 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
   const filtered = rows
     .filter(r => !q.trim() || (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase()))
-    .sort((a, b) => b.users - a.users);
+    .sort((a, b) => {
+      // Pinned first, then by user count
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return b.users - a.users;
+    });
 
   const s = {
     input: { width: "100%", padding: "7px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 12, color: "rgba(243,244,246,.90)", outline: "none", boxSizing: "border-box" as const },
@@ -360,6 +396,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     color: "rgba(243,244,246,.92)",
                   }}>
+                    {rm.pinned && <span title="Pinned room — survives cleanup" style={{ marginRight: 4, fontSize: 10, color: "#f59e0b" }}>📌</span>}
                     {rm.name || rm.id}
                     {rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔒</span>}
                     {rm.hasPassword && !rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔑</span>}
@@ -386,6 +423,22 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                     </div>
                   ) : (
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,.10)" }} />
+                  )}
+                  {canPin && (
+                    <button
+                      title={rm.pinned ? "Unpin room" : "Pin room (survives cleanup)"}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); void togglePin(rm.id, Boolean(rm.pinned)); }}
+                      style={{
+                        marginLeft: 4, width: 22, height: 22, borderRadius: 4,
+                        border: "none", cursor: "pointer",
+                        background: rm.pinned ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.04)",
+                        color: rm.pinned ? "#f59e0b" : "rgba(148,163,184,0.6)",
+                        fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "all 0.12s",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = rm.pinned ? "rgba(245,158,11,0.30)" : "rgba(255,255,255,0.10)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = rm.pinned ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.04)"; }}
+                    >📌</button>
                   )}
                 </div>
               </div>
