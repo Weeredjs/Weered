@@ -853,14 +853,8 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       {!isMe && (
         <div style={{ ...section, marginTop: 10 }}>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={openDM} style={{ ...actionButton, background: "rgba(167,139,250,.1)", borderColor: "rgba(167,139,250,.25)", color: "#c4b5fd" }}>
+            <button onClick={openDM} style={{ ...actionButton, background: "var(--weered-accent-bg, rgba(167,139,250,.1))", borderColor: "var(--weered-accent-ring, rgba(167,139,250,.25))", color: "var(--weered-accent-text, #c4b5fd)" }}>
               <span style={{ fontSize: 14 }}>💬</span> Message
-            </button>
-            <button style={{ ...actionButton, opacity: 0.35, cursor: "not-allowed" }} disabled>
-              <span style={{ fontSize: 14 }}>📨</span> Invite
-            </button>
-            <button style={{ ...actionButton, opacity: 0.35, cursor: "not-allowed" }} disabled>
-              <span style={{ fontSize: 14 }}>👥</span> Add Friend
             </button>
           </div>
         </div>
@@ -887,22 +881,24 @@ const wrap: React.CSSProperties = {
 const section: React.CSSProperties = {
   marginTop: 12,
   padding: "12px 14px",
-  background: "rgba(255,255,255,.025)",
-  border: "1px solid rgba(255,255,255,.06)",
+  background: "var(--weered-panel, rgba(255,255,255,.025))",
+  border: "1px solid var(--weered-border, rgba(255,255,255,.06))",
   borderRadius: 12,
 };
 
 const sectionLabel: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, opacity: 0.4,
-  textTransform: "uppercase", letterSpacing: "1px",
+  fontSize: 10, fontWeight: 800, opacity: 0.75,
+  textTransform: "uppercase", letterSpacing: "0.1em",
   marginBottom: 8, display: "flex", alignItems: "center", gap: 6,
+  color: "var(--weered-accent-text, rgba(167,139,250,.85))",
 };
 
 const btnSmall: React.CSSProperties = {
   padding: "4px 10px", borderRadius: 6,
-  border: "1px solid rgba(255,255,255,.1)",
-  background: "rgba(255,255,255,.05)",
-  color: "inherit", fontSize: 11, fontWeight: 700,
+  border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
+  background: "var(--weered-panel2, rgba(255,255,255,.05))",
+  color: "var(--weered-text, rgba(243,244,246,.9))",
+  fontSize: 11, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
   transition: "all 0.15s",
 };
@@ -910,9 +906,10 @@ const btnSmall: React.CSSProperties = {
 const actionButton: React.CSSProperties = {
   flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
   gap: 6, padding: "9px 0", borderRadius: 10,
-  border: "1px solid rgba(255,255,255,.1)",
-  background: "rgba(255,255,255,.04)",
-  color: "inherit", fontSize: 12, fontWeight: 700,
+  border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
+  background: "var(--weered-panel2, rgba(255,255,255,.04))",
+  color: "var(--weered-text, rgba(243,244,246,.9))",
+  fontSize: 12, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
   transition: "all 0.15s",
 };
