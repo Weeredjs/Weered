@@ -362,6 +362,7 @@ model User {
   blocksReceived   UserBlock[]      @relation("BlocksReceived")
   reportsFiled     Report[]         @relation("ReportsFiled")
   reportsReviewed  Report[]         @relation("ReportsReviewed")
+  reactions        Reaction[]       @relation("ReactionsFrom")
   LocalAuth        LocalAuth?
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
@@ -518,6 +519,28 @@ model UserBlock {
 
   @@unique([blockerId, blockedId])
   @@index([blockedId])
+}
+
+// ── Message reactions ───────────────────────────────────────────────────────
+enum ReactionTargetType {
+  ROOM_MESSAGE
+  DIRECT_MESSAGE
+  CREW_MESSAGE
+}
+
+model Reaction {
+  id         String             @id @default(cuid())
+  targetType ReactionTargetType
+  targetId   String
+  userId     String
+  emoji      String
+  createdAt  DateTime           @default(now())
+
+  user User @relation("ReactionsFrom", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([targetType, targetId, userId, emoji])
+  @@index([targetType, targetId])
+  @@index([userId])
 }
 
 // ── Reports ─────────────────────────────────────────────────────────────────
