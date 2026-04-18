@@ -138,6 +138,15 @@ const S = {
 
 // ═══ SVG Ornaments ═════════════════════════════════════════════════════════════
 
+function SailMark({ size = 56, color = PAL.brassHi, glow = true }: { size?: number; color?: string; glow?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" style={{ filter: glow ? `drop-shadow(0 0 10px ${color}55)` : "none", color }}>
+      <path d="M32 10 Q 56 40 92 64 L 34 72 Z" fill="currentColor" />
+      <rect x="22" y="82" width="70" height="6" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 function CompassRose({ size = 72, color = PAL.brass, glow = true }: { size?: number; color?: string; glow?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: glow ? `drop-shadow(0 0 8px ${color}55)` : "none" }}>
@@ -791,8 +800,8 @@ export default function WindroseModulesPanel({
         {/* Plaque header */}
         <div style={S.plaque}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <div style={{ animation: "windrose-spin 60s linear infinite", flexShrink: 0 }}>
-              <CompassRose size={64} />
+            <div style={{ flexShrink: 0 }}>
+              <SailMark size={64} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ ...S.label, marginBottom: 4 }}>A Kraken Express Voyage</div>
@@ -801,10 +810,15 @@ export default function WindroseModulesPanel({
                 Build. Sail. Survive the storm. <span style={{ color: PAL.brass }}>·</span> Early Access &middot; 2026
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <div style={{ ...S.label, fontSize: 9 }}>Community Hub</div>
-              <div style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, opacity: 0.7 }}>
-                unofficial
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                <div style={{ ...S.label, fontSize: 9 }}>Community Hub</div>
+                <div style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, opacity: 0.7 }}>
+                  unofficial
+                </div>
+              </div>
+              <div style={{ animation: "windrose-spin 90s linear infinite", flexShrink: 0, opacity: 0.8 }}>
+                <CompassRose size={48} />
               </div>
             </div>
           </div>
