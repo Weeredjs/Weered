@@ -98,8 +98,8 @@ export default function LobbyHeroBar({
       {/* Background */}
       {effectiveBanner ? (
         <>
-          <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${effectiveBanner})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.55, transition: "background-image 1s ease" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,18,0.25) 0%, rgba(10,10,18,0.75) 100%)" }} />
+          <div className="weered-hero-bg" style={{ position: "absolute", inset: 0, backgroundImage: `url(${effectiveBanner})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.55, transition: "background-image 1s ease" }} />
+          <div className="weered-hero-scrim" style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,18,0.25) 0%, rgba(10,10,18,0.75) 100%)" }} />
         </>
       ) : (
         <>

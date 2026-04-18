@@ -4416,6 +4416,14 @@ html[data-weered-lobby="windrose"] .weered-hero-content {
     0 6px 24px rgba(0,0,0,0.5);
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
+/* Let the custom pirate banner actually shine through */
+html[data-weered-lobby="windrose"] .weered-hero-bg {
+  opacity: 1 !important;
+  background-position: center center !important;
+}
+html[data-weered-lobby="windrose"] .weered-hero-scrim {
+  background: linear-gradient(180deg, rgba(14,24,38,0.10) 0%, rgba(14,24,38,0.35) 100%) !important;
+}
 
 html[data-weered-lobby="windrose"] .weered-event-badge {
   background: linear-gradient(135deg, #a33d3d 0%, #5b1919 100%) !important;
