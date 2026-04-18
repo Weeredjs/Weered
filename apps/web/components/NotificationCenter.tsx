@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useWeered } from "./WeeredProvider";
 import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -293,9 +294,7 @@ export function NotificationBell() {
           {/* List */}
           <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
             {loading && notifications.length === 0 && (
-              <div style={{ padding: 24, textAlign: "center", color: "rgba(255,255,255,.3)", fontSize: 12 }}>
-                Loading...
-              </div>
+              <LoadingState compact label="Checking" />
             )}
             {!loading && notifications.length === 0 && (
               <EmptyState title="All quiet." hint="You'll know when something moves." />

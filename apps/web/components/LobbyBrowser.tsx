@@ -630,13 +630,19 @@ export default function LobbyBrowser() {
         {loading && (
           <span
             style={{
-              fontSize: 12,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
               color: TEXT_MUTED,
               fontFamily: MONO,
               flexShrink: 0,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
             }}
           >
-            loading...
+            <span className="weered-spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />
+            tuning in
           </span>
         )}
 

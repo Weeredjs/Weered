@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import StoryInterceptModal from "./StoryInterceptModal";
 import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface FeedItem {
@@ -392,9 +393,7 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
         {/* Rows */}
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {loading && items.length === 0 && (
-            <div style={{ padding: "40px 20px", textAlign: "center", color: "rgba(100,116,139,0.35)", fontSize: 12, letterSpacing: "0.06em" }}>
-              Loading feed...
-            </div>
+            <LoadingState label="Pulling the feed" />
           )}
           {filtered.map((item, i) => (
             <FeedRow key={item.id} item={item} index={i} onEnter={handleEnter} />
