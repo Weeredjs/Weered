@@ -1,3 +1,11 @@
+import * as Sentry from "@sentry/node";
+if (process.env.SENTRY_DSN_API) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN_API,
+    environment: process.env.NODE_ENV || "production",
+    tracesSampleRate: 0.1,
+  });
+}
 import Fastify from "fastify";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -4466,6 +4474,15 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
   setInterval(runNewsWorker, 15 * 60 * 1000);
 
   await seedLobbies();
+
+  app.setErrorHandler((err, req, reply) => {
+    if (process.env.SENTRY_DSN_API) {
+      Sentry.captureException(err, {
+        tags: { route: req.routeOptions?.url || req.url },
+      });
+    }
+    reply.status(err.statusCode || 500).send({ error: err.message || "Internal error" });
+  });
 
   app.listen({ host: "0.0.0.0", port: HTTP_PORT });
   app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
