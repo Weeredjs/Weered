@@ -6535,8 +6535,8 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         joinMode: true, ownerId: true,
         enabledModules: true,
         rooms: {
-          select: { id: true, name: true, description: true, locked: true, ownerId: true, _count: { select: { members: true } },},
-          orderBy: { name: "asc" },
+          select: { id: true, name: true, description: true, locked: true, ownerId: true, isEvent: true, pinned: true, _count: { select: { members: true } },},
+          orderBy: [{ isEvent: "desc" }, { name: "asc" }],
         },
         _count: { select: { rooms: true, members: true } },
         tiers: {
