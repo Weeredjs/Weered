@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -128,7 +130,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading streams...</div>;
-  if (streams.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No live streams</div>;
+  if (streams.length === 0) return <EmptyState compact title="Nobody streaming right now." hint="Check back — someone usually goes live soon." />;
 
   return (
     <>
@@ -268,7 +270,7 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       )}
 
       {posts.length === 0 ? (
-        <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No LFG posts yet. Be the first!</div>
+        <EmptyState compact title="No LFG posts yet." hint="Drop the first one — someone's looking." />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => (
@@ -531,7 +533,7 @@ function ItemShop({ accent, wishlist }: { accent: string; wishlist: ReturnType<t
           );
         })}
       </div>
-      {filtered.length === 0 && <div style={{ padding: "20px 0", textAlign: "center", opacity: 0.4, fontSize: 12 }}>No items in this category</div>}
+      {filtered.length === 0 && <EmptyState compact title="Nothing in this category." />}
     </div>
   );
 }
@@ -545,7 +547,7 @@ function FnNews() {
   useEffect(() => { apiFetch("/fortnite/news").then(j => { if (j.ok) setNews(j.news || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading news...</div>;
-  if (news.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No news available</div>;
+  if (news.length === 0) return <EmptyState compact title="No news right now." />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -599,8 +601,8 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
         <div style={{ ...S.label, marginBottom: 10 }}>NEWEST COSMETICS</div>
       )}
 
-      {loading && items.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading...</div>}
-      {!loading && searched && !showingNew && items.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No results found</div>}
+      {loading && items.length === 0 && <LoadingState compact label="Loading items" />}
+      {!loading && searched && !showingNew && items.length === 0 && <EmptyState compact title="No results." />}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
         {items.map(item => {

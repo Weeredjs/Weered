@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getWeeredClient } from "../app/weeredClient";
 import { weeredConfirm } from "../lib/confirm";
+import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -368,7 +370,7 @@ function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId:
   }
 
   if (!positions.length) return (
-    <div style={{ padding: 16, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No open positions</div>
+    <EmptyState compact title="No open positions." hint="Place a trade to get started." />
   );
 
   return (
@@ -484,7 +486,7 @@ function Leaderboard({ lobbyId }: { lobbyId: string }) {
   }, [load]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>Loading leaderboard...</div>;
-  if (!entries.length) return <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No traders yet — be the first</div>;
+  if (!entries.length) return <EmptyState compact title="No traders yet." hint="Be the first on the board." />;
 
   const medals = ["🥇", "🥈", "🥉"];
 
@@ -722,7 +724,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
       {tab === "history" && (
         <div>
           {!history ? (
-            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>Loading...</div>
+            <LoadingState compact label="Loading" />
           ) : (
             <>
               {history.closedPositions.length > 0 && (
@@ -758,7 +760,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
 
               <div style={S.label}>ORDER LOG</div>
               {history.orders.length === 0 ? (
-                <div style={{ padding: 16, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No orders yet</div>
+                <EmptyState compact title="No orders yet." />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {history.orders.map((o: any) => (
