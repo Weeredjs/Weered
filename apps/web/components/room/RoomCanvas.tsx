@@ -443,7 +443,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             ))}
           </div>
         ) : (
-          <div className="text-[12px] text-white/25">No links yet.</div>
+          <div className="text-[12px] text-white/40">No links yet. Paste one above.</div>
         )}
       </div>
     </div>

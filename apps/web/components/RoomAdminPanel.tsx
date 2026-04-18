@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useWeered } from "./WeeredProvider";
+import EmptyState from "./EmptyState";
 
 function fmt(ts: number) {
   try { return new Date(ts).toLocaleString(); } catch { return String(ts); }
@@ -76,7 +77,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
       <div style={{ marginTop: 12 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Knocks</div>
         {(admin?.knocks?.length || 0) === 0 ? (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>No knocks.</div>
+          <EmptyState compact title="Nobody at the door." />
         ) : (
           <div style={{ display: "grid", gap: 6 }}>
             {admin!.knocks!.slice().reverse().map((k) => (
@@ -102,7 +103,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
       <div style={{ marginTop: 12 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Users</div>
         {(users.length || 0) === 0 ? (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>No users.</div>
+          <EmptyState compact title="Nobody in this room." />
         ) : (
           <div style={{ display: "grid", gap: 6 }}>
             {users.map((u) => {
@@ -174,7 +175,7 @@ export default function RoomAdminPanel({ roomId }: { roomId: string }) {
       <div style={{ marginTop: 12 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>Audit</div>
         {(admin?.audit?.length || 0) === 0 ? (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>No audit yet.</div>
+          <EmptyState compact title="No actions yet." />
         ) : (
           <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid var(--weered-border)", borderRadius: 10, padding: 8 }}>
             {admin!.audit!.slice().reverse().map((a) => (

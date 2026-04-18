@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -31,8 +33,8 @@ export default function LobbyEvents({ lobbyId, accent }: { lobbyId: string; acce
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 13 }}>Loading events...</div>;
-  if (events.length === 0) return <div style={{ padding: "40px 20px", textAlign: "center", opacity: 0.4, fontSize: 13 }}>No upcoming events.</div>;
+  if (loading) return <LoadingState label="Loading events" />;
+  if (events.length === 0) return <EmptyState title="Nothing on the calendar." hint="When events drop they'll show up here." />;
 
   const color = accent || "#7C3AED";
 
