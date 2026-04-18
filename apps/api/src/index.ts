@@ -62,7 +62,7 @@ type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: st
 
 type Role = "owner" | "mod" | "member";
 type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; tier?: string; avatarColor?: string | null; avatar?: string | null };
-type ChatMsg = { id: string; user: RoomUser; body: string; ts: number };
+type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number };
 type Knock = { userId: string; name: string; ts: number };
 
 type AuditItem = {
@@ -884,6 +884,8 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.msgs = dbRoom.messages.map((m) => ({
       id: m.id, user: { id: m.userId, name: m.userName || "?", role: "member" as Role },
       body: m.body, ts: new Date(m.ts).getTime(),
+      editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
+      deletedAt: (m as any).deletedAt ? new Date((m as any).deletedAt).getTime() : undefined,
     }));
     r.audit = dbRoom.audit.map((a) => ({
       id: a.id, ts: new Date(a.ts).getTime(), type: a.type,
@@ -4372,6 +4374,57 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
                 })();
               }
           }
+          return;
+        }
+
+        if (msg.type === "chat:edit") {
+          const rId = normalizeRoomId(String(msg.roomId || ""));
+          const msgId = String(msg.msgId || "");
+          const newBody = String(msg.body || "").trim();
+          if (!rId || !msgId || !newBody) return;
+          const room = await ensureRoomLoaded(rId);
+          if (room.banned.has(ws.user.id)) return;
+          const target = room.msgs.find(m => m.id === msgId);
+          if (!target) return;
+          if (target.deletedAt) return;
+          if (target.user.id !== ws.user.id) return; // only sender can edit
+          if (target.body === newBody) return;
+          // 15 min edit window
+          if (Date.now() - target.ts > 15 * 60 * 1000) return;
+          target.body = newBody;
+          const editedAt = Date.now();
+          target.editedAt = editedAt;
+          if (room.roomId !== "lobby") {
+            void prisma.roomMessage.update({
+              where: { id: msgId },
+              data: { body: newBody, editedAt: new Date(editedAt) },
+            }).catch(() => {});
+          }
+          broadcast(room, { type: "chat:edited", roomId: rId, msgId, body: newBody, editedAt });
+          return;
+        }
+
+        if (msg.type === "chat:delete") {
+          const rId = normalizeRoomId(String(msg.roomId || ""));
+          const msgId = String(msg.msgId || "");
+          if (!rId || !msgId) return;
+          const room = await ensureRoomLoaded(rId);
+          const target = room.msgs.find(m => m.id === msgId);
+          if (!target) return;
+          if (target.deletedAt) return;
+          const isSender = target.user.id === ws.user.id;
+          const isMod = isModOrOwner(room, ws.user.id, ws.user.globalRole);
+          if (!isSender && !isMod) return;
+          const deletedAt = Date.now();
+          target.deletedAt = deletedAt;
+          target.body = "";
+          if (room.roomId !== "lobby") {
+            void prisma.roomMessage.update({
+              where: { id: msgId },
+              data: { body: "", deletedAt: new Date(deletedAt) },
+            }).catch(() => {});
+          }
+          broadcast(room, { type: "chat:deleted", roomId: rId, msgId, deletedAt });
           return;
         }
 
