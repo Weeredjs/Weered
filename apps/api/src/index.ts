@@ -762,6 +762,7 @@ const SEED_LOBBIES = [
   { id: "fakeout", name: "FakeOut", description: "Paper trade crypto with fake money against real Binance prices. Live candlestick charts, instant orders, public leaderboards. All the thrill, none of the risk.", keywords: ["fakeout","trading","crypto","bitcoin","paper","stocks","market","btc","eth","finance","investing","fake"], moduleType: ModuleType.TRADING, moduleConfig: {}, accentColor: "#F5C518" },
   { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, AI NPCs, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
   { id: "poe", name: "Path of Exile", description: "Wraeclast awaits. Live economy dashboard powered by poe.ninja, currency trends, item prices, div cards, gem values, and party finder.", keywords: ["poe","path of exile","exile","wraeclast","arpg","grinding gear","ggg","currency","divine","chaos","mirror","mapping","builds"], moduleType: ModuleType.POE, moduleConfig: { twitchCategory: "Path of Exile" }, accentColor: "#AF6025", logoUrl: null, bannerUrl: null, websiteUrl: "https://www.pathofexile.com" },
+  { id: "windrose", name: "Windrose", description: "Age of Piracy survival adventure by Kraken Express. Build, sail, survive. Live Steam player count, Kraken Express dev news, crew finder, and Captain's Log — the unofficial flagship hub.", keywords: ["windrose","kraken","kraken express","pocketpair","pirate","pirates","age of piracy","survival","souls-like","crosswind","naval","sailing","ship","black flag","co-op","pve"], moduleType: ModuleType.WINDROSE, moduleConfig: { twitchCategory: "Windrose", steamAppId: "3041230", publisher: "Pocketpair", studio: "Kraken Express" }, accentColor: "#b8935a", logoUrl: null, bannerUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/3041230/library_hero.jpg", websiteUrl: "https://playwindrose.com/" },
 ];
 
 const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: string }[] = [
@@ -769,6 +770,13 @@ const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: stri
   { id: "dnd-table",     name: "Campaign Table",   description: "Open play table — roll initiative, share maps, run encounters. Bring your character sheet.", lobbyId: "dnd" },
   { id: "dnd-workshop",  name: "DM's Workshop",    description: "Behind the screen. Prep sessions, world-building tips, and DM war stories.",                 lobbyId: "dnd" },
   { id: "dnd-forge",     name: "Character Forge",  description: "Build, theorycraft, and show off your characters. Multiclass debates welcome.",              lobbyId: "dnd" },
+
+  { id: "windrose-helm",       name: "The Helm",          description: "General chat for all sailors. Trade tips, brag about storms, talk shop.",              lobbyId: "windrose" },
+  { id: "windrose-crew",       name: "Crew Finder",       description: "Looking for 3 for a raid? Need a first mate? Post your flag here.",                    lobbyId: "windrose" },
+  { id: "windrose-captains",   name: "Captain's Table",    description: "Voice strategy, PvE routes, soulslite boss tactics, and fleet tactics.",               lobbyId: "windrose" },
+  { id: "windrose-tradingpost",name: "Trading Post",      description: "Barter loot, swap maps, and haggle over spoils. No scams, savvy?",                      lobbyId: "windrose" },
+  { id: "windrose-log",        name: "Captain's Log",     description: "Screenshots, clips, and stories from the open sea. Drop your best shot.",               lobbyId: "windrose" },
+  { id: "windrose-bug-hunters",name: "Bug Hunters",       description: "Repro steps, workarounds, and friendly noise aimed at Kraken Express.",                 lobbyId: "windrose" },
 ];
 
 async function seedLobbies() {
@@ -11700,6 +11708,86 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       console.error("[pubg/leaderboard]", e);
       return reply.send({ ok: false, error: "leaderboard_fetch_failed" });
     }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── WINDROSE (Kraken Express — Steam app 3041230) ─────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  const WINDROSE_APPID = "3041230";
+  const wrCache = new Map<string, { data: any; expiresAt: number }>();
+  function wrCacheGet(key: string) {
+    const c = wrCache.get(key);
+    if (c && c.expiresAt > Date.now()) return c.data;
+    return null;
+  }
+  function wrCacheSet(key: string, data: any, ttlMs: number) {
+    wrCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  }
+
+  // GET /windrose/live-players — current concurrent players via Steam API
+  app.get("/windrose/live-players", async (req, reply) => {
+    const cacheKey = "wr:live";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${WINDROSE_APPID}`;
+      const res = await fetch(url);
+      if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
+      const j: any = await res.json();
+      const count = j?.response?.player_count;
+      if (typeof count !== "number") return reply.send({ ok: false, error: "no_count" });
+      const result = { ok: true, players: count, appid: WINDROSE_APPID, checkedAt: new Date().toISOString() };
+      wrCacheSet(cacheKey, result, 60 * 1000); // 60s
+      return reply.send(result);
+    } catch (e) {
+      console.error("[windrose/live-players]", e);
+      return reply.send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // GET /windrose/news — latest Steam news from Kraken Express
+  app.get("/windrose/news", async (req, reply) => {
+    const cacheKey = "wr:news";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      const url = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${WINDROSE_APPID}&count=12&maxlength=600&format=json`;
+      const res = await fetch(url);
+      if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
+      const j: any = await res.json();
+      const items: any[] = j?.appnews?.newsitems || [];
+      const news = items.map((n: any) => ({
+        id: String(n.gid || ""),
+        title: String(n.title || ""),
+        author: String(n.author || "Kraken Express"),
+        url: String(n.url || ""),
+        date: n.date ? new Date(n.date * 1000).toISOString() : null,
+        feedlabel: String(n.feedlabel || ""),
+        contents: String(n.contents || "").slice(0, 600),
+        tags: Array.isArray(n.tags) ? n.tags.slice(0, 6) : [],
+      }));
+      const result = { ok: true, news };
+      wrCacheSet(cacheKey, result, 10 * 60 * 1000); // 10 min
+      return reply.send(result);
+    } catch (e) {
+      console.error("[windrose/news]", e);
+      return reply.send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // GET /windrose/launch — curated launch milestone snapshot (static, editable)
+  app.get("/windrose/launch", async (req, reply) => {
+    return reply.send({
+      ok: true,
+      releasedAt: "2026-04-14",
+      milestones: [
+        { label: "Units sold (48h)",       value: "500,000",  sub: "Early Access" },
+        { label: "Peak CCU",                value: "~100,000", sub: "Launch week" },
+        { label: "Steam review score",      value: "89%",      sub: "Positive" },
+      ],
+      publisher: { name: "Pocketpair", note: "Palworld studio" },
+      platform:  { steam: `https://store.steampowered.com/app/${WINDROSE_APPID}/`, site: "https://playwindrose.com/" },
+    });
   });
 
   // ══════════════════════════════════════════════════════════════════════════════

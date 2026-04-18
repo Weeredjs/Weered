@@ -24,6 +24,7 @@ import StudyModulesPanel from "../../../components/StudyModulesPanel";
 import PubgModulesPanel from "../../../components/PubgModulesPanel";
 import DndModulesPanel from "../../../components/DndModulesPanel";
 import PoeModulesPanel from "../../../components/PoeModulesPanel";
+import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
 import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
@@ -66,6 +67,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   PUBG: "PUBG: Battlegrounds",
   DND: "Dungeons & Dragons",
   POE: "Path of Exile",
+  WINDROSE: "Windrose",
 };
 
 type LobbyInfo = {
@@ -358,7 +360,7 @@ export default function LobbyIdPage() {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE";
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const showAdmin  = isStaff || isOwner || (membership && membership.roleLevel >= 3);
@@ -528,6 +530,8 @@ export default function LobbyIdPage() {
                   <DndModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "POE" ? (
                   <PoeModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+                ) : lobbyInfo?.moduleType === "WINDROSE" ? (
+                  <WindroseModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : (
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 )
