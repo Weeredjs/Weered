@@ -23,6 +23,10 @@ interface CrewMessage {
   editedAt?: string | null;
   deletedAt?: string | null;
   reactions?: CrewReaction[];
+  replyToId?: string | null;
+  replyToUserId?: string | null;
+  replyToUserName?: string | null;
+  replyToBody?: string | null;
 }
 
 interface Props {
@@ -68,6 +72,7 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
   const [editDraft, setEditDraft] = useState("");
   const [hoveredMsgId, setHoveredMsgId] = useState("");
   const [pickerMsgId, setPickerMsgId] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: string; userName: string; body: string } | null>(null);
   const QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
 
   useEffect(() => {
@@ -183,10 +188,11 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
     const body = input.trim();
     if (!body) return;
 
+    const envelope: any = { type: "crew:send", crewId, body };
+    if (replyingTo?.id) envelope.replyToId = replyingTo.id;
+
     // Dispatch through WS bridge
-    window.dispatchEvent(new CustomEvent("weered:ws:send", {
-      detail: { type: "crew:send", crewId, body },
-    }));
+    window.dispatchEvent(new CustomEvent("weered:ws:send", { detail: envelope }));
 
     // Optimistic add
     const optimistic: CrewMessage = {
@@ -195,12 +201,16 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
       userName: myName,
       body,
       createdAt: new Date().toISOString(),
+      replyToId: replyingTo?.id,
+      replyToUserName: replyingTo?.userName,
+      replyToBody: replyingTo?.body?.slice(0, 120),
     };
     setMessages(prev => [...prev, optimistic]);
     setInput("");
+    setReplyingTo(null);
     scrollToBottom();
     inputRef.current?.focus();
-  }, [input, crewId, myId, myName, scrollToBottom]);
+  }, [input, crewId, myId, myName, scrollToBottom, replyingTo]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -321,6 +331,7 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                   <div
                     onMouseEnter={() => setHoveredMsgId(msg.id)}
                     onMouseLeave={() => setHoveredMsgId(cur => cur === msg.id ? "" : cur)}
+                    data-msg-id={msg.id}
                     style={{
                       display: "flex",
                       flexDirection: isMe ? "row-reverse" : "row",
@@ -362,6 +373,36 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                         )}
                       </div>
 
+                      {msg.replyToId && !isDeleted && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              const el = document.querySelector(`[data-msg-id="${msg.replyToId}"]`) as HTMLElement | null;
+                              if (el) {
+                                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                const prev = el.style.background;
+                                el.style.transition = "background 0.2s";
+                                el.style.background = "rgba(124,58,237,0.10)";
+                                setTimeout(() => { el.style.background = prev; }, 900);
+                              }
+                            } catch {}
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            padding: "2px 8px 2px 6px", marginBottom: 3, fontSize: 10,
+                            background: "transparent", border: "none",
+                            borderLeft: "2px solid rgba(124,58,237,.5)",
+                            color: "rgba(148,163,184,.7)", cursor: "pointer", fontFamily: "inherit",
+                            alignSelf: isMe ? "flex-end" : "flex-start",
+                            maxWidth: "100%", overflow: "hidden",
+                          }}
+                        >
+                          <span style={{ color: "rgba(196,181,253,.85)", fontWeight: 700 }}>↩ {msg.replyToUserName || "?"}</span>
+                          <span style={{ opacity: 0.7, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.replyToBody || ""}</span>
+                        </button>
+                      )}
+
                       {isDeleted ? (
                         <div style={{ fontSize: 12, fontStyle: "italic", color: "rgba(243,244,246,.35)", padding: "6px 12px", borderRadius: isMe ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: "rgba(255,255,255,.025)", border: "1px dashed rgba(255,255,255,.08)" }}>
                           [message deleted]
@@ -401,6 +442,7 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                     {isHovered && !isEditing && !isDeleted && (
                       <div data-reaction-ui style={{ position: "absolute", top: 0, [isMe ? "left" : "right" as any]: 8, display: "flex", gap: 2, padding: 3, borderRadius: 7, background: "rgba(16,16,20,.96)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 12px rgba(0,0,0,.35)", zIndex: 2 }}>
                         <button type="button" title="React" onClick={(e) => { e.stopPropagation(); setPickerMsgId(cur => cur === msg.id ? "" : msg.id); }} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>😊</button>
+                        <button type="button" title="Reply" onClick={(e) => { e.stopPropagation(); setReplyingTo({ id: msg.id, userName: isMe ? "you" : msg.userName, body: String(msg.body || "") }); try { inputRef.current?.focus(); } catch {} }} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>↩</button>
                         {editable && <button type="button" title="Edit" onClick={() => { setEditingMsgId(msg.id); setEditDraft(String(msg.body || "")); }} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>✎</button>}
                         {deletable && <button type="button" title="Delete" onClick={handleDel} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>🗑</button>}
                       </div>
@@ -434,6 +476,22 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
 
         <div ref={bottomRef} />
       </div>
+
+      {/* Reply banner */}
+      {replyingTo && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "6px 12px",
+          borderTop: "1px solid rgba(255,255,255,.06)",
+          borderLeft: "2px solid rgba(124,58,237,.55)",
+          background: "rgba(124,58,237,.08)",
+          fontSize: 11,
+        }}>
+          <span style={{ color: "rgba(196,181,253,.9)", fontWeight: 700, flexShrink: 0 }}>↩ Replying to <strong>{replyingTo.userName}</strong></span>
+          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(148,163,184,.75)" }}>{replyingTo.body}</span>
+          <button type="button" onClick={() => setReplyingTo(null)} title="Cancel reply" style={{ width: 18, height: 18, borderRadius: 4, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 12, flexShrink: 0 }}>×</button>
+        </div>
+      )}
 
       {/* Input bar */}
       <div style={{

@@ -293,6 +293,7 @@ export default function LobbyChatPanel(
   const [editDraft, setEditDraft] = useState<string>("");
   const [hoveredMsgId, setHoveredMsgId] = useState<string>("");
   const [pickerMsgId, setPickerMsgId] = useState<string>("");
+  const [replyingTo, setReplyingTo] = useState<{ id: string; userName: string; body: string } | null>(null);
 
   const QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
 
@@ -356,8 +357,9 @@ export default function LobbyChatPanel(
     if (!canType) return;
     const msg = String(text || "").trim();
     if (!msg) return;
-    try { ctx?.sendChat?.(msg); } catch {}
+    try { ctx?.sendChat?.(msg, replyingTo ? { replyToId: replyingTo.id } : undefined); } catch {}
     setText("");
+    setReplyingTo(null);
   };
 
   return (
@@ -422,6 +424,7 @@ export default function LobbyChatPanel(
               <div
                 key={mId || i}
                 data-chat-message
+                data-msg-id={mId}
                 onMouseEnter={() => mId && setHoveredMsgId(mId)}
                 onMouseLeave={() => setHoveredMsgId(cur => cur === mId ? "" : cur)}
                 style={{ display: "flex", gap: 10, marginBottom: 8, position: "relative" }}
@@ -455,6 +458,42 @@ export default function LobbyChatPanel(
                       <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>(edited)</span>
                     )}
                   </div>
+                  {(m as any).replyTo?.id && !deletedAt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          const el = document.querySelector(`[data-msg-id="${(m as any).replyTo.id}"]`) as HTMLElement | null;
+                          if (el) {
+                            el.scrollIntoView({ behavior: "smooth", block: "center" });
+                            el.style.transition = "background 0.2s";
+                            const prev = el.style.background;
+                            el.style.background = "rgba(124,58,237,0.10)";
+                            setTimeout(() => { el.style.background = prev; }, 900);
+                          }
+                        } catch {}
+                      }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "2px 8px 2px 6px",
+                        marginBottom: 3, marginTop: -1,
+                        fontSize: 11,
+                        background: "transparent",
+                        border: "none",
+                        borderLeft: "2px solid var(--weered-accent-ring, rgba(124,58,237,0.45))",
+                        color: "var(--weered-muted, rgba(148,163,184,.75))",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        maxWidth: "100%",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span style={{ color: "var(--weered-accent-text, rgba(196,181,253,.85))", fontWeight: 700 }}>↩ {(m as any).replyTo.userName}</span>
+                      <span style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(m as any).replyTo.body}</span>
+                    </button>
+                  )}
                   {deletedAt ? (
                     <div style={{ fontSize: 12, fontStyle: "italic", color: "var(--weered-muted, rgba(148,163,184,.55))" }}>[message deleted]</div>
                   ) : isEditing ? (
@@ -547,6 +586,18 @@ export default function LobbyChatPanel(
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                     >😊</button>
+                    <button
+                      type="button"
+                      title="Reply"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReplyingTo({ id: mId, userName: uname || "user", body: String(m?.body || "") });
+                        try { inputRef.current?.focus(); } catch {}
+                      }}
+                      style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                    >↩</button>
                     {editable && (
                       <button
                         type="button"
@@ -619,6 +670,30 @@ export default function LobbyChatPanel(
       {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
         <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
+          {replyingTo && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 10px",
+              marginBottom: 6,
+              borderRadius: 8,
+              borderLeft: "2px solid var(--weered-accent-ring, rgba(124,58,237,0.55))",
+              background: "var(--weered-accent-bg, rgba(124,58,237,0.08))",
+              fontSize: 11,
+            }}>
+              <span style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.9))", fontWeight: 700, flexShrink: 0 }}>
+                ↩ Replying to <strong>{replyingTo.userName}</strong>
+              </span>
+              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--weered-muted, rgba(148,163,184,.75))" }}>
+                {replyingTo.body}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReplyingTo(null)}
+                title="Cancel reply"
+                style={{ width: 18, height: 18, borderRadius: 4, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, flexShrink: 0 }}
+              >×</button>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <input
               ref={inputRef}
