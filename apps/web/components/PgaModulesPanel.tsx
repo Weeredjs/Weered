@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -388,9 +389,7 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
       )}
 
       {players.length === 0 && !loading && !error && (
-        <div style={{ textAlign: "center", padding: 30, opacity: 0.35, fontSize: 13 }}>
-          No leaderboard data available. Check back when a tournament is in progress.
-        </div>
+        <EmptyState title="No tournament live." hint="Check back when the next one tees off." />
       )}
     </div>
   );
@@ -597,9 +596,7 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
       </div>
 
       {field.length === 0 && (
-        <div style={{ textAlign: "center", padding: 30, opacity: 0.35, fontSize: 13 }}>
-          No field data available.
-        </div>
+        <EmptyState title="No field data." />
       )}
     </div>
   );
@@ -706,7 +703,7 @@ function PgaNews({ accentColor }: { accentColor: string }) {
       ))}
 
       {articles.length === 0 && (
-        <div style={{ textAlign: "center", padding: 30, opacity: 0.35, fontSize: 13 }}>No PGA news available right now.</div>
+        <EmptyState title="No PGA news right now." />
       )}
     </div>
   );
@@ -797,7 +794,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
       </div>
 
       {streams.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No live golf streams right now.</div>
+        <EmptyState compact title="Nobody streaming golf right now." />
       )}
 
       <StreamInterceptModal
@@ -933,7 +930,7 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
       </div>
 
       {videos.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No videos found.</div>
+        <EmptyState compact title="No videos found." />
       )}
     </div>
   );

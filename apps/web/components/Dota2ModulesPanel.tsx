@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ODOTA = "https://api.opendota.com/api";
@@ -259,11 +260,7 @@ function StackFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
       {/* Posts List */}
       {posts.length === 0 ? (
-        <div style={{ padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.2 }}>{"\u{1F3AE}"}</div>
-          <div style={{ opacity: 0.4, fontSize: 13, marginBottom: 4 }}>No stacks posted yet</div>
-          <div style={{ opacity: 0.25, fontSize: 11 }}>Be the first to find teammates</div>
-        </div>
+        <EmptyState icon="🎮" title="No stacks posted yet." hint="Drop one — someone's ready to queue." />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => {
@@ -664,7 +661,7 @@ function PlayerLookup({ accent, heroMap }: { accent: string; heroMap: Record<num
       )}
 
       {!selected && !searching && results.length === 0 && query && (
-        <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No players found</div>
+        <EmptyState compact title="No players found." />
       )}
 
       {!selected && !searching && !query && (
@@ -707,7 +704,7 @@ function LiveMatches({ accent }: { accent: string }) {
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading live matches...</div>;
   if (error) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Failed to load live matches</div>;
-  if (matches.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No high-MMR live matches right now</div>;
+  if (matches.length === 0) return <EmptyState compact title="No high-MMR matches live." hint="Pub scene is quiet — check back in a bit." />;
 
   return (
     <div>
@@ -956,7 +953,7 @@ function HeroesBrowser({ accent }: { accent: string }) {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No heroes match your filter</div>
+        <EmptyState compact title="No heroes match." hint="Try a different filter." />
       )}
 
       <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center", marginTop: 10 }}>
@@ -1002,7 +999,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
   }
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading streams...</div>;
-  if (streams.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No live Dota 2 streams right now</div>;
+  if (streams.length === 0) return <EmptyState compact title="Nobody streaming Dota right now." />;
 
   return (
     <>

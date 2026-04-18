@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import StudyQuiz from "./StudyQuiz";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -448,7 +449,7 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
           boxShadow: `0 0 8px ${ACCENT_GREEN}80`, flexShrink: 0,
         }} />
         <span style={{ fontSize: 13, color: "rgba(243,244,246,.7)" }}>
-          {onlineCount > 0 ? `${onlineCount} ${onlineCount === 1 ? "person" : "people"} studying right now` : "No one studying right now — be the first"}
+          {onlineCount > 0 ? `${onlineCount} ${onlineCount === 1 ? "person" : "people"} studying right now` : "Nobody's studying. Be the first to lock in."}
         </span>
       </div>
 
@@ -496,14 +497,7 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
           })}
         </div>
       ) : (
-        <div style={{
-          padding: 40, textAlign: "center",
-          color: "rgba(243,244,246,.35)", fontSize: 13,
-          lineHeight: 1.6,
-        }}>
-          No study rooms yet.<br />
-          Create a study room to get started.
-        </div>
+        <EmptyState title="No study rooms yet." hint="Create one to get started." />
       )}
     </div>
   );
@@ -658,10 +652,7 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
       </div>
 
       {posts.length === 0 && !showForm && (
-        <div style={{ padding: 32, textAlign: "center", color: "rgba(243,244,246,.3)", fontSize: 13, lineHeight: 1.6 }}>
-          No study partners yet.<br />
-          Be the first to post and find a study buddy.
-        </div>
+        <EmptyState title="No study partners yet." hint="Post what you're studying — find a buddy." />
       )}
     </div>
   );

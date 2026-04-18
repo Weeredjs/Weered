@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -84,7 +85,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading streams...</div>;
-  if (streams.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No live streams</div>;
+  if (streams.length === 0) return <EmptyState compact title="Nobody streaming right now." />;
 
   return (
     <>
@@ -224,7 +225,7 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       )}
 
       {posts.length === 0 ? (
-        <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 12 }}>No LFG posts yet. Be the first!</div>
+        <EmptyState compact title="No LFG posts yet." hint="Drop the first one." />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => (

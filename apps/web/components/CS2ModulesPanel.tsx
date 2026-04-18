@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -262,11 +263,7 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
       {/* Posts List */}
       {posts.length === 0 ? (
-        <div style={{ padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.2 }}>{"\u{1F3AE}"}</div>
-          <div style={{ opacity: 0.4, fontSize: 13, marginBottom: 4 }}>No squads posted yet</div>
-          <div style={{ opacity: 0.25, fontSize: 11 }}>Be the first to find teammates</div>
-        </div>
+        <EmptyState icon="🎮" title="No squads posted yet." hint="Drop the first one — someone's queueing." />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => {
@@ -405,7 +402,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   }
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading streams...</div>;
-  if (streams.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No live Counter-Strike 2 streams right now</div>;
+  if (streams.length === 0) return <EmptyState compact title="Nobody streaming CS2 right now." />;
 
   return (
     <>

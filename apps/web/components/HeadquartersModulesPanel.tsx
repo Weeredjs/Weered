@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import EmptyState from "./EmptyState";
 
 // ── API helpers ─────────────────────────────────────────────────────────────
 
@@ -205,14 +206,7 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
   }
 
   if (rooms.length === 0) {
-    return (
-      <div style={{ padding: "40px 20px", textAlign: "center" }}>
-        <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.3 }}>🏢</div>
-        <div style={{ fontSize: 14, color: CLR.dim, lineHeight: 1.5 }}>
-          No offices set up yet. Create rooms in this lobby to build your headquarters.
-        </div>
-      </div>
-    );
+    return <EmptyState icon="🏢" title="No offices yet." hint="Create rooms in this lobby to set up your HQ." />;
   }
 
   return (
@@ -376,9 +370,7 @@ function TeamTab({ members, presence, accent }: {
 
       {/* Member list */}
       {filtered.length === 0 && (
-        <div style={{ padding: 20, textAlign: "center", fontSize: 13, color: CLR.dim }}>
-          {search ? "No matching team members." : "No team members yet."}
-        </div>
+        <EmptyState compact title={search ? "Nobody matches that search." : "No team members yet."} />
       )}
 
       {filtered.map(m => {
@@ -570,7 +562,7 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
       {posts.length === 0 && (
         <div style={{ padding: "30px 20px", textAlign: "center" }}>
           <div style={{ fontSize: 28, marginBottom: 10, opacity: 0.3 }}>📢</div>
-          <div style={{ fontSize: 13, color: CLR.dim }}>No company announcements yet.</div>
+          <EmptyState compact title="No announcements yet." hint="Leadership's quiet. Check back later." />
         </div>
       )}
 

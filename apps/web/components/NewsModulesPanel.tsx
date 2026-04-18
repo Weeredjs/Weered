@@ -479,8 +479,8 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
               <rect x="3" y="3" width="18" height="18" rx="3" />
               <path d="M7 8h10M7 12h6M7 16h8" />
             </svg>
-            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>No articles yet</div>
-            <div style={{ fontSize: 11, marginTop: 4 }}>Feed is loading. Check back shortly.</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 12 }}>No articles yet.</div>
+            <div style={{ fontSize: 11, marginTop: 4 }}>Feed's warming up. Check back in a minute.</div>
           </div>
         ) : (
           <div style={{
