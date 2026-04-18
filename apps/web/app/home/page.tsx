@@ -766,7 +766,7 @@ export default function HomePage() {
           >
             What can you do here?
           </button>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby..."
+          <input data-weered-search value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby... ( / )"
             style={{
               background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
               borderRadius: 10, padding: "9px 14px 9px 34px",
