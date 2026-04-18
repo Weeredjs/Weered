@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -267,7 +268,7 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
                     </div>
                   )}
                   {!boxLoading && !boxscore && (
-                    <div style={{ textAlign: "center", padding: 8, opacity: 0.35, fontSize: 12 }}>No boxscore data available</div>
+                    <EmptyState compact title="No boxscore data." />
                   )}
                 </div>
               )}
@@ -277,7 +278,7 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
       </div>
 
       {games.length === 0 && !loading && !error && (
-        <div style={{ textAlign: "center", padding: 30, opacity: 0.35, fontSize: 13 }}>No games scheduled for this date.</div>
+        <EmptyState title="No games on the slate." hint="Try another date." />
       )}
     </div>
   );
@@ -371,7 +372,7 @@ function Standings({ accentColor }: { accentColor: string }) {
       ))}
 
       {divisions.length === 0 && (
-        <div style={{ textAlign: "center", padding: 30, opacity: 0.35, fontSize: 13 }}>No standings data available.</div>
+        <EmptyState title="No standings data." />
       )}
     </div>
   );
@@ -469,7 +470,7 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
       </div>
 
       {categories.length === 0 && (
-        <div style={{ textAlign: "center", padding: 30, opacity: 0.35, fontSize: 13 }}>No leaderboard data available.</div>
+        <EmptyState title="No leaderboard data." />
       )}
     </div>
   );
@@ -696,7 +697,7 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
                 )}
 
                 {!playerStats.batting && !playerStats.pitching && !playerStats.fielding && (
-                  <div style={{ ...S.card, textAlign: "center", fontSize: 12, opacity: 0.4 }}>No stats available for this player.</div>
+                  <div style={{ ...S.card, padding: 0 }}><EmptyState compact title="No stats for this player." /></div>
                 )}
               </div>
             )}
@@ -873,7 +874,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
       </div>
 
       {streams.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No live MLB streams right now.</div>
+        <EmptyState compact title="Nobody streaming MLB right now." />
       )}
 
       <StreamInterceptModal
@@ -901,7 +902,7 @@ function Highlights({ accentColor }: { accentColor: string }) {
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading highlights...</div>;
-  if (!highlights.length) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No highlights available yet today.</div>;
+  if (!highlights.length) return <EmptyState compact title="No highlights up yet today." />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -998,7 +999,7 @@ function Matchups({ accentColor }: { accentColor: string }) {
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading matchups...</div>;
-  if (!matchups.length) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No games scheduled today.</div>;
+  if (!matchups.length) return <EmptyState compact title="No games scheduled today." />;
 
   const statRow = (label: string, value: string | number | undefined, highlight?: boolean) => (
     <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
