@@ -634,7 +634,7 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
     <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
         {streams.map(s => (
-          <div key={s.id} style={{ ...S.card, padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setIntercept(s)}>
+          <div key={s.userLogin} style={{ ...S.card, padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setIntercept(s)}>
             <div style={{
               width: "100%", aspectRatio: "16 / 9",
               background: s.thumbnailUrl
@@ -672,7 +672,7 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
           </div>
         ))}
       </div>
-      {intercept && <StreamInterceptModal stream={intercept} onClose={() => setIntercept(null)} />}
+      {intercept && <StreamInterceptModal stream={intercept} lobbyId={lobbyId} onClose={() => setIntercept(null)} onWatchHere={() => setIntercept(null)} />}
     </>
   );
 }
