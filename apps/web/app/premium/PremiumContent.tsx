@@ -67,8 +67,8 @@ const tiers = [
   {
     id: "kingpin",
     name: "Kingpin",
-    price: "???",
-    sub: "",
+    price: "\u2014",
+    sub: "sealed",
     color: "#fcd34d",
     glow: "rgba(252,211,77,0.12)",
     border: "rgba(252,211,77,0.25)",
