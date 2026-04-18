@@ -4468,18 +4468,24 @@ html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::after {
 html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::before { bottom: 7px; left: 7px; }
 html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::after  { bottom: 7px; right: 7px; }
 
-/* Hover: brass lantern lights up, card lifts */
+/* Hover: brass lantern lights up, card lifts.
+   Note: inner content has a backdrop-filter glass layer that blocks
+   background changes from reaching the surface — we rely on OUTER
+   box-shadow glow + transform + border for the visible effect. */
 html[data-weered-lobby="windrose"] .weered-room-card:hover {
-  border-color: rgba(232,196,138,0.65) !important;
-  transform: translateY(-2px);
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(232,196,138,0.10) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(30,48,72,0.75) 0%, rgba(20,34,56,0.90) 100%) !important;
+  border: 1px solid rgba(232,196,138,0.75) !important;
+  transform: translateY(-3px) !important;
   box-shadow:
-    inset 0 1px 0 rgba(232,196,138,0.25),
-    inset 0 0 28px rgba(232,196,138,0.08),
-    0 0 30px rgba(232,196,138,0.22),
-    0 8px 28px rgba(0,0,0,0.6) !important;
+    0 0 0 1px rgba(232,196,138,0.35),
+    0 0 38px rgba(232,196,138,0.32),
+    0 0 80px rgba(232,196,138,0.12),
+    0 12px 32px rgba(0,0,0,0.55) !important;
+  z-index: 5 !important;
+}
+/* Hover: tint the inner mesh gradient warmer through an overlay pseudo */
+html[data-weered-lobby="windrose"] .weered-room-card:hover > div:nth-child(2) {
+  background: rgba(232,196,138,0.06) !important;
+  transition: background 0.22s ease !important;
 }
 
 /* Top brass rim flourish */
