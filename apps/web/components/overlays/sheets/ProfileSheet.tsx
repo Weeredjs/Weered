@@ -466,6 +466,44 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     } catch {}
   }
 
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
+  useEffect(() => {
+    if (!resolvedId || isMe || !token) { setIsBlocked(false); return; }
+    fetch(`${apiBase}/blocks`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(j => {
+        const list = Array.isArray(j?.blocks) ? j.blocks : [];
+        setIsBlocked(list.some((b: any) => String(b.userId) === String(resolvedId)));
+      })
+      .catch(() => {});
+  }, [resolvedId, isMe, apiBase, token]);
+
+  async function toggleBlock() {
+    if (!resolvedId || blockBusy) return;
+    const target = isBlocked;
+    if (!target) {
+      const { weeredConfirm } = await import("../../../lib/confirm");
+      const ok = await weeredConfirm({ title: `Block ${profile?.name || userId}?`, body: "They won't be able to DM you. You won't see their messages. You can unblock in Settings.", confirmLabel: "Block", destructive: true });
+      if (!ok) return;
+    }
+    setBlockBusy(true);
+    try {
+      const res = await fetch(`${apiBase}/users/${encodeURIComponent(resolvedId)}/block`, {
+        method: target ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json();
+      if (j?.ok) {
+        setIsBlocked(!target);
+        weeredToast.success(target ? "Unblocked." : "Blocked.");
+      } else {
+        weeredToast.error(j?.error || "Action failed.");
+      }
+    } catch { weeredToast.error("Action failed."); }
+    finally { setBlockBusy(false); }
+  }
+
   // ─── Loading state ──────────────────────────────────────────
   if (loading) return (
     <div style={wrap}>
@@ -855,8 +893,11 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       {!isMe && (
         <div style={{ ...section, marginTop: 10 }}>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={openDM} style={{ ...actionButton, background: "var(--weered-accent-bg, rgba(167,139,250,.1))", borderColor: "var(--weered-accent-ring, rgba(167,139,250,.25))", color: "var(--weered-accent-text, #c4b5fd)" }}>
+            <button onClick={openDM} disabled={isBlocked} title={isBlocked ? "Unblock to message" : undefined} style={{ ...actionButton, background: "var(--weered-accent-bg, rgba(167,139,250,.1))", borderColor: "var(--weered-accent-ring, rgba(167,139,250,.25))", color: "var(--weered-accent-text, #c4b5fd)", opacity: isBlocked ? 0.4 : 1, cursor: isBlocked ? "not-allowed" : "pointer" }}>
               <span style={{ fontSize: 14 }}>💬</span> Message
+            </button>
+            <button onClick={toggleBlock} disabled={blockBusy} style={{ ...actionButton, background: isBlocked ? "rgba(239,68,68,.15)" : "transparent", borderColor: isBlocked ? "rgba(239,68,68,.45)" : "var(--weered-border, rgba(148,163,184,.22))", color: isBlocked ? "rgba(252,165,165,.95)" : "var(--weered-muted, rgba(148,163,184,.75))" }}>
+              <span style={{ fontSize: 14 }}>{isBlocked ? "✓" : "🚫"}</span> {isBlocked ? "Unblock" : "Block"}
             </button>
           </div>
         </div>

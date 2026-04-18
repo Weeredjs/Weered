@@ -210,6 +210,9 @@ export default function SettingsSheet() {
         </Row>
       </Section>
 
+      {/* Blocked users */}
+      <BlockedUsersSection />
+
       {/* Developer */}
       <Section title="Developer">
         <Row label="Debug overlays" hint="Surface extra diagnostic labels.">
@@ -279,5 +282,77 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </div>
       {children}
     </div>
+  );
+}
+
+type BlockedRow = { id: string; userId: string; name: string; avatarColor: string | null; createdAt: string };
+
+function BlockedUsersSection() {
+  const [blocks, setBlocks] = React.useState<BlockedRow[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [busyId, setBusyId] = React.useState<string>("");
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${apiBase}/blocks`, { headers: { Authorization: `Bearer ${token()}` } });
+      const j = await r.json();
+      setBlocks(Array.isArray(j?.blocks) ? j.blocks : []);
+    } catch {} finally { setLoading(false); }
+  }, [apiBase]);
+
+  React.useEffect(() => { void load(); }, [load]);
+
+  async function unblock(userId: string) {
+    setBusyId(userId);
+    try {
+      await fetch(`${apiBase}/users/${encodeURIComponent(userId)}/block`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      setBlocks(cur => cur.filter(b => b.userId !== userId));
+    } finally { setBusyId(""); }
+  }
+
+  return (
+    <Section title="Blocked Users">
+      {loading ? (
+        <div style={{ fontSize: 12, color: "var(--weered-muted, rgba(148,163,184,.65))", padding: "6px 0" }}>Loading…</div>
+      ) : blocks.length === 0 ? (
+        <div style={{ fontSize: 12, color: "var(--weered-muted, rgba(148,163,184,.65))", padding: "6px 0" }}>
+          You haven't blocked anyone.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {blocks.map(b => (
+            <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, background: "var(--weered-panel2, rgba(255,255,255,.03))", border: "1px solid var(--weered-border, rgba(255,255,255,.08))" }}>
+              <div style={{ width: 26, height: 26, borderRadius: 999, background: b.avatarColor || "rgba(148,163,184,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+                {(b.name || "?").slice(0, 1).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "var(--weered-text, rgba(243,244,246,.92))", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {b.name}
+              </div>
+              <button
+                type="button"
+                onClick={() => unblock(b.userId)}
+                disabled={busyId === b.userId}
+                style={{
+                  padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 700,
+                  border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
+                  background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.85))",
+                  cursor: busyId === b.userId ? "default" : "pointer",
+                  opacity: busyId === b.userId ? 0.5 : 1,
+                  fontFamily: "inherit",
+                }}
+              >
+                Unblock
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
   );
 }
