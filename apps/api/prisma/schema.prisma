@@ -343,6 +343,9 @@ model User {
   bannedAt    DateTime?
   bannedBy    String?    // userId of staff member who banned
 
+  // Self-initiated account deletion (GDPR right to erasure)
+  deletedAt   DateTime?
+
   // GPS location (opt-in only)
   locationOptIn     Boolean    @default(false)
   latitude          Float?
