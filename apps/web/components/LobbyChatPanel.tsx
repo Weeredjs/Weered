@@ -52,29 +52,69 @@ function LinkPreviewCard({ url }: { url: string }) {
   );
 }
 
-function ChatBody({ text }: { text: string }) {
+const MENTION_BODY_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
+
+function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (handle: string) => void }) {
   if (!text) return null;
-  const parts: React.ReactNode[] = [];
   const imageUrls: string[] = [];
   const linkUrls: string[] = [];
-  let last = 0;
-  let match: RegExpExecArray | null;
+
+  // Collect URL + mention matches, then render left-to-right
+  type Tok = { kind: "url" | "mention"; start: number; end: number; value: string };
+  const toks: Tok[] = [];
   URL_RE.lastIndex = 0;
-  let key = 0;
-  while ((match = URL_RE.exec(text)) !== null) {
-    if (match.index > last) parts.push(text.slice(last, match.index));
-    const url = match[0];
-    parts.push(
-      <a key={key++} href={url} target="_blank" rel="noopener noreferrer" style={{
-        color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2,
-        wordBreak: "break-all",
-      }}>{url}</a>
-    );
-    if (IMG_EXT.test(url) || TENOR_RE.test(url)) imageUrls.push(url);
-    else linkUrls.push(url);
-    last = match.index + url.length;
+  let m: RegExpExecArray | null;
+  while ((m = URL_RE.exec(text)) !== null) {
+    toks.push({ kind: "url", start: m.index, end: m.index + m[0].length, value: m[0] });
   }
-  if (last < text.length) parts.push(text.slice(last));
+  MENTION_BODY_RE.lastIndex = 0;
+  while ((m = MENTION_BODY_RE.exec(text)) !== null) {
+    // Avoid matching an @ that's inside a URL we already captured
+    const inUrl = toks.some(t => t.kind === "url" && m!.index >= t.start && m!.index < t.end);
+    if (inUrl) continue;
+    toks.push({ kind: "mention", start: m.index, end: m.index + m[0].length, value: m[1] });
+  }
+  toks.sort((a, b) => a.start - b.start);
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+  for (const t of toks) {
+    if (t.start > cursor) parts.push(text.slice(cursor, t.start));
+    if (t.kind === "url") {
+      const url = t.value;
+      parts.push(
+        <a key={key++} href={url} target="_blank" rel="noopener noreferrer" style={{
+          color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2,
+          wordBreak: "break-all",
+        }}>{url}</a>
+      );
+      if (IMG_EXT.test(url) || TENOR_RE.test(url)) imageUrls.push(url);
+      else linkUrls.push(url);
+    } else {
+      const handle = t.value;
+      parts.push(
+        <span
+          key={key++}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onMentionClick) onMentionClick(handle);
+          }}
+          style={{
+            display: "inline-block",
+            padding: "0 4px",
+            borderRadius: 4,
+            background: "var(--weered-accent-bg, rgba(124,58,237,0.18))",
+            color: "var(--weered-accent-text, rgba(196,181,253,0.95))",
+            fontWeight: 700,
+            cursor: onMentionClick ? "pointer" : "default",
+          }}
+        >@{handle}</span>
+      );
+    }
+    cursor = t.end;
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
 
   return (
     <>
@@ -451,7 +491,10 @@ export default function LobbyChatPanel(
                       </div>
                     </div>
                   ) : (
-                    <ChatBody text={m?.body || m?.text || ""} />
+                    <ChatBody
+                      text={m?.body || m?.text || ""}
+                      onMentionClick={(h) => replaceTop("profile", { userId: h })}
+                    />
                   )}
                   {/* Reaction chips */}
                   {Array.isArray((m as any).reactions) && (m as any).reactions.length > 0 && !deletedAt && (

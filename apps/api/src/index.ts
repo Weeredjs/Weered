@@ -1248,6 +1248,36 @@ function dmDeliver(toUserId: string, payload: object) {
   }
 }
 
+// ── @mention resolution ──────────────────────────────────────────────────────
+// Extract @handles from body and look them up against User.usernameKey.
+// Returns { id, name }[] of resolved mentioned users, excluding the sender.
+// Case-insensitive; tolerates hyphens, underscores, numbers.
+const MENTION_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
+const RESERVED_MENTIONS = new Set(["operator", "everyone", "all", "here", "admin", "mods", "staff"]);
+
+async function resolveMentions(body: string, senderId: string): Promise<{ id: string; name: string }[]> {
+  const handles = new Set<string>();
+  let match: RegExpExecArray | null;
+  MENTION_RE.lastIndex = 0;
+  while ((match = MENTION_RE.exec(body)) !== null) {
+    const h = match[1].toLowerCase();
+    if (RESERVED_MENTIONS.has(h)) continue;
+    handles.add(h);
+  }
+  if (handles.size === 0) return [];
+  try {
+    const users = await prisma.user.findMany({
+      where: { usernameKey: { in: Array.from(handles) } },
+      select: { id: true, name: true, usernameKey: true },
+    });
+    return users
+      .filter(u => u.id !== senderId)
+      .map(u => ({ id: u.id, name: u.name || u.usernameKey }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Reaction helper: toggle a user's reaction on a target, return full aggregate
 async function toggleReactionOnTarget(targetType: "ROOM_MESSAGE" | "DIRECT_MESSAGE" | "CREW_MESSAGE", targetId: string, userId: string, emoji: string): Promise<{ ok: true; reactions: ReactionAgg[] } | { ok: false; reason: string }> {
   try {
@@ -3652,6 +3682,23 @@ app.post("/dm/:peerId", async (req, reply) => {
     const post = await prisma.forumPost.create({
       data: { title: title.trim(), body: body.trim(), category: cat as any, authorId: u.id, authorName: user?.name || "Unknown", lobbyId: validLobbyId },
     });
+    // @mentions in post body
+    (async () => {
+      try {
+        const mentioned = await resolveMentions(String(body || ""), u.id);
+        for (const m of mentioned) {
+          createNotification({
+            userId: m.id,
+            type: "MENTION",
+            title: `${user?.name || u.name} mentioned you in a forum post`,
+            body: String(title).slice(0, 120),
+            actorId: u.id,
+            actorName: user?.name || u.name,
+            actionUrl: `/forum/${post.id}`,
+          }).catch(() => {});
+        }
+      } catch {}
+    })();
     return reply.send({ ok: true, post });
   });
 
@@ -3733,6 +3780,27 @@ app.post("/dm/:peerId", async (req, reply) => {
       data: { postId, authorId: u.id, authorName: user?.name || "Unknown", body: body.trim() },
     });
     await prisma.forumPost.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+
+    // @mentions in comment body + notify post author (if not me)
+    (async () => {
+      try {
+        const notifiedIds = new Set<string>();
+        const mentioned = await resolveMentions(String(body || ""), u.id);
+        for (const m of mentioned) {
+          if (notifiedIds.has(m.id)) continue;
+          notifiedIds.add(m.id);
+          createNotification({
+            userId: m.id,
+            type: "MENTION",
+            title: `${user?.name || u.name} mentioned you in a forum thread`,
+            body: String(body).slice(0, 120),
+            actorId: u.id,
+            actorName: user?.name || u.name,
+            actionUrl: `/forum/${postId}`,
+          }).catch(() => {});
+        }
+      } catch {}
+    })();
 
     const authorMap = await enrichForumAuthors([u.id]);
     return reply.send({ ok: true, comment: { ...comment, author: authorMap[u.id] || null, myVote: 0 } });
@@ -4540,17 +4608,25 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           broadcast(room, { type: "chat:new", roomId, msg: m });
           room.lastActiveAt = Date.now();
           awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(() => {});
-          // @mention notifications
-          const mentions = body.match(/@([\w]+)/g);
-          if (mentions) {
-            const mentionedNames = new Set(mentions.map((m: string) => m.slice(1).toLowerCase()));
-            for (const [uid, ru] of room.users) {
-              if (uid === ws.user.id) continue;
-              if (mentionedNames.has(ru.name.toLowerCase())) {
-                createNotification({ userId: uid, type: "MENTION", title: `${ws.user.name} mentioned you in ${room.name || "a lobby"}`, body: body.slice(0, 120), actorId: ws.user.id, actorName: ws.user.name, actionUrl: `/lobby/${room.roomId}` }).catch(() => {});
+          // @mention notifications — resolves against the User table so
+          // offline / out-of-room users still get pinged
+          (async () => {
+            try {
+              const mentioned = await resolveMentions(body, ws.user.id);
+              const roomPath = room.lobbyId ? `/lobby/${room.lobbyId}` : `/room/${room.roomId}`;
+              for (const u of mentioned) {
+                createNotification({
+                  userId: u.id,
+                  type: "MENTION",
+                  title: `${ws.user.name} mentioned you in ${room.name || "a lobby"}`,
+                  body: body.slice(0, 120),
+                  actorId: ws.user.id,
+                  actorName: ws.user.name,
+                  actionUrl: roomPath,
+                }).catch(() => {});
               }
-            }
-          }
+            } catch {}
+          })();
           // AI Operator bot detection
           if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
             const question = body.replace(/@operator/gi, "").replace(/^\/ask\s*/i, "").trim();
@@ -5299,6 +5375,33 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             }
 
             awardNotoriety(fromId, "CHAT_MESSAGE").catch(() => {});
+
+            // @mention notifications inside crew chat — only pings
+            // crew members (we don't notify random users via crew chat)
+            (async () => {
+              try {
+                const mentioned = await resolveMentions(body, fromId);
+                if (mentioned.length === 0) return;
+                const memberRows = await (prisma as any).crewMember.findMany({
+                  where: { crewId },
+                  select: { userId: true },
+                });
+                const memberSet = new Set<string>(memberRows.map((r: any) => r.userId));
+                for (const u of mentioned) {
+                  if (!memberSet.has(u.id)) continue; // skip non-members
+                  createNotification({
+                    userId: u.id,
+                    type: "MENTION",
+                    title: `${ws.user?.name || "Someone"} mentioned you in crew chat`,
+                    body: body.slice(0, 120),
+                    actorId: fromId,
+                    actorName: ws.user?.name || undefined,
+                    actionUrl: "/home",
+                    meta: { crewId },
+                  }).catch(() => {});
+                }
+              } catch {}
+            })();
           } catch (e) { console.error("[crew:send]", e); }
           return;
         }
