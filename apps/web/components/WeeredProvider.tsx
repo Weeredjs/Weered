@@ -305,6 +305,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:message") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
       }
+      if (msg.type === "dm:edited") {
+        try { window.dispatchEvent(new CustomEvent("weered:dm:edited", { detail: msg })); } catch {}
+      }
+      if (msg.type === "dm:deleted") {
+        try { window.dispatchEvent(new CustomEvent("weered:dm:deleted", { detail: msg })); } catch {}
+      }
       // Forward notification events to DOM
       if (msg.type === "notification:new") {
         try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
@@ -312,6 +318,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       // Forward crew chat messages to DOM
       if (msg.type === "crew:message") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:message", { detail: { crewId: msg.crewId, message: msg.message } })); } catch {}
+      }
+      if (msg.type === "crew:edited") {
+        try { window.dispatchEvent(new CustomEvent("weered:crew:edited", { detail: msg })); } catch {}
+      }
+      if (msg.type === "crew:deleted") {
+        try { window.dispatchEvent(new CustomEvent("weered:crew:deleted", { detail: msg })); } catch {}
       }
       // Forward crew presence changes to DOM
       if (msg.type === "crew:presence") {

@@ -3258,13 +3258,13 @@ app.get("/dm/:peerId", async (req, reply) => {
         where: { OR: [{ fromId: viewer.id, toId: peerId }, { fromId: peerId, toId: viewer.id }] },
         orderBy: { createdAt: "asc" },
         take: 50,
-        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true },
+        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true, editedAt: true, deletedAt: true },
       });
       await prisma.directMessage.updateMany({
         where: { fromId: peerId, toId: viewer.id, readAt: null },
         data: { readAt: new Date() },
       });
-      return reply.send({ messages: messages.map(m => ({ ...m, createdAt: m.createdAt.toISOString(), readAt: m.readAt?.toISOString() ?? null })) });
+      return reply.send({ messages: messages.map(m => ({ ...m, createdAt: m.createdAt.toISOString(), readAt: m.readAt?.toISOString() ?? null, editedAt: (m as any).editedAt?.toISOString() ?? null, deletedAt: (m as any).deletedAt?.toISOString() ?? null })) });
     } catch (e) {
       console.error("[dm GET]", e);
       return reply.code(500).send({ error: "Server error" });
@@ -5020,6 +5020,56 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        if (msg.type === "crew:edit") {
+          const msgId = String(msg.msgId || "");
+          const newBody = String(msg.body || "").trim().slice(0, 2000);
+          const meId = ws.user?.id;
+          if (!msgId || !newBody || !meId) return;
+          try {
+            const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+            if (!row) return;
+            if (row.userId !== meId) return;
+            if (row.deletedAt) return;
+            if (row.body === newBody) return;
+            if (Date.now() - new Date(row.createdAt).getTime() > 15 * 60 * 1000) return;
+            const editedAt = new Date();
+            await (prisma as any).crewMessage.update({ where: { id: msgId }, data: { body: newBody, editedAt } });
+            const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+            const memberIds = new Set(members.map((m: any) => m.userId));
+            const payload = { type: "crew:edited", crewId: row.crewId, msgId, body: newBody, editedAt: editedAt.toISOString() };
+            for (const sock of wss.clients) {
+              const sockUser = (sock as any).user;
+              if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+            }
+          } catch (e) { console.error("[crew:edit]", e); }
+          return;
+        }
+
+        if (msg.type === "crew:delete") {
+          const msgId = String(msg.msgId || "");
+          const meId = ws.user?.id;
+          if (!msgId || !meId) return;
+          try {
+            const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+            if (!row) return;
+            if (row.deletedAt) return;
+            // Sender, or crew leader/officer
+            const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
+            const isMod = membership?.role === "LEADER" || membership?.role === "OFFICER";
+            if (row.userId !== meId && !isMod) return;
+            const deletedAt = new Date();
+            await (prisma as any).crewMessage.update({ where: { id: msgId }, data: { body: "", deletedAt } });
+            const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+            const memberIds = new Set(members.map((m: any) => m.userId));
+            const payload = { type: "crew:deleted", crewId: row.crewId, msgId, deletedAt: deletedAt.toISOString() };
+            for (const sock of wss.clients) {
+              const sockUser = (sock as any).user;
+              if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+            }
+          } catch (e) { console.error("[crew:delete]", e); }
+          return;
+        }
+
         // ── DM via WebSocket ──────────────────────────────────────────────────
         if (msg.type === "dm:send") {
           const rawToId = String(msg.toId  || "").trim();
@@ -5053,6 +5103,51 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             });
             send(ws, { type: "dm:read:ack", fromId });
           } catch (e) { console.error("[dm:read]", e); }
+          return;
+        }
+
+        if (msg.type === "dm:edit") {
+          const msgId  = String(msg.msgId || "");
+          const newBody = String(msg.body || "").trim().slice(0, 2000);
+          const meId   = ws.user?.id;
+          if (!msgId || !newBody || !meId) return;
+          try {
+            const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
+            if (!dm) return;
+            if (dm.fromId !== meId) return; // sender-only
+            if ((dm as any).deletedAt) return;
+            if (dm.body === newBody) return;
+            if (Date.now() - new Date(dm.createdAt).getTime() > 15 * 60 * 1000) return;
+            const editedAt = new Date();
+            await prisma.directMessage.update({
+              where: { id: msgId },
+              data: { body: newBody, editedAt },
+            });
+            const payload = { type: "dm:edited", msgId, fromId: dm.fromId, toId: dm.toId, body: newBody, editedAt: editedAt.toISOString() };
+            dmDeliver(dm.toId, payload);
+            dmDeliver(dm.fromId, payload);
+          } catch (e) { console.error("[dm:edit]", e); }
+          return;
+        }
+
+        if (msg.type === "dm:delete") {
+          const msgId = String(msg.msgId || "");
+          const meId  = ws.user?.id;
+          if (!msgId || !meId) return;
+          try {
+            const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
+            if (!dm) return;
+            if (dm.fromId !== meId) return; // sender-only; DMs have no mods
+            if ((dm as any).deletedAt) return;
+            const deletedAt = new Date();
+            await prisma.directMessage.update({
+              where: { id: msgId },
+              data: { body: "", deletedAt },
+            });
+            const payload = { type: "dm:deleted", msgId, fromId: dm.fromId, toId: dm.toId, deletedAt: deletedAt.toISOString() };
+            dmDeliver(dm.toId, payload);
+            dmDeliver(dm.fromId, payload);
+          } catch (e) { console.error("[dm:delete]", e); }
           return;
         }
       })();
@@ -5435,7 +5530,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       where: { crewId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: { id: true, userId: true, userName: true, body: true, createdAt: true },
+      select: { id: true, userId: true, userName: true, body: true, createdAt: true, editedAt: true, deletedAt: true },
     });
 
     return reply.send({ ok: true, messages: messages.reverse() });
