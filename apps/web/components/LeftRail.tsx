@@ -151,6 +151,36 @@ export default function LeftRail() {
   const router = useRouter();
   const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } = useWeered() as any;
 
+  // ── Lobby-theme label swap (reactive to data-weered-lobby attr) ───────────
+  const [lobbyTheme, setLobbyTheme] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => setLobbyTheme(document.documentElement.getAttribute("data-weered-lobby"));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-weered-lobby"] });
+    return () => obs.disconnect();
+  }, []);
+
+  // Pirate vocabulary when inside Windrose
+  const isWindrose = lobbyTheme === "windrose";
+  const navLabels = {
+    lobby:   isWindrose ? "Port"           : "Lobby",
+    home:    isWindrose ? "Home"           : "Home", // already makes sense at sea
+    forum:   isWindrose ? "Ship's Log"     : "Forum",
+    paper:   isWindrose ? "Doubloons"      : "Paper",
+    locator: isWindrose ? "Sextant"        : "Locator",
+    ops:     isWindrose ? "Quartermaster"  : "Ops",
+    communities: isWindrose ? "Fleet"      : "Communities",
+  };
+  const navIcons = {
+    lobby:   isWindrose ? "⚓" : "🏠",
+    home:    isWindrose ? "🏴‍☠️" : "📡",
+    forum:   isWindrose ? "📜" : "💬",
+    paper:   isWindrose ? "🪙" : "💵",
+    locator: isWindrose ? "🧭" : "📍",
+    ops:     isWindrose ? "🗝" : "⚙",
+  };
+
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
   const [q, setQ] = useState("");
@@ -459,20 +489,20 @@ export default function LeftRail() {
 
       {/* ── Communities ───────────────────────────────────────────────────── */}
       <div className="weered-left-section">
-        <div className="weered-left-title">Communities</div>
+        <div className="weered-left-title">{navLabels.communities}</div>
 
         {[
-          { href: lobbyHrefMain, label: "Lobby", icon: "🏠", active: isLobbyActive, onClick: undefined as any },
-          { href: "/home", label: "Home", icon: "📡", active: isHomeActive, onClick: (e: any) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); } },
-          { href: "/forum", label: "Forum", icon: "💬", active: pathname.startsWith("/forum"), onClick: undefined as any },
-          { href: "/store", label: "Paper", icon: "💵", active: pathname.startsWith("/store"), onClick: undefined as any },
-          { href: "/map", label: "Locator", icon: "📍", active: pathname.startsWith("/map"), onClick: undefined as any },
+          { href: lobbyHrefMain, label: navLabels.lobby, icon: navIcons.lobby, active: isLobbyActive, onClick: undefined as any, key: "lobby" },
+          { href: "/home", label: navLabels.home, icon: navIcons.home, active: isHomeActive, onClick: (e: any) => { e.preventDefault(); try { leave(); } catch {} router.push("/home"); }, key: "home" },
+          { href: "/forum", label: navLabels.forum, icon: navIcons.forum, active: pathname.startsWith("/forum"), onClick: undefined as any, key: "forum" },
+          { href: "/store", label: navLabels.paper, icon: navIcons.paper, active: pathname.startsWith("/store"), onClick: undefined as any, key: "paper" },
+          { href: "/map", label: navLabels.locator, icon: navIcons.locator, active: pathname.startsWith("/map"), onClick: undefined as any, key: "locator" },
           ...((globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT")
-            ? [{ href: "/staff", label: "Ops", icon: "⚙", active: pathname.startsWith("/staff"), onClick: undefined as any }]
+            ? [{ href: "/staff", label: navLabels.ops, icon: navIcons.ops, active: pathname.startsWith("/staff"), onClick: undefined as any, key: "ops" }]
             : []),
         ].map((item) => (
           <Link
-            key={item.label}
+            key={item.key}
             className={"weered-left-link rounded-xl border px-3 py-2.5 transition-all flex items-center gap-2.5 " + (item.active
               ? "weered-left-link-active border-violet-500/25 bg-violet-500/12"
               : "border-white/[.06] bg-white/[.02] hover:bg-white/[.06] hover:border-white/[.12]"
@@ -482,7 +512,7 @@ export default function LeftRail() {
           >
             <span className="text-[15px] opacity-70">{item.icon}</span>
             <span className="flex-1 font-semibold text-[13px]">{item.label}</span>
-            {item.label === "Paper" && paperBal !== null && (
+            {item.key === "paper" && paperBal !== null && (
               <span style={{ fontSize: 11, fontWeight: 800, color: "#D4A017", fontFamily: "monospace" }}>
                 {paperBal.toLocaleString()}
               </span>
