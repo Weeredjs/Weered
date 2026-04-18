@@ -414,7 +414,7 @@ export default function StorePage() {
           {storeLoading ? (
             <div style={S.empty}>Loading store...</div>
           ) : storeItems.length === 0 ? (
-            <div style={S.empty}>Store is empty. Check back soon!</div>
+            <div style={S.empty}>Shelves are bare. New drops coming.</div>
           ) : (
             <div style={S.grid}>
               {storeItems.map((item: any) => {
@@ -465,7 +465,7 @@ export default function StorePage() {
           {invLoading ? (
             <div style={S.empty}>Loading inventory...</div>
           ) : inventory.length === 0 ? (
-            <div style={S.empty}>Your collection is empty. Hit the store!</div>
+            <div style={S.empty}>Stash is empty. Hit the store.</div>
           ) : (
             <div style={S.grid}>
               {inventory.map((ui: any) => {
@@ -588,7 +588,7 @@ export default function StorePage() {
           {marketLoading ? (
             <div style={S.empty}>Loading marketplace...</div>
           ) : listings.length === 0 ? (
-            <div style={S.empty}>No listings right now. Be the first seller!</div>
+            <div style={S.empty}>Marketplace is quiet. Be the first to list.</div>
           ) : (
             <div style={S.grid}>
               {listings.map((l: any) => {

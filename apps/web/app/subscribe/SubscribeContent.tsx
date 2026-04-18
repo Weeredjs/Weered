@@ -63,7 +63,7 @@ const TIERS = [
     ctaStyle: "orange",
   },
   {
-    id: "KINGPIN", name: "Kingpin", price: "???", sub: "", monthly: -1,
+    id: "KINGPIN", name: "Kingpin", price: "—", sub: "sealed", monthly: -1,
     color: "#fcd34d",
     glow: "rgba(252,211,77,0.12)",
     border: "rgba(252,211,77,0.25)",
