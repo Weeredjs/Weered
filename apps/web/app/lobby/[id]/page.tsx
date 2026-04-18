@@ -355,6 +355,17 @@ export default function LobbyIdPage() {
 
   useEffect(() => { loadLobby(); }, [lobbyId]);
 
+  // Lobby-specific theme takeover — applies a data attribute to <html>
+  // that scoped CSS (see globals.css) can hook into for full chrome reskin.
+  useEffect(() => {
+    if (!lobbyId) return;
+    const THEMEABLE = new Set<string>(["windrose"]);
+    if (THEMEABLE.has(lobbyId)) {
+      document.documentElement.setAttribute("data-weered-lobby", lobbyId);
+      return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
+    }
+  }, [lobbyId]);
+
   // Only join WS room if member (or staff/owner)
   useEffect(() => {
     if (lobbyId && memberChecked && isMember) join(lobbyId);

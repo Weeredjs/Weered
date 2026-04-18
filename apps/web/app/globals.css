@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
 
 /* =============================================
    WEERED DESIGN TOKENS
@@ -4063,4 +4064,408 @@ a[href^="/room/"]:hover {
 }
 .weered-trademark-footer a:hover {
   color: rgba(148, 163, 184, 0.45);
+}
+
+/* =====================================================================
+   WINDROSE — LOBBY-SPECIFIC THEME TAKEOVER
+   Scope: html[data-weered-lobby="windrose"]
+   Active only when the user is inside the Windrose lobby. Resets on leave.
+   ===================================================================== */
+
+html[data-weered-lobby="windrose"] {
+  --weered-bg:              #0e1826;
+  --weered-panel:           rgba(25, 40, 62, 0.85);
+  --weered-panel2:          rgba(20, 34, 56, 0.92);
+  --weered-border:          rgba(201, 160, 102, 0.25);
+  --weered-border2:         rgba(232, 196, 138, 0.45);
+  --weered-text:            #e4d4b0;
+  --weered-muted:           rgba(168, 151, 117, 0.85);
+  --weered-accent-1:        #c9a066;
+  --weered-accent-2:        #e8c48a;
+  --weered-accent-bg:       rgba(201, 160, 102, 0.18);
+  --weered-accent-ring:     rgba(232, 196, 138, 0.50);
+  --weered-accent-grad:     linear-gradient(135deg, #c9a066 0%, #e8c48a 100%);
+  --weered-scrollbar-track: rgba(10, 18, 32, 0.6);
+  --weered-scrollbar-thumb: rgba(201, 160, 102, 0.35);
+  --weered-scrollbar-thumb-hover: rgba(232, 196, 138, 0.55);
+
+  --wr-brass:      #c9a066;
+  --wr-brass-hi:   #e8c48a;
+  --wr-brass-low:  #8a6b3e;
+  --wr-parchment:  #e4d4b0;
+  --wr-parch-dim:  #a89775;
+  --wr-sea-abyss:  #0a1424;
+  --wr-sea-deep:   #0e1826;
+  --wr-sea-mid:    #19283e;
+  --wr-sea-foam:   #243752;
+  --wr-ink:        #05080f;
+  --wr-blood:      #a33d3d;
+}
+
+html[data-weered-lobby="windrose"] body {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(232,196,138,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 10% 100%, rgba(74,138,157,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(163,61,61,0.03) 0%, transparent 50%),
+    linear-gradient(180deg, #0e1826 0%, #07101c 100%) !important;
+  color: var(--wr-parchment);
+}
+
+html[data-weered-lobby="windrose"] body::before {
+  content: "";
+  position: fixed;
+  bottom: -10%;
+  right: -8%;
+  width: 620px;
+  height: 620px;
+  background: url("/brand/lobbies/windrose-compass.svg") center/contain no-repeat;
+  opacity: 0.055;
+  pointer-events: none;
+  z-index: 0;
+  animation: windrose-compass-spin 360s linear infinite;
+  filter: drop-shadow(0 0 18px rgba(232,196,138,0.08));
+}
+
+html[data-weered-lobby="windrose"] body::after {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: -4%;
+  width: 340px;
+  height: 520px;
+  background: url("/brand/lobbies/windrose-kraken.svg") bottom left/contain no-repeat;
+  opacity: 0.16;
+  pointer-events: none;
+  z-index: 0;
+  transform-origin: bottom left;
+  animation: windrose-tentacle-sway 14s ease-in-out infinite;
+}
+
+html[data-weered-lobby="windrose"] .weered-shell::after {
+  content: "";
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  background: url("/brand/lobbies/windrose-waves.svg") bottom left/2400px 80px repeat-x;
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+  animation: windrose-waves-drift 80s linear infinite;
+}
+
+@keyframes windrose-compass-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes windrose-tentacle-sway {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50%      { transform: rotate(2.5deg) translateY(-4px); }
+}
+@keyframes windrose-waves-drift {
+  from { background-position-x: 0; }
+  to   { background-position-x: -2400px; }
+}
+@keyframes windrose-seal-pulse {
+  0%, 100% { opacity: 0.75; box-shadow: 0 0 6px rgba(230,57,70,0.6); }
+  50%      { opacity: 1;    box-shadow: 0 0 10px rgba(230,57,70,0.9); }
+}
+@keyframes windrose-lantern-flicker {
+  0%, 100% { box-shadow: 0 0 16px rgba(232,196,138,0.18), inset 0 0 8px rgba(232,196,138,0.06); }
+  47%      { box-shadow: 0 0 22px rgba(232,196,138,0.28), inset 0 0 10px rgba(232,196,138,0.10); }
+  50%      { box-shadow: 0 0 14px rgba(232,196,138,0.12), inset 0 0 6px rgba(232,196,138,0.04); }
+  53%      { box-shadow: 0 0 22px rgba(232,196,138,0.26), inset 0 0 10px rgba(232,196,138,0.10); }
+}
+
+html[data-weered-lobby="windrose"] .weered-shell,
+html[data-weered-lobby="windrose"] .weered-left,
+html[data-weered-lobby="windrose"] .weered-right,
+html[data-weered-lobby="windrose"] .weered-center {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-weered-lobby="windrose"] .weered-left,
+html[data-weered-lobby="windrose"] .weered-right {
+  background: linear-gradient(180deg, rgba(25,40,62,0.70) 0%, rgba(14,24,38,0.88) 100%);
+  border-color: rgba(201,160,102,0.22);
+}
+
+html[data-weered-lobby="windrose"] .weered-rr-section,
+html[data-weered-lobby="windrose"] .weered-left-section,
+html[data-weered-lobby="windrose"] .weered-presence,
+html[data-weered-lobby="windrose"] .weered-usercorner {
+  background: linear-gradient(180deg, #1a2a42 0%, #142238 100%);
+  border: 1px solid rgba(201,160,102,0.32);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(201,160,102,0.10),
+    inset 0 1px 0 rgba(232,196,138,0.12),
+    0 4px 18px rgba(0,0,0,0.45);
+  position: relative;
+}
+
+html[data-weered-lobby="windrose"] .weered-rr-section::before,
+html[data-weered-lobby="windrose"] .weered-rr-section::after,
+html[data-weered-lobby="windrose"] .weered-left-section::before,
+html[data-weered-lobby="windrose"] .weered-left-section::after,
+html[data-weered-lobby="windrose"] .weered-presence::before,
+html[data-weered-lobby="windrose"] .weered-presence::after,
+html[data-weered-lobby="windrose"] .weered-usercorner::before,
+html[data-weered-lobby="windrose"] .weered-usercorner::after {
+  content: "";
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e8c48a 0%, #8a6b3e 70%, #3d2d1a 100%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.7);
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-weered-lobby="windrose"] .weered-rr-section::before,
+html[data-weered-lobby="windrose"] .weered-left-section::before,
+html[data-weered-lobby="windrose"] .weered-presence::before,
+html[data-weered-lobby="windrose"] .weered-usercorner::before { top: 5px; left: 5px; }
+html[data-weered-lobby="windrose"] .weered-rr-section::after,
+html[data-weered-lobby="windrose"] .weered-left-section::after,
+html[data-weered-lobby="windrose"] .weered-presence::after,
+html[data-weered-lobby="windrose"] .weered-usercorner::after { top: 5px; right: 5px; }
+
+html[data-weered-lobby="windrose"] .weered-left-title,
+html[data-weered-lobby="windrose"] .weered-rr-section-title,
+html[data-weered-lobby="windrose"] .weered-presence-title {
+  font-family: "Pirata One", "Cormorant Garamond", serif !important;
+  letter-spacing: 2.5px !important;
+  color: #e8c48a !important;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(232,196,138,0.15);
+  font-weight: 400 !important;
+}
+
+html[data-weered-lobby="windrose"] .weered-left-link,
+html[data-weered-lobby="windrose"] .weered-rr-room-card {
+  font-family: "Cormorant Garamond", "Georgia", serif !important;
+}
+
+html[data-weered-lobby="windrose"] .weered-left-link {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--wr-parchment);
+  font-size: 15px !important;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.15s ease;
+}
+html[data-weered-lobby="windrose"] .weered-left-link:hover {
+  background: rgba(201,160,102,0.08);
+  border-color: rgba(201,160,102,0.32);
+  color: #e8c48a;
+  box-shadow: 0 0 18px rgba(232,196,138,0.12), inset 0 0 10px rgba(232,196,138,0.05);
+}
+html[data-weered-lobby="windrose"] .weered-left-link-active {
+  background: linear-gradient(180deg, rgba(201,160,102,0.22), rgba(138,107,62,0.12)) !important;
+  border-color: rgba(232,196,138,0.60) !important;
+  color: #e8c48a !important;
+  box-shadow:
+    inset 0 0 14px rgba(232,196,138,0.10),
+    0 0 24px rgba(232,196,138,0.18) !important;
+  animation: windrose-lantern-flicker 7s ease-in-out infinite;
+}
+
+html[data-weered-lobby="windrose"] .weered-rr-room-card {
+  background: rgba(25,40,62,0.42) !important;
+  border: 1px solid rgba(201,160,102,0.18) !important;
+  border-radius: 3px !important;
+  transition: all 0.15s ease;
+  color: var(--wr-parchment) !important;
+}
+html[data-weered-lobby="windrose"] .weered-rr-room-card:hover {
+  border-color: rgba(232,196,138,0.40) !important;
+  background: rgba(201,160,102,0.08) !important;
+  box-shadow: 0 0 14px rgba(232,196,138,0.14);
+  transform: translateY(-1px);
+}
+html[data-weered-lobby="windrose"] .weered-rr-room-card-active {
+  border-color: rgba(232,196,138,0.70) !important;
+  background: rgba(201,160,102,0.18) !important;
+  box-shadow:
+    inset 0 0 14px rgba(232,196,138,0.12),
+    0 0 22px rgba(232,196,138,0.18) !important;
+  animation: windrose-lantern-flicker 6s ease-in-out infinite;
+}
+html[data-weered-lobby="windrose"] .weered-rr-room-card-live {
+  position: relative;
+}
+html[data-weered-lobby="windrose"] .weered-rr-room-card-live::before {
+  content: "";
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e63946 0%, #6b0f0f 85%);
+  animation: windrose-seal-pulse 2s ease-in-out infinite;
+  z-index: 3;
+  pointer-events: none;
+}
+
+html[data-weered-lobby="windrose"] .weered-rr-primary,
+html[data-weered-lobby="windrose"] .weered-rr-primary-solid,
+html[data-weered-lobby="windrose"] .weered-uc-action,
+html[data-weered-lobby="windrose"] .weered-rr-join {
+  background: linear-gradient(180deg, #243752 0%, #15233a 100%) !important;
+  border: 1px solid rgba(201,160,102,0.50) !important;
+  color: #e8c48a !important;
+  font-family: "Cormorant Garamond", "Georgia", serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.8px !important;
+  text-transform: uppercase;
+  font-size: 11px !important;
+  border-radius: 3px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: inset 0 1px 0 rgba(232,196,138,0.10), 0 2px 8px rgba(0,0,0,0.5);
+}
+html[data-weered-lobby="windrose"] .weered-rr-primary:hover,
+html[data-weered-lobby="windrose"] .weered-rr-primary-solid:hover,
+html[data-weered-lobby="windrose"] .weered-uc-action:hover,
+html[data-weered-lobby="windrose"] .weered-rr-join:hover {
+  background: linear-gradient(180deg, rgba(201,160,102,0.22) 0%, rgba(138,107,62,0.12) 100%) !important;
+  border-color: rgba(232,196,138,0.75) !important;
+  box-shadow:
+    0 0 18px rgba(232,196,138,0.35),
+    inset 0 0 10px rgba(232,196,138,0.10),
+    inset 0 1px 0 rgba(232,196,138,0.20);
+}
+
+html[data-weered-lobby="windrose"] .weered-rr-search,
+html[data-weered-lobby="windrose"] .weered-presence-search,
+html[data-weered-lobby="windrose"] .weered-input {
+  background: rgba(10,20,36,0.70) !important;
+  border: 1px solid rgba(201,160,102,0.32) !important;
+  color: #e4d4b0 !important;
+  font-family: "Cormorant Garamond", "Georgia", serif !important;
+  border-radius: 3px !important;
+  font-size: 14px !important;
+}
+html[data-weered-lobby="windrose"] .weered-rr-search:focus,
+html[data-weered-lobby="windrose"] .weered-presence-search:focus,
+html[data-weered-lobby="windrose"] .weered-input:focus {
+  border-color: rgba(232,196,138,0.65) !important;
+  box-shadow: 0 0 0 2px rgba(232,196,138,0.18), inset 0 0 6px rgba(232,196,138,0.06) !important;
+  outline: none;
+}
+html[data-weered-lobby="windrose"] .weered-rr-search::placeholder,
+html[data-weered-lobby="windrose"] .weered-presence-search::placeholder,
+html[data-weered-lobby="windrose"] .weered-input::placeholder {
+  color: rgba(168,151,117,0.6) !important;
+  font-style: italic;
+}
+
+html[data-weered-lobby="windrose"] .weered-lobby-header-row {
+  background: linear-gradient(180deg, #1a2a42 0%, #142238 100%) !important;
+  border: 1px solid rgba(201,160,102,0.35) !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(232,196,138,0.12),
+    0 4px 18px rgba(0,0,0,0.45);
+  position: relative;
+}
+html[data-weered-lobby="windrose"] .weered-lobby-header-row::before,
+html[data-weered-lobby="windrose"] .weered-lobby-header-row::after {
+  content: "";
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e8c48a 0%, #8a6b3e 70%, #3d2d1a 100%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.7);
+  top: 8px;
+  pointer-events: none;
+}
+html[data-weered-lobby="windrose"] .weered-lobby-header-row::before { left: 8px; }
+html[data-weered-lobby="windrose"] .weered-lobby-header-row::after  { right: 8px; }
+
+html[data-weered-lobby="windrose"] .weered-lobby-tab {
+  background: transparent !important;
+  border: 1px solid rgba(201,160,102,0.25) !important;
+  color: var(--wr-parch-dim) !important;
+  font-family: "Pirata One", "Cormorant Garamond", serif !important;
+  letter-spacing: 3px !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+html[data-weered-lobby="windrose"] .weered-lobby-tab:hover {
+  border-color: rgba(232,196,138,0.55) !important;
+  color: #e8c48a !important;
+  box-shadow: 0 0 14px rgba(232,196,138,0.18);
+}
+html[data-weered-lobby="windrose"] .weered-lobby-tab-active {
+  background: linear-gradient(180deg, rgba(201,160,102,0.22), rgba(138,107,62,0.10)) !important;
+  border-color: rgba(232,196,138,0.75) !important;
+  color: #e8c48a !important;
+  box-shadow:
+    inset 0 0 12px rgba(232,196,138,0.10),
+    0 0 18px rgba(232,196,138,0.22) !important;
+}
+
+html[data-weered-lobby="windrose"] .weered-hero-content {
+  background: linear-gradient(180deg, rgba(25,40,62,0.60) 0%, rgba(14,24,38,0.85) 100%) !important;
+  border: 1px solid rgba(201,160,102,0.30);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(232,196,138,0.12), 0 6px 24px rgba(0,0,0,0.5);
+}
+
+html[data-weered-lobby="windrose"] .weered-event-badge {
+  background: linear-gradient(135deg, #a33d3d 0%, #5b1919 100%) !important;
+  border: 1px solid #e8c48a !important;
+  color: #e8c48a !important;
+  text-transform: uppercase !important;
+  font-family: "Pirata One", "Cormorant Garamond", serif !important;
+  letter-spacing: 2.5px !important;
+  box-shadow: 0 0 12px rgba(163,61,61,0.35), inset 0 1px 0 rgba(232,196,138,0.2) !important;
+}
+
+html[data-weered-lobby="windrose"] .weered-presence-head {
+  border-bottom: 1px solid rgba(201,160,102,0.25);
+}
+html[data-weered-lobby="windrose"] .weered-presence-row {
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+html[data-weered-lobby="windrose"] .weered-presence-row:hover {
+  background: rgba(201,160,102,0.05);
+  border-color: rgba(201,160,102,0.22);
+}
+
+html[data-weered-lobby="windrose"] .weered-usercorner {
+  background: linear-gradient(180deg, rgba(25,40,62,0.80) 0%, rgba(14,24,38,0.92) 100%) !important;
+  border: 1px solid rgba(201,160,102,0.40) !important;
+  border-radius: 4px !important;
+}
+
+html[data-weered-lobby="windrose"] ::-webkit-scrollbar-track {
+  background: rgba(10,18,32,0.6);
+}
+html[data-weered-lobby="windrose"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c9a066, #8a6b3e);
+  border-radius: 2px;
+  border: 1px solid rgba(14,24,38,0.6);
+}
+html[data-weered-lobby="windrose"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e8c48a, #c9a066);
+}
+
+html[data-weered-lobby="windrose"] ::selection {
+  background: rgba(232,196,138,0.35);
+  color: #0a1424;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-weered-lobby="windrose"] body::before,
+  html[data-weered-lobby="windrose"] body::after,
+  html[data-weered-lobby="windrose"] .weered-shell::after,
+  html[data-weered-lobby="windrose"] .weered-left-link-active,
+  html[data-weered-lobby="windrose"] .weered-rr-room-card-active,
+  html[data-weered-lobby="windrose"] .weered-rr-room-card-live::before {
+    animation: none !important;
+  }
 }
