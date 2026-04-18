@@ -1,11 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
-  <!-- Wind-filled sail, apex top-left, belly to the right. -->
-  <!-- Start at head, curve down-right along the leech (wind side), straight back along the luff (mast side). -->
-  <path d="M32 10
-           Q 56 40 92 64
-           L 34 72
-           Z"
-        fill="currentColor" />
-  <!-- Short horizontal deck / waterline stroke below -->
-  <rect x="22" y="82" width="70" height="6" rx="1" fill="currentColor" />
+  <!-- Wind-filled sail, apex top-left, belly to the right. Aged brass fill so it reads on any background. -->
+  <path d="M32 10 Q 56 40 92 64 L 34 72 Z" fill="#e0b97e" />
+  <rect x="22" y="82" width="70" height="6" rx="1" fill="#e0b97e" />
 </svg>

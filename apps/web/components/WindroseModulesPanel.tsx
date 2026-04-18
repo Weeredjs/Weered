@@ -19,19 +19,19 @@ async function apiFetch(path: string, opts?: RequestInit) {
 // ═══ Windrose Palette ══════════════════════════════════════════════════════════
 
 const PAL = {
-  abyss:     "#060a14",
-  stormDeep: "#0a1220",
-  stormMid:  "#0f1c30",
-  stormFoam: "#172a44",
-  brass:     "#b8935a",
-  brassHi:   "#e0b97e",
-  brassLow:  "#7e6239",
-  verdigris: "#3a7488",
-  parchment: "#d4c09f",
-  parchDim:  "#9c8a68",
-  sea:       "#2a5a6b",
-  blood:     "#8b2e2e",
-  ink:       "#05080f",
+  abyss:     "#0e1826",   // deepest shadow — visible dark blue, not black
+  stormDeep: "#19283e",   // base — deep sea at dusk
+  stormMid:  "#243752",   // mid — more life, lets brass pop
+  stormFoam: "#2e4363",   // highlight — foam on the crest
+  brass:     "#c9a066",
+  brassHi:   "#e8c48a",
+  brassLow:  "#8a6b3e",
+  verdigris: "#4a8a9d",
+  parchment: "#e4d4b0",   // warmer parchment
+  parchDim:  "#a89775",
+  sea:       "#3a7488",
+  blood:     "#a33d3d",   // warmer, candle-lit pirate red
+  ink:       "#0a1220",
 };
 
 // ═══ Styles ════════════════════════════════════════════════════════════════════
