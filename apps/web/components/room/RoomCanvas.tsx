@@ -8,6 +8,7 @@ import RoomStage, { StageMode } from "./RoomStage";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
+import CopyButton from "../CopyButton";
 
 // ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
 
@@ -397,8 +398,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         <div className="text-sm font-semibold truncate mb-0.5">{roomLabel}</div>
         <div className="text-[11px] text-white/35 truncate font-mono mb-2">{roomId}</div>
         <div className="flex gap-2">
-          <button type="button" onClick={() => safeCopy(roomId)} className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors">Copy id</button>
-          <button type="button" onClick={() => safeCopy(shareUrl)} className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors">Copy link</button>
+          <CopyButton value={roomId} label="Copy id" copiedLabel="Copied" className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors" />
+          <CopyButton value={shareUrl} label="Copy link" copiedLabel="Copied" className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors" />
         </div>
       </div>
 
@@ -436,7 +437,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             {links.map((v) => (
               <div key={v} className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/10 px-3 py-2">
                 <a className="text-[12px] text-white/60 truncate flex-1 hover:underline" href={v} target="_blank" rel="noreferrer">{v}</a>
-                <button type="button" onClick={() => safeCopy(v)} className="text-[10px] text-white/35 hover:text-white/60 flex-shrink-0">copy</button>
+                <CopyButton value={v} label="copy" copiedLabel="copied" className="text-[10px] text-white/35 hover:text-white/60 flex-shrink-0" />
                 <button type="button" onClick={() => removeLink(v)} className="text-[10px] text-white/35 hover:text-red-400/70 flex-shrink-0">&times;</button>
               </div>
             ))}
