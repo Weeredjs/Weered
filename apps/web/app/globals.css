@@ -38,6 +38,9 @@ html[data-weered-theme="slate"] {
   --weered-muted:   rgba(226, 232, 240, 0.70);
   --weered-accent-bg:   rgba(14, 165, 233, 0.18);
   --weered-accent-ring: rgba(14, 165, 233, 0.35);
+  --weered-scrollbar-track: rgba(14, 165, 233, 0.04);
+  --weered-scrollbar-thumb: rgba(14, 165, 233, 0.28);
+  --weered-scrollbar-thumb-hover: rgba(14, 165, 233, 0.48);
 }
 html[data-weered-theme="zinc"] {
   --weered-bg:      #0a0a0b;
@@ -47,6 +50,9 @@ html[data-weered-theme="zinc"] {
   --weered-muted:   rgba(228, 228, 231, 0.70);
   --weered-accent-bg:   rgba(34, 197, 94, 0.16);
   --weered-accent-ring: rgba(34, 197, 94, 0.34);
+  --weered-scrollbar-track: rgba(34, 197, 94, 0.04);
+  --weered-scrollbar-thumb: rgba(34, 197, 94, 0.28);
+  --weered-scrollbar-thumb-hover: rgba(34, 197, 94, 0.48);
 }
 html[data-weered-theme="stone"] {
   --weered-bg:      #0c0b0a;
@@ -56,6 +62,9 @@ html[data-weered-theme="stone"] {
   --weered-muted:   rgba(229, 231, 235, 0.72);
   --weered-accent-bg:   rgba(245, 158, 11, 0.16);
   --weered-accent-ring: rgba(245, 158, 11, 0.34);
+  --weered-scrollbar-track: rgba(245, 158, 11, 0.04);
+  --weered-scrollbar-thumb: rgba(245, 158, 11, 0.28);
+  --weered-scrollbar-thumb-hover: rgba(245, 158, 11, 0.48);
 }
 html[data-weered-theme="gray"] {
   --weered-bg:      #070a0f;
@@ -65,6 +74,9 @@ html[data-weered-theme="gray"] {
   --weered-muted:   rgba(229, 231, 235, 0.70);
   --weered-accent-bg:   rgba(20, 184, 166, 0.16);
   --weered-accent-ring: rgba(20, 184, 166, 0.34);
+  --weered-scrollbar-track: rgba(20, 184, 166, 0.04);
+  --weered-scrollbar-thumb: rgba(20, 184, 166, 0.28);
+  --weered-scrollbar-thumb-hover: rgba(20, 184, 166, 0.48);
 }
 
 /* =============================================
@@ -3140,6 +3152,28 @@ select:focus-visible {
   background: var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
   color: var(--weered-text, #f3f4f6);
 }
+
+/* Global scrollbars — themed, applies to every theme by default.
+   Character themes (ishimura/broadcast/press) override with their own
+   gradient treatment further down. */
+* { scrollbar-width: thin; scrollbar-color: var(--weered-scrollbar-thumb, rgba(255,255,255,0.14)) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track {
+  background: var(--weered-scrollbar-track, rgba(255, 255, 255, 0.04));
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--weered-scrollbar-thumb, rgba(255, 255, 255, 0.14));
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.15s;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--weered-scrollbar-thumb-hover, rgba(255, 255, 255, 0.22));
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner { background: transparent; }
 
 /* Branded spinner — themed, used by <LoadingState/> */
 @keyframes weeredSpin { to { transform: rotate(360deg); } }
