@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { TierIcon } from "./RoleIcon";
@@ -59,6 +59,17 @@ const IconDock = () => (
 export default function UserCorner() {
   const { me, role, globalRole, currentLobbyId, logout } = useWeered() as any;
   const { openSheet } = useOverlay();
+
+  // Reactive lobby-theme detection for vocabulary swap
+  const [lobbyTheme, setLobbyTheme] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => setLobbyTheme(document.documentElement.getAttribute("data-weered-lobby"));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-weered-lobby"] });
+    return () => obs.disconnect();
+  }, []);
+  const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : "Burner";
 
   // ── Lobby branding: fetch logoUrl for current lobby ─────────────────────────
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
@@ -375,7 +386,7 @@ export default function UserCorner() {
             <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
           </svg>
 
-          <span>Burner</span>
+          <span>{burnerLabel}</span>
 
           {/* Unread badge */}
           {dockUnread > 0 && (
