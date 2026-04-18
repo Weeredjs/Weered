@@ -3,6 +3,7 @@ import InviteModal from "./InviteModal";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { weeredConfirm } from "../lib/confirm";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string };
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
@@ -468,7 +469,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   <button
                     style={{ ...s.btnRed, gridColumn: "span 2" }}
                     onClick={async () => {
-                      if (!window.confirm("Clear all chat messages in this room?")) return;
+                      const ok = await weeredConfirm({ title: "Clear all chat in this room?", body: "Every message gets wiped for everyone. This can't be undone.", confirmLabel: "Clear chat", destructive: true });
+                      if (!ok) return;
                       try {
                         const t = localStorage.getItem("weered_token") || "";
                         const r = await fetch(`${API_BASE}/staff/room/clear-chat`, {

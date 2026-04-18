@@ -7,6 +7,7 @@ import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
+import { weeredConfirm } from "../lib/confirm";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -558,7 +559,8 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
           <button disabled={loading} onClick={() => action("unlock")} style={{ padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer", border: !isLocked ? "1px solid rgba(16,185,129,.50)" : "1px solid rgba(16,185,129,.25)", background: !isLocked ? "rgba(16,185,129,.18)" : "rgba(16,185,129,.08)", color: "rgb(167,243,208)", fontWeight: !isLocked ? 700 : 400 }}>{!isLocked ? "✓ Unlocked" : "Unlock Chat"}</button>
           <button disabled={loading} style={{ padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(239,68,68,.25)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)", gridColumn: "span 2" }}
             onClick={async () => {
-              if (!window.confirm("Clear all lobby chat messages?")) return;
+              const ok = await weeredConfirm({ title: "Clear all lobby chat?", body: "Every message in this lobby's chat gets wiped. Can't be undone.", confirmLabel: "Clear chat", destructive: true });
+              if (!ok) return;
               setLoad(true);
               try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? "Chat cleared." : j.error || "Failed."); }
               catch { setNote("Request failed."); } finally { setLoad(false); }

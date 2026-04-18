@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getWeeredClient } from "../app/weeredClient";
+import { weeredConfirm } from "../lib/confirm";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -639,7 +640,8 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
   }, [tab, lobbyId, history]);
 
   async function resetAccount() {
-    if (!confirm("Reset your paper trading account? All positions and history will be cleared.")) return;
+    const ok = await weeredConfirm({ title: "Reset your paper account?", body: "All positions, orders, and P&L history get wiped. You start back at $100K.", confirmLabel: "Reset", destructive: true });
+    if (!ok) return;
     await apiFetch(`/trading/reset/${lobbyId}`, { method: "POST" });
     setAccount(null);
     setHistory(null);

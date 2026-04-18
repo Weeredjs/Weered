@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { weeredConfirm } from "../../lib/confirm";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -260,7 +261,7 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
                 <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
                   <button onClick={e => { e.stopPropagation(); openChat(npc); }} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>Talk</button>
                   <button onClick={e => { e.stopPropagation(); startEdit(npc); }} style={{ ...S.btn, fontSize: 10, padding: "4px 8px", opacity: 0.5 }}>✎</button>
-                  <button onClick={e => { e.stopPropagation(); if (confirm(`Dismiss ${npc.name}?`)) handleDelete(npc.id); }} style={{ ...S.btn, fontSize: 10, padding: "4px 8px", opacity: 0.5, borderColor: "rgba(239,68,68,.2)" }}>✕</button>
+                  <button onClick={async e => { e.stopPropagation(); const ok = await weeredConfirm({ title: `Dismiss ${npc.name}?`, body: "The NPC gets removed from the room.", confirmLabel: "Dismiss", destructive: true }); if (ok) handleDelete(npc.id); }} style={{ ...S.btn, fontSize: 10, padding: "4px 8px", opacity: 0.5, borderColor: "rgba(239,68,68,.2)" }}>✕</button>
                 </div>
               </div>
             ))}

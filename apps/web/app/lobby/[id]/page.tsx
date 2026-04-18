@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useWeered } from "../../../components/WeeredProvider";
+import { weeredConfirm } from "../../../lib/confirm";
 import LobbyContent from "../../../components/LobbyContent";
 import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
@@ -454,7 +455,8 @@ export default function LobbyIdPage() {
               {membership && membership.roleLevel < 5 && (
                 <button
                   onClick={async () => {
-                    if (!confirm("Leave this lobby?")) return;
+                    const ok = await weeredConfirm({ title: "Leave this lobby?", body: "You can rejoin anytime — you'll just stop seeing it in your active list.", confirmLabel: "Leave" });
+                    if (!ok) return;
                     await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/leave`, {
                       method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
                     });
