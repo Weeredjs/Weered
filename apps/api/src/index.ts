@@ -2561,6 +2561,77 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     }
   });
 
+  // ── Account deletion (GDPR right to erasure) ─────────────────────────────
+  // POST /profile/me/delete — user-initiated account wipe.
+  // Requires body.confirm === "DELETE" (typed-word gate).
+  // Scrubs PII, deletes auth rows + push subs, keeps content for FK integrity
+  // (messages attributed to a generic "deleted_user" handle).
+  app.post("/profile/me/delete", async (req, reply) => {
+    const viewer = authFromHeader((req as any).headers?.authorization);
+    if (!viewer) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    if (String(body.confirm || "").trim() !== "DELETE") {
+      return reply.code(400).send({ ok: false, error: "confirm_phrase_required" });
+    }
+
+    const userId = viewer.id;
+
+    try {
+      // Generate a stable anonymized handle so this user's id can still be FK'd
+      // without leaking their old identity. Use first 8 chars of cuid for uniqueness.
+      const anonSuffix = userId.slice(-8).toLowerCase();
+      const anonName = `deleted_${anonSuffix}`;
+
+      await prisma.$transaction(async (tx) => {
+        // 1. Scrub PII on User row + mark deleted
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            name: anonName,
+            usernameKey: anonName,
+            description: "",
+            bio: null,
+            email: null,
+            googleId: null,
+            avatar: null,
+            avatarColor: null,
+            locationOptIn: false,
+            latitude: null,
+            longitude: null,
+            locationH3: null,
+            locationUpdatedAt: null,
+            deletedAt: new Date(),
+          },
+        });
+
+        // 2. Delete auth credentials so they can't log back in
+        await tx.localAuth.deleteMany({ where: { userId } });
+
+        // 3. Kill push subscriptions
+        await (tx as any).pushSubscription.deleteMany({ where: { userId } });
+
+        // 4. Remove linked game accounts (revoke OAuth)
+        await (tx as any).userGameAccount.deleteMany({ where: { userId } });
+      });
+
+      // Best-effort: terminate live sockets for this user
+      try {
+        for (const sock of wss.clients) {
+          if ((sock as any).user?.id === userId) {
+            try { (sock as any).close(); } catch {}
+          }
+        }
+      } catch {}
+
+      await globalAudit(userId, anonName, "account_deleted_self", userId);
+
+      return reply.send({ ok: true });
+    } catch (e: any) {
+      console.error("[account delete]", e);
+      return reply.code(500).send({ ok: false, error: "delete_failed" });
+    }
+  });
+
   // ── GPS Location (opt-in) ─────────────────────────────────────────────────
   const H3_RES = 7; // ~5.16 km edge length
 

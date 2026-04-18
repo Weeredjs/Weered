@@ -213,6 +213,9 @@ export default function SettingsSheet() {
       {/* Blocked users */}
       <BlockedUsersSection />
 
+      {/* Danger zone — account deletion */}
+      <DangerZoneSection />
+
       {/* Developer */}
       <Section title="Developer">
         <Row label="Debug overlays" hint="Surface extra diagnostic labels.">
@@ -354,5 +357,147 @@ function BlockedUsersSection() {
         </div>
       )}
     </Section>
+  );
+}
+
+function DangerZoneSection() {
+  const [open, setOpen] = React.useState(false);
+  const [confirmText, setConfirmText] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
+
+  async function submit() {
+    if (confirmText.trim() !== "DELETE" || busy) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        // Wipe local session then bounce to login
+        try { localStorage.clear(); } catch {}
+        try { sessionStorage.clear(); } catch {}
+        window.location.href = "/login?deleted=1";
+        return;
+      }
+      setBusy(false);
+      alert(j?.error || "Deletion failed.");
+    } catch {
+      setBusy(false);
+      alert("Network error. Try again.");
+    }
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        borderRadius: 10,
+        border: "1px solid rgba(239,68,68,0.22)",
+        background: "rgba(239,68,68,0.03)",
+        padding: 14,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: "0.10em",
+          textTransform: "uppercase",
+          color: "rgba(252,165,165,0.85)",
+          marginBottom: 8,
+        }}
+      >
+        Danger Zone
+      </div>
+
+      {!open ? (
+        <div>
+          <div style={{ fontSize: 12, color: "var(--weered-muted, rgba(148,163,184,.72))", marginBottom: 10, lineHeight: 1.5 }}>
+            Permanently delete your account. Wipes your profile, login, linked accounts, location, and push subscriptions. Your messages remain but are attributed to a generic "deleted user" handle. This cannot be undone.
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            style={{
+              padding: "7px 14px",
+              borderRadius: 8,
+              border: "1px solid rgba(239,68,68,0.45)",
+              background: "transparent",
+              color: "rgba(252,165,165,0.9)",
+              fontSize: 12,
+              fontWeight: 800,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              transition: "background 0.12s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+          >
+            Delete my account
+          </button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ fontSize: 12, color: "rgba(252,165,165,0.9)", marginBottom: 8, fontWeight: 700 }}>
+            Last chance. This is permanent.
+          </div>
+          <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 10, lineHeight: 1.5 }}>
+            Type <strong style={{ color: "rgba(252,165,165,0.95)", fontFamily: "ui-monospace, monospace" }}>DELETE</strong> in the box below to confirm. Then click <strong>Confirm deletion</strong>.
+          </div>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={e => setConfirmText(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            autoFocus
+            disabled={busy}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: "1px solid rgba(239,68,68,0.4)",
+              background: "rgba(0,0,0,0.3)",
+              color: "rgba(243,244,246,0.95)",
+              fontFamily: "ui-monospace, monospace",
+              fontSize: 13,
+              outline: "none",
+              marginBottom: 10,
+            }}
+          />
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setConfirmText(""); }}
+              disabled={busy}
+              style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid var(--weered-border, rgba(255,255,255,.12))", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.8))", fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: busy ? "default" : "pointer" }}
+            >Cancel</button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={confirmText.trim() !== "DELETE" || busy}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 8,
+                border: "1px solid rgba(239,68,68,0.55)",
+                background: "rgba(239,68,68,0.18)",
+                color: "rgba(254,202,202,0.98)",
+                fontSize: 12,
+                fontWeight: 800,
+                fontFamily: "inherit",
+                cursor: (confirmText.trim() !== "DELETE" || busy) ? "not-allowed" : "pointer",
+                opacity: (confirmText.trim() !== "DELETE" || busy) ? 0.5 : 1,
+              }}
+            >
+              {busy ? "Deleting..." : "Confirm deletion"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
