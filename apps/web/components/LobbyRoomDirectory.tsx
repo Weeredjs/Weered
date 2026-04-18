@@ -38,10 +38,14 @@ function authHeaders() {
 
 function SailMark({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" aria-hidden>
-      <path d="M32 10 Q 56 40 92 64 L 34 72 Z" fill="#e8c48a" />
-      <rect x="22" y="82" width="70" height="6" rx="1" fill="#e8c48a" />
-    </svg>
+    <img
+      src="/brand/lobbies/windrose-logo-official.png"
+      alt=""
+      width={size}
+      height={size}
+      aria-hidden
+      style={{ objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" }}
+    />
   );
 }
 

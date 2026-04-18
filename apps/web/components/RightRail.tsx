@@ -368,10 +368,14 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
             : n.includes("watch") || n.includes("stream") ? "📺" : n.includes("cryo") || n.includes("archive") ? "🧊"
             : n.includes("chill") || n.includes("lounge") ? "🌙"
             : isWindrose ? (
-                <svg width={13} height={13} viewBox="0 0 120 120" fill="none" aria-hidden>
-                  <path d="M32 10 Q 56 40 92 64 L 34 72 Z" fill="#e8c48a" />
-                  <rect x="22" y="82" width="70" height="6" rx="1" fill="#e8c48a" />
-                </svg>
+                <img
+                  src="/brand/lobbies/windrose-logo-official.png"
+                  alt=""
+                  width={14}
+                  height={14}
+                  aria-hidden
+                  style={{ objectFit: "contain" }}
+                />
               )
             : "◆";
 

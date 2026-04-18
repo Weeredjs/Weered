@@ -4425,6 +4425,109 @@ html[data-weered-lobby="windrose"] .weered-hero-scrim {
   background: linear-gradient(180deg, rgba(14,24,38,0.10) 0%, rgba(14,24,38,0.35) 100%) !important;
 }
 
+/* ── ROOM CARDS: center-grid flair ─────────────────────────────── */
+html[data-weered-lobby="windrose"] .weered-room-card {
+  border: 1px solid rgba(201,160,102,0.28) !important;
+  border-radius: 6px !important;
+  background:
+    linear-gradient(180deg, rgba(25,42,66,0.55) 0%, rgba(14,24,38,0.75) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(232,196,138,0.10),
+    inset 0 0 0 1px rgba(201,160,102,0.08),
+    0 4px 18px rgba(0,0,0,0.45) !important;
+  overflow: visible !important;
+  position: relative;
+  transition: all 0.25s ease !important;
+}
+
+/* Brass rivets on all four corners */
+html[data-weered-lobby="windrose"] .weered-room-card::before,
+html[data-weered-lobby="windrose"] .weered-room-card::after {
+  content: "";
+  position: absolute;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e8c48a 0%, #8a6b3e 70%, #3d2d1a 100%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.7);
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-weered-lobby="windrose"] .weered-room-card::before { top: 7px; left: 7px; }
+html[data-weered-lobby="windrose"] .weered-room-card::after  { top: 7px; right: 7px; }
+
+/* Bottom rivets via a mesh decoration element (hijacks the card's ambient gradient div) */
+html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::before,
+html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::after {
+  content: "";
+  position: absolute;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e8c48a 0%, #8a6b3e 70%, #3d2d1a 100%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.7);
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::before { bottom: 7px; left: 7px; }
+html[data-weered-lobby="windrose"] .weered-room-card > div:first-child::after  { bottom: 7px; right: 7px; }
+
+/* Hover: brass lantern lights up, card lifts */
+html[data-weered-lobby="windrose"] .weered-room-card:hover {
+  border-color: rgba(232,196,138,0.65) !important;
+  transform: translateY(-2px);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(232,196,138,0.10) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(30,48,72,0.75) 0%, rgba(20,34,56,0.90) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(232,196,138,0.25),
+    inset 0 0 28px rgba(232,196,138,0.08),
+    0 0 30px rgba(232,196,138,0.22),
+    0 8px 28px rgba(0,0,0,0.6) !important;
+}
+
+/* Top brass rim flourish */
+html[data-weered-lobby="windrose"] .weered-room-card > div:last-child::before {
+  content: "";
+  position: absolute;
+  top: 3px; left: 20px; right: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(232,196,138,0.55) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Ornament diamond between corners (top) on hover */
+html[data-weered-lobby="windrose"] .weered-room-card:hover > div:last-child::after {
+  content: "";
+  position: absolute;
+  top: 1px; left: 50%;
+  width: 8px; height: 8px;
+  transform: translateX(-50%) rotate(45deg);
+  background: linear-gradient(135deg, #e8c48a, #8a6b3e);
+  box-shadow: 0 0 10px rgba(232,196,138,0.5);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Room card event variant: candle-lit plaque treatment */
+html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event {
+  border-color: rgba(163,61,61,0.55) !important;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(163,61,61,0.15) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(35,20,25,0.75) 0%, rgba(14,24,38,0.85) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(232,196,138,0.18),
+    0 0 28px rgba(163,61,61,0.22),
+    0 6px 24px rgba(0,0,0,0.55) !important;
+}
+
+/* Join button brass treatment */
+html[data-weered-lobby="windrose"] .weered-room-card button,
+html[data-weered-lobby="windrose"] .weered-room-card a {
+  transition: all 0.15s ease;
+}
+html[data-weered-lobby="windrose"] .weered-room-card:hover button,
+html[data-weered-lobby="windrose"] .weered-room-card:hover a {
+  box-shadow: 0 0 12px rgba(232,196,138,0.25);
+}
+
 html[data-weered-lobby="windrose"] .weered-event-badge {
   background: linear-gradient(135deg, #a33d3d 0%, #5b1919 100%) !important;
   border: 1px solid #e8c48a !important;
