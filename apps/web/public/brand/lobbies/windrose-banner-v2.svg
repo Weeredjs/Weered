@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#050812" />
+      <stop offset="45%"  stop-color="#0e1826" />
+      <stop offset="100%" stop-color="#152740" />
+    </linearGradient>
+    <linearGradient id="sea" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#152740" />
+      <stop offset="100%" stop-color="#050812" />
+    </linearGradient>
+    <radialGradient id="moonglow" cx="70%" cy="42%" r="30%">
+      <stop offset="0%"   stop-color="#e8c48a" stop-opacity="0.22" />
+      <stop offset="60%"  stop-color="#c9a066" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#c9a066" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="leftHaze" cx="10%" cy="65%" r="40%">
+      <stop offset="0%"   stop-color="#a33d3d" stop-opacity="0.16" />
+      <stop offset="100%" stop-color="#8b2e2e" stop-opacity="0" />
+    </radialGradient>
+    <filter id="turb">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="4" />
+      <feDisplacementMap in="SourceGraphic" scale="12" />
+    </filter>
+  </defs>
+
+  <!-- Sky + sea -->
+  <rect width="1920" height="168" fill="url(#sky)" />
+  <rect y="168" width="1920" height="72" fill="url(#sea)" />
+
+  <!-- Atmospheric layers -->
+  <rect width="1920" height="240" fill="url(#moonglow)" />
+  <rect width="1920" height="240" fill="url(#leftHaze)" />
+
+  <!-- Moon -->
+  <circle cx="1340" cy="95" r="34" fill="#f2d4a1" opacity="0.78" />
+  <circle cx="1330" cy="90" r="30" fill="#0e1826" opacity="0" />
+
+  <!-- Storm clouds -->
+  <g filter="url(#turb)" opacity="0.85">
+    <ellipse cx="300"  cy="60"  rx="300" ry="40" fill="#0a101c" />
+    <ellipse cx="880"  cy="42"  rx="460" ry="32" fill="#0a101c" />
+    <ellipse cx="1540" cy="56"  rx="380" ry="38" fill="#0a101c" />
+    <ellipse cx="680"  cy="110" rx="320" ry="28" fill="#15233a" opacity="0.6" />
+    <ellipse cx="1260" cy="120" rx="400" ry="30" fill="#15233a" opacity="0.5" />
+  </g>
+
+  <!-- Horizon line -->
+  <rect x="0" y="166" width="1920" height="4" fill="#c9a066" opacity="0.12" />
+  <line x1="0" y1="168" x2="1920" y2="168" stroke="#c9a066" stroke-width="0.6" opacity="0.3" />
+
+  <!-- Distant ships — sit ON the horizon, bottom of sky meets top of sea -->
+  <!-- Ship 1 — left galleon -->
+  <g transform="translate(230 124)" fill="#050812" opacity="0.82">
+    <rect x="0" y="34" width="78" height="10" />
+    <polygon points="6,34 72,34 66,40 12,40" />
+    <rect x="18" y="0" width="1.6" height="40" />
+    <rect x="40" y="-4" width="1.8" height="44" />
+    <rect x="62" y="0" width="1.6" height="40" />
+    <path d="M8 4 Q18 8 30 4 L30 28 Q18 30 8 28 Z" />
+    <path d="M30 0 Q42 4 54 0 L54 30 Q42 32 30 30 Z" />
+    <path d="M54 4 Q62 8 74 4 L74 28 Q62 30 54 28 Z" />
+    <line x1="40" y1="-4" x2="48" y2="-1" stroke="#a33d3d" stroke-width="0.9" />
+  </g>
+
+  <!-- Ship 2 — right, smaller -->
+  <g transform="translate(1500 140)" fill="#050812" opacity="0.7">
+    <rect x="0" y="20" width="56" height="8" />
+    <polygon points="4,20 52,20 48,26 8,26" />
+    <rect x="14" y="-2" width="1.4" height="24" />
+    <rect x="32" y="-4" width="1.6" height="26" />
+    <path d="M6 2 Q14 4 22 2 L22 18 Q14 20 6 18 Z" />
+    <path d="M22 0 Q32 2 42 0 L42 18 Q32 20 22 18 Z" />
+  </g>
+
+  <!-- Ship 3 — distant mid -->
+  <g transform="translate(760 148)" fill="#050812" opacity="0.55">
+    <rect x="0" y="18" width="48" height="6" />
+    <rect x="22" y="2" width="1.2" height="18" />
+    <path d="M14 6 Q22 8 30 6 L30 18 Q22 20 14 18 Z" />
+  </g>
+
+  <!-- Wave strokes on the sea -->
+  <g stroke="#c9a066" fill="none" stroke-linecap="round">
+    <path d="M 0 186 Q 160 180 320 186 T 640 186 T 960 186 T 1280 186 T 1600 186 T 1920 186" stroke-width="1.2" opacity="0.42" />
+    <path d="M 0 206 Q 140 200 280 206 T 560 206 T 840 206 T 1120 206 T 1400 206 T 1680 206 T 1960 206" stroke-width="0.9" opacity="0.3" />
+    <path d="M 0 224 Q 120 220 240 224 T 480 224 T 720 224 T 960 224 T 1200 224 T 1440 224 T 1680 224 T 1920 224" stroke-width="0.7" opacity="0.22" />
+  </g>
+
+  <!-- Sail brand mark top-left (subtle, the real logo sits elsewhere in the hero) -->
+  <g transform="translate(40 40)" opacity="0.4">
+    <path d="M22 6 Q 38 28 64 44 L 24 50 Z" fill="#e8c48a" />
+    <rect x="14" y="56" width="50" height="4" rx="1" fill="#e8c48a" />
+  </g>
+
+  <!-- Right-side compass watermark -->
+  <g transform="translate(1800 190)" opacity="0.18">
+    <circle cx="0" cy="0" r="52" fill="none" stroke="#e8c48a" stroke-width="1" />
+    <circle cx="0" cy="0" r="44" fill="none" stroke="#e8c48a" stroke-width="0.6" />
+    <path d="M0 -52 L3 0 L0 1 L-3 0 Z" fill="#e8c48a" />
+    <path d="M0 52 L3 0 L0 -1 L-3 0 Z" fill="#e8c48a" opacity="0.6" />
+    <path d="M52 0 L0 3 L-1 0 L0 -3 Z" fill="#e8c48a" opacity="0.8" />
+    <path d="M-52 0 L0 3 L1 0 L0 -3 Z" fill="#e8c48a" opacity="0.8" />
+    <circle cx="0" cy="0" r="3" fill="#0e1826" stroke="#e8c48a" stroke-width="0.6" />
+  </g>
+
+  <!-- Top brass strip -->
+  <rect x="0" y="0" width="1920" height="2" fill="#c9a066" opacity="0.55" />
+  <rect x="0" y="3" width="1920" height="1" fill="#8a6b3e" opacity="0.35" />
+</svg>
