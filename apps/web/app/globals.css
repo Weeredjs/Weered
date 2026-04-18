@@ -4442,6 +4442,22 @@ html[data-weered-lobby="windrose"] .weered-usercorner {
   border-radius: 4px !important;
 }
 
+/* Burner button hot-state: replace amber glow with brass lantern glow */
+html[data-weered-lobby="windrose"] .weered-burner-hot {
+  animation: windrose-burner-brass 2.5s ease-in-out infinite !important;
+}
+@keyframes windrose-burner-brass {
+  0%, 100% { box-shadow: 0 0 8px rgba(232,196,138,0.20), inset 0 0 12px rgba(232,196,138,0.06); }
+  50%      { box-shadow: 0 0 20px rgba(232,196,138,0.40), inset 0 0 20px rgba(232,196,138,0.10); }
+}
+/* Brass the amber unread pill on the BURNER button */
+html[data-weered-lobby="windrose"] .weered-burner-hot > span:last-child {
+  background: linear-gradient(180deg, #e8c48a, #c9a066) !important;
+  color: #0a1424 !important;
+  border-color: rgba(10,20,36,0.9) !important;
+  box-shadow: 0 0 8px rgba(232,196,138,0.55) !important;
+}
+
 html[data-weered-lobby="windrose"] ::-webkit-scrollbar-track {
   background: rgba(10,18,32,0.6);
 }
