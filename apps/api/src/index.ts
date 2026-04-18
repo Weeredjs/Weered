@@ -5137,6 +5137,25 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           const rate = checkChatRateLimit(fromId);
           if (!rate.ok) { send(ws, { type: "dm:rejected", reason: rate.reason, retryInMs: rate.retryInMs }); return; }
           const toId = await resolveUserId(rawToId);
+          // Block check — either direction blocks
+          try {
+            const blocked = await (prisma as any).userBlock.findFirst({
+              where: {
+                OR: [
+                  { blockerId: fromId, blockedId: toId },
+                  { blockerId: toId, blockedId: fromId },
+                ],
+              },
+              select: { blockerId: true },
+            });
+            if (blocked) {
+              const reason = blocked.blockerId === fromId
+                ? "You've blocked this user. Unblock them in Settings to send messages."
+                : "Message not delivered.";
+              send(ws, { type: "dm:rejected", reason });
+              return;
+            }
+          } catch {}
           try {
             const dm = await prisma.directMessage.create({
               data: { fromId, toId, body },
@@ -5411,6 +5430,62 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     const senders = fromIds.length ? await prisma.user.findMany({ where: { id: { in: fromIds } }, select: { id: true, name: true } }) : [];
     const senderMap = new Map(senders.map(s => [s.id, s.name]));
     return reply.send({ requests: (reqs as any[]).map((r: any) => ({ ...r, fromName: senderMap.get(r.fromId) ?? r.fromId })) });
+  });
+
+  // ── User blocks ─────────────────────────────────────────────────────────
+  // GET /blocks — list my blocks (for Settings UI)
+  app.get("/blocks", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const rows = await (prisma as any).userBlock.findMany({
+      where: { blockerId: u.id },
+      orderBy: { createdAt: "desc" },
+    });
+    const ids = rows.map((r: any) => r.blockedId);
+    const users = ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, avatarColor: true } }) : [];
+    const nameMap = new Map(users.map(x => [x.id, x]));
+    return reply.send({
+      blocks: rows.map((r: any) => ({
+        id: r.id, userId: r.blockedId, createdAt: r.createdAt.toISOString(),
+        name: nameMap.get(r.blockedId)?.name || r.blockedId,
+        avatarColor: nameMap.get(r.blockedId)?.avatarColor || null,
+        reason: r.reason || null,
+      })),
+    });
+  });
+
+  // POST /users/:userId/block — block a user
+  app.post("/users/:userId/block", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const targetId = String((req as any).params?.userId || "");
+    if (!targetId || targetId === u.id) return reply.code(400).send({ ok: false, error: "invalid_target" });
+    const body: any = (req as any).body || {};
+    const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : null;
+    try {
+      await (prisma as any).userBlock.upsert({
+        where: { blockerId_blockedId: { blockerId: u.id, blockedId: targetId } },
+        update: { reason },
+        create: { blockerId: u.id, blockedId: targetId, reason },
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      return reply.code(500).send({ ok: false, error: "block_failed" });
+    }
+  });
+
+  // DELETE /users/:userId/block — unblock
+  app.delete("/users/:userId/block", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const targetId = String((req as any).params?.userId || "");
+    if (!targetId) return reply.code(400).send({ ok: false, error: "invalid_target" });
+    try {
+      await (prisma as any).userBlock.deleteMany({ where: { blockerId: u.id, blockedId: targetId } });
+      return reply.send({ ok: true });
+    } catch (e) {
+      return reply.code(500).send({ ok: false, error: "unblock_failed" });
+    }
   });
 
   app.post("/friends/request/:userId", async (req, reply) => {

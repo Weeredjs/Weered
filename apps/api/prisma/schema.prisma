@@ -355,6 +355,8 @@ model User {
 
   dmSent           DirectMessage[]  @relation("DMSent")
   dmReceived       DirectMessage[]  @relation("DMReceived")
+  blocksSent       UserBlock[]      @relation("BlocksSent")
+  blocksReceived   UserBlock[]      @relation("BlocksReceived")
   LocalAuth        LocalAuth?
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
@@ -496,6 +498,21 @@ model DirectMessage {
 
   @@index([fromId, toId, createdAt])
   @@index([toId, readAt])
+}
+
+// ── User blocks ─────────────────────────────────────────────────────────────
+model UserBlock {
+  id         String   @id @default(cuid())
+  blockerId  String
+  blockedId  String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  blocker User @relation("BlocksSent",     fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }
 
 // ΓöÇΓöÇ Crew / Dojo ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
