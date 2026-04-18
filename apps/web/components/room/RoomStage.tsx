@@ -775,8 +775,8 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
             ))}
           </div>
         ) : (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, fontSize: 12 }}>
-            {live ? "Waiting for others to join…" : "No one in this room yet"}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.45, fontSize: 12, letterSpacing: ".04em" }}>
+            {live ? "Waiting for others to join…" : "You're the first one here."}
           </div>
         );
       })()}

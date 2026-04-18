@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 type RedditPost = {
   id: string;
@@ -132,8 +134,8 @@ export default function SubredditBrowser({ subreddit, view = "both" }: { subredd
 
       {/* Feed */}
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-        {loading && <div style={{ padding: 12, opacity: 0.6, fontSize: 13 }}>Loading…</div>}
-        {!loading && !posts.length && <div style={{ padding: 12, opacity: 0.6, fontSize: 13 }}>No posts.</div>}
+        {loading && <LoadingState compact label="Loading posts" />}
+        {!loading && !posts.length && <EmptyState compact title="No posts." />}
         {posts.map(p => {
           const active  = selected?.id === p.id;
           const isExt   = isExternalUrl(p.url);

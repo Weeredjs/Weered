@@ -4,6 +4,7 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { weeredConfirm } from "../lib/confirm";
+import EmptyState from "./EmptyState";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string };
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
@@ -508,7 +509,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={s.section}>
                 <div style={s.label}>Waiting to enter ({knocks.length})</div>
                 {knocks.length === 0
-                  ? <div style={{ fontSize: 12, opacity: 0.4 }}>No one knocking.</div>
+                  ? <EmptyState compact title="Nobody at the door." />
                   : <>
                     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                       {knocks.map(k => (
@@ -533,7 +534,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={s.section}>
                 <div style={s.label}>Banned ({banned.length})</div>
                 {banned.length === 0
-                  ? <div style={{ fontSize: 12, opacity: 0.4 }}>No bans.</div>
+                  ? <EmptyState compact title="Nobody banned." />
                   : <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {banned.map(uid => (
                       <div key={uid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(239,68,68,.05)", border: "1px solid rgba(239,68,68,.14)" }}>
@@ -551,7 +552,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <div style={s.section}>
                 <div style={s.label}>Recent actions</div>
                 {auditLog.length === 0
-                  ? <div style={{ fontSize: 12, opacity: 0.4 }}>No events yet.</div>
+                  ? <EmptyState compact title="No actions yet." hint="Mod actions show up here as they happen." />
                   : <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 300, overflowY: "auto" }}>
                     {auditLog.map((a: any) => (
                       <div key={a.id} style={{ padding: "5px 8px", borderRadius: 7, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", fontSize: 11 }}>
