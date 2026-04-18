@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { weeredToast } from "../../lib/toast";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -96,13 +97,13 @@ export default function SubscribeContent() {
     setChecking(tier);
     const j = await apiFetch("/subscribe/checkout", { method: "POST", body: JSON.stringify({ tier }) });
     if (j.ok && j.url) window.location.href = j.url;
-    else { alert(j.message || j.error || "Checkout failed."); setChecking(null); }
+    else { weeredToast.error(j.message || j.error || "Checkout failed."); setChecking(null); }
   }
 
   async function manageSubscription() {
     const j = await apiFetch("/subscribe/portal", { method: "POST", body: JSON.stringify({}) });
     if (j.ok && j.url) window.location.href = j.url;
-    else alert(j.message || j.error || "Failed to open billing portal.");
+    else weeredToast.error(j.message || j.error || "Failed to open billing portal.");
   }
 
   const currentTier = sub?.tier || "FREE";

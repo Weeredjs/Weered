@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { weeredToast } from "../lib/toast";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -40,13 +41,13 @@ export default function LobbyTierCards({ lobbyId }: { lobbyId: string }) {
     setChecking(tierId);
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/tiers/${tierId}/checkout`, { method: "POST" });
     if (j.ok && j.url) window.location.href = j.url;
-    else { alert(j.error || "Checkout failed."); setChecking(null); }
+    else { weeredToast.error(j.error || "Checkout failed."); setChecking(null); }
   }
 
   async function manage() {
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/tiers/portal`, { method: "POST" });
     if (j.ok && j.url) window.location.href = j.url;
-    else alert(j.error || "Failed to open billing portal.");
+    else weeredToast.error(j.error || "Failed to open billing portal.");
   }
 
   if (loading || tiers.length === 0) return null;
