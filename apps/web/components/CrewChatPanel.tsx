@@ -13,6 +13,7 @@ function getToken() {
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+type CrewReaction = { emoji: string; count: number; users: string[] };
 interface CrewMessage {
   id: string;
   userId: string;
@@ -21,6 +22,7 @@ interface CrewMessage {
   createdAt: string;
   editedAt?: string | null;
   deletedAt?: string | null;
+  reactions?: CrewReaction[];
 }
 
 interface Props {
@@ -65,6 +67,19 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
   const [editingMsgId, setEditingMsgId] = useState("");
   const [editDraft, setEditDraft] = useState("");
   const [hoveredMsgId, setHoveredMsgId] = useState("");
+  const [pickerMsgId, setPickerMsgId] = useState("");
+  const QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
+
+  useEffect(() => {
+    if (!pickerMsgId) return;
+    function onClick(e: MouseEvent) {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest?.("[data-reaction-ui]")) return;
+      setPickerMsgId("");
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [pickerMsgId]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -138,13 +153,23 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
       if (!id) return;
       setMessages(prev => prev.map(m => m.id === id ? { ...m, body: "", deletedAt } : m));
     };
+    const rxHandler = (ev: any) => {
+      const d = ev?.detail;
+      if (!d || d.crewId !== crewId) return;
+      const id = String(d.msgId || "");
+      const reactions = Array.isArray(d.reactions) ? d.reactions : [];
+      if (!id) return;
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, reactions } : m));
+    };
     window.addEventListener("weered:crew:edited", editHandler);
     window.addEventListener("weered:crew:deleted", delHandler);
+    window.addEventListener("weered:crew:reaction", rxHandler);
 
     return () => {
       window.removeEventListener("weered:crew:message", handler);
       window.removeEventListener("weered:crew:edited", editHandler);
       window.removeEventListener("weered:crew:deleted", delHandler);
+      window.removeEventListener("weered:crew:reaction", rxHandler);
     };
   }, [crewId, scrollToBottom]);
 
@@ -373,10 +398,31 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                       )}
                     </div>
 
-                    {(editable || deletable) && isHovered && !isEditing && !isDeleted && (
-                      <div style={{ position: "absolute", top: 0, [isMe ? "left" : "right" as any]: 8, display: "flex", gap: 2, padding: 3, borderRadius: 7, background: "rgba(16,16,20,.96)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 12px rgba(0,0,0,.35)", zIndex: 2 }}>
+                    {isHovered && !isEditing && !isDeleted && (
+                      <div data-reaction-ui style={{ position: "absolute", top: 0, [isMe ? "left" : "right" as any]: 8, display: "flex", gap: 2, padding: 3, borderRadius: 7, background: "rgba(16,16,20,.96)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 12px rgba(0,0,0,.35)", zIndex: 2 }}>
+                        <button type="button" title="React" onClick={(e) => { e.stopPropagation(); setPickerMsgId(cur => cur === msg.id ? "" : msg.id); }} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>😊</button>
                         {editable && <button type="button" title="Edit" onClick={() => { setEditingMsgId(msg.id); setEditDraft(String(msg.body || "")); }} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>✎</button>}
                         {deletable && <button type="button" title="Delete" onClick={handleDel} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>🗑</button>}
+                      </div>
+                    )}
+                    {pickerMsgId === msg.id && (
+                      <div data-reaction-ui onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 22, [isMe ? "left" : "right" as any]: 8, display: "flex", gap: 2, padding: 5, borderRadius: 8, background: "rgba(16,16,20,.98)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 6px 20px rgba(0,0,0,.5)", zIndex: 3 }}>
+                        {QUICK_REACTIONS.map(e => (
+                          <button key={e} type="button" onClick={() => { try { ctx?.sendRaw?.({ type: "crew:react", msgId: msg.id, emoji: e }); } catch {} setPickerMsgId(""); }} style={{ width: 28, height: 28, borderRadius: 5, border: "none", background: "transparent", cursor: "pointer", fontSize: 16 }}>{e}</button>
+                        ))}
+                      </div>
+                    )}
+                    {Array.isArray(msg.reactions) && msg.reactions.length > 0 && !isDeleted && (
+                      <div data-reaction-ui style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4, justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                        {msg.reactions.map((r) => {
+                          const mine = Array.isArray(r.users) && r.users.includes(myId);
+                          return (
+                            <button key={r.emoji} type="button" onClick={(e) => { e.stopPropagation(); try { ctx?.sendRaw?.({ type: "crew:react", msgId: msg.id, emoji: r.emoji }); } catch {} }} style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 10, border: `1px solid ${mine ? "rgba(88,0,229,.55)" : "rgba(255,255,255,.1)"}`, background: mine ? "rgba(88,0,229,.18)" : "rgba(255,255,255,.04)", color: mine ? "rgba(196,181,253,.95)" : "rgba(148,163,184,.85)", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", lineHeight: 1.1 }}>
+                              <span style={{ fontSize: 12 }}>{r.emoji}</span>
+                              <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.count}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

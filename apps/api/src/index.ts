@@ -1248,6 +1248,61 @@ function dmDeliver(toUserId: string, payload: object) {
   }
 }
 
+// ── Reaction helper: toggle a user's reaction on a target, return full aggregate
+async function toggleReactionOnTarget(targetType: "ROOM_MESSAGE" | "DIRECT_MESSAGE" | "CREW_MESSAGE", targetId: string, userId: string, emoji: string): Promise<{ ok: true; reactions: ReactionAgg[] } | { ok: false; reason: string }> {
+  try {
+    const existing = await (prisma as any).reaction.findUnique({
+      where: { targetType_targetId_userId_emoji: { targetType, targetId, userId, emoji } },
+    });
+    if (existing) {
+      await (prisma as any).reaction.delete({ where: { id: existing.id } });
+    } else {
+      const distinctRows = await (prisma as any).reaction.groupBy({ by: ["emoji"], where: { targetType, targetId } });
+      if (distinctRows.length >= 20 && !distinctRows.find((d: any) => d.emoji === emoji)) {
+        return { ok: false, reason: "Too many different reactions on this message." };
+      }
+      await (prisma as any).reaction.create({ data: { targetType, targetId, userId, emoji } });
+    }
+    const rows = await (prisma as any).reaction.findMany({
+      where: { targetType, targetId },
+      select: { emoji: true, userId: true },
+    });
+    const agg: Record<string, { count: number; users: string[] }> = {};
+    for (const r of rows) {
+      if (!agg[r.emoji]) agg[r.emoji] = { count: 0, users: [] };
+      agg[r.emoji].count++;
+      if (agg[r.emoji].users.length < 12) agg[r.emoji].users.push(r.userId);
+    }
+    const reactions: ReactionAgg[] = Object.entries(agg).map(([emoji, v]) => ({ emoji, count: v.count, users: v.users }));
+    return { ok: true, reactions };
+  } catch (e) {
+    console.error("[reactionToggle]", e);
+    return { ok: false, reason: "reaction_failed" };
+  }
+}
+
+async function fetchReactionsForTargets(targetType: "ROOM_MESSAGE" | "DIRECT_MESSAGE" | "CREW_MESSAGE", targetIds: string[]): Promise<Record<string, ReactionAgg[]>> {
+  const byMsg: Record<string, ReactionAgg[]> = {};
+  if (targetIds.length === 0) return byMsg;
+  try {
+    const rows = await (prisma as any).reaction.findMany({
+      where: { targetType, targetId: { in: targetIds } },
+      select: { targetId: true, emoji: true, userId: true },
+    });
+    const nested: Record<string, Record<string, { count: number; users: string[] }>> = {};
+    for (const r of rows) {
+      if (!nested[r.targetId]) nested[r.targetId] = {};
+      if (!nested[r.targetId][r.emoji]) nested[r.targetId][r.emoji] = { count: 0, users: [] };
+      nested[r.targetId][r.emoji].count++;
+      if (nested[r.targetId][r.emoji].users.length < 12) nested[r.targetId][r.emoji].users.push(r.userId);
+    }
+    for (const [mid, agg] of Object.entries(nested)) {
+      byMsg[mid] = Object.entries(agg).map(([e, v]) => ({ emoji: e, count: v.count, users: v.users }));
+    }
+  } catch {}
+  return byMsg;
+}
+
 // ── Chat rate limit + URL spam filter ────────────────────────────────────────
 const CHAT_RATE_MAX = 6;          // messages per window
 const CHAT_RATE_WINDOW_MS = 10_000; // 10s sliding window
@@ -3402,7 +3457,15 @@ app.get("/dm/:peerId", async (req, reply) => {
         where: { fromId: peerId, toId: viewer.id, readAt: null },
         data: { readAt: new Date() },
       });
-      return reply.send({ messages: messages.map(m => ({ ...m, createdAt: m.createdAt.toISOString(), readAt: m.readAt?.toISOString() ?? null, editedAt: (m as any).editedAt?.toISOString() ?? null, deletedAt: (m as any).deletedAt?.toISOString() ?? null })) });
+      const reactionsByMsg = await fetchReactionsForTargets("DIRECT_MESSAGE", messages.map(m => m.id));
+      return reply.send({ messages: messages.map(m => ({
+        ...m,
+        createdAt: m.createdAt.toISOString(),
+        readAt: m.readAt?.toISOString() ?? null,
+        editedAt: (m as any).editedAt?.toISOString() ?? null,
+        deletedAt: (m as any).deletedAt?.toISOString() ?? null,
+        reactions: reactionsByMsg[m.id] || [],
+      })) });
     } catch (e) {
       console.error("[dm GET]", e);
       return reply.code(500).send({ error: "Server error" });
@@ -5290,6 +5353,30 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        if (msg.type === "crew:react") {
+          const msgId = String(msg.msgId || "");
+          const emoji = String(msg.emoji || "").trim().slice(0, 12);
+          const meId = ws.user?.id;
+          if (!msgId || !emoji || !meId) return;
+          try {
+            const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+            if (!row) return;
+            if (row.deletedAt) return;
+            const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
+            if (!membership) return; // must be a crew member
+            const res = await toggleReactionOnTarget("CREW_MESSAGE", msgId, meId, emoji);
+            if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
+            const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+            const memberIds = new Set(members.map((m: any) => m.userId));
+            const payload = { type: "crew:reaction", crewId: row.crewId, msgId, reactions: res.reactions };
+            for (const sock of wss.clients) {
+              const sockUser = (sock as any).user;
+              if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+            }
+          } catch (e) { console.error("[crew:react]", e); }
+          return;
+        }
+
         // ── DM via WebSocket ──────────────────────────────────────────────────
         if (msg.type === "dm:send") {
           const rawToId = String(msg.toId  || "").trim();
@@ -5393,6 +5480,25 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             dmDeliver(dm.toId, payload);
             dmDeliver(dm.fromId, payload);
           } catch (e) { console.error("[dm:delete]", e); }
+          return;
+        }
+
+        if (msg.type === "dm:react") {
+          const msgId = String(msg.msgId || "");
+          const emoji = String(msg.emoji || "").trim().slice(0, 12);
+          const meId  = ws.user?.id;
+          if (!msgId || !emoji || !meId) return;
+          try {
+            const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
+            if (!dm) return;
+            if ((dm as any).deletedAt) return;
+            if (dm.fromId !== meId && dm.toId !== meId) return; // only the two peers
+            const res = await toggleReactionOnTarget("DIRECT_MESSAGE", msgId, meId, emoji);
+            if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
+            const payload = { type: "dm:reaction", msgId, fromId: dm.fromId, toId: dm.toId, reactions: res.reactions };
+            dmDeliver(dm.toId, payload);
+            dmDeliver(dm.fromId, payload);
+          } catch (e) { console.error("[dm:react]", e); }
           return;
         }
       })();
@@ -5943,8 +6049,10 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       take: 50,
       select: { id: true, userId: true, userName: true, body: true, createdAt: true, editedAt: true, deletedAt: true },
     });
+    const reactionsByMsg = await fetchReactionsForTargets("CREW_MESSAGE", messages.map((m: any) => m.id));
+    const enriched = messages.map((m: any) => ({ ...m, reactions: reactionsByMsg[m.id] || [] }));
 
-    return reply.send({ ok: true, messages: messages.reverse() });
+    return reply.send({ ok: true, messages: enriched.reverse() });
   });
 
 // ── Lobby search ──────────────────────────────────────────────────────────

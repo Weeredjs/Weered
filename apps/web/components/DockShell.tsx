@@ -8,7 +8,8 @@ import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";
 
-type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null };
+type DmReaction = { emoji: string; count: number; users: string[] };
+type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null; reactions?: DmReaction[] };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
 
 const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
@@ -215,6 +216,19 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const [dmEditingMsgId, setDmEditingMsgId] = useState("");
   const [dmEditDraft, setDmEditDraft] = useState("");
   const [dmHoveredMsgId, setDmHoveredMsgId] = useState("");
+  const [dmPickerMsgId, setDmPickerMsgId] = useState("");
+  const DM_QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
+
+  useEffect(() => {
+    if (!dmPickerMsgId) return;
+    function onClick(e: MouseEvent) {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest?.("[data-reaction-ui]")) return;
+      setDmPickerMsgId("");
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [dmPickerMsgId]);
   const dmEndRef = useRef<HTMLDivElement|null>(null);
   const dmInputRef = useRef<HTMLInputElement|null>(null);
   const roomInputRef = useRef<HTMLInputElement|null>(null);
@@ -298,13 +312,24 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
       const peerId=d.fromId===meId?d.toId:d.fromId;
       setDmThreads(cur=>cur.map(t=>t.peerId===peerId?{...t,msgs:t.msgs.map(m=>m.id===msgId?{...m,body:"",deletedAt} as any:m)}:t));
     };
+    const rxHandler=(ev:any)=>{
+      const d=ev?.detail; if (!d) return;
+      const msgId=String(d.msgId||""); const reactions=Array.isArray(d.reactions)?d.reactions:[];
+      if (!msgId) return;
+      const meId=String(me?.id||"");
+      const peerId=d.fromId===meId?d.toId:d.fromId;
+      setDmThreads(cur=>cur.map(t=>t.peerId===peerId?{...t,msgs:t.msgs.map(m=>m.id===msgId?{...m,reactions} as any:m)}:t));
+    };
+
     window.addEventListener("weered:dm:edited",editHandler as any);
     window.addEventListener("weered:dm:deleted",delHandler as any);
+    window.addEventListener("weered:dm:reaction",rxHandler as any);
 
     return ()=>{
       window.removeEventListener("weered:dm:message",handler as any);
       window.removeEventListener("weered:dm:edited",editHandler as any);
       window.removeEventListener("weered:dm:deleted",delHandler as any);
+      window.removeEventListener("weered:dm:reaction",rxHandler as any);
     };
   },[me,dmActivePeerId,apiBase,tokenMaybe]);
 
@@ -613,10 +638,31 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                                   {isLastSent && !isDeleted && !m.readAt && <span style={{ fontSize:9, color:"var(--weered-muted)" }}>Sent</span>}
                                 </div>
                               )}
-                              {(editable||deletable) && isHovered && !isEditing && !isDeleted && (
-                                <div style={{ position:"absolute", top:-6, [isMe?"left":"right" as any]:-4, display:"flex", gap:2, padding:3, borderRadius:7, background:"var(--weered-panel2)", border:"1px solid var(--weered-bd)", boxShadow:"0 4px 12px rgba(0,0,0,.35)", zIndex:2 }}>
+                              {isHovered && !isEditing && !isDeleted && (
+                                <div data-reaction-ui style={{ position:"absolute", top:-6, [isMe?"left":"right" as any]:-4, display:"flex", gap:2, padding:3, borderRadius:7, background:"var(--weered-panel2)", border:"1px solid var(--weered-bd)", boxShadow:"0 4px 12px rgba(0,0,0,.35)", zIndex:2 }}>
+                                  <button type="button" title="React" onClick={(e)=>{ e.stopPropagation(); setDmPickerMsgId(cur=>cur===m.id?"":m.id); }} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>😊</button>
                                   {editable && <button type="button" title="Edit" onClick={()=>{ setDmEditingMsgId(m.id); setDmEditDraft(String(m.body||"")); }} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>✎</button>}
                                   {deletable && <button type="button" title="Delete" onClick={handleDmDelete} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>🗑</button>}
+                                </div>
+                              )}
+                              {dmPickerMsgId===m.id && (
+                                <div data-reaction-ui onClick={e=>e.stopPropagation()} style={{ position:"absolute", top:16, [isMe?"left":"right" as any]:0, display:"flex", gap:2, padding:5, borderRadius:8, background:"var(--weered-panel2)", border:"1px solid var(--weered-bd)", boxShadow:"0 6px 20px rgba(0,0,0,.5)", zIndex:3 }}>
+                                  {DM_QUICK_REACTIONS.map(e=>(
+                                    <button key={e} type="button" onClick={()=>{ try { (ctx as any)?.sendRaw?.({ type:"dm:react", msgId:m.id, emoji:e }); } catch {} setDmPickerMsgId(""); }} style={{ width:28, height:28, borderRadius:5, border:"none", background:"transparent", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>{e}</button>
+                                  ))}
+                                </div>
+                              )}
+                              {Array.isArray((m as any).reactions) && (m as any).reactions.length>0 && !isDeleted && (
+                                <div data-reaction-ui style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:4, justifyContent:isMe?"flex-end":"flex-start" }}>
+                                  {(m as any).reactions.map((r:any)=>{
+                                    const mine=Array.isArray(r.users) && r.users.includes(String(me?.id||""));
+                                    return (
+                                      <button key={r.emoji} type="button" onClick={(e)=>{ e.stopPropagation(); try { (ctx as any)?.sendRaw?.({ type:"dm:react", msgId:m.id, emoji:r.emoji }); } catch {} }} style={{ display:"inline-flex", alignItems:"center", gap:3, padding:"1px 6px", borderRadius:10, border:`1px solid ${mine?"var(--weered-accent-ring)":"var(--weered-bd)"}`, background:mine?"var(--weered-accent-bg)":"rgba(255,255,255,.04)", color:mine?"var(--weered-accent-text)":"var(--weered-muted)", fontSize:10, fontWeight:700, cursor:"pointer", fontFamily:"inherit", lineHeight:1.1 }}>
+                                        <span style={{ fontSize:12 }}>{r.emoji}</span>
+                                        <span style={{ fontVariantNumeric:"tabular-nums" }}>{r.count}</span>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>

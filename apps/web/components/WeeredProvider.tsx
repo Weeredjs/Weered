@@ -312,6 +312,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:deleted") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:deleted", { detail: msg })); } catch {}
       }
+      if (msg.type === "dm:reaction") {
+        try { window.dispatchEvent(new CustomEvent("weered:dm:reaction", { detail: msg })); } catch {}
+      }
       // Forward notification events to DOM
       if (msg.type === "notification:new") {
         try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
@@ -325,6 +328,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
       if (msg.type === "crew:deleted") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:deleted", { detail: msg })); } catch {}
+      }
+      if (msg.type === "crew:reaction") {
+        try { window.dispatchEvent(new CustomEvent("weered:crew:reaction", { detail: msg })); } catch {}
       }
       // Forward crew presence changes to DOM
       if (msg.type === "crew:presence") {
