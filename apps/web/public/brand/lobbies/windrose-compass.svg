@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <radialGradient id="wrRing" cx="50%" cy="50%" r="50%">
+      <stop offset="80%" stop-color="#e8c48a" stop-opacity="0.0" />
+      <stop offset="100%" stop-color="#e8c48a" stop-opacity="0.6" />
+    </radialGradient>
+  </defs>
+  <circle cx="200" cy="200" r="196" stroke="#e8c48a" stroke-width="1" opacity="0.4" fill="none" />
+  <circle cx="200" cy="200" r="180" stroke="#e8c48a" stroke-width="0.6" opacity="0.25" fill="none" />
+  <circle cx="200" cy="200" r="160" stroke="#e8c48a" stroke-width="0.4" opacity="0.18" fill="none" />
+  <!-- degree tick marks every 10° -->
+  <g stroke="#e8c48a" stroke-width="0.8" opacity="0.5">
+    <g transform="translate(200 200)">
+      <line x1="0" y1="-196" x2="0" y2="-188" />
+      <g transform="rotate(10)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(20)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(30)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(40)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(50)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(60)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(70)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(80)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(90)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(100)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(110)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(120)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(130)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(140)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(150)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(160)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(170)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(180)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(190)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(200)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(210)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(220)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(230)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(240)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(250)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(260)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(270)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(280)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(290)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(300)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(310)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(320)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(330)"><line x1="0" y1="-196" x2="0" y2="-188" /></g>
+      <g transform="rotate(340)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+      <g transform="rotate(350)"><line x1="0" y1="-196" x2="0" y2="-192" /></g>
+    </g>
+  </g>
+  <!-- Cardinal rays -->
+  <path d="M200 20 L210 200 L200 200 L190 200 Z" fill="#e8c48a" opacity="0.8" />
+  <path d="M200 380 L210 200 L200 200 L190 200 Z" fill="#e8c48a" opacity="0.5" />
+  <path d="M380 200 L200 210 L200 200 L200 190 Z" fill="#e8c48a" opacity="0.7" />
+  <path d="M20 200 L200 210 L200 200 L200 190 Z" fill="#e8c48a" opacity="0.7" />
+  <!-- Intercardinal (short) -->
+  <path d="M330 70 L205 195 L200 200 L195 205 Z" fill="#e8c48a" opacity="0.35" />
+  <path d="M70 70 L195 195 L200 200 L205 205 Z" fill="#e8c48a" opacity="0.35" />
+  <path d="M330 330 L205 205 L200 200 L195 195 Z" fill="#e8c48a" opacity="0.35" />
+  <path d="M70 330 L195 205 L200 200 L205 195 Z" fill="#e8c48a" opacity="0.35" />
+  <!-- Fleur-de-lis on North -->
+  <path d="M200 12 L196 28 L192 24 L194 32 L200 40 L206 32 L208 24 L204 28 Z" fill="#e8c48a" />
+  <!-- Center boss -->
+  <circle cx="200" cy="200" r="8" fill="#0e1826" stroke="#e8c48a" stroke-width="1.5" />
+  <circle cx="200" cy="200" r="3" fill="#e8c48a" />
+  <!-- Cardinal labels -->
+  <text x="200" y="52" fill="#e8c48a" font-size="20" font-family="Cormorant Garamond, serif" font-weight="700" text-anchor="middle" opacity="0.85">N</text>
+  <text x="200" y="360" fill="#e8c48a" font-size="16" font-family="Cormorant Garamond, serif" font-weight="700" text-anchor="middle" opacity="0.6">S</text>
+  <text x="352" y="206" fill="#e8c48a" font-size="16" font-family="Cormorant Garamond, serif" font-weight="700" text-anchor="middle" opacity="0.7">E</text>
+  <text x="48" y="206" fill="#e8c48a" font-size="16" font-family="Cormorant Garamond, serif" font-weight="700" text-anchor="middle" opacity="0.7">W</text>
+</svg>

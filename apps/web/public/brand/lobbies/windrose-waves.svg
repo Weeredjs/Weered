@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 80" fill="none" preserveAspectRatio="none">
+  <!-- Layered wave strokes for horizon at the bottom of the viewport -->
+  <g stroke="#e8c48a" fill="none" stroke-linecap="round">
+    <path d="M 0 40 Q 100 30 200 40 T 400 40 T 600 40 T 800 40 T 1000 40 T 1200 40 T 1400 40 T 1600 40 T 1800 40 T 2000 40 T 2200 40 T 2400 40" stroke-width="1.4" opacity="0.5" />
+    <path d="M 0 55 Q 120 48 240 55 T 480 55 T 720 55 T 960 55 T 1200 55 T 1440 55 T 1680 55 T 1920 55 T 2160 55 T 2400 55" stroke-width="1" opacity="0.35" />
+    <path d="M 0 70 Q 80 65 160 70 T 320 70 T 480 70 T 640 70 T 800 70 T 960 70 T 1120 70 T 1280 70 T 1440 70 T 1600 70 T 1760 70 T 1920 70 T 2080 70 T 2240 70 T 2400 70" stroke-width="0.8" opacity="0.25" />
+  </g>
+</svg>
