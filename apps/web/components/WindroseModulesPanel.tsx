@@ -42,7 +42,7 @@ const WR_FONT_MONO    = `"DM Mono", "JetBrains Mono", ui-monospace, SFMono-Regul
 
 const S = {
   shell: {
-    display: "flex", flexDirection: "column" as const, minHeight: 0, flex: 1,
+    display: "flex", flexDirection: "column" as const,
     background: `
       radial-gradient(ellipse 120% 80% at 50% -10%, ${PAL.stormFoam}90 0%, transparent 55%),
       radial-gradient(ellipse 80% 60% at 20% 110%, ${PAL.sea}25 0%, transparent 60%),
@@ -51,7 +51,6 @@ const S = {
     color: PAL.parchment,
     fontFamily: WR_FONT_SERIF,
     position: "relative" as const,
-    overflow: "hidden" as const,
   },
   plaque: {
     padding: "18px 22px 14px",
@@ -65,7 +64,6 @@ const S = {
     borderBottom: `1px solid ${PAL.brass}25`,
   },
   body: {
-    flex: 1, minHeight: 0, overflow: "auto" as const,
     padding: "22px 22px 28px",
     position: "relative" as const,
   },
@@ -796,7 +794,7 @@ export default function WindroseModulesPanel({
         }
       `}</style>
 
-      <div style={{ ...S.shell, ...(style || {}) }}>
+      <div style={{ ...S.shell, ...(style || {}), flex: "initial", minHeight: "auto", overflow: "visible" }}>
         {/* Plaque header */}
         <div style={S.plaque}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
