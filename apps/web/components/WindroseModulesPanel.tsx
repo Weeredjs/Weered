@@ -798,13 +798,14 @@ export default function WindroseModulesPanel({
         {/* Plaque header */}
         <div style={S.plaque}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <div style={{ flexShrink: 0 }}>
-              <SailMark size={64} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ ...S.label, marginBottom: 4 }}>A Kraken Express Voyage</div>
-              <div style={S.title}>Windrose</div>
-              <div style={{ fontSize: 12, color: PAL.parchDim, marginTop: 4, fontStyle: "italic" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ ...S.label, marginBottom: 2 }}>A Kraken Express Voyage</div>
+              <img
+                src="/brand/lobbies/windrose-wordmark-official.png"
+                alt="Windrose"
+                style={{ height: 54, width: "auto", maxWidth: 420, objectFit: "contain", filter: `drop-shadow(0 2px 8px ${PAL.brass}55)` }}
+              />
+              <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic" }}>
                 Build. Sail. Survive the storm. <span style={{ color: PAL.brass }}>·</span> Early Access &middot; 2026
               </div>
             </div>
