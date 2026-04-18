@@ -252,6 +252,26 @@ export default function LobbyChatPanel(
   const [editingMsgId, setEditingMsgId] = useState<string>("");
   const [editDraft, setEditDraft] = useState<string>("");
   const [hoveredMsgId, setHoveredMsgId] = useState<string>("");
+  const [pickerMsgId, setPickerMsgId] = useState<string>("");
+
+  const QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
+
+  function toggleReaction(msgId: string, emoji: string) {
+    try { (ctx as any)?.sendRaw?.({ type: "reaction:toggle", roomId: effectiveRoomId, msgId, emoji }); } catch {}
+    setPickerMsgId("");
+  }
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!pickerMsgId) return;
+    function onClick(e: MouseEvent) {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest?.("[data-reaction-ui]")) return;
+      setPickerMsgId("");
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [pickerMsgId]);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const emojiRef = useRef<HTMLDivElement | null>(null);
@@ -433,9 +453,37 @@ export default function LobbyChatPanel(
                   ) : (
                     <ChatBody text={m?.body || m?.text || ""} />
                   )}
+                  {/* Reaction chips */}
+                  {Array.isArray((m as any).reactions) && (m as any).reactions.length > 0 && !deletedAt && (
+                    <div data-reaction-ui style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                      {(m as any).reactions.map((r: any) => {
+                        const mine = Array.isArray(r.users) && String(ctx?.me?.id || "") && r.users.includes(String(ctx?.me?.id || ""));
+                        return (
+                          <button
+                            key={r.emoji}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleReaction(mId, r.emoji); }}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              padding: "2px 7px", borderRadius: 10,
+                              border: `1px solid ${mine ? "var(--weered-accent-ring, rgba(124,58,237,.55))" : "var(--weered-border, rgba(255,255,255,.1))"}`,
+                              background: mine ? "var(--weered-accent-bg, rgba(124,58,237,.18))" : "rgba(255,255,255,.04)",
+                              color: mine ? "var(--weered-accent-text, rgba(196,181,253,.95))" : "var(--weered-muted, rgba(148,163,184,.85))",
+                              fontSize: 11, fontWeight: 700, cursor: "pointer",
+                              fontFamily: "inherit", transition: "all .12s",
+                              lineHeight: 1.1,
+                            }}
+                          >
+                            <span style={{ fontSize: 13 }}>{r.emoji}</span>
+                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                {(editable || deletable || (!isMine && mId)) && isHovered && !isEditing && !deletedAt && (
-                  <div style={{
+                {mId && isHovered && !isEditing && !deletedAt && (
+                  <div data-reaction-ui style={{
                     position: "absolute",
                     top: -8,
                     right: 4,
@@ -448,6 +496,14 @@ export default function LobbyChatPanel(
                     boxShadow: "0 4px 12px rgba(0,0,0,.35)",
                     zIndex: 2,
                   }}>
+                    <button
+                      type="button"
+                      title="React"
+                      onClick={(e) => { e.stopPropagation(); setPickerMsgId(cur => cur === mId ? "" : mId); }}
+                      style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                    >😊</button>
                     {editable && (
                       <button
                         type="button"
@@ -482,6 +538,33 @@ export default function LobbyChatPanel(
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
                       >🚩</button>
                     )}
+                  </div>
+                )}
+                {pickerMsgId === mId && (
+                  <div
+                    data-reaction-ui
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      position: "absolute",
+                      top: 18, right: 4,
+                      display: "flex", gap: 2, padding: 5,
+                      borderRadius: 8,
+                      background: "var(--weered-panel2, rgba(16,16,20,.98))",
+                      border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
+                      boxShadow: "0 6px 20px rgba(0,0,0,.5)",
+                      zIndex: 3,
+                    }}
+                  >
+                    {QUICK_REACTIONS.map(e => (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => toggleReaction(mId, e)}
+                        style={{ width: 28, height: 28, borderRadius: 5, border: "none", background: "transparent", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, transform .1s" }}
+                        onMouseEnter={ev => { (ev.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (ev.currentTarget as HTMLElement).style.transform = "scale(1.15)"; }}
+                        onMouseLeave={ev => { (ev.currentTarget as HTMLElement).style.background = "transparent"; (ev.currentTarget as HTMLElement).style.transform = "none"; }}
+                      >{e}</button>
+                    ))}
                   </div>
                 )}
               </div>

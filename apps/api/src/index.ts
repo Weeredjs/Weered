@@ -62,7 +62,8 @@ type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: st
 
 type Role = "owner" | "mod" | "member";
 type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; tier?: string; avatarColor?: string | null; avatar?: string | null };
-type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number };
+type ReactionAgg = { emoji: string; count: number; users: string[] }; // users = first N user IDs for "you reacted" detection + hover
+type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number; reactions?: ReactionAgg[] };
 type Knock = { userId: string; name: string; ts: number };
 
 type AuditItem = {
@@ -887,6 +888,30 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
       deletedAt: (m as any).deletedAt ? new Date((m as any).deletedAt).getTime() : undefined,
     }));
+
+    // Attach reaction aggregates to the loaded messages
+    try {
+      const msgIds = r.msgs.map(m => m.id);
+      if (msgIds.length > 0) {
+        const rxRows = await (prisma as any).reaction.findMany({
+          where: { targetType: "ROOM_MESSAGE", targetId: { in: msgIds } },
+          select: { targetId: true, emoji: true, userId: true },
+        });
+        const byMsg: Record<string, Record<string, { count: number; users: string[] }>> = {};
+        for (const rx of rxRows) {
+          if (!byMsg[rx.targetId]) byMsg[rx.targetId] = {};
+          if (!byMsg[rx.targetId][rx.emoji]) byMsg[rx.targetId][rx.emoji] = { count: 0, users: [] };
+          byMsg[rx.targetId][rx.emoji].count++;
+          if (byMsg[rx.targetId][rx.emoji].users.length < 12) byMsg[rx.targetId][rx.emoji].users.push(rx.userId);
+        }
+        for (const m of r.msgs) {
+          const agg = byMsg[m.id];
+          if (agg) {
+            m.reactions = Object.entries(agg).map(([emoji, v]) => ({ emoji, count: v.count, users: v.users }));
+          }
+        }
+      }
+    } catch {}
     r.audit = dbRoom.audit.map((a) => ({
       id: a.id, ts: new Date(a.ts).getTime(), type: a.type,
       actorId: a.actorId, actorName: a.actorName,
@@ -4544,6 +4569,76 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             }).catch(() => {});
           }
           broadcast(room, { type: "chat:deleted", roomId: rId, msgId, deletedAt });
+          return;
+        }
+
+        if (msg.type === "reaction:toggle") {
+          const rId = normalizeRoomId(String(msg.roomId || ""));
+          const msgId = String(msg.msgId || "");
+          const emoji = String(msg.emoji || "").trim().slice(0, 12);
+          if (!rId || !msgId || !emoji) return;
+          const room = await ensureRoomLoaded(rId);
+          if (room.banned.has(ws.user.id)) return;
+          const target = room.msgs.find(m => m.id === msgId);
+          if (!target || target.deletedAt) return;
+
+          // Spam guard — max 20 distinct emojis across all users per message
+          if (room.roomId !== "lobby") {
+            try {
+              const existing = await (prisma as any).reaction.findUnique({
+                where: { targetType_targetId_userId_emoji: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji } },
+              });
+              if (existing) {
+                await (prisma as any).reaction.delete({ where: { id: existing.id } });
+              } else {
+                const distinctCount = await (prisma as any).reaction.groupBy({
+                  by: ["emoji"], where: { targetType: "ROOM_MESSAGE", targetId: msgId },
+                });
+                if (distinctCount.length >= 20 && !distinctCount.find((d: any) => d.emoji === emoji)) {
+                  send(ws, { type: "reaction:rejected", roomId: rId, msgId, reason: "Too many different reactions on this message." });
+                  return;
+                }
+                await (prisma as any).reaction.create({
+                  data: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji },
+                });
+              }
+              // Rebuild aggregation for this message
+              const rows = await (prisma as any).reaction.findMany({
+                where: { targetType: "ROOM_MESSAGE", targetId: msgId },
+                select: { emoji: true, userId: true },
+              });
+              const agg: Record<string, { count: number; users: string[] }> = {};
+              for (const r of rows) {
+                if (!agg[r.emoji]) agg[r.emoji] = { count: 0, users: [] };
+                agg[r.emoji].count++;
+                if (agg[r.emoji].users.length < 12) agg[r.emoji].users.push(r.userId);
+              }
+              const reactions = Object.entries(agg).map(([e, v]) => ({ emoji: e, count: v.count, users: v.users }));
+              target.reactions = reactions;
+              broadcast(room, { type: "reaction:changed", roomId: rId, msgId, reactions });
+            } catch (e) { console.error("[reaction:toggle]", e); }
+          } else {
+            // Root lobby is in-memory only; toggle on ChatMsg.reactions directly
+            target.reactions = target.reactions || [];
+            const existing = target.reactions.find(r => r.emoji === emoji);
+            if (existing) {
+              if (existing.users.includes(ws.user.id)) {
+                existing.users = existing.users.filter(u => u !== ws.user.id);
+                existing.count = Math.max(0, existing.count - 1);
+                if (existing.count === 0) target.reactions = target.reactions.filter(r => r.emoji !== emoji);
+              } else {
+                existing.users.push(ws.user.id);
+                existing.count++;
+              }
+            } else {
+              if (target.reactions.length >= 20) {
+                send(ws, { type: "reaction:rejected", roomId: rId, msgId, reason: "Too many different reactions on this message." });
+                return;
+              }
+              target.reactions.push({ emoji, count: 1, users: [ws.user.id] });
+            }
+            broadcast(room, { type: "reaction:changed", roomId: rId, msgId, reactions: target.reactions });
+          }
           return;
         }
 

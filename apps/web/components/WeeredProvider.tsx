@@ -501,6 +501,23 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (msg.type === "reaction:changed") {
+        const rid = String(msg.roomId || "");
+        const msgId = String(msg.msgId || "");
+        const reactions = Array.isArray(msg.reactions) ? msg.reactions : [];
+        if (!rid || !msgId) return;
+        setMsgsByRoom(prev => ({
+          ...prev,
+          [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, reactions } as any : m),
+        }));
+        return;
+      }
+
+      if (msg.type === "reaction:rejected") {
+        weeredToast.warn(String(msg.reason || "Reaction not added."));
+        return;
+      }
+
       // Server rejected a send (spam filter / rate limit)
       if (msg.type === "chat:rejected" || msg.type === "dm:rejected" || msg.type === "crew:rejected") {
         const reason = String(msg.reason || "Message blocked.");
