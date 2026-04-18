@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { openConsentBanner } from "../../CookieConsent";
 
 type Settings = {
   theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press";
@@ -207,6 +208,15 @@ export default function SettingsSheet() {
         </Row>
         <Row label="Allow DMs" hint="Let anyone send you a direct message.">
           <Toggle checked={s.allowDMs} onChange={(v) => patch({ allowDMs: v })} />
+        </Row>
+        <Row label="Cookies & storage" hint="Revisit what Weered stores on your device.">
+          <button
+            type="button"
+            onClick={() => openConsentBanner()}
+            style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}
+          >
+            Manage
+          </button>
         </Row>
       </Section>
 
