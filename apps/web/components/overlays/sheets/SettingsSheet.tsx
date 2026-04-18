@@ -220,8 +220,8 @@ export default function SettingsSheet() {
         </Row>
       </Section>
 
-      {/* Steam rich presence */}
-      <SteamPresenceSection />
+      {/* Rich presence (Steam + Twitch) */}
+      <PresenceSection />
 
       {/* Blocked users */}
       <BlockedUsersSection />
@@ -373,15 +373,16 @@ function BlockedUsersSection() {
   );
 }
 
-function SteamPresenceSection() {
+function PresenceSection() {
   const [steamId, setSteamId] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
+  const [twitchLogin, setTwitchLogin] = React.useState("");
+  const [saving, setSaving] = React.useState<"" | "steam" | "twitch">("");
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
   function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
 
-  async function save(clear?: boolean) {
-    setSaving(true); setMsg(null);
+  async function saveSteam(clear?: boolean) {
+    setSaving("steam"); setMsg(null);
     try {
       const r = await fetch(`${apiBase}/profile/me/steam-id`, {
         method: "POST",
@@ -392,40 +393,58 @@ function SteamPresenceSection() {
       if (j?.ok) {
         setMsg({ ok: true, text: clear ? "Steam disconnected." : "Steam linked. Presence updates every 2 minutes." });
         if (clear) setSteamId("");
-      } else {
-        setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-      }
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
     } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving(false);
+    setSaving("");
   }
+
+  async function saveTwitch(clear?: boolean) {
+    setSaving("twitch"); setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/twitch-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ twitchLogin: clear ? "" : twitchLogin.trim().toLowerCase() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({ ok: true, text: clear ? "Twitch disconnected." : "Twitch linked. You'll show as streaming when live." });
+        if (clear) setTwitchLogin("");
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch { setMsg({ ok: false, text: "Network error." }); }
+    setSaving("");
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: 220, padding: "6px 10px", borderRadius: 8,
+    border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
+    background: "var(--weered-panel2, rgba(0,0,0,.3))",
+    color: "var(--weered-text, rgba(243,244,246,.95))",
+    fontFamily: "ui-monospace, monospace", fontSize: 12, outline: "none",
+  };
 
   return (
     <Section title="Rich Presence">
       <Row label="Steam ID" hint="Paste your 17-digit SteamID64 so friends see what you're playing.">
         <div style={{ display: "flex", gap: 6 }}>
-          <input
-            type="text"
-            value={steamId}
-            onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))}
-            placeholder="76561198000000000"
-            style={{
-              width: 220, padding: "6px 10px",
-              borderRadius: 8,
-              border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
-              background: "var(--weered-panel2, rgba(0,0,0,.3))",
-              color: "var(--weered-text, rgba(243,244,246,.95))",
-              fontFamily: "ui-monospace, monospace",
-              fontSize: 12, outline: "none",
-            }}
-          />
-          <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={() => save(false)} disabled={saving || !/^\d{17}$/.test(steamId.trim())}>
-            {saving ? "Saving…" : "Link"}
+          <input type="text" value={steamId} onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))} placeholder="76561198000000000" style={inputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={() => saveSteam(false)} disabled={saving === "steam" || !/^\d{17}$/.test(steamId.trim())}>
+            {saving === "steam" ? "Saving…" : "Link"}
           </button>
-          <button type="button" style={{ ...btnStyle, padding: "6px 10px", fontSize: 11, opacity: 0.7 }} onClick={() => save(true)} disabled={saving}>
-            Clear
-          </button>
+          <button type="button" style={{ ...btnStyle, padding: "6px 10px", fontSize: 11, opacity: 0.7 }} onClick={() => saveSteam(true)} disabled={saving === "steam"}>Clear</button>
         </div>
       </Row>
+
+      <Row label="Twitch login" hint="Your Twitch username — friends see a live stream badge when you're on air.">
+        <div style={{ display: "flex", gap: 6 }}>
+          <input type="text" value={twitchLogin} onChange={e => setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder="your_twitch_login" style={inputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={() => saveTwitch(false)} disabled={saving === "twitch" || !/^[a-z0-9_]{3,25}$/.test(twitchLogin.trim())}>
+            {saving === "twitch" ? "Saving…" : "Link"}
+          </button>
+          <button type="button" style={{ ...btnStyle, padding: "6px 10px", fontSize: 11, opacity: 0.7 }} onClick={() => saveTwitch(true)} disabled={saving === "twitch"}>Clear</button>
+        </div>
+      </Row>
+
       {msg && (
         <div style={{ marginTop: 6, fontSize: 11, color: msg.ok ? "rgba(134,239,172,.85)" : "rgba(252,165,165,.85)" }}>
           {msg.text}
@@ -436,7 +455,8 @@ function SteamPresenceSection() {
         <a href="https://steamdb.info/calculator/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline" }}>
           steamdb.info/calculator
         </a>
-        . Only your current game and online status are pulled — make sure your Steam profile's game activity is set to public.
+        . Steam requires your game activity to be public. Twitch uses your login from{" "}
+        <a href="https://twitch.tv" target="_blank" rel="noopener noreferrer" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline" }}>twitch.tv</a>.
       </div>
     </Section>
   );
