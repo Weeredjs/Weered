@@ -5,6 +5,7 @@ import { VoiceProvider } from "./VoiceContext";
 import NotorietyToast from "./NotorietyToast";
 import RankUpCelebration from "./RankUpCelebration";
 import SystemBroadcast from "./SystemBroadcast";
+import { weeredToast } from "../lib/toast";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -497,6 +498,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, body: "", deletedAt } as any : m),
         }));
+        return;
+      }
+
+      // Server rejected a send (spam filter / rate limit)
+      if (msg.type === "chat:rejected" || msg.type === "dm:rejected" || msg.type === "crew:rejected") {
+        const reason = String(msg.reason || "Message blocked.");
+        weeredToast.warn(reason);
         return;
       }
 

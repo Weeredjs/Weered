@@ -1223,6 +1223,48 @@ function dmDeliver(toUserId: string, payload: object) {
   }
 }
 
+// ── Chat rate limit + URL spam filter ────────────────────────────────────────
+const CHAT_RATE_MAX = 6;          // messages per window
+const CHAT_RATE_WINDOW_MS = 10_000; // 10s sliding window
+const CHAT_MAX_URLS = 3;          // per message
+const recentChatSends = new Map<string, number[]>();
+
+function checkChatRateLimit(userId: string): { ok: boolean; reason?: string; retryInMs?: number } {
+  const now = Date.now();
+  const arr = recentChatSends.get(userId) || [];
+  // Prune anything outside the window
+  const fresh = arr.filter(ts => now - ts < CHAT_RATE_WINDOW_MS);
+  if (fresh.length >= CHAT_RATE_MAX) {
+    const oldest = fresh[0];
+    const retryInMs = CHAT_RATE_WINDOW_MS - (now - oldest);
+    recentChatSends.set(userId, fresh);
+    return { ok: false, reason: "Slow down — too many messages in a short window.", retryInMs };
+  }
+  fresh.push(now);
+  recentChatSends.set(userId, fresh);
+  return { ok: true };
+}
+
+const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+function checkUrlSpam(body: string): { ok: boolean; reason?: string } {
+  const matches = body.match(URL_RE);
+  const count = matches ? matches.length : 0;
+  if (count > CHAT_MAX_URLS) {
+    return { ok: false, reason: `Too many links in one message (max ${CHAT_MAX_URLS}).` };
+  }
+  return { ok: true };
+}
+
+// Occasional cleanup of stale entries so the map doesn't grow unbounded
+setInterval(() => {
+  const now = Date.now();
+  for (const [uid, arr] of recentChatSends) {
+    const fresh = arr.filter(ts => now - ts < CHAT_RATE_WINDOW_MS);
+    if (fresh.length === 0) recentChatSends.delete(uid);
+    else recentChatSends.set(uid, fresh);
+  }
+}, 60_000);
+
 function send_to_user(userId: string, payload: object) {
   dmDeliver(userId, payload);
 }
@@ -4321,6 +4363,12 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           if (!room.users.has(ws.user.id)) return;
           if (room.banned.has(ws.user.id)) return;
           if (room.muted.has(ws.user.id)) return;
+          // URL spam check
+          const urlCheck = checkUrlSpam(body);
+          if (!urlCheck.ok) { send(ws, { type: "chat:rejected", roomId, reason: urlCheck.reason }); return; }
+          // Rate limit
+          const rate = checkChatRateLimit(ws.user.id);
+          if (!rate.ok) { send(ws, { type: "chat:rejected", roomId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
           const u = room.users.get(ws.user.id)!;
           const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id), avatarColor: (u as any).avatarColor, avatar: (u as any).avatar }, body, ts: Date.now() };
           room.msgs.push(m);
@@ -4973,6 +5021,12 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           const body = String(msg.body || "").trim().slice(0, 2000);
           const fromId = ws.user?.id;
           if (!fromId || !crewId || !body) return;
+          // URL spam check
+          const urlCheck = checkUrlSpam(body);
+          if (!urlCheck.ok) { send(ws, { type: "crew:rejected", crewId, reason: urlCheck.reason }); return; }
+          // Rate limit
+          const rate = checkChatRateLimit(fromId);
+          if (!rate.ok) { send(ws, { type: "crew:rejected", crewId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
 
           try {
             // Verify sender is a member of the crew
@@ -5076,6 +5130,12 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           const body    = String(msg.body  || "").trim().slice(0, 2000);
           const fromId  = ws.user?.id;
           if (!fromId || !rawToId || !body) return;
+          // URL spam check
+          const urlCheck = checkUrlSpam(body);
+          if (!urlCheck.ok) { send(ws, { type: "dm:rejected", reason: urlCheck.reason }); return; }
+          // Rate limit
+          const rate = checkChatRateLimit(fromId);
+          if (!rate.ok) { send(ws, { type: "dm:rejected", reason: rate.reason, retryInMs: rate.retryInMs }); return; }
           const toId = await resolveUserId(rawToId);
           try {
             const dm = await prisma.directMessage.create({
