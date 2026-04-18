@@ -3,6 +3,7 @@
 import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
+import { weeredToast } from "../../../lib/toast";
 
 // ─── Theme ──────────────────────────────────────────────────
 const WEERED_THEME_KEY = "weered_theme_v2";
@@ -403,10 +404,11 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         body: JSON.stringify({ bio }),
       });
       const j = await r.json();
-      if (j?.error) { alert(j.error); return; }
+      if (j?.error) { weeredToast.error(j.error); return; }
       setProfile(prev => prev ? { ...prev, bio } : prev);
       setEditing(false);
-    } catch { alert("Failed to save."); }
+      weeredToast.success("Bio saved.");
+    } catch { weeredToast.error("Failed to save."); }
     finally { setSaving(false); }
   }, [token, apiBase, bio]);
 

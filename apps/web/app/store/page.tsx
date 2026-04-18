@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useWeered } from "../../components/WeeredProvider";
 import LoadingState from "../../components/LoadingState";
+import { weeredToast } from "../../lib/toast";
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
 const GOLD = "#F5C518";
@@ -292,7 +293,7 @@ export default function StorePage() {
       fetchStore();
       fetchInventory();
     } else {
-      alert(d.error === "insufficient_paper" ? "Not enough Paper!" : d.error === "sold_out" ? "Sold out!" : (d.error || "Purchase failed"));
+      weeredToast.error(d.error === "insufficient_paper" ? "Not enough Paper." : d.error === "sold_out" ? "Sold out." : (d.error || "Purchase failed."));
     }
     setBusy(null);
   }
@@ -327,7 +328,7 @@ export default function StorePage() {
       fetchInventory();
       fetchMarket();
     } else {
-      alert(d.error || "Failed to list");
+      weeredToast.error(d.error || "Failed to list.");
     }
     setBusy(null);
   }
@@ -341,7 +342,7 @@ export default function StorePage() {
       fetchMarket();
       fetchInventory();
     } else {
-      alert(d.error === "insufficient_paper" ? "Not enough Paper!" : (d.error || "Purchase failed"));
+      weeredToast.error(d.error === "insufficient_paper" ? "Not enough Paper." : (d.error || "Purchase failed."));
     }
     setBusy(null);
   }

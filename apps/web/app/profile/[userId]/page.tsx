@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useWeered } from "../../../components/WeeredProvider";
+import { weeredToast } from "../../../lib/toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type GameAccount = {
@@ -127,11 +128,12 @@ export default function ProfilePage() {
         body: JSON.stringify({ bio }),
       });
       const j = await r.json();
-      if (j?.error) { alert(j.error); return; }
+      if (j?.error) { weeredToast.error(j.error); return; }
       setProfile(prev => prev ? { ...prev, bio } : prev);
       setEditing(false);
+      weeredToast.success("Bio saved.");
     } catch {
-      alert("Failed to save.");
+      weeredToast.error("Failed to save.");
     } finally {
       setSaving(false);
     }
