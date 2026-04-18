@@ -627,6 +627,11 @@ function FriendsPanel() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, color: hasUnread ? "rgba(243,244,246,1)" : "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
           {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
+          {f.livePresence?.activity && (
+            <div title={f.livePresence.source ? `via ${f.livePresence.source}` : undefined} style={{ fontSize: 10, marginTop: 1, color: "var(--weered-accent-text, rgba(196,181,253,.85))", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              🎮 {f.livePresence.activity}
+            </div>
+          )}
         </div>
         {f.online && joinHref && (
           <Link href={joinHref} className="weered-rr-join" onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}>
