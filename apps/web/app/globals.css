@@ -3104,6 +3104,66 @@ html[data-weered-theme="press"] .weered-rr-room-card-event {
 }
 
 /* =============================================
+   GLOBAL POLISH — focus ring, selection, loaders
+   Theme-aware so every surface inherits without
+   per-component plumbing.
+   ============================================= */
+
+/* Focus ring — subtle, themed, visible on keyboard nav only */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--weered-accent-ring, rgba(124, 58, 237, 0.55));
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--weered-bg, #0c0b0a),
+    0 0 0 4px var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+}
+
+/* Selection — themed highlight */
+::selection {
+  background: var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+  color: var(--weered-text, #f3f4f6);
+}
+::-moz-selection {
+  background: var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+  color: var(--weered-text, #f3f4f6);
+}
+
+/* Branded spinner — themed, used by <LoadingState/> */
+@keyframes weeredSpin { to { transform: rotate(360deg); } }
+@keyframes weeredPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.weered-spinner {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid transparent;
+  border-top-color: var(--weered-accent-text, rgba(167, 139, 250, 0.9));
+  border-right-color: var(--weered-accent-text, rgba(167, 139, 250, 0.45));
+  border-radius: 50%;
+  animation: weeredSpin 0.85s linear infinite;
+}
+.weered-loading-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--weered-muted, rgba(148, 163, 184, 0.7));
+  animation: weeredPulse 1.6s ease-in-out infinite;
+}
+
+/* =============================================
    BASE RESET
    ============================================= */
 *, *::before, *::after { box-sizing: border-box; }

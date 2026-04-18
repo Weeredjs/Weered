@@ -5,6 +5,7 @@ import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
 import CrewChatPanel from "./CrewChatPanel";
 import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
@@ -505,8 +506,8 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                 {/* Messages with date separators */}
                 <div style={{ flex:1, overflowY:"auto", padding:"10px 14px", display:"flex", flexDirection:"column", gap:3 }}>
                   {dmLoading ? (
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", flex:1 }}>
-                      <span style={{ color:"var(--weered-muted)", fontSize:13 }}>Loading...</span>
+                    <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <LoadingState compact label="Tuning in" />
                     </div>
                   ) : dmActive.msgs.length ? dmActive.msgs.map((m,i,arr)=>{
                     const isMe=m.fromId===String(me?.id||"");

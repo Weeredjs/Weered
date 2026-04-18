@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useWeered } from "../../components/WeeredProvider";
+import LoadingState from "../../components/LoadingState";
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
 const GOLD = "#F5C518";
@@ -412,7 +413,7 @@ export default function StorePage() {
       {tab === "store" && (
         <div>
           {storeLoading ? (
-            <div style={S.empty}>Loading store...</div>
+            <LoadingState label="Opening the store" />
           ) : storeItems.length === 0 ? (
             <div style={S.empty}>Shelves are bare. New drops coming.</div>
           ) : (
@@ -463,7 +464,7 @@ export default function StorePage() {
       {tab === "inventory" && (
         <div>
           {invLoading ? (
-            <div style={S.empty}>Loading inventory...</div>
+            <LoadingState label="Pulling your stash" />
           ) : inventory.length === 0 ? (
             <div style={S.empty}>Stash is empty. Hit the store.</div>
           ) : (
@@ -586,7 +587,7 @@ export default function StorePage() {
           </div>
 
           {marketLoading ? (
-            <div style={S.empty}>Loading marketplace...</div>
+            <LoadingState label="Loading listings" />
           ) : listings.length === 0 ? (
             <div style={S.empty}>Marketplace is quiet. Be the first to list.</div>
           ) : (
