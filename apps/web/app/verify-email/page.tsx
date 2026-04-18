@@ -183,12 +183,12 @@ function VerifyEmailInner() {
           )}
           {status === "already" && (
             <button className="ve-btn" onClick={() => router.replace("/home")}>
-              go to home
+              enter_weered()
             </button>
           )}
           {status === "error" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-              <a href="/login" className="ve-btn">back to login</a>
+              <a href="/login" className="ve-btn">back_to_login()</a>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>or</span>
               <span style={{ fontSize: 11, color: "rgba(148,163,184,0.4)" }}>
                 need a new link?{" "}

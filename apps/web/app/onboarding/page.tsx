@@ -199,7 +199,7 @@ function OnboardingForm() {
             }}>w</div>
             <div>
               <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px" }}>weered</div>
-              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", marginTop: 3 }}>one last thing</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", marginTop: 3, letterSpacing: "0.04em" }}>claim your handle</div>
             </div>
           </div>
 
@@ -208,9 +208,9 @@ function OnboardingForm() {
             <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
               Pick your handle.
             </div>
-            <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", marginTop: 8, lineHeight: 1.7 }}>
-              This is how you'll appear in rooms, chat, and presence.<br/>
-              Lowercase letters, numbers, and underscores only.
+            <div style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", marginTop: 8, lineHeight: 1.65 }}>
+              This is how you'll show up everywhere — rooms, chat, presence.<br/>
+              Lowercase, numbers, and underscores. Pick something you'll answer to.
             </div>
           </div>
 
@@ -265,8 +265,8 @@ function OnboardingForm() {
             {busy ? "setting up..." : "claim_handle()"}
           </button>
 
-          <div style={{ marginTop: 16, fontSize: 11, color: "rgba(100,116,139,0.4)", textAlign: "center", lineHeight: 1.6 }}>
-            You can change this later in your profile settings.
+          <div style={{ marginTop: 16, fontSize: 11, color: "rgba(100,116,139,0.45)", textAlign: "center", lineHeight: 1.6, letterSpacing: "0.02em" }}>
+            You can change this later in your profile.
           </div>
         </div>
       </div>
