@@ -36,8 +36,26 @@ function authHeaders() {
   } catch { return {}; }
 }
 
-function roomIcon(name: string): string {
+function SailMark({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" aria-hidden>
+      <path d="M32 10 Q 56 40 92 64 L 34 72 Z" fill="#e8c48a" />
+      <rect x="22" y="82" width="70" height="6" rx="1" fill="#e8c48a" />
+    </svg>
+  );
+}
+
+function roomIcon(name: string, moduleType?: string): React.ReactNode {
   const n = name.toLowerCase();
+  // Windrose-specific pirate vocabulary
+  if (moduleType === "WINDROSE") {
+    if (n.includes("helm") || n.includes("wheel"))   return "⚓";
+    if (n.includes("crew") || n.includes("mate"))    return "🏴‍☠️";
+    if (n.includes("captain"))                       return "🧭";
+    if (n.includes("log") || n.includes("journal"))  return "📖";
+    if (n.includes("bug") || n.includes("hunter"))   return "🐛";
+    if (n.includes("trading") || n.includes("post") || n.includes("market")) return "💰";
+  }
   if (n.includes("tavern"))   return "🍺";
   if (n.includes("campaign") || n.includes("table")) return "🎲";
   if (n.includes("dm") || n.includes("workshop") || n.includes("dungeon master")) return "📜";
@@ -56,6 +74,7 @@ function roomIcon(name: string): string {
   if (n.includes("music") || n.includes("audio"))  return "🎵";
   if (n.includes("art") || n.includes("creative")) return "🎨";
   if (n.includes("cryo") || n.includes("archive")) return "🧊";
+  if (moduleType === "WINDROSE") return <SailMark size={22} />;
   return "◆";
 }
 
@@ -372,7 +391,7 @@ export default function LobbyRoomDirectory({
           gap: 14,
         }}>
           {rooms.map(room => {
-            const icon = roomIcon(room.name);
+            const icon = roomIcon(room.name, moduleType);
             const subtitle = room.description || roomSubtitle(room.name);
             const memberCount = room._count?.members ?? 0;
             const liveCount = room.onlineCount ?? 0;

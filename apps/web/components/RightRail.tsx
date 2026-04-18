@@ -355,10 +355,25 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
           // Mini icon based on room name
           const n = (rm.name || "").toLowerCase();
-          const icon = n.includes("voice") ? "🎙" : n.includes("lfg") || n.includes("squad") ? "🔥"
+          const isWindrose = lobbyId === "windrose" || rm.lobbyId === "windrose";
+          const icon: React.ReactNode =
+              isWindrose && (n.includes("helm") || n.includes("wheel"))   ? "⚓"
+            : isWindrose && (n.includes("crew") || n.includes("mate"))    ? "🏴\u200d☠️"
+            : isWindrose && n.includes("captain")                         ? "🧭"
+            : isWindrose && (n.includes("log") || n.includes("journal"))  ? "📖"
+            : isWindrose && (n.includes("bug") || n.includes("hunter"))   ? "🐛"
+            : isWindrose && (n.includes("trading") || n.includes("post")) ? "💰"
+            : n.includes("voice") ? "🎙" : n.includes("lfg") || n.includes("squad") ? "🔥"
             : n.includes("trad") ? "💱" : n.includes("general") ? "💬" : n.includes("ranked") ? "🏆"
             : n.includes("watch") || n.includes("stream") ? "📺" : n.includes("cryo") || n.includes("archive") ? "🧊"
-            : n.includes("chill") || n.includes("lounge") ? "🌙" : "◆";
+            : n.includes("chill") || n.includes("lounge") ? "🌙"
+            : isWindrose ? (
+                <svg width={13} height={13} viewBox="0 0 120 120" fill="none" aria-hidden>
+                  <path d="M32 10 Q 56 40 92 64 L 34 72 Z" fill="#e8c48a" />
+                  <rect x="22" y="82" width="70" height="6" rx="1" fill="#e8c48a" />
+                </svg>
+              )
+            : "◆";
 
           // Color: live = green, active = accent, default = subtle
           const cardAccent = isLive ? "#22c55e" : active ? "#5800E5" : "rgba(255,255,255,.08)";
