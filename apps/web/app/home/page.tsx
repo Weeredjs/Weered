@@ -9,6 +9,7 @@ import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
 import FeatureShowcase from "../../components/FeatureShowcase";
 import EmptyState from "../../components/EmptyState";
+import VerticalPicker from "../../components/VerticalPicker";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -513,7 +514,14 @@ function SectionHeader({ icon, label, count, sub }: { icon: string; label: strin
 /* ─── HomePage ───────────────────────────────────────────── */
 export default function HomePage() {
   const router = useRouter();
-  const { rooms, usersByRoom, me, join } = useWeered() as any;
+  const { rooms, usersByRoom, me, join, joinedRoomId, joinStatus } = useWeered() as any;
+
+  useEffect(() => {
+    if (!me?.id) return;
+    if (joinedRoomId === "home" && joinStatus === "joined") return;
+    try { join?.("home"); } catch {}
+  }, [me?.id, joinedRoomId, joinStatus, join]);
+
   const [search, setSearch] = useState("");
   const [showShowcase, setShowShowcase] = useState(false);
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
@@ -918,6 +926,7 @@ export default function HomePage() {
       `}</style>
 
       <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
+      <VerticalPicker />
     </div>
   );
 }

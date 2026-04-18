@@ -353,6 +353,7 @@ model User {
 
   // External presence integrations
   steamId     String?   // SteamID64, e.g. "76561198000000000"
+  twitchLogin String?   // Twitch login (lowercase username)
   livePresence Json?    // { source, activity, detail?, url?, updatedAt } or null
   presenceCheckedAt DateTime?
 

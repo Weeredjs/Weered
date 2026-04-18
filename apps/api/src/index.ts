@@ -1396,9 +1396,58 @@ setInterval(() => {
 // detail, url, updatedAt } or clears it when they're offline/hidden.
 const PRESENCE_POLL_MS = 120_000; // 2 min
 const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
+const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID || "";
+const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
 const STEAM_PERSONASTATES: Record<number, string> = {
   0: "Offline", 1: "Online", 2: "Busy", 3: "Away", 4: "Snooze", 5: "Looking to trade", 6: "Looking to play",
 };
+
+let twitchAppToken: { token: string; expiresAt: number } | null = null;
+async function getTwitchAppToken(): Promise<string | null> {
+  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return null;
+  if (twitchAppToken && twitchAppToken.expiresAt > Date.now() + 60_000) return twitchAppToken.token;
+  try {
+    const url = `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`;
+    const res = await fetch(url, { method: "POST" });
+    if (!res.ok) return null;
+    const j: any = await res.json();
+    if (!j?.access_token) return null;
+    twitchAppToken = { token: j.access_token, expiresAt: Date.now() + (j.expires_in ?? 3600) * 1000 };
+    return twitchAppToken.token;
+  } catch { return null; }
+}
+
+async function pollTwitchPresenceBatch(logins: string[]): Promise<Record<string, any>> {
+  if (!TWITCH_CLIENT_ID || logins.length === 0) return {};
+  const token = await getTwitchAppToken();
+  if (!token) return {};
+  try {
+    const qs = logins.map(l => `user_login=${encodeURIComponent(l)}`).join("&");
+    const res = await fetch(`https://api.twitch.tv/helix/streams?${qs}&first=100`, {
+      headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return {};
+    const j: any = await res.json();
+    const streams: any[] = j?.data || [];
+    const live = new Set<string>();
+    const out: Record<string, any> = {};
+    for (const s of streams) {
+      const login = String(s.user_login || "").toLowerCase();
+      if (!login) continue;
+      live.add(login);
+      out[login] = {
+        source: "TWITCH",
+        activity: s.game_name ? `Streaming ${s.game_name}` : "Streaming on Twitch",
+        detail: s.title || undefined,
+        url: `https://twitch.tv/${login}`,
+        viewers: typeof s.viewer_count === "number" ? s.viewer_count : undefined,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    for (const login of logins) if (!live.has(login.toLowerCase())) out[login.toLowerCase()] = null;
+    return out;
+  } catch { return {}; }
+}
 
 async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string, any>> {
   if (!STEAM_API_KEY || steamIds.length === 0) return {};
@@ -1438,34 +1487,51 @@ async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string
 }
 
 async function runPresencePoll() {
-  if (!STEAM_API_KEY) return;
+  if (!STEAM_API_KEY && !TWITCH_CLIENT_ID) return;
   try {
     const users = await prisma.user.findMany({
-      where: { steamId: { not: null } },
-      select: { id: true, steamId: true },
-      take: 500, // cap to avoid runaway batches; good enough for MVP
+      where: { OR: [{ steamId: { not: null } }, { twitchLogin: { not: null } }] },
+      select: { id: true, steamId: true, twitchLogin: true },
+      take: 500,
     });
     if (users.length === 0) return;
-    // Steam allows up to 100 ids per call
-    for (let i = 0; i < users.length; i += 100) {
-      const chunk = users.slice(i, i + 100);
-      const ids = chunk.map(u => u.steamId as string);
-      const data = await pollSteamPresenceBatch(ids);
-      for (const u of chunk) {
-        const p = data[u.steamId as string];
-        if (p === undefined) continue;
-        await prisma.user.update({
-          where: { id: u.id },
-          data: { livePresence: p as any, presenceCheckedAt: new Date() },
-        }).catch(() => {});
+
+    const steamData: Record<string, any> = {};
+    if (STEAM_API_KEY) {
+      const steamUsers = users.filter(u => u.steamId);
+      for (let i = 0; i < steamUsers.length; i += 100) {
+        const chunk = steamUsers.slice(i, i + 100);
+        const batch = await pollSteamPresenceBatch(chunk.map(u => u.steamId as string));
+        Object.assign(steamData, batch);
       }
+    }
+
+    const twitchData: Record<string, any> = {};
+    if (TWITCH_CLIENT_ID) {
+      const twitchUsers = users.filter(u => u.twitchLogin);
+      for (let i = 0; i < twitchUsers.length; i += 100) {
+        const chunk = twitchUsers.slice(i, i + 100);
+        const batch = await pollTwitchPresenceBatch(chunk.map(u => (u.twitchLogin as string).toLowerCase()));
+        Object.assign(twitchData, batch);
+      }
+    }
+
+    for (const u of users) {
+      const tw = u.twitchLogin ? twitchData[(u.twitchLogin as string).toLowerCase()] : undefined;
+      const st = u.steamId ? steamData[u.steamId as string] : undefined;
+      // Priority: Twitch-live > Steam game/online > null
+      const primary = (tw && tw.source === "TWITCH") ? tw : (st ?? null);
+      if (primary === undefined) continue;
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { livePresence: primary as any, presenceCheckedAt: new Date() },
+      }).catch(() => {});
     }
   } catch (e) { console.error("[presence poll]", e); }
 }
 
-if (STEAM_API_KEY) {
+if (STEAM_API_KEY || TWITCH_CLIENT_ID) {
   setInterval(() => { void runPresencePoll(); }, PRESENCE_POLL_MS);
-  // Kick an initial run shortly after boot
   setTimeout(() => { void runPresencePoll(); }, 15_000);
 }
 
@@ -2782,6 +2848,23 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       data: { steamId, livePresence: steamId ? undefined : null, presenceCheckedAt: null },
     });
     return reply.send({ ok: true, steamId });
+  });
+
+  // POST /profile/me/twitch-login  { twitchLogin } — set or clear
+  app.post("/profile/me/twitch-login", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const raw = String(body.twitchLogin || "").trim().toLowerCase();
+    const twitchLogin = raw === "" ? null : (/^[a-z0-9_]{3,25}$/.test(raw) ? raw : null);
+    if (raw !== "" && !twitchLogin) {
+      return reply.code(400).send({ ok: false, error: "invalid_twitch_login", message: "Twitch login is 3-25 chars: letters, numbers, underscores." });
+    }
+    await prisma.user.update({
+      where: { id: u.id },
+      data: { twitchLogin, livePresence: twitchLogin ? undefined : null, presenceCheckedAt: null },
+    });
+    return reply.send({ ok: true, twitchLogin });
   });
 
   // GET /presence/users?ids=a,b,c — batch live-presence for friend lists etc.
