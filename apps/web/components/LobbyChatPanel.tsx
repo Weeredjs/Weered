@@ -7,6 +7,8 @@ import { avatarBg } from "../lib/avatarColor";
 import { useUserHover } from "./UserHoverCard";
 import EmptyState from "./EmptyState";
 import { weeredConfirm } from "../lib/confirm";
+import { weeredReport } from "../lib/report";
+import { weeredToast } from "../lib/toast";
 
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
@@ -432,7 +434,7 @@ export default function LobbyChatPanel(
                     <ChatBody text={m?.body || m?.text || ""} />
                   )}
                 </div>
-                {(editable || deletable) && isHovered && !isEditing && !deletedAt && (
+                {(editable || deletable || (!isMine && mId)) && isHovered && !isEditing && !deletedAt && (
                   <div style={{
                     position: "absolute",
                     top: -8,
@@ -465,6 +467,20 @@ export default function LobbyChatPanel(
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.18)"; (e.currentTarget as HTMLElement).style.color = "rgba(252,165,165,.95)"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
                       >🗑</button>
+                    )}
+                    {!isMine && mId && (
+                      <button
+                        type="button"
+                        title="Report message"
+                        onClick={async () => {
+                          const res = await weeredReport({ targetType: "MESSAGE", targetId: mId, context: effectiveRoomId });
+                          if (res?.ok) weeredToast.success("Report submitted. Staff will review.");
+                          else if (res && !res.ok) weeredToast.error(res.error === "report_rate_limit" ? "You're reporting too fast. Try again in a few minutes." : "Report failed.");
+                        }}
+                        style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(245,158,11,.18)"; (e.currentTarget as HTMLElement).style.color = "rgba(251,191,36,.95)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
+                      >🚩</button>
                     )}
                   </div>
                 )}

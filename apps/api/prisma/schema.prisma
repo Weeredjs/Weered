@@ -357,6 +357,8 @@ model User {
   dmReceived       DirectMessage[]  @relation("DMReceived")
   blocksSent       UserBlock[]      @relation("BlocksSent")
   blocksReceived   UserBlock[]      @relation("BlocksReceived")
+  reportsFiled     Report[]         @relation("ReportsFiled")
+  reportsReviewed  Report[]         @relation("ReportsReviewed")
   LocalAuth        LocalAuth?
   staffNotes       StaffNote[]      @relation("StaffNoteTarget")
   auditLogs        GlobalAudit[]    @relation("GlobalAuditTarget")
@@ -513,6 +515,55 @@ model UserBlock {
 
   @@unique([blockerId, blockedId])
   @@index([blockedId])
+}
+
+// ── Reports ─────────────────────────────────────────────────────────────────
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+enum ReportTargetType {
+  MESSAGE
+  USER
+  ROOM
+  LOBBY
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  THREATS
+  NSFW
+  MINOR_SAFETY
+  IMPERSONATION
+  SELF_HARM
+  OTHER
+}
+
+model Report {
+  id            String           @id @default(cuid())
+  reporterId   String
+  targetType    ReportTargetType
+  targetId      String
+  context       String?          // roomId / lobbyId for message reports
+  reason        ReportReason
+  note          String?
+  status        ReportStatus     @default(OPEN)
+  bodySnapshot  String?          // captured content at time of report (for MESSAGE)
+  createdAt     DateTime         @default(now())
+  reviewedAt    DateTime?
+  reviewedById  String?
+
+  reporter User  @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReportsReviewed", fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+  @@index([targetType, targetId])
 }
 
 // ΓöÇΓöÇ Crew / Dojo ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ

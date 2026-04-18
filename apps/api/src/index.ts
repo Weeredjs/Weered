@@ -5488,6 +5488,116 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   });
 
+  // ── Reports ─────────────────────────────────────────────────────────────
+  const VALID_REPORT_REASONS = new Set(["SPAM", "HARASSMENT", "HATE_SPEECH", "THREATS", "NSFW", "MINOR_SAFETY", "IMPERSONATION", "SELF_HARM", "OTHER"]);
+  const VALID_TARGET_TYPES = new Set(["MESSAGE", "USER", "ROOM", "LOBBY"]);
+
+  // POST /reports — user submits a report
+  app.post("/reports", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const targetType = String(body.targetType || "").toUpperCase();
+    const targetId = String(body.targetId || "").trim();
+    const reason = String(body.reason || "").toUpperCase();
+    const context = body.context ? String(body.context).trim().slice(0, 100) : null;
+    const note = body.note ? String(body.note).slice(0, 500) : null;
+    if (!VALID_TARGET_TYPES.has(targetType)) return reply.code(400).send({ ok: false, error: "invalid_target_type" });
+    if (!targetId) return reply.code(400).send({ ok: false, error: "missing_target_id" });
+    if (!VALID_REPORT_REASONS.has(reason)) return reply.code(400).send({ ok: false, error: "invalid_reason" });
+
+    // Rate limit: max 5 reports per 10 min per user
+    const recent = await (prisma as any).report.count({
+      where: { reporterId: u.id, createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } },
+    });
+    if (recent >= 5) return reply.code(429).send({ ok: false, error: "report_rate_limit" });
+
+    // Capture message body snapshot if reporting a message (so mods see what was there even if deleted/edited)
+    let bodySnapshot: string | null = null;
+    if (targetType === "MESSAGE") {
+      try {
+        const m = await (prisma as any).roomMessage.findUnique({ where: { id: targetId }, select: { body: true } });
+        if (m?.body) bodySnapshot = String(m.body).slice(0, 500);
+      } catch {}
+      if (!bodySnapshot) {
+        try {
+          const dm = await (prisma as any).directMessage.findUnique({ where: { id: targetId }, select: { body: true } });
+          if (dm?.body) bodySnapshot = String(dm.body).slice(0, 500);
+        } catch {}
+      }
+      if (!bodySnapshot) {
+        try {
+          const cm = await (prisma as any).crewMessage.findUnique({ where: { id: targetId }, select: { body: true } });
+          if (cm?.body) bodySnapshot = String(cm.body).slice(0, 500);
+        } catch {}
+      }
+    }
+
+    const row = await (prisma as any).report.create({
+      data: { reporterId: u.id, targetType, targetId, context, reason, note, bodySnapshot },
+    });
+    return reply.send({ ok: true, id: row.id });
+  });
+
+  // GET /staff/reports — queue
+  app.get("/staff/reports", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const statusFilter = String((req.query as any)?.status || "OPEN").toUpperCase();
+    const where: any = {};
+    if (statusFilter !== "ALL") where.status = statusFilter;
+    const rows = await (prisma as any).report.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    // Enrich with reporter names and target names (for USER targets)
+    const userIds = new Set<string>();
+    for (const r of rows) {
+      userIds.add(r.reporterId);
+      if (r.targetType === "USER") userIds.add(r.targetId);
+      if (r.reviewedById) userIds.add(r.reviewedById);
+    }
+    const users = userIds.size
+      ? await prisma.user.findMany({ where: { id: { in: Array.from(userIds) } }, select: { id: true, name: true } })
+      : [];
+    const nameMap = new Map(users.map(x => [x.id, x.name]));
+    return reply.send({
+      reports: rows.map((r: any) => ({
+        ...r,
+        createdAt: r.createdAt.toISOString(),
+        reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+        reporterName: nameMap.get(r.reporterId) || r.reporterId,
+        targetName: r.targetType === "USER" ? nameMap.get(r.targetId) || r.targetId : null,
+        reviewerName: r.reviewedById ? (nameMap.get(r.reviewedById) || r.reviewedById) : null,
+      })),
+    });
+  });
+
+  // POST /staff/reports/:id/action — mark as reviewed/actioned/dismissed
+  app.post("/staff/reports/:id/action", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const id = String((req as any).params?.id || "");
+    const body: any = (req as any).body || {};
+    const status = String(body.status || "").toUpperCase();
+    if (!["REVIEWED", "ACTIONED", "DISMISSED"].includes(status)) return reply.code(400).send({ ok: false, error: "invalid_status" });
+    try {
+      await (prisma as any).report.update({
+        where: { id },
+        data: { status, reviewedAt: new Date(), reviewedById: u.id },
+      });
+      await globalAudit(u.id, u.name, `report_${status.toLowerCase()}`, id);
+      return reply.send({ ok: true });
+    } catch {
+      return reply.code(500).send({ ok: false, error: "update_failed" });
+    }
+  });
+
   app.post("/friends/request/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
