@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
+import { weeredConfirm } from "../../../../lib/confirm";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -335,7 +336,8 @@ function RoomsTab({ lobbyId, initialRooms, perms, onRefresh }: { lobbyId: string
   const canManage = perms.includes("manage_rooms");
 
   async function deleteRoom(roomId: string, name: string) {
-    if (!confirm(`Delete room "${name}"? This kicks all users.`)) return;
+    const ok = await weeredConfirm({ title: `Delete room "${name}"?`, body: "Every user in the room gets kicked and the room is removed from the lobby.", confirmLabel: "Delete", destructive: true });
+    if (!ok) return;
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/admin/rooms/${encodeURIComponent(roomId)}`, { method: "DELETE" });
     if (j.ok) { setRooms(prev => prev.filter(r => r.id !== roomId)); setMsg(`Deleted ${name}`); onRefresh(); }
     else setMsg(j.error || "Failed.");
@@ -462,7 +464,8 @@ function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overri
   }
 
   async function kickMember(userId: string, name: string) {
-    if (!confirm(`Kick ${name} from this lobby?`)) return;
+    const ok = await weeredConfirm({ title: `Kick ${name}?`, body: "They'll be removed from the lobby. They can rejoin unless you ban them.", confirmLabel: "Kick", destructive: true });
+    if (!ok) return;
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/admin/members/${userId}/kick`, { method: "POST" });
     if (j.ok) { setMembers(prev => prev.filter(m => m.userId !== userId)); setSelected(null); setMsg(`Kicked ${name}`); }
     else setMsg(j.error || "Failed.");

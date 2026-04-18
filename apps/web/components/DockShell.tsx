@@ -6,6 +6,7 @@ import { avatarBg } from "../lib/avatarColor";
 import CrewChatPanel from "./CrewChatPanel";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import { weeredConfirm } from "../lib/confirm";
 
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
@@ -832,8 +833,18 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
     setTimeout(() => setInviteNote(n => ({ ...n, [crewId]: "" })), 3000);
   }
 
-  async function leaveCrew(crewId:string){if(!confirm("Leave this crew?"))return;await fetch(`${apiBase}/crews/${crewId}/members/${myId}`,{method:"DELETE",headers:{Authorization:`Bearer ${tokenMaybe}`}});void load();}
-  async function disbandCrew(crewId:string){if(!confirm("Disband? Cannot be undone."))return;await fetch(`${apiBase}/crews/${crewId}`,{method:"DELETE",headers:{Authorization:`Bearer ${tokenMaybe}`}});void load();}
+  async function leaveCrew(crewId:string){
+    const ok = await weeredConfirm({ title:"Leave this crew?", body:"You'll stop seeing crew chat and presence. You can be re-invited later.", confirmLabel:"Leave", destructive:true });
+    if(!ok)return;
+    await fetch(`${apiBase}/crews/${crewId}/members/${myId}`,{method:"DELETE",headers:{Authorization:`Bearer ${tokenMaybe}`}});
+    void load();
+  }
+  async function disbandCrew(crewId:string){
+    const ok = await weeredConfirm({ title:"Disband this crew?", body:"Everyone gets removed and the crew is gone. This can't be undone.", confirmLabel:"Disband", destructive:true });
+    if(!ok)return;
+    await fetch(`${apiBase}/crews/${crewId}`,{method:"DELETE",headers:{Authorization:`Bearer ${tokenMaybe}`}});
+    void load();
+  }
 
   const iStyle:React.CSSProperties={width:"100%",padding:"8px 10px",borderRadius:10,border:"1px solid var(--weered-bd2)",background:"rgba(255,255,255,.05)",color:"var(--weered-text)",outline:"none",fontSize:13,boxSizing:"border-box" as const};
 

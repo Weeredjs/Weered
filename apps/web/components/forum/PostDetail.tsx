@@ -7,6 +7,7 @@ import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./Forum
 import { avatarBg } from "../../lib/avatarColor";
 import { useUserHover } from "../UserHoverCard";
 import { useOverlay } from "../overlays/OverlayProvider";
+import { weeredConfirm } from "../../lib/confirm";
 
 type Author = { name: string; avatar?: string; avatarColor?: string; tier?: string; globalRole?: string } | null;
 type Post = {
@@ -125,12 +126,14 @@ export default function PostDetail({ postId }: { postId: string }) {
     load();
   }
   async function handleDeletePost() {
-    if (!confirm("Delete this post?")) return;
+    const ok = await weeredConfirm({ title: "Delete this post?", body: "Comments and votes go with it. Can't be undone.", confirmLabel: "Delete", destructive: true });
+    if (!ok) return;
     await forumFetch(`/forum/posts/${postId}`, { method: "DELETE" });
     router.push("/forum");
   }
   async function handleDeleteComment(commentId: string) {
-    if (!confirm("Delete this comment?")) return;
+    const ok = await weeredConfirm({ title: "Delete this comment?", confirmLabel: "Delete", destructive: true });
+    if (!ok) return;
     await forumFetch(`/forum/comments/${commentId}`, { method: "DELETE" });
     setComments(prev => prev.filter(c => c.id !== commentId));
     setPost(prev => prev ? { ...prev, commentCount: prev.commentCount - 1 } : prev);
