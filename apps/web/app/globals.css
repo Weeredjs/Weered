@@ -4407,10 +4407,14 @@ html[data-weered-lobby="windrose"] .weered-lobby-tab-active {
 }
 
 html[data-weered-lobby="windrose"] .weered-hero-content {
-  background: linear-gradient(180deg, rgba(25,40,62,0.60) 0%, rgba(14,24,38,0.85) 100%) !important;
+  background: transparent !important;
   border: 1px solid rgba(201,160,102,0.30);
   border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(232,196,138,0.12), 0 6px 24px rgba(0,0,0,0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(232,196,138,0.12),
+    inset 0 -40px 60px rgba(10,20,36,0.55),
+    0 6px 24px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 html[data-weered-lobby="windrose"] .weered-event-badge {
