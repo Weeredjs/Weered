@@ -177,6 +177,8 @@ model LobbyMessage {
   userName  String   @default("")
   body      String
   ts        DateTime @default(now())
+  editedAt  DateTime?
+  deletedAt DateTime?
 
   lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
 
@@ -261,12 +263,14 @@ model RoomBan {
 }
 
 model RoomMessage {
-  id       String   @id
-  roomId   String
-  userId   String
-  userName String   @default("")
-  body     String
-  ts       DateTime @default(now())
+  id        String   @id
+  roomId    String
+  userId    String
+  userName  String   @default("")
+  body      String
+  ts        DateTime @default(now())
+  editedAt  DateTime?
+  deletedAt DateTime?
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 

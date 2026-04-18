@@ -6,6 +6,7 @@ import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
 import { useUserHover } from "./UserHoverCard";
 import EmptyState from "./EmptyState";
+import { weeredConfirm } from "../lib/confirm";
 
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
@@ -246,6 +247,9 @@ export default function LobbyChatPanel(
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiCat, setEmojiCat] = useState(0);
   const [gifOpen, setGifOpen] = useState(false);
+  const [editingMsgId, setEditingMsgId] = useState<string>("");
+  const [editDraft, setEditDraft] = useState<string>("");
+  const [hoveredMsgId, setHoveredMsgId] = useState<string>("");
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const emojiRef = useRef<HTMLDivElement | null>(null);
@@ -320,45 +324,153 @@ export default function LobbyChatPanel(
         {msgs.length === 0 ? (
           <EmptyState title="Crickets." hint="Be the one who drops the first line." />
         ) : (
-          msgs.map((m: any, i: number) => (
-            <div key={i} data-chat-message style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-              {(() => {
-                const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
-                const isMine = !!(ctx?.me && (String(ctx.me.name) === uname || String(ctx.me.id) === String(m?.user?.id || m?.userId || "")));
-                const msgAvatar = m?.user?.avatar || null;
-                return (
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 999, flexShrink: 0,
-                    background: msgAvatar ? "rgba(255,255,255,.08)" : avatarBg(uname, isMine, m?.user?.avatarColor),
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, fontWeight: 700, color: "#fff",
-                    overflow: "hidden",
-                  }}>
-                    {msgAvatar ? (
-                      <img src={msgAvatar} alt={uname + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      uname.slice(0, 1).toUpperCase()
+          msgs.map((m: any, i: number) => {
+            const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
+            const mId = String(m?.id || "");
+            const meId = String(ctx?.me?.id || "");
+            const meName = String(ctx?.me?.name || "");
+            const msgUserId = String(m?.user?.id || m?.userId || "");
+            const isMine = !!(meId && msgUserId === meId) || !!(meName && uname === meName);
+            const ts = Number(m?.ts || 0);
+            const editedAt = m?.editedAt ? Number(m.editedAt) : 0;
+            const deletedAt = m?.deletedAt ? Number(m.deletedAt) : 0;
+            const editable = isMine && !deletedAt && ts > 0 && (Date.now() - ts) < 15 * 60 * 1000;
+            const deletable = isMine && !deletedAt;
+            const isEditing = editingMsgId === mId && mId !== "";
+            const msgAvatar = m?.user?.avatar || null;
+            const isHovered = hoveredMsgId === mId;
+
+            function commitEdit() {
+              const next = editDraft.trim();
+              if (!next || !mId) { setEditingMsgId(""); return; }
+              if (next !== String(m?.body || "")) {
+                try { (ctx as any)?.sendRaw?.({ type: "chat:edit", roomId: effectiveRoomId, msgId: mId, body: next }); } catch {}
+              }
+              setEditingMsgId("");
+              setEditDraft("");
+            }
+
+            async function handleDelete() {
+              const ok = await weeredConfirm({ title: "Delete this message?", body: "It'll be wiped for everyone in this room.", confirmLabel: "Delete", destructive: true });
+              if (!ok) return;
+              try { (ctx as any)?.sendRaw?.({ type: "chat:delete", roomId: effectiveRoomId, msgId: mId }); } catch {}
+            }
+
+            return (
+              <div
+                key={mId || i}
+                data-chat-message
+                onMouseEnter={() => mId && setHoveredMsgId(mId)}
+                onMouseLeave={() => setHoveredMsgId(cur => cur === mId ? "" : cur)}
+                style={{ display: "flex", gap: 10, marginBottom: 8, position: "relative" }}
+              >
+                <div style={{
+                  width: 28, height: 28, borderRadius: 999, flexShrink: 0,
+                  background: msgAvatar ? "rgba(255,255,255,.08)" : avatarBg(uname, isMine, m?.user?.avatarColor),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 700, color: "#fff",
+                  overflow: "hidden",
+                  opacity: deletedAt ? 0.4 : 1,
+                }}>
+                  {msgAvatar ? (
+                    <img src={msgAvatar} alt={uname + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    uname.slice(0, 1).toUpperCase()
+                  )}
+                </div>
+                <div style={{ minWidth: 0, flex: 1, opacity: deletedAt ? 0.55 : 1 }}>
+                  <div
+                    data-chat-username
+                    style={{ fontWeight: 800, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "baseline", gap: 6 }}
+                    onMouseEnter={e => {
+                      const uid = msgUserId;
+                      if (uid) openHover(uid, uname, e.currentTarget as HTMLElement);
+                    }}
+                    onMouseLeave={() => hoverClose(160)}
+                  >
+                    <span>{uname}</span>
+                    {editedAt > 0 && !deletedAt && (
+                      <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>(edited)</span>
                     )}
                   </div>
-                );
-              })()}
-              <div style={{ minWidth: 0 }}>
-                <div
-                  data-chat-username
-                  style={{ fontWeight: 800, fontSize: 13, cursor: "pointer" }}
-                  onMouseEnter={e => {
-                    const uid = String(m?.user?.id || m?.userId || m?.authorId || "");
-                    const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown");
-                    if (uid) openHover(uid, uname, e.currentTarget as HTMLElement);
-                  }}
-                  onMouseLeave={() => hoverClose(160)}
-                >
-                  {String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "unknown")}
+                  {deletedAt ? (
+                    <div style={{ fontSize: 12, fontStyle: "italic", color: "var(--weered-muted, rgba(148,163,184,.55))" }}>[message deleted]</div>
+                  ) : isEditing ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2 }}>
+                      <textarea
+                        autoFocus
+                        value={editDraft}
+                        onChange={e => setEditDraft(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit(); }
+                          if (e.key === "Escape") { e.preventDefault(); setEditingMsgId(""); setEditDraft(""); }
+                        }}
+                        style={{
+                          width: "100%",
+                          minHeight: 60,
+                          resize: "vertical",
+                          padding: "6px 10px",
+                          borderRadius: 8,
+                          border: "1px solid var(--weered-border2, rgba(255,255,255,.18))",
+                          background: "var(--weered-panel2, rgba(0,0,0,.25))",
+                          color: "var(--weered-text, rgba(243,244,246,.95))",
+                          fontFamily: "inherit",
+                          fontSize: 13,
+                          outline: "none",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 6, fontSize: 10, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>
+                        <span>Enter to save</span>
+                        <span>·</span>
+                        <span>Esc to cancel</span>
+                        <span style={{ flex: 1 }} />
+                        <button type="button" onClick={() => { setEditingMsgId(""); setEditDraft(""); }} style={{ padding: "3px 8px", fontSize: 10, fontWeight: 700, background: "transparent", border: "1px solid var(--weered-border, rgba(255,255,255,.1))", borderRadius: 6, color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer" }}>Cancel</button>
+                        <button type="button" onClick={commitEdit} style={{ padding: "3px 10px", fontSize: 10, fontWeight: 800, background: "var(--weered-accent-bg, rgba(124,58,237,.18))", border: "1px solid var(--weered-accent-ring, rgba(124,58,237,.45))", borderRadius: 6, color: "var(--weered-accent-text, #c4b5fd)", cursor: "pointer" }}>Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <ChatBody text={m?.body || m?.text || ""} />
+                  )}
                 </div>
-                <ChatBody text={m?.body || m?.text || ""} />
+                {(editable || deletable) && isHovered && !isEditing && !deletedAt && (
+                  <div style={{
+                    position: "absolute",
+                    top: -8,
+                    right: 4,
+                    display: "flex",
+                    gap: 2,
+                    padding: 3,
+                    borderRadius: 7,
+                    background: "var(--weered-panel2, rgba(16,16,20,.96))",
+                    border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
+                    boxShadow: "0 4px 12px rgba(0,0,0,.35)",
+                    zIndex: 2,
+                  }}>
+                    {editable && (
+                      <button
+                        type="button"
+                        title="Edit message"
+                        onClick={() => { setEditingMsgId(mId); setEditDraft(String(m?.body || "")); }}
+                        style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.95))"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
+                      >✎</button>
+                    )}
+                    {deletable && (
+                      <button
+                        type="button"
+                        title="Delete message"
+                        onClick={handleDelete}
+                        style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.18)"; (e.currentTarget as HTMLElement).style.color = "rgba(252,165,165,.95)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
+                      >🗑</button>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

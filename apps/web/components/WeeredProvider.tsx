@@ -463,6 +463,31 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (msg.type === "chat:edited") {
+        const rid = String(msg.roomId || "");
+        const msgId = String(msg.msgId || "");
+        const newBody = String(msg.body || "");
+        const editedAt = Number(msg.editedAt || Date.now());
+        if (!rid || !msgId) return;
+        setMsgsByRoom(prev => ({
+          ...prev,
+          [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, body: newBody, editedAt } as any : m),
+        }));
+        return;
+      }
+
+      if (msg.type === "chat:deleted") {
+        const rid = String(msg.roomId || "");
+        const msgId = String(msg.msgId || "");
+        const deletedAt = Number(msg.deletedAt || Date.now());
+        if (!rid || !msgId) return;
+        setMsgsByRoom(prev => ({
+          ...prev,
+          [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, body: "", deletedAt } as any : m),
+        }));
+        return;
+      }
+
 
       // room:locked: server sends locked:true for lock, locked:false for unlock (room behaviour).
       // Lobby omits the field entirely, so default to true when absent.
