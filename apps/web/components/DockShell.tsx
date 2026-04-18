@@ -9,7 +9,8 @@ import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";
 
 type DmReaction = { emoji: string; count: number; users: string[] };
-type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null; reactions?: DmReaction[] };
+type DmReplyTo = { id: string; userName: string; body: string };
+type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null; reactions?: DmReaction[]; replyToId?: string | null; replyToUserId?: string | null; replyToUserName?: string | null; replyToBody?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
 
 const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
@@ -217,6 +218,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const [dmEditDraft, setDmEditDraft] = useState("");
   const [dmHoveredMsgId, setDmHoveredMsgId] = useState("");
   const [dmPickerMsgId, setDmPickerMsgId] = useState("");
+  const [dmReplyingTo, setDmReplyingTo] = useState<{ id: string; userName: string; body: string } | null>(null);
   const DM_QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
 
   useEffect(() => {
@@ -394,13 +396,21 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
 
   async function dmSend(){
     if(!dmActive||!dmDraft.trim()||!tokenMaybe||!apiBase) return;
-    const body=dmDraft.trim(); setDmDraft("");
+    const body=dmDraft.trim();
+    const replyToId = dmReplyingTo?.id;
+    setDmDraft("");
+    setDmReplyingTo(null);
     const meId=String(me?.id||"");
     const optimistic:DmMsg={id:__id(),fromId:meId,toId:dmActive.peerId,body,createdAt:new Date().toISOString(),readAt:null};
+    if (replyToId && dmReplyingTo) {
+      (optimistic as any).replyToId = replyToId;
+      (optimistic as any).replyToUserName = dmReplyingTo.userName;
+      (optimistic as any).replyToBody = dmReplyingTo.body.slice(0, 120);
+    }
     setDmThreads(cur=>cur.map(t=>t.peerId===dmActive.peerId?{...t,msgs:[...t.msgs,optimistic]}:t));
     try {
-      if(typeof (ctx as any)?.sendRaw==="function") (ctx as any).sendRaw({type:"dm:send",toId:dmActive.peerId,body});
-      else await fetch(`${apiBase}/dm/${dmActive.peerId}`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tokenMaybe}`},body:JSON.stringify({body})});
+      if(typeof (ctx as any)?.sendRaw==="function") (ctx as any).sendRaw({type:"dm:send",toId:dmActive.peerId,body, ...(replyToId?{replyToId}:{})});
+      else await fetch(`${apiBase}/dm/${dmActive.peerId}`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tokenMaybe}`},body:JSON.stringify({body, replyToId})});
     } catch {}
   }
 
@@ -611,8 +621,40 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                             <div
                               onMouseEnter={()=>setDmHoveredMsgId(m.id)}
                               onMouseLeave={()=>setDmHoveredMsgId(cur=>cur===m.id?"":cur)}
+                              data-msg-id={m.id}
                               style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start", marginTop:sameSender&&!showDateSep?1:8, position:"relative", maxWidth:"82%", alignSelf:isMe?"flex-end":"flex-start" }}
                             >
+                              {(m as any).replyToId && !isDeleted && (
+                                <button
+                                  type="button"
+                                  onClick={()=>{
+                                    try {
+                                      const el = document.querySelector(`[data-msg-id="${(m as any).replyToId}"]`) as HTMLElement | null;
+                                      if (el) {
+                                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                        const prev = el.style.background;
+                                        el.style.transition = "background 0.2s";
+                                        el.style.background = "rgba(124,58,237,0.10)";
+                                        setTimeout(()=>{ el.style.background = prev; }, 900);
+                                      }
+                                    } catch {}
+                                  }}
+                                  style={{
+                                    display:"flex", alignItems:"center", gap:6,
+                                    padding:"2px 8px 2px 6px",
+                                    marginBottom:3,
+                                    fontSize:10,
+                                    background:"transparent", border:"none",
+                                    borderLeft:"2px solid var(--weered-accent-ring)",
+                                    color:"var(--weered-muted)",
+                                    cursor:"pointer", fontFamily:"inherit",
+                                    maxWidth:"100%", overflow:"hidden",
+                                  }}
+                                >
+                                  <span style={{ color:"var(--weered-accent-text)", fontWeight:700 }}>↩ {(m as any).replyToUserName || "?"}</span>
+                                  <span style={{ opacity:0.75, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{(m as any).replyToBody || ""}</span>
+                                </button>
+                              )}
                               {isDeleted ? (
                                 <div style={{ padding:"7px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:"rgba(255,255,255,.03)", border:"1px dashed var(--weered-bd)", fontSize:12, fontStyle:"italic", color:"var(--weered-muted)" }}>[message deleted]</div>
                               ) : isEditing ? (
@@ -641,6 +683,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                               {isHovered && !isEditing && !isDeleted && (
                                 <div data-reaction-ui style={{ position:"absolute", top:-6, [isMe?"left":"right" as any]:-4, display:"flex", gap:2, padding:3, borderRadius:7, background:"var(--weered-panel2)", border:"1px solid var(--weered-bd)", boxShadow:"0 4px 12px rgba(0,0,0,.35)", zIndex:2 }}>
                                   <button type="button" title="React" onClick={(e)=>{ e.stopPropagation(); setDmPickerMsgId(cur=>cur===m.id?"":m.id); }} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>😊</button>
+                                  <button type="button" title="Reply" onClick={(e)=>{ e.stopPropagation(); const peerName = dmActive?.peerName || "user"; const senderName = isMe ? (me?.name || "you") : peerName; setDmReplyingTo({ id: m.id, userName: senderName, body: String(m.body || "") }); try { dmInputRef.current?.focus(); } catch {} }} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>↩</button>
                                   {editable && <button type="button" title="Edit" onClick={()=>{ setDmEditingMsgId(m.id); setDmEditDraft(String(m.body||"")); }} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>✎</button>}
                                   {deletable && <button type="button" title="Delete" onClick={handleDmDelete} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>🗑</button>}
                                 </div>
@@ -682,6 +725,20 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
 
                 {/* Pill input */}
                 <div style={{ padding:"8px 12px 10px", borderTop:"1px solid var(--weered-bd)", flexShrink:0 }}>
+                  {dmReplyingTo && (
+                    <div style={{
+                      display:"flex", alignItems:"center", gap:8,
+                      padding:"5px 10px", marginBottom:6,
+                      borderRadius:7,
+                      borderLeft:"2px solid var(--weered-accent-ring)",
+                      background:"var(--weered-accent-bg)",
+                      fontSize:11,
+                    }}>
+                      <span style={{ color:"var(--weered-accent-text)", fontWeight:700, flexShrink:0 }}>↩ Replying to <strong>{dmReplyingTo.userName}</strong></span>
+                      <span style={{ flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"var(--weered-muted)" }}>{dmReplyingTo.body}</span>
+                      <button type="button" onClick={()=>setDmReplyingTo(null)} title="Cancel reply" style={{ width:18, height:18, borderRadius:4, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:12, flexShrink:0 }}>×</button>
+                    </div>
+                  )}
                   <div style={{ position:"relative", display:"flex", alignItems:"center" }}>
                     <input ref={dmInputRef} value={dmDraft} onChange={e=>setDmDraft((e.target as any).value||"")} placeholder="Message..."
                       style={{ width:"100%", padding:"10px 42px 10px 16px", borderRadius:22, border:"1px solid var(--weered-bd2)", background:"rgba(255,255,255,.05)", color:"var(--weered-text)", outline:"none", fontSize:13, fontFamily:"inherit" }}

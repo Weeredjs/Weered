@@ -52,7 +52,7 @@ type Ctx = {
   knock: (roomId: string) => void;
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
-  sendChat: (body: string) => void;
+  sendChat: (body: string, opts?: { replyToId?: string }) => void;
   renameRoom: (name: string) => void;
   setModuleState: (mode: string | null, opts?: { url?: string; channel?: string }) => void;
   lockRoom: () => void; unlockRoom: () => void;
@@ -793,13 +793,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     lastJoinedRidRef.current = "";
   }
 
-  function sendChat(body: string) {
+  function sendChat(body: string, opts?: { replyToId?: string }) {
     const b = body.trim();
     if (!b || !canChat()) return;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     let rid = activeRoomId; try { rid = decodeURIComponent(activeRoomId); } catch {}
-    ws.send(JSON.stringify({ type: "chat:send", roomId: rid, body: b }));
+    const env: any = { type: "chat:send", roomId: rid, body: b };
+    if (opts?.replyToId) env.replyToId = opts.replyToId;
+    ws.send(JSON.stringify(env));
   }
 
   function sendAdmin(type: string, payload: any = {}) {

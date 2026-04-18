@@ -63,7 +63,8 @@ type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: st
 type Role = "owner" | "mod" | "member";
 type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; tier?: string; avatarColor?: string | null; avatar?: string | null };
 type ReactionAgg = { emoji: string; count: number; users: string[] }; // users = first N user IDs for "you reacted" detection + hover
-type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number; reactions?: ReactionAgg[] };
+type ReplyTo = { id: string; userId: string; userName: string; body: string };
+type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number; reactions?: ReactionAgg[]; replyTo?: ReplyTo };
 type Knock = { userId: string; name: string; ts: number };
 
 type AuditItem = {
@@ -887,6 +888,12 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       body: m.body, ts: new Date(m.ts).getTime(),
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
       deletedAt: (m as any).deletedAt ? new Date((m as any).deletedAt).getTime() : undefined,
+      replyTo: (m as any).replyToId ? {
+        id: (m as any).replyToId,
+        userId: (m as any).replyToUserId || "",
+        userName: (m as any).replyToUserName || "?",
+        body: (m as any).replyToBody || "",
+      } : undefined,
     }));
 
     // Attach reaction aggregates to the loaded messages
@@ -3592,7 +3599,7 @@ app.get("/dm/:peerId", async (req, reply) => {
         where: { OR: [{ fromId: viewer.id, toId: peerId }, { fromId: peerId, toId: viewer.id }] },
         orderBy: { createdAt: "asc" },
         take: 50,
-        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true, editedAt: true, deletedAt: true },
+        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true, editedAt: true, deletedAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
       });
       await prisma.directMessage.updateMany({
         where: { fromId: peerId, toId: viewer.id, readAt: null },
@@ -4707,13 +4714,33 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           // Rate limit
           const rate = checkChatRateLimit(ws.user.id);
           if (!rate.ok) { send(ws, { type: "chat:rejected", roomId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
+          // Optional reply-to — snapshot parent from in-memory room.msgs
+          let replyTo: ReplyTo | undefined;
+          const replyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
+          if (replyToId) {
+            const parent = room.msgs.find(x => x.id === replyToId);
+            if (parent && !parent.deletedAt) {
+              replyTo = {
+                id: parent.id,
+                userId: parent.user.id,
+                userName: parent.user.name,
+                body: String(parent.body || "").slice(0, 120),
+              };
+            }
+          }
           const u = room.users.get(ws.user.id)!;
-          const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id), avatarColor: (u as any).avatarColor, avatar: (u as any).avatar }, body, ts: Date.now() };
+          const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id), avatarColor: (u as any).avatarColor, avatar: (u as any).avatar }, body, ts: Date.now(), replyTo };
           room.msgs.push(m);
           if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
           if (room.roomId !== "lobby") {
             void prisma.roomMessage.create({
-              data: { id: m.id, roomId: room.roomId, userId: m.user.id, userName: m.user.name, body: m.body, ts: new Date(m.ts) },
+              data: {
+                id: m.id, roomId: room.roomId, userId: m.user.id, userName: m.user.name, body: m.body, ts: new Date(m.ts),
+                replyToId: replyTo?.id ?? null,
+                replyToUserId: replyTo?.userId ?? null,
+                replyToUserName: replyTo?.userName ?? null,
+                replyToBody: replyTo?.body ?? null,
+              } as any,
             }).catch(() => {});
           }
           broadcast(room, { type: "chat:new", roomId, msg: m });
@@ -5451,10 +5478,25 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             });
             if (!membership) return;
 
+            // Optional reply-to — look up parent (must be same crew)
+            let crewReplyData: any = {};
+            const crewReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
+            if (crewReplyToId) {
+              const parent = await (prisma as any).crewMessage.findUnique({ where: { id: crewReplyToId } });
+              if (parent && !parent.deletedAt && parent.crewId === crewId) {
+                crewReplyData = {
+                  replyToId: parent.id,
+                  replyToUserId: parent.userId,
+                  replyToUserName: parent.userName || "?",
+                  replyToBody: String(parent.body || "").slice(0, 120),
+                };
+              }
+            }
+
             // Save message
             const message = await (prisma as any).crewMessage.create({
-              data: { crewId, userId: fromId, userName: ws.user?.name || "Unknown", body },
-              select: { id: true, crewId: true, userId: true, userName: true, body: true, createdAt: true },
+              data: { crewId, userId: fromId, userName: ws.user?.name || "Unknown", body, ...crewReplyData },
+              select: { id: true, crewId: true, userId: true, userName: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true },
             });
 
             // Get all crew members
@@ -5623,10 +5665,33 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
               return;
             }
           } catch {}
+          // Optional reply-to — look up the parent message to snapshot
+          let dmReplyData: any = {};
+          const dmReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
+          if (dmReplyToId) {
+            try {
+              const parent = await prisma.directMessage.findUnique({ where: { id: dmReplyToId } });
+              if (parent && !(parent as any).deletedAt) {
+                // Only allow replying to messages in the same thread
+                const sameThread =
+                  (parent.fromId === fromId && parent.toId === toId) ||
+                  (parent.fromId === toId && parent.toId === fromId);
+                if (sameThread) {
+                  const parentUser = await prisma.user.findUnique({ where: { id: parent.fromId }, select: { name: true } });
+                  dmReplyData = {
+                    replyToId: parent.id,
+                    replyToUserId: parent.fromId,
+                    replyToUserName: parentUser?.name || "?",
+                    replyToBody: String(parent.body || "").slice(0, 120),
+                  };
+                }
+              }
+            } catch {}
+          }
           try {
             const dm = await prisma.directMessage.create({
-              data: { fromId, toId, body },
-              select: { id: true, fromId: true, toId: true, body: true, createdAt: true },
+              data: { fromId, toId, body, ...dmReplyData },
+              select: { id: true, fromId: true, toId: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
             });
           const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
           dmDeliver(toId, payload);
@@ -6261,7 +6326,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       where: { crewId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: { id: true, userId: true, userName: true, body: true, createdAt: true, editedAt: true, deletedAt: true },
+      select: { id: true, userId: true, userName: true, body: true, createdAt: true, editedAt: true, deletedAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true },
     });
     const reactionsByMsg = await fetchReactionsForTargets("CREW_MESSAGE", messages.map((m: any) => m.id));
     const enriched = messages.map((m: any) => ({ ...m, reactions: reactionsByMsg[m.id] || [] }));

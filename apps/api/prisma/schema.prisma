@@ -271,6 +271,11 @@ model RoomMessage {
   ts        DateTime @default(now())
   editedAt  DateTime?
   deletedAt DateTime?
+  // Reply-to — snapshot of parent so preview stays stable across edits/deletes
+  replyToId       String?
+  replyToUserId   String?
+  replyToUserName String?
+  replyToBody     String?
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
@@ -503,6 +508,11 @@ model DirectMessage {
   createdAt DateTime  @default(now())
   editedAt  DateTime?
   deletedAt DateTime?
+  // Reply-to — snapshot of parent so preview stays stable across edits/deletes
+  replyToId       String?
+  replyToUserId   String?
+  replyToUserName String?
+  replyToBody     String?
 
   from User @relation("DMSent",     fields: [fromId], references: [id], onDelete: Cascade)
   to   User @relation("DMReceived", fields: [toId],   references: [id], onDelete: Cascade)
@@ -626,6 +636,11 @@ model CrewMessage {
   createdAt DateTime  @default(now())
   editedAt  DateTime?
   deletedAt DateTime?
+  // Reply-to — snapshot of parent so preview stays stable across edits/deletes
+  replyToId       String?
+  replyToUserId   String?
+  replyToUserName String?
+  replyToBody     String?
 
   @@index([crewId, createdAt])
 }
