@@ -144,6 +144,16 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     return ALL_MODULES.filter(m => allowed.includes(m.id));
   }, [lobbyContext?.moduleType]);
 
+  // Lobby-specific theme takeover — persist into room pages too
+  useEffect(() => {
+    const THEMEABLE = new Set<string>(["windrose"]);
+    const id = lobbyContext?.id;
+    if (id && THEMEABLE.has(id)) {
+      document.documentElement.setAttribute("data-weered-lobby", id);
+      return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
+    }
+  }, [lobbyContext?.id]);
+
   const [articleUrl, setArticleUrl]     = useState<string>("");
   const [browserUrl, setBrowserUrl]     = useState<string>("");
   const [browserInput, setBrowserInput] = useState<string>("");
