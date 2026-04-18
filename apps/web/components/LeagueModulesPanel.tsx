@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -143,7 +144,7 @@ function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }:
         ))}
       </div>
 
-      {streams.length === 0 && <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No live {gameName} streams right now.</div>}
+      {streams.length === 0 && <EmptyState compact title={`Nobody streaming ${gameName} right now.`} />}
       <StreamInterceptModal stream={interceptStream} lobbyId={lobbyId} accentColor={accentColor} onClose={() => setInterceptStream(null)} onWatchHere={handleWatchHere} />
     </div>
   );
@@ -270,9 +271,7 @@ function TeamFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
           );
         })}
         {posts.length === 0 && (
-          <div style={{ textAlign: "center", padding: 24, opacity: 0.35, fontSize: 13 }}>
-            No active teams. Be the first to create one!
-          </div>
+          <EmptyState title="No teams running." hint="Flag one up top and rally a five-stack." />
         )}
       </div>
     </div>

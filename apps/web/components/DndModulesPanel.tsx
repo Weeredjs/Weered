@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const OPEN5E = "https://api.open5e.com/v1";
@@ -276,7 +277,7 @@ function SpellBrowser() {
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Consulting the arcane library...</div>
       ) : spells.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No spells found</div>
+        <EmptyState title="No spells match." hint="Try a different search or filter." />
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -489,7 +490,7 @@ function MonsterBrowser() {
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Scouting the dungeon...</div>
       ) : monsters.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No monsters found</div>
+        <EmptyState title="No monsters match." hint="Try a different search or CR range." />
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -736,7 +737,7 @@ function MagicItemBrowser() {
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Rummaging through the hoard...</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No magic items found</div>
+        <EmptyState title="No magic items match." hint="Try a different search or rarity." />
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -1105,7 +1106,7 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
       {posts.length === 0 ? (
         <div style={{ textAlign: "center", padding: 30 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🍺</div>
-          <div style={{ fontSize: 13, color: "rgba(148,163,184,.4)" }}>The tavern board is empty. Be the first to post a quest!</div>
+          <div style={{ fontSize: 13, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>Tavern board's empty. Post the first quest.</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1176,7 +1177,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
   if (streams.length === 0) return (
     <div style={{ textAlign: "center", padding: 30 }}>
       <div style={{ fontSize: 32, marginBottom: 8 }}>📺</div>
-      <div style={{ fontSize: 13, color: "rgba(148,163,184,.4)" }}>No D&D streams live right now</div>
+      <div style={{ fontSize: 13, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>Nobody streaming D&D right now.</div>
     </div>
   );
 

@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -530,9 +532,7 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
           );
         })}
         {posts.length === 0 && (
-          <div style={{ textAlign: "center", padding: 24, opacity: 0.35, fontSize: 13 }}>
-            No active fireteams. Be the first to create one!
-          </div>
+          <EmptyState title="No fireteams running." hint="Flag one up top and rally a crew." />
         )}
       </div>
     </div>
@@ -632,7 +632,9 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
           ))}
         </div>
       ) : (
-        <div style={{ ...S.card, fontSize: 12, opacity: 0.4 }}>{data?.error ? "Bungie API unavailable — check back later" : "No milestone data available"}</div>
+        <div style={{ ...S.card, padding: 0 }}>
+          <EmptyState compact title={data?.error ? "Bungie API's down." : "No milestone data."} hint={data?.error ? "Check back in a bit." : undefined} />
+        </div>
       )}
 
       <div style={{ ...S.card, textAlign: "center" }}>
@@ -932,7 +934,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
             <InventoryGrid items={char.inventory || []} hasManifest={hasManifest} onItemClick={setSelectedItem} />
           )
         ) : (
-          <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>No character data available</div>
+          <EmptyState compact title="No character data." hint="Link your Bungie account to pull it in." />
         )}
       </div>
 
@@ -999,7 +1001,7 @@ function EquippedView({ char, hasManifest, accent, onItemClick }: { char: any; h
 }
 
 function InventoryGrid({ items, hasManifest, onItemClick }: { items: any[]; hasManifest: boolean; onItemClick?: (item: any) => void }) {
-  if (!items.length) return <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>Inventory empty</div>;
+  if (!items.length) return <EmptyState compact title="Inventory empty." />;
   const exotics = items.filter((i: any) => i.tierName === "Exotic");
   const legendaries = items.filter((i: any) => i.tierName === "Legendary");
   const rest = items.filter((i: any) => i.tierName !== "Exotic" && i.tierName !== "Legendary");
@@ -1019,7 +1021,7 @@ function InventoryGrid({ items, hasManifest, onItemClick }: { items: any[]; hasM
 
 function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: any) => void }) {
   const [filter, setFilter] = useState<"all" | "weapons" | "armor">("all");
-  if (!items.length) return <div style={{ textAlign: "center", padding: 20, opacity: 0.35, fontSize: 13 }}>Vault empty or not loaded</div>;
+  if (!items.length) return <EmptyState compact title="Vault empty or unreachable." />;
   const weaponBuckets = new Set([1498876634, 2465295065, 953998645]);
   const armorBuckets = new Set([3448274439, 3551918588, 14239492, 20886954, 1585787867]);
   const filtered = items.filter((i: any) => {
@@ -1184,8 +1186,8 @@ function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: stri
     });
   }, [instanceId]);
 
-  if (loading) return <div style={{ padding: 12, opacity: 0.4, fontSize: 11 }}>Loading...</div>;
-  if (rows.length === 0) return <div style={{ padding: 12, opacity: 0.3, fontSize: 11 }}>No completions yet.</div>;
+  if (loading) return <LoadingState compact label="Loading" />;
+  if (rows.length === 0) return <EmptyState compact title="No completions yet." />;
 
   const RANK_COLORS = ["#fcd34d", "#94a3b8", "#cd7f32"]; // gold, silver, bronze
 
@@ -1316,7 +1318,7 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       {subTab === "active" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {activeChallenges.length === 0 ? (
-            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No active challenges right now.</div>
+            <EmptyState compact title="No active challenges." hint="Drops on reset." />
           ) : activeChallenges.map(c => (
             <ChallengeCard
               key={c.id}
@@ -1351,7 +1353,7 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       {subTab === "completed" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {completedChallenges.length === 0 ? (
-            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No completed challenges yet. Get grinding!</div>
+            <EmptyState compact title="Nothing completed yet." hint="Get grinding." />
           ) : completedChallenges.map(e => {
             const c = challenges.find(ch => ch.id === e.instanceId) || { definition: e.instance?.definition, _count: { enrollments: 0 }, ...e.instance };
             return (
@@ -1515,9 +1517,9 @@ function TournamentLeaderboardView({ tournamentId, title, onBack }: { tournament
       </button>
       <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.9)" }}>{title}</div>
       {loading ? (
-        <div style={{ padding: 12, opacity: 0.4, fontSize: 11 }}>Loading...</div>
+        <LoadingState compact label="Loading" />
       ) : rows.length === 0 ? (
-        <div style={{ padding: 12, opacity: 0.3, fontSize: 11 }}>No entries yet.</div>
+        <EmptyState compact title="No entries yet." />
       ) : rows.map((r: any) => (
         <div key={r.id} style={{
           display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8,
@@ -1579,7 +1581,7 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
   }
 
   if (tournaments.length === 0) {
-    return <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No tournaments right now. Check back soon.</div>;
+    return <EmptyState compact title="No tournaments up." hint="Check back after reset." />;
   }
 
   return (

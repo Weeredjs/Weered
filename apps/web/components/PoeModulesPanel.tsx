@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const POE_NINJA = "https://poe.ninja/api/data";
@@ -236,7 +237,7 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No results found</div>
+        <EmptyState title="No results." hint="Try a different search." />
       )}
     </div>
   );
@@ -303,7 +304,7 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading unique items...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No items found</div>
+        <EmptyState title="No items found." />
       ) : (
         <>
           <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginBottom: 8 }}>{filtered.length} items</div>
@@ -417,7 +418,7 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading divination cards...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No cards found</div>
+        <EmptyState title="No cards found." />
       ) : (
         <>
           <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginBottom: 8 }}>{filtered.length} cards</div>
@@ -568,7 +569,7 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading skill gems...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>No gems found</div>
+        <EmptyState title="No gems found." />
       ) : (
         <>
           <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginBottom: 8 }}>{filtered.length} gems</div>
@@ -779,11 +780,7 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
       {/* Posts List */}
       {posts.length === 0 ? (
-        <div style={{ padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.2 }}>{"\u{1F465}"}</div>
-          <div style={{ opacity: 0.4, fontSize: 13, marginBottom: 4 }}>No parties posted yet</div>
-          <div style={{ opacity: 0.25, fontSize: 11 }}>Be the first to find a group</div>
-        </div>
+        <EmptyState icon="👥" title="No parties posted yet." hint="Drop one up top — someone's looking." />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => {
@@ -882,7 +879,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
   if (streams.length === 0) return (
     <div style={{ textAlign: "center", padding: 30 }}>
       <div style={{ fontSize: 32, marginBottom: 8 }}>{"\u{1F4FA}"}</div>
-      <div style={{ fontSize: 13, color: "rgba(148,163,184,.4)" }}>No Path of Exile streams live right now</div>
+      <div style={{ fontSize: 13, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>Nobody streaming PoE right now.</div>
     </div>
   );
 
