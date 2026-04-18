@@ -1375,6 +1375,85 @@ setInterval(() => {
   }
 }, 60_000);
 
+// ── Steam Rich Presence poller ───────────────────────────────────────────────
+// Polls Steam GetPlayerSummaries every PRESENCE_POLL_MS for all users with a
+// steamId set. Updates User.livePresence with { source: "STEAM", activity,
+// detail, url, updatedAt } or clears it when they're offline/hidden.
+const PRESENCE_POLL_MS = 120_000; // 2 min
+const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
+const STEAM_PERSONASTATES: Record<number, string> = {
+  0: "Offline", 1: "Online", 2: "Busy", 3: "Away", 4: "Snooze", 5: "Looking to trade", 6: "Looking to play",
+};
+
+async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string, any>> {
+  if (!STEAM_API_KEY || steamIds.length === 0) return {};
+  try {
+    const url = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamIds.join(",")}`;
+    const res = await fetch(url);
+    if (!res.ok) return {};
+    const j: any = await res.json();
+    const players: any[] = j?.response?.players || [];
+    const out: Record<string, any> = {};
+    for (const p of players) {
+      const sid = String(p.steamid || "");
+      if (!sid) continue;
+      if (p.gameextrainfo) {
+        out[sid] = {
+          source: "STEAM",
+          activity: `Playing ${p.gameextrainfo}`,
+          detail: p.gameserverip || undefined,
+          url: p.profileurl || undefined,
+          updatedAt: new Date().toISOString(),
+        };
+      } else if (p.personastate && p.personastate !== 0) {
+        out[sid] = {
+          source: "STEAM",
+          activity: STEAM_PERSONASTATES[p.personastate] || "Online",
+          url: p.profileurl || undefined,
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        out[sid] = null; // offline / hidden
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+async function runPresencePoll() {
+  if (!STEAM_API_KEY) return;
+  try {
+    const users = await prisma.user.findMany({
+      where: { steamId: { not: null } },
+      select: { id: true, steamId: true },
+      take: 500, // cap to avoid runaway batches; good enough for MVP
+    });
+    if (users.length === 0) return;
+    // Steam allows up to 100 ids per call
+    for (let i = 0; i < users.length; i += 100) {
+      const chunk = users.slice(i, i + 100);
+      const ids = chunk.map(u => u.steamId as string);
+      const data = await pollSteamPresenceBatch(ids);
+      for (const u of chunk) {
+        const p = data[u.steamId as string];
+        if (p === undefined) continue;
+        await prisma.user.update({
+          where: { id: u.id },
+          data: { livePresence: p as any, presenceCheckedAt: new Date() },
+        }).catch(() => {});
+      }
+    }
+  } catch (e) { console.error("[presence poll]", e); }
+}
+
+if (STEAM_API_KEY) {
+  setInterval(() => { void runPresencePoll(); }, PRESENCE_POLL_MS);
+  // Kick an initial run shortly after boot
+  setTimeout(() => { void runPresencePoll(); }, 15_000);
+}
+
 function send_to_user(userId: string, payload: object) {
   dmDeliver(userId, payload);
 }
@@ -2669,6 +2748,38 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       console.error("[profile PATCH]", e);
       return reply.code(500).send({ error: "Server error" });
     }
+  });
+
+  // ── Rich Presence (Steam pull) ───────────────────────────────────────────
+  // POST /profile/me/steam-id  { steamId } — set or clear (pass empty to clear)
+  app.post("/profile/me/steam-id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const raw = String(body.steamId || "").trim();
+    // Accept SteamID64 (17 digits starting 7656119...) or vanity URL ID
+    const steamId = raw === "" ? null : (/^\d{17}$/.test(raw) ? raw : null);
+    if (raw !== "" && !steamId) {
+      return reply.code(400).send({ ok: false, error: "invalid_steam_id", message: "Expected a 17-digit SteamID64 (e.g. 76561198000000000)." });
+    }
+    await prisma.user.update({
+      where: { id: u.id },
+      data: { steamId, livePresence: steamId ? undefined : null, presenceCheckedAt: null },
+    });
+    return reply.send({ ok: true, steamId });
+  });
+
+  // GET /presence/users?ids=a,b,c — batch live-presence for friend lists etc.
+  app.get("/presence/users", async (req, reply) => {
+    const ids = String((req.query as any)?.ids || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 60);
+    if (ids.length === 0) return reply.send({ ok: true, presence: {} });
+    const rows = await prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, livePresence: true },
+    });
+    const out: Record<string, any> = {};
+    for (const r of rows) if (r.livePresence) out[r.id] = r.livePresence;
+    return reply.send({ ok: true, presence: out });
   });
 
   // ── Account deletion (GDPR right to erasure) ─────────────────────────────
@@ -5655,7 +5766,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true } })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true } })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string }>();
       for (const p of profiles) {
@@ -5671,7 +5782,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         const pres = presenceMap.get(p.id);
         const roomId = pres?.roomId ?? null;
         const roomName = pres?.roomName ?? null;
-        return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false };
+        return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false, livePresence: (p as any).livePresence || null };
       });
       return reply.send({ friends: out });
   });

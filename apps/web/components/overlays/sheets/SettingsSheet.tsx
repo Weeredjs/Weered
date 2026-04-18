@@ -220,6 +220,9 @@ export default function SettingsSheet() {
         </Row>
       </Section>
 
+      {/* Steam rich presence */}
+      <SteamPresenceSection />
+
       {/* Blocked users */}
       <BlockedUsersSection />
 
@@ -366,6 +369,75 @@ function BlockedUsersSection() {
           ))}
         </div>
       )}
+    </Section>
+  );
+}
+
+function SteamPresenceSection() {
+  const [steamId, setSteamId] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
+
+  async function save(clear?: boolean) {
+    setSaving(true); setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/steam-id`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ steamId: clear ? "" : steamId.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({ ok: true, text: clear ? "Steam disconnected." : "Steam linked. Presence updates every 2 minutes." });
+        if (clear) setSteamId("");
+      } else {
+        setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+      }
+    } catch { setMsg({ ok: false, text: "Network error." }); }
+    setSaving(false);
+  }
+
+  return (
+    <Section title="Rich Presence">
+      <Row label="Steam ID" hint="Paste your 17-digit SteamID64 so friends see what you're playing.">
+        <div style={{ display: "flex", gap: 6 }}>
+          <input
+            type="text"
+            value={steamId}
+            onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))}
+            placeholder="76561198000000000"
+            style={{
+              width: 220, padding: "6px 10px",
+              borderRadius: 8,
+              border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
+              background: "var(--weered-panel2, rgba(0,0,0,.3))",
+              color: "var(--weered-text, rgba(243,244,246,.95))",
+              fontFamily: "ui-monospace, monospace",
+              fontSize: 12, outline: "none",
+            }}
+          />
+          <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={() => save(false)} disabled={saving || !/^\d{17}$/.test(steamId.trim())}>
+            {saving ? "Saving…" : "Link"}
+          </button>
+          <button type="button" style={{ ...btnStyle, padding: "6px 10px", fontSize: 11, opacity: 0.7 }} onClick={() => save(true)} disabled={saving}>
+            Clear
+          </button>
+        </div>
+      </Row>
+      {msg && (
+        <div style={{ marginTop: 6, fontSize: 11, color: msg.ok ? "rgba(134,239,172,.85)" : "rgba(252,165,165,.85)" }}>
+          {msg.text}
+        </div>
+      )}
+      <div style={{ marginTop: 8, fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.55))", lineHeight: 1.5 }}>
+        Find your SteamID64 at{" "}
+        <a href="https://steamdb.info/calculator/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline" }}>
+          steamdb.info/calculator
+        </a>
+        . Only your current game and online status are pulled — make sure your Steam profile's game activity is set to public.
+      </div>
     </Section>
   );
 }
