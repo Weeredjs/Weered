@@ -488,6 +488,8 @@ model DirectMessage {
   body      String
   readAt    DateTime?
   createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  deletedAt DateTime?
 
   from User @relation("DMSent",     fields: [fromId], references: [id], onDelete: Cascade)
   to   User @relation("DMReceived", fields: [toId],   references: [id], onDelete: Cascade)
@@ -517,12 +519,14 @@ model Crew {
 }
 
 model CrewMessage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   crewId    String
   userId    String
-  userName  String   @default("")
+  userName  String    @default("")
   body      String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  deletedAt DateTime?
 
   @@index([crewId, createdAt])
 }

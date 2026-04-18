@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
+import { useWeered } from "./WeeredProvider";
+import { weeredConfirm } from "../lib/confirm";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -17,6 +19,8 @@ interface CrewMessage {
   userName: string;
   body: string;
   createdAt: string;
+  editedAt?: string | null;
+  deletedAt?: string | null;
 }
 
 interface Props {
@@ -58,9 +62,13 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
   const [messages, setMessages] = useState<CrewMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
+  const [editingMsgId, setEditingMsgId] = useState("");
+  const [editDraft, setEditDraft] = useState("");
+  const [hoveredMsgId, setHoveredMsgId] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const ctx = useWeered() as any;
 
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -112,7 +120,32 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
       scrollToBottom();
     };
     window.addEventListener("weered:crew:message", handler);
-    return () => window.removeEventListener("weered:crew:message", handler);
+
+    const editHandler = (ev: any) => {
+      const d = ev?.detail;
+      if (!d || d.crewId !== crewId) return;
+      const id = String(d.msgId || "");
+      const body = String(d.body || "");
+      const editedAt = d.editedAt;
+      if (!id) return;
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, body, editedAt } : m));
+    };
+    const delHandler = (ev: any) => {
+      const d = ev?.detail;
+      if (!d || d.crewId !== crewId) return;
+      const id = String(d.msgId || "");
+      const deletedAt = d.deletedAt;
+      if (!id) return;
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, body: "", deletedAt } : m));
+    };
+    window.addEventListener("weered:crew:edited", editHandler);
+    window.addEventListener("weered:crew:deleted", delHandler);
+
+    return () => {
+      window.removeEventListener("weered:crew:message", handler);
+      window.removeEventListener("weered:crew:edited", editHandler);
+      window.removeEventListener("weered:crew:deleted", delHandler);
+    };
   }, [crewId, scrollToBottom]);
 
   // Scroll when messages change
@@ -238,64 +271,117 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
               )}
 
               {/* Message row */}
-              <div style={{
-                display: "flex",
-                flexDirection: isMe ? "row-reverse" : "row",
-                alignItems: "flex-start",
-                gap: 8,
-                padding: "4px 16px",
-              }}>
-                {/* Avatar */}
-                <div style={{
-                  width: 28, height: 28, minWidth: 28, borderRadius: "50%",
-                  background: `${bg}33`,
-                  border: `1.5px solid ${bg}55`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 800, color: bg,
-                  marginTop: 2,
-                  flexShrink: 0,
-                }}>
-                  {msg.userName.charAt(0).toUpperCase()}
-                </div>
+              {(() => {
+                const isDeleted = !!msg.deletedAt;
+                const isEdited = !!msg.editedAt && !isDeleted;
+                const createdTs = new Date(msg.createdAt).getTime();
+                const editable = isMe && !isDeleted && (Date.now() - createdTs) < 15 * 60 * 1000;
+                const deletable = isMe && !isDeleted;
+                const isEditing = editingMsgId === msg.id;
+                const isHovered = hoveredMsgId === msg.id;
 
-                {/* Bubble */}
-                <div style={{
-                  maxWidth: "75%", minWidth: 0,
-                }}>
-                  {/* Name + time */}
-                  <div style={{
-                    display: "flex", alignItems: "baseline", gap: 6,
-                    marginBottom: 2,
-                    flexDirection: isMe ? "row-reverse" : "row",
-                  }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 700,
-                      color: isMe ? "rgba(88,0,229,.8)" : bg,
-                    }}>
-                      {isMe ? "You" : msg.userName}
-                    </span>
-                    <span style={{
-                      fontSize: 9, color: "rgba(243,244,246,.20)",
-                      fontVariantNumeric: "tabular-nums",
-                    }}>
-                      {timeStr(msg.createdAt)}
-                    </span>
-                  </div>
+                const commitEdit = () => {
+                  const next = editDraft.trim();
+                  if (!next || next === msg.body) { setEditingMsgId(""); setEditDraft(""); return; }
+                  try { ctx?.sendRaw?.({ type: "crew:edit", msgId: msg.id, body: next }); } catch {}
+                  setEditingMsgId(""); setEditDraft("");
+                };
+                const handleDel = async () => {
+                  const ok = await weeredConfirm({ title: "Delete this message?", body: "Wiped for the whole crew.", confirmLabel: "Delete", destructive: true });
+                  if (!ok) return;
+                  try { ctx?.sendRaw?.({ type: "crew:delete", msgId: msg.id }); } catch {}
+                };
 
-                  {/* Body */}
-                  <div style={{
-                    fontSize: 13, lineHeight: 1.45,
-                    color: "rgba(243,244,246,.88)",
-                    padding: "8px 12px",
-                    borderRadius: isMe ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
-                    background: isMe ? "rgba(88,0,229,.15)" : "rgba(255,255,255,.05)",
-                    border: `1px solid ${isMe ? "rgba(88,0,229,.20)" : "rgba(255,255,255,.06)"}`,
-                    wordBreak: "break-word",
-                  }}>
-                    {msg.body}
+                return (
+                  <div
+                    onMouseEnter={() => setHoveredMsgId(msg.id)}
+                    onMouseLeave={() => setHoveredMsgId(cur => cur === msg.id ? "" : cur)}
+                    style={{
+                      display: "flex",
+                      flexDirection: isMe ? "row-reverse" : "row",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      padding: "4px 16px",
+                      position: "relative",
+                    }}
+                  >
+                    {/* Avatar */}
+                    <div style={{
+                      width: 28, height: 28, minWidth: 28, borderRadius: "50%",
+                      background: `${bg}33`,
+                      border: `1.5px solid ${bg}55`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 800, color: bg,
+                      marginTop: 2,
+                      flexShrink: 0,
+                      opacity: isDeleted ? 0.45 : 1,
+                    }}>
+                      {msg.userName.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* Bubble */}
+                    <div style={{ maxWidth: "75%", minWidth: 0 }}>
+                      <div style={{
+                        display: "flex", alignItems: "baseline", gap: 6,
+                        marginBottom: 2,
+                        flexDirection: isMe ? "row-reverse" : "row",
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isMe ? "rgba(88,0,229,.8)" : bg }}>
+                          {isMe ? "You" : msg.userName}
+                        </span>
+                        <span style={{ fontSize: 9, color: "rgba(243,244,246,.20)", fontVariantNumeric: "tabular-nums" }}>
+                          {timeStr(msg.createdAt)}
+                        </span>
+                        {isEdited && (
+                          <span title={msg.editedAt ? new Date(msg.editedAt).toLocaleString() : undefined} style={{ fontSize: 9, color: "rgba(243,244,246,.30)" }}>(edited)</span>
+                        )}
+                      </div>
+
+                      {isDeleted ? (
+                        <div style={{ fontSize: 12, fontStyle: "italic", color: "rgba(243,244,246,.35)", padding: "6px 12px", borderRadius: isMe ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: "rgba(255,255,255,.025)", border: "1px dashed rgba(255,255,255,.08)" }}>
+                          [message deleted]
+                        </div>
+                      ) : isEditing ? (
+                        <div style={{ minWidth: 220 }}>
+                          <textarea
+                            autoFocus
+                            value={editDraft}
+                            onChange={e => setEditDraft(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit(); }
+                              if (e.key === "Escape") { e.preventDefault(); setEditingMsgId(""); setEditDraft(""); }
+                            }}
+                            style={{ width: "100%", minHeight: 56, padding: "7px 11px", borderRadius: 10, border: "1px solid rgba(255,255,255,.18)", background: "rgba(0,0,0,.3)", color: "rgba(243,244,246,.95)", fontFamily: "inherit", fontSize: 13, outline: "none", resize: "vertical" }}
+                          />
+                          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
+                            <button type="button" onClick={() => { setEditingMsgId(""); setEditDraft(""); }} style={{ padding: "3px 8px", fontSize: 10, fontWeight: 700, background: "transparent", border: "1px solid rgba(255,255,255,.12)", borderRadius: 6, color: "rgba(148,163,184,.75)", cursor: "pointer" }}>Cancel</button>
+                            <button type="button" onClick={commitEdit} style={{ padding: "3px 10px", fontSize: 10, fontWeight: 800, background: "rgba(88,0,229,.18)", border: "1px solid rgba(88,0,229,.45)", borderRadius: 6, color: "rgba(196,181,253,.95)", cursor: "pointer" }}>Save</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{
+                          fontSize: 13, lineHeight: 1.45,
+                          color: "rgba(243,244,246,.88)",
+                          padding: "8px 12px",
+                          borderRadius: isMe ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
+                          background: isMe ? "rgba(88,0,229,.15)" : "rgba(255,255,255,.05)",
+                          border: `1px solid ${isMe ? "rgba(88,0,229,.20)" : "rgba(255,255,255,.06)"}`,
+                          wordBreak: "break-word",
+                        }}>
+                          {msg.body}
+                        </div>
+                      )}
+                    </div>
+
+                    {(editable || deletable) && isHovered && !isEditing && !isDeleted && (
+                      <div style={{ position: "absolute", top: 0, [isMe ? "left" : "right" as any]: 8, display: "flex", gap: 2, padding: 3, borderRadius: 7, background: "rgba(16,16,20,.96)", border: "1px solid rgba(255,255,255,.1)", boxShadow: "0 4px 12px rgba(0,0,0,.35)", zIndex: 2 }}>
+                        {editable && <button type="button" title="Edit" onClick={() => { setEditingMsgId(msg.id); setEditDraft(String(msg.body || "")); }} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>✎</button>}
+                        {deletable && <button type="button" title="Delete" onClick={handleDel} style={{ width: 22, height: 22, borderRadius: 5, border: "none", background: "transparent", color: "rgba(148,163,184,.75)", cursor: "pointer", fontSize: 11 }}>🗑</button>}
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </React.Fragment>
           );
         })}

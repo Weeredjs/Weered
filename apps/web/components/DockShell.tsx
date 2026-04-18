@@ -8,7 +8,7 @@ import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";
 
-type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null };
+type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null };
 type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
 
 const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
@@ -212,6 +212,9 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const [dmPeer, setDmPeer] = useState("");
   const [dmDraft, setDmDraft] = useState("");
   const [dmLoading, setDmLoading] = useState(false);
+  const [dmEditingMsgId, setDmEditingMsgId] = useState("");
+  const [dmEditDraft, setDmEditDraft] = useState("");
+  const [dmHoveredMsgId, setDmHoveredMsgId] = useState("");
   const dmEndRef = useRef<HTMLDivElement|null>(null);
   const dmInputRef = useRef<HTMLInputElement|null>(null);
   const roomInputRef = useRef<HTMLInputElement|null>(null);
@@ -279,7 +282,30 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
       });
     };
     window.addEventListener("weered:dm:message",handler as any);
-    return ()=>window.removeEventListener("weered:dm:message",handler as any);
+
+    const editHandler=(ev:any)=>{
+      const d=ev?.detail; if (!d) return;
+      const msgId=String(d.msgId||""); const newBody=String(d.body||"");
+      const editedAt=d.editedAt; if (!msgId) return;
+      const meId=String(me?.id||"");
+      const peerId=d.fromId===meId?d.toId:d.fromId;
+      setDmThreads(cur=>cur.map(t=>t.peerId===peerId?{...t,msgs:t.msgs.map(m=>m.id===msgId?{...m,body:newBody,editedAt} as any:m)}:t));
+    };
+    const delHandler=(ev:any)=>{
+      const d=ev?.detail; if (!d) return;
+      const msgId=String(d.msgId||""); const deletedAt=d.deletedAt; if (!msgId) return;
+      const meId=String(me?.id||"");
+      const peerId=d.fromId===meId?d.toId:d.fromId;
+      setDmThreads(cur=>cur.map(t=>t.peerId===peerId?{...t,msgs:t.msgs.map(m=>m.id===msgId?{...m,body:"",deletedAt} as any:m)}:t));
+    };
+    window.addEventListener("weered:dm:edited",editHandler as any);
+    window.addEventListener("weered:dm:deleted",delHandler as any);
+
+    return ()=>{
+      window.removeEventListener("weered:dm:message",handler as any);
+      window.removeEventListener("weered:dm:edited",editHandler as any);
+      window.removeEventListener("weered:dm:deleted",delHandler as any);
+    };
   },[me,dmActivePeerId,apiBase,tokenMaybe]);
 
   useEffect(()=>{ try { dmEndRef.current?.scrollIntoView({behavior:"smooth"}); } catch {} },[dmActivePeerId,dmThreads]);
@@ -534,18 +560,68 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                             <div style={{ flex:1, height:1, background:"var(--weered-bd)" }} />
                           </div>
                         )}
-                        <div style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start", marginTop:sameSender&&!showDateSep?1:8 }}>
-                          <div className={`weered-dock-bubble${isMe?" weered-dock-bubble-me":""}`} style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
-                            <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{linkify(String(m.body||""))}</div>
-                          </div>
-                          {showTime && (
-                            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:2, padding:"0 4px" }}>
-                              <span style={{ fontSize:10, color:"var(--weered-muted)" }}>{fmtTime(m.createdAt)}</span>
-                              {isLastSent && m.readAt && <span style={{ fontSize:9, color:"var(--weered-accent-text)", fontWeight:600 }}>Read</span>}
-                              {isLastSent && !m.readAt && <span style={{ fontSize:9, color:"var(--weered-muted)" }}>Sent</span>}
+                        {(() => {
+                          const isDeleted=!!(m as any).deletedAt;
+                          const isEdited=!!(m as any).editedAt && !isDeleted;
+                          const createdTs=new Date(m.createdAt).getTime();
+                          const editable=isMe && !isDeleted && (Date.now()-createdTs) < 15*60*1000;
+                          const deletable=isMe && !isDeleted;
+                          const isEditing=dmEditingMsgId===m.id;
+                          const isHovered=dmHoveredMsgId===m.id;
+
+                          const commitDmEdit=()=>{
+                            const next=dmEditDraft.trim();
+                            if (!next || next===m.body) { setDmEditingMsgId(""); setDmEditDraft(""); return; }
+                            try { (ctx as any)?.sendRaw?.({ type:"dm:edit", msgId:m.id, body:next }); } catch {}
+                            setDmEditingMsgId(""); setDmEditDraft("");
+                          };
+                          const handleDmDelete=async ()=>{
+                            const { weeredConfirm } = await import("../lib/confirm");
+                            const ok=await weeredConfirm({ title:"Delete this message?", body:"Gone for you and them.", confirmLabel:"Delete", destructive:true });
+                            if (!ok) return;
+                            try { (ctx as any)?.sendRaw?.({ type:"dm:delete", msgId:m.id }); } catch {}
+                          };
+
+                          return (
+                            <div
+                              onMouseEnter={()=>setDmHoveredMsgId(m.id)}
+                              onMouseLeave={()=>setDmHoveredMsgId(cur=>cur===m.id?"":cur)}
+                              style={{ display:"flex", flexDirection:"column", alignItems:isMe?"flex-end":"flex-start", marginTop:sameSender&&!showDateSep?1:8, position:"relative", maxWidth:"82%", alignSelf:isMe?"flex-end":"flex-start" }}
+                            >
+                              {isDeleted ? (
+                                <div style={{ padding:"7px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:"rgba(255,255,255,.03)", border:"1px dashed var(--weered-bd)", fontSize:12, fontStyle:"italic", color:"var(--weered-muted)" }}>[message deleted]</div>
+                              ) : isEditing ? (
+                                <div style={{ width:"100%", minWidth:220 }}>
+                                  <textarea autoFocus value={dmEditDraft} onChange={e=>setDmEditDraft(e.target.value)}
+                                    onKeyDown={e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); commitDmEdit(); } if(e.key==="Escape"){ e.preventDefault(); setDmEditingMsgId(""); setDmEditDraft(""); } }}
+                                    style={{ width:"100%", minHeight:56, padding:"7px 11px", borderRadius:12, border:"1px solid var(--weered-bd2)", background:"var(--weered-panel2)", color:"var(--weered-text)", fontFamily:"inherit", fontSize:13, outline:"none", resize:"vertical" }} />
+                                  <div style={{ display:"flex", gap:6, justifyContent:"flex-end", marginTop:4, fontSize:10, color:"var(--weered-muted)" }}>
+                                    <button type="button" onClick={()=>{ setDmEditingMsgId(""); setDmEditDraft(""); }} style={{ padding:"3px 8px", fontSize:10, fontWeight:700, background:"transparent", border:"1px solid var(--weered-bd)", borderRadius:6, color:"var(--weered-muted)", cursor:"pointer" }}>Cancel</button>
+                                    <button type="button" onClick={commitDmEdit} style={{ padding:"3px 10px", fontSize:10, fontWeight:800, background:"var(--weered-accent-bg)", border:"1px solid var(--weered-accent-ring)", borderRadius:6, color:"var(--weered-accent-text)", cursor:"pointer" }}>Save</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className={`weered-dock-bubble${isMe?" weered-dock-bubble-me":""}`} style={{ padding:"9px 13px", borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px", background:isMe?"var(--weered-accent-bg)":"rgba(255,255,255,.07)", border:isMe?"1px solid var(--weered-accent-ring)":"1px solid var(--weered-bd)" }}>
+                                  <div style={{ fontSize:13, lineHeight:"19px", color:"var(--weered-text)" }}>{linkify(String(m.body||""))}</div>
+                                </div>
+                              )}
+                              {showTime && (
+                                <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:2, padding:"0 4px" }}>
+                                  <span style={{ fontSize:10, color:"var(--weered-muted)" }}>{fmtTime(m.createdAt)}</span>
+                                  {isEdited && <span title={(m as any).editedAt ? new Date((m as any).editedAt).toLocaleString() : undefined} style={{ fontSize:9, color:"var(--weered-muted)" }}>(edited)</span>}
+                                  {isLastSent && !isDeleted && m.readAt && <span style={{ fontSize:9, color:"var(--weered-accent-text)", fontWeight:600 }}>Read</span>}
+                                  {isLastSent && !isDeleted && !m.readAt && <span style={{ fontSize:9, color:"var(--weered-muted)" }}>Sent</span>}
+                                </div>
+                              )}
+                              {(editable||deletable) && isHovered && !isEditing && !isDeleted && (
+                                <div style={{ position:"absolute", top:-6, [isMe?"left":"right" as any]:-4, display:"flex", gap:2, padding:3, borderRadius:7, background:"var(--weered-panel2)", border:"1px solid var(--weered-bd)", boxShadow:"0 4px 12px rgba(0,0,0,.35)", zIndex:2 }}>
+                                  {editable && <button type="button" title="Edit" onClick={()=>{ setDmEditingMsgId(m.id); setDmEditDraft(String(m.body||"")); }} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>✎</button>}
+                                  {deletable && <button type="button" title="Delete" onClick={handleDmDelete} style={{ width:22, height:22, borderRadius:5, border:"none", background:"transparent", color:"var(--weered-muted)", cursor:"pointer", fontSize:11 }}>🗑</button>}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </React.Fragment>
                     );
                   }) : (
