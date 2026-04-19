@@ -7,7 +7,7 @@ const SITE = "https://weered.ca";
 // Add entries here when a lobby has its own branded social card.
 const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: string; description?: string; title?: string }> = {
   windrose: {
-    ogImage: `${SITE}/brand/lobbies/windrose-og-v2.png`,
+    ogImage: `${SITE}/brand/lobbies/windrose-og-v3.png`,
     description: "The unofficial Windrose community hub. Live Steam player count, Kraken Express dispatches, crew finder, and Captain's Log. Build. Sail. Survive the storm.",
     title: "Windrose — unofficial community hub · Weered",
   },
