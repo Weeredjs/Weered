@@ -1,5 +1,32 @@
 import "./globals.css";
 import React from "react";
+import { Pirata_One, Cormorant_Garamond, Rajdhani } from "next/font/google";
+
+// Preloaded / self-hosted via next/font so lobby theme typography is
+// reliable on first paint (no FOUC). Exposed as CSS variables that
+// globals.css consumes for lobby-scoped font stacks.
+const pirataOne = Pirata_One({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-pirata",
+  display: "swap",
+  preload: true,
+});
+const cormorant = Cormorant_Garamond({
+  weight: ["400", "600", "700"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-cormorant",
+  display: "swap",
+  preload: true,
+});
+const rajdhani = Rajdhani({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-rajdhani",
+  display: "swap",
+  preload: true,
+});
 import { WeeredProvider } from "../components/WeeredProvider";
 import OverlayProvider from "../components/overlays/OverlayProvider";
 import OverlayHost from "../components/overlays/OverlayHost";
@@ -120,7 +147,7 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>

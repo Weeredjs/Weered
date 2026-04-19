@@ -1,5 +1,8 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Rajdhani:wght@400;500;600;700&display=swap');
+/* Lobby-theme fonts (Pirata One, Cormorant Garamond, Rajdhani) are now
+   loaded via next/font/google in app/layout.tsx — self-hosted,
+   preloaded, no FOUC. CSS vars --font-pirata, --font-cormorant,
+   --font-rajdhani are available everywhere. */
 
 /* Tier-2 header logo: clickable to replay the splash overlay */
 .weered-tier2-logo {
@@ -4196,6 +4199,21 @@ html[data-weered-lobby="windrose"] body {
     radial-gradient(ellipse 50% 40% at 90% 100%, rgba(163,61,61,0.03) 0%, transparent 50%),
     linear-gradient(180deg, #0e1826 0%, #07101c 100%) !important;
   color: var(--wr-parchment);
+  font-family: var(--font-cormorant), Georgia, serif !important;
+}
+/* Windrose lobby: force ALL text in the chrome to the Cormorant body font
+   unless explicitly set by a more specific Windrose rule (Pirata One on titles) */
+html[data-weered-lobby="windrose"] .weered-left,
+html[data-weered-lobby="windrose"] .weered-right,
+html[data-weered-lobby="windrose"] .weered-center,
+html[data-weered-lobby="windrose"] .weered-dock,
+html[data-weered-lobby="windrose"] .weered-overlay-panel,
+html[data-weered-lobby="windrose"] .weered-usercorner,
+html[data-weered-lobby="windrose"] button,
+html[data-weered-lobby="windrose"] input,
+html[data-weered-lobby="windrose"] textarea,
+html[data-weered-lobby="windrose"] select {
+  font-family: var(--font-cormorant), Georgia, serif !important;
 }
 
 html[data-weered-lobby="windrose"] body::before {
@@ -4329,7 +4347,7 @@ html[data-weered-lobby="windrose"] .weered-usercorner::after { top: 5px; right: 
 html[data-weered-lobby="windrose"] .weered-left-title,
 html[data-weered-lobby="windrose"] .weered-rr-section-title,
 html[data-weered-lobby="windrose"] .weered-presence-title {
-  font-family: "Pirata One", "Cormorant Garamond", serif !important;
+  font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
   letter-spacing: 2.5px !important;
   color: #e8c48a !important;
   text-transform: uppercase;
@@ -4339,7 +4357,7 @@ html[data-weered-lobby="windrose"] .weered-presence-title {
 
 html[data-weered-lobby="windrose"] .weered-left-link,
 html[data-weered-lobby="windrose"] .weered-rr-room-card {
-  font-family: "Cormorant Garamond", "Georgia", serif !important;
+  font-family: var(--font-cormorant), Georgia, serif !important;
 }
 
 html[data-weered-lobby="windrose"] .weered-left-link {
@@ -4410,7 +4428,7 @@ html[data-weered-lobby="windrose"] .weered-rr-join {
   background: linear-gradient(180deg, #243752 0%, #15233a 100%) !important;
   border: 1px solid rgba(201,160,102,0.50) !important;
   color: #e8c48a !important;
-  font-family: "Cormorant Garamond", "Georgia", serif !important;
+  font-family: var(--font-cormorant), Georgia, serif !important;
   font-weight: 700 !important;
   letter-spacing: 1.8px !important;
   text-transform: uppercase;
@@ -4437,7 +4455,7 @@ html[data-weered-lobby="windrose"] .weered-input {
   background: rgba(10,20,36,0.70) !important;
   border: 1px solid rgba(201,160,102,0.32) !important;
   color: #e4d4b0 !important;
-  font-family: "Cormorant Garamond", "Georgia", serif !important;
+  font-family: var(--font-cormorant), Georgia, serif !important;
   border-radius: 3px !important;
   font-size: 14px !important;
 }
@@ -4482,7 +4500,7 @@ html[data-weered-lobby="windrose"] .weered-lobby-tab {
   background: transparent !important;
   border: 1px solid rgba(201,160,102,0.25) !important;
   color: var(--wr-parch-dim) !important;
-  font-family: "Pirata One", "Cormorant Garamond", serif !important;
+  font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
   letter-spacing: 3px !important;
   font-size: 13px !important;
   text-transform: uppercase;
@@ -4666,7 +4684,7 @@ html[data-weered-lobby="windrose"] .weered-event-badge {
   border: 1px solid #e8c48a !important;
   color: #e8c48a !important;
   text-transform: uppercase !important;
-  font-family: "Pirata One", "Cormorant Garamond", serif !important;
+  font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
   letter-spacing: 2.5px !important;
   box-shadow: 0 0 12px rgba(163,61,61,0.35), inset 0 1px 0 rgba(232,196,138,0.2) !important;
 }
@@ -4779,6 +4797,19 @@ html[data-weered-lobby="destiny2"] body {
     radial-gradient(ellipse 55% 45% at 88% 100%, rgba(74,158,255,0.06) 0%, transparent 50%),
     linear-gradient(180deg, #050810 0%, #020308 100%) !important;
   color: var(--d2-text);
+  font-family: var(--font-rajdhani), Inter, "Segoe UI", system-ui, sans-serif !important;
+}
+html[data-weered-lobby="destiny2"] .weered-left,
+html[data-weered-lobby="destiny2"] .weered-right,
+html[data-weered-lobby="destiny2"] .weered-center,
+html[data-weered-lobby="destiny2"] .weered-dock,
+html[data-weered-lobby="destiny2"] .weered-overlay-panel,
+html[data-weered-lobby="destiny2"] .weered-usercorner,
+html[data-weered-lobby="destiny2"] button,
+html[data-weered-lobby="destiny2"] input,
+html[data-weered-lobby="destiny2"] textarea,
+html[data-weered-lobby="destiny2"] select {
+  font-family: var(--font-rajdhani), Inter, "Segoe UI", system-ui, sans-serif !important;
 }
 
 /* Giant Traveler watermark, bottom-right, drifting in */
@@ -4925,7 +4956,7 @@ html[data-weered-lobby="destiny2"] .weered-usercorner::after { top: 6px; right: 
 html[data-weered-lobby="destiny2"] .weered-left-title,
 html[data-weered-lobby="destiny2"] .weered-rr-section-title,
 html[data-weered-lobby="destiny2"] .weered-presence-title {
-  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', 'Impact', sans-serif !important;
+  font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", Impact, sans-serif !important;
   letter-spacing: 3.5px !important;
   color: #ffb066 !important;
   text-transform: uppercase;
@@ -4934,7 +4965,7 @@ html[data-weered-lobby="destiny2"] .weered-presence-title {
 }
 html[data-weered-lobby="destiny2"] .weered-left-link,
 html[data-weered-lobby="destiny2"] .weered-rr-room-card {
-  font-family: 'Rajdhani', 'Inter', 'Segoe UI', system-ui, sans-serif !important;
+  font-family: var(--font-rajdhani), Inter, "Segoe UI", system-ui, sans-serif !important;
   letter-spacing: 0.5px;
 }
 
@@ -5009,7 +5040,7 @@ html[data-weered-lobby="destiny2"] .weered-rr-join {
   background: linear-gradient(180deg, rgba(18,24,48,0.95) 0%, rgba(10,14,28,0.98) 100%) !important;
   border: 1px solid rgba(245,130,32,0.55) !important;
   color: #ffb066 !important;
-  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', sans-serif !important;
+  font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   font-weight: 700 !important;
   letter-spacing: 2.2px !important;
   text-transform: uppercase;
@@ -5037,7 +5068,7 @@ html[data-weered-lobby="destiny2"] .weered-input {
   background: rgba(5,8,16,0.70) !important;
   border: 1px solid rgba(245,130,32,0.30) !important;
   color: #cfd6e0 !important;
-  font-family: 'Rajdhani', 'Inter', 'Segoe UI', system-ui, sans-serif !important;
+  font-family: var(--font-rajdhani), Inter, "Segoe UI", system-ui, sans-serif !important;
   border-radius: 2px !important;
   font-size: 14px !important;
   letter-spacing: 0.4px;
@@ -5084,7 +5115,7 @@ html[data-weered-lobby="destiny2"] .weered-lobby-tab {
   background: transparent !important;
   border: 1px solid rgba(245,130,32,0.25) !important;
   color: var(--d2-textDim) !important;
-  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', sans-serif !important;
+  font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   letter-spacing: 3px !important;
   font-size: 13px !important;
   text-transform: uppercase;
@@ -5129,7 +5160,7 @@ html[data-weered-lobby="destiny2"] .weered-event-badge {
   border: 1px solid #ffb066 !important;
   color: #fff !important;
   text-transform: uppercase !important;
-  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', sans-serif !important;
+  font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   letter-spacing: 2.5px !important;
   box-shadow: 0 0 12px rgba(245,130,32,0.45), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
