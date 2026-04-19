@@ -11802,6 +11802,142 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     });
   });
 
+  // ── Windrose Community Servers directory ───────────────────────────────
+  // Any authenticated user can register a server (WindrosePlus-hosted or
+  // otherwise). Owner manages lifecycle. Public GET shows live directory.
+
+  // GET /windrose/servers — public directory
+  app.get("/windrose/servers", async (req, reply) => {
+    try {
+      const servers = await (prisma as any).communityServer.findMany({
+        where: { lobbyId: "windrose" },
+        orderBy: [{ status: "desc" }, { lastSeenAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true, name: true, host: true, dashboardUrl: true, queryUrl: true,
+          region: true, description: true, tags: true, maxSlots: true, framework: true,
+          status: true, lastSeenAt: true, lastState: true, createdAt: true,
+          owner: { select: { id: true, name: true, avatar: true, avatarColor: true } },
+        },
+        take: 100,
+      });
+      return reply.send({ ok: true, servers });
+    } catch (e) {
+      console.error("[windrose/servers GET]", e);
+      return reply.code(500).send({ ok: false, error: "server_error" });
+    }
+  });
+
+  // POST /windrose/servers — register a server
+  app.post("/windrose/servers", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const name = String(body.name || "").trim().slice(0, 60);
+    const host = String(body.host || "").trim().slice(0, 120);
+    if (!name || !host) return reply.code(400).send({ ok: false, error: "name_and_host_required" });
+    const dashboardUrl = (body.dashboardUrl ? String(body.dashboardUrl).trim() : null);
+    const queryUrl     = (body.queryUrl ? String(body.queryUrl).trim() : null);
+    const region       = (body.region ? String(body.region).trim().slice(0, 24) : null);
+    const description  = (body.description ? String(body.description).trim().slice(0, 500) : null);
+    const framework    = (body.framework ? String(body.framework).trim().slice(0, 40) : null);
+    const maxSlots     = body.maxSlots ? Math.max(1, Math.min(64, Number(body.maxSlots) || 8)) : null;
+    const tags         = Array.isArray(body.tags) ? body.tags.map((t: any) => String(t).slice(0, 24)).slice(0, 10) : [];
+    // Cap per user: 5 servers
+    const existing = await (prisma as any).communityServer.count({ where: { ownerId: u.id, lobbyId: "windrose" } });
+    if (existing >= 5) return reply.code(400).send({ ok: false, error: "limit_reached", message: "Max 5 servers per user." });
+    try {
+      const created = await (prisma as any).communityServer.create({
+        data: { lobbyId: "windrose", ownerId: u.id, name, host, dashboardUrl, queryUrl, region, description, framework, maxSlots, tags, status: "pending" },
+      });
+      return reply.send({ ok: true, server: created });
+    } catch (e) {
+      console.error("[windrose/servers POST]", e);
+      return reply.code(500).send({ ok: false, error: "create_failed" });
+    }
+  });
+
+  // PATCH /windrose/servers/:id — owner edits
+  app.patch("/windrose/servers/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = (req.params as any).id as string;
+    const existing = await (prisma as any).communityServer.findUnique({ where: { id } });
+    if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
+    const isOwner = existing.ownerId === u.id;
+    const isStaff = ["GOD","STAFF","SUPPORT"].includes(u.globalRole || "");
+    if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const body: any = (req as any).body || {};
+    const data: any = {};
+    if (typeof body.name === "string") data.name = body.name.trim().slice(0, 60);
+    if (typeof body.host === "string") data.host = body.host.trim().slice(0, 120);
+    if (typeof body.dashboardUrl === "string") data.dashboardUrl = body.dashboardUrl.trim() || null;
+    if (typeof body.queryUrl === "string") data.queryUrl = body.queryUrl.trim() || null;
+    if (typeof body.region === "string") data.region = body.region.trim().slice(0, 24) || null;
+    if (typeof body.description === "string") data.description = body.description.trim().slice(0, 500) || null;
+    if (typeof body.framework === "string") data.framework = body.framework.trim().slice(0, 40) || null;
+    if (body.maxSlots != null) data.maxSlots = Math.max(1, Math.min(64, Number(body.maxSlots) || 8));
+    if (Array.isArray(body.tags)) data.tags = body.tags.map((t: any) => String(t).slice(0, 24)).slice(0, 10);
+    try {
+      const updated = await (prisma as any).communityServer.update({ where: { id }, data });
+      return reply.send({ ok: true, server: updated });
+    } catch (e) {
+      console.error("[windrose/servers PATCH]", e);
+      return reply.code(500).send({ ok: false, error: "update_failed" });
+    }
+  });
+
+  // DELETE /windrose/servers/:id — owner or staff
+  app.delete("/windrose/servers/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = (req.params as any).id as string;
+    const existing = await (prisma as any).communityServer.findUnique({ where: { id } });
+    if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
+    const isOwner = existing.ownerId === u.id;
+    const isStaff = ["GOD","STAFF","SUPPORT"].includes(u.globalRole || "");
+    if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
+    try {
+      await (prisma as any).communityServer.delete({ where: { id } });
+      return reply.send({ ok: true });
+    } catch (e) {
+      console.error("[windrose/servers DELETE]", e);
+      return reply.code(500).send({ ok: false, error: "delete_failed" });
+    }
+  });
+
+  // ── Windrose server polling worker ─────────────────────────────────────
+  // Pings each registered server's queryUrl every 90s. Updates status +
+  // lastState JSON blob. Tolerant of missing/unknown response shapes — we
+  // just store what we get so the directory can render whatever's there.
+  async function pollWindroseServers() {
+    try {
+      const servers = await (prisma as any).communityServer.findMany({
+        where: { lobbyId: "windrose", queryUrl: { not: null } },
+        select: { id: true, queryUrl: true },
+        take: 200,
+      });
+      for (const s of servers) {
+        if (!s.queryUrl) continue;
+        try {
+          const res = await fetch(s.queryUrl, { signal: AbortSignal.timeout(5000) });
+          if (!res.ok) {
+            await (prisma as any).communityServer.update({ where: { id: s.id }, data: { status: "offline" } }).catch(() => {});
+            continue;
+          }
+          const json: any = await res.json().catch(() => null);
+          await (prisma as any).communityServer.update({
+            where: { id: s.id },
+            data: { status: "online", lastSeenAt: new Date(), lastState: json as any },
+          }).catch(() => {});
+        } catch {
+          await (prisma as any).communityServer.update({ where: { id: s.id }, data: { status: "offline" } }).catch(() => {});
+        }
+      }
+    } catch (e) { console.error("[windrose server poller]", e); }
+  }
+  setInterval(() => { void pollWindroseServers(); }, 90_000);
+  setTimeout(() => { void pollWindroseServers(); }, 20_000);
+
   // ══════════════════════════════════════════════════════════════════════════════
   // ── DESTINY 2 (Steam appid 1085660) ───────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════

@@ -215,6 +215,7 @@ const TABS = [
   { id: "flagship" as const, label: "Flagship" },
   { id: "log"      as const, label: "Captain's Log" },
   { id: "crew"     as const, label: "Crew Finder" },
+  { id: "ports"    as const, label: "Ports of Call" },
   { id: "streams"  as const, label: "Streams" },
   { id: "about"    as const, label: "About" },
 ];
@@ -619,6 +620,315 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+// ═══ Tab: Ports of Call (community servers directory) ═══════════════════════════
+
+type CommunityServer = {
+  id: string;
+  name: string;
+  host: string;
+  dashboardUrl?: string | null;
+  queryUrl?: string | null;
+  region?: string | null;
+  description?: string | null;
+  tags?: string[];
+  maxSlots?: number | null;
+  framework?: string | null;
+  status: string;
+  lastSeenAt?: string | null;
+  lastState?: any;
+  createdAt: string;
+  owner?: { id: string; name: string; avatar?: string | null; avatarColor?: string | null };
+};
+
+const WR_REGIONS_LIST = ["NA-East", "NA-West", "EU", "OCE", "ASIA", "SA", "MENA"];
+const WR_FRAMEWORKS = ["WindrosePlus", "Vanilla", "Other"];
+
+function PortsOfCallTab() {
+  const [servers, setServers] = useState<CommunityServer[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [filterRegion, setFilterRegion] = useState<string>("");
+  const [filterSlots, setFilterSlots] = useState<boolean>(false);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const j = await apiFetch("/windrose/servers");
+      if (j?.ok && Array.isArray(j.servers)) setServers(j.servers);
+      else setServers([]);
+    } catch { setServers([]); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const filtered = (servers || []).filter(s => {
+    if (filterRegion && s.region !== filterRegion) return false;
+    if (filterSlots) {
+      const online = Number(s.lastState?.players?.length ?? s.lastState?.online ?? s.lastState?.count ?? 0);
+      const max = Number(s.maxSlots ?? 8);
+      if (online >= max) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ ...S.card, padding: "18px 22px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...S.label, marginBottom: 4 }}>Community Servers</div>
+            <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.brassHi, margin: 0, letterSpacing: "0.3px" }}>Ports of Call</h3>
+            <div style={{ fontSize: 13, color: PAL.parchDim, marginTop: 4, fontStyle: "italic" }}>
+              Community-run Windrose servers. Pick a port, drop anchor. If you run one, list it — free.
+            </div>
+          </div>
+          <button type="button" style={S.btnPrimary} onClick={() => setShowForm(true)}>
+            List Your Port
+          </button>
+        </div>
+
+        <BrassDivider />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ ...S.label, fontSize: 9 }}>Region</span>
+          <select value={filterRegion} onChange={e => setFilterRegion(e.target.value)} style={{ ...S.input, width: "auto" } as React.CSSProperties}>
+            <option value="">Any</option>
+            {WR_REGIONS_LIST.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", color: PAL.parchDim, fontSize: 12 }}>
+            <input type="checkbox" checked={filterSlots} onChange={e => setFilterSlots(e.target.checked)} />
+            slots available only
+          </label>
+          <span style={{ flex: 1 }} />
+          <span style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim }}>
+            {filtered.length} server{filtered.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+
+      {showForm && <LinkServerForm onClose={() => { setShowForm(false); reload(); }} />}
+
+      {loading ? (
+        <LoadingState label="Checking the horizon..." />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon="⚓"
+          title="No ports flying colors yet"
+          hint="Run a Windrose server? Be the first port of call. Drop a pin below and sailors will follow."
+          action={<button type="button" style={S.btnPrimary} onClick={() => setShowForm(true)}>List Your Port</button>}
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
+          {filtered.map(s => <ServerCard key={s.id} server={s} />)}
+        </div>
+      )}
+
+      <div style={{ ...S.card, padding: "14px 18px", background: `linear-gradient(180deg, ${PAL.stormMid}50 0%, ${PAL.stormDeep}70 100%)` }}>
+        <div style={{ ...S.label, marginBottom: 6, fontSize: 9 }}>Running a server?</div>
+        <div style={{ fontSize: 13, color: PAL.parchment, lineHeight: 1.55, fontStyle: "italic" }}>
+          If you&apos;re on <strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>WindrosePlus</strong>, you can drop your query endpoint below and we&apos;ll keep the listing live — player count, multipliers, uptime. Never logged in as admin, just read-only polling. Deeper event integration (join/leave broadcasts to your lobby) coming as the ecosystem matures.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServerCard({ server }: { server: CommunityServer }) {
+  const online = Number(server.lastState?.players?.length ?? server.lastState?.online ?? server.lastState?.count ?? 0);
+  const max = server.maxSlots || 8;
+  const pct = Math.min(100, (online / max) * 100);
+  const statusColor = server.status === "online" ? "#5db765" : server.status === "offline" ? "#a54848" : PAL.brass;
+  const statusLabel = server.status === "online" ? "online" : server.status === "offline" ? "offline" : "pending";
+
+  return (
+    <div style={{ ...S.card, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+            <span style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 17, color: PAL.brassHi, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {server.name}
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: WR_FONT_MONO, color: statusColor, letterSpacing: "1px", textTransform: "uppercase" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, boxShadow: `0 0 6px ${statusColor}` }} />
+              {statusLabel}
+            </span>
+          </div>
+          <div style={{ fontFamily: WR_FONT_MONO, fontSize: 11, color: PAL.parchDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {server.host}
+          </div>
+        </div>
+      </div>
+
+      {server.description && (
+        <div style={{ fontSize: 12, color: PAL.parchment, lineHeight: 1.5, fontStyle: "italic", opacity: 0.88 }}>
+          {server.description.length > 140 ? `${server.description.slice(0, 140)}…` : server.description}
+        </div>
+      )}
+
+      {/* Slots bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1, height: 4, background: `${PAL.brass}18`, borderRadius: 1, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${PAL.brass}, ${PAL.brassHi})`, transition: "width 400ms ease" }} />
+        </div>
+        <span style={{ fontFamily: WR_FONT_MONO, fontSize: 11, color: PAL.brass, fontVariantNumeric: "tabular-nums" }}>
+          {online}<span style={{ color: PAL.parchDim }}>/</span>{max}
+        </span>
+      </div>
+
+      {/* Meta strip */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        {server.region && (
+          <span style={{ ...S.label, fontSize: 9 }}>
+            <SkullIcon size={10} /> {server.region}
+          </span>
+        )}
+        {server.framework && (
+          <span style={{ ...S.label, fontSize: 9, color: PAL.brass }}>
+            · {server.framework}
+          </span>
+        )}
+        {(server.tags || []).slice(0, 3).map(t => (
+          <span key={t} style={{ fontSize: 10, color: PAL.brass, fontFamily: WR_FONT_MONO, letterSpacing: "0.5px" }}>
+            #{t}
+          </span>
+        ))}
+        <span style={{ flex: 1 }} />
+        {server.owner && (
+          <span style={{ fontSize: 10, color: PAL.parchDim, fontStyle: "italic" }}>
+            listed by {server.owner.name}
+          </span>
+        )}
+      </div>
+
+      {/* Action row */}
+      {(server.dashboardUrl || server.host) && (
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          {server.dashboardUrl && (
+            <a href={server.dashboardUrl} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 10, padding: "6px 12px" }}>
+              Dashboard
+            </a>
+          )}
+          <button
+            type="button"
+            style={{ ...S.btn, fontSize: 10, padding: "6px 12px" }}
+            onClick={() => { try { navigator.clipboard.writeText(server.host); } catch {} }}
+          >
+            Copy Address
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LinkServerForm({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [host, setHost] = useState("");
+  const [dashboardUrl, setDashboardUrl] = useState("");
+  const [queryUrl, setQueryUrl] = useState("");
+  const [region, setRegion] = useState("");
+  const [description, setDescription] = useState("");
+  const [framework, setFramework] = useState("WindrosePlus");
+  const [maxSlots, setMaxSlots] = useState(8);
+  const [tags, setTags] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    if (!name.trim() || !host.trim() || busy) return;
+    setErr(null); setBusy(true);
+    const tagList = tags.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean).slice(0, 10);
+    const j = await apiFetch("/windrose/servers", {
+      method: "POST",
+      body: JSON.stringify({
+        name: name.trim(), host: host.trim(),
+        dashboardUrl: dashboardUrl.trim() || undefined,
+        queryUrl: queryUrl.trim() || undefined,
+        region: region || undefined,
+        description: description.trim() || undefined,
+        framework: framework || undefined,
+        maxSlots,
+        tags: tagList,
+      }),
+    });
+    setBusy(false);
+    if (j?.ok) onClose();
+    else setErr(j?.message || j?.error || "Couldn't list your port. Try again.");
+  }
+
+  return (
+    <div style={{ ...S.card, padding: "20px 24px", borderColor: PAL.brass }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div>
+          <div style={{ ...S.label, marginBottom: 2 }}>Register a server</div>
+          <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.brassHi, margin: 0, letterSpacing: "0.3px" }}>
+            List Your Port
+          </h3>
+        </div>
+        <button type="button" style={{ ...S.btn, padding: "6px 12px", fontSize: 10 }} onClick={onClose}>Close</button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <Labeled label="Server name *">
+          <input value={name} onChange={e => setName(e.target.value.slice(0, 60))} placeholder="Kraken's Fury" style={S.input as React.CSSProperties} />
+        </Labeled>
+        <Labeled label="Server address *">
+          <input value={host} onChange={e => setHost(e.target.value.slice(0, 120))} placeholder="play.myserver.com:28000" style={S.input as React.CSSProperties} />
+        </Labeled>
+        <Labeled label="Region">
+          <select value={region} onChange={e => setRegion(e.target.value)} style={S.input as React.CSSProperties}>
+            <option value="">Choose...</option>
+            {WR_REGIONS_LIST.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </Labeled>
+        <Labeled label="Framework">
+          <select value={framework} onChange={e => setFramework(e.target.value)} style={S.input as React.CSSProperties}>
+            {WR_FRAMEWORKS.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </Labeled>
+        <Labeled label="Max slots">
+          <input type="number" min={1} max={64} value={maxSlots} onChange={e => setMaxSlots(Math.max(1, Math.min(64, Number(e.target.value) || 8)))} style={S.input as React.CSSProperties} />
+        </Labeled>
+        <Labeled label="Tags (comma-separated)">
+          <input value={tags} onChange={e => setTags(e.target.value)} placeholder="chill, 2xloot, pve-only" style={S.input as React.CSSProperties} />
+        </Labeled>
+        <Labeled label="Public dashboard URL (optional)" span={2}>
+          <input value={dashboardUrl} onChange={e => setDashboardUrl(e.target.value.slice(0, 300))} placeholder="https://play.myserver.com:8080" style={S.input as React.CSSProperties} />
+        </Labeled>
+        <Labeled label="Public query/status URL (optional — live polling)" span={2}>
+          <input value={queryUrl} onChange={e => setQueryUrl(e.target.value.slice(0, 300))} placeholder="https://play.myserver.com:8080/status.json" style={S.input as React.CSSProperties} />
+        </Labeled>
+        <Labeled label="Description" span={2}>
+          <textarea value={description} onChange={e => setDescription(e.target.value.slice(0, 500))} placeholder="Casual PvE, 2x loot weekends, active crew, no-wipe policy for a year. All welcome." style={{ ...S.input, minHeight: 70, fontFamily: WR_FONT_SERIF, fontStyle: "italic" } as React.CSSProperties} />
+        </Labeled>
+      </div>
+
+      {err && (
+        <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(163,61,61,0.12)", border: "1px solid rgba(163,61,61,0.35)", borderRadius: 3, color: "rgba(232,196,138,0.9)", fontSize: 12 }}>
+          {err}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
+        <button type="button" style={S.btn} onClick={onClose} disabled={busy}>Cancel</button>
+        <button type="button" style={S.btnPrimary} onClick={submit} disabled={busy || !name.trim() || !host.trim()}>
+          {busy ? "Listing…" : "Raise Your Colors"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Labeled({ label, children, span = 1 }: { label: string; children: React.ReactNode; span?: number }) {
+  return (
+    <div style={{ gridColumn: `span ${span}`, display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ ...S.label, fontSize: 9 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
 // ═══ Tab: Twitch Streams ═══════════════════════════════════════════════════════
 
 function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }) {
@@ -866,6 +1176,7 @@ export default function WindroseModulesPanel({
           {tab === "flagship" && <FlagshipTab />}
           {tab === "log"      && <LogTab />}
           {tab === "crew"     && <CrewTab lobbyId={lobbyId} />}
+          {tab === "ports"    && <PortsOfCallTab />}
           {tab === "streams"  && <StreamsTab gameName={gameName} lobbyId={lobbyId} />}
           {tab === "about"    && <AboutTab />}
         </div>
