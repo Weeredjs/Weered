@@ -1643,8 +1643,19 @@ function removeKnock(room: RoomState, userId: string) {
 // Hydrate globalRole onto AuthedUser from DB (called once per WS connection)
 async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
-    const u = await prisma.user.findUnique({ where: { id: user.id }, select: { globalRole: true, tier: true, avatarColor: true, avatar: true } });
-    return { ...user, globalRole: String(u?.globalRole ?? "USER"), tier: String(u?.tier ?? "INNOCENT"), avatarColor: u?.avatarColor ?? undefined, avatar: u?.avatar ?? undefined };
+    const u = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true },
+    });
+    return {
+      ...user,
+      globalRole: String(u?.globalRole ?? "USER"),
+      tier: String(u?.tier ?? "INNOCENT"),
+      avatarColor: u?.avatarColor ?? undefined,
+      avatar: u?.avatar ?? undefined,
+      steamId: u?.steamId ?? undefined,
+      twitchLogin: u?.twitchLogin ?? undefined,
+    } as any;
   } catch { return user; }
 }
 
@@ -1741,7 +1752,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -6041,7 +6052,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true } })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true } })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string }>();
       for (const p of profiles) {

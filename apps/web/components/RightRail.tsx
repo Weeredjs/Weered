@@ -8,6 +8,7 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
 import { weeredConfirm } from "../lib/confirm";
+import PresenceRow from "./PresenceRow";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -615,47 +616,58 @@ function FriendsPanel() {
     const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
     const userId      = String(f.id ?? f.userId ?? f.username ?? "");
     const rawRoomId   = String(f.roomId || "").replace(/^room:/, "");
-    // ── Use roomIsLobby from API, fall back to smart detection ──
-    // Lobby slugs are always lowercase and human-readable (destiny2, warframe, etc.)
-    // Random room IDs from shortRoomId() have mixed case (zbZTrF, k1rc3P)
     const isLobby     = f.roomIsLobby === true
       || (f.roomName || "").toLowerCase().includes("lobby")
       || rawRoomId === "lobby"
       || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/.test(rawRoomId) && rawRoomId.length < 30);
     const joinHref    = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
 
-    return (
-      <div key={f.id}
-        className="weered-rr-friend-row"
-        style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", cursor: "pointer", transition: "background 0.12s" }}
-        onClick={() => userId && openSheet("profile", { userId })}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
+    const platforms = {
+      steam:  !!f.steamId,
+      twitch: !!f.twitchLogin,
+      xbox:   !!f.xboxGamertag,
+      psn:    !!f.psnAccountId,
+    };
+
+    const joinLink = f.online && joinHref ? (
+      <Link
+        href={joinHref}
+        className="weered-rr-join"
+        onClick={e => e.stopPropagation()}
+        style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}
       >
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 999, background: f.avatar ? "rgba(255,255,255,.08)" : (f.avatarColor || "rgba(88,0,229,.3)"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden" }}>
-            {f.avatar ? <img src={f.avatar} alt={(f.name || "User") + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (f.name || "?").slice(0, 1).toUpperCase()}
-          </div>
-          <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: f.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
-          {hasUnread && (
-            <span style={{ position: "absolute", top: -3, right: -3, minWidth: 14, height: 14, borderRadius: 999, background: "#f59e0b", border: "2px solid rgba(10,10,15,1)", fontSize: 8, fontWeight: 900, color: "#000", display: "flex", alignItems: "center", justifyContent: "center", padding: unreadCount > 9 ? "0 2px" : "0", lineHeight: 1 }}>
-              {unreadCount > 9 ? "9+" : unreadCount > 1 ? unreadCount : ""}
-            </span>
-          )}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, color: hasUnread ? "rgba(243,244,246,1)" : "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
-          {f.online && f.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.roomName}</div>}
-          {f.livePresence?.activity && (
-            <div title={f.livePresence.source ? `via ${f.livePresence.source}` : undefined} style={{ fontSize: 10, marginTop: 1, color: "var(--weered-accent-text, rgba(196,181,253,.85))", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              🎮 {f.livePresence.activity}
-            </div>
-          )}
-        </div>
-        {f.online && joinHref && (
-          <Link href={joinHref} className="weered-rr-join" onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}>
-            join
-          </Link>
+        join
+      </Link>
+    ) : undefined;
+
+    return (
+      <div key={f.id} className="weered-rr-friend-row" style={{ position: "relative" }}>
+        <PresenceRow
+          name={f.name}
+          avatar={f.avatar}
+          avatarColor={f.avatarColor}
+          globalRole={f.globalRole}
+          tier={f.tier}
+          online={f.online}
+          roomName={f.roomName}
+          livePresence={f.livePresence}
+          platforms={platforms}
+          onClick={() => userId && openSheet("profile", { userId })}
+          action={joinLink}
+          compact
+        />
+        {hasUnread && (
+          <span style={{
+            position: "absolute", top: 2, left: 30,
+            minWidth: 14, height: 14, borderRadius: 999,
+            background: "#f59e0b", border: "2px solid rgba(10,10,15,1)",
+            fontSize: 8, fontWeight: 900, color: "#000",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: unreadCount > 9 ? "0 2px" : "0", lineHeight: 1,
+            zIndex: 2, pointerEvents: "none",
+          }}>
+            {unreadCount > 9 ? "9+" : unreadCount > 1 ? unreadCount : ""}
+          </span>
         )}
       </div>
     );
