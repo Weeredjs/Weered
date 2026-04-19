@@ -41,7 +41,7 @@ export default function LobbySplash({
   ogImage,
   ariaLabel,
   cooldownDays = 7,
-  ctaLabel = "Enter the Hub \u2192",
+  ctaLabel = "Enter the Hub →",
   liveCount,
   palette,
   storageKey,
@@ -94,8 +94,6 @@ export default function LobbySplash({
 
   if (!open) return null;
 
-  const pos = liveCount?.position || { top: "15%", right: "5%" };
-
   return (
     <>
       <style>{`
@@ -104,17 +102,32 @@ export default function LobbySplash({
           to   { opacity: 1; transform: scale(1); }
         }
         @keyframes lobby-count-in {
-          from { opacity: 0; transform: translateX(14px); }
-          to   { opacity: 1; transform: translateX(0); }
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes lobby-count-pulse {
           0%, 100% { box-shadow: 0 0 18px ${palette.frameGlow}; }
-          50%      { box-shadow: 0 0 28px ${palette.accent}80; }
+          50%      { box-shadow: 0 0 32px ${palette.accent}99; }
+        }
+        @keyframes lobby-backdrop-pulse {
+          0%, 100% { opacity: 0.38; transform: scale(1); }
+          50%      { opacity: 0.56; transform: scale(1.04); }
+        }
+        @keyframes lobby-particle-drift {
+          from { background-position: 0 0, 0 0, 0 0; }
+          to   { background-position: 800px 400px, -800px 600px, 400px -800px; }
+        }
+        @keyframes lobby-ring-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
         @media (prefers-reduced-motion: reduce) {
           .weered-lobby-splash-root,
           .weered-lobby-splash-inner,
-          .weered-lobby-splash-count { animation: none !important; transition: none !important; }
+          .weered-lobby-splash-count,
+          .weered-lobby-splash-glow,
+          .weered-lobby-splash-particles,
+          .weered-lobby-splash-ring { animation: none !important; transition: none !important; }
         }
       `}</style>
       <div
@@ -125,7 +138,7 @@ export default function LobbySplash({
         className="weered-lobby-splash-root"
         style={{
           position: "fixed", inset: 0, zIndex: 9999,
-          background: "rgba(3,5,10,0.90)",
+          background: "rgba(3,5,10,0.92)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -133,8 +146,61 @@ export default function LobbySplash({
           opacity: closing ? 0 : 1,
           transition: "opacity 260ms ease",
           animation: !closing ? "lobby-splash-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1)" : undefined,
+          overflow: "hidden",
         }}
       >
+        {/* Radial accent-colored glow behind the card — breathing pulse */}
+        <div
+          className="weered-lobby-splash-glow"
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "50%", left: "50%",
+            width: "min(1400px, 120vw)", height: "min(1400px, 120vw)",
+            transform: "translate(-50%, -50%)",
+            background: `radial-gradient(circle at 50% 50%, ${palette.accent}38 0%, ${palette.accent}10 30%, transparent 65%)`,
+            pointerEvents: "none",
+            filter: "blur(24px)",
+            animation: "lobby-backdrop-pulse 6s ease-in-out infinite",
+          }}
+        />
+
+        {/* Drifting particle/star layer */}
+        <div
+          className="weered-lobby-splash-particles"
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `
+              radial-gradient(1.6px 1.6px at 18% 28%, ${palette.accent}90, transparent 2px),
+              radial-gradient(1.2px 1.2px at 72% 44%, ${palette.accent}70, transparent 2px),
+              radial-gradient(1.8px 1.8px at 42% 78%, ${palette.accent}85, transparent 2px)
+            `,
+            backgroundSize: "800px 800px, 800px 800px, 800px 800px",
+            opacity: 0.5,
+            pointerEvents: "none",
+            animation: "lobby-particle-drift 90s linear infinite",
+          }}
+        />
+
+        {/* Slow-rotating conic ring behind the card */}
+        <div
+          className="weered-lobby-splash-ring"
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "50%", left: "50%",
+            width: "min(1180px, 110vw)", height: "min(1180px, 110vw)",
+            transform: "translate(-50%, -50%)",
+            background: `conic-gradient(from 0deg, transparent 0deg, ${palette.accent}22 40deg, transparent 80deg, transparent 180deg, ${palette.accent}18 220deg, transparent 260deg, transparent 360deg)`,
+            pointerEvents: "none",
+            filter: "blur(8px)",
+            opacity: 0.55,
+            animation: "lobby-ring-spin 40s linear infinite",
+          }}
+        />
+
         <div
           className="weered-lobby-splash-inner"
           onClick={(e) => e.stopPropagation()}
@@ -143,48 +209,54 @@ export default function LobbySplash({
             maxWidth: 960, width: "100%",
             display: "flex", flexDirection: "column",
             alignItems: "center", gap: 22,
+            zIndex: 1,
           }}
         >
           <div style={{
             position: "relative", width: "100%",
             borderRadius: 6, overflow: "hidden",
-            boxShadow: `0 24px 70px rgba(0,0,0,0.65), 0 0 0 1px ${palette.frame}`,
+            boxShadow: `0 24px 70px rgba(0,0,0,0.65), 0 0 0 1px ${palette.frame}, 0 0 60px ${palette.frameGlow}`,
           }}>
             <img
               src={ogImage}
               alt={ariaLabel}
               style={{ width: "100%", height: "auto", display: "block" }}
             />
+          </div>
 
-            {count !== null && liveCount && (
-              <div
-                className="weered-lobby-splash-count"
-                style={{
-                  position: "absolute",
-                  top: pos.top, right: pos.right,
-                  padding: "12px 18px",
-                  background: palette.pillBg,
-                  border: `1px solid ${palette.accent}90`,
-                  borderRadius: 3,
-                  fontFamily: 'Georgia, "Times New Roman", serif',
-                  textAlign: "center",
-                  minWidth: 160,
-                  animation: "lobby-count-in 400ms ease 200ms both, lobby-count-pulse 2.4s ease-in-out 600ms infinite",
-                  backdropFilter: "blur(4px)",
-                }}
-              >
-                <div style={{ fontSize: 9, letterSpacing: 2.5, color: palette.textDim, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>
+          {/* Live count strip — sits between card and CTA, works for any card composition */}
+          {count !== null && liveCount && (
+            <div
+              className="weered-lobby-splash-count"
+              style={{
+                display: "flex", alignItems: "center", gap: 18,
+                padding: "12px 22px",
+                background: palette.pillBg,
+                border: `1px solid ${palette.accent}90`,
+                borderRadius: 3,
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                animation: "lobby-count-in 420ms ease 220ms both, lobby-count-pulse 2.6s ease-in-out 700ms infinite",
+                backdropFilter: "blur(4px)",
+                marginTop: -2,
+              }}
+            >
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: 9, letterSpacing: 2.5, color: palette.textDim, textTransform: "uppercase", fontWeight: 700, marginBottom: 2 }}>
                   {liveCount.label}
                 </div>
-                <div style={{ fontSize: 34, color: palette.accent, lineHeight: 1, fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px" }}>
-                  {count.toLocaleString()}
-                </div>
-                <div style={{ fontSize: 9, color: palette.textDim, marginTop: 4, fontStyle: "italic", letterSpacing: 0.5 }}>
+                <div style={{ fontSize: 10, color: palette.textDim, fontStyle: "italic", letterSpacing: 0.5 }}>
                   {liveCount.suffix}
                 </div>
               </div>
-            )}
-          </div>
+              <div style={{
+                fontSize: 38, color: palette.accent, lineHeight: 1, fontWeight: 700,
+                fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px",
+                paddingLeft: 18, borderLeft: `1px solid ${palette.accent}40`,
+              }}>
+                {count.toLocaleString()}
+              </div>
+            </div>
+          )}
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: 4 }}>
             <button

@@ -394,8 +394,8 @@ export default function LobbyIdPage() {
         ogImage="/brand/lobbies/destiny2-og-v1.png"
         ariaLabel="Welcome to the Destiny 2 hub"
         palette={DESTINY_SPLASH_PALETTE}
-        ctaLabel="Open the Tower \u2192"
-        liveCount={{ endpoint: "/destiny/live-players", label: "Guardians sailing light", suffix: "live · Steam" }}
+        ctaLabel="Open the Tower →"
+        liveCount={{ endpoint: "/destiny/live-players", label: "Guardians on Steam", suffix: "live · right now" }}
       />
     )}
     <div
