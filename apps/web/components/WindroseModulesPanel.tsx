@@ -935,6 +935,7 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [intercept, setIntercept] = useState<StreamInfo | null>(null);
+  const [activeStream, setActiveStream] = useState<string | null>(null);
 
   useEffect(() => {
     const game = encodeURIComponent(gameName || "Windrose");
@@ -947,8 +948,27 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
   if (loading) return <LoadingState label="Tuning the spyglass..." />;
   if (streams.length === 0) return <EmptyState icon="📡" title="No one's live" hint="When a captain goes live on Twitch, they'll show up here." />;
 
+  const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
+
   return (
     <>
+      {activeStream && (
+        <div style={{ ...S.card, padding: 0, marginBottom: 16, overflow: "hidden", border: `1px solid ${PAL.brass}` }}>
+          <iframe
+            src={`https://player.twitch.tv/?channel=${activeStream}&parent=${parentHost}&muted=true`}
+            width="100%" height="380" style={{ border: "none", display: "block" }} allowFullScreen
+            title={`${activeStream} live stream`}
+          />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: `${PAL.brass}10`, borderTop: `1px solid ${PAL.brass}35` }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: PAL.blood, boxShadow: `0 0 8px ${PAL.blood}` }} />
+              <span style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 15, color: PAL.brassHi, letterSpacing: "0.3px" }}>{activeStream}</span>
+              <span style={{ ...S.label, fontSize: 9 }}>LIVE · Watching in the hub</span>
+            </span>
+            <button type="button" onClick={() => setActiveStream(null)} style={{ ...S.btn, fontSize: 10, padding: "6px 12px" }}>Close</button>
+          </div>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
         {streams.map(s => (
           <div key={s.userLogin} style={{ ...S.card, padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={() => setIntercept(s)}>
@@ -989,7 +1009,14 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
           </div>
         ))}
       </div>
-      {intercept && <StreamInterceptModal stream={intercept} lobbyId={lobbyId} onClose={() => setIntercept(null)} onWatchHere={() => setIntercept(null)} />}
+      {intercept && (
+        <StreamInterceptModal
+          stream={intercept}
+          lobbyId={lobbyId}
+          onClose={() => setIntercept(null)}
+          onWatchHere={(s) => setActiveStream(s.userLogin)}
+        />
+      )}
     </>
   );
 }
