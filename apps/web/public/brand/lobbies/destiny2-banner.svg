@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="d2-sky" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#050810" />
+      <stop offset="50%"  stop-color="#0a0e1c" />
+      <stop offset="100%" stop-color="#080a18" />
+    </linearGradient>
+    <radialGradient id="d2-solarHaze" cx="28%" cy="50%" r="32%">
+      <stop offset="0%"   stop-color="#f58220" stop-opacity="0.14" />
+      <stop offset="50%"  stop-color="#a3530f" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000"    stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="d2-voidHaze" cx="78%" cy="55%" r="36%">
+      <stop offset="0%"   stop-color="#6f3aa0" stop-opacity="0.12" />
+      <stop offset="60%"  stop-color="#3b1e5e" stop-opacity="0.04" />
+      <stop offset="100%" stop-color="#000"    stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="d2-traveler" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.96" />
+      <stop offset="55%"  stop-color="#e4e8f0" stop-opacity="0.88" />
+      <stop offset="85%"  stop-color="#b8c0d0" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#5d6475" stop-opacity="0.4" />
+    </radialGradient>
+    <radialGradient id="d2-travelerGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="40%"  stop-color="#e8ecf5" stop-opacity="0" />
+      <stop offset="80%"  stop-color="#f58220" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#f58220" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Sky + glows -->
+  <rect width="1920" height="240" fill="url(#d2-sky)" />
+  <rect width="1920" height="240" fill="url(#d2-solarHaze)" />
+  <rect width="1920" height="240" fill="url(#d2-voidHaze)" />
+
+  <!-- Starfield -->
+  <g fill="#e4e8f0">
+    <circle cx="30"   cy="40"  r="0.8" opacity="0.6" />
+    <circle cx="110"  cy="150" r="1.1" opacity="0.75" />
+    <circle cx="180"  cy="50"  r="0.7" opacity="0.5" />
+    <circle cx="250"  cy="180" r="0.9" opacity="0.55" />
+    <circle cx="320"  cy="30"  r="0.6" opacity="0.45" />
+    <circle cx="450"  cy="90"  r="1.0" opacity="0.7" />
+    <circle cx="540"  cy="200" r="0.7" opacity="0.5" />
+    <circle cx="620"  cy="60"  r="1.2" opacity="0.8" />
+    <circle cx="720"  cy="130" r="0.8" opacity="0.6" />
+    <circle cx="820"  cy="20"  r="0.7" opacity="0.5" />
+    <circle cx="900"  cy="170" r="1.0" opacity="0.7" />
+    <circle cx="1020" cy="80"  r="0.8" opacity="0.55" />
+    <circle cx="1120" cy="210" r="0.7" opacity="0.45" />
+    <circle cx="1220" cy="40"  r="1.1" opacity="0.75" />
+    <circle cx="1320" cy="140" r="0.8" opacity="0.55" />
+    <circle cx="1410" cy="70"  r="0.9" opacity="0.65" />
+    <circle cx="1510" cy="180" r="0.7" opacity="0.5" />
+    <circle cx="1610" cy="50"  r="1.0" opacity="0.7" />
+    <circle cx="1710" cy="120" r="0.8" opacity="0.6" />
+    <circle cx="1800" cy="190" r="0.7" opacity="0.5" />
+    <circle cx="1870" cy="70"  r="0.9" opacity="0.65" />
+  </g>
+
+  <!-- Distant city horizon silhouette (Tower vibe) -->
+  <g fill="#0c1020" opacity="0.95">
+    <rect x="0"    y="180" width="80"   height="60" />
+    <rect x="90"   y="168" width="40"   height="72" />
+    <rect x="130"  y="190" width="70"   height="50" />
+    <rect x="210"  y="170" width="34"   height="70" />
+    <rect x="250"  y="184" width="90"   height="56" />
+    <rect x="350"  y="176" width="46"   height="64" />
+    <!-- tower antenna -->
+    <rect x="370"  y="160" width="2"    height="30" />
+    <rect x="408"  y="188" width="60"   height="52" />
+    <!-- gap for Traveler -->
+    <rect x="720"  y="190" width="80"   height="50" />
+    <rect x="810"  y="180" width="36"   height="60" />
+    <rect x="856"  y="194" width="60"   height="46" />
+    <rect x="926"  y="178" width="30"   height="62" />
+    <rect x="966"  y="186" width="80"   height="54" />
+    <rect x="1056" y="182" width="42"   height="58" />
+    <rect x="1108" y="194" width="70"   height="46" />
+    <rect x="1188" y="172" width="36"   height="68" />
+    <rect x="1234" y="188" width="80"   height="52" />
+    <rect x="1324" y="176" width="50"   height="64" />
+    <rect x="1384" y="190" width="88"   height="50" />
+    <rect x="1482" y="184" width="38"   height="56" />
+    <rect x="1530" y="194" width="70"   height="46" />
+    <rect x="1610" y="178" width="42"   height="62" />
+    <rect x="1662" y="186" width="76"   height="54" />
+    <rect x="1748" y="172" width="32"   height="68" />
+    <rect x="1790" y="188" width="70"   height="52" />
+    <rect x="1870" y="180" width="50"   height="60" />
+  </g>
+
+  <!-- The Traveler — big, dominant, left-center -->
+  <g transform="translate(560 120)">
+    <!-- outer glow -->
+    <circle cx="0" cy="0" r="130" fill="url(#d2-travelerGlow)" />
+    <!-- main sphere -->
+    <circle cx="0" cy="0" r="78" fill="url(#d2-traveler)" />
+    <!-- speckled surface texture (stippled hex-ish marks) -->
+    <g fill="#7a8294" opacity="0.55">
+      <circle cx="-34" cy="-28" r="2.4" />
+      <circle cx="-18" cy="-42" r="1.8" />
+      <circle cx="10"  cy="-48" r="2.2" />
+      <circle cx="34"  cy="-34" r="1.6" />
+      <circle cx="48"  cy="-12" r="2.0" />
+      <circle cx="56"  cy="18"  r="2.4" />
+      <circle cx="42"  cy="42"  r="1.8" />
+      <circle cx="14"  cy="52"  r="2.2" />
+      <circle cx="-20" cy="46"  r="1.6" />
+      <circle cx="-42" cy="28"  r="2.0" />
+      <circle cx="-54" cy="-2"  r="2.2" />
+      <circle cx="-10" cy="-14" r="1.4" />
+      <circle cx="18"  cy="-8"  r="1.2" />
+      <circle cx="22"  cy="20"  r="1.6" />
+      <circle cx="-6"  cy="24"  r="1.4" />
+      <circle cx="-28" cy="6"   r="1.2" />
+    </g>
+    <!-- darker shadow side -->
+    <ellipse cx="26" cy="22" rx="48" ry="50" fill="#1a1f2c" opacity="0.25" />
+  </g>
+
+  <!-- Solar-orange accent strip top -->
+  <rect x="0" y="0" width="1920" height="2" fill="#f58220" opacity="0.7" />
+  <rect x="0" y="3" width="1920" height="1" fill="#a3530f" opacity="0.4" />
+
+  <!-- Hex flourish top-right (Destiny UI motif) -->
+  <g transform="translate(1820 30)" fill="none" stroke="#f58220" stroke-width="1.2" opacity="0.6">
+    <polygon points="0,-16 14,-8 14,8 0,16 -14,8 -14,-8" />
+    <polygon points="0,-8 7,-4 7,4 0,8 -7,4 -7,-4" />
+  </g>
+  <g transform="translate(1780 30)" fill="none" stroke="#f58220" stroke-width="0.8" opacity="0.35">
+    <polygon points="0,-12 10,-6 10,6 0,12 -10,6 -10,-6" />
+  </g>
+</svg>

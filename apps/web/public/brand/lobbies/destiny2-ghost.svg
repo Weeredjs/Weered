@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none">
+  <defs>
+    <radialGradient id="ghostEye" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="45%"  stop-color="#f58220" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#a3530f" stop-opacity="0.15" />
+    </radialGradient>
+    <linearGradient id="ghostShell" x1="30%" y1="20%" x2="70%" y2="100%">
+      <stop offset="0%"   stop-color="#cfd6e0" />
+      <stop offset="100%" stop-color="#6d7587" />
+    </linearGradient>
+  </defs>
+  <!-- Ghost body: classic 8-point shard arrangement around central core -->
+  <g transform="translate(160 160)">
+    <!-- outer shards (8 petals) -->
+    <g fill="url(#ghostShell)" opacity="0.9">
+      <polygon points="0,-120  20,-70  0,-55  -20,-70" />
+      <polygon points="85,-85  75,-30  55,-40  50,-75" transform="rotate(0)" />
+      <polygon points="120,0  70,20  55,0  70,-20" />
+      <polygon points="85,85  50,75  55,40  75,30" />
+      <polygon points="0,120  -20,70  0,55  20,70" />
+      <polygon points="-85,85  -75,30  -55,40  -50,75" />
+      <polygon points="-120,0  -70,-20  -55,0  -70,20" />
+      <polygon points="-85,-85  -50,-75  -55,-40  -75,-30" />
+    </g>
+    <!-- inner dark core -->
+    <circle cx="0" cy="0" r="38" fill="#0d1220" stroke="#3b4355" stroke-width="1" />
+    <!-- eye / optic -->
+    <circle cx="0" cy="0" r="18" fill="url(#ghostEye)" />
+    <circle cx="0" cy="0" r="6" fill="#ffffff" opacity="0.95" />
+  </g>
+</svg>

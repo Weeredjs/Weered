@@ -757,7 +757,7 @@ const SEED_LOBBIES = [
   { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         keywords: ["reddit","tech","technology","coding"],  moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/technology" } },
   { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        keywords: ["reddit","news","world","worldnews"],   moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/worldnews" } },
   { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    keywords: ["weered","meta","official","hq"],       moduleType: ModuleType.NONE,    moduleConfig: null },
-  { id: "destiny2", name: "Destiny 2 | Bungie.net", description: "Guardians, strikes, raids and loot. Powered by the Bungie API.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"] }, accentColor: "#4F88C6", logoUrl: "/brand/lobbies/destiny2-logo.png", bannerUrl: null, websiteUrl: "https://www.bungie.net" },
+  { id: "destiny2", name: "Destiny 2", description: "Guardians, raids, dungeons, Trials, Gambit, and the Traveler's Light. Live raid races, Bungie API loadouts, LFG for every activity. The unofficial Guardian hub.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid", "crucible", "gambit", "trials", "iron banner", "nightfall", "dungeon"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"], steamAppId: "1085660" }, accentColor: "#f58220", logoUrl: "/brand/lobbies/destiny2-logo.png", bannerUrl: "/brand/lobbies/destiny2-banner.svg", websiteUrl: "https://www.bungie.net" },
   { id: "news", name: "News", description: "Breaking news and headlines from around the world. CBC, BBC, Reuters, and more.", keywords: ["news","breaking","headlines","world","canada","politics","tech","business","science"], moduleType: ModuleType.NEWS, moduleConfig: {}, accentColor: "#DC2626" },
   { id: "fakeout", name: "FakeOut", description: "Paper trade crypto with fake money against real Binance prices. Live candlestick charts, instant orders, public leaderboards. All the thrill, none of the risk.", keywords: ["fakeout","trading","crypto","bitcoin","paper","stocks","market","btc","eth","finance","investing","fake"], moduleType: ModuleType.TRADING, moduleConfig: {}, accentColor: "#F5C518" },
   { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, AI NPCs, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
@@ -777,6 +777,15 @@ const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: stri
   { id: "windrose-tradingpost",name: "Trading Post",      description: "Barter loot, swap maps, and haggle over spoils. No scams, savvy?",                      lobbyId: "windrose" },
   { id: "windrose-log",        name: "Captain's Log",     description: "Screenshots, clips, and stories from the open sea. Drop your best shot.",               lobbyId: "windrose" },
   { id: "windrose-bug-hunters",name: "Bug Hunters",       description: "Repro steps, workarounds, and friendly noise aimed at Kraken Express.",                 lobbyId: "windrose" },
+
+  { id: "destiny2-tower",      name: "The Tower",         description: "General Guardian gathering. Loadouts, roll talk, gunsmith chatter, all welcome.",        lobbyId: "destiny2" },
+  { id: "destiny2-lfg-raids",  name: "LFG · Raids",       description: "Looking for fireteams for current and lore raids. Post role, encounter, platform.",    lobbyId: "destiny2" },
+  { id: "destiny2-lfg-dungeons",name:"LFG · Dungeons",    description: "Dungeon fireteam finder. Solo flawless attempts welcome to post pre-run planning.",    lobbyId: "destiny2" },
+  { id: "destiny2-crucible",   name: "Crucible",          description: "PvP. Trials cards, Comp climbs, Iron Banner lamentations. Pros and scrubs alike.",      lobbyId: "destiny2" },
+  { id: "destiny2-vanguard",   name: "Vanguard Intel",    description: "PvE strats. Nightfalls, Onslaught, Exotic Missions. Build-crafting and rotation talk.", lobbyId: "destiny2" },
+  { id: "destiny2-gambit",     name: "Gambit Hall",       description: "Gambit is still here. Bank motes, invade, have opinions.",                              lobbyId: "destiny2" },
+  { id: "destiny2-gjallarhorn",name: "Gjallarhorn Wing",   description: "Lore, theorycrafting, patch speculation. Any and all non-fireteam discourse.",          lobbyId: "destiny2" },
+  { id: "destiny2-clip-vault", name: "Clip Vault",        description: "Best plays, worst deaths, most cursed loadouts. Post the shot.",                         lobbyId: "destiny2" },
 ];
 
 async function seedLobbies() {
@@ -11791,6 +11800,40 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       publisher: { name: "Pocketpair", note: "Palworld studio" },
       platform:  { steam: `https://store.steampowered.com/app/${WINDROSE_APPID}/`, site: "https://playwindrose.com/" },
     });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── DESTINY 2 (Steam appid 1085660) ───────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  const DESTINY2_APPID = "1085660";
+  const d2Cache = new Map<string, { data: any; expiresAt: number }>();
+  function d2CacheGet(key: string) {
+    const c = d2Cache.get(key);
+    if (c && c.expiresAt > Date.now()) return c.data;
+    return null;
+  }
+  function d2CacheSet(key: string, data: any, ttlMs: number) {
+    d2Cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  }
+
+  app.get("/destiny/live-players", async (req, reply) => {
+    const cacheKey = "d2:live";
+    const cached = d2CacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${DESTINY2_APPID}`;
+      const res = await fetch(url);
+      if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
+      const j: any = await res.json();
+      const count = j?.response?.player_count;
+      if (typeof count !== "number") return reply.send({ ok: false, error: "no_count" });
+      const result = { ok: true, players: count, appid: DESTINY2_APPID, checkedAt: new Date().toISOString() };
+      d2CacheSet(cacheKey, result, 60 * 1000);
+      return reply.send(result);
+    } catch (e) {
+      console.error("[destiny/live-players]", e);
+      return reply.send({ ok: false, error: "fetch_failed" });
+    }
   });
 
   // ══════════════════════════════════════════════════════════════════════════════

@@ -69,7 +69,7 @@ export default function UserCorner() {
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-weered-lobby"] });
     return () => obs.disconnect();
   }, []);
-  const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : "Burner";
+  const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : lobbyTheme === "destiny2" ? "Transmat" : "Burner";
 
   // ── Lobby branding: fetch logoUrl for current lobby ─────────────────────────
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";

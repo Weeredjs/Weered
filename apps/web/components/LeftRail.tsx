@@ -161,24 +161,25 @@ export default function LeftRail() {
     return () => obs.disconnect();
   }, []);
 
-  // Pirate vocabulary when inside Windrose
+  // Lobby-scoped vocabulary swap
   const isWindrose = lobbyTheme === "windrose";
+  const isDestiny  = lobbyTheme === "destiny2";
   const navLabels = {
-    lobby:   isWindrose ? "Port"           : "Lobby",
-    home:    isWindrose ? "Home"           : "Home", // already makes sense at sea
-    forum:   isWindrose ? "Ship's Log"     : "Forum",
-    paper:   isWindrose ? "Doubloons"      : "Paper",
-    locator: isWindrose ? "Sextant"        : "Locator",
-    ops:     isWindrose ? "Quartermaster"  : "Ops",
-    communities: isWindrose ? "Fleet"      : "Communities",
+    lobby:        isWindrose ? "Port"           : isDestiny ? "Tower"             : "Lobby",
+    home:         isWindrose ? "Home"           : isDestiny ? "Relay"             : "Home",
+    forum:        isWindrose ? "Ship's Log"     : isDestiny ? "Vanguard Report"   : "Forum",
+    paper:        isWindrose ? "Doubloons"      : isDestiny ? "Glimmer"           : "Paper",
+    locator:      isWindrose ? "Sextant"        : isDestiny ? "Ghost"             : "Locator",
+    ops:          isWindrose ? "Quartermaster"  : isDestiny ? "Vanguard"          : "Ops",
+    communities:  isWindrose ? "Fleet"          : isDestiny ? "Clans"             : "Communities",
   };
   const navIcons = {
-    lobby:   isWindrose ? "⚓" : "🏠",
-    home:    isWindrose ? "🏴‍☠️" : "📡",
-    forum:   isWindrose ? "📜" : "💬",
-    paper:   isWindrose ? "🪙" : "💵",
-    locator: isWindrose ? "🧭" : "📍",
-    ops:     isWindrose ? "🗝" : "⚙",
+    lobby:   isWindrose ? "⚓" : isDestiny ? "🛡" : "🏠",
+    home:    isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : "📡",
+    forum:   isWindrose ? "📜" : isDestiny ? "📖" : "💬",
+    paper:   isWindrose ? "🪙" : isDestiny ? "💠" : "💵",
+    locator: isWindrose ? "🧭" : isDestiny ? "👁" : "📍",
+    ops:     isWindrose ? "🗝" : isDestiny ? "⚔" : "⚙",
   };
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();

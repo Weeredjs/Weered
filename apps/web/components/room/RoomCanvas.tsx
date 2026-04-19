@@ -146,7 +146,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // Lobby-specific theme takeover — persist into room pages too
   useEffect(() => {
-    const THEMEABLE = new Set<string>(["windrose"]);
+    const THEMEABLE = new Set<string>(["windrose", "destiny2"]);
     const id = lobbyContext?.id;
     if (id && THEMEABLE.has(id)) {
       document.documentElement.setAttribute("data-weered-lobby", id);

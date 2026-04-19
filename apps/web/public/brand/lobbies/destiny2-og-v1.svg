@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="d2og-sky" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#050810" />
+      <stop offset="55%"  stop-color="#0a0e1c" />
+      <stop offset="100%" stop-color="#060914" />
+    </linearGradient>
+    <radialGradient id="d2og-solar" cx="65%" cy="45%" r="35%">
+      <stop offset="0%"   stop-color="#f58220" stop-opacity="0.18" />
+      <stop offset="50%"  stop-color="#a3530f" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#000"    stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="d2og-void" cx="20%" cy="70%" r="35%">
+      <stop offset="0%"   stop-color="#6f3aa0" stop-opacity="0.16" />
+      <stop offset="60%"  stop-color="#3b1e5e" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000"    stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="d2og-traveler" cx="45%" cy="45%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.98" />
+      <stop offset="50%"  stop-color="#e4e8f0" stop-opacity="0.9" />
+      <stop offset="85%"  stop-color="#9aa2b4" stop-opacity="0.72" />
+      <stop offset="100%" stop-color="#3a4052" stop-opacity="0.35" />
+    </radialGradient>
+    <radialGradient id="d2og-travelerGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="35%"  stop-color="#e8ecf5" stop-opacity="0" />
+      <stop offset="70%"  stop-color="#f58220" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#f58220" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#d2og-sky)" />
+  <rect width="1200" height="630" fill="url(#d2og-solar)" />
+  <rect width="1200" height="630" fill="url(#d2og-void)" />
+
+  <!-- Starfield -->
+  <g fill="#e4e8f0">
+    <circle cx="30"   cy="80"  r="0.9" opacity="0.65" />
+    <circle cx="90"   cy="200" r="1.2" opacity="0.8" />
+    <circle cx="140"  cy="50"  r="0.7" opacity="0.55" />
+    <circle cx="220"  cy="320" r="0.9" opacity="0.6" />
+    <circle cx="280"  cy="110" r="0.8" opacity="0.55" />
+    <circle cx="340"  cy="450" r="1.0" opacity="0.7" />
+    <circle cx="410"  cy="60"  r="1.1" opacity="0.78" />
+    <circle cx="480"  cy="260" r="0.7" opacity="0.5" />
+    <circle cx="540"  cy="40"  r="0.9" opacity="0.6" />
+    <circle cx="620"  cy="520" r="1.2" opacity="0.8" />
+    <circle cx="700"  cy="150" r="0.8" opacity="0.55" />
+    <circle cx="780"  cy="70"  r="1.0" opacity="0.7" />
+    <circle cx="850"  cy="300" r="0.7" opacity="0.5" />
+    <circle cx="920"  cy="40"  r="1.1" opacity="0.75" />
+    <circle cx="990"  cy="480" r="0.8" opacity="0.6" />
+    <circle cx="1050" cy="120" r="0.9" opacity="0.65" />
+    <circle cx="1110" cy="260" r="0.7" opacity="0.5" />
+    <circle cx="1160" cy="560" r="1.0" opacity="0.7" />
+    <circle cx="60"   cy="560" r="0.9" opacity="0.6" />
+    <circle cx="180"  cy="590" r="0.7" opacity="0.5" />
+    <circle cx="400"  cy="380" r="0.8" opacity="0.55" />
+    <circle cx="720"  cy="410" r="0.9" opacity="0.65" />
+    <circle cx="880"  cy="590" r="0.7" opacity="0.5" />
+    <circle cx="160"  cy="470" r="1.1" opacity="0.75" />
+  </g>
+
+  <!-- The Traveler — hero visual, right-center -->
+  <g transform="translate(920 260)">
+    <circle cx="0" cy="0" r="240" fill="url(#d2og-travelerGlow)" />
+    <circle cx="0" cy="0" r="150" fill="url(#d2og-traveler)" />
+    <!-- speckled surface -->
+    <g fill="#5d6475" opacity="0.55">
+      <circle cx="-62" cy="-52" r="4" />
+      <circle cx="-32" cy="-78" r="3" />
+      <circle cx="14"  cy="-90" r="4" />
+      <circle cx="58"  cy="-64" r="3" />
+      <circle cx="92"  cy="-22" r="4" />
+      <circle cx="106" cy="30"  r="4" />
+      <circle cx="82"  cy="78"  r="3" />
+      <circle cx="30"  cy="100" r="4" />
+      <circle cx="-34" cy="92"  r="3" />
+      <circle cx="-78" cy="52"  r="4" />
+      <circle cx="-104" cy="-8" r="4" />
+      <circle cx="-20" cy="-26" r="2.5" />
+      <circle cx="32"  cy="-16" r="2" />
+      <circle cx="44"  cy="38"  r="3" />
+      <circle cx="-12" cy="46"  r="2.5" />
+      <circle cx="-52" cy="12"  r="2" />
+    </g>
+    <!-- shadow side -->
+    <ellipse cx="50" cy="42" rx="92" ry="98" fill="#0a0e1c" opacity="0.32" />
+  </g>
+
+  <!-- Horizon city silhouette at bottom -->
+  <g fill="#0a0e1c" opacity="0.92">
+    <rect x="0"    y="560" width="90"   height="70" />
+    <rect x="100"  y="540" width="60"   height="90" />
+    <rect x="166"  y="555" width="44"   height="75" />
+    <rect x="214"  y="530" width="38"   height="100" />
+    <rect x="258"  y="548" width="78"   height="82" />
+    <rect x="342"  y="540" width="46"   height="90" />
+    <rect x="394"  y="560" width="62"   height="70" />
+    <rect x="462"  y="545" width="42"   height="85" />
+    <rect x="510"  y="558" width="72"   height="72" />
+    <rect x="588"  y="540" width="38"   height="90" />
+    <rect x="632"  y="556" width="64"   height="74" />
+    <rect x="1000" y="558" width="60"   height="72" />
+    <rect x="1066" y="545" width="44"   height="85" />
+    <rect x="1116" y="560" width="84"   height="70" />
+    <!-- Antenna mast on tallest building -->
+    <rect x="232"  y="510" width="2.5"  height="30" />
+  </g>
+
+  <!-- Solar accent top strip -->
+  <rect x="0" y="0" width="1200" height="3" fill="#f58220" opacity="0.7" />
+  <rect x="0" y="4" width="1200" height="1" fill="#a3530f" opacity="0.4" />
+
+  <!-- KICKER -->
+  <text x="80" y="110"
+        font-family="Arial, 'Helvetica Neue', Helvetica, sans-serif"
+        font-size="22" letter-spacing="6"
+        fill="#f58220" font-weight="700">
+    UNOFFICIAL GUARDIAN HUB · BUILT BY WEERED
+  </text>
+
+  <!-- HEADLINE — DESTINY 2 in big bold sans -->
+  <text x="80" y="250"
+        font-family="Arial Black, 'Arial Black', Arial, Helvetica, sans-serif"
+        font-size="116" letter-spacing="4"
+        fill="#ffffff" font-weight="900">
+    DESTINY 2
+  </text>
+
+  <!-- Tagline -->
+  <text x="82" y="304"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="26" letter-spacing="1"
+        fill="#cfd6e0" font-style="italic">
+    Become Legend. Find your fireteam.
+  </text>
+
+  <!-- Value pills -->
+  <g font-family="Arial, 'Helvetica Neue', Helvetica, sans-serif" font-weight="700" font-size="17" letter-spacing="2.4">
+    <g transform="translate(80 350)">
+      <rect x="0" y="0" width="240" height="44" rx="3" fill="#0a0e1c" opacity="0.88" stroke="#f58220" stroke-width="1.3" />
+      <text x="120" y="29" fill="#f58220" text-anchor="middle">LIVE ON STEAM</text>
+    </g>
+    <g transform="translate(340 350)">
+      <rect x="0" y="0" width="240" height="44" rx="3" fill="#0a0e1c" opacity="0.88" stroke="#f58220" stroke-width="1.3" />
+      <text x="120" y="29" fill="#f58220" text-anchor="middle">RAID LFG</text>
+    </g>
+    <g transform="translate(600 350)">
+      <rect x="0" y="0" width="240" height="44" rx="3" fill="#0a0e1c" opacity="0.88" stroke="#f58220" stroke-width="1.3" />
+      <text x="120" y="29" fill="#f58220" text-anchor="middle">VANGUARD INTEL</text>
+    </g>
+  </g>
+
+  <!-- Bottom-left: weered wordmark + url -->
+  <g transform="translate(80 540)">
+    <text font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="44" letter-spacing="2" fill="#f58220" font-weight="900">weered</text>
+    <text y="34" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="3" fill="#8a9bb0" font-weight="600">
+      weered.ca/lobby/destiny2
+    </text>
+  </g>
+
+  <!-- Bottom-right: official Destiny tricorn logo -->
+  <image xlink:href="destiny2-logo.png"
+         x="1072" y="492"
+         width="100" height="100"
+         preserveAspectRatio="xMidYMid meet"
+         opacity="0.85" />
+
+  <!-- Hex flourish accent -->
+  <g transform="translate(1130 90)" fill="none" stroke="#f58220" stroke-width="1.4" opacity="0.8">
+    <polygon points="0,-22 19,-11 19,11 0,22 -19,11 -19,-11" />
+    <polygon points="0,-12 10,-6 10,6 0,12 -10,6 -10,-6" />
+  </g>
+  <g transform="translate(1085 70)" fill="none" stroke="#f58220" stroke-width="0.9" opacity="0.4">
+    <polygon points="0,-16 14,-8 14,8 0,16 -14,8 -14,-8" />
+  </g>
+</svg>
