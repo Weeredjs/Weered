@@ -32,6 +32,7 @@ export interface LobbySplashProps {
   liveCount?: LobbySplashLiveCount;
   palette: LobbySplashPalette;
   storageKey?: string;            // defaults to weered:<lobbyId>:splash:lastShownAt
+  forceOpen?: boolean;            // preview/debug: bypass cooldown + don't persist dismiss
 }
 
 const WINDROSE_DEFAULT_EXTRACT = (j: any) => (j?.ok && typeof j?.players === "number" ? j.players : null);
@@ -45,16 +46,18 @@ export default function LobbySplash({
   liveCount,
   palette,
   storageKey,
+  forceOpen = false,
 }: LobbySplashProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(forceOpen);
   const [closing, setClosing] = useState(false);
   const [count, setCount] = useState<number | null>(null);
 
   const key = storageKey || `weered:${lobbyId}:splash:lastShownAt`;
   const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
 
-  // Cooldown gate
+  // Cooldown gate — skipped entirely when forceOpen is true
   useEffect(() => {
+    if (forceOpen) { setOpen(true); return; }
     let cancelled = false;
     try {
       const raw = localStorage.getItem(key);
@@ -63,7 +66,7 @@ export default function LobbySplash({
     } catch { return; }
     const t = setTimeout(() => { if (!cancelled) setOpen(true); }, 220);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [key, cooldownMs]);
+  }, [key, cooldownMs, forceOpen]);
 
   // Live count fetch
   useEffect(() => {
@@ -79,10 +82,12 @@ export default function LobbySplash({
   }, [open, liveCount]);
 
   const handleClose = useCallback(() => {
-    try { localStorage.setItem(key, String(Date.now())); } catch {}
+    if (!forceOpen) {
+      try { localStorage.setItem(key, String(Date.now())); } catch {}
+    }
     setClosing(true);
     setTimeout(() => setOpen(false), 260);
-  }, [key]);
+  }, [key, forceOpen]);
 
   // ESC dismiss
   useEffect(() => {
