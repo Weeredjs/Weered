@@ -2549,6 +2549,18 @@ async function main() {
     }
     await prisma.user.update({ where: { id: targetId }, data: { globalRole: newRole } });
     await globalAudit(u.id, u.name, "role_change", targetId, target.name, { from: target.globalRole, to: newRole });
+    // Propagate to in-memory presence so connected clients see the new role
+    // without requiring the target to reconnect
+    for (const sock of wss.clients as any) {
+      if ((sock as any).user?.id === targetId) (sock as any).user.globalRole = newRole;
+    }
+    for (const [, room] of rooms) {
+      const entry = room.users.get(targetId);
+      if (entry) {
+        (entry as any).globalRole = newRole;
+        broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
+      }
+    }
     return reply.send({ ok: true, userId: targetId, globalRole: newRole });
   });
 
