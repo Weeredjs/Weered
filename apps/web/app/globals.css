@@ -4098,18 +4098,44 @@ a[href^="/room/"]:hover {
 /* ── Nuclear reset: when ANY lobby theme is active, neutralize
    personal-theme pseudo-texture layers + panel-grain backgrounds.
    Lobby themes re-paint their own styles below. Applies to any
-   data-weered-lobby attribute so every future themed lobby gets this. */
+   data-weered-lobby attribute so every future themed lobby gets this.
+
+   Only includes pseudos that the LOBBY THEMES (windrose/destiny2) don't
+   use for their own decorations. Lobby-owned pseudos (panel rivets,
+   event-card corners, header plaques, hero scrim) are NOT in this
+   reset so they continue to render. */
 html[data-weered-lobby] body::before,
 html[data-weered-lobby] body::after,
 html[data-weered-lobby] .weered-shell::before,
-html[data-weered-lobby] .weered-shell::after {
+html[data-weered-lobby] .weered-shell::after,
+html[data-weered-lobby] .weered-panel::before,
+html[data-weered-lobby] .weered-panel::after,
+html[data-weered-lobby] .weered-panel2::before,
+html[data-weered-lobby] .weered-panel2::after,
+html[data-weered-lobby] .weered-left::before,
+html[data-weered-lobby] .weered-left::after,
+html[data-weered-lobby] .weered-right::before,
+html[data-weered-lobby] .weered-right::after,
+html[data-weered-lobby] .weered-left-title::before,
+html[data-weered-lobby] .weered-left-title::after,
+html[data-weered-lobby] .weered-presence-title::before,
+html[data-weered-lobby] .weered-presence-title::after,
+html[data-weered-lobby] .weered-rr-section-title::before,
+html[data-weered-lobby] .weered-rr-section-title::after,
+html[data-weered-lobby] .weered-dock::before,
+html[data-weered-lobby] .weered-dock::after {
   content: "" !important;
   background: none !important;
+  background-image: none !important;
+  border: none !important;
   animation: none !important;
   mix-blend-mode: normal !important;
   opacity: 0 !important;
-  /* Lobby theme's own ::before/::after definitions follow and re-enable */
+  filter: none !important;
+  clip-path: none !important;
 }
+/* Background-image + blend-mode reset on container surfaces. Lobby themes
+   still re-paint with solid/gradient backgrounds via their own !important. */
 html[data-weered-lobby] .weered-shell,
 html[data-weered-lobby] .weered-left,
 html[data-weered-lobby] .weered-right,
@@ -4118,9 +4144,19 @@ html[data-weered-lobby] .weered-overlay-panel,
 html[data-weered-lobby] .weered-panel,
 html[data-weered-lobby] .weered-panel2,
 html[data-weered-lobby] .weered-usercorner,
-html[data-weered-lobby] .weered-left-section {
+html[data-weered-lobby] .weered-left-section,
+html[data-weered-lobby] .weered-rr-section,
+html[data-weered-lobby] .weered-dock {
   background-image: none !important;
   background-blend-mode: normal !important;
+  filter: none !important;
+}
+/* Kill any theme text-shadow CRT-glow effects that survive the cascade. */
+html[data-weered-lobby] .weered-left-link,
+html[data-weered-lobby] .weered-left-title,
+html[data-weered-lobby] .weered-presence-title,
+html[data-weered-lobby] .weered-rr-section-title {
+  text-shadow: none !important;
 }
 
 html[data-weered-lobby="windrose"] {
@@ -4297,7 +4333,7 @@ html[data-weered-lobby="windrose"] .weered-presence-title {
   letter-spacing: 2.5px !important;
   color: #e8c48a !important;
   text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(232,196,138,0.15);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(232,196,138,0.15) !important;
   font-weight: 400 !important;
 }
 
@@ -4893,7 +4929,7 @@ html[data-weered-lobby="destiny2"] .weered-presence-title {
   letter-spacing: 3.5px !important;
   color: #ffb066 !important;
   text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 10px rgba(245,130,32,0.25);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 10px rgba(245,130,32,0.25) !important;
   font-weight: 700 !important;
 }
 html[data-weered-lobby="destiny2"] .weered-left-link,
