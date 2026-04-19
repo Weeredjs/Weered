@@ -688,14 +688,17 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
 
 function AboutTab() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 720 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 760 }}>
       <div style={{ ...S.card, padding: "22px 26px" }}>
         <div style={{ ...S.label, marginBottom: 6 }}>The Studio</div>
         <h2 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 28, color: PAL.brassHi, margin: "0 0 10px", letterSpacing: "0.5px" }}>
           Kraken Express
         </h2>
+        <p style={{ fontSize: 14, color: PAL.parchment, lineHeight: 1.7, margin: "0 0 10px", fontStyle: "italic" }}>
+          Uzbekistan-based indie studio previously known as <em>Windrose Crew</em>, originally <em>Crosswind Crew</em>. Producer Philip Molodkovets delivered the Gamescom 2025 demo and has been the studio&apos;s public voice through the pivot.
+        </p>
         <p style={{ fontSize: 14, color: PAL.parchment, lineHeight: 1.7, margin: 0, fontStyle: "italic" }}>
-          Indie studio previously known as <em>Windrose Crew</em>, originally <em>Crosswind Crew</em>. Makers of Windrose — a pirate survival adventure. Upcoming: <strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>Kraken&apos;s Lair: Battle for the Abyss</strong>, a free-to-play underwater multiplayer action game.
+          Upcoming: <strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>Kraken&apos;s Lair: Battle for the Abyss</strong> — a free-to-play underwater multiplayer action game.
         </p>
       </div>
 
@@ -712,6 +715,28 @@ function AboutTab() {
         </p>
       </div>
 
+      {/* Why Weered — the ecosystem-gap positioning */}
+      <div style={{
+        ...S.card,
+        padding: "22px 26px",
+        borderColor: `${PAL.brass}80`,
+        background: `
+          radial-gradient(ellipse 70% 55% at 50% 0%, rgba(232,196,138,0.10) 0%, transparent 60%),
+          linear-gradient(180deg, rgba(30,48,72,0.70) 0%, rgba(20,34,56,0.85) 100%)
+        `,
+      }}>
+        <div style={{ ...S.label, marginBottom: 6 }}>Why Weered</div>
+        <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.brassHi, margin: "0 0 10px", letterSpacing: "0.5px" }}>
+          The crew-social layer nobody else built.
+        </h3>
+        <p style={{ fontSize: 14, color: PAL.parchment, lineHeight: 1.7, margin: "0 0 10px", fontStyle: "italic" }}>
+          Windrose&apos;s community shipped incredible infrastructure in the five days since launch: <strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>WindrosePlus</strong> (RCON + Lua modding), the <strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>Mod Manager</strong> (SFTP deploy to hosted servers), dozens of Nexus mods, <strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>windrose.gaming.tools</strong> (seed-parsed world maps, character builder), and five+ commercial hosts with pre-installed mod stacks.
+        </p>
+        <p style={{ fontSize: 14, color: PAL.parchment, lineHeight: 1.7, margin: 0, fontStyle: "italic" }}>
+          No one built the <em>crew-social</em> layer — where to hang out between sessions, find a crew, watch a stream together, talk to the dev team. That&apos;s what we do. We respect the stack the community already put down.
+        </p>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <div style={{ ...S.card, padding: 18, textAlign: "center" }}>
           <div style={{ ...S.label, marginBottom: 6 }}>Publisher</div>
@@ -719,8 +744,8 @@ function AboutTab() {
           <div style={{ fontSize: 11, color: PAL.parchDim, marginTop: 4, fontStyle: "italic" }}>Palworld studio</div>
         </div>
         <div style={{ ...S.card, padding: 18, textAlign: "center" }}>
-          <div style={{ ...S.label, marginBottom: 6 }}>Platform</div>
-          <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.brassHi }}>Steam · PC</div>
+          <div style={{ ...S.label, marginBottom: 6 }}>Platforms</div>
+          <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.brassHi }}>Steam · Epic · Stove</div>
           <div style={{ fontSize: 11, color: PAL.parchDim, marginTop: 4, fontStyle: "italic" }}>Console TBD</div>
         </div>
       </div>
@@ -731,7 +756,7 @@ function AboutTab() {
       </div>
 
       <div style={{ fontSize: 10, color: PAL.parchDim, marginTop: 8, lineHeight: 1.5, opacity: 0.7 }}>
-        Windrose and Kraken Express are trademarks of their respective owners. This is a community hub. Not affiliated with, endorsed by, or officially associated with Kraken Express or Pocketpair.
+        Windrose and Kraken Express are trademarks of their respective owners. This is an unofficial community hub. Not affiliated with, endorsed by, or officially associated with Kraken Express or Pocketpair. If the studio wants anything changed or removed, email hello@weered.ca and we&apos;ll act same-day.
       </div>
     </div>
   );
