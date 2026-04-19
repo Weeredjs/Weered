@@ -3762,7 +3762,9 @@ main {
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
+  /* No fill — matches .weered-left-section visual language so Favorites /
+     Recents / Presence sections are consistent. Rows handle their own
+     hover tints. */
 }
 .weered-presence-head {
   padding: 10px 12px;
