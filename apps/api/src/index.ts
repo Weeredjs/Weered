@@ -2247,14 +2247,67 @@ async function main() {
     return { ok: true, rooms: [...lobbyOut, ...roomOut] };
   });
 
+  // ── Room creation rate limit (anti-spam) ────────────────────────────
+  // Sliding window per user + active-room ceiling.
+  const roomCreateWindow = new Map<string, number[]>();
+  const ROOM_CREATE_WINDOW_MS   = 60 * 60 * 1000; // 1h window
+  const ROOM_CREATE_MAX_PER_HR  = 8;              // 8 rooms / user / hour
+  const ROOM_USER_ACTIVE_CAP    = 25;             // 25 active user-owned rooms
+  const ROOM_LOBBY_CEILING      = 500;            // hard ceiling per lobby (excl. pinned)
+
   app.post("/rooms", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized", message: "Sign in to create rooms." });
     const body: any = (req as any).body || {};
     const name = (typeof body.name === "string" ? body.name : "").trim().slice(0, 64);
     const lobbyId = typeof body.lobbyId === "string" ? body.lobbyId.trim() : null;
 
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
     if (!lobbyId) return reply.code(400).send({ ok: false, error: "lobbyId_required" });
+
+    // Staff bypass all rate/count limits
+    const actorRole = await getGlobalRole(u.id);
+    const isStaff = canAccessStaff(actorRole);
+
+    if (!isStaff) {
+      // 1. Sliding-window rate limit
+      const now = Date.now();
+      const userWindow = (roomCreateWindow.get(u.id) || []).filter(t => now - t < ROOM_CREATE_WINDOW_MS);
+      if (userWindow.length >= ROOM_CREATE_MAX_PER_HR) {
+        const oldest = userWindow[0];
+        const waitMs = ROOM_CREATE_WINDOW_MS - (now - oldest);
+        return reply.code(429).send({
+          ok: false, error: "rate_limited",
+          message: `Too many rooms. Try again in ${Math.ceil(waitMs / 60000)} min.`,
+          retryAfterMs: waitMs,
+        });
+      }
+
+      // 2. Active-room ceiling per user (counts only user-owned, non-pinned)
+      const activeCount = await prisma.room.count({
+        where: { ownerId: u.id, pinned: false },
+      });
+      if (activeCount >= ROOM_USER_ACTIVE_CAP) {
+        return reply.code(400).send({
+          ok: false, error: "room_cap_reached",
+          message: `You already own ${activeCount} rooms. Clean some up before creating more.`,
+        });
+      }
+
+      // 3. Per-lobby ceiling
+      const lobbyCount = await prisma.room.count({
+        where: { lobbyId, pinned: false },
+      });
+      if (lobbyCount >= ROOM_LOBBY_CEILING) {
+        return reply.code(400).send({
+          ok: false, error: "lobby_full",
+          message: "This lobby has hit its room cap. Try a different lobby.",
+        });
+      }
+
+      userWindow.push(now);
+      roomCreateWindow.set(u.id, userWindow);
+    }
 
     // Verify lobby exists
     const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
