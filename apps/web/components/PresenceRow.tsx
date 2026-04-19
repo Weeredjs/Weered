@@ -168,10 +168,10 @@ export default function PresenceRow({
       {/* Left accent stripe for role/tier (colored only) */}
       {accentStripe && (
         <span style={{
-          position: "absolute", left: 0, top: 3, bottom: 3,
-          width: 4, borderRadius: "0 3px 3px 0",
-          background: `linear-gradient(180deg, ${accentStripe}, ${accentStripe}aa)`,
-          boxShadow: `0 0 10px ${accentStripe}88, 0 0 2px ${accentStripe}`,
+          position: "absolute", left: 0, top: 4, bottom: 4,
+          width: 3, borderRadius: "0 2px 2px 0",
+          background: `linear-gradient(180deg, ${accentStripe}, ${accentStripe}88)`,
+          boxShadow: `0 0 4px ${accentStripe}55`,
         }} />
       )}
 
@@ -214,15 +214,15 @@ export default function PresenceRow({
           {globalRole && globalRole !== "USER" && (
             <RoleIcon
               role={globalRole}
-              size={compact ? 17 : 19}
-              style={{ filter: `drop-shadow(0 0 3px ${accentStripe || "rgba(0,0,0,.6)"}) drop-shadow(0 1px 1px rgba(0,0,0,.45))` }}
+              size={compact ? 16 : 18}
+              style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
             />
           )}
           {tier && tier !== "INNOCENT" && (
             <TierIcon
               tier={tier}
-              size={compact ? 17 : 19}
-              style={{ filter: `drop-shadow(0 0 3px ${accentStripe || "rgba(0,0,0,.6)"}) drop-shadow(0 1px 1px rgba(0,0,0,.45))` }}
+              size={compact ? 16 : 18}
+              style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
             />
           )}
         </div>
