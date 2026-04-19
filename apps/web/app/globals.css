@@ -4496,15 +4496,40 @@ html[data-weered-lobby="windrose"] .weered-lobby-header-row::after {
 html[data-weered-lobby="windrose"] .weered-lobby-header-row::before { left: 8px; }
 html[data-weered-lobby="windrose"] .weered-lobby-header-row::after  { right: 8px; }
 
+/* Square off the tab container to match the brass-button visual language */
+html[data-weered-lobby="windrose"] .weered-lobby-tabs {
+  border-radius: 3px !important;
+  border-color: rgba(201,160,102,0.25) !important;
+  background: rgba(10,20,36,0.55) !important;
+  padding: 3px !important;
+}
 html[data-weered-lobby="windrose"] .weered-lobby-tab {
   background: transparent !important;
   border: 1px solid rgba(201,160,102,0.25) !important;
+  border-radius: 2px !important;
   color: var(--wr-parch-dim) !important;
   font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
   letter-spacing: 3px !important;
   font-size: 13px !important;
   text-transform: uppercase;
   transition: all 0.15s ease;
+  padding: 6px 14px !important;
+}
+/* BROWSE / INVITE (weered-btn) inherit the pirate display font too */
+html[data-weered-lobby="windrose"] .weered-btn {
+  font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
+  letter-spacing: 3px !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+  border: 1px solid rgba(201,160,102,0.35) !important;
+  background: rgba(10,20,36,0.55) !important;
+  color: #e8c48a !important;
+  font-weight: 400 !important;
+}
+html[data-weered-lobby="windrose"] .weered-btn:hover {
+  border-color: rgba(232,196,138,0.65) !important;
+  box-shadow: 0 0 12px rgba(232,196,138,0.22) !important;
+  color: #f2d4a1 !important;
 }
 html[data-weered-lobby="windrose"] .weered-lobby-tab:hover {
   border-color: rgba(232,196,138,0.55) !important;
@@ -5111,15 +5136,39 @@ html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after {
 html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before { left: 8px; }
 html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after  { right: 8px; }
 
+html[data-weered-lobby="destiny2"] .weered-lobby-tabs {
+  border-radius: 3px !important;
+  border-color: rgba(245,130,32,0.25) !important;
+  background: rgba(5,8,16,0.55) !important;
+  padding: 3px !important;
+}
 html[data-weered-lobby="destiny2"] .weered-lobby-tab {
   background: transparent !important;
   border: 1px solid rgba(245,130,32,0.25) !important;
+  border-radius: 2px !important;
   color: var(--d2-textDim) !important;
   font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   letter-spacing: 3px !important;
   font-size: 13px !important;
   text-transform: uppercase;
   transition: all 0.15s ease;
+  padding: 6px 14px !important;
+}
+/* BROWSE / INVITE use the Destiny HUD font too */
+html[data-weered-lobby="destiny2"] .weered-btn {
+  font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
+  letter-spacing: 2.5px !important;
+  text-transform: uppercase !important;
+  border-radius: 2px !important;
+  border: 1px solid rgba(245,130,32,0.35) !important;
+  background: rgba(5,8,16,0.55) !important;
+  color: #ffb066 !important;
+  font-weight: 700 !important;
+}
+html[data-weered-lobby="destiny2"] .weered-btn:hover {
+  border-color: rgba(255,176,102,0.75) !important;
+  box-shadow: 0 0 14px rgba(245,130,32,0.28) !important;
+  color: #ffe8c0 !important;
 }
 html[data-weered-lobby="destiny2"] .weered-lobby-tab:hover {
   border-color: rgba(255,176,102,0.55) !important;
