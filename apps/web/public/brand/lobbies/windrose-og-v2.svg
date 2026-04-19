@@ -124,19 +124,19 @@
     Build. Sail. Survive the storm.
   </text>
 
-  <!-- Value pills — widened so nothing clips in fallback serif -->
+  <!-- Value pills — shortened labels + consistent 260w with generous gaps so nothing overflows -->
   <g font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="18" letter-spacing="2">
     <g transform="translate(80 416)">
-      <rect x="0" y="0" width="290" height="44" rx="4" fill="#19283e" opacity="0.82" stroke="#c9a066" stroke-width="1.3" />
-      <text x="20" y="29" fill="#e8c48a">LIVE STEAM PLAYER COUNT</text>
+      <rect x="0" y="0" width="260" height="44" rx="4" fill="#19283e" opacity="0.82" stroke="#c9a066" stroke-width="1.3" />
+      <text x="130" y="29" fill="#e8c48a" text-anchor="middle">LIVE ON STEAM</text>
     </g>
-    <g transform="translate(382 416)">
-      <rect x="0" y="0" width="250" height="44" rx="4" fill="#19283e" opacity="0.82" stroke="#c9a066" stroke-width="1.3" />
-      <text x="20" y="29" fill="#e8c48a">DEV DISPATCHES</text>
+    <g transform="translate(360 416)">
+      <rect x="0" y="0" width="260" height="44" rx="4" fill="#19283e" opacity="0.82" stroke="#c9a066" stroke-width="1.3" />
+      <text x="130" y="29" fill="#e8c48a" text-anchor="middle">DEV DISPATCHES</text>
     </g>
-    <g transform="translate(644 416)">
-      <rect x="0" y="0" width="210" height="44" rx="4" fill="#19283e" opacity="0.82" stroke="#c9a066" stroke-width="1.3" />
-      <text x="20" y="29" fill="#e8c48a">CREW FINDER</text>
+    <g transform="translate(640 416)">
+      <rect x="0" y="0" width="260" height="44" rx="4" fill="#19283e" opacity="0.82" stroke="#c9a066" stroke-width="1.3" />
+      <text x="130" y="29" fill="#e8c48a" text-anchor="middle">CREW FINDER</text>
     </g>
   </g>
 
