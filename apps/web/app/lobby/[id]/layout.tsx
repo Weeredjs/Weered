@@ -1,6 +1,17 @@
 import { Metadata } from "next";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+const SITE = "https://weered.ca";
+
+// Per-lobby OG overrides. Default is the generic Weered card + description.
+// Add entries here when a lobby has its own branded social card.
+const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: string; description?: string; title?: string }> = {
+  windrose: {
+    ogImage: `${SITE}/brand/lobbies/windrose-og.png`,
+    description: "The unofficial Windrose community hub. Live Steam player count, Kraken Express dispatches, crew finder, and Captain's Log. Build. Sail. Survive the storm.",
+    title: "Windrose — unofficial community hub · Weered",
+  },
+};
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const id = decodeURIComponent(params.id);
@@ -11,25 +22,37 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, { next: { revalidate: 300 } });
     if (res.ok) {
       const data = await res.json();
-      if (data?.name) name = data.name;
-      if (data?.description) description = data.description;
+      const lobby = data?.lobby ?? data; // handle both { ok, lobby } and flat shapes
+      if (lobby?.name) name = lobby.name;
+      if (lobby?.description) description = lobby.description;
     }
   } catch {}
 
+  const override = LOBBY_OG_OVERRIDES[id];
+  const title = override?.title ?? `${name} — Weered`;
+  const ogDescription = override?.description ?? description;
+  const ogImage = override?.ogImage ?? `${SITE}/brand/og-image.png`;
+  const twitterImage = override?.twitterImage ?? ogImage;
+  const url = `${SITE}/lobby/${encodeURIComponent(id)}`;
+
   return {
-    title: `${name} — Weered`,
-    description,
+    title,
+    description: ogDescription,
     openGraph: {
-      title: `${name} — Weered Lobby`,
-      description,
-      url: `https://weered.ca/lobby/${encodeURIComponent(id)}`,
-      images: [{ url: "https://weered.ca/brand/og-image.png", width: 1200, height: 630, alt: `${name} on Weered` }],
+      title,
+      description: ogDescription,
+      url,
+      type: "website",
+      siteName: "Weered",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${name} on Weered` }],
     },
     twitter: {
-      title: `${name} — Weered`,
-      description,
+      card: "summary_large_image",
+      title,
+      description: ogDescription,
+      images: [twitterImage],
     },
-    alternates: { canonical: `https://weered.ca/lobby/${encodeURIComponent(id)}` },
+    alternates: { canonical: url },
   };
 }
 
