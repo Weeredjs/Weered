@@ -43,12 +43,14 @@ interface RoleIconProps {
   className?: string;
 }
 
+const ICON_VERSION = "v3";
+
 export default function RoleIcon({ role, size = 14, style, className }: RoleIconProps) {
   const info = ROLE_MAP[role];
   if (!info) return null;
   return (
     <img
-      src={`/brand/roles/${info.file}.svg`}
+      src={`/brand/roles/${info.file}.svg?${ICON_VERSION}`}
       alt={DISPLAY_NAMES[role] || role}
       width={size}
       height={size}
@@ -69,7 +71,7 @@ export function TierIcon({ tier, size = 14, style, className }: { tier: string; 
   if (!info) return null;
   return (
     <img
-      src={`/brand/roles/${info.file}.svg`}
+      src={`/brand/roles/${info.file}.svg?${ICON_VERSION}`}
       alt={tier}
       width={size}
       height={size}
