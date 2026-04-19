@@ -13,7 +13,7 @@ const ROLE_MAP: Record<string, { file: string; color: string }> = {
   GOD:     { file: "godfather",   color: "#D4A017" },
   ADMIN:   { file: "lieutenant",  color: "#EF4444" },
   STAFF:   { file: "enforcer",    color: "#60A5FA" },
-  SUPPORT: { file: "backup",      color: "#60A5FA" },
+  SUPPORT: { file: "backup",      color: "#5800E5" },
   MOD:     { file: "captain",     color: "#5800E5" },
   OWNER:   { file: "founder",     color: "#F97316" },
   MEMBER:  { file: "member",      color: "#94A3B8" },
