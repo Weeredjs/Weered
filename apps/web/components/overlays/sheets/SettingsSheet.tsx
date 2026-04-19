@@ -423,34 +423,55 @@ function PresenceSection() {
     fontFamily: "ui-monospace, monospace", fontSize: 12, outline: "none",
   };
 
+  const stackedInputStyle: React.CSSProperties = {
+    flex: 1, minWidth: 0,
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
+    background: "var(--weered-panel2, rgba(0,0,0,.3))",
+    color: "var(--weered-text, rgba(243,244,246,.95))",
+    fontFamily: "ui-monospace, monospace",
+    fontSize: 13, outline: "none",
+  };
+
   return (
     <Section title="Rich Presence">
-      <Row label="Steam ID" hint="Paste your 17-digit SteamID64 so friends see what you're playing.">
-        <div style={{ display: "flex", gap: 6 }}>
-          <input type="text" value={steamId} onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))} placeholder="76561198000000000" style={inputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={() => saveSteam(false)} disabled={saving === "steam" || !/^\d{17}$/.test(steamId.trim())}>
+      {/* Steam ID — stacked: label + hint on top, input row below */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Steam ID</div>
+        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
+          Paste your 17-digit SteamID64 so friends see what you&apos;re playing.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input type="text" value={steamId} onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))} placeholder="76561198000000000" style={stackedInputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveSteam(false)} disabled={saving === "steam" || !/^\d{17}$/.test(steamId.trim())}>
             {saving === "steam" ? "Saving…" : "Link"}
           </button>
-          <button type="button" style={{ ...btnStyle, padding: "6px 10px", fontSize: 11, opacity: 0.7 }} onClick={() => saveSteam(true)} disabled={saving === "steam"}>Clear</button>
+          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveSteam(true)} disabled={saving === "steam"}>Clear</button>
         </div>
-      </Row>
+      </div>
 
-      <Row label="Twitch login" hint="Your Twitch username — friends see a live stream badge when you're on air.">
-        <div style={{ display: "flex", gap: 6 }}>
-          <input type="text" value={twitchLogin} onChange={e => setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder="your_twitch_login" style={inputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={() => saveTwitch(false)} disabled={saving === "twitch" || !/^[a-z0-9_]{3,25}$/.test(twitchLogin.trim())}>
+      {/* Twitch login */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Twitch login</div>
+        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
+          Your Twitch username — friends see a live stream badge when you&apos;re on air.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input type="text" value={twitchLogin} onChange={e => setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder="your_twitch_login" style={stackedInputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveTwitch(false)} disabled={saving === "twitch" || !/^[a-z0-9_]{3,25}$/.test(twitchLogin.trim())}>
             {saving === "twitch" ? "Saving…" : "Link"}
           </button>
-          <button type="button" style={{ ...btnStyle, padding: "6px 10px", fontSize: 11, opacity: 0.7 }} onClick={() => saveTwitch(true)} disabled={saving === "twitch"}>Clear</button>
+          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveTwitch(true)} disabled={saving === "twitch"}>Clear</button>
         </div>
-      </Row>
+      </div>
 
       {msg && (
         <div style={{ marginTop: 6, fontSize: 11, color: msg.ok ? "rgba(134,239,172,.85)" : "rgba(252,165,165,.85)" }}>
           {msg.text}
         </div>
       )}
-      <div style={{ marginTop: 8, fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.55))", lineHeight: 1.5 }}>
+      <div style={{ marginTop: 10, fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.55))", lineHeight: 1.5 }}>
         Find your SteamID64 at{" "}
         <a href="https://steamdb.info/calculator/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline" }}>
           steamdb.info/calculator
