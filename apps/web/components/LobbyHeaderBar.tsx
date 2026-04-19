@@ -195,49 +195,83 @@ export default function LobbyHeaderBar({
         display: "flex", alignItems: "center", gap: 10,
         padding: "8px 14px", flexWrap: "wrap",
       }}>
-        {/* Logo + name — or official wordmark lockup for themed lobbies */}
-        {lobbyId === "windrose" ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <img
-              src="/brand/lobbies/windrose-wordmark-official.png"
-              alt="Windrose"
-              style={{ height: 26, width: "auto", maxWidth: 220, objectFit: "contain", flexShrink: 0, filter: `drop-shadow(0 1px 3px ${accent || "#c9a066"}55)` }}
-            />
-            {verified && (
-              <span style={{
-                fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
-                background: accent ? `${accent}20` : "rgba(88,0,229,.15)",
-                border: `1px solid ${accent || "#5800E5"}35`,
-                color: accent || "#5800E5",
-                letterSpacing: "0.05em",
-                flexShrink: 0,
-              }}>VERIFIED</span>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Logo or initial */}
-            {logoUrl ? (
-              <div style={{
-                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                background: "rgba(0,0,0,.4)",
-                border: `1px solid ${accent || "rgba(255,255,255,.08)"}33`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                overflow: "hidden",
-              }}>
-                <img src={logoUrl} alt={title + " logo"} style={{ width: 20, height: 20, objectFit: "contain" }} />
+        {/* Tier-2 lobbies (those with a registered splash overlay) get a clickable
+            logo that replays the splash. Event is namespaced and fires into the
+            void for non-Tier-2 — no-op by design. */}
+        {(() => { /* helper closure to keep the JSX scope clean */
+          const HAS_SPLASH = new Set(["windrose", "destiny2"]);
+          const isTier2 = HAS_SPLASH.has(lobbyId);
+          const replaySplash = () => {
+            try { window.dispatchEvent(new CustomEvent("weered:splash:open", { detail: { lobbyId } })); } catch {}
+          };
+          const tier2CursorStyle: React.CSSProperties = isTier2 ? { cursor: "pointer" } : {};
+          const tier2Title = isTier2 ? "Replay the intro · click to open" : undefined;
+
+          if (lobbyId === "windrose") {
+            return (
+              <div
+                onClick={isTier2 ? replaySplash : undefined}
+                title={tier2Title}
+                className={isTier2 ? "weered-tier2-logo" : undefined}
+                style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, padding: "2px 4px", borderRadius: 6, transition: "all 0.15s ease", ...tier2CursorStyle }}
+              >
+                <img
+                  src="/brand/lobbies/windrose-wordmark-official.png"
+                  alt="Windrose"
+                  style={{ height: 26, width: "auto", maxWidth: 220, objectFit: "contain", flexShrink: 0, filter: `drop-shadow(0 1px 3px ${accent || "#c9a066"}55)` }}
+                />
+                {verified && (
+                  <span style={{
+                    fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
+                    background: accent ? `${accent}20` : "rgba(88,0,229,.15)",
+                    border: `1px solid ${accent || "#5800E5"}35`,
+                    color: accent || "#5800E5",
+                    letterSpacing: "0.05em",
+                    flexShrink: 0,
+                  }}>VERIFIED</span>
+                )}
               </div>
-            ) : (
-              <div style={{
-                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                background: accent ? `${accent}15` : "rgba(88,0,229,.12)",
-                border: `1px solid ${accent || "#5800E5"}22`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, fontWeight: 900, color: accent || "#5800E5",
-              }}>
-                {initial}
-              </div>
-            )}
+            );
+          }
+
+          return (
+            <>
+              {/* Logo or initial — clickable on Tier 2 */}
+              {logoUrl ? (
+                <div
+                  onClick={isTier2 ? replaySplash : undefined}
+                  title={tier2Title}
+                  className={isTier2 ? "weered-tier2-logo" : undefined}
+                  style={{
+                    width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                    background: "rgba(0,0,0,.4)",
+                    border: `1px solid ${accent || "rgba(255,255,255,.08)"}33`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    overflow: "hidden",
+                    transition: "all 0.15s ease",
+                    ...tier2CursorStyle,
+                  }}
+                >
+                  <img src={logoUrl} alt={title + " logo"} style={{ width: 20, height: 20, objectFit: "contain" }} />
+                </div>
+              ) : (
+                <div
+                  onClick={isTier2 ? replaySplash : undefined}
+                  title={tier2Title}
+                  className={isTier2 ? "weered-tier2-logo" : undefined}
+                  style={{
+                    width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                    background: accent ? `${accent}15` : "rgba(88,0,229,.12)",
+                    border: `1px solid ${accent || "#5800E5"}22`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 12, fontWeight: 900, color: accent || "#5800E5",
+                    transition: "all 0.15s ease",
+                    ...tier2CursorStyle,
+                  }}
+                >
+                  {initial}
+                </div>
+              )}
 
             {/* Name + verified */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -261,8 +295,9 @@ export default function LobbyHeaderBar({
                 </span>
               )}
             </div>
-          </>
-        )}
+            </>
+          );
+        })()}
 
         {/* Mode tabs */}
         <div className="weered-lobby-tabs flex gap-1 rounded-xl border border-white/10 bg-white/5 p-0.5" style={{ flexShrink: 0 }}>
