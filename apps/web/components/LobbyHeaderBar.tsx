@@ -178,7 +178,9 @@ export default function LobbyHeaderBar({
       className={ui.panel}
       style={{
         position: "relative", flexShrink: 0,
-        padding: 0, overflow: "hidden",
+        padding: 0,
+        // overflow intentionally visible so the search dropdown can escape
+        // the header bar's bounds (it renders at top: 100% + 6px)
       }}
     >
       {/* Accent top line */}
