@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="og-sky" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#050812" />
+      <stop offset="45%"  stop-color="#0e1826" />
+      <stop offset="90%"  stop-color="#152740" />
+      <stop offset="100%" stop-color="#19283e" />
+    </linearGradient>
+    <linearGradient id="og-sea" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#152740" />
+      <stop offset="100%" stop-color="#050812" />
+    </linearGradient>
+    <radialGradient id="og-moonglow" cx="82%" cy="25%" r="28%">
+      <stop offset="0%"   stop-color="#e8c48a" stop-opacity="0.28" />
+      <stop offset="60%"  stop-color="#c9a066" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#c9a066" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="og-leftHaze" cx="8%" cy="60%" r="42%">
+      <stop offset="0%"   stop-color="#a33d3d" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#8b2e2e" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="og-horizonGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#e8c48a" stop-opacity="0" />
+      <stop offset="50%"  stop-color="#c9a066" stop-opacity="0.20" />
+      <stop offset="100%" stop-color="#c9a066" stop-opacity="0" />
+    </linearGradient>
+    <filter id="og-turb">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" />
+      <feDisplacementMap in="SourceGraphic" scale="20" />
+    </filter>
+    <filter id="og-textShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
+      <feOffset dx="0" dy="2" result="offsetblur" />
+      <feFlood flood-color="#05080f" flood-opacity="0.9" />
+      <feComposite in2="offsetblur" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Sky + Sea split at y=390 -->
+  <rect width="1200" height="390" fill="url(#og-sky)" />
+  <rect y="390" width="1200" height="240" fill="url(#og-sea)" />
+
+  <!-- Atmospheric glow layers -->
+  <rect width="1200" height="630" fill="url(#og-moonglow)" />
+  <rect width="1200" height="630" fill="url(#og-leftHaze)" />
+
+  <!-- Moon -->
+  <circle cx="984" cy="160" r="46" fill="#f2d4a1" opacity="0.82" />
+  <circle cx="984" cy="160" r="46" fill="none" stroke="#e8c48a" stroke-width="1" opacity="0.3" />
+
+  <!-- Storm clouds -->
+  <g filter="url(#og-turb)" opacity="0.90">
+    <ellipse cx="220"  cy="110" rx="360" ry="80"  fill="#0a101c" />
+    <ellipse cx="720"  cy="60"  rx="520" ry="66"  fill="#0a101c" />
+    <ellipse cx="1080" cy="100" rx="320" ry="80"  fill="#0a101c" />
+    <ellipse cx="540"  cy="200" rx="340" ry="50"  fill="#15233a" opacity="0.55" />
+    <ellipse cx="960"  cy="220" rx="380" ry="58"  fill="#15233a" opacity="0.45" />
+  </g>
+
+  <!-- Horizon line + glow -->
+  <rect x="0" y="382" width="1200" height="14" fill="url(#og-horizonGlow)" />
+  <line x1="0" y1="390" x2="1200" y2="390" stroke="#c9a066" stroke-width="1" opacity="0.38" />
+
+  <!-- Distant galleons on horizon -->
+  <g transform="translate(140 340)" fill="#050812" opacity="0.85">
+    <rect x="0" y="38" width="110" height="14" />
+    <polygon points="8,38 102,38 94,50 16,50" />
+    <rect x="24" y="-4" width="2" height="46" />
+    <rect x="56" y="-8" width="2.4" height="50" />
+    <rect x="88" y="-4" width="2" height="46" />
+    <path d="M12 4 Q26 10 40 4 L40 34 Q26 36 12 34 Z" />
+    <path d="M42 0 Q58 4 76 0 L76 36 Q58 38 42 36 Z" />
+    <path d="M78 4 Q88 10 106 4 L106 34 Q88 36 78 34 Z" />
+    <line x1="56" y1="-8" x2="70" y2="-3" stroke="#a33d3d" stroke-width="1.2" />
+  </g>
+
+  <g transform="translate(1040 360)" fill="#050812" opacity="0.72">
+    <rect x="0" y="24" width="80" height="10" />
+    <polygon points="4,24 76,24 70,32 10,32" />
+    <rect x="20" y="-4" width="2" height="28" />
+    <rect x="46" y="-8" width="2.2" height="32" />
+    <path d="M8 2 Q20 6 32 2 L32 22 Q20 24 8 22 Z" />
+    <path d="M34 -2 Q46 2 60 -2 L60 22 Q46 24 34 22 Z" />
+  </g>
+
+  <g transform="translate(640 364)" fill="#050812" opacity="0.55">
+    <rect x="0" y="22" width="64" height="8" />
+    <rect x="28" y="4" width="1.6" height="22" />
+    <path d="M18 8 Q28 10 38 8 L38 22 Q28 24 18 22 Z" />
+  </g>
+
+  <!-- Waves -->
+  <g stroke="#c9a066" fill="none" stroke-linecap="round">
+    <path d="M 0 440 Q 160 432 320 440 T 640 440 T 960 440 T 1280 440" stroke-width="1.6" opacity="0.48" />
+    <path d="M 0 478 Q 140 470 280 478 T 560 478 T 840 478 T 1120 478 T 1280 478" stroke-width="1.1" opacity="0.36" />
+    <path d="M 0 518 Q 120 512 240 518 T 480 518 T 720 518 T 960 518 T 1200 518" stroke-width="0.9" opacity="0.26" />
+    <path d="M 0 558 Q 100 554 200 558 T 400 558 T 600 558 T 800 558 T 1000 558 T 1200 558" stroke-width="0.8" opacity="0.20" />
+  </g>
+
+  <!-- Compass watermark bottom-right -->
+  <g transform="translate(1090 530)" opacity="0.20">
+    <circle cx="0" cy="0" r="66" fill="none" stroke="#e8c48a" stroke-width="1.2" />
+    <circle cx="0" cy="0" r="56" fill="none" stroke="#e8c48a" stroke-width="0.7" />
+    <path d="M0 -66 L4 0 L0 2 L-4 0 Z" fill="#e8c48a" />
+    <path d="M0 66 L4 0 L0 -2 L-4 0 Z" fill="#e8c48a" opacity="0.6" />
+    <path d="M66 0 L0 4 L-2 0 L0 -4 Z" fill="#e8c48a" opacity="0.8" />
+    <path d="M-66 0 L0 4 L2 0 L0 -4 Z" fill="#e8c48a" opacity="0.8" />
+    <circle cx="0" cy="0" r="4" fill="#0e1826" stroke="#e8c48a" stroke-width="0.8" />
+  </g>
+
+  <!-- Top brass strip -->
+  <rect x="0" y="0" width="1200" height="3" fill="#c9a066" opacity="0.65" />
+
+  <!-- KICKER: "A KRAKEN EXPRESS VOYAGE · UNOFFICIAL COMMUNITY HUB" -->
+  <text x="80" y="128"
+        font-family="Cormorant Garamond, Georgia, serif"
+        font-size="22" letter-spacing="6"
+        fill="#c9a066" font-weight="700"
+        filter="url(#og-textShadow)">
+    A KRAKEN EXPRESS VOYAGE · UNOFFICIAL COMMUNITY HUB
+  </text>
+
+  <!-- HEADLINE: "Windrose" in pirate display font -->
+  <text x="80" y="250"
+        font-family="Pirata One, Cinzel Decorative, Georgia, serif"
+        font-size="140" letter-spacing="2"
+        fill="#e8c48a" font-weight="400"
+        filter="url(#og-textShadow)">
+    Windrose
+  </text>
+
+  <!-- TAGLINE -->
+  <text x="80" y="306"
+        font-family="Cormorant Garamond, Georgia, serif"
+        font-size="28" letter-spacing="1"
+        fill="#e4d4b0" font-style="italic"
+        filter="url(#og-textShadow)">
+    Build. Sail. Survive the storm.
+  </text>
+
+  <!-- VALUE BULLETS — three pills -->
+  <g font-family="Cormorant Garamond, Georgia, serif" font-weight="700" font-size="20" letter-spacing="2.5" fill="#e8c48a">
+    <g transform="translate(80 360)">
+      <rect x="0" y="0" width="280" height="44" rx="4" fill="#19283e" opacity="0.72" stroke="#c9a066" stroke-width="1.2" />
+      <text x="18" y="29" fill="#e8c48a">LIVE STEAM PLAYER COUNT</text>
+    </g>
+    <g transform="translate(372 360)">
+      <rect x="0" y="0" width="220" height="44" rx="4" fill="#19283e" opacity="0.72" stroke="#c9a066" stroke-width="1.2" />
+      <text x="18" y="29" fill="#e8c48a">KRAKEN DISPATCHES</text>
+    </g>
+    <g transform="translate(604 360)">
+      <rect x="0" y="0" width="170" height="44" rx="4" fill="#19283e" opacity="0.72" stroke="#c9a066" stroke-width="1.2" />
+      <text x="18" y="29" fill="#e8c48a">CREW FINDER</text>
+    </g>
+  </g>
+
+  <!-- BOTTOM LEFT: Weered logo + URL strip -->
+  <g transform="translate(80 548)">
+    <!-- Weered wordmark -->
+    <text font-family="Pirata One, Georgia, serif" font-size="38" letter-spacing="2" fill="#e8c48a">weered</text>
+    <text y="32" font-family="Cormorant Garamond, Georgia, serif" font-size="17" letter-spacing="3" fill="#a89775" font-weight="600">
+      weered.ca/lobby/windrose
+    </text>
+  </g>
+
+  <!-- BOTTOM RIGHT: sail mark -->
+  <g transform="translate(980 540)">
+    <path d="M22 6 Q 42 34 78 54 L 24 62 Z" fill="#e8c48a" opacity="0.88" />
+    <rect x="14" y="68" width="58" height="5" rx="1" fill="#e8c48a" opacity="0.88" />
+  </g>
+</svg>
