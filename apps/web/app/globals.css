@@ -4208,7 +4208,14 @@ html[data-weered-lobby="windrose"] .weered-left,
 html[data-weered-lobby="windrose"] .weered-right,
 html[data-weered-lobby="windrose"] .weered-center {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+}
+/* Media elements (Twitch/YouTube iframes, video) must render above the
+   ambient decoration layer no matter where they sit in the tree. */
+html[data-weered-lobby="windrose"] iframe,
+html[data-weered-lobby="windrose"] video {
+  position: relative;
+  z-index: 3;
 }
 
 html[data-weered-lobby="windrose"] .weered-left,
@@ -4788,12 +4795,17 @@ html[data-weered-lobby="destiny2"] .weered-shell::after {
 }
 
 /* Rails + shell */
+html[data-weered-lobby="destiny2"] iframe,
+html[data-weered-lobby="destiny2"] video {
+  position: relative;
+  z-index: 3;
+}
 html[data-weered-lobby="destiny2"] .weered-shell,
 html[data-weered-lobby="destiny2"] .weered-left,
 html[data-weered-lobby="destiny2"] .weered-right,
 html[data-weered-lobby="destiny2"] .weered-center {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 html[data-weered-lobby="destiny2"] .weered-left,
 html[data-weered-lobby="destiny2"] .weered-right {
