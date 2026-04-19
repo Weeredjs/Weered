@@ -25,7 +25,7 @@ import PubgModulesPanel from "../../../components/PubgModulesPanel";
 import DndModulesPanel from "../../../components/DndModulesPanel";
 import PoeModulesPanel from "../../../components/PoeModulesPanel";
 import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
-import WindroseSplash from "../../../components/WindroseSplash";
+import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
@@ -360,7 +360,7 @@ export default function LobbyIdPage() {
   // that scoped CSS (see globals.css) can hook into for full chrome reskin.
   useEffect(() => {
     if (!lobbyId) return;
-    const THEMEABLE = new Set<string>(["windrose"]);
+    const THEMEABLE = new Set<string>(["windrose", "destiny2"]);
     if (THEMEABLE.has(lobbyId)) {
       document.documentElement.setAttribute("data-weered-lobby", lobbyId);
       return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
@@ -379,7 +379,25 @@ export default function LobbyIdPage() {
 
   return (
     <>
-    {lobbyId === "windrose" && isMember && <WindroseSplash />}
+    {lobbyId === "windrose" && isMember && (
+      <LobbySplash
+        lobbyId="windrose"
+        ogImage="/brand/lobbies/windrose-og-v3.png"
+        ariaLabel="Welcome to the Windrose hub"
+        palette={WINDROSE_SPLASH_PALETTE}
+        liveCount={{ endpoint: "/windrose/live-players", label: "Sailing right now", suffix: "pirates · Steam live" }}
+      />
+    )}
+    {lobbyId === "destiny2" && isMember && (
+      <LobbySplash
+        lobbyId="destiny2"
+        ogImage="/brand/lobbies/destiny2-og-v1.png"
+        ariaLabel="Welcome to the Destiny 2 hub"
+        palette={DESTINY_SPLASH_PALETTE}
+        ctaLabel="Open the Tower \u2192"
+        liveCount={{ endpoint: "/destiny/live-players", label: "Guardians sailing light", suffix: "live · Steam" }}
+      />
+    )}
     <div
       className="weered-lobby-page"
       style={{

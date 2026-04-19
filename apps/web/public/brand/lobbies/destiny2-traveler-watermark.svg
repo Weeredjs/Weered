@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" fill="none">
+  <defs>
+    <radialGradient id="wmTrav" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="60%"  stop-color="#c8ccda" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#404856" stop-opacity="0.4" />
+    </radialGradient>
+  </defs>
+  <circle cx="300" cy="300" r="260" fill="url(#wmTrav)" />
+  <g fill="#2d3445" opacity="0.45">
+    <circle cx="180" cy="200" r="6" />
+    <circle cx="240" cy="150" r="4.5" />
+    <circle cx="310" cy="130" r="6.5" />
+    <circle cx="380" cy="170" r="4" />
+    <circle cx="440" cy="240" r="5.5" />
+    <circle cx="470" cy="320" r="5" />
+    <circle cx="440" cy="400" r="6" />
+    <circle cx="370" cy="450" r="4.5" />
+    <circle cx="290" cy="470" r="6.5" />
+    <circle cx="200" cy="440" r="5" />
+    <circle cx="150" cy="370" r="5.5" />
+    <circle cx="130" cy="280" r="6" />
+    <circle cx="240" cy="260" r="3.5" />
+    <circle cx="320" cy="230" r="3" />
+    <circle cx="380" cy="320" r="3.5" />
+    <circle cx="300" cy="350" r="3" />
+    <circle cx="230" cy="340" r="3.5" />
+  </g>
+  <ellipse cx="370" cy="360" rx="160" ry="170" fill="#1a1f2c" opacity="0.22" />
+</svg>

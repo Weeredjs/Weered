@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Rajdhani:wght@400;500;600;700&display=swap');
 
 /* =============================================
    WEERED DESIGN TOKENS
@@ -4634,6 +4634,493 @@ html[data-weered-lobby="windrose"] ::selection {
   html[data-weered-lobby="windrose"] .weered-left-link-active,
   html[data-weered-lobby="windrose"] .weered-rr-room-card-active,
   html[data-weered-lobby="windrose"] .weered-rr-room-card-live::before {
+    animation: none !important;
+  }
+}
+
+/* =====================================================================
+   DESTINY 2 — LOBBY-SPECIFIC THEME TAKEOVER
+   Scope: html[data-weered-lobby="destiny2"]
+   Deep space + Traveler-white highlights + solar-orange accents.
+   ===================================================================== */
+
+html[data-weered-lobby="destiny2"] {
+  --weered-bg:              #050810;
+  --weered-panel:           rgba(10, 14, 28, 0.88);
+  --weered-panel2:          rgba(8, 10, 22, 0.92);
+  --weered-border:          rgba(245, 130, 32, 0.22);
+  --weered-border2:         rgba(245, 130, 32, 0.45);
+  --weered-text:            #cfd6e0;
+  --weered-muted:           rgba(138, 155, 176, 0.85);
+  --weered-accent-1:        #f58220;
+  --weered-accent-2:        #ffb066;
+  --weered-accent-bg:       rgba(245, 130, 32, 0.16);
+  --weered-accent-ring:     rgba(255, 176, 102, 0.50);
+  --weered-accent-grad:     linear-gradient(135deg, #f58220 0%, #ffb066 100%);
+  --weered-scrollbar-track: rgba(5, 8, 16, 0.7);
+  --weered-scrollbar-thumb: rgba(245, 130, 32, 0.35);
+  --weered-scrollbar-thumb-hover: rgba(255, 176, 102, 0.55);
+
+  --d2-space:    #050810;
+  --d2-deep:     #0a0e1c;
+  --d2-mid:      #121830;
+  --d2-rim:      #1e2948;
+  --d2-solar:    #f58220;
+  --d2-solarHi:  #ffb066;
+  --d2-solarLow: #a3530f;
+  --d2-void:     #6f3aa0;
+  --d2-arc:      #4a9eff;
+  --d2-text:     #cfd6e0;
+  --d2-textDim:  #8a9bb0;
+  --d2-traveler: #e4e8f0;
+}
+
+/* Body — deep space with solar + void nebulae */
+html[data-weered-lobby="destiny2"] body {
+  background:
+    radial-gradient(ellipse 85% 60% at 55% -10%, rgba(245,130,32,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 12% 100%, rgba(111,58,160,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 88% 100%, rgba(74,158,255,0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #050810 0%, #020308 100%) !important;
+  color: var(--d2-text);
+}
+
+/* Giant Traveler watermark, bottom-right, drifting in */
+html[data-weered-lobby="destiny2"] body::before {
+  content: '';
+  position: fixed;
+  bottom: -8%;
+  right: -6%;
+  width: 620px;
+  height: 620px;
+  background: url("/brand/lobbies/destiny2-traveler-watermark.svg") center/contain no-repeat;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+  filter: drop-shadow(0 0 28px rgba(245,130,32,0.06));
+  animation: d2-traveler-drift 24s ease-in-out infinite;
+}
+
+/* Ghost companion, bottom-left, slow float */
+html[data-weered-lobby="destiny2"] body::after {
+  content: '';
+  position: fixed;
+  bottom: 3%;
+  left: 1%;
+  width: 170px;
+  height: 170px;
+  background: url("/brand/lobbies/destiny2-ghost.svg") bottom left/contain no-repeat;
+  opacity: 0.14;
+  pointer-events: none;
+  z-index: 0;
+  animation: d2-ghost-float 9s ease-in-out infinite;
+}
+
+/* Starfield drift across bottom */
+html[data-weered-lobby="destiny2"] .weered-shell::after {
+  content: '';
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 100%;
+  background-image:
+    radial-gradient(1px 1px at 15% 18%,  rgba(228,232,240,0.6), transparent 2px),
+    radial-gradient(1px 1px at 32% 72%,  rgba(228,232,240,0.5), transparent 2px),
+    radial-gradient(1.2px 1.2px at 48% 28%, rgba(228,232,240,0.7), transparent 2px),
+    radial-gradient(1px 1px at 62% 84%,  rgba(228,232,240,0.5), transparent 2px),
+    radial-gradient(1.4px 1.4px at 78% 44%, rgba(228,232,240,0.75), transparent 2px),
+    radial-gradient(1px 1px at 88% 62%,  rgba(228,232,240,0.5), transparent 2px),
+    radial-gradient(1px 1px at 5%  52%,  rgba(228,232,240,0.6), transparent 2px),
+    radial-gradient(1.2px 1.2px at 25% 40%, rgba(228,232,240,0.6), transparent 2px);
+  background-size: 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+  animation: d2-star-drift 180s linear infinite;
+}
+
+@keyframes d2-traveler-drift {
+  0%, 100% { transform: translate(0, 0); opacity: 0.08; }
+  50%      { transform: translate(-6px, -10px); opacity: 0.10; }
+}
+@keyframes d2-ghost-float {
+  0%, 100% { transform: translate(0, 0) rotate(-1deg); }
+  50%      { transform: translate(6px, -10px) rotate(2deg); }
+}
+@keyframes d2-star-drift {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to   { background-position: 600px 300px, -600px 300px, 300px -600px, -300px -600px, 400px 500px, -400px 500px, 200px -400px, -200px -400px; }
+}
+@keyframes d2-solar-pulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(245,130,32,0.15), inset 0 0 10px rgba(245,130,32,0.05); }
+  50%      { box-shadow: 0 0 22px rgba(245,130,32,0.30), inset 0 0 14px rgba(245,130,32,0.10); }
+}
+@keyframes d2-legendary-shimmer {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(245,130,32,0.20), inset 0 1px 0 rgba(255,176,102,0.30), 0 0 22px rgba(245,130,32,0.25), 0 0 52px rgba(111,58,160,0.18), 0 6px 26px rgba(0,0,0,0.55); }
+  33%      { box-shadow: inset 0 0 0 1px rgba(245,130,32,0.28), inset 0 1px 0 rgba(255,176,102,0.40), 0 0 32px rgba(245,130,32,0.35), 0 0 62px rgba(111,58,160,0.22), 0 6px 26px rgba(0,0,0,0.55); }
+  66%      { box-shadow: inset 0 0 0 1px rgba(111,58,160,0.28), inset 0 1px 0 rgba(255,176,102,0.35), 0 0 30px rgba(111,58,160,0.30), 0 0 62px rgba(245,130,32,0.22), 0 6px 26px rgba(0,0,0,0.55); }
+}
+
+/* Rails + shell */
+html[data-weered-lobby="destiny2"] .weered-shell,
+html[data-weered-lobby="destiny2"] .weered-left,
+html[data-weered-lobby="destiny2"] .weered-right,
+html[data-weered-lobby="destiny2"] .weered-center {
+  position: relative;
+  z-index: 1;
+}
+html[data-weered-lobby="destiny2"] .weered-left,
+html[data-weered-lobby="destiny2"] .weered-right {
+  background: linear-gradient(180deg, rgba(10,14,28,0.72) 0%, rgba(5,8,16,0.90) 100%);
+  border-color: rgba(245,130,32,0.18);
+}
+
+/* Panels: deep navy with hex-tile inset subtle pattern + solar rim */
+html[data-weered-lobby="destiny2"] .weered-rr-section,
+html[data-weered-lobby="destiny2"] .weered-left-section,
+html[data-weered-lobby="destiny2"] .weered-presence,
+html[data-weered-lobby="destiny2"] .weered-usercorner {
+  background:
+    linear-gradient(180deg, rgba(18,24,48,0.75) 0%, rgba(10,14,28,0.90) 100%);
+  border: 1px solid rgba(245,130,32,0.28);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 1px rgba(245,130,32,0.08),
+    inset 0 1px 0 rgba(255,176,102,0.10),
+    0 4px 18px rgba(0,0,0,0.55);
+  position: relative;
+}
+
+/* Hex-tile corners (Destiny UI motif) on panels */
+html[data-weered-lobby="destiny2"] .weered-rr-section::before,
+html[data-weered-lobby="destiny2"] .weered-rr-section::after,
+html[data-weered-lobby="destiny2"] .weered-left-section::before,
+html[data-weered-lobby="destiny2"] .weered-left-section::after,
+html[data-weered-lobby="destiny2"] .weered-presence::before,
+html[data-weered-lobby="destiny2"] .weered-presence::after,
+html[data-weered-lobby="destiny2"] .weered-usercorner::before,
+html[data-weered-lobby="destiny2"] .weered-usercorner::after {
+  content: "";
+  position: absolute;
+  width: 9px; height: 10px;
+  background: #f58220;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  opacity: 0.65;
+  box-shadow: 0 0 6px rgba(245,130,32,0.5);
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-weered-lobby="destiny2"] .weered-rr-section::before,
+html[data-weered-lobby="destiny2"] .weered-left-section::before,
+html[data-weered-lobby="destiny2"] .weered-presence::before,
+html[data-weered-lobby="destiny2"] .weered-usercorner::before { top: 6px; left: 6px; }
+html[data-weered-lobby="destiny2"] .weered-rr-section::after,
+html[data-weered-lobby="destiny2"] .weered-left-section::after,
+html[data-weered-lobby="destiny2"] .weered-presence::after,
+html[data-weered-lobby="destiny2"] .weered-usercorner::after { top: 6px; right: 6px; }
+
+/* Typography */
+html[data-weered-lobby="destiny2"] .weered-left-title,
+html[data-weered-lobby="destiny2"] .weered-rr-section-title,
+html[data-weered-lobby="destiny2"] .weered-presence-title {
+  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', 'Impact', sans-serif !important;
+  letter-spacing: 3.5px !important;
+  color: #ffb066 !important;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 10px rgba(245,130,32,0.25);
+  font-weight: 700 !important;
+}
+html[data-weered-lobby="destiny2"] .weered-left-link,
+html[data-weered-lobby="destiny2"] .weered-rr-room-card {
+  font-family: 'Rajdhani', 'Inter', 'Segoe UI', system-ui, sans-serif !important;
+  letter-spacing: 0.5px;
+}
+
+/* Left rail links */
+html[data-weered-lobby="destiny2"] .weered-left-link {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--d2-text);
+  font-size: 14px !important;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+html[data-weered-lobby="destiny2"] .weered-left-link:hover {
+  background: rgba(245,130,32,0.08);
+  border-color: rgba(245,130,32,0.30);
+  color: #ffb066;
+  box-shadow: 0 0 16px rgba(245,130,32,0.14), inset 0 0 10px rgba(245,130,32,0.05);
+}
+html[data-weered-lobby="destiny2"] .weered-left-link-active {
+  background: linear-gradient(180deg, rgba(245,130,32,0.22), rgba(163,83,15,0.12)) !important;
+  border-color: rgba(255,176,102,0.60) !important;
+  color: #ffb066 !important;
+  box-shadow:
+    inset 0 0 14px rgba(245,130,32,0.10),
+    0 0 22px rgba(245,130,32,0.22) !important;
+  animation: d2-solar-pulse 6s ease-in-out infinite;
+}
+
+/* Right rail room cards */
+html[data-weered-lobby="destiny2"] .weered-rr-room-card {
+  background: rgba(18,24,48,0.45) !important;
+  border: 1px solid rgba(245,130,32,0.18) !important;
+  border-radius: 3px !important;
+  transition: all 0.15s ease;
+  color: var(--d2-text) !important;
+}
+html[data-weered-lobby="destiny2"] .weered-rr-room-card:hover {
+  border-color: rgba(255,176,102,0.45) !important;
+  background: rgba(245,130,32,0.08) !important;
+  box-shadow: 0 0 14px rgba(245,130,32,0.16);
+  transform: translateY(-1px);
+}
+html[data-weered-lobby="destiny2"] .weered-rr-room-card-active {
+  border-color: rgba(255,176,102,0.72) !important;
+  background: rgba(245,130,32,0.17) !important;
+  box-shadow:
+    inset 0 0 14px rgba(245,130,32,0.12),
+    0 0 22px rgba(245,130,32,0.20) !important;
+  animation: d2-solar-pulse 5s ease-in-out infinite;
+}
+html[data-weered-lobby="destiny2"] .weered-rr-room-card-live {
+  position: relative;
+}
+html[data-weered-lobby="destiny2"] .weered-rr-room-card-live::before {
+  content: "";
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffe8c0 0%, #f58220 60%, #7a3a08 100%);
+  box-shadow: 0 0 10px rgba(245,130,32,0.85);
+  animation: d2-solar-pulse 2s ease-in-out infinite;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Buttons — Destiny HUD feel */
+html[data-weered-lobby="destiny2"] .weered-rr-primary,
+html[data-weered-lobby="destiny2"] .weered-rr-primary-solid,
+html[data-weered-lobby="destiny2"] .weered-uc-action,
+html[data-weered-lobby="destiny2"] .weered-rr-join {
+  background: linear-gradient(180deg, rgba(18,24,48,0.95) 0%, rgba(10,14,28,0.98) 100%) !important;
+  border: 1px solid rgba(245,130,32,0.55) !important;
+  color: #ffb066 !important;
+  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 2.2px !important;
+  text-transform: uppercase;
+  font-size: 11px !important;
+  border-radius: 2px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: inset 0 1px 0 rgba(255,176,102,0.15), 0 2px 8px rgba(0,0,0,0.55);
+}
+html[data-weered-lobby="destiny2"] .weered-rr-primary:hover,
+html[data-weered-lobby="destiny2"] .weered-rr-primary-solid:hover,
+html[data-weered-lobby="destiny2"] .weered-uc-action:hover,
+html[data-weered-lobby="destiny2"] .weered-rr-join:hover {
+  background: linear-gradient(180deg, rgba(245,130,32,0.22) 0%, rgba(163,83,15,0.14) 100%) !important;
+  border-color: rgba(255,176,102,0.80) !important;
+  box-shadow:
+    0 0 18px rgba(245,130,32,0.38),
+    inset 0 0 10px rgba(245,130,32,0.10),
+    inset 0 1px 0 rgba(255,176,102,0.26);
+}
+
+/* Inputs */
+html[data-weered-lobby="destiny2"] .weered-rr-search,
+html[data-weered-lobby="destiny2"] .weered-presence-search,
+html[data-weered-lobby="destiny2"] .weered-input {
+  background: rgba(5,8,16,0.70) !important;
+  border: 1px solid rgba(245,130,32,0.30) !important;
+  color: #cfd6e0 !important;
+  font-family: 'Rajdhani', 'Inter', 'Segoe UI', system-ui, sans-serif !important;
+  border-radius: 2px !important;
+  font-size: 14px !important;
+  letter-spacing: 0.4px;
+}
+html[data-weered-lobby="destiny2"] .weered-rr-search:focus,
+html[data-weered-lobby="destiny2"] .weered-presence-search:focus,
+html[data-weered-lobby="destiny2"] .weered-input:focus {
+  border-color: rgba(255,176,102,0.70) !important;
+  box-shadow: 0 0 0 2px rgba(245,130,32,0.22), inset 0 0 6px rgba(245,130,32,0.06) !important;
+  outline: none;
+}
+html[data-weered-lobby="destiny2"] .weered-rr-search::placeholder,
+html[data-weered-lobby="destiny2"] .weered-presence-search::placeholder,
+html[data-weered-lobby="destiny2"] .weered-input::placeholder {
+  color: rgba(138,155,176,0.55) !important;
+  font-style: italic;
+}
+
+/* Lobby header bar with hex corners */
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row {
+  background: linear-gradient(180deg, rgba(18,24,48,0.85) 0%, rgba(10,14,28,0.95) 100%) !important;
+  border: 1px solid rgba(245,130,32,0.38) !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,176,102,0.14),
+    0 4px 18px rgba(0,0,0,0.55);
+  position: relative;
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before,
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after {
+  content: "";
+  position: absolute;
+  width: 10px; height: 11px;
+  background: #f58220;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: 0 0 8px rgba(245,130,32,0.55);
+  top: 7px;
+  pointer-events: none;
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before { left: 8px; }
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after  { right: 8px; }
+
+html[data-weered-lobby="destiny2"] .weered-lobby-tab {
+  background: transparent !important;
+  border: 1px solid rgba(245,130,32,0.25) !important;
+  color: var(--d2-textDim) !important;
+  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', sans-serif !important;
+  letter-spacing: 3px !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-tab:hover {
+  border-color: rgba(255,176,102,0.55) !important;
+  color: #ffb066 !important;
+  box-shadow: 0 0 14px rgba(245,130,32,0.20);
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-tab-active {
+  background: linear-gradient(180deg, rgba(245,130,32,0.22), rgba(163,83,15,0.12)) !important;
+  border-color: rgba(255,176,102,0.80) !important;
+  color: #ffb066 !important;
+  box-shadow:
+    inset 0 0 12px rgba(245,130,32,0.10),
+    0 0 18px rgba(245,130,32,0.24) !important;
+}
+
+/* Hero banner transparent so banner SVG shines through */
+html[data-weered-lobby="destiny2"] .weered-hero-content {
+  background: transparent !important;
+  border: 1px solid rgba(245,130,32,0.28);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,176,102,0.15),
+    inset 0 -40px 60px rgba(5,8,16,0.55),
+    0 6px 24px rgba(0,0,0,0.55);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+}
+html[data-weered-lobby="destiny2"] .weered-hero-bg {
+  opacity: 1 !important;
+  background-position: center center !important;
+}
+html[data-weered-lobby="destiny2"] .weered-hero-scrim {
+  background: linear-gradient(180deg, rgba(5,8,16,0.10) 0%, rgba(5,8,16,0.40) 100%) !important;
+}
+
+/* Event badge — legendary engram vibe (solar+void) */
+html[data-weered-lobby="destiny2"] .weered-event-badge {
+  background: linear-gradient(135deg, #f58220 0%, #a3530f 55%, #6f3aa0 100%) !important;
+  border: 1px solid #ffb066 !important;
+  color: #fff !important;
+  text-transform: uppercase !important;
+  font-family: 'Rajdhani', 'Bank Gothic', 'Arial Narrow', sans-serif !important;
+  letter-spacing: 2.5px !important;
+  box-shadow: 0 0 12px rgba(245,130,32,0.45), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+
+/* User corner */
+html[data-weered-lobby="destiny2"] .weered-usercorner {
+  background: linear-gradient(180deg, rgba(18,24,48,0.85) 0%, rgba(5,8,16,0.95) 100%) !important;
+  border: 1px solid rgba(245,130,32,0.40) !important;
+  border-radius: 3px !important;
+}
+
+/* Burner (now "Transmat"): solar flicker replaces amber */
+html[data-weered-lobby="destiny2"] .weered-burner-hot {
+  animation: d2-solar-pulse 2.5s ease-in-out infinite !important;
+}
+html[data-weered-lobby="destiny2"] .weered-burner-hot > span:last-child {
+  background: linear-gradient(180deg, #ffb066, #f58220) !important;
+  color: #0a0e1c !important;
+  border-color: rgba(5,8,16,0.9) !important;
+  box-shadow: 0 0 8px rgba(245,130,32,0.65) !important;
+}
+
+/* Scrollbars */
+html[data-weered-lobby="destiny2"] ::-webkit-scrollbar-track {
+  background: rgba(5,8,16,0.7);
+}
+html[data-weered-lobby="destiny2"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f58220, #a3530f);
+  border-radius: 1px;
+  border: 1px solid rgba(5,8,16,0.6);
+}
+html[data-weered-lobby="destiny2"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ffb066, #f58220);
+}
+
+html[data-weered-lobby="destiny2"] ::selection {
+  background: rgba(245,130,32,0.35);
+  color: #050810;
+}
+
+/* ── DESTINY 2 EVENT CARD: legendary engram treatment ─── */
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event {
+  border: 1.5px solid rgba(255,176,102,0.55) !important;
+  border-radius: 3px !important;
+  overflow: visible !important;
+  position: relative;
+  transition: all 0.25s ease !important;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,130,32,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(111,58,160,0.14) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(18,24,48,0.72) 0%, rgba(8,10,22,0.88) 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,176,102,0.20),
+    inset 0 1px 0 rgba(255,176,102,0.35),
+    0 0 24px rgba(245,130,32,0.22),
+    0 0 54px rgba(111,58,160,0.18),
+    0 6px 26px rgba(0,0,0,0.55) !important;
+  animation: d2-legendary-shimmer 9s ease-in-out infinite;
+}
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::before,
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::after {
+  content: "";
+  position: absolute;
+  width: 11px; height: 12px;
+  background: #f58220;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: 0 0 10px rgba(245,130,32,0.70);
+  pointer-events: none;
+  z-index: 4;
+}
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::before { top: 8px; left: 8px; }
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::after  { top: 8px; right: 8px; }
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hover {
+  border-color: rgba(255,232,192,0.95) !important;
+  transform: translateY(-4px) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,232,192,0.40),
+    inset 0 1px 0 rgba(255,232,192,0.55),
+    0 0 48px rgba(245,130,32,0.50),
+    0 0 100px rgba(245,130,32,0.22),
+    0 0 70px rgba(111,58,160,0.32),
+    0 14px 36px rgba(0,0,0,0.65) !important;
+  animation-play-state: paused;
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-weered-lobby="destiny2"] body::before,
+  html[data-weered-lobby="destiny2"] body::after,
+  html[data-weered-lobby="destiny2"] .weered-shell::after,
+  html[data-weered-lobby="destiny2"] .weered-left-link-active,
+  html[data-weered-lobby="destiny2"] .weered-rr-room-card-active,
+  html[data-weered-lobby="destiny2"] .weered-rr-room-card-live::before,
+  html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event {
     animation: none !important;
   }
 }
