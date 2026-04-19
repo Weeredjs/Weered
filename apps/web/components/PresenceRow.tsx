@@ -147,7 +147,7 @@ export default function PresenceRow({
   const accentStripe =
     globalRole === "GOD"     ? "#fcd34d"      // GOD: gold
     : globalRole === "STAFF"   ? "#60a5fa"      // STAFF: blue
-    : globalRole === "SUPPORT" ? "#a78bfa"      // SUPPORT: violet
+    : globalRole === "SUPPORT" ? "#5800E5"      // SUPPORT: Weered purple
     : globalRole === "MOD"     ? "#34d399"      // MOD: emerald
     : tier === "KINGPIN"       ? "#fcd34d"      // KINGPIN: gold
     : tier === "FELON"         ? "#f97316"      // FELON: orange
