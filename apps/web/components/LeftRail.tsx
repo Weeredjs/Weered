@@ -8,6 +8,7 @@ import { useWeered } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
 import { useUserHover } from "./UserHoverCard";
 import RoleIcon, { getRoleDisplayName, TierIcon } from "./RoleIcon";
+import PresenceRow from "./PresenceRow";
 import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
@@ -541,111 +542,49 @@ export default function LeftRail() {
             const nm  = pickFirstString(u?.name, u?.username, "Unknown");
             const rid = pickFirstString(u?.id, nm);
             const you = me?.id && u?.id && me.id === u.id;
-            const f   = flairFor(u);
+            const uid = String(u?.id || u?.userId || "");
 
-            const label = f.badge ? String(f.badge).toLowerCase() : you ? "you" : "member";
-            const cls   =
-              label === "owner" || label === "admin"  ? "border-emerald-300/25 bg-emerald-500/10 text-emerald-200"
-              : label === "staff" || label === "support" || label === "god" ? "border-amber-300/25 bg-amber-500/10 text-amber-200"
-              : label === "mod"   ? "weered-mod"
-              : label === "kingpin" ? "weered-tier-kingpin"
-              : label === "felon"   ? "weered-tier-felon"
-              : label === "indicted" ? "weered-tier-indicted"
-              : "border-white/10 bg-black/10 text-white/70";
+            const platforms = {
+              steam:  !!u?.steamId,
+              twitch: !!u?.twitchLogin,
+              xbox:   !!u?.xboxGamertag,
+              psn:    !!u?.psnAccountId,
+            };
+
+            const isOperator = uid === "operator";
+            const secondary = isOperator
+              ? <span style={{ color: "rgba(212,160,23,.7)", fontStyle: "italic" }}>AI · @operator</span>
+              : you
+                ? <span style={{ opacity: 0.55, fontStyle: "italic" }}>you</span>
+                : u?.livePresence?.activity
+                  ? <span style={{ color: "var(--weered-accent-text, rgba(196,181,253,.92))", fontWeight: 600 }}>{u.livePresence.activity}</span>
+                  : isLobbyActive && u?.roomName
+                    ? <span style={{ opacity: 0.65 }}>in {u.roomName}</span>
+                    : <span style={{ opacity: 0.5 }}>online</span>;
 
             return (
               <div
                 key={rid}
-                className="weered-presence-row"
-                style={{
-                  display: "flex", alignItems: "center", gap: 9,
-                  padding: "7px 9px", borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  background: you ? "rgba(124,58,237,0.07)" : "rgba(255,255,255,0.03)",
-                  cursor: "pointer", transition: "background 0.12s, border-color 0.12s",
-                }}
-                title={nm}
-                role="button"
-                tabIndex={0}
-                onClick={() => replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") });
-                  }
-                }}
                 onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background = you ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.06)";
-                  el.style.borderColor = "rgba(255,255,255,0.14)";
-                  const uid = String(u?.id || u?.userId || "");
-                  if (uid) openHover(uid, nm, el);
+                  if (uid) openHover(uid, nm, e.currentTarget as HTMLElement);
                 }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background = you ? "rgba(124,58,237,0.07)" : "rgba(255,255,255,0.03)";
-                  el.style.borderColor = "rgba(255,255,255,0.07)";
-                  scheduleClose(160);
-                }}
+                onMouseLeave={() => scheduleClose(160)}
+                style={you ? { background: "rgba(124,58,237,0.04)", borderRadius: 10 } : undefined}
+                className="weered-presence-row"
               >
-                {(() => {
-                  const roleColors: Record<string,string> = { god: "#fcd34d", staff: "#60a5fa", support: "#60a5fa", admin: "#a78bfa", mod: "#34d399", owner: "#f97316", paid: "#a78bfa" };
-                  const aColor = roleColors[label] || avatarBg(nm, label === "you", u?.avatarColor);
-                  const userAvatar = u?.avatar || null;
-                  return (
-                    <div style={{
-                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                      background: userAvatar ? "rgba(255,255,255,.08)" : `linear-gradient(135deg, ${aColor}33, ${aColor}66)`,
-                      border: `1.5px solid ${aColor}44`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontWeight: 700, fontSize: 11, color: aColor,
-                      position: "relative",
-                    }}>
-                      <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {userAvatar ? <img src={userAvatar} alt={nm + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nm[0]?.toUpperCase() ?? "?"}
-                      </div>
-                      <div style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: "50%", background: "#22c55e", border: "2px solid var(--weered-bg, #0f1117)", boxShadow: "0 0 4px #22c55e" }} />
-                    </div>
-                  );
-                })()}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: you ? "rgba(243,244,246,0.95)" : "rgba(232,232,236,0.9)", display: "flex", alignItems: "center", gap: 4 }}>
-                    {nm}
-                    {f.icon && <span style={{ opacity: 0.85, lineHeight: 1 }}>{f.icon}</span>}
-                  </div>
-                  <div style={{ fontSize: 10, color: (u?.id || u?.userId) === "operator" ? "rgba(212,160,23,.5)" : "rgba(255,255,255,0.28)", marginTop: 1, fontFamily: "monospace" }}>
-                    {(u?.id || u?.userId) === "operator" ? "AI \u00b7 @operator" : you ? "you" : isLobbyActive && u?.roomName ? `in ${u.roomName}` : roleDisplay(f.badge || "member")}
-                  </div>
-                </div>
-                {f.badge && (() => {
-                  // INDICTED (free tier) — faded text, no pill
-                  if (label === "indicted") {
-                    return (
-                      <span style={{
-                        fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
-                        color: "rgba(148,163,184,0.22)", flexShrink: 0,
-                      }}>Indicted</span>
-                    );
-                  }
-                  // Badge colors by type
-                  const tierColors: Record<string, { border: string; bg: string; color: string }> = {
-                    "weered-tier-kingpin":  { border: "rgba(252,211,77,0.4)",  bg: "rgba(252,211,77,0.12)", color: "#fde68a" },
-                    "weered-tier-felon":    { border: "rgba(249,115,22,0.4)",  bg: "rgba(249,115,22,0.12)", color: "#fdba74" },
-                    "weered-mod":           { border: "rgba(88,0,229,0.35)",   bg: "rgba(88,0,229,0.12)",   color: "rgba(243,244,246,0.8)" },
-                  };
-                  const roleColors: Record<string, { border: string; bg: string; color: string }> = {
-                    emerald: { border: "rgba(52,211,153,0.3)",  bg: "rgba(16,185,129,0.1)",  color: "#6ee7b7" },
-                    amber:   { border: "rgba(251,191,36,0.3)",  bg: "rgba(245,158,11,0.1)",  color: "#fcd34d" },
-                  };
-                  const tc = tierColors[cls] || (cls.includes("emerald") ? roleColors.emerald : cls.includes("amber") ? roleColors.amber : { border: "rgba(255,255,255,0.1)", bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" });
-                  return (
-                    <span style={{
-                      fontSize: 9, fontFamily: "monospace", letterSpacing: "0.04em",
-                      padding: "2px 6px", borderRadius: 999, flexShrink: 0,
-                      border: `1px solid ${tc.border}`, background: tc.bg, color: tc.color,
-                    }}>{label === "kingpin" || label === "felon" ? label.toUpperCase() : roleDisplay(f.badge || label)}</span>
-                  );
-                })()}
+                <PresenceRow
+                  name={nm}
+                  avatar={u?.avatar}
+                  avatarColor={u?.avatarColor}
+                  globalRole={u?.globalRole}
+                  tier={u?.tier}
+                  online={true}
+                  livePresence={u?.livePresence}
+                  secondaryText={secondary}
+                  platforms={platforms}
+                  onClick={() => replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })}
+                  compact
+                />
               </div>
             );
           })}
