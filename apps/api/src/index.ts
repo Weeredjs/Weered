@@ -2852,22 +2852,62 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
   });
 
   // ── Rich Presence (Steam pull) ───────────────────────────────────────────
-  // POST /profile/me/steam-id  { steamId } — set or clear (pass empty to clear)
+  // POST /profile/me/steam-id  { steamId } — accepts a SteamID64 (17 digits)
+  // OR a vanity URL/username (e.g. "weeredjs" from steamcommunity.com/id/weeredjs)
+  // Resolves vanity via Steam's ResolveVanityURL API.
   app.post("/profile/me/steam-id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
-    const raw = String(body.steamId || "").trim();
-    // Accept SteamID64 (17 digits starting 7656119...) or vanity URL ID
-    const steamId = raw === "" ? null : (/^\d{17}$/.test(raw) ? raw : null);
-    if (raw !== "" && !steamId) {
-      return reply.code(400).send({ ok: false, error: "invalid_steam_id", message: "Expected a 17-digit SteamID64 (e.g. 76561198000000000)." });
+    let raw = String(body.steamId || "").trim();
+
+    // Clear
+    if (raw === "") {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { steamId: null, livePresence: null, presenceCheckedAt: null },
+      });
+      return reply.send({ ok: true, steamId: null });
     }
+
+    // Strip common paste mistakes — users often paste the full profile URL
+    // e.g. "https://steamcommunity.com/id/weeredjs/" or ".../profiles/76561198..."
+    const urlMatch = raw.match(/steamcommunity\.com\/(id|profiles)\/([^/\s?#]+)/i);
+    if (urlMatch) raw = urlMatch[2];
+
+    let steamId: string | null = null;
+
+    if (/^\d{17}$/.test(raw)) {
+      steamId = raw;
+    } else if (STEAM_API_KEY) {
+      // Resolve vanity URL -> SteamID64
+      try {
+        const resolveUrl = `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${STEAM_API_KEY}&vanityurl=${encodeURIComponent(raw)}`;
+        const res = await fetch(resolveUrl);
+        if (res.ok) {
+          const j: any = await res.json();
+          if (j?.response?.success === 1 && typeof j?.response?.steamid === "string") {
+            steamId = j.response.steamid;
+          }
+        }
+      } catch {}
+    }
+
+    if (!steamId) {
+      return reply.code(400).send({
+        ok: false,
+        error: "invalid_steam_id",
+        message: STEAM_API_KEY
+          ? "Could not resolve that. Use your SteamID64 (17 digits) or the exact vanity URL from steamcommunity.com/id/<yourname>/."
+          : "Server missing Steam API key — paste your 17-digit SteamID64 directly.",
+      });
+    }
+
     await prisma.user.update({
       where: { id: u.id },
-      data: { steamId, livePresence: steamId ? undefined : null, presenceCheckedAt: null },
+      data: { steamId, livePresence: undefined, presenceCheckedAt: null },
     });
-    return reply.send({ ok: true, steamId });
+    return reply.send({ ok: true, steamId, resolvedFrom: raw !== steamId ? raw : undefined });
   });
 
   // POST /profile/me/twitch-login  { twitchLogin } — set or clear
@@ -2885,6 +2925,56 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       data: { twitchLogin, livePresence: twitchLogin ? undefined : null, presenceCheckedAt: null },
     });
     return reply.send({ ok: true, twitchLogin });
+  });
+
+  // GET /profile/me/presence — authed user's own link state + most recent detected presence
+  app.get("/profile/me/presence", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const row = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { steamId: true, twitchLogin: true, livePresence: true, presenceCheckedAt: true },
+    });
+    return reply.send({
+      ok: true,
+      steamId: row?.steamId ?? null,
+      twitchLogin: row?.twitchLogin ?? null,
+      livePresence: row?.livePresence ?? null,
+      presenceCheckedAt: row?.presenceCheckedAt ?? null,
+    });
+  });
+
+  // POST /profile/me/presence/refresh — force an immediate poll for this user
+  app.post("/profile/me/presence/refresh", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const row = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { id: true, steamId: true, twitchLogin: true },
+    });
+    if (!row) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    let steamData: any = undefined;
+    let twitchData: any = undefined;
+
+    if (STEAM_API_KEY && row.steamId) {
+      const batch = await pollSteamPresenceBatch([row.steamId]);
+      steamData = batch[row.steamId];
+    }
+    if (TWITCH_CLIENT_ID && row.twitchLogin) {
+      const batch = await pollTwitchPresenceBatch([row.twitchLogin.toLowerCase()]);
+      twitchData = batch[row.twitchLogin.toLowerCase()];
+    }
+
+    // Priority: Twitch-live > Steam game/online > null
+    const primary = (twitchData && twitchData.source === "TWITCH") ? twitchData : (steamData ?? null);
+    if (primary !== undefined) {
+      await prisma.user.update({
+        where: { id: row.id },
+        data: { livePresence: primary as any, presenceCheckedAt: new Date() },
+      }).catch(() => {});
+    }
+    return reply.send({ ok: true, livePresence: primary ?? null, presenceCheckedAt: new Date().toISOString() });
   });
 
   // GET /presence/users?ids=a,b,c — batch live-presence for friend lists etc.

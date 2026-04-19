@@ -378,8 +378,44 @@ function PresenceSection() {
   const [twitchLogin, setTwitchLogin] = React.useState("");
   const [saving, setSaving] = React.useState<"" | "steam" | "twitch">("");
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
+  const [linkedSteam, setLinkedSteam] = React.useState<string | null>(null);
+  const [linkedTwitch, setLinkedTwitch] = React.useState<string | null>(null);
+  const [livePresence, setLivePresence] = React.useState<any>(null);
+  const [presenceCheckedAt, setPresenceCheckedAt] = React.useState<string | null>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
   function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
+
+  const loadPresence = React.useCallback(async () => {
+    try {
+      const r = await fetch(`${apiBase}/profile/me/presence`, { headers: { Authorization: `Bearer ${token()}` } });
+      const j = await r.json();
+      if (j?.ok) {
+        setLinkedSteam(j.steamId ?? null);
+        setLinkedTwitch(j.twitchLogin ?? null);
+        setLivePresence(j.livePresence ?? null);
+        setPresenceCheckedAt(j.presenceCheckedAt ?? null);
+      }
+    } catch {}
+  }, [apiBase]);
+
+  React.useEffect(() => { loadPresence(); }, [loadPresence]);
+
+  async function refreshNow() {
+    setRefreshing(true);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/presence/refresh`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setLivePresence(j.livePresence ?? null);
+        setPresenceCheckedAt(j.presenceCheckedAt ?? null);
+      }
+    } catch {}
+    setRefreshing(false);
+  }
 
   async function saveSteam(clear?: boolean) {
     setSaving("steam"); setMsg(null);
@@ -391,8 +427,11 @@ function PresenceSection() {
       });
       const j = await r.json();
       if (j?.ok) {
-        setMsg({ ok: true, text: clear ? "Steam disconnected." : "Steam linked. Presence updates every 2 minutes." });
+        const resolvedNote = j?.resolvedFrom ? ` (resolved "${j.resolvedFrom}" → ${j.steamId})` : "";
+        setMsg({ ok: true, text: clear ? "Steam disconnected." : `Steam linked${resolvedNote}. Polling your activity now…` });
         if (clear) setSteamId("");
+        await loadPresence();
+        if (!clear) { void refreshNow(); }
       } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
     } catch { setMsg({ ok: false, text: "Network error." }); }
     setSaving("");
@@ -410,6 +449,8 @@ function PresenceSection() {
       if (j?.ok) {
         setMsg({ ok: true, text: clear ? "Twitch disconnected." : "Twitch linked. You'll show as streaming when live." });
         if (clear) setTwitchLogin("");
+        await loadPresence();
+        if (!clear) { void refreshNow(); }
       } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
     } catch { setMsg({ ok: false, text: "Network error." }); }
     setSaving("");
@@ -438,13 +479,18 @@ function PresenceSection() {
     <Section title="Rich Presence">
       {/* Steam ID — stacked: label + hint on top, input row below */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Steam ID</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Steam ID</span>
+          {linkedSteam && (
+            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,.12)", border: "1px solid rgba(34,197,94,.3)", color: "rgba(134,239,172,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
+          )}
+        </div>
         <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Paste your 17-digit SteamID64 so friends see what you&apos;re playing.
+          Paste your 17-digit SteamID64, your Steam vanity URL name, or your full profile URL.
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={steamId} onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))} placeholder="76561198000000000" style={stackedInputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveSteam(false)} disabled={saving === "steam" || !/^\d{17}$/.test(steamId.trim())}>
+          <input type="text" value={steamId} onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))} placeholder={linkedSteam || "weeredjs  or  76561198000000000"} style={stackedInputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveSteam(false)} disabled={saving === "steam" || steamId.trim().length < 2}>
             {saving === "steam" ? "Saving…" : "Link"}
           </button>
           <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveSteam(true)} disabled={saving === "steam"}>Clear</button>
@@ -453,18 +499,63 @@ function PresenceSection() {
 
       {/* Twitch login */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Twitch login</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Twitch login</span>
+          {linkedTwitch && (
+            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(139,92,246,.14)", border: "1px solid rgba(139,92,246,.32)", color: "rgba(196,181,253,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
+          )}
+        </div>
         <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
           Your Twitch username — friends see a live stream badge when you&apos;re on air.
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={twitchLogin} onChange={e => setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder="your_twitch_login" style={stackedInputStyle} />
+          <input type="text" value={twitchLogin} onChange={e => setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder={linkedTwitch || "your_twitch_login"} style={stackedInputStyle} />
           <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveTwitch(false)} disabled={saving === "twitch" || !/^[a-z0-9_]{3,25}$/.test(twitchLogin.trim())}>
             {saving === "twitch" ? "Saving…" : "Link"}
           </button>
           <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveTwitch(true)} disabled={saving === "twitch"}>Clear</button>
         </div>
       </div>
+
+      {/* Current detected state */}
+      {(linkedSteam || linkedTwitch) && (
+        <div style={{
+          marginTop: 12,
+          padding: "12px 14px",
+          borderRadius: 8,
+          background: "rgba(124,58,237,0.06)",
+          border: "1px solid rgba(124,58,237,0.18)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--weered-muted, rgba(148,163,184,.7))" }}>
+                Detected now
+              </div>
+              <div style={{ marginTop: 4, fontSize: 13, color: "var(--weered-text, rgba(243,244,246,.95))" }}>
+                {livePresence?.activity ? (
+                  <>
+                    <span style={{ fontWeight: 700, color: "rgba(196,181,253,.98)" }}>{livePresence.activity}</span>
+                    {livePresence.detail && (
+                      <span style={{ opacity: 0.75, marginLeft: 6, fontSize: 12, fontStyle: "italic" }}>— {String(livePresence.detail).slice(0, 80)}</span>
+                    )}
+                    <span style={{ marginLeft: 8, fontSize: 10, opacity: 0.5, fontFamily: "ui-monospace, monospace" }}>via {livePresence.source || "?"}</span>
+                  </>
+                ) : (
+                  <span style={{ opacity: 0.6, fontStyle: "italic" }}>Nothing detected yet. Go live on Twitch or open a Steam game and refresh.</span>
+                )}
+              </div>
+              {presenceCheckedAt && (
+                <div style={{ marginTop: 3, fontSize: 10, opacity: 0.45, fontFamily: "ui-monospace, monospace" }}>
+                  last checked {new Date(presenceCheckedAt).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+            <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={refreshNow} disabled={refreshing}>
+              {refreshing ? "Checking…" : "Refresh"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div style={{ marginTop: 6, fontSize: 11, color: msg.ok ? "rgba(134,239,172,.85)" : "rgba(252,165,165,.85)" }}>
