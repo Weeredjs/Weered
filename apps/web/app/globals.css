@@ -4095,6 +4095,34 @@ a[href^="/room/"]:hover {
    Active only when the user is inside the Windrose lobby. Resets on leave.
    ===================================================================== */
 
+/* ── Nuclear reset: when ANY lobby theme is active, neutralize
+   personal-theme pseudo-texture layers + panel-grain backgrounds.
+   Lobby themes re-paint their own styles below. Applies to any
+   data-weered-lobby attribute so every future themed lobby gets this. */
+html[data-weered-lobby] body::before,
+html[data-weered-lobby] body::after,
+html[data-weered-lobby] .weered-shell::before,
+html[data-weered-lobby] .weered-shell::after {
+  content: "" !important;
+  background: none !important;
+  animation: none !important;
+  mix-blend-mode: normal !important;
+  opacity: 0 !important;
+  /* Lobby theme's own ::before/::after definitions follow and re-enable */
+}
+html[data-weered-lobby] .weered-shell,
+html[data-weered-lobby] .weered-left,
+html[data-weered-lobby] .weered-right,
+html[data-weered-lobby] .weered-presence,
+html[data-weered-lobby] .weered-overlay-panel,
+html[data-weered-lobby] .weered-panel,
+html[data-weered-lobby] .weered-panel2,
+html[data-weered-lobby] .weered-usercorner,
+html[data-weered-lobby] .weered-left-section {
+  background-image: none !important;
+  background-blend-mode: normal !important;
+}
+
 html[data-weered-lobby="windrose"] {
   --weered-bg:              #0e1826;
   --weered-panel:           rgba(25, 40, 62, 0.85);
@@ -4135,45 +4163,47 @@ html[data-weered-lobby="windrose"] body {
 }
 
 html[data-weered-lobby="windrose"] body::before {
-  content: "";
+  content: "" !important;
   position: fixed;
   bottom: -10%;
   right: -8%;
   width: 620px;
   height: 620px;
-  background: url("/brand/lobbies/windrose-compass.svg") center/contain no-repeat;
-  opacity: 0.055;
+  background: url("/brand/lobbies/windrose-compass.svg") center/contain no-repeat !important;
+  opacity: 0.055 !important;
   pointer-events: none;
   z-index: 0;
-  animation: windrose-compass-spin 360s linear infinite;
+  animation: windrose-compass-spin 360s linear infinite !important;
   filter: drop-shadow(0 0 18px rgba(232,196,138,0.08));
+  mix-blend-mode: normal !important;
 }
 
 html[data-weered-lobby="windrose"] body::after {
-  content: "";
+  content: "" !important;
   position: fixed;
   bottom: 0;
   left: -4%;
   width: 340px;
   height: 520px;
-  background: url("/brand/lobbies/windrose-kraken.svg") bottom left/contain no-repeat;
-  opacity: 0.16;
+  background: url("/brand/lobbies/windrose-kraken.svg") bottom left/contain no-repeat !important;
+  opacity: 0.16 !important;
   pointer-events: none;
   z-index: 0;
   transform-origin: bottom left;
-  animation: windrose-tentacle-sway 14s ease-in-out infinite;
+  animation: windrose-tentacle-sway 14s ease-in-out infinite !important;
+  mix-blend-mode: normal !important;
 }
 
 html[data-weered-lobby="windrose"] .weered-shell::after {
-  content: "";
+  content: "" !important;
   position: fixed;
   bottom: 0; left: 0; right: 0;
   height: 80px;
-  background: url("/brand/lobbies/windrose-waves.svg") bottom left/2400px 80px repeat-x;
-  opacity: 0.22;
+  background: url("/brand/lobbies/windrose-waves.svg") bottom left/2400px 80px repeat-x !important;
+  opacity: 0.22 !important;
   pointer-events: none;
   z-index: 0;
-  animation: windrose-waves-drift 80s linear infinite;
+  animation: windrose-waves-drift 80s linear infinite !important;
 }
 
 @keyframes windrose-compass-spin {
@@ -4216,21 +4246,21 @@ html[data-weered-lobby="windrose"] video {
 
 html[data-weered-lobby="windrose"] .weered-left,
 html[data-weered-lobby="windrose"] .weered-right {
-  background: linear-gradient(180deg, rgba(25,40,62,0.70) 0%, rgba(14,24,38,0.88) 100%);
-  border-color: rgba(201,160,102,0.22);
+  background: linear-gradient(180deg, rgba(25,40,62,0.70) 0%, rgba(14,24,38,0.88) 100%) !important;
+  border-color: rgba(201,160,102,0.22) !important;
 }
 
 html[data-weered-lobby="windrose"] .weered-rr-section,
 html[data-weered-lobby="windrose"] .weered-left-section,
 html[data-weered-lobby="windrose"] .weered-presence,
 html[data-weered-lobby="windrose"] .weered-usercorner {
-  background: linear-gradient(180deg, #1a2a42 0%, #142238 100%);
-  border: 1px solid rgba(201,160,102,0.32);
-  border-radius: 4px;
+  background: linear-gradient(180deg, #1a2a42 0%, #142238 100%) !important;
+  border: 1px solid rgba(201,160,102,0.32) !important;
+  border-radius: 4px !important;
   box-shadow:
     inset 0 0 0 1px rgba(201,160,102,0.10),
     inset 0 1px 0 rgba(232,196,138,0.12),
-    0 4px 18px rgba(0,0,0,0.45);
+    0 4px 18px rgba(0,0,0,0.45) !important;
   position: relative;
 }
 
@@ -4717,38 +4747,40 @@ html[data-weered-lobby="destiny2"] body {
 
 /* Giant Traveler watermark, bottom-right, drifting in */
 html[data-weered-lobby="destiny2"] body::before {
-  content: '';
+  content: '' !important;
   position: fixed;
   bottom: -8%;
   right: -6%;
   width: 620px;
   height: 620px;
-  background: url("/brand/lobbies/destiny2-traveler-watermark.svg") center/contain no-repeat;
-  opacity: 0.08;
+  background: url("/brand/lobbies/destiny2-traveler-watermark.svg") center/contain no-repeat !important;
+  opacity: 0.08 !important;
   pointer-events: none;
   z-index: 0;
   filter: drop-shadow(0 0 28px rgba(245,130,32,0.06));
-  animation: d2-traveler-drift 24s ease-in-out infinite;
+  animation: d2-traveler-drift 24s ease-in-out infinite !important;
+  mix-blend-mode: normal !important;
 }
 
 /* Ghost companion, bottom-left, slow float */
 html[data-weered-lobby="destiny2"] body::after {
-  content: '';
+  content: '' !important;
   position: fixed;
   bottom: 3%;
   left: 1%;
   width: 170px;
   height: 170px;
-  background: url("/brand/lobbies/destiny2-ghost.svg") bottom left/contain no-repeat;
-  opacity: 0.14;
+  background: url("/brand/lobbies/destiny2-ghost.svg") bottom left/contain no-repeat !important;
+  opacity: 0.14 !important;
   pointer-events: none;
   z-index: 0;
-  animation: d2-ghost-float 9s ease-in-out infinite;
+  animation: d2-ghost-float 9s ease-in-out infinite !important;
+  mix-blend-mode: normal !important;
 }
 
 /* Starfield drift across bottom */
 html[data-weered-lobby="destiny2"] .weered-shell::after {
-  content: '';
+  content: '' !important;
   position: fixed;
   bottom: 0; left: 0; right: 0;
   height: 100%;
@@ -4760,12 +4792,12 @@ html[data-weered-lobby="destiny2"] .weered-shell::after {
     radial-gradient(1.4px 1.4px at 78% 44%, rgba(228,232,240,0.75), transparent 2px),
     radial-gradient(1px 1px at 88% 62%,  rgba(228,232,240,0.5), transparent 2px),
     radial-gradient(1px 1px at 5%  52%,  rgba(228,232,240,0.6), transparent 2px),
-    radial-gradient(1.2px 1.2px at 25% 40%, rgba(228,232,240,0.6), transparent 2px);
-  background-size: 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px;
-  opacity: 0.55;
+    radial-gradient(1.2px 1.2px at 25% 40%, rgba(228,232,240,0.6), transparent 2px) !important;
+  background-size: 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px !important;
+  opacity: 0.55 !important;
   pointer-events: none;
   z-index: 0;
-  animation: d2-star-drift 180s linear infinite;
+  animation: d2-star-drift 180s linear infinite !important;
 }
 
 @keyframes d2-traveler-drift {
@@ -4805,8 +4837,8 @@ html[data-weered-lobby="destiny2"] .weered-center {
 }
 html[data-weered-lobby="destiny2"] .weered-left,
 html[data-weered-lobby="destiny2"] .weered-right {
-  background: linear-gradient(180deg, rgba(10,14,28,0.72) 0%, rgba(5,8,16,0.90) 100%);
-  border-color: rgba(245,130,32,0.18);
+  background: linear-gradient(180deg, rgba(10,14,28,0.72) 0%, rgba(5,8,16,0.90) 100%) !important;
+  border-color: rgba(245,130,32,0.18) !important;
 }
 
 /* Panels: deep navy with hex-tile inset subtle pattern + solar rim */
@@ -4815,13 +4847,13 @@ html[data-weered-lobby="destiny2"] .weered-left-section,
 html[data-weered-lobby="destiny2"] .weered-presence,
 html[data-weered-lobby="destiny2"] .weered-usercorner {
   background:
-    linear-gradient(180deg, rgba(18,24,48,0.75) 0%, rgba(10,14,28,0.90) 100%);
-  border: 1px solid rgba(245,130,32,0.28);
-  border-radius: 3px;
+    linear-gradient(180deg, rgba(18,24,48,0.75) 0%, rgba(10,14,28,0.90) 100%) !important;
+  border: 1px solid rgba(245,130,32,0.28) !important;
+  border-radius: 3px !important;
   box-shadow:
     inset 0 0 0 1px rgba(245,130,32,0.08),
     inset 0 1px 0 rgba(255,176,102,0.10),
-    0 4px 18px rgba(0,0,0,0.55);
+    0 4px 18px rgba(0,0,0,0.55) !important;
   position: relative;
 }
 
