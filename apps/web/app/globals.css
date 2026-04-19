@@ -3816,17 +3816,11 @@ main {
   background: rgba(148,163,184,.38);
 }
 .weered-presence-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 9px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.07);
-  transition: background 0.12s, border-color 0.12s;
-  cursor: pointer;
-  margin-bottom: 4px;
+  /* PresenceRow component renders its own layout/padding/hover.
+     Keep the class hook for lobby-theme overrides (Ishimura/Windrose/Destiny)
+     but strip baseline decoration so we don't double up borders. */
+  border-radius: 8px;
 }
-.weered-presence-row:last-child { margin-bottom: 0; }
 .weered-presence-left {
   display: flex;
   align-items: center;
