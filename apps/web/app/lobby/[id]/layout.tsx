@@ -11,6 +11,11 @@ const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: strin
     description: "The unofficial Windrose community hub. Live Steam player count, Kraken Express dispatches, crew finder, and Captain's Log. Build. Sail. Survive the storm.",
     title: "Windrose — unofficial community hub · Weered",
   },
+  destiny2: {
+    ogImage: `${SITE}/brand/lobbies/destiny2-og-v1.png`,
+    description: "The unofficial Guardian hub. Live Steam player count, raid & dungeon LFG, Crucible talk, Vanguard intel, Gjallarhorn lore. Become Legend. Find your fireteam.",
+    title: "Destiny 2 — unofficial Guardian hub · Weered",
+  },
 };
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
