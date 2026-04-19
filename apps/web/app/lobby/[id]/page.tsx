@@ -25,6 +25,7 @@ import PubgModulesPanel from "../../../components/PubgModulesPanel";
 import DndModulesPanel from "../../../components/DndModulesPanel";
 import PoeModulesPanel from "../../../components/PoeModulesPanel";
 import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
+import WindroseSplash from "../../../components/WindroseSplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
@@ -377,6 +378,8 @@ export default function LobbyIdPage() {
   const showAdmin  = isStaff || isOwner || (membership && membership.roleLevel >= 3);
 
   return (
+    <>
+    {lobbyId === "windrose" && isMember && <WindroseSplash />}
     <div
       className="weered-lobby-page"
       style={{
@@ -565,6 +568,7 @@ export default function LobbyIdPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
 
