@@ -357,7 +357,7 @@ export default function UserCorner() {
             fontFamily: "inherit", fontSize: 12, fontWeight: 800,
             letterSpacing: "0.02em",
             transition: "all 0.2s",
-            position: "relative", overflow: "hidden",
+            position: "relative",
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement;
@@ -388,18 +388,24 @@ export default function UserCorner() {
 
           <span>{burnerLabel}</span>
 
-          {/* Unread badge */}
+          {/* Unread badge — absolute top-right, floats outside the button edge
+              like a classic app-icon notification dot. Doesn't fight the button's
+              text for space, so it works regardless of label length / padding. */}
           {dockUnread > 0 && (
             <span style={{
+              position: "absolute",
+              top: -6, right: -6,
               minWidth: 18, height: 18, borderRadius: 999,
               background: "#f59e0b",
               border: "2px solid rgba(10,10,15,.9)",
               fontSize: 9, fontWeight: 900, color: "#000",
               display: "inline-flex", alignItems: "center", justifyContent: "center",
-              padding: dockUnread > 9 ? "0 3px" : "0",
+              padding: dockUnread > 9 ? "0 4px" : "0",
               lineHeight: 1,
               boxShadow: "0 0 8px rgba(245,158,11,.5)",
               animation: "weered-burner-badge 2s ease-in-out infinite",
+              zIndex: 2,
+              pointerEvents: "none",
             }}>
               {dockUnread > 99 ? "99+" : dockUnread}
             </span>
