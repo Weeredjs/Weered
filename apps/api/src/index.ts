@@ -791,16 +791,19 @@ async function seedLobbies() {
   }
   console.log("[weered] lobbies seeded");
 
-  // Seed rooms (skip if already exist)
+  // Seed rooms — upsert so that newly-added seeds are created AND existing
+  // seed rooms are force-pinned (they should never dissolve; they're the
+  // default architecture of their parent lobby, not ephemeral user rooms).
   for (const r of SEED_ROOMS) {
     try {
-      const exists = await prisma.room.findUnique({ where: { id: r.id } });
-      if (!exists) {
-        await prisma.room.create({ data: { id: r.id, name: r.name, description: r.description, lobbyId: r.lobbyId, locked: false } });
-        console.log(`[weered] seeded room: ${r.id}`);
-      }
+      await prisma.room.upsert({
+        where: { id: r.id },
+        update: { name: r.name, description: r.description, lobbyId: r.lobbyId, pinned: true },
+        create: { id: r.id, name: r.name, description: r.description, lobbyId: r.lobbyId, locked: false, pinned: true },
+      });
     } catch (e) { console.warn("seedRooms:", r.id, e); }
   }
+  console.log(`[weered] seeded/updated ${SEED_ROOMS.length} default room(s)`);
 }
 
 async function globalAudit(actorId: string, actorName: string, action: string, targetId?: string, targetName?: string, meta?: any) {
