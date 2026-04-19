@@ -1,6 +1,33 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Rajdhani:wght@400;500;600;700&display=swap');
 
+/* Tier-2 header logo: clickable to replay the splash overlay */
+.weered-tier2-logo {
+  position: relative;
+}
+.weered-tier2-logo:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 12px currentColor;
+}
+.weered-tier2-logo::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+.weered-tier2-logo:hover::after {
+  border-color: rgba(255,255,255,0.25);
+  opacity: 1;
+}
+html[data-weered-lobby="windrose"] .weered-tier2-logo:hover { box-shadow: 0 0 14px rgba(232,196,138,0.55); }
+html[data-weered-lobby="windrose"] .weered-tier2-logo:hover::after { border-color: rgba(232,196,138,0.55); }
+html[data-weered-lobby="destiny2"] .weered-tier2-logo:hover { box-shadow: 0 0 14px rgba(245,130,32,0.6); }
+html[data-weered-lobby="destiny2"] .weered-tier2-logo:hover::after { border-color: rgba(245,130,32,0.6); }
+
 /* =============================================
    WEERED DESIGN TOKENS
    ============================================= */

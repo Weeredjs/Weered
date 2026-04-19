@@ -97,6 +97,18 @@ export default function LobbySplash({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, handleClose]);
 
+  // External re-open trigger (e.g. clicking the lobby header logo)
+  useEffect(() => {
+    const onOpenEvent = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || detail.lobbyId !== lobbyId) return;
+      setClosing(false);
+      setOpen(true);
+    };
+    window.addEventListener("weered:splash:open", onOpenEvent as EventListener);
+    return () => window.removeEventListener("weered:splash:open", onOpenEvent as EventListener);
+  }, [lobbyId]);
+
   if (!open) return null;
 
   return (
