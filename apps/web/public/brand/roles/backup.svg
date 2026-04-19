@@ -1,3 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <path d="M8 12L16 20L24 12" fill="none" stroke="#5F5E5A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Shield with double-chevron rank insignia (backup = the muscle that arrives behind the enforcer) -->
+  <path d="M16 3 L27 6.5 L27 17 C27 23 22 27 16 29 C10 27 5 23 5 17 L5 6.5 Z"
+        fill="#60A5FA" stroke="#3B82F6" stroke-width="1" stroke-linejoin="round" />
+  <!-- Top chevron -->
+  <path d="M10 13 L16 9 L22 13" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Bottom chevron -->
+  <path d="M10 20 L16 16 L22 20" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
