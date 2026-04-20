@@ -2142,15 +2142,49 @@ async function main() {
   const GOOGLE_CALLBACK_URL  = process.env.GOOGLE_CALLBACK_URL  || "https://api.weered.ca/auth/google/callback";
   const WEB_URL              = process.env.APP_URL               || "https://weered.ca";
 
+  // Allowlist: web app, mobile standalone scheme, and Expo Go dev redirects.
+  // Mobile passes its own redirect URI because it differs between Expo Go and a built app.
+  const REDIRECT_ALLOW = [
+    /^https:\/\/([a-z0-9-]+\.)?weered\.ca(\/.*)?$/i,
+    /^weered:\/\/[^\s]*$/i,
+    /^exp:\/\/[0-9a-z.\-:]+\/--\/[^\s]*$/i,
+  ];
+  const isAllowedRedirect = (u: string) => REDIRECT_ALLOW.some((re) => re.test(u));
+
   app.get("/auth/google", async (req, reply) => {
+    const { redirect } = (req as any).query as { redirect?: string };
     const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL);
-    const url = client.generateAuthUrl({ access_type: "offline", scope: ["profile", "email"], prompt: "select_account" });
+    let state: string | undefined;
+    if (redirect && isAllowedRedirect(redirect)) {
+      state = jwt.sign({ r: redirect }, JWT_SECRET, { expiresIn: "10m" });
+    }
+    const url = client.generateAuthUrl({
+      access_type: "offline",
+      scope: ["profile", "email"],
+      prompt: "select_account",
+      ...(state ? { state } : {}),
+    });
     return reply.redirect(url);
   });
 
   app.get("/auth/google/callback", async (req, reply) => {
-    const { code } = (req as any).query as { code?: string };
-    if (!code) return reply.redirect(`${WEB_URL}/login?error=no_code`);
+    const { code, state } = (req as any).query as { code?: string; state?: string };
+    // Decode a custom redirect if one was signed into state on the start leg.
+    let customRedirect: string | null = null;
+    if (state) {
+      try {
+        const decoded = jwt.verify(state, JWT_SECRET) as { r?: string };
+        if (decoded?.r && isAllowedRedirect(decoded.r)) customRedirect = decoded.r;
+      } catch {}
+    }
+    const finishUrl = (path: string, qs: string) => {
+      if (customRedirect) {
+        const sep = customRedirect.includes("?") ? "&" : "?";
+        return `${customRedirect}${sep}${qs}`;
+      }
+      return `${WEB_URL}${path}?${qs}`;
+    };
+    if (!code) return reply.redirect(customRedirect ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=no_code` : `${WEB_URL}/login?error=no_code`);
     try {
       const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL);
       const { tokens } = await client.getToken(code);
@@ -2180,16 +2214,14 @@ async function main() {
         const tempName = `g_${googleId.slice(0, 12)}`;
         user = await prisma.user.create({ data: { name: displayName, usernameKey: tempName, googleId, email, avatar } });
       }
-      if (user.banned) return reply.redirect(`${WEB_URL}/login?error=account_suspended`);
+      if (user.banned) return reply.redirect(customRedirect ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=account_suspended` : `${WEB_URL}/login?error=account_suspended`);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
-      if (isNew) {
-        return reply.redirect(`${WEB_URL}/onboarding?token=${token}&user=${userParam}`);
-      }
-      return reply.redirect(`${WEB_URL}/auth/google/finish?token=${token}&user=${userParam}`);
+      const qs = `token=${token}&user=${userParam}${isNew ? "&new=1" : ""}`;
+      return reply.redirect(finishUrl(isNew ? "/onboarding" : "/auth/google/finish", qs));
     } catch (e) {
       console.error("[google callback]", e);
-      return reply.redirect(`${WEB_URL}/login?error=oauth_failed`);
+      return reply.redirect(customRedirect ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=oauth_failed` : `${WEB_URL}/login?error=oauth_failed`);
     }
   });
 
