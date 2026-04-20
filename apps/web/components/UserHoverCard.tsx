@@ -240,10 +240,10 @@ export default function UserHoverCard({
                 <span style={{
                   display: "inline-flex", alignItems: "center", gap: 4,
                   padding: "1px 6px", borderRadius: 4,
-                  background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.35)",
-                  color: "#fca5a5", fontSize: 8, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase",
+                  background: "rgba(250,204,21,.12)", border: "1px solid rgba(250,204,21,.4)",
+                  color: "#fde68a", fontSize: 8, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase",
                 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444" }} />
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#facc15" }} />
                   Lying low
                 </span>
               )}

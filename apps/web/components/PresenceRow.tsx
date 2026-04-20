@@ -131,7 +131,7 @@ export default function PresenceRow({
   // Secondary line content
   const secondary = secondaryText ?? (() => {
     if (online && isAway) {
-      return <span style={{ color: "#f87171", fontStyle: "italic", opacity: 0.75 }}>lying low{roomName ? ` · in ${roomName}` : ""}</span>;
+      return <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.8 }}>lying low{roomName ? ` · in ${roomName}` : ""}</span>;
     }
     if (livePresence?.activity) {
       return (
@@ -199,9 +199,9 @@ export default function PresenceRow({
           <span title={isAway ? "Lying low" : "Online"} style={{
             position: "absolute", bottom: -1, right: -1,
             width: 10, height: 10, borderRadius: "50%",
-            background: isAway ? "#ef4444" : "#22c55e",
+            background: isAway ? "#facc15" : "#22c55e",
             border: "2px solid var(--weered-bg, #0c0b0a)",
-            boxShadow: isAway ? "0 0 8px rgba(239,68,68,.7)" : "0 0 8px rgba(34,197,94,.85)",
+            boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.85)",
             animation: isAway ? "none" : "weered-presence-pulse 2.2s ease-in-out infinite",
           }} />
         )}

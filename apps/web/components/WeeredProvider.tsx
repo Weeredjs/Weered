@@ -410,15 +410,20 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Another user joined this room
+      // Another user joined this room (or had their in-memory state updated
+      // — role change, AFK flip, etc. all come through as presence:join
+      // re-broadcasts). Replace-or-append so updates take effect live.
       if (msg.type === "presence:join") {
         const rid  = String(msg.roomId || "");
         const user = msg.user as RoomUser | null;
         if (!rid || !user?.id) return;
         setUsersByRoom(prev => {
           const cur = prev[rid] || [];
-          if (cur.find((u: RoomUser) => u.id === user.id)) return prev;
-          return { ...prev, [rid]: [...cur, user] };
+          const idx = cur.findIndex((u: RoomUser) => u.id === user.id);
+          if (idx === -1) return { ...prev, [rid]: [...cur, user] };
+          const next = cur.slice();
+          next[idx] = { ...cur[idx], ...user };
+          return { ...prev, [rid]: next };
         });
         return;
       }
