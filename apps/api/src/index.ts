@@ -9390,6 +9390,35 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   }
 
+  // GET /tenor/featured — proxied Tenor featured GIFs (web uses referrer-restricted key)
+  // GET /tenor/search?q=... — proxied Tenor search
+  const TENOR_KEY = process.env.TENOR_API_KEY || "AIzaSyD2S1JlAfKIR0JZ89A4VuqvpMBb28EiG0M";
+  const tenorCache = new Map<string, { data: any; expiresAt: number }>();
+  async function tenorFetch(path: string, params: Record<string, string>) {
+    const qs = new URLSearchParams({ key: TENOR_KEY, limit: "20", media_filter: "tinygif,gif", ...params }).toString();
+    const cacheKey = `${path}?${qs}`;
+    const hit = tenorCache.get(cacheKey);
+    if (hit && hit.expiresAt > Date.now()) return hit.data;
+    try {
+      const res = await fetch(`https://tenor.googleapis.com/v2${path}?${qs}`);
+      const j = await res.json();
+      tenorCache.set(cacheKey, { data: j, expiresAt: Date.now() + 10 * 60 * 1000 });
+      return j;
+    } catch (e) {
+      return { results: [] };
+    }
+  }
+  app.get("/tenor/featured", async (_req, reply) => {
+    const data = await tenorFetch("/featured", {});
+    return reply.send({ ok: true, results: data.results || [] });
+  });
+  app.get("/tenor/search", async (req, reply) => {
+    const q = String((req as any).query?.q || "").trim();
+    if (!q) return reply.send({ ok: true, results: [] });
+    const data = await tenorFetch("/search", { q });
+    return reply.send({ ok: true, results: data.results || [] });
+  });
+
   // GET /twitch/streams?game=Destiny+2 — top live streams for a game
   app.get("/twitch/streams", async (req, reply) => {
     const token = await getTwitchAppToken();
