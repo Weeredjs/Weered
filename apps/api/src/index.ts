@@ -1643,7 +1643,7 @@ function isUserOnline(userId: string): boolean {
   return false;
 }
 
-async function sendPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
+async function sendWebPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
   for (const sub of subs) {
@@ -1658,6 +1658,47 @@ async function sendPush(userId: string, data: { title: string; body: string; url
       }
     }
   }
+}
+
+// Expo Push (mobile). Accepts Expo push tokens (ExponentPushToken[...]).
+// Server-to-server REST call to exp.host — no VAPID keys, no FCM creds needed.
+async function sendExpoPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
+  const tokens = await (prisma as any).expoPushToken.findMany({ where: { userId } });
+  if (tokens.length === 0) return;
+  const messages = tokens.map((t: any) => ({
+    to: t.token,
+    title: data.title,
+    body: data.body || "",
+    sound: "default",
+    data: { url: data.url || "/", tag: data.tag },
+  }));
+  try {
+    const res = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(messages),
+    });
+    if (!res.ok) return;
+    const json: any = await res.json().catch(() => null);
+    const tickets: any[] = json?.data || [];
+    // Drop tokens Expo flags as DeviceNotRegistered so they don't accumulate.
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      const token = tokens[i];
+      if (!token) continue;
+      if (ticket?.status === "error" && ticket?.details?.error === "DeviceNotRegistered") {
+        await (prisma as any).expoPushToken.delete({ where: { id: token.id } }).catch(() => {});
+      }
+    }
+  } catch {}
+}
+
+// Convenience wrapper that fires both transports for a user.
+async function sendPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
+  await Promise.all([
+    sendWebPush(userId, data),
+    sendExpoPush(userId, data),
+  ]);
 }
 
 // ── Notification helper — creates in-app notification + WS push + browser push ──
@@ -8853,6 +8894,35 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         where: { id: (req as any).params.id, userId: u.id },
       });
     } catch {}
+    return reply.send({ ok: true });
+  });
+
+  // POST /push/expo-register — save an Expo push token for the authed user
+  app.post("/push/expo-register", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body = (req as any).body || {};
+    const token = typeof body.token === "string" ? body.token.trim() : "";
+    const platform = typeof body.platform === "string" ? body.platform.slice(0, 10) : null;
+    if (!token || !/^ExponentPushToken\[[^\]]+\]$/.test(token)) {
+      return reply.code(400).send({ ok: false, error: "invalid_token" });
+    }
+    await (prisma as any).expoPushToken.upsert({
+      where: { token },
+      update: { userId: u.id, platform, lastUsedAt: new Date() },
+      create: { userId: u.id, token, platform },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // DELETE /push/expo-register — drop a token (on sign-out or device removal)
+  app.delete("/push/expo-register", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body = (req as any).body || {};
+    const token = typeof body.token === "string" ? body.token.trim() : "";
+    if (!token) return reply.code(400).send({ ok: false, error: "invalid_token" });
+    await (prisma as any).expoPushToken.deleteMany({ where: { token, userId: u.id } }).catch(() => {});
     return reply.send({ ok: true });
   });
 
