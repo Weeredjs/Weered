@@ -6047,7 +6047,10 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           const rawToId = String(msg.toId  || "").trim();
           const body    = String(msg.body  || "").trim().slice(0, 2000);
           const fromId  = ws.user?.id;
-          if (!fromId || !rawToId || !body) return;
+          console.log(`[dm:send] fromId=${fromId || "(none)"} rawToId=${JSON.stringify(rawToId)} bodyLen=${body.length}`);
+          if (!fromId) { send(ws, { type: "dm:rejected", reason: "Session expired. Refresh the page." }); return; }
+          if (!rawToId) { send(ws, { type: "dm:rejected", reason: "No recipient selected." }); return; }
+          if (!body) { send(ws, { type: "dm:rejected", reason: "Empty message." }); return; }
           // URL spam check
           const urlCheck = checkUrlSpam(body);
           if (!urlCheck.ok) { send(ws, { type: "dm:rejected", reason: urlCheck.reason }); return; }
