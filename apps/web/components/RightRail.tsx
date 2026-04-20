@@ -649,6 +649,7 @@ function FriendsPanel() {
           globalRole={f.globalRole}
           tier={f.tier}
           online={f.online}
+          isAway={!!f.isAway}
           roomName={f.roomName}
           livePresence={f.livePresence}
           platforms={platforms}

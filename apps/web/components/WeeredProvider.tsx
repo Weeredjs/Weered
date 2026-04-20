@@ -719,6 +719,34 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("weered:ws:send", handler);
   }, []);
 
+  // ─── Idle detector — flags user "Lying low" (AFK) after 5 min of no input ─
+  useEffect(() => {
+    const IDLE_MS = 5 * 60 * 1000;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastStatus: boolean | null = null;
+    const sendStatus = (away: boolean) => {
+      if (lastStatus === away) return;
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      try { ws.send(JSON.stringify({ type: "presence:idle", away })); lastStatus = away; } catch {}
+    };
+    const armIdleTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => sendStatus(true), IDLE_MS);
+    };
+    const onActivity = () => {
+      sendStatus(false);
+      armIdleTimer();
+    };
+    armIdleTimer();
+    const events: (keyof WindowEventMap)[] = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach(e => window.addEventListener(e, onActivity, { passive: true }));
+    return () => {
+      events.forEach(e => window.removeEventListener(e, onActivity));
+      if (idleTimer) clearTimeout(idleTimer);
+    };
+  }, []);
+
   // ─── Public API ───────────────────────────────────────────────────────────
   async function devLogin(username: string) {
     const r = await fetch(`${API}/auth/dev-login`, {
