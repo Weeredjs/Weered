@@ -131,9 +131,10 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   return (
     <div
       onClick={() => onJoin(roomId(lobby), Boolean(lobby?.pinned))}
+      className="weered-featured-card"
       style={{
         position: "relative", borderRadius: 16, overflow: "hidden",
-        height: 200, cursor: "pointer",
+        minHeight: 200, cursor: "pointer",
         border: `1px solid ${accent}22`,
         background: banner
           ? `linear-gradient(135deg, rgba(10,10,15,.7) 0%, rgba(10,10,15,.4) 50%, rgba(10,10,15,.7) 100%)`
@@ -164,16 +165,17 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         </>
       )}
 
-      {/* Top bar */}
-      <div style={{ position: "absolute", top: 14, left: 18, right: 18, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {logo && <img src={logo} alt={`${roomName(lobby)} logo`} style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />}
+      {/* Top bar — wraps on narrow viewports so pills don't collide */}
+      <div style={{ position: "absolute", top: 14, left: 18, right: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", zIndex: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          {logo && <img src={logo} alt={`${roomName(lobby)} logo`} style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />}
           <span style={{
-            display: "flex", alignItems: "center", gap: 6,
+            display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
             border: `1px solid ${accent}35`,
             borderRadius: 99, padding: "3px 11px",
             fontSize: 10, fontWeight: 800, color: accent, letterSpacing: ".3px",
+            whiteSpace: "nowrap",
           }}>
             <PulseDot color={accent} />
             {lobby.pinned ? "FEATURED LOBBY" : "POPULAR"}
@@ -184,16 +186,26 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
           border: "1px solid rgba(255,255,255,.08)", borderRadius: 8,
           padding: "4px 10px", fontSize: 11, fontFamily: "monospace",
           color: "rgba(255,255,255,.6)", display: "flex", alignItems: "center", gap: 5,
+          whiteSpace: "nowrap", flexShrink: 0,
         }}>
           <PulseDot color="#22c55e" size={5} />
           {cnt} online
         </div>
       </div>
 
-      {/* Bottom content */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 22px 18px", zIndex: 2, background: "linear-gradient(transparent, rgba(0,0,0,.75))" }}>
+      {/* Spacer so the absolute top bar never overlaps body content when card grows */}
+      <div aria-hidden style={{ height: 52 }} />
+
+      {/* Bottom content — flows in normal layout so the card grows to fit */}
+      <div style={{ padding: "8px 22px 18px", zIndex: 2, position: "relative", background: "linear-gradient(transparent, rgba(0,0,0,.75))" }}>
         <div style={{ fontWeight: 900, fontSize: 26, lineHeight: 1.1, marginBottom: desc ? 6 : 14, letterSpacing: "-0.5px", textShadow: banner ? "0 2px 8px rgba(0,0,0,.6)" : "none" }}>{name}</div>
-        {desc && <div style={{ fontSize: 12, color: "rgba(232,232,236,.6)", marginBottom: 14, maxWidth: 480, lineHeight: 1.4, textShadow: banner ? "0 1px 4px rgba(0,0,0,.5)" : "none" }}>{desc}</div>}
+        {desc && (
+          <div style={{
+            fontSize: 12, color: "rgba(232,232,236,.6)", marginBottom: 14, maxWidth: 480,
+            lineHeight: 1.4, textShadow: banner ? "0 1px 4px rgba(0,0,0,.5)" : "none",
+            display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as any, overflow: "hidden",
+          }}>{desc}</div>
+        )}
         <button
           type="button"
           onClick={e => { e.stopPropagation(); onJoin(roomId(lobby), Boolean(lobby?.pinned)); }}
