@@ -7192,6 +7192,9 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             avatarColor: u.avatarColor,
             avatar: u.avatar,
             isAway: Boolean((u as any).isAway),
+            steamId: (u as any).steamId,
+            twitchLogin: (u as any).twitchLogin,
+            xboxGamertag: (u as any).xboxGamertag,
             roomId: room.roomId,
             roomName: room.name || room.roomId,
           });
