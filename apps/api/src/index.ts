@@ -3995,12 +3995,16 @@ app.get("/dm/:peerId", async (req, reply) => {
     if (!rawPeerId) return reply.code(400).send({ error: "Missing peerId" });
     const peerId = await resolveUserId(rawPeerId);
     try {
-      const messages = await prisma.directMessage.findMany({
+      // Fetch the NEWEST 50 messages (desc) then reverse so the client gets
+      // them oldest-first. Using orderBy asc + take was silently dropping
+      // recent messages once a thread grew past 50 total.
+      const latest = await prisma.directMessage.findMany({
         where: { OR: [{ fromId: viewer.id, toId: peerId }, { fromId: peerId, toId: viewer.id }] },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         take: 50,
         select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true, editedAt: true, deletedAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
       });
+      const messages = latest.reverse();
       await prisma.directMessage.updateMany({
         where: { fromId: peerId, toId: viewer.id, readAt: null },
         data: { readAt: new Date() },
