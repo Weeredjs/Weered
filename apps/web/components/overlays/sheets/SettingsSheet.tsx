@@ -376,10 +376,12 @@ function BlockedUsersSection() {
 function PresenceSection() {
   const [steamId, setSteamId] = React.useState("");
   const [twitchLogin, setTwitchLogin] = React.useState("");
-  const [saving, setSaving] = React.useState<"" | "steam" | "twitch">("");
+  const [xboxGamertag, setXboxGamertag] = React.useState("");
+  const [saving, setSaving] = React.useState<"" | "steam" | "twitch" | "xbox">("");
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
   const [linkedSteam, setLinkedSteam] = React.useState<string | null>(null);
   const [linkedTwitch, setLinkedTwitch] = React.useState<string | null>(null);
+  const [linkedXbox, setLinkedXbox] = React.useState<string | null>(null);
   const [livePresence, setLivePresence] = React.useState<any>(null);
   const [presenceCheckedAt, setPresenceCheckedAt] = React.useState<string | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -393,6 +395,7 @@ function PresenceSection() {
       if (j?.ok) {
         setLinkedSteam(j.steamId ?? null);
         setLinkedTwitch(j.twitchLogin ?? null);
+        setLinkedXbox(j.xboxGamertag ?? null);
         setLivePresence(j.livePresence ?? null);
         setPresenceCheckedAt(j.presenceCheckedAt ?? null);
       }
@@ -449,6 +452,25 @@ function PresenceSection() {
       if (j?.ok) {
         setMsg({ ok: true, text: clear ? "Twitch disconnected." : "Twitch linked. You'll show as streaming when live." });
         if (clear) setTwitchLogin("");
+        await loadPresence();
+        if (!clear) { void refreshNow(); }
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch { setMsg({ ok: false, text: "Network error." }); }
+    setSaving("");
+  }
+
+  async function saveXbox(clear?: boolean) {
+    setSaving("xbox"); setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/xbox-gamertag`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ gamertag: clear ? "" : xboxGamertag.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({ ok: true, text: clear ? "Xbox disconnected." : `Xbox linked as ${j.xboxGamertag}. Polling your activity now…` });
+        if (clear) setXboxGamertag("");
         await loadPresence();
         if (!clear) { void refreshNow(); }
       } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
@@ -517,8 +539,28 @@ function PresenceSection() {
         </div>
       </div>
 
+      {/* Xbox gamertag */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Xbox gamertag</span>
+          {linkedXbox && (
+            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(16,124,16,.14)", border: "1px solid rgba(16,124,16,.36)", color: "rgba(134,239,172,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
+          )}
+        </div>
+        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
+          Your Xbox gamertag — friends see what you&apos;re playing on Xbox. Resolved via OpenXBL.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input type="text" value={xboxGamertag} onChange={e => setXboxGamertag(e.target.value.slice(0, 20))} placeholder={linkedXbox || "YourGamertag"} style={stackedInputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveXbox(false)} disabled={saving === "xbox" || xboxGamertag.trim().length < 3}>
+            {saving === "xbox" ? "Saving…" : "Link"}
+          </button>
+          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveXbox(true)} disabled={saving === "xbox"}>Clear</button>
+        </div>
+      </div>
+
       {/* Current detected state */}
-      {(linkedSteam || linkedTwitch) && (
+      {(linkedSteam || linkedTwitch || linkedXbox) && (
         <div style={{
           marginTop: 12,
           padding: "12px 14px",

@@ -1418,6 +1418,10 @@ const PRESENCE_POLL_MS = 120_000; // 2 min
 const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID || "";
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
+const OPENXBL_API_KEY = process.env.OPENXBL_API_KEY || "";
+// OpenXBL free tier: 60 requests per 5 min. Each Xbox-linked user costs 1
+// request per cycle, so cap Xbox polling to stay well under the ceiling.
+const XBL_POLL_CAP_PER_CYCLE = 20;
 const STEAM_PERSONASTATES: Record<number, string> = {
   0: "Offline", 1: "Online", 2: "Busy", 3: "Away", 4: "Snooze", 5: "Looking to trade", 6: "Looking to play",
 };
@@ -1506,12 +1510,65 @@ async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string
   }
 }
 
+// ── OpenXBL (xbl.io) Xbox presence ────────────────────────────────────
+// Free tier rate-limit: 60 requests per 5 min. No batch endpoint; one
+// request per gamertag lookup / presence poll. Uses X-Authorization header.
+const XBL_BASE = "https://xbl.io/api/v2";
+
+async function resolveXboxGamertag(gamertag: string): Promise<{ xuid: string; gamertag: string } | null> {
+  if (!OPENXBL_API_KEY) return null;
+  try {
+    const res = await fetch(`${XBL_BASE}/search/${encodeURIComponent(gamertag)}`, {
+      headers: { "X-Authorization": OPENXBL_API_KEY, Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const j: any = await res.json();
+    const p = j?.people?.[0] || j?.profileUsers?.[0] || null;
+    if (!p) return null;
+    const xuid = String(p.xuid || p.id || "");
+    const gt = String(p.gamertag || p.modernGamertag || gamertag);
+    if (!xuid) return null;
+    return { xuid, gamertag: gt };
+  } catch { return null; }
+}
+
+async function pollXboxPresenceOne(xuid: string): Promise<any | null> {
+  if (!OPENXBL_API_KEY || !xuid) return null;
+  try {
+    const res = await fetch(`${XBL_BASE}/${encodeURIComponent(xuid)}/presence`, {
+      headers: { "X-Authorization": OPENXBL_API_KEY, Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const j: any = await res.json();
+    const state = String(j?.state || "").toLowerCase();
+    const devices: any[] = Array.isArray(j?.devices) ? j.devices : [];
+    const titles = devices.flatMap(d => Array.isArray(d?.titles) ? d.titles : []);
+    const activeTitle = titles.find(t => {
+      const tState = String(t?.state || "").toLowerCase();
+      return tState === "active" || t?.activity;
+    }) || titles[0];
+    if (activeTitle && activeTitle.name && String(activeTitle.name).toLowerCase() !== "home") {
+      const rich = activeTitle?.activity?.richPresence || activeTitle?.placement;
+      return {
+        source: "XBOX",
+        activity: `Playing ${activeTitle.name}`,
+        detail: rich || undefined,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    if (state === "online") {
+      return { source: "XBOX", activity: "Online on Xbox", updatedAt: new Date().toISOString() };
+    }
+    return null;
+  } catch { return null; }
+}
+
 async function runPresencePoll() {
-  if (!STEAM_API_KEY && !TWITCH_CLIENT_ID) return;
+  if (!STEAM_API_KEY && !TWITCH_CLIENT_ID && !OPENXBL_API_KEY) return;
   try {
     const users = await prisma.user.findMany({
-      where: { OR: [{ steamId: { not: null } }, { twitchLogin: { not: null } }] },
-      select: { id: true, steamId: true, twitchLogin: true },
+      where: { OR: [{ steamId: { not: null } }, { twitchLogin: { not: null } }, { xboxXuid: { not: null } }] },
+      select: { id: true, steamId: true, twitchLogin: true, xboxXuid: true },
       take: 500,
     });
     if (users.length === 0) return;
@@ -1536,11 +1593,23 @@ async function runPresencePoll() {
       }
     }
 
+    const xboxData: Record<string, any> = {};
+    if (OPENXBL_API_KEY) {
+      const xboxUsers = users.filter(u => u.xboxXuid).slice(0, XBL_POLL_CAP_PER_CYCLE);
+      for (const u of xboxUsers) {
+        const pres = await pollXboxPresenceOne(u.xboxXuid as string);
+        xboxData[u.xboxXuid as string] = pres;
+      }
+    }
+
     for (const u of users) {
       const tw = u.twitchLogin ? twitchData[(u.twitchLogin as string).toLowerCase()] : undefined;
+      const xb = u.xboxXuid ? xboxData[u.xboxXuid as string] : undefined;
       const st = u.steamId ? steamData[u.steamId as string] : undefined;
-      // Priority: Twitch-live > Steam game/online > null
-      const primary = (tw && tw.source === "TWITCH") ? tw : (st ?? null);
+      // Priority: Twitch-live > Xbox game > Steam game/online > null
+      const primary = (tw && tw.source === "TWITCH") ? tw
+        : (xb && xb.source === "XBOX") ? xb
+        : (st ?? null);
       if (primary === undefined) continue;
       await prisma.user.update({
         where: { id: u.id },
@@ -1550,7 +1619,7 @@ async function runPresencePoll() {
   } catch (e) { console.error("[presence poll]", e); }
 }
 
-if (STEAM_API_KEY || TWITCH_CLIENT_ID) {
+if (STEAM_API_KEY || TWITCH_CLIENT_ID || OPENXBL_API_KEY) {
   setInterval(() => { void runPresencePoll(); }, PRESENCE_POLL_MS);
   setTimeout(() => { void runPresencePoll(); }, 15_000);
 }
@@ -1645,7 +1714,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
     const u = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true },
+      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true },
     });
     return {
       ...user,
@@ -1655,6 +1724,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
       avatar: u?.avatar ?? undefined,
       steamId: u?.steamId ?? undefined,
       twitchLogin: u?.twitchLogin ?? undefined,
+      xboxGamertag: u?.xboxGamertag ?? undefined,
     } as any;
   } catch { return user; }
 }
@@ -1752,7 +1822,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -3003,18 +3073,51 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     return reply.send({ ok: true, twitchLogin });
   });
 
+  // POST /profile/me/xbox-gamertag  { gamertag } — set or clear. Resolves
+  // gamertag -> xuid via OpenXBL (xbl.io). Empty string clears.
+  app.post("/profile/me/xbox-gamertag", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const raw = String(body.gamertag || "").trim();
+
+    if (raw === "") {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { xboxGamertag: null, xboxXuid: null, livePresence: null, presenceCheckedAt: null },
+      });
+      return reply.send({ ok: true, xboxGamertag: null });
+    }
+
+    if (!OPENXBL_API_KEY) {
+      return reply.code(503).send({ ok: false, error: "xbl_unconfigured", message: "Xbox integration is not configured on the server." });
+    }
+
+    const resolved = await resolveXboxGamertag(raw);
+    if (!resolved) {
+      return reply.code(400).send({ ok: false, error: "invalid_gamertag", message: "Could not find that Xbox gamertag. Double-check spelling and try again." });
+    }
+
+    await prisma.user.update({
+      where: { id: u.id },
+      data: { xboxGamertag: resolved.gamertag, xboxXuid: resolved.xuid, livePresence: undefined, presenceCheckedAt: null },
+    });
+    return reply.send({ ok: true, xboxGamertag: resolved.gamertag, xboxXuid: resolved.xuid });
+  });
+
   // GET /profile/me/presence — authed user's own link state + most recent detected presence
   app.get("/profile/me/presence", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const row = await prisma.user.findUnique({
       where: { id: u.id },
-      select: { steamId: true, twitchLogin: true, livePresence: true, presenceCheckedAt: true },
+      select: { steamId: true, twitchLogin: true, xboxGamertag: true, xboxXuid: true, livePresence: true, presenceCheckedAt: true },
     });
     return reply.send({
       ok: true,
       steamId: row?.steamId ?? null,
       twitchLogin: row?.twitchLogin ?? null,
+      xboxGamertag: row?.xboxGamertag ?? null,
       livePresence: row?.livePresence ?? null,
       presenceCheckedAt: row?.presenceCheckedAt ?? null,
     });
@@ -3026,12 +3129,13 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const row = await prisma.user.findUnique({
       where: { id: u.id },
-      select: { id: true, steamId: true, twitchLogin: true },
+      select: { id: true, steamId: true, twitchLogin: true, xboxXuid: true },
     });
     if (!row) return reply.code(404).send({ ok: false, error: "not_found" });
 
     let steamData: any = undefined;
     let twitchData: any = undefined;
+    let xboxData: any = undefined;
 
     if (STEAM_API_KEY && row.steamId) {
       const batch = await pollSteamPresenceBatch([row.steamId]);
@@ -3041,9 +3145,14 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
       const batch = await pollTwitchPresenceBatch([row.twitchLogin.toLowerCase()]);
       twitchData = batch[row.twitchLogin.toLowerCase()];
     }
+    if (OPENXBL_API_KEY && row.xboxXuid) {
+      xboxData = await pollXboxPresenceOne(row.xboxXuid);
+    }
 
-    // Priority: Twitch-live > Steam game/online > null
-    const primary = (twitchData && twitchData.source === "TWITCH") ? twitchData : (steamData ?? null);
+    // Priority: Twitch-live > Xbox game > Steam game/online > null
+    const primary = (twitchData && twitchData.source === "TWITCH") ? twitchData
+      : (xboxData && xboxData.source === "XBOX") ? xboxData
+      : (steamData ?? null);
     if (primary !== undefined) {
       await prisma.user.update({
         where: { id: row.id },
@@ -6117,7 +6226,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true } })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true } })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string }>();
       for (const p of profiles) {
