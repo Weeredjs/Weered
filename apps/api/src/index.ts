@@ -9390,33 +9390,48 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   }
 
-  // GET /tenor/featured — proxied Tenor featured GIFs (web uses referrer-restricted key)
-  // GET /tenor/search?q=... — proxied Tenor search
-  const TENOR_KEY = process.env.TENOR_API_KEY || "AIzaSyD2S1JlAfKIR0JZ89A4VuqvpMBb28EiG0M";
-  const tenorCache = new Map<string, { data: any; expiresAt: number }>();
-  async function tenorFetch(path: string, params: Record<string, string>) {
-    const qs = new URLSearchParams({ key: TENOR_KEY, limit: "20", media_filter: "tinygif,gif", ...params }).toString();
-    const cacheKey = `${path}?${qs}`;
-    const hit = tenorCache.get(cacheKey);
+  // GET /tenor/featured + /tenor/search — Giphy-backed proxy (kept under /tenor/* for mobile compat)
+  // Normalizes Giphy's shape into the Tenor-like shape the mobile client expects:
+  //   results: [{ id, media_formats: { tinygif: { url, dims }, gif: { url } } }]
+  const GIPHY_KEY = process.env.GIPHY_API_KEY || "";
+  const gifCache = new Map<string, { data: any; expiresAt: number }>();
+  async function giphyFetch(endpoint: "trending" | "search", params: Record<string, string>) {
+    if (!GIPHY_KEY) return { data: [] };
+    const qs = new URLSearchParams({ api_key: GIPHY_KEY, limit: "20", rating: "pg-13", ...params }).toString();
+    const cacheKey = `${endpoint}?${qs}`;
+    const hit = gifCache.get(cacheKey);
     if (hit && hit.expiresAt > Date.now()) return hit.data;
     try {
-      const res = await fetch(`https://tenor.googleapis.com/v2${path}?${qs}`);
+      const res = await fetch(`https://api.giphy.com/v1/gifs/${endpoint}?${qs}`);
       const j = await res.json();
-      tenorCache.set(cacheKey, { data: j, expiresAt: Date.now() + 10 * 60 * 1000 });
+      gifCache.set(cacheKey, { data: j, expiresAt: Date.now() + 10 * 60 * 1000 });
       return j;
     } catch (e) {
-      return { results: [] };
+      return { data: [] };
     }
   }
+  function normalizeGiphy(items: any[]) {
+    return items.map((g: any) => {
+      const tiny = g.images?.fixed_width_small || g.images?.fixed_height_small || g.images?.preview_gif;
+      const full = g.images?.original || g.images?.fixed_height || tiny;
+      return {
+        id: g.id,
+        media_formats: {
+          tinygif: { url: tiny?.url, dims: [Number(tiny?.width) || 200, Number(tiny?.height) || 200] },
+          gif: { url: full?.url },
+        },
+      };
+    });
+  }
   app.get("/tenor/featured", async (_req, reply) => {
-    const data = await tenorFetch("/featured", {});
-    return reply.send({ ok: true, results: data.results || [] });
+    const data = await giphyFetch("trending", {});
+    return reply.send({ ok: true, results: normalizeGiphy(data.data || []) });
   });
   app.get("/tenor/search", async (req, reply) => {
     const q = String((req as any).query?.q || "").trim();
     if (!q) return reply.send({ ok: true, results: [] });
-    const data = await tenorFetch("/search", { q });
-    return reply.send({ ok: true, results: data.results || [] });
+    const data = await giphyFetch("search", { q });
+    return reply.send({ ok: true, results: normalizeGiphy(data.data || []) });
   });
 
   // GET /twitch/streams?game=Destiny+2 — top live streams for a game
