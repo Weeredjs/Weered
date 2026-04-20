@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { avatarBg } from "../lib/avatarColor";
+import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
+import { SteamIcon, TwitchIcon, XboxIcon, PlaystationIcon } from "./PresenceRow";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -14,6 +16,9 @@ type Profile = {
   joinedAt: string; lastSeen: string;
   roomsHosted: number;
   avatar?: string; avatarColor?: string;
+  steamId?: string | null;
+  twitchLogin?: string | null;
+  xboxGamertag?: string | null;
 };
 
 type GuardianInfo = {
@@ -266,6 +271,65 @@ export default function UserHoverCard({
             )}
           </div>
         )}
+
+        {/* Identity glossary — role, tier, linked platforms */}
+        {profile && (() => {
+          const rows: { icon: React.ReactNode; label: string; value?: string; color?: string }[] = [];
+          if (profile.globalRole && profile.globalRole !== "USER") {
+            rows.push({
+              icon: <RoleIcon role={profile.globalRole} size={16} />,
+              label: getRoleDisplayName(profile.globalRole),
+              value: profile.globalRole,
+              color: getRoleColor(profile.globalRole),
+            });
+          }
+          if (profile.tier && profile.tier !== "INNOCENT") {
+            rows.push({
+              icon: <TierIcon tier={profile.tier} size={16} />,
+              label: profile.tier.charAt(0) + profile.tier.slice(1).toLowerCase(),
+              value: "tier",
+              color: TIER_CONFIG[profile.tier]?.color,
+            });
+          }
+          if (profile.steamId) {
+            rows.push({ icon: <SteamIcon size={14} />, label: "Steam", value: "Linked", color: "#66c0f4" });
+          }
+          if (profile.twitchLogin) {
+            rows.push({ icon: <TwitchIcon size={14} />, label: "Twitch", value: profile.twitchLogin, color: "#9146ff" });
+          }
+          if (profile.xboxGamertag) {
+            rows.push({ icon: <XboxIcon size={14} />, label: "Xbox", value: profile.xboxGamertag, color: "#9ee493" });
+          }
+          if (rows.length === 0) return null;
+          return (
+            <div style={{
+              marginBottom: 10,
+              padding: "6px 10px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,.02)",
+              border: "1px solid rgba(255,255,255,.06)",
+              display: "flex", flexDirection: "column", gap: 4,
+            }}>
+              <div style={{ fontSize: 9, fontWeight: 800, opacity: 0.35, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 2 }}>
+                Identity
+              </div>
+              {rows.map((r, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  fontSize: 11,
+                }}>
+                  <span style={{ display: "inline-flex", width: 18, justifyContent: "center", flexShrink: 0 }}>{r.icon}</span>
+                  <span style={{ fontWeight: 700, color: r.color || "rgba(243,244,246,.85)" }}>{r.label}</span>
+                  {r.value && r.value !== r.label && (
+                    <span style={{ marginLeft: "auto", fontSize: 10, opacity: 0.55, fontFamily: "ui-monospace, monospace" }}>
+                      {r.value}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Guardian stats (Destiny lobbies only) */}
         {guardian && guardian.characters.length > 0 && (
