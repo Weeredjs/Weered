@@ -566,7 +566,7 @@ export default function LeftRail() {
               <div
                 key={rid}
                 onMouseEnter={(e) => {
-                  if (uid) openHover(uid, nm, e.currentTarget as HTMLElement);
+                  if (uid) openHover(uid, nm, e.currentTarget as HTMLElement, { isAway: !!u?.isAway });
                 }}
                 onMouseLeave={() => scheduleClose(160)}
                 style={you ? { background: "rgba(124,58,237,0.04)", borderRadius: 10 } : undefined}
@@ -579,6 +579,7 @@ export default function LeftRail() {
                   globalRole={u?.globalRole}
                   tier={u?.tier}
                   online={true}
+                  isAway={!!u?.isAway}
                   livePresence={u?.livePresence}
                   secondaryText={secondary}
                   platforms={platforms}

@@ -77,6 +77,7 @@ export interface UserHoverCardProps {
   userName: string;
   position: HoverCardPosition;
   lobbyModuleType?: string; // "BUNGIE" to show guardian stats
+  isAway?: boolean;         // live AFK flag from presence; profile endpoint doesn't carry this
   onClose: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
@@ -85,7 +86,7 @@ export interface UserHoverCardProps {
 }
 
 export default function UserHoverCard({
-  userId, userName, position, lobbyModuleType,
+  userId, userName, position, lobbyModuleType, isAway,
   onClose, onMouseEnter, onMouseLeave,
   onViewProfile, onMessage,
 }: UserHoverCardProps) {
@@ -234,7 +235,18 @@ export default function UserHoverCard({
           <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13, fontWeight: 800 }}>{profile?.name || userName}</span>
-              {isOnline && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />}
+              {isOnline && !isAway && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />}
+              {isOnline && isAway && (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "1px 6px", borderRadius: 4,
+                  background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.35)",
+                  color: "#fca5a5", fontSize: 8, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase",
+                }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444" }} />
+                  Lying low
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 9, opacity: 0.35, marginTop: 1 }}>
               {lastSeen && !isOnline && lastSeen}
@@ -436,13 +448,13 @@ export default function UserHoverCard({
 // ── Hook for easy integration ───────────────────────────────────────────────
 
 export function useUserHover(opts?: { lobbyModuleType?: string; onViewProfile?: (id: string) => void; onMessage?: (id: string, name: string) => void }) {
-  const [hover, setHover] = useState<{ userId: string; userName: string; pos: HoverCardPosition } | null>(null);
+  const [hover, setHover] = useState<{ userId: string; userName: string; pos: HoverCardPosition; isAway?: boolean } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const openHover = useCallback((userId: string, userName: string, el: HTMLElement) => {
+  const openHover = useCallback((userId: string, userName: string, el: HTMLElement, hints?: { isAway?: boolean }) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const r = el.getBoundingClientRect();
-    setHover({ userId, userName, pos: { x: r.right + 8, y: r.top } });
+    setHover({ userId, userName, pos: { x: r.right + 8, y: r.top }, isAway: hints?.isAway });
   }, []);
 
   const scheduleClose = useCallback((ms = 160) => {
@@ -460,6 +472,7 @@ export function useUserHover(opts?: { lobbyModuleType?: string; onViewProfile?: 
       userName={hover.userName}
       position={hover.pos}
       lobbyModuleType={opts?.lobbyModuleType}
+      isAway={hover.isAway}
       onClose={() => setHover(null)}
       onMouseEnter={cancelClose}
       onMouseLeave={() => scheduleClose(180)}

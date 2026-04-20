@@ -1830,7 +1830,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway) };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -5006,6 +5006,22 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        if (msg.type === "presence:idle") {
+          if (!ws.user) return;
+          const away = Boolean(msg.away);
+          (ws.user as any).isAway = away;
+          // Update and rebroadcast in every room this user is currently in
+          // so the red dot flips instantly for everyone else in the same room.
+          for (const [, room] of rooms) {
+            const entry = room.users.get(ws.user.id);
+            if (entry) {
+              (entry as any).isAway = away;
+              broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
+            }
+          }
+          return;
+        }
+
         if (msg.type === "presence:leave") {
           if (ws.pendingRoomId) {
             const rid = ws.pendingRoomId;
@@ -6249,10 +6265,14 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     const profiles = peerIds.length
       ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true } })
       : [];
-    const presenceMap = new Map<string, { roomId: string; roomName: string }>();
+    const presenceMap = new Map<string, { roomId: string; roomName: string; isAway: boolean }>();
       for (const p of profiles) {
         for (const [rid, rs] of rooms) {
-          if (rs.users.has(p.id)) { presenceMap.set(p.id, { roomId: rid, roomName: rs.name || rid }); break; }
+          const entry = rs.users.get(p.id);
+          if (entry) {
+            presenceMap.set(p.id, { roomId: rid, roomName: rs.name || rid, isAway: Boolean((entry as any).isAway) });
+            break;
+          }
         }
       }
       const activeRoomIds = [...new Set([...presenceMap.values()].map(v => v.roomId))];
@@ -6263,7 +6283,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         const pres = presenceMap.get(p.id);
         const roomId = pres?.roomId ?? null;
         const roomName = pres?.roomName ?? null;
-        return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false, livePresence: (p as any).livePresence || null };
+        return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false, isAway: Boolean(pres?.isAway), livePresence: (p as any).livePresence || null };
       });
       return reply.send({ friends: out });
   });
@@ -7171,6 +7191,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             tier: u.tier,
             avatarColor: u.avatarColor,
             avatar: u.avatar,
+            isAway: Boolean((u as any).isAway),
             roomId: room.roomId,
             roomName: room.name || room.roomId,
           });

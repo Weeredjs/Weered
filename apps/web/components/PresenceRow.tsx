@@ -91,6 +91,7 @@ export interface PresenceRowProps {
   roomName?: string | null;
   livePresence?: LivePresence | null;
   secondaryText?: React.ReactNode; // override for the bottom line if needed
+  isAway?: boolean;                // "Lying low" — online but idle
 
   // Platforms (only linked platforms render)
   platforms?: PresencePlatforms;
@@ -115,6 +116,7 @@ export default function PresenceRow({
   roomName,
   livePresence,
   secondaryText,
+  isAway,
   platforms,
   onClick,
   href,
@@ -128,6 +130,9 @@ export default function PresenceRow({
 
   // Secondary line content
   const secondary = secondaryText ?? (() => {
+    if (online && isAway) {
+      return <span style={{ color: "#f87171", fontStyle: "italic", opacity: 0.75 }}>lying low{roomName ? ` · in ${roomName}` : ""}</span>;
+    }
     if (livePresence?.activity) {
       return (
         <span style={{ color: "var(--weered-accent-text, rgba(196,181,253,.92))", fontWeight: 600 }}>
@@ -191,13 +196,13 @@ export default function PresenceRow({
           ) : initial}
         </div>
         {online && (
-          <span style={{
+          <span title={isAway ? "Lying low" : "Online"} style={{
             position: "absolute", bottom: -1, right: -1,
             width: 10, height: 10, borderRadius: "50%",
-            background: "#22c55e",
+            background: isAway ? "#ef4444" : "#22c55e",
             border: "2px solid var(--weered-bg, #0c0b0a)",
-            boxShadow: "0 0 8px rgba(34,197,94,.85)",
-            animation: "weered-presence-pulse 2.2s ease-in-out infinite",
+            boxShadow: isAway ? "0 0 8px rgba(239,68,68,.7)" : "0 0 8px rgba(34,197,94,.85)",
+            animation: isAway ? "none" : "weered-presence-pulse 2.2s ease-in-out infinite",
           }} />
         )}
       </div>
