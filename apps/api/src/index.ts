@@ -1523,10 +1523,13 @@ async function resolveXboxGamertag(gamertag: string): Promise<{ xuid: string; ga
     });
     if (!res.ok) return null;
     const j: any = await res.json();
-    const p = j?.people?.[0] || j?.profileUsers?.[0] || null;
+    // Responses come wrapped: { content: { people: [...] } } or { content: { profileUsers: [...] } }
+    const content = j?.content ?? j;
+    const p = content?.people?.[0] || content?.profileUsers?.[0] || null;
     if (!p) return null;
     const xuid = String(p.xuid || p.id || "");
-    const gt = String(p.gamertag || p.modernGamertag || gamertag);
+    // Prefer the modern display form ("Weered#3068") so our stored copy matches what the user typed
+    const gt = String(p.uniqueModernGamertag || p.gamertag || p.modernGamertag || gamertag);
     if (!xuid) return null;
     return { xuid, gamertag: gt };
   } catch { return null; }
@@ -1540,19 +1543,24 @@ async function pollXboxPresenceOne(xuid: string): Promise<any | null> {
     });
     if (!res.ok) return null;
     const j: any = await res.json();
-    const state = String(j?.state || "").toLowerCase();
-    const devices: any[] = Array.isArray(j?.devices) ? j.devices : [];
+    // OpenXBL wraps the payload in `content`
+    const body = j?.content ?? j;
+    const state = String(body?.state || "").toLowerCase();
+    const devices: any[] = Array.isArray(body?.devices) ? body.devices : [];
+    // Prefer Full placement + Active state, and skip "Home" (the dashboard) /
+    // empty-name entries (anonymous web sessions)
     const titles = devices.flatMap(d => Array.isArray(d?.titles) ? d.titles : []);
-    const activeTitle = titles.find(t => {
+    const game = titles.find(t => {
+      const name = String(t?.name || "").trim();
+      const placement = String(t?.placement || "").toLowerCase();
       const tState = String(t?.state || "").toLowerCase();
-      return tState === "active" || t?.activity;
-    }) || titles[0];
-    if (activeTitle && activeTitle.name && String(activeTitle.name).toLowerCase() !== "home") {
-      const rich = activeTitle?.activity?.richPresence || activeTitle?.placement;
+      return name && name.toLowerCase() !== "home" && placement === "full" && tState === "active";
+    });
+    if (game) {
       return {
         source: "XBOX",
-        activity: `Playing ${activeTitle.name}`,
-        detail: rich || undefined,
+        activity: `Playing ${game.name}`,
+        detail: game?.activity?.richPresence || undefined,
         updatedAt: new Date().toISOString(),
       };
     }
