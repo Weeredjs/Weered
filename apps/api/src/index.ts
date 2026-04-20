@@ -4065,10 +4065,36 @@ app.post("/dm/:peerId", async (req, reply) => {
     const body: any = (req as any).body || {};
     const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
     if (!text) return reply.code(400).send({ error: "Empty message" });
+
+    // Optional reply-to — snapshot parent metadata so the reply renders even
+    // if the parent is later edited or deleted. Only allowed within the same
+    // two-person thread.
+    let replyData: any = {};
+    const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
+    if (rawReplyToId) {
+      try {
+        const parent = await prisma.directMessage.findUnique({ where: { id: rawReplyToId } });
+        if (parent && !(parent as any).deletedAt) {
+          const sameThread =
+            (parent.fromId === viewer.id && parent.toId === peerId) ||
+            (parent.fromId === peerId && parent.toId === viewer.id);
+          if (sameThread) {
+            const parentUser = await prisma.user.findUnique({ where: { id: parent.fromId }, select: { name: true } });
+            replyData = {
+              replyToId: parent.id,
+              replyToUserId: parent.fromId,
+              replyToUserName: parentUser?.name || "?",
+              replyToBody: String(parent.body || "").slice(0, 120),
+            };
+          }
+        }
+      } catch {}
+    }
+
     try {
       const dm = await prisma.directMessage.create({
-        data: { fromId: viewer.id, toId: peerId, body: text },
-        select: { id: true, fromId: true, toId: true, body: true, createdAt: true },
+        data: { fromId: viewer.id, toId: peerId, body: text, ...replyData },
+        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
       });
       const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
       dmDeliver(peerId, payload);
