@@ -2908,6 +2908,9 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
           updatedAt: true,
           avatar: true,
           avatarColor: true,
+          steamId: true,
+          twitchLogin: true,
+          xboxGamertag: true,
         },
       });
 
@@ -2937,6 +2940,9 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
         roomsHosted,
         avatar: u.avatar || null,
         avatarColor: u.avatarColor || null,
+        steamId: u.steamId || null,
+        twitchLogin: u.twitchLogin || null,
+        xboxGamertag: u.xboxGamertag || null,
         gameAccounts: gameAccounts.map(a => ({
           gameType: a.gameType,
           displayName: a.displayName,

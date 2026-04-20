@@ -240,11 +240,15 @@ export default function PresenceRow({
       {/* Action slot */}
       {action && <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{action}</div>}
 
-      {/* Platform icon stack — vertical, right-aligned, only shows linked */}
+      {/* Platform icon stack — 2-row grid that grows to a second column past
+          two platforms, so the row never stretches vertically */}
       {hasPlatforms && (
         <div style={{
-          display: "flex", flexDirection: "column",
-          gap: 3, alignItems: "center", justifyContent: "center",
+          display: "grid",
+          gridTemplateRows: "repeat(2, auto)",
+          gridAutoFlow: "column",
+          columnGap: 3, rowGap: 3,
+          alignItems: "center", justifyContent: "center",
           flexShrink: 0,
           paddingLeft: 4,
           marginLeft: 2,
