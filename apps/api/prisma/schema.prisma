@@ -414,6 +414,7 @@ model User {
   notorietyEvents  NotorietyEvent[]
   gameAccounts     UserGameAccount[]
   pushSubs         PushSubscription[]
+  expoPushTokens   ExpoPushToken[]
   paperTransactions PaperTransaction[]
   inventory        UserItem[]
   marketListings   MarketListing[]   @relation("MarketSeller")
@@ -1021,6 +1022,22 @@ model PushSubscription {
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Expo (mobile) push tokens. Separate from web push because Expo uses a
+// different transport (https://exp.host/--/api/v2/push/send) and opaque
+// token strings instead of endpoint+keys.
+model ExpoPushToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  platform   String?  // "ios" | "android"
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
