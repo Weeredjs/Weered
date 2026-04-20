@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Weered",
+    "slug": "weered",
+    "scheme": "weered",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c0b0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ca.weered.app"
+    },
+    "android": {
+      "package": "ca.weered.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#5800E5"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBase": "https://api.weered.ca",
+      "wsUrl": "wss://api.weered.ca/ws"
+    }
+  }
+}
