@@ -1,0 +1,48 @@
+{
+  "name": "@weered/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "start:go": "expo start --go",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "doctor": "expo-doctor",
+    "align": "expo install --check"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "latest",
+    "expo": "latest",
+    "expo-auth-session": "latest",
+    "expo-constants": "latest",
+    "expo-font": "latest",
+    "expo-linking": "latest",
+    "expo-notifications": "latest",
+    "expo-router": "latest",
+    "expo-secure-store": "latest",
+    "expo-splash-screen": "latest",
+    "expo-status-bar": "latest",
+    "expo-system-ui": "latest",
+    "expo-web-browser": "latest",
+    "nativewind": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-native": "latest",
+    "react-native-gesture-handler": "latest",
+    "react-native-mmkv": "latest",
+    "react-native-reanimated": "latest",
+    "react-native-safe-area-context": "latest",
+    "react-native-screens": "latest",
+    "react-native-web": "latest",
+    "tailwindcss": "^3.4.17",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "~19.2.0",
+    "expo-doctor": "latest",
+    "typescript": "~5.7.0"
+  }
+}
