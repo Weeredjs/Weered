@@ -5455,15 +5455,18 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        // Crew and DM messages don't carry a roomId — let them fall through to
+        // their dedicated handlers below without forcing a room context.
+        const isCrewOrDm = typeof msg.type === "string" && (msg.type.startsWith("crew:") || msg.type.startsWith("dm:"));
         const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ws.pendingRoomId || ""));
-        if (!roomId) return;
-        const room = await ensureRoomLoaded(roomId);
+        if (!roomId && !isCrewOrDm) return;
+        const room = roomId ? await ensureRoomLoaded(roomId) : (null as unknown as RoomState);
 
         const actorId = ws.user.id;
         const actorName = ws.user.name;
         const actorGlobalRole = ws.user.globalRole || "USER";
-        const actorIsMod = isModOrOwner(room, actorId, actorGlobalRole);
-        const actorIsOwner = isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole);
+        const actorIsMod = roomId ? isModOrOwner(room, actorId, actorGlobalRole) : false;
+        const actorIsOwner = roomId ? (isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole)) : false;
 
         if (msg.type === "crew:send") console.log(`[trace-MID-1] reached pre room:getAdminState`);
         if (msg.type === "room:getAdminState") {
