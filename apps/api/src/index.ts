@@ -7100,6 +7100,9 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
   });
 
   // GET /lobbies/:lobbyId/crews — published crews visible in this lobby
+  // Enriches each crew with its members' aggregate bounty stats pulled from
+  // the (lobby-scoped) bounty table so the crew cards actually reflect work
+  // done on the board. Keeps the N+1 cost to two queries regardless of size.
   app.get("/lobbies/:lobbyId/crews", async (req, reply) => {
     const { lobbyId } = req.params as any;
     const db = prisma as any;
@@ -7110,6 +7113,33 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         take: 60,
         include: { members: { select: { userId: true }, take: 100 } },
       });
+
+      // Map userId → crewId so we can attribute bounty settles back
+      const userToCrew = new Map<string, string>();
+      for (const c of crews) {
+        for (const m of (c.members || [])) {
+          if (!userToCrew.has(m.userId)) userToCrew.set(m.userId, c.id);
+        }
+      }
+      // Pull settled bounties for any member of any listed crew
+      const memberIds = Array.from(userToCrew.keys());
+      const bountyStats = new Map<string, { kills: number; earned: number }>();
+      if (memberIds.length && String(lobbyId) === "windrose") {
+        const settled: any[] = await db.windroseBounty.findMany({
+          where: { lobbyId: "windrose", status: "SETTLED", claimantId: { in: memberIds } },
+          select: { claimantId: true, amount: true },
+          take: 5000,
+        });
+        for (const b of settled) {
+          const crewId = userToCrew.get(b.claimantId);
+          if (!crewId) continue;
+          const slot = bountyStats.get(crewId) || { kills: 0, earned: 0 };
+          slot.kills += 1;
+          slot.earned += Number(b.amount) || 0;
+          bountyStats.set(crewId, slot);
+        }
+      }
+
       const shaped = crews.map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -7123,10 +7153,90 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         recruitingNote: c.recruitingNote,
         memberCount: c.members.length,
         updatedAt: c.updatedAt,
+        bountyKills:  (bountyStats.get(c.id)?.kills) ?? 0,
+        bountyEarned: (bountyStats.get(c.id)?.earned) ?? 0,
       }));
       return reply.send({ ok: true, crews: shaped });
     } catch (e) {
       console.error("[lobbies/:id/crews GET]", e);
+      return reply.code(500).send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // GET /lobbies/:lobbyId/crews/leaderboard — three ranked boards for crews.
+  // Derived from the same crew + bounty data the lobby listing uses.
+  app.get("/lobbies/:lobbyId/crews/leaderboard", async (req, reply) => {
+    const { lobbyId } = req.params as any;
+    const db = prisma as any;
+    try {
+      const crews: any[] = await db.crew.findMany({
+        where: { publicInLobbies: { has: String(lobbyId) } },
+        include: { members: { select: { userId: true }, take: 200 } },
+        take: 200,
+      });
+      const userToCrew = new Map<string, string>();
+      for (const c of crews) for (const m of (c.members || [])) if (!userToCrew.has(m.userId)) userToCrew.set(m.userId, c.id);
+      const memberIds = Array.from(userToCrew.keys());
+
+      const bountyStats = new Map<string, { kills: number; earned: number }>();
+      if (memberIds.length && String(lobbyId) === "windrose") {
+        const settled: any[] = await db.windroseBounty.findMany({
+          where: { lobbyId: "windrose", status: "SETTLED", claimantId: { in: memberIds } },
+          select: { claimantId: true, amount: true },
+          take: 5000,
+        });
+        for (const b of settled) {
+          const crewId = userToCrew.get(b.claimantId);
+          if (!crewId) continue;
+          const slot = bountyStats.get(crewId) || { kills: 0, earned: 0 };
+          slot.kills += 1;
+          slot.earned += Number(b.amount) || 0;
+          bountyStats.set(crewId, slot);
+        }
+      }
+
+      const base = crews.map(c => ({
+        id: c.id,
+        name: c.name,
+        tag: c.tag,
+        logoUrl: c.logoUrl,
+        accentColor: c.accentColor,
+        recruiting: c.recruiting,
+        memberCount: (c.members || []).length,
+        updatedAt: c.updatedAt,
+        bountyKills:  (bountyStats.get(c.id)?.kills) ?? 0,
+        bountyEarned: (bountyStats.get(c.id)?.earned) ?? 0,
+      }));
+
+      const largest = [...base]
+        .filter(c => c.memberCount > 0)
+        .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name))
+        .slice(0, 10);
+
+      const mostDecorated = [...base]
+        .filter(c => c.bountyEarned > 0 || c.bountyKills > 0)
+        .sort((a, b) => b.bountyEarned - a.bountyEarned || b.bountyKills - a.bountyKills)
+        .slice(0, 10);
+
+      const recruitingNow = [...base]
+        .filter(c => c.recruiting)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 10);
+
+      return reply.send({
+        ok: true,
+        stats: {
+          crewCount: base.length,
+          totalMembers: base.reduce((s, c) => s + c.memberCount, 0),
+          recruitingCount: base.filter(c => c.recruiting).length,
+          totalKills: base.reduce((s, c) => s + c.bountyKills, 0),
+        },
+        largest,
+        mostDecorated,
+        recruiting: recruitingNow,
+      });
+    } catch (e) {
+      console.error("[lobbies/:id/crews/leaderboard]", e);
       return reply.code(500).send({ ok: false, error: "fetch_failed" });
     }
   });
