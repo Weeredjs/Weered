@@ -12312,6 +12312,57 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   });
 
+  // GET /windrose/public-servers — auto-discovered public Windrose servers
+  // Pulls from Steam's master server list (IGameServersService) filtered by
+  // appid. No admin registration needed — any server advertising on Steam
+  // Master appears here. Cached 60s so we don't hammer Steam.
+  app.get("/windrose/public-servers", async (req, reply) => {
+    const cacheKey = "wr:public-servers";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      if (!STEAM_API_KEY) return reply.send({ ok: false, error: "steam_key_missing", servers: [] });
+      // filter: \appid\<id> limits to Windrose; \gamedir\windrose double-filters
+      // if some entries lie about appid. Steam API caps at ~20k results.
+      const filter = encodeURIComponent(`\\appid\\${WINDROSE_APPID}`);
+      const url = `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${STEAM_API_KEY}&filter=${filter}&limit=200`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        // Some keys get 403 on this endpoint — graceful degrade so UI shows manual registry only
+        return reply.send({ ok: false, error: `steam_status_${res.status}`, servers: [] });
+      }
+      const j: any = await res.json();
+      const raw: any[] = Array.isArray(j?.response?.servers) ? j.response.servers : [];
+      // Normalise + drop empties we can't use
+      const servers = raw
+        .filter(s => s && typeof s.addr === "string")
+        .map((s: any) => ({
+          addr: String(s.addr),
+          steamId: String(s.steamid || ""),
+          name: String(s.name || "").trim(),
+          players: Number(s.players ?? 0),
+          maxPlayers: Number(s.max_players ?? 0),
+          bots: Number(s.bots ?? 0),
+          map: String(s.map || "").trim(),
+          gameType: String(s.gametype || "").trim(),
+          version: String(s.version || "").trim(),
+          dedicated: Boolean(s.dedicated),
+          os: String(s.os || "").trim(),     // "w" | "l" | "m"
+          secure: Boolean(s.secure),
+          passworded: Boolean(s.passworded ?? false),
+          region: Number.isFinite(s.region) ? Number(s.region) : null,
+        }))
+        // Sort by populated first, then alphabetical
+        .sort((a, b) => (b.players - a.players) || a.name.localeCompare(b.name));
+      const result = { ok: true, count: servers.length, servers, checkedAt: new Date().toISOString() };
+      wrCacheSet(cacheKey, result, 60 * 1000);
+      return reply.send(result);
+    } catch (e) {
+      console.error("[windrose/public-servers]", e);
+      return reply.send({ ok: false, error: "fetch_failed", servers: [] });
+    }
+  });
+
   // GET /windrose/news — latest Steam news from Kraken Express
   app.get("/windrose/news", async (req, reply) => {
     const cacheKey = "wr:news";
