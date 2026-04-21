@@ -12611,6 +12611,131 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
   // Aggregates the past 7 days of Windrose lobby activity and has
   // Claude Haiku write it up as The Operator (GTA gold-robot persona).
   // Cached 6h so we don't burn tokens on every refresh.
+  // GET /windrose/activity — unified event stream for the Flagship chaos bar
+  // Stitches bounties, crew publications, community server listings, and LFG
+  // flags into one time-sorted list so the Windrose tab feels alive without a
+  // dedicated event-sourcing system. 30s cache keeps load light.
+  app.get("/windrose/activity", async (_req, reply) => {
+    const cacheKey = "wr:activity";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      const DAYS_BACK = 14;
+      const since = new Date(Date.now() - DAYS_BACK * 24 * 60 * 60 * 1000);
+      type Event = {
+        id: string;
+        kind: "bounty_post" | "bounty_settle" | "bounty_cancel" | "crew_publish" | "server_list" | "lfg_raise";
+        ts: string;
+        actor?: string | null;
+        subject?: string | null;
+        amount?: number | null;
+        meta?: Record<string, any>;
+      };
+      const [bounties, crews, servers, lfg] = await Promise.all([
+        (prisma as any).windroseBounty.findMany({
+          where: { lobbyId: "windrose", OR: [{ createdAt: { gte: since } }, { settledAt: { gte: since } }, { cancelledAt: { gte: since } }] },
+          orderBy: { createdAt: "desc" },
+          take: 80,
+        }).catch(() => []),
+        (prisma as any).crew.findMany({
+          where: { publicInLobbies: { has: "windrose" }, updatedAt: { gte: since } },
+          select: { id: true, name: true, tag: true, recruiting: true, updatedAt: true },
+          take: 30,
+        }).catch(() => []),
+        (prisma as any).communityServer.findMany({
+          where: { lobbyId: "windrose", createdAt: { gte: since } },
+          select: { id: true, name: true, region: true, framework: true, owner: { select: { name: true } }, createdAt: true },
+          take: 30,
+        }).catch(() => []),
+        (prisma as any).lfgPost.findMany({
+          where: { lobbyId: "windrose", createdAt: { gte: since } },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, userName: true, mode: true, slotsWanted: true, createdAt: true },
+          take: 30,
+        }).catch(() => []),
+      ]);
+
+      const events: Event[] = [];
+
+      for (const b of bounties) {
+        // Post
+        events.push({
+          id: `b:post:${b.id}`,
+          kind: "bounty_post",
+          ts: b.createdAt,
+          actor: b.posterName,
+          subject: b.targetHandle,
+          amount: b.amount,
+        });
+        // Settle
+        if (b.status === "SETTLED" && b.settledAt) {
+          events.push({
+            id: `b:settle:${b.id}`,
+            kind: "bounty_settle",
+            ts: b.settledAt,
+            actor: b.claimantName,
+            subject: b.targetHandle,
+            amount: b.amount,
+          });
+        }
+        // Cancel
+        if (b.status === "CANCELLED" && b.cancelledAt) {
+          events.push({
+            id: `b:cancel:${b.id}`,
+            kind: "bounty_cancel",
+            ts: b.cancelledAt,
+            actor: b.posterName,
+            subject: b.targetHandle,
+            amount: b.amount,
+          });
+        }
+      }
+
+      for (const c of crews) {
+        events.push({
+          id: `c:pub:${c.id}:${new Date(c.updatedAt).getTime()}`,
+          kind: "crew_publish",
+          ts: c.updatedAt,
+          actor: null,
+          subject: c.name,
+          meta: { tag: c.tag, recruiting: c.recruiting },
+        });
+      }
+
+      for (const s of servers) {
+        events.push({
+          id: `s:list:${s.id}`,
+          kind: "server_list",
+          ts: s.createdAt,
+          actor: s.owner?.name || null,
+          subject: s.name,
+          meta: { region: s.region, framework: s.framework },
+        });
+      }
+
+      for (const p of lfg) {
+        events.push({
+          id: `l:raise:${p.id}`,
+          kind: "lfg_raise",
+          ts: p.createdAt,
+          actor: p.userName,
+          subject: p.mode || "a run",
+          meta: { slots: p.slotsWanted },
+        });
+      }
+
+      events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+      const trimmed = events.slice(0, 50);
+
+      const result = { ok: true, events: trimmed, generatedAt: new Date().toISOString() };
+      wrCacheSet(cacheKey, result, 30 * 1000);
+      return reply.send(result);
+    } catch (e) {
+      console.error("[windrose/activity]", e);
+      return reply.send({ ok: false, error: "fetch_failed", events: [] });
+    }
+  });
+
   app.get("/windrose/captains-log", async (_req, reply) => {
     const cacheKey = "wr:captains-log";
     const cached = wrCacheGet(cacheKey);

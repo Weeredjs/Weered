@@ -359,12 +359,147 @@ function FlagshipTab() {
 
       <BrassDivider />
 
+      {/* Live activity — chaos-bar stitch of bounties, crews, servers, flags */}
+      <ActivityTicker />
+
+      <BrassDivider />
+
       {/* Three-column: Inspiration / Systems / Platform */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
         <FeatureBlock icon="⚓" title="Soulslite Combat" body="Challenging bosses. Weighty swings. Parries that matter. Not a Souls clone — a Souls-lite. Takes inspiration from Black Flag." />
         <FeatureBlock icon="🌊" title="Naval & Exploration" body="Procedural open world. Build a galleon, captain a crew of eight, discover isles, and weather real-time storms." />
         <FeatureBlock icon="🏴‍☠️" title="PvE, Solo or Co-op" body="Fully playable offline. Self-hosted or dedicated servers. 8-player co-op. No forced PvP." />
       </div>
+    </div>
+  );
+}
+
+// ═══ Activity Ticker ═══════════════════════════════════════════════════════
+
+type ActivityEvent = {
+  id: string;
+  kind: "bounty_post" | "bounty_settle" | "bounty_cancel" | "crew_publish" | "server_list" | "lfg_raise";
+  ts: string;
+  actor?: string | null;
+  subject?: string | null;
+  amount?: number | null;
+  meta?: Record<string, any>;
+};
+
+function ActivityTicker() {
+  const [events, setEvents] = useState<ActivityEvent[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const j = await apiFetch("/windrose/activity");
+      if (j?.ok && Array.isArray(j.events)) setEvents(j.events);
+      else setEvents([]);
+    } catch { setEvents([]); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 60_000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const shown = expanded ? (events || []) : (events || []).slice(0, 8);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#5db765", boxShadow: "0 0 8px #5db765", animation: "windrose-wave 1.2s ease-in-out infinite" }} />
+        <span style={{ ...S.label, fontSize: 10 }}>On the Wire</span>
+        <span style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${PAL.brass}40, transparent)` }} />
+        <span style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, letterSpacing: "0.5px" }}>
+          last 14 days
+        </span>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: "14px 18px", textAlign: "center", fontSize: 12, color: PAL.parchDim, fontStyle: "italic", ...S.card }}>
+          Listening to the docks…
+        </div>
+      ) : !events || events.length === 0 ? (
+        <div style={{ padding: "14px 18px", textAlign: "center", fontSize: 12, color: PAL.parchDim, fontStyle: "italic", ...S.card }}>
+          Quiet harbour. Post a bounty or raise a flag to kick it off.
+        </div>
+      ) : (
+        <>
+          <div style={{ ...S.card, padding: "4px 0", display: "flex", flexDirection: "column" }}>
+            {shown.map((e, i) => (
+              <ActivityRow key={e.id} event={e} alt={i % 2 === 1} />
+            ))}
+          </div>
+          {events.length > 8 && (
+            <div style={{ textAlign: "center", marginTop: 10 }}>
+              <button type="button" style={{ ...S.btn, fontSize: 10, padding: "5px 14px" }} onClick={() => setExpanded(v => !v)}>
+                {expanded ? "Show less" : `Show all ${events.length}`}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ActivityRow({ event, alt }: { event: ActivityEvent; alt: boolean }) {
+  const { glyph, color } = (() => {
+    switch (event.kind) {
+      case "bounty_post":    return { glyph: "☠", color: PAL.blood };
+      case "bounty_settle":  return { glyph: "⚔", color: "#5db765" };
+      case "bounty_cancel":  return { glyph: "✕", color: PAL.parchDim };
+      case "crew_publish":   return { glyph: "⚑", color: PAL.brassHi };
+      case "server_list":    return { glyph: "⚓", color: PAL.verdigris };
+      case "lfg_raise":      return { glyph: "🏴", color: PAL.brass };
+      default:               return { glyph: "·", color: PAL.parchDim };
+    }
+  })();
+
+  const line = (() => {
+    const amt = (event.amount || 0).toLocaleString();
+    const actor = event.actor || "someone";
+    const subject = event.subject || "…";
+    switch (event.kind) {
+      case "bounty_post":
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> put <span style={{ color: PAL.brassHi, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{amt} Paper</span> on <strong style={{ color: PAL.blood, fontStyle: "normal" }}>{subject}</strong>'s head</>;
+      case "bounty_settle":
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> cashed in <span style={{ color: "#5db765", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{amt} Paper</span> on <strong style={{ color: PAL.blood, fontStyle: "normal" }}>{subject}</strong></>;
+      case "bounty_cancel":
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> pulled their bounty on <strong style={{ color: PAL.parchDim, fontStyle: "normal" }}>{subject}</strong></>;
+      case "crew_publish":
+        return <><strong style={{ color: PAL.brassHi, fontStyle: "normal" }}>{subject}</strong>{event.meta?.tag ? <span style={{ color: PAL.brass, fontFamily: WR_FONT_MONO, fontSize: 11 }}> [{event.meta.tag}]</span> : null} hoisted their colors{event.meta?.recruiting ? <span style={{ color: "#5db765" }}> · recruiting</span> : null}</>;
+      case "server_list":
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{subject}</strong> dropped anchor on the list{event.meta?.region ? <span style={{ color: PAL.parchDim }}> · {event.meta.region}</span> : null}{event.meta?.framework ? <span style={{ color: PAL.brass, fontSize: 11 }}> · {event.meta.framework}</span> : null}</>;
+      case "lfg_raise":
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> raised a flag{event.meta?.slots ? <span style={{ color: PAL.brass }}> · need {event.meta.slots}</span> : null}{subject && subject !== "a run" ? <span style={{ color: PAL.parchDim }}> · {subject}</span> : null}</>;
+    }
+  })();
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "8px 14px",
+      background: alt ? "rgba(255,255,255,0.015)" : "transparent",
+      borderBottom: `1px solid ${PAL.brass}10`,
+      fontSize: 13,
+      lineHeight: 1.4,
+    }}>
+      <span style={{
+        width: 20, height: 20, flexShrink: 0,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        fontSize: 14, color,
+      }}>{glyph}</span>
+      <div style={{ flex: 1, minWidth: 0, color: PAL.parchment, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {line}
+      </div>
+      <span style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, flexShrink: 0, letterSpacing: "0.5px" }}>
+        {timeAgo(event.ts)}
+      </span>
     </div>
   );
 }
