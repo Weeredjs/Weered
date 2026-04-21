@@ -1623,6 +1623,22 @@ async function runPresencePoll() {
         where: { id: u.id },
         data: { livePresence: primary as any, presenceCheckedAt: new Date() },
       }).catch(() => {});
+
+      // Push the change into every room this user is currently in so the
+      // left-rail presence line updates without requiring a rejoin. We also
+      // refresh the AuthedUser on any connected sockets so subsequent
+      // presence:join broadcasts carry the latest state.
+      try {
+        for (const [, room] of rooms) {
+          const entry = room.users.get(u.id);
+          if (!entry) continue;
+          (entry as any).livePresence = primary ?? null;
+          broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
+        }
+        for (const s of wss.clients as any) {
+          if (s?.user?.id === u.id) (s.user as any).livePresence = primary ?? null;
+        }
+      } catch { /* ignore — best-effort fanout */ }
     }
   } catch (e) { console.error("[presence poll]", e); }
 }
@@ -1763,7 +1779,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
     const u = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true },
+      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true },
     });
     return {
       ...user,
@@ -1774,6 +1790,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
       steamId: u?.steamId ?? undefined,
       twitchLogin: u?.twitchLogin ?? undefined,
       xboxGamertag: u?.xboxGamertag ?? undefined,
+      livePresence: u?.livePresence ?? null,
     } as any;
   } catch { return user; }
 }
@@ -1871,7 +1888,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway) };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -4895,9 +4912,14 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
         messages: [{ role: "user", content: q }],
       });
 
-      const text = response?.content?.[0]?.text || "{}";
+      const rawText = response?.content?.[0]?.text || "{}";
+      // Haiku sometimes wraps JSON in a ```json fence even when instructed not to.
+      const text = rawText
+        .replace(/^\s*```(?:json)?\s*/i, "")
+        .replace(/\s*```\s*$/i, "")
+        .trim();
       let parsed: any = {};
-      try { parsed = JSON.parse(text); } catch { parsed = { answer: text.slice(0, 200) }; }
+      try { parsed = JSON.parse(text); } catch { parsed = { answer: text.slice(0, 300) }; }
 
       const matchedLobbies = Array.isArray(parsed.lobbies)
         ? lobbyList.filter((l: any) => parsed.lobbies.includes(l.id))
