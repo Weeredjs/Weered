@@ -12607,6 +12607,124 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   });
 
+  // GET /windrose/captains-log — The Operator's weekly recap
+  // Aggregates the past 7 days of Windrose lobby activity and has
+  // Claude Haiku write it up as The Operator (GTA gold-robot persona).
+  // Cached 6h so we don't burn tokens on every refresh.
+  app.get("/windrose/captains-log", async (_req, reply) => {
+    const cacheKey = "wr:captains-log";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      if (!isAIAvailable()) return reply.send({ ok: false, error: "ai_unavailable", summary: null });
+
+      const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const since = new Date(Date.now() - WEEK_MS);
+
+      // ── Aggregate ─────────────────────────────────────────────────
+      const [bountiesAll, crews, servers, lfg] = await Promise.all([
+        (prisma as any).windroseBounty.findMany({
+          where: { lobbyId: "windrose", createdAt: { gte: since } },
+          take: 500,
+        }).catch(() => []),
+        (prisma as any).crew.findMany({
+          where: { publicInLobbies: { has: "windrose" }, updatedAt: { gte: since } },
+          select: { name: true, tag: true, recruiting: true, updatedAt: true, members: { select: { userId: true } } },
+          take: 50,
+        }).catch(() => []),
+        (prisma as any).communityServer.findMany({
+          where: { lobbyId: "windrose", createdAt: { gte: since } },
+          select: { name: true, region: true, framework: true, createdAt: true },
+          take: 50,
+        }).catch(() => []),
+        (prisma as any).lfgPost.findMany({
+          where: { lobbyId: "windrose", createdAt: { gte: since } },
+          select: { mode: true, region: true, createdAt: true },
+          take: 200,
+        }).catch(() => []),
+      ]);
+
+      const posted = bountiesAll.length;
+      const settled = bountiesAll.filter((b: any) => b.status === "SETTLED").length;
+      const hottestOpen = bountiesAll
+        .filter((b: any) => b.status === "OPEN" || b.status === "CLAIMED")
+        .sort((a: any, b: any) => b.amount - a.amount)
+        .slice(0, 3)
+        .map((b: any) => ({ target: b.targetHandle, amount: b.amount }));
+      const biggestSettle = bountiesAll
+        .filter((b: any) => b.status === "SETTLED")
+        .sort((a: any, b: any) => b.amount - a.amount)
+        .slice(0, 3)
+        .map((b: any) => ({ target: b.targetHandle, hunter: b.claimantName, amount: b.amount }));
+
+      const newCrews = crews
+        .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 5)
+        .map((c: any) => ({ name: c.name, tag: c.tag, recruiting: c.recruiting, members: (c.members || []).length }));
+      const newServers = servers
+        .slice(0, 5)
+        .map((s: any) => ({ name: s.name, region: s.region, framework: s.framework }));
+      const lfgCount = lfg.length;
+      const lfgModes = Array.from(new Set(lfg.map((p: any) => p.mode).filter(Boolean))).slice(0, 5);
+
+      const payload = {
+        period: "last 7 days",
+        bounties: { posted, settled, hottestOpen, biggestSettle },
+        crews: { newOrUpdated: newCrews.length, featured: newCrews },
+        servers: { new: newServers.length, featured: newServers },
+        lfg: { posts: lfgCount, modes: lfgModes },
+      };
+
+      // ── Ask The Operator ──────────────────────────────────────────
+      const ai = await getAI();
+      if (!ai) return reply.send({ ok: false, error: "ai_unavailable", summary: null });
+
+      const system = `You are The Operator — a gold-robot AI concierge on Weered, with a GTA/mafia aesthetic flavour. The context is WINDROSE, a pirate survival co-op game. Your job: write a sharp, punchy weekly recap of what's gone down in the Windrose community hub.
+
+Voice: street-smart, laconic, a little dangerous, dry humour. Pirate-flavoured phrasing where it lands but never forced. You're running the joint, not a tour guide.
+
+Rules:
+- 140-220 words total. No more.
+- Structure: an opening line (set the tone), 3-5 short bullets (•), a closing line (a hook).
+- No markdown headings. No emojis. No hashtags. No quotes around bullets.
+- Use real specifics from the data (names, amounts, counts). Never make numbers up.
+- If there's very little activity, say so honestly — don't pad.
+- Numbers use commas ("25,000 Paper", not "25000").
+- Never break character or mention "AI", "assistant", or "Claude".
+- The reader is a Windrose player on Weered. Talk to them, not about them.`;
+
+      const user = `Here's this week's data. Write the recap.\n\n${JSON.stringify(payload, null, 2)}`;
+
+      const res = await ai.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 500,
+        system,
+        messages: [{ role: "user", content: user }],
+      });
+      const summary = res?.content?.[0]?.text?.trim() || "";
+      if (!summary) return reply.send({ ok: false, error: "empty_summary", summary: null });
+
+      const result = {
+        ok: true,
+        summary,
+        period: payload.period,
+        stats: {
+          bountiesPosted: posted,
+          bountiesSettled: settled,
+          crewsActive: newCrews.length,
+          serversNew: newServers.length,
+          lfgPosts: lfgCount,
+        },
+        generatedAt: new Date().toISOString(),
+      };
+      wrCacheSet(cacheKey, result, 6 * 60 * 60 * 1000); // 6h
+      return reply.send(result);
+    } catch (e) {
+      console.error("[windrose/captains-log]", e);
+      return reply.send({ ok: false, error: "generation_failed", summary: null });
+    }
+  });
+
   // GET /windrose/news — latest Steam news from Kraken Express
   app.get("/windrose/news", async (req, reply) => {
     const cacheKey = "wr:news";

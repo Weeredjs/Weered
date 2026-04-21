@@ -388,6 +388,8 @@ function FeatureBlock({ icon, title, body }: { icon: string; title: string; body
 function LogTab() {
   const [items, setItems] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recap, setRecap] = useState<{ summary: string; period: string; generatedAt: string; stats: any } | null>(null);
+  const [recapLoading, setRecapLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -396,16 +398,28 @@ function LogTab() {
       else setItems([]);
       setLoading(false);
     });
+    // The Operator's weekly recap — independent fetch so it shows even
+    // when Steam news is slow or empty.
+    setRecapLoading(true);
+    apiFetch("/windrose/captains-log").then(j => {
+      if (j?.ok && j.summary) setRecap({ summary: j.summary, period: j.period, generatedAt: j.generatedAt, stats: j.stats });
+      setRecapLoading(false);
+    }).catch(() => setRecapLoading(false));
   }, []);
 
-  if (loading) return <LoadingState label="Loading Captain's Log..." />;
-  if (!items || items.length === 0) {
-    return <EmptyState icon="📜" title="The log is empty" hint="No dispatches from Kraken Express yet. Check back after the storm passes." />;
+  const nothingAtAll = !loading && !recapLoading && (!items || items.length === 0) && !recap;
+  if (nothingAtAll) {
+    return <EmptyState icon="📜" title="The log is empty" hint="No dispatches yet. Check back after the storm passes." />;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {items.map((n, i) => (
+      {/* The Operator's weekly recap — sits above Steam news */}
+      <OperatorRecap recap={recap} loading={recapLoading} />
+
+      {loading ? (
+        <LoadingState label="Loading dispatches..." />
+      ) : !items || items.length === 0 ? null : (items.map((n, i) => (
         <article key={n.id || i} style={{ ...S.card, padding: "18px 22px" }}>
           {/* wax seal corner */}
           <span style={{
@@ -438,7 +452,121 @@ function LogTab() {
             </div>
           )}
         </article>
-      ))}
+      )))}
+    </div>
+  );
+}
+
+function OperatorRecap({ recap, loading }: {
+  recap: { summary: string; period: string; generatedAt: string; stats: any } | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div style={{
+        ...S.card,
+        padding: "22px 26px",
+        background: `radial-gradient(ellipse 80% 60% at 30% 0%, rgba(212,160,23,0.12) 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`,
+        borderColor: "rgba(212,160,23,0.45)",
+        display: "flex", alignItems: "center", gap: 14,
+      }}>
+        <div style={{
+          width: 42, height: 42, borderRadius: "50%",
+          background: "radial-gradient(circle at 30% 30%, #e8c48a, #8a6b3e)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          border: "2px solid rgba(212,160,23,0.6)",
+          fontSize: 18,
+        }}>
+          🤖
+        </div>
+        <div>
+          <div style={{ ...S.label, fontSize: 9, color: "rgba(212,160,23,0.9)" }}>The Operator is writing</div>
+          <div style={{ fontSize: 13, color: PAL.parchDim, fontStyle: "italic", marginTop: 3 }}>
+            Compiling the week's dispatches…
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (!recap) return null;
+
+  const when = (() => {
+    try {
+      const d = new Date(recap.generatedAt);
+      return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    } catch { return ""; }
+  })();
+
+  return (
+    <div style={{
+      ...S.card,
+      padding: "22px 26px",
+      background: `radial-gradient(ellipse 90% 70% at 20% 0%, rgba(212,160,23,0.14) 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`,
+      borderColor: "rgba(212,160,23,0.45)",
+      position: "relative",
+    }}>
+      {/* Operator identity row */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: "50%",
+          background: "radial-gradient(circle at 30% 30%, #e8c48a, #8a6b3e)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          border: "2px solid rgba(212,160,23,0.6)",
+          boxShadow: "0 0 18px rgba(212,160,23,0.25), inset 0 -2px 4px rgba(0,0,0,0.3)",
+          fontSize: 20, flexShrink: 0,
+        }}>
+          🤖
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 18, color: "rgba(212,160,23,0.95)", letterSpacing: "0.5px" }}>
+              The Operator
+            </span>
+            <span style={{ fontSize: 9, fontFamily: WR_FONT_MONO, color: PAL.parchDim, letterSpacing: "1.5px", textTransform: "uppercase", padding: "2px 7px", background: "rgba(212,160,23,0.08)", border: "1px solid rgba(212,160,23,0.3)" }}>
+              AI · Weekly Recap
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: PAL.parchDim, marginTop: 3, fontStyle: "italic" }}>
+            {recap.period}{when ? ` · compiled ${when}` : ""}
+          </div>
+        </div>
+      </div>
+
+      {/* Recap body */}
+      <div style={{
+        fontSize: 14,
+        color: PAL.parchment,
+        lineHeight: 1.7,
+        fontFamily: WR_FONT_SERIF,
+        whiteSpace: "pre-wrap",
+        borderLeft: "2px solid rgba(212,160,23,0.4)",
+        paddingLeft: 14,
+        marginLeft: 4,
+      }}>
+        {recap.summary}
+      </div>
+
+      {/* Stat strip */}
+      {recap.stats && (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${PAL.brass}20` }}>
+          <RecapStat label="Bounties posted" value={recap.stats.bountiesPosted} />
+          <RecapStat label="Bounties settled" value={recap.stats.bountiesSettled} />
+          <RecapStat label="Crews active" value={recap.stats.crewsActive} />
+          <RecapStat label="New servers" value={recap.stats.serversNew} />
+          <RecapStat label="Flags raised" value={recap.stats.lfgPosts} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecapStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.brassHi, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+        {Number(value || 0).toLocaleString()}
+      </div>
+      <div style={{ ...S.label, fontSize: 9 }}>{label}</div>
     </div>
   );
 }
