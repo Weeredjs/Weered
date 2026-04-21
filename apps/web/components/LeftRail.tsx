@@ -551,15 +551,14 @@ export default function LeftRail() {
               psn:    !!u?.psnAccountId,
             };
 
-            // Only override the default line for the two "speaker" rows.
-            // Everyone else falls through to PresenceRow's own logic so we get
-            // the platform icon + game / "lying low" / "online" treatment.
+            // Only override the default line for the Operator row. Everyone
+            // else — including "you" — falls through to PresenceRow's own
+            // logic so we get the platform icon + game / "lying low" /
+            // "online" treatment. Self-row still stands out via row background.
             const isOperator = uid === "operator";
             const secondary: React.ReactNode | undefined = isOperator
               ? <span style={{ color: "rgba(212,160,23,.7)", fontStyle: "italic" }}>AI · @operator</span>
-              : you
-                ? <span style={{ opacity: 0.55, fontStyle: "italic" }}>you</span>
-                : undefined;
+              : undefined;
 
             return (
               <div
