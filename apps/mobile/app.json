@@ -37,7 +37,8 @@
     },
     "extra": {
       "apiBase": "https://api.weered.ca",
-      "wsUrl": "wss://api.weered.ca/ws"
+      "wsUrl": "wss://ws.weered.ca",
+      "webBase": "https://weered.ca"
     }
   }
 }
