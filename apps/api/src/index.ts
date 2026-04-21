@@ -12611,6 +12611,102 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
   // Aggregates the past 7 days of Windrose lobby activity and has
   // Claude Haiku write it up as The Operator (GTA gold-robot persona).
   // Cached 6h so we don't burn tokens on every refresh.
+  // GET /windrose/hunter/:userId — per-user bounty dossier
+  // Derived entirely from existing bounty rows; no new storage. Ranks are
+  // computed against the same hunter set we use on the Hall of Fame.
+  app.get("/windrose/hunter/:userId", async (req, reply) => {
+    const userId = String((req.params as any).userId || "");
+    if (!userId) return reply.code(400).send({ ok: false, error: "userId_required" });
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, avatar: true, avatarColor: true, tier: true, globalRole: true },
+      });
+      if (!user) return reply.code(404).send({ ok: false, error: "not_found" });
+
+      // Pull every bounty in lobby once — volume is small enough that
+      // computing user dossiers in-memory is simpler than N queries.
+      const all = await (prisma as any).windroseBounty.findMany({
+        where: { lobbyId: "windrose" },
+        take: 5000,
+      });
+
+      // As hunter (claimant on SETTLED)
+      const claimedSettled = all.filter((b: any) => b.claimantId === userId && b.status === "SETTLED");
+      const claimedPending = all.filter((b: any) => b.claimantId === userId && b.status === "CLAIMED");
+      const kills = claimedSettled.length;
+      const totalEarned = claimedSettled.reduce((s: number, b: any) => s + (Number(b.amount) || 0), 0);
+      const biggestHit = claimedSettled.reduce((m: any, b: any) => (!m || b.amount > m.amount) ? b : m, null);
+
+      // As poster
+      const posted = all.filter((b: any) => b.posterId === userId);
+      const postedCount = posted.length;
+      const totalPosted = posted.reduce((s: number, b: any) => s + (Number(b.amount) || 0), 0);
+      const postedOpen = posted.filter((b: any) => b.status === "OPEN" || b.status === "CLAIMED").length;
+      const postedSettled = posted.filter((b: any) => b.status === "SETTLED").length;
+
+      // Rank among hunters (by totalEarned) — 0 means unranked
+      const hunterMap = new Map<string, number>();
+      for (const b of all) {
+        if (b.status !== "SETTLED" || !b.claimantId) continue;
+        hunterMap.set(b.claimantId, (hunterMap.get(b.claimantId) || 0) + (Number(b.amount) || 0));
+      }
+      const sortedHunters = Array.from(hunterMap.entries()).sort((a, b) => b[1] - a[1]);
+      const rankIndex = sortedHunters.findIndex(([uid]) => uid === userId);
+      const hunterRank = rankIndex === -1 ? null : rankIndex + 1;
+      const totalHunters = sortedHunters.length;
+
+      // Rank among posters (by totalPosted)
+      const posterMap = new Map<string, number>();
+      for (const b of all) {
+        posterMap.set(b.posterId, (posterMap.get(b.posterId) || 0) + (Number(b.amount) || 0));
+      }
+      const sortedPosters = Array.from(posterMap.entries()).sort((a, b) => b[1] - a[1]);
+      const posterRankIdx = sortedPosters.findIndex(([uid]) => uid === userId);
+      const posterRank = posterRankIdx === -1 ? null : posterRankIdx + 1;
+
+      // Recent activity — last 5 of each side, trimmed for payload
+      const recentKills = claimedSettled
+        .sort((a: any, b: any) => new Date(b.settledAt || 0).getTime() - new Date(a.settledAt || 0).getTime())
+        .slice(0, 5)
+        .map((b: any) => ({
+          id: b.id, target: b.targetHandle, amount: b.amount, at: b.settledAt,
+        }));
+      const recentPosts = posted
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5)
+        .map((b: any) => ({
+          id: b.id, target: b.targetHandle, amount: b.amount, status: b.status, at: b.createdAt,
+        }));
+
+      return reply.send({
+        ok: true,
+        user: { id: user.id, name: user.name, avatar: user.avatar, avatarColor: user.avatarColor, tier: user.tier, globalRole: user.globalRole },
+        hunter: {
+          kills,
+          totalEarned,
+          biggestHit: biggestHit ? { target: biggestHit.targetHandle, amount: biggestHit.amount, at: biggestHit.settledAt } : null,
+          pendingClaims: claimedPending.length,
+          rank: hunterRank,
+          totalHunters,
+          recentKills,
+        },
+        poster: {
+          postedCount,
+          totalPosted,
+          open: postedOpen,
+          settled: postedSettled,
+          rank: posterRank,
+          totalPosters: sortedPosters.length,
+          recentPosts,
+        },
+      });
+    } catch (e) {
+      console.error("[windrose/hunter]", e);
+      return reply.code(500).send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
   // GET /windrose/activity — unified event stream for the Flagship chaos bar
   // Stitches bounties, crew publications, community server listings, and LFG
   // flags into one time-sorted list so the Windrose tab feels alive without a
