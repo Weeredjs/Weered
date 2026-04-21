@@ -11,6 +11,31 @@ export class WeeredSocket {
 
   connect() {
     this.intentionallyClosed = false;
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      // Already connected/connecting — re-auth in case the token changed.
+      if (this.ws.readyState === WebSocket.OPEN) {
+        const token = getAuthToken();
+        if (token) this.ws.send(JSON.stringify({ type: "auth:hello", token }));
+      }
+      return;
+    }
+    this.open();
+  }
+
+  reauth() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      const token = getAuthToken();
+      if (token) this.ws.send(JSON.stringify({ type: "auth:hello", token }));
+    }
+  }
+
+  // Force-close and reopen the socket. Use when a stale/zombied connection is
+  // suspected (e.g. silent send failures, long network changes).
+  forceReconnect() {
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    try { this.ws?.close(); } catch {}
+    this.ws = null;
+    this.intentionallyClosed = false;
     this.open();
   }
 
