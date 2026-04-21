@@ -4921,9 +4921,11 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
       let parsed: any = {};
       try { parsed = JSON.parse(text); } catch { parsed = { answer: text.slice(0, 300) }; }
 
-      const matchedLobbies = Array.isArray(parsed.lobbies)
-        ? lobbyList.filter((l: any) => parsed.lobbies.includes(l.id))
-        : [];
+      // Accept both lobby IDs and names (case-insensitive) since Haiku sometimes returns names
+      const wanted = Array.isArray(parsed.lobbies) ? parsed.lobbies.map((x: any) => String(x).toLowerCase()) : [];
+      const matchedLobbies = lobbyList.filter((l: any) =>
+        wanted.includes(String(l.id).toLowerCase()) || wanted.includes(String(l.name).toLowerCase())
+      );
 
       return reply.send({
         ok: true,
