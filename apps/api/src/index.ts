@@ -94,6 +94,27 @@ type ModuleState = {
   setAt?: number;
 };
 
+// MPlayer-style launch target, set by the room host. Lives in-memory on
+// the room; cleared when the room is evicted or the host clears it.
+type LaunchTarget = {
+  appid: number;          // Steam AppID, e.g. 3041230 for Windrose
+  connect: string;        // "ip:port" or "ip:port/password" — feeds steam://connect/
+  display: string;        // human label shown to members (server name)
+  note?: string;          // free-text from host
+  setBy: string;          // userId of whoever set it
+  setAt: number;          // epoch ms
+};
+
+type LaunchSlot = "player" | "observer";
+
+type LaunchState = {
+  target: LaunchTarget | null;
+  slots: Map<string, LaunchSlot>;  // userId → slot
+  ready: Set<string>;              // userIds of player-slotted users who've clicked Ready
+  firedAt: number | null;          // epoch ms when host hit fire (null otherwise)
+  firedBy: string | null;
+};
+
 type RoomState = {
   roomId: string;
   name?: string;
@@ -116,6 +137,7 @@ type RoomState = {
   pinned: boolean;
   isEvent: boolean;
   passwordHash?: string;
+  launch?: LaunchState;
   };
 
 const rooms = new Map<string, RoomState>();
@@ -1039,6 +1061,29 @@ function roleOf(room: RoomState, userId: string): Role {
   return "member";
 }
 
+// ── Room launcher (MPlayer-style) ──────────────────────────────────────────
+function ensureLaunch(room: RoomState): LaunchState {
+  if (!room.launch) {
+    room.launch = { target: null, slots: new Map(), ready: new Set(), firedAt: null, firedBy: null };
+  }
+  return room.launch;
+}
+
+function serializeLaunch(room: RoomState) {
+  const l = ensureLaunch(room);
+  return {
+    target: l.target,
+    slots: Array.from(l.slots.entries()).map(([userId, slot]) => ({ userId, slot })),
+    ready: Array.from(l.ready.values()),
+    firedAt: l.firedAt,
+    firedBy: l.firedBy,
+  };
+}
+
+function broadcastLaunch(room: RoomState) {
+  broadcast(room, { type: "launch:state", roomId: room.roomId, launch: serializeLaunch(room) });
+}
+
 function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: number }) {
   const a: AuditItem = { id: randomUUID(), ts: item.ts ?? Date.now(), ...item };
   room.audit.push(a);
@@ -1094,6 +1139,7 @@ function buildStatePayload(room: RoomState) {
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
     activeModule: room.activeModule || null,
+    launch: room.launch ? serializeLaunch(room) : null,
   };
 }
 
@@ -1147,6 +1193,12 @@ function leaveRoom(ws: Sock) {
     if (!userHasOtherSocket) {
       const existed = room.users.delete(ws.user.id);
       if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
+      // Drop any launch slot/ready entries the user held
+      if (room.launch) {
+        const hadSlot = room.launch.slots.delete(ws.user.id);
+        const hadReady = room.launch.ready.delete(ws.user.id);
+        if (hadSlot || hadReady) broadcastLaunch(room);
+      }
     }
   }
   ws.roomId = undefined;
@@ -5155,6 +5207,98 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
               (entry as any).isAway = away;
               broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
             }
+          }
+          return;
+        }
+
+        // ── Room launcher (MPlayer-style) ──────────────────────────────────
+        // All launch:* messages target the user's currently-joined room. Only
+        // the room owner can set/clear a target and fire the countdown. Any
+        // member can pick player/observer and ready up.
+        if (msg.type === "launch:set" || msg.type === "launch:clear"
+            || msg.type === "launch:slot" || msg.type === "launch:ready"
+            || msg.type === "launch:fire" || msg.type === "launch:abort") {
+          if (!ws.user || !ws.joinedRoomId) return;
+          const room = rooms.get(ws.joinedRoomId);
+          if (!room) return;
+          if (!room.users.has(ws.user.id)) return;
+          const launch = ensureLaunch(room);
+          const userIsOwner = isOwner(room, ws.user.id) || isElevatedGlobal(ws.user.globalRole);
+
+          if (msg.type === "launch:set") {
+            if (!userIsOwner) return;
+            const appid = Number(msg.appid);
+            const connect = String(msg.connect || "").trim().slice(0, 200);
+            const display = String(msg.display || connect || "").trim().slice(0, 80);
+            const note    = msg.note ? String(msg.note).trim().slice(0, 300) : undefined;
+            if (!appid || !connect) return;
+            launch.target = { appid, connect, display, note, setBy: ws.user.id, setAt: Date.now() };
+            // Reset ready set + firedAt on a new target; preserve slot picks
+            launch.ready.clear();
+            launch.firedAt = null;
+            launch.firedBy = null;
+            broadcastLaunch(room);
+            return;
+          }
+
+          if (msg.type === "launch:clear") {
+            if (!userIsOwner) return;
+            launch.target = null;
+            launch.ready.clear();
+            launch.slots.clear();
+            launch.firedAt = null;
+            launch.firedBy = null;
+            broadcastLaunch(room);
+            return;
+          }
+
+          if (msg.type === "launch:slot") {
+            const slot: LaunchSlot = msg.slot === "player" ? "player" : "observer";
+            launch.slots.set(ws.user.id, slot);
+            // Dropping out of player slot also drops ready
+            if (slot === "observer") launch.ready.delete(ws.user.id);
+            broadcastLaunch(room);
+            return;
+          }
+
+          if (msg.type === "launch:ready") {
+            // Only player-slotted users can ready up
+            if (launch.slots.get(ws.user.id) !== "player") return;
+            const ready = Boolean(msg.ready);
+            if (ready) launch.ready.add(ws.user.id);
+            else launch.ready.delete(ws.user.id);
+            broadcastLaunch(room);
+            return;
+          }
+
+          if (msg.type === "launch:fire") {
+            if (!userIsOwner || !launch.target) return;
+            // Need at least one player-slotted user to fire
+            const anyPlayer = Array.from(launch.slots.values()).some(s => s === "player");
+            if (!anyPlayer) return;
+            launch.firedAt = Date.now();
+            launch.firedBy = ws.user.id;
+            broadcastLaunch(room);
+            // Auto-reset 60s after fire so a new match can be queued
+            setTimeout(() => {
+              const r = rooms.get(room.roomId);
+              if (!r?.launch) return;
+              if (r.launch.firedAt === launch.firedAt) {
+                r.launch.firedAt = null;
+                r.launch.firedBy = null;
+                r.launch.ready.clear();
+                broadcastLaunch(r);
+              }
+            }, 60_000);
+            return;
+          }
+
+          if (msg.type === "launch:abort") {
+            if (!userIsOwner) return;
+            launch.firedAt = null;
+            launch.firedBy = null;
+            broadcastLaunch(room);
+            return;
           }
           return;
         }

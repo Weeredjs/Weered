@@ -5,6 +5,7 @@ import { useWeered } from "../WeeredProvider";
 import RoomHeader from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
+import LaunchPad from "./LaunchPad";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
@@ -511,6 +512,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         }}
         showDetails={showDetails}
       />
+
+      {/* ── Launch Pad (MPlayer-style game launcher) ── */}
+      <LaunchPad roomId={roomId} />
 
       {/* ── Voice available prompt — hidden when Voice tab is active (VoiceStage has its own) ── */}
       {voicePrompt && stageMode !== "voice" && voice.connState !== "connected" && voice.connState !== "connecting" && (
