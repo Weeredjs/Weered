@@ -7342,6 +7342,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             steamId: (u as any).steamId,
             twitchLogin: (u as any).twitchLogin,
             xboxGamertag: (u as any).xboxGamertag,
+            livePresence: (u as any).livePresence ?? null,
             roomId: room.roomId,
             roomName: room.name || room.roomId,
           });
