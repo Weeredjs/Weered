@@ -57,7 +57,7 @@ const IconDock = () => (
 );
 
 export default function UserCorner() {
-  const { me, role, globalRole, currentLobbyId, logout } = useWeered() as any;
+  const { me, role, globalRole, currentLobbyId, logout, isAway, setAway } = useWeered() as any;
   const { openSheet } = useOverlay();
 
   // Reactive lobby-theme detection for vocabulary swap
@@ -278,6 +278,42 @@ export default function UserCorner() {
           </div>
         </div>
       </button>
+
+      {/* Status toggle — click to flip between Online and Lying low */}
+      <div style={{ padding: "2px 12px 4px" }}>
+        <button
+          type="button"
+          onClick={() => { if (typeof setAway === "function") setAway(!isAway); }}
+          title={isAway ? "You're lying low. Click to come back online." : "Click to lie low (manual AFK)."}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "4px 10px 4px 8px",
+            borderRadius: 999,
+            border: `1px solid ${isAway ? "rgba(250,204,21,.35)" : "rgba(34,197,94,.30)"}`,
+            background: isAway ? "rgba(250,204,21,.10)" : "rgba(34,197,94,.08)",
+            color: isAway ? "#fde68a" : "rgba(187,247,208,.9)",
+            fontFamily: "inherit", fontSize: 10, fontWeight: 800,
+            letterSpacing: ".3px", textTransform: "uppercase",
+            cursor: "pointer", transition: "background .15s, border-color .15s",
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = isAway ? "rgba(250,204,21,.16)" : "rgba(34,197,94,.14)";
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = isAway ? "rgba(250,204,21,.10)" : "rgba(34,197,94,.08)";
+          }}
+        >
+          <span style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: isAway ? "#facc15" : "#22c55e",
+            boxShadow: isAway ? "0 0 6px rgba(250,204,21,.6)" : "0 0 6px rgba(34,197,94,.7)",
+            flexShrink: 0,
+          }} />
+          {isAway ? "Lying low" : "Online"}
+        </button>
+      </div>
 
       {/* Notoriety XP bar + notification bell */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px 0" }}>

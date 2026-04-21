@@ -128,25 +128,56 @@ export default function PresenceRow({
   const bg = avatar ? "rgba(255,255,255,0.08)" : (avatarColor || avatarBg(name || ""));
   const avatarSize = compact ? 30 : 36;
 
-  // Secondary line content
+  // Active platform key, if we have a live game/stream signal — drives the
+  // inline icon in the activity line AND dedup of the trailing pill group.
+  const activePlatformKey =
+    (livePresence?.activity && typeof livePresence?.source === "string")
+      ? livePresence.source.toUpperCase()
+      : "";
+  const activePlatformGlyph = (() => {
+    if (!activePlatformKey) return null;
+    const glyphSize = compact ? 12 : 13;
+    switch (activePlatformKey) {
+      case "STEAM":  return <SteamIcon size={glyphSize} />;
+      case "TWITCH": return <TwitchIcon size={glyphSize} />;
+      case "XBOX":   return <XboxIcon size={glyphSize} />;
+      case "PSN":
+      case "PLAYSTATION": return <PlaystationIcon size={glyphSize} />;
+      default: return null;
+    }
+  })();
+
+  // Secondary line content.
+  //
+  // Presence bar contract: if we see you in the list, we know you're with us
+  // on Weered — so the default line only speaks to *status*, not location.
+  // Hierarchy:  playing/streaming game  >  lying low  >  online  >  offline.
   const secondary = secondaryText ?? (() => {
     if (online && isAway) {
-      return <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.8 }}>lying low{roomName ? ` · in ${roomName}` : ""}</span>;
+      return <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.85 }}>lying low</span>;
     }
     if (livePresence?.activity) {
       return (
-        <span style={{ color: "var(--weered-accent-text, rgba(196,181,253,.92))", fontWeight: 600 }}>
-          {livePresence.activity}
-          {livePresence.detail ? <span style={{ opacity: 0.65, fontWeight: 400, fontStyle: "italic" }}> · {livePresence.detail.slice(0, 40)}</span> : null}
+        <span style={{ color: "var(--weered-accent-text, rgba(196,181,253,.92))", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+          {activePlatformGlyph && <span style={{ display: "inline-flex", flexShrink: 0 }}>{activePlatformGlyph}</span>}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {livePresence.activity}
+            {livePresence.detail ? <span style={{ opacity: 0.65, fontWeight: 400, fontStyle: "italic" }}> · {livePresence.detail.slice(0, 40)}</span> : null}
+          </span>
         </span>
       );
     }
-    if (online && roomName) return <span style={{ opacity: 0.65 }}>in {roomName}</span>;
     if (online) return <span style={{ opacity: 0.55, fontStyle: "italic" }}>online</span>;
     return <span style={{ opacity: 0.35, fontStyle: "italic" }}>offline</span>;
   })();
 
-  const hasPlatforms = !!(platforms?.steam || platforms?.twitch || platforms?.xbox || platforms?.psn);
+  // Trailing platform pills — suppress the one that's already rendering
+  // inline in the activity line so the same icon doesn't appear twice.
+  const showSteam  = !!platforms?.steam  && activePlatformKey !== "STEAM";
+  const showTwitch = !!platforms?.twitch && activePlatformKey !== "TWITCH";
+  const showXbox   = !!platforms?.xbox   && activePlatformKey !== "XBOX";
+  const showPsn    = !!platforms?.psn    && activePlatformKey !== "PSN" && activePlatformKey !== "PLAYSTATION";
+  const hasPlatforms = showSteam || showTwitch || showXbox || showPsn;
 
   // Accent stripe color — role takes priority over tier
   const accentStripe =
@@ -259,10 +290,10 @@ export default function PresenceRow({
           marginLeft: 2,
           borderLeft: "1px solid rgba(255,255,255,.05)",
         }}>
-          {platforms?.steam  && <SteamIcon size={compact ? 12 : 13} />}
-          {platforms?.twitch && <TwitchIcon size={compact ? 12 : 13} />}
-          {platforms?.xbox   && <XboxIcon size={compact ? 12 : 13} />}
-          {platforms?.psn    && <PlaystationIcon size={compact ? 12 : 13} />}
+          {showSteam  && <SteamIcon size={compact ? 12 : 13} />}
+          {showTwitch && <TwitchIcon size={compact ? 12 : 13} />}
+          {showXbox   && <XboxIcon size={compact ? 12 : 13} />}
+          {showPsn    && <PlaystationIcon size={compact ? 12 : 13} />}
         </div>
       )}
     </div>
