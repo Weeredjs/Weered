@@ -4995,10 +4995,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         const msg = safeJson(raw);
         if (!msg || typeof msg.type !== "string") return;
 
-        if (msg.type !== "trading:subscribe" && msg.type !== "trading:unsubscribe") {
-          console.log(`[ws-recv] type=${msg.type} userId=${ws.user?.id || "(unauthed)"}`);
-        }
-
         if (msg.type === "auth:hello") {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
@@ -5032,7 +5028,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
         if (!ws.user) { send(ws, { type: "auth:fail", reason: "Not authenticated" }); return; }
 
-        if (msg.type === "crew:send") console.log(`[trace-A] post-auth-check, type=${msg.type}`);
 
         // ── rooms:list — return lobby directory from DB ───────────────────
         if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
@@ -5064,7 +5059,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
-        if (msg.type === "crew:send") console.log(`[trace-PRES-JOIN-PRE] about to test presence:join`);
         if (msg.type === "presence:join") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           if (!roomId) return;
@@ -5149,7 +5143,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
           // ── module:set — user sets the active module for the room
-        if (msg.type === "crew:send") console.log(`[trace-MOD-SET-PRE] about to test module:set`);
         if (msg.type === "module:set") {
           const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
           if (!roomId) return;
@@ -5235,7 +5228,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           await globalAudit(ws.user.id, ws.user.name, "room_close", roomId);
           return;
         }
-        if (msg.type === "crew:send") console.log(`[trace-CHAT-PRE] about to test chat:send`);
         if (msg.type === "chat:send") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           const body = String(msg.body || "").trim();
@@ -5468,7 +5460,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         const actorIsMod = roomId ? isModOrOwner(room, actorId, actorGlobalRole) : false;
         const actorIsOwner = roomId ? (isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole)) : false;
 
-        if (msg.type === "crew:send") console.log(`[trace-MID-1] reached pre room:getAdminState`);
         if (msg.type === "room:getAdminState") {
           // Allow any user to request presence state; admin state only goes to mods
           publishState(room);
@@ -5911,7 +5902,6 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
-        if (msg.type === "crew:send") console.log(`[trace-B] reached just before poker:action, still alive`);
         if (msg.type === "poker:action") {
           const tableId = String(msg.tableId || "").trim();
           const action = String(msg.action || "").trim().toLowerCase();
@@ -6000,19 +5990,11 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         }
 
         // ── Crew Chat via WebSocket ──────────────────────────────────────────
-        if (msg.type === "crew:send" || msg.type === "crew:edit" || msg.type === "crew:delete" || msg.type === "crew:react") {
-          console.log(`[crew:reached-pre-check] type=${msg.type}`);
-        }
         if (msg.type === "crew:send") {
-          console.log(`[crew:send] HANDLER ENTERED`);
           const crewId = String(msg.crewId || "").trim();
           const body = String(msg.body || "").trim().slice(0, 2000);
           const fromId = ws.user?.id;
-          console.log(`[crew:send] fromId=${fromId || "(none)"} crewId=${crewId} bodyLen=${body.length}`);
-          if (!fromId || !crewId || !body) {
-            console.log(`[crew:send] EARLY RETURN: missing field`);
-            return;
-          }
+          if (!fromId || !crewId || !body) return;
           // URL spam check
           const urlCheck = checkUrlSpam(body);
           if (!urlCheck.ok) { send(ws, { type: "crew:rejected", crewId, reason: urlCheck.reason }); return; }
@@ -6025,11 +6007,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             const membership = await (prisma as any).crewMember.findFirst({
               where: { crewId, userId: fromId },
             });
-            if (!membership) {
-              console.log(`[crew:send] NOT A MEMBER: user=${fromId} crew=${crewId}`);
-              return;
-            }
-            console.log(`[crew:send] member ok, role=${membership.role}, creating message`);
+            if (!membership) return;
 
             // Optional reply-to — look up parent (must be same crew)
             let crewReplyData: any = {};
