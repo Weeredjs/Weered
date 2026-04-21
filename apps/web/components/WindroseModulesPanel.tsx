@@ -701,7 +701,14 @@ type Bounty = {
   cancelledAt?: string | null;
 };
 
-type BountyFilter = "OPEN" | "CLAIMED" | "SETTLED" | "MINE";
+type BountyFilter = "OPEN" | "CLAIMED" | "SETTLED" | "MINE" | "LEADERBOARD";
+
+type LeaderboardData = {
+  mostWanted: { targetHandle: string; openCount: number; totalAmount: number }[];
+  topHunters: { userId: string; userName: string; kills: number; totalEarned: number }[];
+  biggestPosters: { userId: string; userName: string; postedCount: number; totalPosted: number }[];
+  stats: { openCount: number; openTotal: number; settledCount: number; settledTotal: number };
+};
 
 function BountiesTab() {
   const [bounties, setBounties] = useState<Bounty[] | null>(null);
@@ -720,6 +727,9 @@ function BountiesTab() {
   // Claim modal
   const [claiming, setClaiming] = useState<Bounty | null>(null);
 
+  // Leaderboard data
+  const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
+
   // Who am I
   const [myId, setMyId] = useState<string>("");
   useEffect(() => {
@@ -730,15 +740,20 @@ function BountiesTab() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = filter === "MINE" ? "?mine=1"
-        : filter === "OPEN"    ? "?status=OPEN"
-        : filter === "CLAIMED" ? "?status=CLAIMED"
-        : filter === "SETTLED" ? "?status=SETTLED"
-        : "";
-      const j = await apiFetch(`/windrose/bounties${qs}`);
-      if (j?.ok && Array.isArray(j.bounties)) setBounties(j.bounties);
-      else setBounties([]);
-    } catch { setBounties([]); }
+      if (filter === "LEADERBOARD") {
+        const j = await apiFetch("/windrose/bounties/leaderboard");
+        setLeaderboard(j?.ok ? (j as LeaderboardData) : null);
+      } else {
+        const qs = filter === "MINE" ? "?mine=1"
+          : filter === "OPEN"    ? "?status=OPEN"
+          : filter === "CLAIMED" ? "?status=CLAIMED"
+          : filter === "SETTLED" ? "?status=SETTLED"
+          : "";
+        const j = await apiFetch(`/windrose/bounties${qs}`);
+        if (j?.ok && Array.isArray(j.bounties)) setBounties(j.bounties);
+        else setBounties([]);
+      }
+    } catch { setBounties([]); setLeaderboard(null); }
     setLoading(false);
   }, [filter]);
 
@@ -871,6 +886,7 @@ function BountiesTab() {
           { id: "CLAIMED", label: "Claimed" },
           { id: "MINE", label: "Mine" },
           { id: "SETTLED", label: "Settled" },
+          { id: "LEADERBOARD", label: "⚑ Hall of Fame" },
         ] as { id: BountyFilter; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -890,9 +906,11 @@ function BountiesTab() {
         ))}
       </div>
 
-      {/* List */}
+      {/* List — or leaderboards */}
       {loading ? (
-        <LoadingState label="Combing the wanted posters..." />
+        <LoadingState label={filter === "LEADERBOARD" ? "Tallying the tales..." : "Combing the wanted posters..."} />
+      ) : filter === "LEADERBOARD" ? (
+        <BountyLeaderboard data={leaderboard} />
       ) : !bounties || bounties.length === 0 ? (
         <EmptyState
           icon="🏴‍☠️"
@@ -921,6 +939,164 @@ function BountiesTab() {
           onClose={() => setClaiming(null)}
           onSubmitted={() => { setClaiming(null); reload(); }}
         />
+      )}
+    </div>
+  );
+}
+
+function BountyLeaderboard({ data }: { data: LeaderboardData | null }) {
+  if (!data) {
+    return <EmptyState icon="⚑" title="No legends yet" hint="Once the first bounty settles, the Hall of Fame opens its doors." />;
+  }
+  const { mostWanted, topHunters, biggestPosters, stats } = data;
+  const hasAny = mostWanted.length > 0 || topHunters.length > 0 || biggestPosters.length > 0;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Stats strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <StatTile label="Open bounties"   value={stats.openCount.toLocaleString()}      sub="on the board" />
+        <StatTile label="Paper in flight" value={stats.openTotal.toLocaleString()}      sub="held in escrow" highlight />
+        <StatTile label="Bounties settled" value={stats.settledCount.toLocaleString()}  sub="kills confirmed" />
+        <StatTile label="Paper paid out"  value={stats.settledTotal.toLocaleString()}  sub="to hunters" highlight />
+      </div>
+
+      {!hasAny ? (
+        <EmptyState icon="⚑" title="No legends yet" hint="Post a few bounties and settle a few kills — the Hall of Fame fills itself." />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
+          <LeaderboardColumn
+            title="Most Wanted"
+            caption="Highest bounty on a sailor's head"
+            emptyLabel="No open marks right now."
+            rows={mostWanted.map((r, i) => ({
+              key: r.targetHandle,
+              rank: i + 1,
+              primary: r.targetHandle,
+              secondary: `${r.openCount} bounty${r.openCount === 1 ? "" : "ies"} open`,
+              value: r.totalAmount,
+            }))}
+          />
+          <LeaderboardColumn
+            title="Top Hunters"
+            caption="Most Paper earned from confirmed kills"
+            emptyLabel="No one's cashed in yet."
+            rows={topHunters.map((r, i) => ({
+              key: r.userId,
+              rank: i + 1,
+              primary: r.userName,
+              secondary: `${r.kills} confirmed kill${r.kills === 1 ? "" : "s"}`,
+              value: r.totalEarned,
+            }))}
+          />
+          <LeaderboardColumn
+            title="Biggest Posters"
+            caption="Most Paper put on the board"
+            emptyLabel="No one's opened their purse."
+            rows={biggestPosters.map((r, i) => ({
+              key: r.userId,
+              rank: i + 1,
+              primary: r.userName,
+              secondary: `${r.postedCount} bount${r.postedCount === 1 ? "y" : "ies"} posted`,
+              value: r.totalPosted,
+            }))}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatTile({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
+  return (
+    <div style={{
+      ...S.card,
+      padding: "12px 14px",
+      textAlign: "center",
+      background: highlight
+        ? `linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`
+        : S.card.background,
+      borderColor: highlight ? PAL.brass : `${PAL.brass}35`,
+    }}>
+      <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 24, color: highlight ? PAL.brassHi : PAL.parchment, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </div>
+      {sub && <div style={{ fontSize: 10, color: PAL.parchDim, marginTop: 5, fontStyle: "italic" }}>{sub}</div>}
+    </div>
+  );
+}
+
+function LeaderboardColumn({
+  title, caption, rows, emptyLabel,
+}: {
+  title: string; caption: string; emptyLabel: string;
+  rows: { key: string; rank: number; primary: string; secondary: string; value: number }[];
+}) {
+  return (
+    <div style={{ ...S.card, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div>
+        <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 18, color: PAL.brassHi, letterSpacing: "0.3px", lineHeight: 1 }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 11, color: PAL.parchDim, marginTop: 3, fontStyle: "italic" }}>
+          {caption}
+        </div>
+      </div>
+      <BrassDivider />
+      {rows.length === 0 ? (
+        <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic", padding: "16px 0", textAlign: "center" }}>
+          {emptyLabel}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {rows.map(r => (
+            <div key={r.key} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 10px",
+              background: r.rank === 1 ? `${PAL.brass}12` : r.rank === 2 ? `${PAL.brass}08` : r.rank === 3 ? `${PAL.brass}05` : "transparent",
+              border: `1px solid ${r.rank <= 3 ? `${PAL.brass}25` : `${PAL.brass}10`}`,
+              borderRadius: 2,
+            }}>
+              <span style={{
+                width: 22, textAlign: "center",
+                fontFamily: WR_FONT_DISPLAY,
+                fontSize: r.rank === 1 ? 18 : 14,
+                color: r.rank === 1 ? PAL.brassHi : r.rank <= 3 ? PAL.brass : PAL.parchDim,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}>
+                {r.rank}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontFamily: WR_FONT_DISPLAY,
+                  fontSize: 14,
+                  color: r.rank === 1 ? PAL.parchment : PAL.parchment,
+                  letterSpacing: "0.3px",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {r.primary}
+                </div>
+                <div style={{ fontSize: 10, color: PAL.parchDim, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {r.secondary}
+                </div>
+              </div>
+              <div style={{
+                textAlign: "right",
+                flexShrink: 0,
+                fontFamily: WR_FONT_MONO,
+                fontSize: 12,
+                fontVariantNumeric: "tabular-nums",
+                color: r.rank <= 3 ? PAL.brassHi : PAL.brass,
+                fontWeight: 600,
+              }}>
+                {r.value.toLocaleString()}
+                <div style={{ fontSize: 8, color: PAL.parchDim, letterSpacing: "1px", marginTop: 1 }}>PAPER</div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
