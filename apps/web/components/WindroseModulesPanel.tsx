@@ -640,37 +640,160 @@ type CommunityServer = {
   owner?: { id: string; name: string; avatar?: string | null; avatarColor?: string | null };
 };
 
+type PublicServer = {
+  addr: string;           // "ip:port"
+  steamId: string;
+  name: string;
+  players: number;
+  maxPlayers: number;
+  map: string;
+  gameType: string;
+  version: string;
+  os: string;             // "w"|"l"|"m"
+  secure: boolean;
+  passworded: boolean;
+};
+
+/** Unified row shape the Ports list renders */
+type PortRow = {
+  key: string;
+  source: "registered" | "public" | "both";
+  // Display
+  name: string;
+  addr: string;           // host for public, host for registered
+  description?: string | null;
+  region?: string | null;
+  framework?: string | null;
+  tags?: string[];
+  // Live
+  players: number;
+  maxPlayers: number;
+  passworded?: boolean;
+  secure?: boolean;
+  // Registered-only bits
+  owner?: CommunityServer["owner"];
+  dashboardUrl?: string | null;
+  status?: string;
+};
+
 const WR_REGIONS_LIST = ["NA-East", "NA-West", "EU", "OCE", "ASIA", "SA", "MENA"];
 const WR_FRAMEWORKS = ["WindrosePlus", "Vanilla", "Other"];
 
 function PortsOfCallTab() {
-  const [servers, setServers] = useState<CommunityServer[] | null>(null);
+  const [registered, setRegistered] = useState<CommunityServer[] | null>(null);
+  const [publicServers, setPublicServers] = useState<PublicServer[] | null>(null);
+  const [publicError, setPublicError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [filterRegion, setFilterRegion] = useState<string>("");
   const [filterSlots, setFilterSlots] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const j = await apiFetch("/windrose/servers");
-      if (j?.ok && Array.isArray(j.servers)) setServers(j.servers);
-      else setServers([]);
-    } catch { setServers([]); }
+      const [r1, r2] = await Promise.all([
+        apiFetch("/windrose/servers").catch(() => ({ ok: false })),
+        apiFetch("/windrose/public-servers").catch(() => ({ ok: false })),
+      ]);
+      setRegistered(Array.isArray(r1?.servers) ? r1.servers : []);
+      if (r2?.ok) {
+        setPublicServers(Array.isArray(r2.servers) ? r2.servers : []);
+        setPublicError(null);
+      } else {
+        setPublicServers([]);
+        setPublicError(r2?.error === "steam_key_missing" ? "Steam discovery disabled" : "Steam discovery unavailable");
+      }
+    } catch { setRegistered([]); setPublicServers([]); }
     setLoading(false);
   }, []);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+    const t = setInterval(reload, 60_000);
+    return () => clearInterval(t);
+  }, [reload]);
 
-  const filtered = (servers || []).filter(s => {
+  // Merge the two lists by host/addr. A manually-registered server enhances
+  // the Steam-discovered one with description, tags, owner, dashboard, etc.
+  const rows: PortRow[] = useMemo(() => {
+    const reg = registered || [];
+    const pub = publicServers || [];
+    const byAddr = new Map<string, PortRow>();
+
+    // Seed with auto-discovered public servers
+    for (const p of pub) {
+      byAddr.set(p.addr.toLowerCase(), {
+        key: `pub:${p.addr}`,
+        source: "public",
+        name: p.name || p.addr,
+        addr: p.addr,
+        players: p.players,
+        maxPlayers: p.maxPlayers,
+        passworded: p.passworded,
+        secure: p.secure,
+      });
+    }
+    // Overlay registered entries (merge when host matches; append when it doesn't)
+    for (const r of reg) {
+      const host = String(r.host || "").toLowerCase();
+      const existing = host ? byAddr.get(host) : undefined;
+      const regLive = Number(r.lastState?.players?.length ?? r.lastState?.online ?? r.lastState?.count ?? 0);
+      const maxRegistered = Number(r.maxSlots ?? 8);
+      if (existing) {
+        byAddr.set(host, {
+          ...existing,
+          source: "both",
+          // Prefer the name the owner curated
+          name: r.name || existing.name,
+          description: r.description ?? existing.description,
+          region: r.region ?? existing.region,
+          framework: r.framework ?? existing.framework,
+          tags: r.tags && r.tags.length ? r.tags : existing.tags,
+          owner: r.owner,
+          dashboardUrl: r.dashboardUrl,
+          status: r.status,
+        });
+      } else {
+        byAddr.set(`reg:${r.id}`, {
+          key: `reg:${r.id}`,
+          source: "registered",
+          name: r.name,
+          addr: r.host,
+          description: r.description,
+          region: r.region,
+          framework: r.framework,
+          tags: r.tags,
+          players: regLive,
+          maxPlayers: maxRegistered,
+          owner: r.owner,
+          dashboardUrl: r.dashboardUrl,
+          status: r.status,
+        });
+      }
+    }
+    return Array.from(byAddr.values()).sort((a, b) => {
+      // Registered/enhanced rows float up, then by players desc, then name
+      const aPin = a.source === "both" || a.source === "registered" ? 1 : 0;
+      const bPin = b.source === "both" || b.source === "registered" ? 1 : 0;
+      if (aPin !== bPin) return bPin - aPin;
+      if ((b.players || 0) !== (a.players || 0)) return (b.players || 0) - (a.players || 0);
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }, [registered, publicServers]);
+
+  const filtered = rows.filter(s => {
     if (filterRegion && s.region !== filterRegion) return false;
-    if (filterSlots) {
-      const online = Number(s.lastState?.players?.length ?? s.lastState?.online ?? s.lastState?.count ?? 0);
-      const max = Number(s.maxSlots ?? 8);
-      if (online >= max) return false;
+    if (filterSlots && s.maxPlayers > 0 && s.players >= s.maxPlayers) return false;
+    if (query) {
+      const q = query.trim().toLowerCase();
+      if (q && !(`${s.name} ${s.addr} ${(s.tags || []).join(" ")}`.toLowerCase().includes(q))) return false;
     }
     return true;
   });
+
+  const publicCount = (publicServers || []).length;
+  const registeredCount = (registered || []).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -680,7 +803,7 @@ function PortsOfCallTab() {
             <div style={{ ...S.label, marginBottom: 4 }}>Community Servers</div>
             <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.brassHi, margin: 0, letterSpacing: "0.3px" }}>Ports of Call</h3>
             <div style={{ fontSize: 13, color: PAL.parchDim, marginTop: 4, fontStyle: "italic" }}>
-              Community-run Windrose servers. Pick a port, drop anchor. If you run one, list it — free.
+              Every public Windrose server, auto-discovered from Steam. Owners can list their port for richer details — description, tags, dashboard links.
             </div>
           </div>
           <button type="button" style={S.btnPrimary} onClick={() => setShowForm(true)}>
@@ -691,6 +814,12 @@ function PortsOfCallTab() {
         <BrassDivider />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search by name, address, or tag..."
+            style={{ ...S.input, width: 260, flex: "0 1 260px" } as React.CSSProperties}
+          />
           <span style={{ ...S.label, fontSize: 9 }}>Region</span>
           <select value={filterRegion} onChange={e => setFilterRegion(e.target.value)} style={{ ...S.input, width: "auto" } as React.CSSProperties}>
             <option value="">Any</option>
@@ -702,7 +831,12 @@ function PortsOfCallTab() {
           </label>
           <span style={{ flex: 1 }} />
           <span style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim }}>
-            {filtered.length} server{filtered.length === 1 ? "" : "s"}
+            {filtered.length} of {rows.length}
+            {publicError ? (
+              <span style={{ color: PAL.blood, marginLeft: 8, opacity: 0.85 }}>· {publicError}</span>
+            ) : (
+              <> · {publicCount} public · {registeredCount} listed</>
+            )}
           </span>
         </div>
       </div>
@@ -710,17 +844,19 @@ function PortsOfCallTab() {
       {showForm && <LinkServerForm onClose={() => { setShowForm(false); reload(); }} />}
 
       {loading ? (
-        <LoadingState label="Checking the horizon..." />
+        <LoadingState label="Scanning the open seas..." />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="⚓"
-          title="No ports flying colors yet"
-          hint="Run a Windrose server? Be the first port of call. Drop a pin below and sailors will follow."
+          title={rows.length === 0 ? "No ports flying colors yet" : "No ports match that filter"}
+          hint={rows.length === 0
+            ? "No public Windrose servers advertising right now. Run one? Be the first port of call."
+            : "Try loosening the filters, or clear the search."}
           action={<button type="button" style={S.btnPrimary} onClick={() => setShowForm(true)}>List Your Port</button>}
         />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
-          {filtered.map(s => <ServerCard key={s.id} server={s} />)}
+          {filtered.map(s => <PortCard key={s.key} row={s} />)}
         </div>
       )}
 
@@ -734,90 +870,106 @@ function PortsOfCallTab() {
   );
 }
 
-function ServerCard({ server }: { server: CommunityServer }) {
-  const online = Number(server.lastState?.players?.length ?? server.lastState?.online ?? server.lastState?.count ?? 0);
-  const max = server.maxSlots || 8;
-  const pct = Math.min(100, (online / max) * 100);
-  const statusColor = server.status === "online" ? "#5db765" : server.status === "offline" ? "#a54848" : PAL.brass;
-  const statusLabel = server.status === "online" ? "online" : server.status === "offline" ? "offline" : "pending";
+function PortCard({ row }: { row: PortRow }) {
+  const online = row.players || 0;
+  const max = row.maxPlayers || 8;
+  const pct = max > 0 ? Math.min(100, (online / max) * 100) : 0;
+  const full = max > 0 && online >= max;
+
+  // Source-driven pill
+  const srcPill =
+    row.source === "both"       ? { label: "LISTED · LIVE", color: PAL.brassHi } :
+    row.source === "registered" ? { label: "LISTED",         color: PAL.brass   } :
+                                   { label: "PUBLIC",         color: "#5db765"   };
+
+  // Heat colour — green if room to spare, amber if packed, red if full
+  const heat = full ? "#a54848" : pct > 75 ? PAL.brassHi : pct > 30 ? PAL.brass : "#5db765";
 
   return (
     <div style={{ ...S.card, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-            <span style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 17, color: PAL.brassHi, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {server.name}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 17, color: PAL.brassHi, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+              {row.name}
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: WR_FONT_MONO, color: statusColor, letterSpacing: "1px", textTransform: "uppercase" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, boxShadow: `0 0 6px ${statusColor}` }} />
-              {statusLabel}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: WR_FONT_MONO, color: srcPill.color, letterSpacing: "1px" }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: srcPill.color, boxShadow: `0 0 6px ${srcPill.color}` }} />
+              {srcPill.label}
             </span>
+            {row.passworded && (
+              <span style={{ fontSize: 9, fontFamily: WR_FONT_MONO, color: PAL.parchDim, letterSpacing: "1px" }}>· LOCKED</span>
+            )}
           </div>
           <div style={{ fontFamily: WR_FONT_MONO, fontSize: 11, color: PAL.parchDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {server.host}
+            {row.addr}
           </div>
         </div>
       </div>
 
-      {server.description && (
+      {row.description && (
         <div style={{ fontSize: 12, color: PAL.parchment, lineHeight: 1.5, fontStyle: "italic", opacity: 0.88 }}>
-          {server.description.length > 140 ? `${server.description.slice(0, 140)}…` : server.description}
+          {row.description.length > 140 ? `${row.description.slice(0, 140)}…` : row.description}
         </div>
       )}
 
       {/* Slots bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1, height: 4, background: `${PAL.brass}18`, borderRadius: 1, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${PAL.brass}, ${PAL.brassHi})`, transition: "width 400ms ease" }} />
+          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${heat}, ${PAL.brassHi})`, transition: "width 400ms ease" }} />
         </div>
-        <span style={{ fontFamily: WR_FONT_MONO, fontSize: 11, color: PAL.brass, fontVariantNumeric: "tabular-nums" }}>
-          {online}<span style={{ color: PAL.parchDim }}>/</span>{max}
+        <span style={{ fontFamily: WR_FONT_MONO, fontSize: 11, color: heat, fontVariantNumeric: "tabular-nums" }}>
+          {online}<span style={{ color: PAL.parchDim }}>/</span>{max || "?"}
         </span>
       </div>
 
       {/* Meta strip */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        {server.region && (
+        {row.region && (
           <span style={{ ...S.label, fontSize: 9 }}>
-            <SkullIcon size={10} /> {server.region}
+            <SkullIcon size={10} /> {row.region}
           </span>
         )}
-        {server.framework && (
+        {row.framework && (
           <span style={{ ...S.label, fontSize: 9, color: PAL.brass }}>
-            · {server.framework}
+            · {row.framework}
           </span>
         )}
-        {(server.tags || []).slice(0, 3).map(t => (
+        {(row.tags || []).slice(0, 3).map(t => (
           <span key={t} style={{ fontSize: 10, color: PAL.brass, fontFamily: WR_FONT_MONO, letterSpacing: "0.5px" }}>
             #{t}
           </span>
         ))}
         <span style={{ flex: 1 }} />
-        {server.owner && (
+        {row.owner && (
           <span style={{ fontSize: 10, color: PAL.parchDim, fontStyle: "italic" }}>
-            listed by {server.owner.name}
+            listed by {row.owner.name}
           </span>
         )}
       </div>
 
       {/* Action row */}
-      {(server.dashboardUrl || server.host) && (
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          {server.dashboardUrl && (
-            <a href={server.dashboardUrl} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 10, padding: "6px 12px" }}>
-              Dashboard
-            </a>
-          )}
-          <button
-            type="button"
-            style={{ ...S.btn, fontSize: 10, padding: "6px 12px" }}
-            onClick={() => { try { navigator.clipboard.writeText(server.host); } catch {} }}
-          >
-            Copy Address
-          </button>
-        </div>
-      )}
+      <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+        <a
+          href={`steam://connect/${row.addr}`}
+          title="Launches Windrose and connects you to this server"
+          style={{ ...S.btnPrimary, textDecoration: "none", fontSize: 10, padding: "6px 14px", letterSpacing: "1.5px" }}
+        >
+          Set Sail
+        </a>
+        {row.dashboardUrl && (
+          <a href={row.dashboardUrl} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 10, padding: "6px 12px" }}>
+            Dashboard
+          </a>
+        )}
+        <button
+          type="button"
+          style={{ ...S.btn, fontSize: 10, padding: "6px 12px" }}
+          onClick={() => { try { navigator.clipboard.writeText(row.addr); } catch {} }}
+        >
+          Copy Address
+        </button>
+      </div>
     </div>
   );
 }
