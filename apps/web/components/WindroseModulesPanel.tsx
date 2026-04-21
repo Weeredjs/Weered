@@ -466,6 +466,37 @@ const WR_MODES   = ["Any", "PvE Solo", "Co-op 2", "Co-op 4", "Co-op 8", "Boss Ru
 const WR_REGIONS = ["Any", "NA", "EU", "OCE", "ASIA", "SA", "MENA"];
 const WR_TAGS    = ["chill", "mic-required", "no-mic", "first-time", "veteran", "streaming", "18+"];
 
+// Published crews (crew profiles surfacing in a lobby's directory)
+type PublishedCrew = {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+  accentColor?: string | null;
+  homePort?: string | null;
+  recruiting: boolean;
+  recruitingNote: string;
+  memberCount: number;
+  updatedAt: string;
+};
+
+type MyCrew = {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+  accentColor?: string | null;
+  homePort?: string | null;
+  recruiting: boolean;
+  recruitingNote: string;
+  publicInLobbies: string[];
+  myRole: "LEADER" | "OFFICER" | "MEMBER";
+};
+
 function CrewTab({ lobbyId }: { lobbyId: string }) {
   const [posts, setPosts] = useState<LfgPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -476,10 +507,21 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
   const [tags, setTags] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
+  // Published crews
+  const [crews, setCrews] = useState<PublishedCrew[]>([]);
+  const [myCrews, setMyCrews] = useState<MyCrew[]>([]);
+  const [editingCrew, setEditingCrew] = useState<MyCrew | null>(null);
+
   const reload = useCallback(async () => {
     setLoading(true);
-    const j = await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`);
-    if (j?.ok && Array.isArray(j.posts)) setPosts(j.posts);
+    const [lfgJ, crewsJ, mineJ] = await Promise.all([
+      apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`).catch(() => null),
+      apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/crews`).catch(() => null),
+      apiFetch("/crews/mine").catch(() => null),
+    ]);
+    if (lfgJ?.ok && Array.isArray(lfgJ.posts)) setPosts(lfgJ.posts);
+    if (crewsJ?.ok && Array.isArray(crewsJ.crews)) setCrews(crewsJ.crews);
+    if (mineJ && Array.isArray(mineJ.crews)) setMyCrews(mineJ.crews);
     setLoading(false);
   }, [lobbyId]);
 
@@ -556,6 +598,58 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
         </div>
       </div>
 
+      {/* Established crews — persistent profiles published into this lobby */}
+      <div style={{ ...S.card, padding: "18px 22px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ ...S.label, marginBottom: 4 }}>Established Crews</div>
+            <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.brassHi, margin: 0, letterSpacing: "0.3px" }}>
+              Who's sailing under colors.
+            </h3>
+            <div style={{ fontSize: 12, color: PAL.parchDim, marginTop: 4, fontStyle: "italic" }}>
+              Persistent crew profiles — home port, colors, recruiting status. Different from the flags below (which are one-off calls).
+            </div>
+          </div>
+          {myCrews.some(c => c.myRole === "LEADER") && (
+            <button
+              type="button"
+              style={S.btnPrimary}
+              onClick={() => {
+                const leaderCrews = myCrews.filter(c => c.myRole === "LEADER");
+                const unpublished = leaderCrews.find(c => !(c.publicInLobbies || []).includes(lobbyId));
+                setEditingCrew(unpublished || leaderCrews[0]);
+              }}
+            >
+              {myCrews.some(c => c.myRole === "LEADER" && (c.publicInLobbies || []).includes(lobbyId))
+                ? "Edit My Crew"
+                : "Publish My Crew Here"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {crews.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
+          {crews.map(c => <CrewProfileCard key={c.id} crew={c} />)}
+        </div>
+      )}
+
+      {/* Divider between crews and LFG */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "6px 0" }}>
+        <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${PAL.brass}40, transparent)` }} />
+        <div style={{ ...S.label, fontSize: 9, whiteSpace: "nowrap" }}>Flags Flying Right Now</div>
+        <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${PAL.brass}40, transparent)` }} />
+      </div>
+
+      {editingCrew && (
+        <CrewProfileEditor
+          crew={editingCrew}
+          lobbyId={lobbyId}
+          onClose={() => setEditingCrew(null)}
+          onSaved={() => { setEditingCrew(null); reload(); }}
+        />
+      )}
+
       {/* List */}
       {loading ? (
         <LoadingState label="Scanning the horizon..." />
@@ -607,6 +701,225 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function CrewProfileCard({ crew }: { crew: PublishedCrew }) {
+  const accent = crew.accentColor && /^#[0-9a-f]{6}$/i.test(crew.accentColor) ? crew.accentColor : PAL.brass;
+  return (
+    <div style={{
+      ...S.card,
+      padding: 0,
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+      position: "relative",
+      borderColor: `${accent}45`,
+    }}>
+      {/* Banner or gradient header */}
+      <div style={{
+        height: 76,
+        background: crew.bannerUrl
+          ? `linear-gradient(180deg, rgba(10,18,32,0.2), rgba(10,18,32,0.85)), url(${crew.bannerUrl}) center/cover no-repeat`
+          : `linear-gradient(135deg, ${accent}35, ${PAL.stormDeep})`,
+        position: "relative",
+      }}>
+        {crew.recruiting && (
+          <span style={{
+            position: "absolute", top: 8, right: 10,
+            fontSize: 9, fontWeight: 900, letterSpacing: "1.5px", textTransform: "uppercase",
+            padding: "3px 8px",
+            background: "rgba(93,183,101,0.22)", color: "#5db765",
+            border: "1px solid rgba(93,183,101,0.45)",
+            fontFamily: WR_FONT_MONO,
+          }}>
+            Recruiting
+          </span>
+        )}
+      </div>
+
+      {/* Logo + identity */}
+      <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: -30 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 4,
+            background: crew.logoUrl
+              ? `url(${crew.logoUrl}) center/cover no-repeat, ${PAL.stormDeep}`
+              : `linear-gradient(135deg, ${accent}, ${PAL.brassLow})`,
+            border: `2px solid ${accent}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.abyss, fontWeight: 700,
+            flexShrink: 0,
+            boxShadow: `0 2px 8px ${PAL.ink}`,
+          }}>
+            {!crew.logoUrl && (crew.tag || crew.name || "?").slice(0, 2).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0, marginTop: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 18, color: PAL.brassHi, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {crew.name}
+              </span>
+              {crew.tag && (
+                <span style={{ fontSize: 10, fontFamily: WR_FONT_MONO, color: accent, letterSpacing: "1.5px", padding: "2px 6px", border: `1px solid ${accent}45`, background: `${accent}10` }}>
+                  [{crew.tag}]
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 10, color: PAL.parchDim, fontFamily: WR_FONT_MONO, letterSpacing: "0.5px", marginTop: 2 }}>
+              {crew.memberCount} member{crew.memberCount === 1 ? "" : "s"}
+              {crew.homePort ? <> · {crew.homePort}</> : null}
+            </div>
+          </div>
+        </div>
+
+        {crew.description && (
+          <div style={{ fontSize: 12, color: PAL.parchment, lineHeight: 1.55, fontStyle: "italic", opacity: 0.88 }}>
+            {crew.description.length > 160 ? `${crew.description.slice(0, 160)}…` : crew.description}
+          </div>
+        )}
+
+        {crew.recruiting && crew.recruitingNote && (
+          <div style={{
+            padding: "8px 10px",
+            background: "rgba(93,183,101,0.08)",
+            border: "1px solid rgba(93,183,101,0.25)",
+            borderRadius: 2,
+            fontSize: 11, color: PAL.parchment, lineHeight: 1.5, fontStyle: "italic",
+          }}>
+            <div style={{ ...S.label, fontSize: 8, marginBottom: 3, color: "#5db765" }}>Looking for</div>
+            {crew.recruitingNote.length > 140 ? `${crew.recruitingNote.slice(0, 140)}…` : crew.recruitingNote}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
+  crew: MyCrew;
+  lobbyId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(crew.name);
+  const [tag, setTag] = useState(crew.tag);
+  const [description, setDescription] = useState(crew.description);
+  const [logoUrl, setLogoUrl] = useState(crew.logoUrl || "");
+  const [bannerUrl, setBannerUrl] = useState(crew.bannerUrl || "");
+  const [accentColor, setAccentColor] = useState(crew.accentColor || "");
+  const [homePort, setHomePort] = useState(crew.homePort || "");
+  const [recruiting, setRecruiting] = useState(crew.recruiting);
+  const [recruitingNote, setRecruitingNote] = useState(crew.recruitingNote);
+  const [publish, setPublish] = useState((crew.publicInLobbies || []).includes(lobbyId));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    if (busy) return;
+    setBusy(true); setErr(null);
+    const lobbies = new Set(crew.publicInLobbies || []);
+    if (publish) lobbies.add(lobbyId);
+    else lobbies.delete(lobbyId);
+    const j = await apiFetch(`/crews/${crew.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name, tag, description,
+        logoUrl, bannerUrl, accentColor,
+        homePort, recruiting, recruitingNote,
+        publicInLobbies: Array.from(lobbies),
+      }),
+    });
+    setBusy(false);
+    if (j?.ok) onSaved();
+    else setErr(j?.message || j?.error || "Failed to save.");
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,5,10,.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ ...S.card, width: "min(560px, 100%)", padding: "22px 26px", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ ...S.label, marginBottom: 4 }}>Crew Profile</div>
+        <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.brassHi, marginBottom: 14, letterSpacing: "0.3px" }}>
+          {crew.name}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", gap: 10 }}>
+          <Labeled label="Crew name">
+            <input value={name} onChange={e => setName(e.target.value.slice(0, 60))} style={S.input as React.CSSProperties} />
+          </Labeled>
+          <Labeled label="Tag">
+            <input value={tag} onChange={e => setTag(e.target.value.toUpperCase().slice(0, 8))} placeholder="[WR]" style={S.input as React.CSSProperties} />
+          </Labeled>
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <Labeled label="Description">
+            <textarea value={description} onChange={e => setDescription(e.target.value.slice(0, 800))} style={{ ...S.input, minHeight: 70, fontFamily: WR_FONT_SERIF, fontStyle: "italic" } as React.CSSProperties} />
+          </Labeled>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+          <Labeled label="Logo URL">
+            <input value={logoUrl} onChange={e => setLogoUrl(e.target.value.slice(0, 500))} placeholder="https://..." style={S.input as React.CSSProperties} />
+          </Labeled>
+          <Labeled label="Banner URL">
+            <input value={bannerUrl} onChange={e => setBannerUrl(e.target.value.slice(0, 500))} placeholder="https://..." style={S.input as React.CSSProperties} />
+          </Labeled>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10, marginTop: 10 }}>
+          <Labeled label="Accent color">
+            <input
+              value={accentColor}
+              onChange={e => setAccentColor(e.target.value.slice(0, 7))}
+              placeholder="#c9a066"
+              style={{ ...S.input, fontFamily: WR_FONT_MONO, textTransform: "lowercase" } as React.CSSProperties}
+            />
+          </Labeled>
+          <Labeled label="Home port">
+            <input value={homePort} onChange={e => setHomePort(e.target.value.slice(0, 80))} placeholder="Tortuga · EU-3" style={S.input as React.CSSProperties} />
+          </Labeled>
+        </div>
+
+        <div style={{ marginTop: 14, padding: "12px 14px", background: "rgba(93,183,101,0.06)", border: "1px solid rgba(93,183,101,0.2)", borderRadius: 2 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: PAL.parchment, fontWeight: 600 }}>
+            <input type="checkbox" checked={recruiting} onChange={e => setRecruiting(e.target.checked)} />
+            Recruiting new members
+          </label>
+          {recruiting && (
+            <div style={{ marginTop: 8 }}>
+              <textarea
+                value={recruitingNote}
+                onChange={e => setRecruitingNote(e.target.value.slice(0, 400))}
+                placeholder="Looking for 2 cannoneers, 40+ level, mic preferred. No drama."
+                style={{ ...S.input, minHeight: 50, fontFamily: WR_FONT_SERIF, fontStyle: "italic", fontSize: 12 } as React.CSSProperties}
+              />
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 14, padding: "12px 14px", background: `${PAL.brass}10`, border: `1px solid ${PAL.brass}30`, borderRadius: 2 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: PAL.parchment, fontWeight: 600 }}>
+            <input type="checkbox" checked={publish} onChange={e => setPublish(e.target.checked)} />
+            List this crew in the {lobbyId} lobby
+          </label>
+          <div style={{ fontSize: 10, color: PAL.parchDim, marginTop: 4, fontStyle: "italic", marginLeft: 24 }}>
+            Other captains in this lobby will see your crew profile. Uncheck to delist.
+          </div>
+        </div>
+
+        {err && (
+          <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(163,61,61,0.12)", border: "1px solid rgba(163,61,61,0.35)", borderRadius: 3, color: "rgba(232,196,138,0.9)", fontSize: 12 }}>
+            {err}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
+          <button type="button" style={S.btn} onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" style={S.btnPrimary} onClick={submit} disabled={busy}>
+            {busy ? "Saving…" : "Save Profile"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

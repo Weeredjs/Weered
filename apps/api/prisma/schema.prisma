@@ -660,7 +660,20 @@ model Crew {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // ── Published crew profile ─────────────────────────────────────────
+  // When a crew opts to be publicly listed in a lobby, these fields
+  // surface on a cards-view in that lobby. publicInLobbies gates where.
+  logoUrl          String?
+  bannerUrl        String?
+  accentColor      String?   // "#xxxxxx"
+  homePort         String?   // free text — "Tortuga", "Caribbean-3 server", etc.
+  recruiting       Boolean   @default(false)
+  recruitingNote   String    @default("")
+  publicInLobbies  String[]  @default([])  // lobbyIds where this profile appears
+
   members CrewMember[]
+
+  @@index([recruiting])
 }
 
 model CrewMessage {
