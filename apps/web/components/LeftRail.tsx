@@ -179,7 +179,7 @@ export default function LeftRail() {
     home:    isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : "📡",
     forum:   isWindrose ? "📜" : isDestiny ? "📖" : "💬",
     paper:   isWindrose ? "🪙" : isDestiny ? "💠" : "💵",
-    locator: isWindrose ? "🧭" : isDestiny ? "👁" : "📍",
+    locator: isWindrose ? "🧭" : isDestiny ? "👁" : "🎯",
     ops:     isWindrose ? "🗝" : isDestiny ? "⚔" : "⚙",
   };
 
