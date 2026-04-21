@@ -4991,7 +4991,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     const ws = rawWs as Sock;
 
     ws.on("message", (raw) => {
-      void (async () => {
+      (async () => {
         const msg = safeJson(raw);
         if (!msg || typeof msg.type !== "string") return;
 
@@ -5992,6 +5992,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
         // ── Crew Chat via WebSocket ──────────────────────────────────────────
         if (msg.type === "crew:send") {
+          console.log(`[crew:send] HANDLER ENTERED`);
           const crewId = String(msg.crewId || "").trim();
           const body = String(msg.body || "").trim().slice(0, 2000);
           const fromId = ws.user?.id;
@@ -6323,7 +6324,9 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           } catch (e) { console.error("[dm:react]", e); }
           return;
         }
-      })();
+      })().catch((e) => {
+        console.error("[ws-dispatcher] async chain threw:", e);
+      });
     });
 
     ws.on("close", () => {
