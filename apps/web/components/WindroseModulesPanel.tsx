@@ -743,6 +743,15 @@ type PublishedCrew = {
   recruitingNote: string;
   memberCount: number;
   updatedAt: string;
+  bountyKills?: number;
+  bountyEarned?: number;
+};
+
+type CrewLeaderboardData = {
+  stats: { crewCount: number; totalMembers: number; recruitingCount: number; totalKills: number };
+  largest: { id: string; name: string; tag: string; logoUrl?: string | null; accentColor?: string | null; memberCount: number; bountyEarned: number; bountyKills: number; recruiting: boolean }[];
+  mostDecorated: { id: string; name: string; tag: string; logoUrl?: string | null; accentColor?: string | null; memberCount: number; bountyEarned: number; bountyKills: number; recruiting: boolean }[];
+  recruiting: { id: string; name: string; tag: string; logoUrl?: string | null; accentColor?: string | null; memberCount: number; bountyEarned: number; bountyKills: number; recruiting: boolean }[];
 };
 
 type MyCrew = {
@@ -774,6 +783,7 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
   const [crews, setCrews] = useState<PublishedCrew[]>([]);
   const [myCrews, setMyCrews] = useState<MyCrew[]>([]);
   const [editingCrew, setEditingCrew] = useState<MyCrew | null>(null);
+  const [showCrewLeaders, setShowCrewLeaders] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -873,21 +883,30 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
               Persistent crew profiles — home port, colors, recruiting status. Different from the flags below (which are one-off calls).
             </div>
           </div>
-          {myCrews.some(c => c.myRole === "LEADER") && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               type="button"
-              style={S.btnPrimary}
-              onClick={() => {
-                const leaderCrews = myCrews.filter(c => c.myRole === "LEADER");
-                const unpublished = leaderCrews.find(c => !(c.publicInLobbies || []).includes(lobbyId));
-                setEditingCrew(unpublished || leaderCrews[0]);
-              }}
+              style={S.btn}
+              onClick={() => setShowCrewLeaders(true)}
             >
-              {myCrews.some(c => c.myRole === "LEADER" && (c.publicInLobbies || []).includes(lobbyId))
-                ? "Edit My Crew"
-                : "Publish My Crew Here"}
+              ⚑ Hall of Crews
             </button>
-          )}
+            {myCrews.some(c => c.myRole === "LEADER") && (
+              <button
+                type="button"
+                style={S.btnPrimary}
+                onClick={() => {
+                  const leaderCrews = myCrews.filter(c => c.myRole === "LEADER");
+                  const unpublished = leaderCrews.find(c => !(c.publicInLobbies || []).includes(lobbyId));
+                  setEditingCrew(unpublished || leaderCrews[0]);
+                }}
+              >
+                {myCrews.some(c => c.myRole === "LEADER" && (c.publicInLobbies || []).includes(lobbyId))
+                  ? "Edit My Crew"
+                  : "Publish My Crew Here"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -911,6 +930,10 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
           onClose={() => setEditingCrew(null)}
           onSaved={() => { setEditingCrew(null); reload(); }}
         />
+      )}
+
+      {showCrewLeaders && (
+        <CrewLeaderboardModal lobbyId={lobbyId} onClose={() => setShowCrewLeaders(false)} />
       )}
 
       {/* List */}
@@ -1053,7 +1076,184 @@ function CrewProfileCard({ crew }: { crew: PublishedCrew }) {
             {crew.recruitingNote.length > 140 ? `${crew.recruitingNote.slice(0, 140)}…` : crew.recruitingNote}
           </div>
         )}
+
+        {/* Bounty-board footer — surfaces when the crew's members have
+            settled anything on the board. Cross-feature proof the crew
+            actually does work. */}
+        {((crew.bountyKills || 0) > 0 || (crew.bountyEarned || 0) > 0) && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            paddingTop: 10,
+            borderTop: `1px solid ${PAL.brass}20`,
+            fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, letterSpacing: "0.5px",
+          }}>
+            <span style={{ color: "#5db765" }}>⚔</span>
+            <span>
+              <span style={{ color: PAL.parchment, fontWeight: 600, fontFamily: WR_FONT_DISPLAY, fontSize: 13, marginRight: 4 }}>
+                {(crew.bountyKills || 0).toLocaleString()}
+              </span>
+              kills
+            </span>
+            <span style={{ color: `${PAL.brass}60` }}>·</span>
+            <span>
+              <span style={{ color: accent, fontWeight: 600, fontFamily: WR_FONT_DISPLAY, fontSize: 13, marginRight: 4 }}>
+                {(crew.bountyEarned || 0).toLocaleString()}
+              </span>
+              earned
+            </span>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: () => void }) {
+  const [d, setD] = useState<CrewLeaderboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/crews/leaderboard`).then(j => {
+      if (j?.ok) setD(j as CrewLeaderboardData);
+      else setErr("Couldn't pull the rankings.");
+      setLoading(false);
+    }).catch(() => { setErr("Couldn't pull the rankings."); setLoading(false); });
+  }, [lobbyId]);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,5,10,.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ ...S.card, width: "min(860px, 100%)", padding: 0, maxHeight: "90vh", overflowY: "auto", borderColor: `${PAL.brass}55` }}>
+        {/* Header */}
+        <div style={{
+          padding: "20px 26px 18px",
+          background: `radial-gradient(ellipse 80% 60% at 20% 0%, ${PAL.brass}18 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`,
+          borderBottom: `1px solid ${PAL.brass}30`,
+        }}>
+          <div style={{ ...S.label, marginBottom: 4 }}>Hall of Crews</div>
+          <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 24, color: PAL.brassHi, letterSpacing: "0.3px", lineHeight: 1.1 }}>
+            Who's flying the biggest colors.
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "18px 26px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {loading ? (
+            <LoadingState label="Tallying the roster..." />
+          ) : err ? (
+            <div style={{ fontSize: 13, color: PAL.parchDim, fontStyle: "italic", padding: 16, textAlign: "center" }}>{err}</div>
+          ) : !d ? null : (
+            <>
+              {/* Stat strip */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                <StatTile label="Crews listed" value={d.stats.crewCount.toLocaleString()} />
+                <StatTile label="Total members" value={d.stats.totalMembers.toLocaleString()} highlight />
+                <StatTile label="Recruiting now" value={d.stats.recruitingCount.toLocaleString()} />
+                <StatTile label="Bounty kills" value={d.stats.totalKills.toLocaleString()} highlight />
+              </div>
+
+              {/* Three boards */}
+              {d.largest.length === 0 && d.mostDecorated.length === 0 && d.recruiting.length === 0 ? (
+                <EmptyState icon="⚑" title="No crews on the board yet" hint="Publish a crew to take your spot." />
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+                  <CrewLeaderColumn
+                    title="Largest Crews"
+                    caption="By member headcount"
+                    rows={d.largest.map((c, i) => ({ ...c, rank: i + 1, value: c.memberCount, sub: "members" }))}
+                    emptyLabel="No members rostered yet."
+                  />
+                  <CrewLeaderColumn
+                    title="Most Decorated"
+                    caption="Paper earned on the bounty board"
+                    rows={d.mostDecorated.map((c, i) => ({ ...c, rank: i + 1, value: c.bountyEarned, sub: `${c.bountyKills} kill${c.bountyKills === 1 ? "" : "s"}` }))}
+                    emptyLabel="No crew's settled a bounty yet."
+                    valueKey="Paper"
+                  />
+                  <CrewLeaderColumn
+                    title="Recruiting Now"
+                    caption="Hoisted colors, taking hands"
+                    rows={d.recruiting.map((c, i) => ({ ...c, rank: i + 1, value: c.memberCount, sub: "crew size" }))}
+                    emptyLabel="No crews recruiting right now."
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button type="button" style={S.btn} onClick={onClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CrewLeaderColumn({ title, caption, rows, emptyLabel, valueKey }: {
+  title: string;
+  caption: string;
+  rows: { id: string; rank: number; name: string; tag: string; logoUrl?: string | null; accentColor?: string | null; value: number; sub: string }[];
+  emptyLabel: string;
+  valueKey?: string;
+}) {
+  return (
+    <div style={{ ...S.card, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div>
+        <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 16, color: PAL.brassHi, letterSpacing: "0.3px", lineHeight: 1 }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 11, color: PAL.parchDim, marginTop: 3, fontStyle: "italic" }}>
+          {caption}
+        </div>
+      </div>
+      <BrassDivider />
+      {rows.length === 0 ? (
+        <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic", padding: "14px 0", textAlign: "center" }}>
+          {emptyLabel}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {rows.map(r => {
+            const accent = r.accentColor && /^#[0-9a-f]{6}$/i.test(r.accentColor) ? r.accentColor : PAL.brass;
+            return (
+              <div key={r.id} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "6px 8px",
+                background: r.rank === 1 ? `${PAL.brass}12` : r.rank === 2 ? `${PAL.brass}08` : r.rank === 3 ? `${PAL.brass}05` : "transparent",
+                border: `1px solid ${r.rank <= 3 ? `${PAL.brass}25` : `${PAL.brass}10`}`,
+                borderRadius: 2,
+              }}>
+                <span style={{
+                  width: 20, textAlign: "center",
+                  fontFamily: WR_FONT_DISPLAY,
+                  fontSize: r.rank === 1 ? 16 : 13,
+                  color: r.rank === 1 ? PAL.brassHi : r.rank <= 3 ? PAL.brass : PAL.parchDim,
+                  fontWeight: 700, flexShrink: 0,
+                }}>{r.rank}</span>
+                <div style={{
+                  width: 24, height: 24, borderRadius: 2, flexShrink: 0,
+                  background: r.logoUrl ? `url(${r.logoUrl}) center/cover` : `linear-gradient(135deg, ${accent}, ${PAL.brassLow})`,
+                  border: `1px solid ${accent}40`,
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 13, color: PAL.parchment, letterSpacing: "0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.name}{r.tag ? <span style={{ fontSize: 9, color: accent, marginLeft: 6, fontFamily: WR_FONT_MONO }}>[{r.tag}]</span> : null}
+                  </div>
+                  <div style={{ fontSize: 9, color: PAL.parchDim, fontStyle: "italic" }}>{r.sub}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontFamily: WR_FONT_MONO, fontSize: 12, color: r.rank <= 3 ? PAL.brassHi : PAL.brass, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                    {r.value.toLocaleString()}
+                  </div>
+                  {valueKey && <div style={{ fontSize: 7, color: PAL.parchDim, letterSpacing: "1px", marginTop: 1 }}>{valueKey}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
