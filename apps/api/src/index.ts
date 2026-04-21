@@ -2093,6 +2093,20 @@ async function main() {
     }
     return payload;
   });
+
+  // Windrose banner reel — 24 cinematic images, one chosen at random per
+  // request so the hero rotates every refresh. Applied to any lobby response
+  // where `id === "windrose"`. If we ever want per-lobby reels, promote this
+  // to a schema field and iterate the list.
+  const WINDROSE_BANNER_COUNT = 24;
+  function applyWindroseReel<T extends { id?: string; bannerUrl?: string | null } | null>(lobby: T): T {
+    if (!lobby || lobby.id !== "windrose") return lobby;
+    const idx = Math.floor(Math.random() * WINDROSE_BANNER_COUNT) + 1;
+    const num = idx.toString().padStart(2, "0");
+    (lobby as any).bannerUrl = `/brand/windrose/banners/banner-${num}.webp`;
+    return lobby;
+  }
+
   // GET /featured — public endpoint returning featured lobby for homepage hero
   app.get("/featured", async (_req, reply) => {
     const featuredId = await getSiteConfig("featuredLobbyId");
@@ -2108,7 +2122,7 @@ async function main() {
         },
         orderBy: { name: "asc" },
       });
-      return reply.send({ ok: true, lobby: fallback || null, source: "fallback" });
+      return reply.send({ ok: true, lobby: applyWindroseReel(fallback), source: "fallback" });
     }
 
     const lobby = await (prisma as any).lobby.findUnique({
@@ -2125,7 +2139,7 @@ async function main() {
       return reply.send({ ok: true, lobby: null, source: "missing" });
     }
 
-    return reply.send({ ok: true, lobby, source: "config" });
+    return reply.send({ ok: true, lobby: applyWindroseReel(lobby), source: "config" });
   });
 
   // Health
@@ -6964,7 +6978,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       },
       orderBy: [{ pinned: "desc" }, { name: "asc" }],
     });
-    const enriched = lobbies.map((l: any) => ({
+    const enriched = lobbies.map((l: any) => applyWindroseReel({
       ...l,
       onlineCount: rooms.get(l.id)?.users?.size ?? 0,
     }));
@@ -7059,7 +7073,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
     return reply.send({
       ok: true,
-      lobby: { ...lobby, rooms: enrichedRooms },
+      lobby: applyWindroseReel({ ...lobby, rooms: enrichedRooms }),
       membership,
       joinRequest,
     });
