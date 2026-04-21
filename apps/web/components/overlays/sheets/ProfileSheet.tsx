@@ -348,7 +348,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [activeTab,   setActiveTab  ] = useState<"gta" | "gallery" | "color" | "upload">("gta");
   const [uploading,   setUploading  ] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [theme,       setTheme      ] = useState<WeeredThemeName>("ishimura");
+  const [theme,       setTheme      ] = useState<WeeredThemeName>("press");
 
   // Hydrate theme from localStorage
   useEffect(() => {

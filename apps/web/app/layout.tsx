@@ -138,7 +138,7 @@ try {
   var valid = ['slate','zinc','stone','gray','ishimura','broadcast','press'];
   var theme = (v2 && valid.indexOf(v2) >= 0) ? v2
             : (s && s.theme && valid.indexOf(s.theme) >= 0) ? s.theme
-            : 'ishimura';
+            : 'press';
   d.setAttribute('data-weered-theme', theme);
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');

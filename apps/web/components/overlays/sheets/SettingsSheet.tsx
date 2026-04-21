@@ -21,7 +21,7 @@ type Settings = {
 const KEY = "weered:settings:v0";
 
 const DEFAULTS: Settings = {
-  theme: "stone",
+  theme: "press",
   density: "comfortable",
   reduceMotion: false,
 
