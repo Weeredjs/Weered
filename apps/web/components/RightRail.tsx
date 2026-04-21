@@ -629,6 +629,31 @@ function FriendsPanel() {
       psn:    !!f.psnAccountId,
     };
 
+    // Friends list shows *Weered* location — "Online in Destiny 2",
+    // "Lying low in Destiny 2". Cross-platform game state lives on the left
+    // rail where we're already with them; here the useful signal is where on
+    // Weered they are so you know whether to jump in.
+    const locationLabel = (f.roomName || "").trim();
+    const friendSecondary: React.ReactNode = (() => {
+      if (!f.online) return <span style={{ opacity: 0.4, fontStyle: "italic" }}>offline</span>;
+      if (f.isAway) {
+        return (
+          <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.85 }}>
+            lying low{locationLabel ? ` in ${locationLabel}` : ""}
+          </span>
+        );
+      }
+      if (locationLabel) {
+        return (
+          <span style={{ color: "rgba(203,213,225,.82)" }}>
+            Online <span style={{ opacity: 0.55 }}>in</span>{" "}
+            <span style={{ fontWeight: 600, color: "rgba(243,244,246,.92)" }}>{locationLabel}</span>
+          </span>
+        );
+      }
+      return <span style={{ opacity: 0.55, fontStyle: "italic" }}>online</span>;
+    })();
+
     const joinLink = f.online && joinHref ? (
       <Link
         href={joinHref}
@@ -651,7 +676,7 @@ function FriendsPanel() {
           online={f.online}
           isAway={!!f.isAway}
           roomName={f.roomName}
-          livePresence={f.livePresence}
+          secondaryText={friendSecondary}
           platforms={platforms}
           onClick={() => userId && openSheet("profile", { userId })}
           action={joinLink}
