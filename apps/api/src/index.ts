@@ -5032,6 +5032,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
         if (!ws.user) { send(ws, { type: "auth:fail", reason: "Not authenticated" }); return; }
 
+        if (msg.type === "crew:send") console.log(`[trace-A] post-auth-check, type=${msg.type}`);
 
         // ── rooms:list — return lobby directory from DB ───────────────────
         if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
@@ -5903,6 +5904,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        if (msg.type === "crew:send") console.log(`[trace-B] reached just before poker:action, still alive`);
         if (msg.type === "poker:action") {
           const tableId = String(msg.tableId || "").trim();
           const action = String(msg.action || "").trim().toLowerCase();
