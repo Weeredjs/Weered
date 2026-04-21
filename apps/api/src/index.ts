@@ -7031,6 +7031,106 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     return reply.send({ ok: true });
   });
 
+  // ── Crew published profiles ────────────────────────────────────────────
+  // GET /crews/:crewId — public profile, only returns published fields
+  app.get("/crews/:crewId", async (req, reply) => {
+    const { crewId } = req.params as any;
+    const db = prisma as any;
+    const crew = await db.crew.findUnique({
+      where: { id: crewId },
+      include: {
+        members: {
+          select: { userId: true, name: true, role: true, joinedAt: true },
+          orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+          take: 100,
+        },
+      },
+    });
+    if (!crew) return reply.code(404).send({ ok: false, error: "not_found" });
+    return reply.send({
+      ok: true,
+      crew: {
+        id: crew.id,
+        name: crew.name,
+        tag: crew.tag,
+        description: crew.description,
+        logoUrl: crew.logoUrl,
+        bannerUrl: crew.bannerUrl,
+        accentColor: crew.accentColor,
+        homePort: crew.homePort,
+        recruiting: crew.recruiting,
+        recruitingNote: crew.recruitingNote,
+        publicInLobbies: crew.publicInLobbies,
+        ownerId: crew.ownerId,
+        createdAt: crew.createdAt,
+        memberCount: crew.members.length,
+        members: crew.members,
+      },
+    });
+  });
+
+  // PATCH /crews/:crewId — leader edits profile (publishing fields live here)
+  app.patch("/crews/:crewId", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const { crewId } = req.params as any;
+    const db = prisma as any;
+    const crew = await db.crew.findUnique({ where: { id: crewId } });
+    if (!crew) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (crew.ownerId !== u.id) return reply.code(403).send({ ok: false, error: "leader_only" });
+    const body: any = (req as any).body || {};
+    const data: any = {};
+    if (typeof body.name === "string")            data.name = body.name.trim().slice(0, 60);
+    if (typeof body.tag === "string")             data.tag = body.tag.trim().slice(0, 8).toUpperCase();
+    if (typeof body.description === "string")     data.description = body.description.trim().slice(0, 800);
+    if (typeof body.logoUrl === "string")         data.logoUrl = body.logoUrl.trim().slice(0, 500) || null;
+    if (typeof body.bannerUrl === "string")       data.bannerUrl = body.bannerUrl.trim().slice(0, 500) || null;
+    if (typeof body.accentColor === "string")     data.accentColor = /^#[0-9a-f]{6}$/i.test(body.accentColor) ? body.accentColor : null;
+    if (typeof body.homePort === "string")        data.homePort = body.homePort.trim().slice(0, 80) || null;
+    if (typeof body.recruiting === "boolean")     data.recruiting = body.recruiting;
+    if (typeof body.recruitingNote === "string")  data.recruitingNote = body.recruitingNote.trim().slice(0, 400);
+    if (Array.isArray(body.publicInLobbies))      data.publicInLobbies = body.publicInLobbies.map((x: any) => String(x).trim()).filter(Boolean).slice(0, 20);
+    try {
+      const updated = await db.crew.update({ where: { id: crewId }, data });
+      return reply.send({ ok: true, crew: updated });
+    } catch (e) {
+      console.error("[crews PATCH]", e);
+      return reply.code(500).send({ ok: false, error: "update_failed" });
+    }
+  });
+
+  // GET /lobbies/:lobbyId/crews — published crews visible in this lobby
+  app.get("/lobbies/:lobbyId/crews", async (req, reply) => {
+    const { lobbyId } = req.params as any;
+    const db = prisma as any;
+    try {
+      const crews = await db.crew.findMany({
+        where: { publicInLobbies: { has: String(lobbyId) } },
+        orderBy: [{ recruiting: "desc" }, { updatedAt: "desc" }],
+        take: 60,
+        include: { members: { select: { userId: true }, take: 100 } },
+      });
+      const shaped = crews.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        tag: c.tag,
+        description: c.description,
+        logoUrl: c.logoUrl,
+        bannerUrl: c.bannerUrl,
+        accentColor: c.accentColor,
+        homePort: c.homePort,
+        recruiting: c.recruiting,
+        recruitingNote: c.recruitingNote,
+        memberCount: c.members.length,
+        updatedAt: c.updatedAt,
+      }));
+      return reply.send({ ok: true, crews: shaped });
+    } catch (e) {
+      console.error("[lobbies/:id/crews GET]", e);
+      return reply.code(500).send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
   // GET /crews/:crewId/messages — crew chat history (last 50, oldest first)
   app.get("/crews/:crewId/messages", async (req, reply) => {
     const u = authFromHeader(req.headers.authorization);
