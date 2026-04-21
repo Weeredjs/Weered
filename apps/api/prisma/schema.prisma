@@ -1553,6 +1553,45 @@ model PaperTransaction {
   @@index([type])
 }
 
+// ── Windrose Bounty Board ───────────────────────────────────────────────────
+// Players post Paper-denominated bounties on in-game targets. A hunter
+// submits proof (text + optional image/clip URL), the poster confirms or
+// rejects, Paper settles. Escrow is held on the poster (deducted at post,
+// refunded on cancel, paid out to claimant on settle). In-game handles are
+// free-text — we can't verify game identity, so the system relies on the
+// poster's manual confirmation.
+
+enum BountyStatus {
+  OPEN        // posted, awaiting claim
+  CLAIMED     // someone submitted proof, awaiting poster confirmation
+  SETTLED     // poster confirmed — Paper released to claimant
+  CANCELLED   // poster cancelled while OPEN — Paper refunded
+}
+
+model WindroseBounty {
+  id            String       @id @default(cuid())
+  lobbyId       String       @default("windrose")
+  posterId      String       // Weered userId of the poster
+  posterName    String       // snapshot of poster's display name
+  targetHandle  String       // in-game handle of the mark
+  targetServer  String?      // optional — which server the mark plays on
+  amount        Int          // Paper escrowed at creation
+  reason        String       @default("")
+  status        BountyStatus @default(OPEN)
+  claimantId    String?      // Weered userId of the hunter
+  claimantName  String?      // snapshot of hunter's display name
+  proofNote     String?      // hunter's submitted text
+  proofImageUrl String?      // optional — imgur, gyazo, twitch clip, youtube, etc.
+  createdAt     DateTime     @default(now())
+  claimedAt     DateTime?
+  settledAt     DateTime?
+  cancelledAt   DateTime?
+
+  @@index([lobbyId, status, createdAt])
+  @@index([posterId, createdAt])
+  @@index([claimantId])
+}
+
 // ── Store Items ─────────────────────────────────────────────────────────────
 // Items that can be purchased from the store or traded between users.
 

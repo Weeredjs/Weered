@@ -215,6 +215,7 @@ const TABS = [
   { id: "flagship" as const, label: "Flagship" },
   { id: "log"      as const, label: "Captain's Log" },
   { id: "crew"     as const, label: "Crew Finder" },
+  { id: "bounties" as const, label: "Bounties" },
   { id: "ports"    as const, label: "Ports of Call" },
   { id: "streams"  as const, label: "Streams" },
   { id: "about"    as const, label: "About" },
@@ -678,6 +679,439 @@ type PortRow = {
 
 const WR_REGIONS_LIST = ["NA-East", "NA-West", "EU", "OCE", "ASIA", "SA", "MENA"];
 const WR_FRAMEWORKS = ["WindrosePlus", "Vanilla", "Other"];
+
+// ═══ Tab: Bounty Board ═════════════════════════════════════════════════════
+
+type Bounty = {
+  id: string;
+  posterId: string;
+  posterName: string;
+  targetHandle: string;
+  targetServer?: string | null;
+  amount: number;
+  reason: string;
+  status: "OPEN" | "CLAIMED" | "SETTLED" | "CANCELLED";
+  claimantId?: string | null;
+  claimantName?: string | null;
+  proofNote?: string | null;
+  proofImageUrl?: string | null;
+  createdAt: string;
+  claimedAt?: string | null;
+  settledAt?: string | null;
+  cancelledAt?: string | null;
+};
+
+type BountyFilter = "OPEN" | "CLAIMED" | "SETTLED" | "MINE";
+
+function BountiesTab() {
+  const [bounties, setBounties] = useState<Bounty[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<BountyFilter>("OPEN");
+  const [balance, setBalance] = useState<number | null>(null);
+
+  // Compose form
+  const [target, setTarget] = useState("");
+  const [server, setServer] = useState("");
+  const [amount, setAmount] = useState<number>(1000);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Claim modal
+  const [claiming, setClaiming] = useState<Bounty | null>(null);
+
+  // Who am I
+  const [myId, setMyId] = useState<string>("");
+  useEffect(() => {
+    apiFetch("/auth/me").then(j => { if (j?.user?.id) setMyId(j.user.id); }).catch(() => {});
+    apiFetch("/paper/wallet").then(j => { if (typeof j?.balance === "number") setBalance(j.balance); }).catch(() => {});
+  }, []);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const qs = filter === "MINE" ? "?mine=1"
+        : filter === "OPEN"    ? "?status=OPEN"
+        : filter === "CLAIMED" ? "?status=CLAIMED"
+        : filter === "SETTLED" ? "?status=SETTLED"
+        : "";
+      const j = await apiFetch(`/windrose/bounties${qs}`);
+      if (j?.ok && Array.isArray(j.bounties)) setBounties(j.bounties);
+      else setBounties([]);
+    } catch { setBounties([]); }
+    setLoading(false);
+  }, [filter]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  async function refreshWallet() {
+    try { const j = await apiFetch("/paper/wallet"); if (typeof j?.balance === "number") setBalance(j.balance); } catch {}
+  }
+
+  async function postBounty() {
+    if (!target.trim() || busy) return;
+    setErr(null); setBusy(true);
+    const j = await apiFetch("/windrose/bounties", {
+      method: "POST",
+      body: JSON.stringify({ targetHandle: target.trim(), targetServer: server.trim() || undefined, amount, reason: reason.trim() }),
+    });
+    setBusy(false);
+    if (j?.ok) {
+      setTarget(""); setServer(""); setReason(""); setAmount(1000);
+      if (typeof j.balance === "number") setBalance(j.balance);
+      reload();
+    } else {
+      setErr(j?.message || j?.error || "Failed to post bounty.");
+    }
+  }
+
+  async function settleBounty(id: string) {
+    const j = await apiFetch(`/windrose/bounties/${id}/settle`, { method: "POST", body: "{}" });
+    if (j?.ok) { reload(); refreshWallet(); }
+  }
+  async function rejectBounty(id: string) {
+    const j = await apiFetch(`/windrose/bounties/${id}/reject`, { method: "POST", body: "{}" });
+    if (j?.ok) reload();
+  }
+  async function cancelBounty(id: string) {
+    if (!window.confirm("Cancel and refund this bounty?")) return;
+    const j = await apiFetch(`/windrose/bounties/${id}/cancel`, { method: "POST", body: "{}" });
+    if (j?.ok) { reload(); refreshWallet(); }
+  }
+
+  const openBountyTotal = (bounties || [])
+    .filter(b => b.status === "OPEN" || b.status === "CLAIMED")
+    .reduce((sum, b) => sum + b.amount, 0);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Hero strip */}
+      <div style={{ ...S.card, padding: "18px 22px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ ...S.label, marginBottom: 4 }}>The Bounty Board</div>
+            <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 24, color: PAL.brassHi, margin: 0, letterSpacing: "0.5px" }}>
+              Dead or alive.
+            </h3>
+            <div style={{ fontSize: 13, color: PAL.parchDim, marginTop: 6, fontStyle: "italic", lineHeight: 1.55 }}>
+              Post a Paper bounty on any sailor. A hunter submits proof of the kill, you confirm, and the Paper's theirs. Your stake's escrowed the moment you post — refunded only on cancel.
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+            <div style={{ ...S.label, fontSize: 9 }}>Your Paper</div>
+            <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 28, color: PAL.brassHi, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+              {balance === null ? "—" : balance.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 10, color: PAL.parchDim, fontFamily: WR_FONT_MONO, letterSpacing: "0.5px" }}>
+              · {openBountyTotal.toLocaleString()} in flight
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Compose */}
+      <div style={{ ...S.card, padding: 18 }}>
+        <div style={{ ...S.label, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+          <SkullIcon size={14} />
+          Post a bounty
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
+          <div>
+            <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>In-game handle *</div>
+            <input
+              value={target} onChange={e => setTarget(e.target.value.slice(0, 60))}
+              placeholder="BlackbeardXL"
+              style={S.input as React.CSSProperties}
+            />
+          </div>
+          <div>
+            <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Server (optional)</div>
+            <input
+              value={server} onChange={e => setServer(e.target.value.slice(0, 120))}
+              placeholder="play.myserver.com"
+              style={S.input as React.CSSProperties}
+            />
+          </div>
+          <div>
+            <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Amount (Paper) *</div>
+            <input
+              type="number" min={100} max={500000} step={100}
+              value={amount} onChange={e => setAmount(Math.max(100, Math.min(500000, Number(e.target.value) || 100)))}
+              style={{ ...S.input, fontVariantNumeric: "tabular-nums" } as React.CSSProperties}
+            />
+          </div>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Reason (optional)</div>
+          <textarea
+            value={reason} onChange={e => setReason(e.target.value.slice(0, 400))}
+            placeholder="Ganked my galleon loaded with silks. Wants a reckoning."
+            style={{ ...S.input, minHeight: 54, fontFamily: WR_FONT_SERIF, fontStyle: "italic" } as React.CSSProperties}
+          />
+        </div>
+        {err && (
+          <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(163,61,61,0.12)", border: "1px solid rgba(163,61,61,0.35)", borderRadius: 3, color: "rgba(232,196,138,0.9)", fontSize: 12 }}>
+            {err}
+          </div>
+        )}
+        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end" }}>
+          <span style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim }}>
+            {amount.toLocaleString()} Paper will be held in escrow
+          </span>
+          <button type="button" style={S.btnPrimary} onClick={postBounty} disabled={busy || !target.trim()}>
+            {busy ? "Posting…" : "Post Bounty"}
+          </button>
+        </div>
+      </div>
+
+      {/* Filter strip */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {([
+          { id: "OPEN", label: "Open" },
+          { id: "CLAIMED", label: "Claimed" },
+          { id: "MINE", label: "Mine" },
+          { id: "SETTLED", label: "Settled" },
+        ] as { id: BountyFilter; label: string }[]).map(t => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setFilter(t.id)}
+            style={{
+              ...S.btn,
+              padding: "6px 14px",
+              fontSize: 11,
+              borderColor: filter === t.id ? PAL.brass : `${PAL.brass}35`,
+              background: filter === t.id ? `${PAL.brass}20` : S.btn.background,
+              color: filter === t.id ? PAL.brassHi : PAL.parchDim,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <LoadingState label="Combing the wanted posters..." />
+      ) : !bounties || bounties.length === 0 ? (
+        <EmptyState
+          icon="🏴‍☠️"
+          title={filter === "MINE" ? "You've posted nothing." : "No bounties yet."}
+          hint={filter === "MINE" ? "Your name's clean. For now." : "Be the first to put a price on someone's head."}
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
+          {bounties.map(b => (
+            <BountyCard
+              key={b.id}
+              b={b}
+              meId={myId}
+              onClaim={() => setClaiming(b)}
+              onSettle={() => settleBounty(b.id)}
+              onReject={() => rejectBounty(b.id)}
+              onCancel={() => cancelBounty(b.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {claiming && (
+        <ClaimModal
+          bounty={claiming}
+          onClose={() => setClaiming(null)}
+          onSubmitted={() => { setClaiming(null); reload(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel }: {
+  b: Bounty;
+  meId: string;
+  onClaim: () => void;
+  onSettle: () => void;
+  onReject: () => void;
+  onCancel: () => void;
+}) {
+  const mine = !!meId && meId === b.posterId;
+  const mineClaim = !!meId && meId === b.claimantId;
+  const statusColor =
+    b.status === "OPEN"    ? "#5db765" :
+    b.status === "CLAIMED" ? PAL.brassHi :
+    b.status === "SETTLED" ? PAL.brass :
+                             "#a54848";
+  const statusLabel =
+    b.status === "OPEN" ? "OPEN" :
+    b.status === "CLAIMED" ? "AWAITING SETTLE" :
+    b.status === "SETTLED" ? "SETTLED" :
+    "CANCELLED";
+
+  return (
+    <div style={{ ...S.card, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Header: target + amount */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...S.label, fontSize: 9, marginBottom: 2 }}>
+            <SkullIcon size={10} /> Wanted
+          </div>
+          <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.parchment, lineHeight: 1.1, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {b.targetHandle}
+          </div>
+          {b.targetServer && (
+            <div style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              on {b.targetServer}
+            </div>
+          )}
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.brassHi, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+            {b.amount.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 9, color: PAL.parchDim, fontFamily: WR_FONT_MONO, letterSpacing: "1px", textTransform: "uppercase" }}>
+            Paper
+          </div>
+        </div>
+      </div>
+
+      {/* Reason */}
+      {b.reason && (
+        <div style={{ fontSize: 12, color: PAL.parchment, lineHeight: 1.5, fontStyle: "italic", opacity: 0.85, borderLeft: `2px solid ${PAL.brass}55`, paddingLeft: 10 }}>
+          {b.reason.length > 160 ? `${b.reason.slice(0, 160)}…` : b.reason}
+        </div>
+      )}
+
+      {/* Claim proof if CLAIMED/SETTLED */}
+      {(b.status === "CLAIMED" || b.status === "SETTLED") && b.proofNote && (
+        <div style={{ padding: "8px 10px", background: `${PAL.brass}10`, border: `1px solid ${PAL.brass}25`, borderRadius: 2, fontSize: 11, color: PAL.parchment }}>
+          <div style={{ ...S.label, fontSize: 8, marginBottom: 3 }}>
+            Proof · {b.claimantName || "hunter"}
+          </div>
+          <div style={{ lineHeight: 1.4, fontStyle: "italic" }}>
+            {b.proofNote.length > 180 ? `${b.proofNote.slice(0, 180)}…` : b.proofNote}
+          </div>
+          {b.proofImageUrl && (
+            <div style={{ marginTop: 6 }}>
+              <a href={b.proofImageUrl} target="_blank" rel="noopener noreferrer" style={{ color: PAL.verdigris, fontSize: 10, fontFamily: WR_FONT_MONO, letterSpacing: "0.5px" }}>
+                View evidence →
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Meta strip */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: WR_FONT_MONO, color: statusColor, letterSpacing: "1px" }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, boxShadow: `0 0 6px ${statusColor}` }} />
+          {statusLabel}
+        </span>
+        <span style={{ fontSize: 10, color: PAL.parchDim, fontStyle: "italic" }}>
+          posted by {b.posterName} · {timeAgo(b.createdAt)}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+        {b.status === "OPEN" && !mine && meId && (
+          <button type="button" style={{ ...S.btnPrimary, fontSize: 11, padding: "7px 14px" }} onClick={onClaim}>
+            I got 'em — Claim
+          </button>
+        )}
+        {b.status === "OPEN" && mine && (
+          <button type="button" style={{ ...S.btn, fontSize: 10, padding: "6px 12px", color: "rgba(252,165,165,0.85)", borderColor: "rgba(163,61,61,0.45)" }} onClick={onCancel}>
+            Cancel & Refund
+          </button>
+        )}
+        {b.status === "CLAIMED" && mine && (
+          <>
+            <button type="button" style={{ ...S.btnPrimary, fontSize: 11, padding: "7px 14px" }} onClick={onSettle}>
+              Settle · Pay {b.amount.toLocaleString()}
+            </button>
+            <button type="button" style={{ ...S.btn, fontSize: 10, padding: "6px 12px", color: "rgba(252,165,165,0.85)" }} onClick={onReject}>
+              Reject
+            </button>
+          </>
+        )}
+        {b.status === "CLAIMED" && !mine && mineClaim && (
+          <span style={{ fontSize: 11, color: PAL.brass, fontStyle: "italic", padding: "6px 0" }}>
+            Awaiting poster's confirmation…
+          </span>
+        )}
+        {b.status === "SETTLED" && (
+          <span style={{ fontSize: 11, color: PAL.brass, fontStyle: "italic" }}>
+            Paid to {b.claimantName || "hunter"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ClaimModal({ bounty, onClose, onSubmitted }: { bounty: Bounty; onClose: () => void; onSubmitted: () => void }) {
+  const [proofNote, setProofNote] = useState("");
+  const [proofImageUrl, setProofImageUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    if (!proofNote.trim() || busy) return;
+    setErr(null); setBusy(true);
+    const j = await apiFetch(`/windrose/bounties/${bounty.id}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ proofNote: proofNote.trim(), proofImageUrl: proofImageUrl.trim() || undefined }),
+    });
+    setBusy(false);
+    if (j?.ok) onSubmitted();
+    else setErr(j?.message || j?.error || "Failed to submit claim.");
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,5,10,.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <div onClick={e => e.stopPropagation()} style={{ ...S.card, width: "min(520px, calc(100% - 32px))", padding: "22px 26px" }}>
+        <div style={{ ...S.label, marginBottom: 6 }}>Claiming bounty on</div>
+        <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.parchment, letterSpacing: "0.3px", marginBottom: 4 }}>
+          {bounty.targetHandle}
+        </div>
+        <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic", marginBottom: 16 }}>
+          {bounty.amount.toLocaleString()} Paper if the poster confirms the kill.
+        </div>
+
+        <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Proof · what happened *</div>
+        <textarea
+          value={proofNote}
+          onChange={e => setProofNote(e.target.value.slice(0, 500))}
+          placeholder="Sank their galleon off the east archipelago, had them on stream. VOD timestamp 1:42:10. Screenshot below."
+          style={{ ...S.input, minHeight: 90, fontFamily: WR_FONT_SERIF, fontStyle: "italic" } as React.CSSProperties}
+        />
+
+        <div style={{ ...S.label, fontSize: 9, marginBottom: 4, marginTop: 12 }}>Evidence link (optional)</div>
+        <input
+          value={proofImageUrl}
+          onChange={e => setProofImageUrl(e.target.value.slice(0, 300))}
+          placeholder="https://imgur.com/... or https://clips.twitch.tv/..."
+          style={S.input as React.CSSProperties}
+        />
+
+        {err && (
+          <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(163,61,61,0.12)", border: "1px solid rgba(163,61,61,0.35)", borderRadius: 3, color: "rgba(232,196,138,0.9)", fontSize: 12 }}>
+            {err}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, marginTop: 18, justifyContent: "flex-end" }}>
+          <button type="button" style={S.btn} onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" style={S.btnPrimary} onClick={submit} disabled={busy || !proofNote.trim()}>
+            {busy ? "Submitting…" : "Submit Claim"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PortsOfCallTab() {
   const [registered, setRegistered] = useState<CommunityServer[] | null>(null);
@@ -1355,6 +1789,7 @@ export default function WindroseModulesPanel({
           {tab === "flagship" && <FlagshipTab />}
           {tab === "log"      && <LogTab />}
           {tab === "crew"     && <CrewTab lobbyId={lobbyId} />}
+          {tab === "bounties" && <BountiesTab />}
           {tab === "ports"    && <PortsOfCallTab />}
           {tab === "streams"  && <StreamsTab gameName={gameName} lobbyId={lobbyId} />}
           {tab === "about"    && <AboutTab />}

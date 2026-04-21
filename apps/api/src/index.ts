@@ -12655,6 +12655,182 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   });
 
+  // ── Windrose Bounty Board ──────────────────────────────────────────────
+  // Players escrow Paper on an in-game target. A hunter submits proof, the
+  // poster settles or rejects. Paper moves through awardPaper() so the
+  // ledger stays coherent.
+  const BOUNTY_MIN = 100;
+  const BOUNTY_MAX = 500_000;
+  const BOUNTY_CAP_OPEN_PER_USER = 10;
+
+  // GET /windrose/bounties?status=OPEN&mine=1
+  app.get("/windrose/bounties", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    const q: any = (req as any).query || {};
+    const status = typeof q.status === "string" ? q.status.toUpperCase() : "";
+    const mine = q.mine === "1" || q.mine === "true";
+    const where: any = { lobbyId: "windrose" };
+    if (["OPEN","CLAIMED","SETTLED","CANCELLED"].includes(status)) where.status = status;
+    if (mine && u) where.OR = [{ posterId: u.id }, { claimantId: u.id }];
+    try {
+      const rows = await (prisma as any).windroseBounty.findMany({
+        where,
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        take: 100,
+      });
+      return reply.send({ ok: true, bounties: rows });
+    } catch (e) {
+      console.error("[windrose/bounties GET]", e);
+      return reply.code(500).send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // POST /windrose/bounties — create. Escrows Paper from poster immediately.
+  app.post("/windrose/bounties", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const targetHandle = String(body.targetHandle || "").trim().slice(0, 60);
+    const targetServer = body.targetServer ? String(body.targetServer).trim().slice(0, 120) : null;
+    const reason = String(body.reason || "").trim().slice(0, 400);
+    const amount = Math.floor(Number(body.amount) || 0);
+    if (!targetHandle) return reply.code(400).send({ ok: false, error: "target_required" });
+    if (amount < BOUNTY_MIN) return reply.code(400).send({ ok: false, error: "amount_too_low", message: `Minimum bounty is ${BOUNTY_MIN} Paper.` });
+    if (amount > BOUNTY_MAX) return reply.code(400).send({ ok: false, error: "amount_too_high", message: `Maximum bounty is ${BOUNTY_MAX.toLocaleString()} Paper.` });
+
+    // Cap on simultaneous open posts per user — prevents locking up all their Paper
+    const openCount = await (prisma as any).windroseBounty.count({
+      where: { posterId: u.id, status: { in: ["OPEN","CLAIMED"] } },
+    });
+    if (openCount >= BOUNTY_CAP_OPEN_PER_USER) {
+      return reply.code(400).send({ ok: false, error: "limit_reached", message: `You already have ${BOUNTY_CAP_OPEN_PER_USER} bounties in flight. Settle or cancel one first.` });
+    }
+
+    // Escrow: debit Paper now. awardPaper prevents going negative.
+    const debit = await awardPaper(u.id, "SPEND_UNLOCK", -amount, `Bounty escrow · ${targetHandle}`);
+    if (!debit) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
+
+    try {
+      const posterName = (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name || u.id;
+      const created = await (prisma as any).windroseBounty.create({
+        data: {
+          lobbyId: "windrose", posterId: u.id, posterName,
+          targetHandle, targetServer: targetServer || null,
+          amount, reason, status: "OPEN",
+        },
+      });
+      return reply.send({ ok: true, bounty: created, balance: debit.balance });
+    } catch (e) {
+      // Escrow was debited but DB write failed — refund so we don't eat user's Paper
+      await awardPaper(u.id, "ADJUSTMENT", amount, `Bounty escrow refund (create failed)`);
+      console.error("[windrose/bounties POST]", e);
+      return reply.code(500).send({ ok: false, error: "create_failed" });
+    }
+  });
+
+  // POST /windrose/bounties/:id/claim — hunter submits proof
+  app.post("/windrose/bounties/:id/claim", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = (req.params as any).id as string;
+    const body: any = (req as any).body || {};
+    const proofNote = String(body.proofNote || "").trim().slice(0, 500);
+    const proofImageUrl = body.proofImageUrl ? String(body.proofImageUrl).trim().slice(0, 300) : null;
+    if (!proofNote) return reply.code(400).send({ ok: false, error: "proof_required" });
+
+    const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+    if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (b.status !== "OPEN") return reply.code(400).send({ ok: false, error: "not_claimable", message: "This bounty is no longer open." });
+    if (b.posterId === u.id) return reply.code(400).send({ ok: false, error: "cannot_self_claim", message: "You can't claim your own bounty." });
+
+    try {
+      const claimantName = (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name || u.id;
+      const updated = await (prisma as any).windroseBounty.update({
+        where: { id },
+        data: {
+          status: "CLAIMED",
+          claimantId: u.id,
+          claimantName,
+          proofNote, proofImageUrl,
+          claimedAt: new Date(),
+        },
+      });
+      return reply.send({ ok: true, bounty: updated });
+    } catch (e) {
+      console.error("[windrose/bounties claim]", e);
+      return reply.code(500).send({ ok: false, error: "claim_failed" });
+    }
+  });
+
+  // POST /windrose/bounties/:id/settle — poster confirms, releases Paper
+  app.post("/windrose/bounties/:id/settle", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = (req.params as any).id as string;
+    const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+    if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (b.status !== "CLAIMED" || !b.claimantId) return reply.code(400).send({ ok: false, error: "not_claimed" });
+    // Pay the hunter from escrow
+    const credit = await awardPaper(b.claimantId, "EARN_GIFT", b.amount, `Bounty claim · ${b.targetHandle}`, b.id);
+    if (!credit) return reply.code(500).send({ ok: false, error: "payout_failed" });
+    try {
+      const updated = await (prisma as any).windroseBounty.update({
+        where: { id },
+        data: { status: "SETTLED", settledAt: new Date() },
+      });
+      return reply.send({ ok: true, bounty: updated });
+    } catch (e) {
+      console.error("[windrose/bounties settle]", e);
+      return reply.code(500).send({ ok: false, error: "settle_failed" });
+    }
+  });
+
+  // POST /windrose/bounties/:id/reject — poster rejects claim, returns to OPEN
+  app.post("/windrose/bounties/:id/reject", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = (req.params as any).id as string;
+    const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+    if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (b.status !== "CLAIMED") return reply.code(400).send({ ok: false, error: "not_claimed" });
+    try {
+      const updated = await (prisma as any).windroseBounty.update({
+        where: { id },
+        data: { status: "OPEN", claimantId: null, claimantName: null, proofNote: null, proofImageUrl: null, claimedAt: null },
+      });
+      return reply.send({ ok: true, bounty: updated });
+    } catch (e) {
+      console.error("[windrose/bounties reject]", e);
+      return reply.code(500).send({ ok: false, error: "reject_failed" });
+    }
+  });
+
+  // POST /windrose/bounties/:id/cancel — poster cancels OPEN bounty, refund
+  app.post("/windrose/bounties/:id/cancel", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = (req.params as any).id as string;
+    const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+    if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (b.status !== "OPEN") return reply.code(400).send({ ok: false, error: "not_open", message: "Can only cancel while open (uncclaimed)." });
+    // Refund escrow
+    const refund = await awardPaper(u.id, "ADJUSTMENT", b.amount, `Bounty cancelled · refund`, b.id);
+    if (!refund) return reply.code(500).send({ ok: false, error: "refund_failed" });
+    try {
+      const updated = await (prisma as any).windroseBounty.update({
+        where: { id },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+      });
+      return reply.send({ ok: true, bounty: updated, balance: refund.balance });
+    } catch (e) {
+      console.error("[windrose/bounties cancel]", e);
+      return reply.code(500).send({ ok: false, error: "cancel_failed" });
+    }
+  });
+
   // ── Windrose server polling worker ─────────────────────────────────────
   // Pings each registered server's queryUrl every 90s. Updates status +
   // lastState JSON blob. Tolerant of missing/unknown response shapes — we
