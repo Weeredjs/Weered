@@ -43,7 +43,7 @@ interface RoleIconProps {
   className?: string;
 }
 
-const ICON_VERSION = "v4";
+const ICON_VERSION = "v5";
 
 export default function RoleIcon({ role, size = 14, style, className }: RoleIconProps) {
   const info = ROLE_MAP[role];
