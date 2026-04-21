@@ -13158,6 +13158,42 @@ Rules:
           amount, reason, status: "OPEN",
         },
       });
+      // Bust the leaderboard + activity + captain's-log caches so the new
+      // bounty lands in each surface on the next refresh without a 5-min wait.
+      wrCache.delete("wr:bounties:leaderboard");
+      wrCache.delete("wr:activity");
+      wrCache.delete("wr:captains-log");
+
+      // Most Wanted push — ring the bell on the whole Windrose lobby when a
+      // big bounty drops. Threshold is intentionally high so the ping stays
+      // event-worthy. Fires async; never blocks the response.
+      const MOST_WANTED_THRESHOLD = 50_000;
+      if (amount >= MOST_WANTED_THRESHOLD) {
+        void (async () => {
+          try {
+            const members = await (prisma as any).lobbyMember.findMany({
+              where: { lobbyId: "windrose" },
+              select: { userId: true },
+              take: 2000,
+            });
+            // Skip pinging the poster themselves
+            const memberIds = new Set<string>(members.map((m: any) => m.userId).filter((id: string) => id && id !== u.id));
+            const body = `${amount.toLocaleString()} Paper on ${targetHandle}. ${reason ? `"${reason.slice(0, 80)}${reason.length > 80 ? "…" : ""}"` : "Hunter season."}`;
+            const data = {
+              title: "Most Wanted",
+              body,
+              url: "/lobby/windrose",
+              tag: `windrose:bounty:${created.id}`,
+            };
+            for (const uid of memberIds) {
+              sendPush(uid, data).catch(() => {});
+            }
+          } catch (e) {
+            console.error("[windrose/bounties most-wanted push]", e);
+          }
+        })();
+      }
+
       return reply.send({ ok: true, bounty: created, balance: debit.balance });
     } catch (e) {
       // Escrow was debited but DB write failed — refund so we don't eat user's Paper
@@ -13218,6 +13254,8 @@ Rules:
         where: { id },
         data: { status: "SETTLED", settledAt: new Date() },
       });
+      wrCache.delete("wr:bounties:leaderboard");
+      wrCache.delete("wr:activity");
       return reply.send({ ok: true, bounty: updated });
     } catch (e) {
       console.error("[windrose/bounties settle]", e);
@@ -13263,6 +13301,8 @@ Rules:
         where: { id },
         data: { status: "CANCELLED", cancelledAt: new Date() },
       });
+      wrCache.delete("wr:bounties:leaderboard");
+      wrCache.delete("wr:activity");
       return reply.send({ ok: true, bounty: updated, balance: refund.balance });
     } catch (e) {
       console.error("[windrose/bounties cancel]", e);
