@@ -4995,6 +4995,10 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         const msg = safeJson(raw);
         if (!msg || typeof msg.type !== "string") return;
 
+        if (msg.type !== "trading:subscribe" && msg.type !== "trading:unsubscribe") {
+          console.log(`[ws-recv] type=${msg.type} userId=${ws.user?.id || "(unauthed)"}`);
+        }
+
         if (msg.type === "auth:hello") {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
