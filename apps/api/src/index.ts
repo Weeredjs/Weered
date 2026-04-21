@@ -5991,7 +5991,11 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           const crewId = String(msg.crewId || "").trim();
           const body = String(msg.body || "").trim().slice(0, 2000);
           const fromId = ws.user?.id;
-          if (!fromId || !crewId || !body) return;
+          console.log(`[crew:send] fromId=${fromId || "(none)"} crewId=${crewId} bodyLen=${body.length}`);
+          if (!fromId || !crewId || !body) {
+            console.log(`[crew:send] EARLY RETURN: missing field`);
+            return;
+          }
           // URL spam check
           const urlCheck = checkUrlSpam(body);
           if (!urlCheck.ok) { send(ws, { type: "crew:rejected", crewId, reason: urlCheck.reason }); return; }
@@ -6004,7 +6008,11 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             const membership = await (prisma as any).crewMember.findFirst({
               where: { crewId, userId: fromId },
             });
-            if (!membership) return;
+            if (!membership) {
+              console.log(`[crew:send] NOT A MEMBER: user=${fromId} crew=${crewId}`);
+              return;
+            }
+            console.log(`[crew:send] member ok, role=${membership.role}, creating message`);
 
             // Optional reply-to — look up parent (must be same crew)
             let crewReplyData: any = {};
