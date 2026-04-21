@@ -5991,6 +5991,9 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         }
 
         // ── Crew Chat via WebSocket ──────────────────────────────────────────
+        if (msg.type === "crew:send" || msg.type === "crew:edit" || msg.type === "crew:delete" || msg.type === "crew:react") {
+          console.log(`[crew:reached-pre-check] type=${msg.type}`);
+        }
         if (msg.type === "crew:send") {
           console.log(`[crew:send] HANDLER ENTERED`);
           const crewId = String(msg.crewId || "").trim();
