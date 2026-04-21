@@ -30,6 +30,23 @@ type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbn
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
+// MPlayer-style room launcher
+export type LaunchTarget = {
+  appid: number;
+  connect: string;     // ip:port or ip:port/password — feeds steam://connect/
+  display: string;     // human-readable server name
+  note?: string;
+  setBy: string;
+  setAt: number;
+};
+export type LaunchSnapshot = {
+  target: LaunchTarget | null;
+  slots: { userId: string; slot: "player" | "observer" }[];
+  ready: string[];     // userIds
+  firedAt: number | null;
+  firedBy: string | null;
+};
+
 type Ctx = {
   apiBase: string; wsUrl: string;
   token: string; me: any; authed: boolean; globalRole: string;
@@ -43,6 +60,7 @@ type Ctx = {
   adminByRoom: Record<string, AdminState>;
   moduleByRoom: Record<string, ModuleState>;
   ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
+  launchByRoom: Record<string, LaunchSnapshot | null>;
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
@@ -172,6 +190,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
+  const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
   const [passwordRoomId, setPasswordRoomId] = useState("");
   const [passwordError,  setPasswordError ] = useState("");
@@ -400,6 +419,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (msg.activeModule) {
           setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule }));
         }
+        // Extract launch state if the room has one
+        if (msg.launch !== undefined) {
+          setLaunchByRoom(prev => ({ ...prev, [rid]: msg.launch as LaunchSnapshot | null }));
+        }
         // Track lobby context from the server's lobbyId field
         if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
         // activeRoomId managed by path effect — no override needed here
@@ -409,6 +432,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           }
           return rid;
         });
+        return;
+      }
+
+      // Room launcher state changed (target set, slot picked, ready toggled,
+      // countdown fired, auto-reset).
+      if (msg.type === "launch:state") {
+        const rid = String(msg.roomId || "");
+        if (!rid) return;
+        setLaunchByRoom(prev => ({ ...prev, [rid]: (msg.launch as LaunchSnapshot) ?? null }));
         return;
       }
 
@@ -907,7 +939,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom,
+    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom,
     moduleState, setModuleState,
     rooms, join, leave, knock,
     devLogin, logout,
