@@ -270,7 +270,9 @@ export default function PremiumContent() {
 
           <div className="prem-header">
             <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
-              <img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered" style={{ width: 120, height: 120, filter: "drop-shadow(0 0 32px rgba(88,0,229,0.35))" }} />
+              <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
+                <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 120, height: 120, filter: "drop-shadow(0 0 32px rgba(88,0,229,0.35))" }} />
+              </a>
             </div>
             <div className="prem-eyebrow">// access levels</div>
             <div className="prem-title">Choose your status.</div>

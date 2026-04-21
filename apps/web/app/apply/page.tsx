@@ -397,6 +397,11 @@ export default function ApplyPage() {
       <div className="mod-root">
         <div className={`mod-inner${visible ? " visible" : ""}`}>
 
+          <div style={{ marginBottom: 20 }}>
+            <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
+              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 72, height: 72, filter: "drop-shadow(0 0 20px rgba(88,0,229,0.35))" }} />
+            </a>
+          </div>
           <div className="mod-eyebrow">// apply</div>
           <div className="mod-title">Apply to Moderate</div>
           <div className="mod-sub">
