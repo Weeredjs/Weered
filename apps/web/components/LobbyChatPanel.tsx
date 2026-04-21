@@ -217,6 +217,29 @@ function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onC
   );
 }
 
+// ── Inline SVG icons (Discord-ish monochrome set) ──
+const svgProps = {
+  width: 16, height: 16, viewBox: "0 0 24 24",
+  fill: "none", stroke: "currentColor", strokeWidth: 2,
+  strokeLinecap: "round" as const, strokeLinejoin: "round" as const,
+};
+const Icons = {
+  Smile: (p: any = {}) => (<svg {...svgProps} {...p}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>),
+  Reply:  (p: any = {}) => (<svg {...svgProps} {...p}><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>),
+  Forward:(p: any = {}) => (<svg {...svgProps} {...p}><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>),
+  More:   (p: any = {}) => (<svg {...svgProps} fill="currentColor" stroke="none" {...p}><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>),
+  Copy:   (p: any = {}) => (<svg {...svgProps} {...p}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>),
+  Link:   (p: any = {}) => (<svg {...svgProps} {...p}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>),
+  Unread: (p: any = {}) => (<svg {...svgProps} {...p}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>),
+  Speak:  (p: any = {}) => (<svg {...svgProps} {...p}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>),
+  Edit:   (p: any = {}) => (<svg {...svgProps} {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>),
+  Trash:  (p: any = {}) => (<svg {...svgProps} {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4c0-.55.45-1 1-1h4c.55 0 1 .45 1 1v2"/></svg>),
+  Flag:   (p: any = {}) => (<svg {...svgProps} {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>),
+  Gif:    (p: any = {}) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm3.3 3.2v2.6h1.5v.6H8.5c-.1.3-.4.5-.9.5-.7 0-1.2-.5-1.2-1.4S7 9.1 7.7 9.1c.5 0 .9.3 1 .6h1.1c-.1-.8-.9-1.6-2.1-1.6-1.5 0-2.4 1-2.4 2.5s.9 2.5 2.3 2.5c.8 0 1.4-.4 1.6-.9l.1.8h.8V10H7.3v-1.8zm5.3 0h-1.2v5.2h1.2V8.2zm1.4 0v5.2h1.2v-2h1.6v-.9h-1.6v-1.4h2.1v-.9h-3.3z"/></svg>),
+  Emoji:  (p: any = {}) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>),
+  Send:   (p: any = {}) => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/></svg>),
+};
+
 // ── Emoji picker data (compact) ──
 const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   { label: "😀", emojis: ["😀","😂","🤣","😅","😊","😍","🥰","😘","😎","🤩","🥳","😭","😤","🤔","🤫","🤯","🥶","🥵","😈","👻"] },
@@ -224,6 +247,129 @@ const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   { label: "🎯", emojis: ["🎯","🚀","💡","⚡","🔫","🗡️","🛡️","💣","🎲","🃏","♟️","🏹","⚔️","🧨","💥","💫","🌟","🔮","🧿","🎪"] },
   { label: "🐸", emojis: ["🐸","🐶","🐱","🦊","🐺","🦁","🐯","🦄","🐉","🦅","🐍","🦈","🐙","🦀","🐝","🦋","🌈","🌊","☀️","🌙"] },
 ];
+
+// ── Discord-style "More" dropdown menu ──
+function MoreMenuItem({
+  icon, label, onClick, danger, divider,
+}: { icon?: React.ReactNode; label: string; onClick: () => void; danger?: boolean; divider?: boolean }) {
+  const color = danger ? "rgba(252,165,165,.95)" : "var(--weered-text, rgba(243,244,246,.92))";
+  const hoverBg = danger ? "rgba(239,68,68,.15)" : "rgba(124,58,237,.18)";
+  return (
+    <>
+      {divider && <div style={{ height: 1, margin: "4px 6px", background: "rgba(255,255,255,.06)" }} />}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", padding: "7px 10px",
+          border: "none", background: "transparent",
+          color, cursor: "pointer", fontFamily: "inherit",
+          fontSize: 12, fontWeight: 500, textAlign: "left",
+          borderRadius: 5, transition: "background .1s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = hoverBg; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+      >
+        <span style={{ width: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", opacity: 0.85 }}>{icon}</span>
+        <span style={{ flex: 1 }}>{label}</span>
+      </button>
+    </>
+  );
+}
+
+function MoreMenu({
+  msgId, body, userName, isMine, editable, deletable, roomId,
+  onClose, onAddReaction, onReply, onEdit, onDelete,
+}: {
+  msgId: string;
+  body: string;
+  userName: string;
+  isMine: boolean;
+  editable: boolean;
+  deletable: boolean;
+  roomId: string;
+  onClose: () => void;
+  onAddReaction: () => void;
+  onReply: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const copy = async (txt: string, okMsg: string) => {
+    try { await navigator.clipboard.writeText(txt); weeredToast.success(okMsg); }
+    catch { weeredToast.error("Clipboard unavailable."); }
+  };
+  const handleForward = () => {
+    copy(`↪ ${userName}: ${body}`, "Forward text copied — paste in any chat.");
+    onClose();
+  };
+  const handleCopyText = () => {
+    copy(body, "Message copied.");
+    onClose();
+  };
+  const handleCopyLink = () => {
+    const path = (typeof window !== "undefined") ? window.location.pathname : `/room/${encodeURIComponent(roomId)}`;
+    const origin = (typeof window !== "undefined") ? window.location.origin : "https://weered.ca";
+    copy(`${origin}${path}?msg=${encodeURIComponent(msgId)}`, "Message link copied.");
+    onClose();
+  };
+  const handleMarkUnread = () => {
+    try {
+      const key = `weered:unread:${roomId}`;
+      localStorage.setItem(key, msgId);
+      weeredToast("Marked unread from this message.");
+    } catch { /* ignore */ }
+    onClose();
+  };
+  const handleSpeak = () => {
+    try {
+      const synth = (window as any).speechSynthesis;
+      if (!synth) { weeredToast.error("Speech not supported in this browser."); return; }
+      synth.cancel();
+      const utter = new SpeechSynthesisUtterance(body);
+      utter.rate = 1; utter.pitch = 1;
+      synth.speak(utter);
+    } catch { weeredToast.error("Speak failed."); }
+    onClose();
+  };
+  const handleReport = async () => {
+    const res = await weeredReport({ targetType: "MESSAGE", targetId: msgId, context: roomId });
+    if (res?.ok) weeredToast.success("Report submitted. Staff will review.");
+    else if (res && !res.ok) weeredToast.error(res.error === "report_rate_limit" ? "You're reporting too fast. Try again in a few minutes." : "Report failed.");
+    onClose();
+  };
+
+  return (
+    <div
+      data-reaction-ui
+      data-more-menu
+      onClick={e => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        top: 22, right: 4,
+        minWidth: 220,
+        padding: 5,
+        borderRadius: 8,
+        background: "var(--weered-panel2, rgba(16,16,20,.98))",
+        border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
+        boxShadow: "0 10px 32px rgba(0,0,0,.55)",
+        zIndex: 30,
+        display: "flex", flexDirection: "column",
+      }}
+    >
+      <MoreMenuItem icon={<Icons.Smile />} label="Add Reaction" onClick={onAddReaction} />
+      <MoreMenuItem icon={<Icons.Reply />} label="Reply" onClick={onReply} />
+      <MoreMenuItem icon={<Icons.Forward />} label="Forward" onClick={handleForward} />
+      <MoreMenuItem divider icon={<Icons.Copy />} label="Copy Text" onClick={handleCopyText} />
+      <MoreMenuItem icon={<Icons.Unread />} label="Mark Unread" onClick={handleMarkUnread} />
+      <MoreMenuItem icon={<Icons.Link />} label="Copy Message Link" onClick={handleCopyLink} />
+      <MoreMenuItem icon={<Icons.Speak />} label="Speak Message" onClick={handleSpeak} />
+      {editable && <MoreMenuItem divider icon={<Icons.Edit />} label="Edit Message" onClick={onEdit} />}
+      {deletable && <MoreMenuItem icon={<Icons.Trash />} label="Delete Message" onClick={onDelete} danger />}
+      {!isMine && <MoreMenuItem divider icon={<Icons.Flag />} label="Report Message" onClick={handleReport} danger />}
+    </div>
+  );
+}
 
 export default function LobbyChatPanel(
   props: {
@@ -293,6 +439,7 @@ export default function LobbyChatPanel(
   const [editDraft, setEditDraft] = useState<string>("");
   const [hoveredMsgId, setHoveredMsgId] = useState<string>("");
   const [pickerMsgId, setPickerMsgId] = useState<string>("");
+  const [moreMenuMsgId, setMoreMenuMsgId] = useState<string>("");
   const [replyingTo, setReplyingTo] = useState<{ id: string; userName: string; body: string } | null>(null);
 
   const QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
@@ -313,6 +460,23 @@ export default function LobbyChatPanel(
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, [pickerMsgId]);
+
+  // Close More dropdown on outside click / Escape
+  useEffect(() => {
+    if (!moreMenuMsgId) return;
+    function onClick(e: MouseEvent) {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest?.("[data-more-menu]")) return;
+      setMoreMenuMsgId("");
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setMoreMenuMsgId(""); }
+    document.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreMenuMsgId]);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const emojiRef = useRef<HTMLDivElement | null>(null);
@@ -564,28 +728,28 @@ export default function LobbyChatPanel(
                     </div>
                   )}
                 </div>
-                {mId && isHovered && !isEditing && !deletedAt && (
-                  <div data-reaction-ui style={{
+                {mId && (isHovered || moreMenuMsgId === mId) && !isEditing && !deletedAt && (
+                  <div data-reaction-ui data-more-menu style={{
                     position: "absolute",
-                    top: -8,
+                    top: -14,
                     right: 4,
                     display: "flex",
-                    gap: 2,
-                    padding: 3,
-                    borderRadius: 7,
-                    background: "var(--weered-panel2, rgba(16,16,20,.96))",
+                    gap: 1,
+                    padding: 2,
+                    borderRadius: 8,
+                    background: "var(--weered-panel2, rgba(16,16,20,.98))",
                     border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
-                    boxShadow: "0 4px 12px rgba(0,0,0,.35)",
+                    boxShadow: "0 4px 14px rgba(0,0,0,.4)",
                     zIndex: 2,
                   }}>
                     <button
                       type="button"
-                      title="React"
-                      onClick={(e) => { e.stopPropagation(); setPickerMsgId(cur => cur === mId ? "" : mId); }}
-                      style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                    >😊</button>
+                      title="Add Reaction"
+                      onClick={(e) => { e.stopPropagation(); setPickerMsgId(cur => cur === mId ? "" : mId); setMoreMenuMsgId(""); }}
+                      style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.8))", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.95))"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.8))"; }}
+                    ><Icons.Smile /></button>
                     <button
                       type="button"
                       title="Reply"
@@ -594,45 +758,39 @@ export default function LobbyChatPanel(
                         setReplyingTo({ id: mId, userName: uname || "user", body: String(m?.body || "") });
                         try { inputRef.current?.focus(); } catch {}
                       }}
-                      style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                    >↩</button>
-                    {editable && (
-                      <button
-                        type="button"
-                        title="Edit message"
-                        onClick={() => { setEditingMsgId(mId); setEditDraft(String(m?.body || "")); }}
-                        style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.95))"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
-                      >✎</button>
-                    )}
-                    {deletable && (
-                      <button
-                        type="button"
-                        title="Delete message"
-                        onClick={handleDelete}
-                        style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.18)"; (e.currentTarget as HTMLElement).style.color = "rgba(252,165,165,.95)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
-                      >🗑</button>
-                    )}
-                    {!isMine && mId && (
-                      <button
-                        type="button"
-                        title="Report message"
-                        onClick={async () => {
-                          const res = await weeredReport({ targetType: "MESSAGE", targetId: mId, context: effectiveRoomId });
-                          if (res?.ok) weeredToast.success("Report submitted. Staff will review.");
-                          else if (res && !res.ok) weeredToast.error(res.error === "report_rate_limit" ? "You're reporting too fast. Try again in a few minutes." : "Report failed.");
-                        }}
-                        style={{ width: 24, height: 24, borderRadius: 5, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.75))", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(245,158,11,.18)"; (e.currentTarget as HTMLElement).style.color = "rgba(251,191,36,.95)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.75))"; }}
-                      >🚩</button>
-                    )}
+                      style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.8))", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.95))"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.8))"; }}
+                    ><Icons.Reply /></button>
+                    <button
+                      type="button"
+                      title="More"
+                      onClick={(e) => { e.stopPropagation(); setMoreMenuMsgId(cur => cur === mId ? "" : mId); setPickerMsgId(""); }}
+                      style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: moreMenuMsgId === mId ? "rgba(255,255,255,.08)" : "transparent", color: moreMenuMsgId === mId ? "var(--weered-text, rgba(243,244,246,.95))" : "var(--weered-muted, rgba(148,163,184,.8))", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .1s, color .1s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)"; (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.95))"; }}
+                      onMouseLeave={e => { if (moreMenuMsgId !== mId) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.8))"; } }}
+                    ><Icons.More /></button>
                   </div>
+                )}
+                {moreMenuMsgId === mId && !deletedAt && !isEditing && (
+                  <MoreMenu
+                    msgId={mId}
+                    body={String(m?.body || "")}
+                    userName={uname}
+                    isMine={isMine}
+                    editable={editable}
+                    deletable={deletable}
+                    roomId={effectiveRoomId}
+                    onClose={() => setMoreMenuMsgId("")}
+                    onAddReaction={() => { setPickerMsgId(mId); setMoreMenuMsgId(""); }}
+                    onReply={() => {
+                      setReplyingTo({ id: mId, userName: uname || "user", body: String(m?.body || "") });
+                      try { inputRef.current?.focus(); } catch {}
+                      setMoreMenuMsgId("");
+                    }}
+                    onEdit={() => { setEditingMsgId(mId); setEditDraft(String(m?.body || "")); setMoreMenuMsgId(""); }}
+                    onDelete={() => { handleDelete(); setMoreMenuMsgId(""); }}
+                  />
                 )}
                 {pickerMsgId === mId && (
                   <div
@@ -716,40 +874,53 @@ export default function LobbyChatPanel(
               disabled={!canType}
               title="GIF"
               style={{
-                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: gifOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-                padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: canType ? "pointer" : "not-allowed",
-                color: canType ? "rgba(216,180,254,.8)" : "rgba(255,255,255,.4)", transition: "background .15s",
-                letterSpacing: ".5px", flexShrink: 0,
+                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)",
+                background: gifOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: canType ? "pointer" : "not-allowed",
+                color: canType ? (gifOpen ? "rgba(216,180,254,.95)" : "rgba(200,205,215,.75)") : "rgba(255,255,255,.3)",
+                transition: "background .15s, color .15s", flexShrink: 0,
               }}
+              onMouseEnter={e => { if (canType && !gifOpen) (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.95)"; }}
+              onMouseLeave={e => { if (canType && !gifOpen) (e.currentTarget as HTMLElement).style.color = "rgba(200,205,215,.75)"; }}
+              aria-label="GIF"
             >
-              GIF
+              <Icons.Gif />
             </button>
             <button
               onClick={() => { setEmojiOpen(v => !v); setGifOpen(false); }}
               disabled={!canType}
               title="Emoji"
               style={{
-                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: emojiOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-                padding: "6px 10px", fontSize: 16, cursor: canType ? "pointer" : "not-allowed",
-                color: canType ? "#fff" : "rgba(255,255,255,.4)", transition: "background .15s",
-                flexShrink: 0,
+                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)",
+                background: emojiOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: canType ? "pointer" : "not-allowed",
+                color: canType ? (emojiOpen ? "rgba(216,180,254,.95)" : "rgba(200,205,215,.75)") : "rgba(255,255,255,.3)",
+                transition: "background .15s, color .15s", flexShrink: 0,
               }}
+              onMouseEnter={e => { if (canType && !emojiOpen) (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.95)"; }}
+              onMouseLeave={e => { if (canType && !emojiOpen) (e.currentTarget as HTMLElement).style.color = "rgba(200,205,215,.75)"; }}
+              aria-label="Emoji"
             >
-              😀
+              <Icons.Emoji />
             </button>
             <button
               onClick={onSend}
               disabled={!canSend}
+              title="Send"
+              aria-label="Send"
               style={{
-                borderRadius: 10, border: canSend ? "1px solid rgba(124,58,237,.35)" : "1px solid rgba(255,255,255,.10)",
+                borderRadius: 10,
+                border: canSend ? "1px solid rgba(124,58,237,.35)" : "1px solid rgba(255,255,255,.10)",
                 background: canSend ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
                 color: canSend ? "rgba(216,180,254,.95)" : "rgba(255,255,255,.4)",
-                padding: "6px 14px", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+                width: 40, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: canSend ? "pointer" : "not-allowed", transition: "all .15s",
                 flexShrink: 0,
               }}
             >
-              Send
+              <Icons.Send />
             </button>
           </div>
 
