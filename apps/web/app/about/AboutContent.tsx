@@ -140,6 +140,11 @@ export default function AboutContent() {
             {Array.from({ length: 8 }).map((_, i) => <Glyph key={i} delay={i * 120} />)}
           </div>
 
+          <div style={{ marginBottom: 20 }}>
+            <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
+              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 88, height: 88, filter: "drop-shadow(0 0 24px rgba(88,0,229,0.35))" }} />
+            </a>
+          </div>
           <div className="about-wordmark">weered</div>
           <div className="about-tagline">communities · presence · rooms</div>
 

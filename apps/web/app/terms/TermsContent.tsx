@@ -125,6 +125,11 @@ export default function TermsContent() {
 
       <div className="legal-root">
         <div className={`legal-inner ${visible ? "visible" : ""}`}>
+          <div style={{ marginBottom: 20 }}>
+            <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
+              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 64, height: 64, filter: "drop-shadow(0 0 18px rgba(88,0,229,0.3))" }} />
+            </a>
+          </div>
           <div className="legal-title">Terms of Service</div>
           <div className="legal-updated">Last updated: April 8, 2026</div>
 
