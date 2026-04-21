@@ -64,6 +64,8 @@ type Ctx = {
   unban: (userId: string) => void; mute: (userId: string) => void; unmute: (userId: string) => void;
   admit: (userId: string) => void; deny: (userId: string) => void;
   sendRaw: (msg: object) => void;
+  isAway: boolean;
+  setAway: (away: boolean) => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -724,23 +726,44 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("weered:ws:send", handler);
   }, []);
 
-  // ─── Idle detector — flags user "Lying low" (AFK) after 5 min of no input ─
-  useEffect(() => {
+  // ─── Idle + manual-away presence ───────────────────────────────────────────
+  // Auto-idle fires "Lying low" after 5 min of no input. A manual toggle
+  // (via setAway below) pins the status and disables the auto timer until the
+  // user flips it back.
+  const [isAway, setIsAwayState] = useState(false);
+  const manualAwayRef = useRef(false);
+  const lastSentAwayRef = useRef<boolean | null>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sendAwayStatus = React.useCallback((away: boolean, force = false) => {
+    if (!force && lastSentAwayRef.current === away) return;
+    setIsAwayState(away);
+    lastSentAwayRef.current = away;
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    try { ws.send(JSON.stringify({ type: "presence:idle", away })); } catch {}
+  }, []);
+
+  const armIdleTimer = React.useCallback(() => {
     const IDLE_MS = 5 * 60 * 1000;
-    let idleTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastStatus: boolean | null = null;
-    const sendStatus = (away: boolean) => {
-      if (lastStatus === away) return;
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      try { ws.send(JSON.stringify({ type: "presence:idle", away })); lastStatus = away; } catch {}
-    };
-    const armIdleTimer = () => {
-      if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => sendStatus(true), IDLE_MS);
-    };
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      if (manualAwayRef.current) return;
+      sendAwayStatus(true);
+    }, IDLE_MS);
+  }, [sendAwayStatus]);
+
+  const setAway = React.useCallback((away: boolean) => {
+    manualAwayRef.current = away;
+    sendAwayStatus(away, true);
+    if (!away) armIdleTimer();
+    else if (idleTimerRef.current) { clearTimeout(idleTimerRef.current); idleTimerRef.current = null; }
+  }, [sendAwayStatus, armIdleTimer]);
+
+  useEffect(() => {
     const onActivity = () => {
-      sendStatus(false);
+      if (manualAwayRef.current) return;
+      sendAwayStatus(false);
       armIdleTimer();
     };
     armIdleTimer();
@@ -748,9 +771,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     events.forEach(e => window.addEventListener(e, onActivity, { passive: true }));
     return () => {
       events.forEach(e => window.removeEventListener(e, onActivity));
-      if (idleTimer) clearTimeout(idleTimer);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, []);
+  }, [armIdleTimer, sendAwayStatus]);
 
   // ─── Public API ───────────────────────────────────────────────────────────
   async function devLogin(username: string) {
@@ -898,6 +921,8 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
         if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
       } catch {}
     },
+    isAway,
+    setAway,
   };
 
   return (
