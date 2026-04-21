@@ -12831,6 +12831,86 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   });
 
+  // GET /windrose/bounties/leaderboard — hall-of-fame aggregates
+  // Three boards + a stats strip. Cached 5 min to keep the query cheap.
+  app.get("/windrose/bounties/leaderboard", async (_req, reply) => {
+    const cacheKey = "wr:bounties:leaderboard";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      // Fetch all bounties once, aggregate in memory — simpler than Prisma
+      // groupBy juggling, and the volume is small.
+      const rows: any[] = await (prisma as any).windroseBounty.findMany({
+        where: { lobbyId: "windrose" },
+        take: 5000, // plenty of headroom; revisit if the board ever gets huge
+      });
+
+      // Most Wanted — group OPEN + CLAIMED by targetHandle, sum amount
+      const wantedMap = new Map<string, { count: number; amount: number }>();
+      for (const r of rows) {
+        if (r.status !== "OPEN" && r.status !== "CLAIMED") continue;
+        const key = String(r.targetHandle || "").trim();
+        if (!key) continue;
+        const slot = wantedMap.get(key) || { count: 0, amount: 0 };
+        slot.count += 1;
+        slot.amount += Number(r.amount) || 0;
+        wantedMap.set(key, slot);
+      }
+      const mostWanted = Array.from(wantedMap.entries())
+        .map(([targetHandle, v]) => ({ targetHandle, openCount: v.count, totalAmount: v.amount }))
+        .sort((a, b) => b.totalAmount - a.totalAmount)
+        .slice(0, 10);
+
+      // Top Hunters — group SETTLED by claimantId, count + sum
+      const hunterMap = new Map<string, { name: string; kills: number; earned: number }>();
+      for (const r of rows) {
+        if (r.status !== "SETTLED" || !r.claimantId) continue;
+        const slot = hunterMap.get(r.claimantId) || { name: String(r.claimantName || r.claimantId), kills: 0, earned: 0 };
+        slot.kills += 1;
+        slot.earned += Number(r.amount) || 0;
+        hunterMap.set(r.claimantId, slot);
+      }
+      const topHunters = Array.from(hunterMap.entries())
+        .map(([userId, v]) => ({ userId, userName: v.name, kills: v.kills, totalEarned: v.earned }))
+        .sort((a, b) => b.totalEarned - a.totalEarned)
+        .slice(0, 10);
+
+      // Biggest Posters — group ALL posts by posterId
+      const posterMap = new Map<string, { name: string; posted: number; total: number }>();
+      for (const r of rows) {
+        if (!r.posterId) continue;
+        const slot = posterMap.get(r.posterId) || { name: String(r.posterName || r.posterId), posted: 0, total: 0 };
+        slot.posted += 1;
+        slot.total += Number(r.amount) || 0;
+        posterMap.set(r.posterId, slot);
+      }
+      const biggestPosters = Array.from(posterMap.entries())
+        .map(([userId, v]) => ({ userId, userName: v.name, postedCount: v.posted, totalPosted: v.total }))
+        .sort((a, b) => b.totalPosted - a.totalPosted)
+        .slice(0, 10);
+
+      // Stats strip
+      const openCount = rows.filter(r => r.status === "OPEN" || r.status === "CLAIMED").length;
+      const openTotal = rows.filter(r => r.status === "OPEN" || r.status === "CLAIMED")
+        .reduce((s, r) => s + (Number(r.amount) || 0), 0);
+      const settled = rows.filter(r => r.status === "SETTLED");
+      const settledCount = settled.length;
+      const settledTotal = settled.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+
+      const result = {
+        ok: true,
+        mostWanted, topHunters, biggestPosters,
+        stats: { openCount, openTotal, settledCount, settledTotal },
+        checkedAt: new Date().toISOString(),
+      };
+      wrCacheSet(cacheKey, result, 5 * 60 * 1000);
+      return reply.send(result);
+    } catch (e) {
+      console.error("[windrose/bounties leaderboard]", e);
+      return reply.code(500).send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
   // ── Windrose server polling worker ─────────────────────────────────────
   // Pings each registered server's queryUrl every 90s. Updates status +
   // lastState JSON blob. Tolerant of missing/unknown response shapes — we
