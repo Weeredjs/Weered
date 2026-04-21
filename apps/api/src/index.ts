@@ -5064,6 +5064,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        if (msg.type === "crew:send") console.log(`[trace-PRES-JOIN-PRE] about to test presence:join`);
         if (msg.type === "presence:join") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           if (!roomId) return;
@@ -5148,6 +5149,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
           // ── module:set — user sets the active module for the room
+        if (msg.type === "crew:send") console.log(`[trace-MOD-SET-PRE] about to test module:set`);
         if (msg.type === "module:set") {
           const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
           if (!roomId) return;
@@ -5233,6 +5235,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           await globalAudit(ws.user.id, ws.user.name, "room_close", roomId);
           return;
         }
+        if (msg.type === "crew:send") console.log(`[trace-CHAT-PRE] about to test chat:send`);
         if (msg.type === "chat:send") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           const body = String(msg.body || "").trim();
@@ -5462,6 +5465,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         const actorIsMod = isModOrOwner(room, actorId, actorGlobalRole);
         const actorIsOwner = isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole);
 
+        if (msg.type === "crew:send") console.log(`[trace-MID-1] reached pre room:getAdminState`);
         if (msg.type === "room:getAdminState") {
           // Allow any user to request presence state; admin state only goes to mods
           publishState(room);
