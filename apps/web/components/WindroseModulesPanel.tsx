@@ -1146,6 +1146,19 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
             </span>
           </div>
         )}
+
+        {/* View / share chip */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+          <a
+            href={`/crew/${encodeURIComponent(crew.id)}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 10, color: PAL.parchDim, textDecoration: "none", fontFamily: WR_FONT_MONO, letterSpacing: "0.5px", padding: "3px 10px", border: `1px solid ${PAL.brass}20`, transition: "border-color .15s" }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = `${PAL.brass}55`)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = `${PAL.brass}20`)}
+          >
+            view ↗
+          </a>
+        </div>
       </div>
     </div>
   );
