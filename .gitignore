@@ -18,19 +18,36 @@ secrets/
 *.pem
 *.key
 
-# ── GPT patch debris (never commit these) ─────────────────────
+# ── Editor / patch / backup debris (never commit these) ──────
 *.bak
 *.bak.*
 *.bak_*
 **/*.bak
 **/*.bak.*
 **/*.bak_*
+*.broken
+**/*.broken
+**/*.broken.*
+*.preRepair
+**/*.preRepair
+**/*.preRepair.*
+*.orig
+**/*.orig
+*~
+*.swp
+.idea/
+.vscode/launch.json
 _patch_*.ps1
 _patch_*.txt
 *.ps1
 *.LINED*.txt
 _ui_backup_*/
 *_bak_*/
+
+# ── Desktop (Tauri) ───────────────────────────────────────────
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/Cargo.lock
 
 # ── Archives ──────────────────────────────────────────────────
 *.tgz
@@ -46,7 +63,5 @@ pnpm-debug.log*
 # ── OS ────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
-
-apps/api/manifest-cache/
 
 apps/api/manifest-cache/
