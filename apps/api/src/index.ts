@@ -7122,7 +7122,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         where: { publicInLobbies: { has: String(lobbyId) } },
         orderBy: [{ recruiting: "desc" }, { updatedAt: "desc" }],
         take: 60,
-        include: { members: { select: { userId: true }, take: 100 } },
+        include: { members: { select: { userId: true, name: true, role: true }, take: 100 } },
       });
 
       // Map userId → crewId so we can attribute bounty settles back
@@ -7151,22 +7151,28 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
         }
       }
 
-      const shaped = crews.map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        tag: c.tag,
-        description: c.description,
-        logoUrl: c.logoUrl,
-        bannerUrl: c.bannerUrl,
-        accentColor: c.accentColor,
-        homePort: c.homePort,
-        recruiting: c.recruiting,
-        recruitingNote: c.recruitingNote,
-        memberCount: c.members.length,
-        updatedAt: c.updatedAt,
-        bountyKills:  (bountyStats.get(c.id)?.kills) ?? 0,
-        bountyEarned: (bountyStats.get(c.id)?.earned) ?? 0,
-      }));
+      const shaped = crews.map((c: any) => {
+        // Find the leader's display name from members
+        const leader = (c.members || []).find((m: any) => m.userId === c.ownerId);
+        return {
+          id: c.id,
+          name: c.name,
+          tag: c.tag,
+          description: c.description,
+          logoUrl: c.logoUrl,
+          bannerUrl: c.bannerUrl,
+          accentColor: c.accentColor,
+          homePort: c.homePort,
+          recruiting: c.recruiting,
+          recruitingNote: c.recruitingNote,
+          memberCount: c.members.length,
+          updatedAt: c.updatedAt,
+          bountyKills:  (bountyStats.get(c.id)?.kills) ?? 0,
+          bountyEarned: (bountyStats.get(c.id)?.earned) ?? 0,
+          ownerId: c.ownerId, // for the recruit-me flow
+          ownerName: leader?.name || "",
+        };
+      });
       return reply.send({ ok: true, crews: shaped });
     } catch (e) {
       console.error("[lobbies/:id/crews GET]", e);
