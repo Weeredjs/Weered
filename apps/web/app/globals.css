@@ -3303,11 +3303,31 @@ button:hover, [role="button"]:hover {
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
 .weered-right { width: 340px; flex: 0 0 340px; position: relative; }
-.weered-center { 
-  flex: 1 1 auto; 
-  min-width: 0; 
+.weered-center {
+  flex: 1 1 auto;
+  min-width: 0;
   height: 100%;
   overflow: hidden;
+}
+
+/* Chat fullscreen overlay — covers everything except the left rail.
+   Left offset matches shell padding + left-rail width + gap at each
+   breakpoint, so the chat tucks right up against the rail and stops. */
+.weered-chat-fullscreen {
+  /* widescreen: 16 padding + 320 rail + 16 gap = 352 */
+  left: 352px !important;
+}
+@media (max-width: 1399px) {
+  /* mid: left rail hidden; icon strip 48 + 10 padding + 10 gap = 68 */
+  .weered-chat-fullscreen { left: 68px !important; }
+}
+@media (max-width: 1099px) {
+  /* narrow: shell padding 0, icon strip 48 flush; chat covers the rest */
+  .weered-chat-fullscreen { left: 48px !important; }
+}
+@media (max-width: 767px) {
+  /* mobile: left rail + icon strip both gone; overlay covers full viewport */
+  .weered-chat-fullscreen { left: 0 !important; }
 }
 
 /* Rails: sticky, panel-styled */
