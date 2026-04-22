@@ -4887,31 +4887,136 @@ app.post("/dm/:peerId", async (req, reply) => {
   });
 
   // ── Desktop app updater (Tauri) ─────────────────────────────────────────────
-  // Tauri's updater plugin polls this endpoint on launch. Returning 204 means
-  // "no update available" — clients stay on their current shell. When we
-  // publish a new release, populate the `desktopRelease` object below with
-  // the signed manifest. See apps/desktop/README.md for the wire format.
+  // Tauri's updater plugin polls this endpoint on launch. We pull the latest
+  // signed release from GitHub Releases and translate it into the manifest
+  // shape Tauri expects. Returns 204 (no update) if there's no release,
+  // the user is already current, or GitHub is unreachable — never errors
+  // back to the client (we'd rather miss an update than crash the desktop app).
 
   type DesktopReleaseManifest = {
     version: string;
     notes: string;
     pub_date: string;
     platforms: Record<string, { signature: string; url: string }>;
-  } | null;
+  };
 
-  let desktopRelease: DesktopReleaseManifest = null;
+  // Map Tauri's target strings to release-asset filename patterns.
+  // GitHub Actions uploads artifacts named like Weered_0.2.0_x64-setup.exe etc.
+  const TAURI_TARGET_MATCHERS: Record<string, RegExp> = {
+    "windows-x86_64":  /Weered.*x64-setup\.exe$/i,
+    "darwin-x86_64":   /Weered.*x64\.app\.tar\.gz$/i,
+    "darwin-aarch64":  /Weered.*aarch64\.app\.tar\.gz$/i,
+    "linux-x86_64":    /weered.*amd64\.AppImage$/i,
+  };
+
+  type GhAsset = { name: string; browser_download_url: string };
+  type GhRelease = {
+    tag_name: string;
+    name: string;
+    body: string;
+    published_at: string;
+    assets: GhAsset[];
+    prerelease: boolean;
+    draft: boolean;
+  };
+
+  // Cache the latest manifest for 5 minutes — Tauri clients poll on each launch
+  // and we don't want to hammer GitHub. Also keeps the endpoint snappy.
+  let desktopReleaseCache: { manifest: DesktopReleaseManifest | null; expiresAt: number } | null = null;
+  const DESKTOP_RELEASE_TTL = 5 * 60 * 1000;
+
+  // GitHub repo to pull releases from. Override via env if the repo moves.
+  const DESKTOP_RELEASES_REPO = process.env.DESKTOP_RELEASES_REPO || "Weeredjs/Weered";
+
+  async function fetchLatestDesktopRelease(): Promise<DesktopReleaseManifest | null> {
+    if (desktopReleaseCache && desktopReleaseCache.expiresAt > Date.now()) {
+      return desktopReleaseCache.manifest;
+    }
+
+    let manifest: DesktopReleaseManifest | null = null;
+    try {
+      const url = `https://api.github.com/repos/${DESKTOP_RELEASES_REPO}/releases?per_page=10`;
+      const headers: Record<string, string> = {
+        "User-Agent": "Weered-API/1.0",
+        Accept: "application/vnd.github+json",
+      };
+      if (process.env.GITHUB_TOKEN) headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`GitHub releases ${res.status}`);
+      const releases = (await res.json()) as GhRelease[];
+
+      // Find the latest non-draft, non-prerelease desktop release.
+      const latest = releases.find((r) => !r.draft && !r.prerelease && /^desktop-v/.test(r.tag_name));
+      if (!latest) {
+        manifest = null;
+      } else {
+        const version = latest.tag_name.replace(/^desktop-v/, "");
+
+        // Build the platforms map. We need both the asset URL and its .sig file.
+        const platforms: DesktopReleaseManifest["platforms"] = {};
+        for (const [target, matcher] of Object.entries(TAURI_TARGET_MATCHERS)) {
+          const asset = latest.assets.find((a) => matcher.test(a.name));
+          if (!asset) continue;
+          const sigAsset = latest.assets.find((a) => a.name === `${asset.name}.sig`);
+          if (!sigAsset) continue; // Skip platforms without a signature — Tauri rejects unsigned updates.
+          // Tauri expects the signature *contents* in the manifest, not the URL.
+          let signature = "";
+          try {
+            const sigRes = await fetch(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
+            if (sigRes.ok) signature = (await sigRes.text()).trim();
+          } catch {}
+          if (!signature) continue;
+          platforms[target] = { signature, url: asset.browser_download_url };
+        }
+
+        if (Object.keys(platforms).length > 0) {
+          manifest = {
+            version,
+            notes: latest.body || `Weered Desktop ${version}`,
+            pub_date: latest.published_at,
+            platforms,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("[desktop-updater] fetchLatestDesktopRelease failed:", e);
+      // On error, keep whatever we had cached. If nothing cached, return null.
+      if (desktopReleaseCache?.manifest) return desktopReleaseCache.manifest;
+    }
+
+    desktopReleaseCache = { manifest, expiresAt: Date.now() + DESKTOP_RELEASE_TTL };
+    return manifest;
+  }
 
   app.get<{ Params: { target: string; version: string } }>(
     "/desktop/updates/:target/:version",
     async (req, reply) => {
-      if (!desktopRelease) return reply.code(204).send();
+      const manifest = await fetchLatestDesktopRelease();
+      if (!manifest) return reply.code(204).send();
       const { version, target } = req.params;
-      // Skip if user is already on the latest version, or platform isn't shipped.
-      if (desktopRelease.version === version) return reply.code(204).send();
-      if (!desktopRelease.platforms[target]) return reply.code(204).send();
-      return reply.send(desktopRelease);
+      if (manifest.version === version) return reply.code(204).send();
+      if (!manifest.platforms[target]) return reply.code(204).send();
+      return reply.send(manifest);
     },
   );
+
+  // Convenience endpoint for the /desktop landing page — returns the latest
+  // release info (or null) so the page can render real download buttons.
+  app.get("/desktop/latest", async (_req, reply) => {
+    const manifest = await fetchLatestDesktopRelease();
+    if (!manifest) return reply.send({ ok: true, release: null });
+    return reply.send({
+      ok: true,
+      release: {
+        version: manifest.version,
+        pub_date: manifest.pub_date,
+        notes: manifest.notes,
+        downloads: Object.fromEntries(
+          Object.entries(manifest.platforms).map(([k, v]) => [k, v.url]),
+        ),
+      },
+    });
+  });
 
   app.post("/staff/banner", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
