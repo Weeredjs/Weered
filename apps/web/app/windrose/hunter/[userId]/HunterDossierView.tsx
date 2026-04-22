@@ -195,7 +195,7 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
             {/* Hunter side */}
             <Section title="As Hunter" glyph="⚔" glyphColor="#5db765">
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-                <Stat label="Kills" value={d.hunter.kills.toLocaleString()} />
+                <Stat label="Delivered" value={d.hunter.kills.toLocaleString()} />
                 <Stat label="Earned" value={d.hunter.totalEarned.toLocaleString()} sub="Paper" highlight />
                 <Stat
                   label="Biggest Hit"
@@ -215,7 +215,7 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
               )}
               {d.hunter.recentKills.length > 0 && (
                 <LedgerList
-                  heading="Recent Kills"
+                  heading="Recent Deliveries"
                   rows={d.hunter.recentKills.map(k => ({
                     id: k.id, icon: "⚔", iconColor: "#5db765",
                     primary: k.target, amount: k.amount, amountColor: PAL.brassHi, at: k.at,

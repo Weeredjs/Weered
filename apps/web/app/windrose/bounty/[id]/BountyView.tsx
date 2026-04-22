@@ -84,8 +84,8 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
 
   const statusConf = b ? (() => {
     switch (b.status) {
-      case "OPEN":      return { label: "Open · Hunting Season", color: PAL.blood, sub: `Posted ${timeAgo(b.createdAt)}` };
-      case "CLAIMED":   return { label: "Claimed · Awaiting Settlement", color: PAL.brassHi, sub: `Claim submitted ${timeAgo(b.claimedAt)}` };
+      case "OPEN":      return { label: "Open · On the Board", color: PAL.blood, sub: `Posted ${timeAgo(b.createdAt)}` };
+      case "CLAIMED":   return { label: "Delivered · Awaiting Settlement", color: PAL.brassHi, sub: `Claim submitted ${timeAgo(b.claimedAt)}` };
       case "SETTLED":   return { label: "Settled · Paid Out", color: "#5db765", sub: `Settled ${timeAgo(b.settledAt)}` };
       case "CANCELLED": return { label: "Cancelled · Refunded", color: PAL.parchDim, sub: `Cancelled ${timeAgo(b.cancelledAt)}` };
     }
@@ -167,7 +167,7 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
               </h1>
               {b.targetServer && (
                 <div style={{ fontSize: 12, color: PAL.parchDim, fontFamily: WR_MONO, letterSpacing: "1px", marginBottom: 20 }}>
-                  last seen on {b.targetServer}
+                  on {b.targetServer}
                 </div>
               )}
 
@@ -216,7 +216,7 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
                 marginBottom: 14,
               }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, marginBottom: 8, opacity: 0.75 }}>
-                  Reason
+                  Terms
                 </div>
                 <div style={{ fontSize: 15, color: PAL.parchment, lineHeight: 1.6, fontStyle: "italic" }}>
                   {b.reason}

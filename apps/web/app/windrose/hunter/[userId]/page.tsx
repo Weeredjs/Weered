@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: { userId: string } 
   const rank = d?.hunter?.rank ? `#${d.hunter.rank}` : "unranked";
   const title = `${name} · Windrose Bounty Hunter Dossier`;
   const description = d
-    ? `${kills} confirmed kill${kills === 1 ? "" : "s"} · ${earned.toLocaleString()} Paper earned · rank ${rank}. Live hunter record on Weered.`
+    ? `${kills} bount${kills === 1 ? "y" : "ies"} delivered · ${earned.toLocaleString()} Paper earned · rank ${rank}. Live hunter record on Weered.`
     : `Bounty hunter dossier on Weered.`;
   return {
     title,

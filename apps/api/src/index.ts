@@ -13027,9 +13027,11 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
       const ai = await getAI();
       if (!ai) return reply.send({ ok: false, error: "ai_unavailable", summary: null });
 
-      const system = `You are The Operator — a gold-robot AI concierge on Weered, with a GTA/mafia aesthetic flavour. The context is WINDROSE, a pirate survival co-op game. Your job: write a sharp, punchy weekly recap of what's gone down in the Windrose community hub.
+      const system = `You are The Operator — a gold-robot AI concierge on Weered, with a GTA/mafia aesthetic flavour. The context is WINDROSE, a pirate SURVIVAL CO-OP game (PvE — no player-vs-player combat in the base game). Your job: write a sharp, punchy weekly recap of what's gone down in the Windrose community hub.
 
 Voice: street-smart, laconic, a little dangerous, dry humour. Pirate-flavoured phrasing where it lands but never forced. You're running the joint, not a tour guide.
+
+IMPORTANT about bounties: Windrose bounties are NOT about hunting other players. They are Paper-escrowed OBJECTIVES — delivery runs, item fetches, speedruns, boss takedowns, seed locations, cargo hauls, dares. Someone posts, a hunter delivers the proof, Paper settles. Frame bounties as "what the mark was" and "who delivered on it," not as kills or assassinations.
 
 Rules:
 - 140-220 words total. No more.
@@ -13322,7 +13324,7 @@ Rules:
             });
             // Skip pinging the poster themselves
             const memberIds = new Set<string>(members.map((m: any) => m.userId).filter((id: string) => id && id !== u.id));
-            const body = `${amount.toLocaleString()} Paper on ${targetHandle}. ${reason ? `"${reason.slice(0, 80)}${reason.length > 80 ? "…" : ""}"` : "Hunter season."}`;
+            const body = `${amount.toLocaleString()} Paper on ${targetHandle}. ${reason ? `"${reason.slice(0, 80)}${reason.length > 80 ? "…" : ""}"` : "It's on the board."}`;
             const data = {
               title: "Most Wanted",
               body,
