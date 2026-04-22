@@ -62,6 +62,7 @@ type Ctx = {
   ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
   launchByRoom: Record<string, LaunchSnapshot | null>;
   typingByRoom: Record<string, { userId: string; name: string; ts: number }[]>;
+  pinnedByRoom: Record<string, string[]>;
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
@@ -193,6 +194,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
   const [typingByRoom,  setTypingByRoom ] = useState<Record<string, { userId: string; name: string; ts: number }[]>>({});
+  const [pinnedByRoom,  setPinnedByRoom ] = useState<Record<string, string[]>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
   const [passwordRoomId, setPasswordRoomId] = useState("");
   const [passwordError,  setPasswordError ] = useState("");
@@ -425,6 +427,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (msg.launch !== undefined) {
           setLaunchByRoom(prev => ({ ...prev, [rid]: msg.launch as LaunchSnapshot | null }));
         }
+        // Initial pinned snapshot on join
+        if (Array.isArray(msg.pinned)) {
+          setPinnedByRoom(prev => ({ ...prev, [rid]: msg.pinned.map(String) }));
+        }
         // Track lobby context from the server's lobbyId field
         if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
         // activeRoomId managed by path effect — no override needed here
@@ -434,6 +440,21 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           }
           return rid;
         });
+        return;
+      }
+
+      // Pinned message set for this room changed — mod pinned/unpinned.
+      if (msg.type === "chat:pins") {
+        const rid = String(msg.roomId || "");
+        if (!rid) return;
+        const pins = Array.isArray(msg.pinned) ? msg.pinned.map(String) : [];
+        setPinnedByRoom(prev => ({ ...prev, [rid]: pins }));
+        return;
+      }
+
+      // Pin error feedback (e.g. limit reached) — surface a toast
+      if (msg.type === "chat:pin:error") {
+        try { weeredToast.error(String((msg as any).reason || "Pin failed.")); } catch {}
         return;
       }
 
@@ -979,7 +1000,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
     usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom,
-    typingByRoom,
+    typingByRoom, pinnedByRoom,
     moduleState, setModuleState,
     rooms, join, leave, knock,
     devLogin, logout,

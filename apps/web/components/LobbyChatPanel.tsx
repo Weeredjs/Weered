@@ -657,6 +657,7 @@ const Icons = {
   Edit:   (p: any = {}) => (<svg {...svgProps} {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>),
   Trash:  (p: any = {}) => (<svg {...svgProps} {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4c0-.55.45-1 1-1h4c.55 0 1 .45 1 1v2"/></svg>),
   Flag:   (p: any = {}) => (<svg {...svgProps} {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>),
+  Pin:    (p: any = {}) => (<svg {...svgProps} {...p}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14l-1.5-4.5a2 2 0 0 1 .5-2L20 9V3H4v6l1.5 1.5a2 2 0 0 1 .5 2L5 17z"/></svg>),
   Gif:    (p: any = {}) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm3.3 3.2v2.6h1.5v.6H8.5c-.1.3-.4.5-.9.5-.7 0-1.2-.5-1.2-1.4S7 9.1 7.7 9.1c.5 0 .9.3 1 .6h1.1c-.1-.8-.9-1.6-2.1-1.6-1.5 0-2.4 1-2.4 2.5s.9 2.5 2.3 2.5c.8 0 1.4-.4 1.6-.9l.1.8h.8V10H7.3v-1.8zm5.3 0h-1.2v5.2h1.2V8.2zm1.4 0v5.2h1.2v-2h1.6v-.9h-1.6v-1.4h2.1v-.9h-3.3z"/></svg>),
   Emoji:  (p: any = {}) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>),
   Send:   (p: any = {}) => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/></svg>),
@@ -702,7 +703,8 @@ function MoreMenuItem({
 
 function MoreMenu({
   msgId, body, userName, isMine, editable, deletable, roomId,
-  onClose, onAddReaction, onReply, onEdit, onDelete,
+  isPinned, canPin,
+  onClose, onAddReaction, onReply, onEdit, onDelete, onTogglePin,
 }: {
   msgId: string;
   body: string;
@@ -711,11 +713,14 @@ function MoreMenu({
   editable: boolean;
   deletable: boolean;
   roomId: string;
+  isPinned: boolean;
+  canPin: boolean;
   onClose: () => void;
   onAddReaction: () => void;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onTogglePin: () => void;
 }) {
   const copy = async (txt: string, okMsg: string) => {
     try { await navigator.clipboard.writeText(txt); weeredToast.success(okMsg); }
@@ -786,6 +791,14 @@ function MoreMenu({
       <MoreMenuItem icon={<Icons.Unread />} label="Mark Unread" onClick={handleMarkUnread} />
       <MoreMenuItem icon={<Icons.Link />} label="Copy Message Link" onClick={handleCopyLink} />
       <MoreMenuItem icon={<Icons.Speak />} label="Speak Message" onClick={handleSpeak} />
+      {canPin && (
+        <MoreMenuItem
+          divider
+          icon={<Icons.Pin />}
+          label={isPinned ? "Unpin Message" : "Pin Message"}
+          onClick={() => { onTogglePin(); onClose(); }}
+        />
+      )}
       {editable && <MoreMenuItem divider icon={<Icons.Edit />} label="Edit Message" onClick={onEdit} />}
       {deletable && <MoreMenuItem icon={<Icons.Trash />} label="Delete Message" onClick={onDelete} danger />}
       {!isMine && <MoreMenuItem divider icon={<Icons.Flag />} label="Report Message" onClick={handleReport} danger />}
@@ -1032,6 +1045,84 @@ export default function LobbyChatPanel(
           <div className="text-xs text-white/60 truncate">room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}</div>
         </div>
       )}
+
+      {/* Pinned messages strip — collapsible bar at the top of every chat.
+          Clicks scroll the referenced message into view + flash its row. */}
+      {(() => {
+        const pinIds: string[] = Array.isArray(ctx?.pinnedByRoom?.[effectiveRoomId]) ? ctx.pinnedByRoom[effectiveRoomId] : [];
+        if (pinIds.length === 0) return null;
+        const pinMsgs = pinIds.map(pid => msgs.find((m: any) => String(m?.id || "") === pid)).filter(Boolean) as any[];
+        if (pinMsgs.length === 0) return null;
+        return (
+          <details style={{
+            marginBottom: 8,
+            background: "linear-gradient(90deg, rgba(217,169,66,.08), rgba(217,169,66,.02))",
+            border: "1px solid rgba(217,169,66,.22)",
+            borderRadius: 8,
+            flexShrink: 0,
+          }}>
+            <summary style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase",
+              color: "rgba(232,196,138,.85)",
+              listStyle: "none",
+            }}>
+              <Icons.Pin />
+              Pinned · {pinMsgs.length}
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 9, opacity: 0.6, letterSpacing: "1px" }}>click to expand</span>
+            </summary>
+            <div style={{ padding: "4px 10px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {pinMsgs.map(pm => {
+                const pid = String(pm?.id || "");
+                const puname = String(pm?.user?.name || pm?.user?.id || pm?.name || pm?.author || "?");
+                const pbody = String(pm?.body || pm?.text || "");
+                return (
+                  <button
+                    key={pid}
+                    type="button"
+                    onClick={() => {
+                      try {
+                        const el = document.querySelector(`[data-msg-id="${pid}"]`) as HTMLElement | null;
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth", block: "center" });
+                          const prev = el.style.background;
+                          el.style.transition = "background 0.2s";
+                          el.style.background = "rgba(232,196,138,0.18)";
+                          setTimeout(() => { el.style.background = prev; }, 1200);
+                        }
+                      } catch {}
+                    }}
+                    style={{
+                      display: "flex", alignItems: "baseline", gap: 8,
+                      padding: "6px 10px",
+                      border: "1px solid rgba(217,169,66,.18)",
+                      borderRadius: 5,
+                      background: "rgba(0,0,0,.15)",
+                      color: "inherit",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                      fontSize: 12,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <span style={{ color: "rgba(232,196,138,0.9)", fontWeight: 700, flexShrink: 0 }}>{puname}</span>
+                    <span style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+                      {pbody.length > 140 ? `${pbody.slice(0, 140)}…` : pbody}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </details>
+        );
+      })()}
 
       <div
         ref={listRef}
@@ -1284,26 +1375,41 @@ export default function LobbyChatPanel(
                     ><Icons.More /></button>
                   </div>
                 )}
-                {moreMenuMsgId === mId && !deletedAt && !isEditing && (
-                  <MoreMenu
-                    msgId={mId}
-                    body={String(m?.body || "")}
-                    userName={uname}
-                    isMine={isMine}
-                    editable={editable}
-                    deletable={deletable}
-                    roomId={effectiveRoomId}
-                    onClose={() => setMoreMenuMsgId("")}
-                    onAddReaction={() => { setPickerMsgId(mId); setMoreMenuMsgId(""); }}
-                    onReply={() => {
-                      setReplyingTo({ id: mId, userName: uname || "user", body: String(m?.body || "") });
-                      try { inputRef.current?.focus(); } catch {}
-                      setMoreMenuMsgId("");
-                    }}
-                    onEdit={() => { setEditingMsgId(mId); setEditDraft(String(m?.body || "")); setMoreMenuMsgId(""); }}
-                    onDelete={() => { handleDelete(); setMoreMenuMsgId(""); }}
-                  />
-                )}
+                {moreMenuMsgId === mId && !deletedAt && !isEditing && (() => {
+                  const meId = String(ctx?.me?.id || "");
+                  const meRole = String(ctx?.me?.globalRole || "").toUpperCase();
+                  const meIsElevated = ["GOD", "STAFF", "SUPPORT", "ADMIN"].includes(meRole);
+                  const ownerId = String(meta?.ownerId || "");
+                  const mods = Array.isArray(meta?.mods) ? meta.mods.map(String) : [];
+                  const canPin = meIsElevated || (!!meId && (meId === ownerId || mods.includes(meId)));
+                  const pinnedSet: string[] = Array.isArray(ctx?.pinnedByRoom?.[effectiveRoomId]) ? ctx.pinnedByRoom[effectiveRoomId] : [];
+                  const isPinned = pinnedSet.includes(mId);
+                  return (
+                    <MoreMenu
+                      msgId={mId}
+                      body={String(m?.body || "")}
+                      userName={uname}
+                      isMine={isMine}
+                      editable={editable}
+                      deletable={deletable}
+                      roomId={effectiveRoomId}
+                      isPinned={isPinned}
+                      canPin={canPin}
+                      onClose={() => setMoreMenuMsgId("")}
+                      onAddReaction={() => { setPickerMsgId(mId); setMoreMenuMsgId(""); }}
+                      onReply={() => {
+                        setReplyingTo({ id: mId, userName: uname || "user", body: String(m?.body || "") });
+                        try { inputRef.current?.focus(); } catch {}
+                        setMoreMenuMsgId("");
+                      }}
+                      onEdit={() => { setEditingMsgId(mId); setEditDraft(String(m?.body || "")); setMoreMenuMsgId(""); }}
+                      onDelete={() => { handleDelete(); setMoreMenuMsgId(""); }}
+                      onTogglePin={() => {
+                        try { (ctx as any)?.sendRaw?.({ type: isPinned ? "chat:unpin" : "chat:pin", msgId: mId }); } catch {}
+                      }}
+                    />
+                  );
+                })()}
                 {pickerMsgId === mId && (
                   <div
                     data-reaction-ui
