@@ -35,7 +35,7 @@ export interface Lobby {
   bannerUrl: string | null;
   onlineCount: number;
   joinMode?: JoinMode;
-  _count?: { rooms: number; members: number };
+  _count: { rooms: number; members: number };
 }
 
 export interface LobbiesResponse {

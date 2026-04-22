@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@sentry/nextjs": "^10.49.0",
+    "@weered/shared": "workspace:*",
     "leaflet": "^1.9.4",
     "lightweight-charts": "^5.1.0",
     "livekit-client": "^2.7.5",
