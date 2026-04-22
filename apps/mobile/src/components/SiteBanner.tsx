@@ -36,10 +36,10 @@ export function SiteBanner() {
   const c = colors[b.level] || colors.info;
 
   return (
-    <View style={{ backgroundColor: c.bg, borderBottomWidth: 1, borderBottomColor: c.border }} className="px-3 py-2 flex-row items-center">
-      <View className="flex-1 mr-2">
-        <Text style={{ color: c.text, fontSize: 12, fontWeight: "700" }}>{b.from}</Text>
-        <Text style={{ color: c.text, fontSize: 12 }} numberOfLines={3}>{b.message}</Text>
+    <View style={{ backgroundColor: c.bg, borderBottomWidth: 1, borderBottomColor: c.border, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8 }}>
+      <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
+        <Text style={{ color: c.text, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>{b.from}</Text>
+        <Text style={{ color: c.text, fontSize: 11, lineHeight: 15 }} numberOfLines={3}>{b.message}</Text>
       </View>
       <Pressable
         onPress={() => {
@@ -48,7 +48,7 @@ export function SiteBanner() {
         }}
         hitSlop={10}
       >
-        <Text style={{ color: c.text, fontWeight: "700" }}>✕</Text>
+        <Text style={{ color: c.text, fontWeight: "700", fontSize: 14 }}>✕</Text>
       </Pressable>
     </View>
   );

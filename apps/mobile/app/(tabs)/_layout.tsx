@@ -12,21 +12,26 @@ function TabItem({ label, focused, badge }: { label: string; focused: boolean; b
       <Text
         numberOfLines={1}
         style={{
+          fontFamily: "monospace",
           fontSize: 11,
-          fontWeight: "700",
-          letterSpacing: 0.4,
-          color: focused ? "#ffffff" : "rgba(180,180,190,0.7)",
+          fontWeight: "900",
+          letterSpacing: 1.4,
+          color: focused ? "#ffffff" : "rgba(180,180,190,0.6)",
         }}
       >
         {label.toUpperCase()}
       </Text>
       <View
         style={{
-          width: 5,
-          height: 5,
-          borderRadius: 3,
-          backgroundColor: focused ? "#5800E5" : "transparent",
-          marginTop: 3,
+          width: focused ? 20 : 0,
+          height: 2,
+          backgroundColor: "#5800E5",
+          marginTop: 4,
+          shadowColor: "#5800E5",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: focused ? 0.8 : 0,
+          shadowRadius: 4,
+          elevation: focused ? 2 : 0,
         }}
       />
       {!!badge && badge > 0 && (
@@ -38,7 +43,6 @@ function TabItem({ label, focused, badge }: { label: string; focused: boolean; b
             minWidth: 16,
             height: 16,
             paddingHorizontal: 4,
-            borderRadius: 8,
             backgroundColor: "#ef4444",
             alignItems: "center",
             justifyContent: "center",
@@ -46,7 +50,7 @@ function TabItem({ label, focused, badge }: { label: string; focused: boolean; b
             borderColor: "#0c0b0a",
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}>
+          <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900", fontFamily: "monospace" }}>
             {badge > 9 ? "9+" : badge}
           </Text>
         </View>
@@ -88,14 +92,16 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      sceneContainerStyle={{ backgroundColor: "#0c0b0a" }}
       screenOptions={{
-        headerStyle: { backgroundColor: "#0c0b0a" },
+        headerStyle: { backgroundColor: "#000", shadowColor: "transparent", elevation: 0, borderBottomWidth: 1.5, borderBottomColor: "rgba(245,183,0,0.35)" },
         headerTintColor: "rgba(243,244,246,.96)",
-        headerTitleStyle: { fontWeight: "800" },
+        headerTitleStyle: { fontFamily: "monospace", fontWeight: "900", letterSpacing: 1.5, fontSize: 16 },
         headerRight: () => <HeaderActions />,
         tabBarStyle: {
-          backgroundColor: "#0c0b0a",
-          borderTopColor: "rgba(70,70,80,0.4)",
+          backgroundColor: "#000",
+          borderTopColor: "rgba(245,183,0,0.3)",
+          borderTopWidth: 1.5,
           height: 56 + bottomPad,
           paddingTop: 8,
           paddingBottom: bottomPad,

@@ -18,6 +18,7 @@ import { Avatar } from "@/components/Avatar";
 import { ProfileBody, type Profile } from "@/components/ProfileBody";
 import { BadgesSection } from "@/components/BadgesSection";
 import { ReportModal } from "@/components/ReportModal";
+import { RoleChip, TierChip } from "@/components/RoleIcon";
 
 type FriendState = "none" | "pending_sent" | "pending_received" | "friends";
 
@@ -112,13 +113,11 @@ export default function UserProfile() {
           <>
             <View className="items-center pt-6 pb-3">
               <Avatar name={profile.name} url={profile.avatar} size={96} />
-              <Text className="text-weered-text text-2xl font-black mt-3">{profile.name}</Text>
-              {profile.tier && (
-                <Text className="text-weered-muted text-xs uppercase tracking-widest mt-0.5">
-                  {profile.tier}
-                  {profile.globalRole && profile.globalRole !== "USER" ? ` · ${profile.globalRole}` : ""}
-                </Text>
-              )}
+              <Text className="text-weered-text text-2xl mt-3" style={{ fontFamily: "monospace", fontWeight: "900", letterSpacing: 0.5 }}>{profile.name}</Text>
+              <View className="flex-row items-center mt-2" style={{ gap: 6 }}>
+                {profile.globalRole && profile.globalRole !== "USER" && <RoleChip role={profile.globalRole} />}
+                {profile.tier && profile.tier !== "INNOCENT" && <TierChip tier={profile.tier} />}
+              </View>
             </View>
 
             {!!profile.bio && (

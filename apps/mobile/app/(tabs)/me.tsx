@@ -9,11 +9,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   Share,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import * as WebBrowser from "expo-web-browser";
 import { api } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
 import { WEB_BASE } from "@/lib/config";
@@ -24,6 +26,8 @@ import { PlatformLinks } from "@/components/PlatformLinks";
 import { LivePresenceBadge, type LivePresence } from "@/components/LivePresenceBadge";
 import { WalletCard } from "@/components/WalletCard";
 import { BungieLinkButton } from "@/components/BungieLinkButton";
+import { Ionicons } from "@expo/vector-icons";
+import { RoleChip, TierChip } from "@/components/RoleIcon";
 
 const AVATAR_COLORS = [
   "#5800E5", "#e85d75", "#f59e0b", "#22c55e",
@@ -46,6 +50,11 @@ export default function Me() {
     queryFn: () => api<{ ok: boolean; livePresence: LivePresence | null }>("/profile/me/presence"),
     refetchInterval: 60_000,
     enabled: !!me?.id,
+  });
+
+  const refreshPresence = useMutation({
+    mutationFn: () => api("/profile/me/presence/refresh", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-presence"] }),
   });
 
   const profile = profileQ.data;
@@ -113,16 +122,17 @@ export default function Me() {
 
   if (!me) {
     return (
-      <SafeAreaView className="flex-1 bg-weered-bg items-center justify-center">
-        <Text className="text-weered-muted">Not signed in.</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#0c0b0a", alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: "rgba(203,213,225,0.72)" }}>Not signed in.</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView edges={[]} className="flex-1 bg-weered-bg">
+    <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: "#0c0b0a" }}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        style={{ backgroundColor: "#0c0b0a" }}
+        contentContainerStyle={{ paddingBottom: 40, backgroundColor: "#0c0b0a" }}
         refreshControl={
           <RefreshControl
             refreshing={profileQ.isRefetching}
@@ -131,26 +141,38 @@ export default function Me() {
           />
         }
       >
-        <View className="items-center pt-6 pb-3">
-          <Pressable onPress={pickAvatar} className="active:opacity-80">
-            <Avatar name={me.name} url={profile?.avatar || me.avatar} size={96} />
+        <View
+          style={{
+            paddingTop: 28,
+            paddingBottom: 18,
+            alignItems: "center",
+            backgroundColor: "#120a22",
+            borderBottomWidth: 1,
+            borderBottomColor: "rgba(88,0,229,0.35)",
+          }}
+        >
+          <View style={{ width: 80, height: 2, backgroundColor: "#5800E5", marginBottom: 14, opacity: 0.6 }} />
+          <Pressable onPress={pickAvatar} style={{ shadowColor: "#5800E5", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 12, elevation: 6 }}>
+            <Avatar name={me.name} url={profile?.avatar || me.avatar} size={104} />
             {uploadAvatar.isPending && (
-              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 48 }}>
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 52 }}>
                 <ActivityIndicator color="#fff" />
               </View>
             )}
           </Pressable>
-          <Text className="text-weered-muted text-[10px] mt-1.5">Tap avatar to change (Indicted+)</Text>
-          <Text className="text-weered-text text-2xl font-black mt-2">{me.name}</Text>
-          {profile?.tier && (
-            <Text className="text-weered-muted text-xs uppercase tracking-widest mt-0.5">
-              {profile.tier}
-              {profile.globalRole && profile.globalRole !== "USER" ? ` · ${profile.globalRole}` : ""}
-            </Text>
-          )}
+          <Text style={{ color: "rgba(203,213,225,0.5)", fontSize: 9, fontFamily: "monospace", letterSpacing: 1.2, marginTop: 6, textTransform: "uppercase" }}>Tap to change · Indicted+</Text>
+          <Text style={{ color: "rgba(243,244,246,0.98)", fontFamily: "monospace", fontWeight: "900", fontSize: 26, letterSpacing: 0.8, marginTop: 8 }}>{me.name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 6 }}>
+            {profile?.globalRole && profile.globalRole !== "USER" && <RoleChip role={profile.globalRole} size={16} />}
+            {profile?.tier && profile.tier !== "INNOCENT" && <TierChip tier={profile.tier} size={16} />}
+          </View>
         </View>
 
-        <LivePresenceBadge presence={livePresence} />
+        <LivePresenceBadge
+          presence={livePresence}
+          onRefresh={() => refreshPresence.mutate()}
+          refreshing={refreshPresence.isPending}
+        />
 
         <WalletCard />
 
@@ -204,12 +226,11 @@ export default function Me() {
             </Section>
 
             <Section title="Avatar color">
-              <View className="flex-row flex-wrap">
+              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                 {AVATAR_COLORS.map((hex) => (
                   <Pressable
                     key={hex}
                     onPress={() => { setColor(hex); saveColor.mutate(hex); }}
-                    className="mr-2 mb-2 active:opacity-80"
                     style={{
                       width: 36,
                       height: 36,
@@ -217,6 +238,8 @@ export default function Me() {
                       backgroundColor: hex,
                       borderWidth: color === hex ? 3 : 0,
                       borderColor: "#ffffff",
+                      marginRight: 8,
+                      marginBottom: 8,
                     }}
                   />
                 ))}
@@ -233,127 +256,51 @@ export default function Me() {
           </View>
         )}
 
-        <View className="px-4 mt-6">
-          <View className="flex-row mb-2">
-            <Pressable
-              onPress={() => router.push("/store")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Store</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/inventory")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Inventory</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/market")}
-              className="flex-1 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Market</Text>
-            </Pressable>
+        <View className="px-3 mt-6">
+          <View className="flex-row flex-wrap">
+            <NavTile icon="cash-outline" label="Store" tone="gold" onPress={() => router.push("/store")} />
+            <NavTile icon="bag-handle-outline" label="Inventory" onPress={() => router.push("/inventory")} />
+            <NavTile icon="storefront-outline" label="Market" onPress={() => router.push("/market")} />
+            <NavTile icon="pulse-outline" label="Activity" onPress={() => router.push("/activity")} />
+            <NavTile icon="newspaper-outline" label="News" onPress={() => router.push("/news")} />
+            <NavTile icon="flame-outline" label="Hot" tone="red" onPress={() => router.push("/hot")} />
+            <NavTile icon="trophy-outline" label="Notoriety" tone="gold" onPress={() => router.push("/notoriety")} />
+            <NavTile icon="people-outline" label="Crews" onPress={() => router.push("/crews")} />
+            <NavTile icon="chatbubbles-outline" label="Forum" onPress={() => router.push("/forum")} />
+            <NavTile icon="flag-outline" label="Challenges" onPress={() => router.push("/challenges")} />
+            <NavTile icon="ribbon-outline" label="Tournaments" tone="gold" onPress={() => router.push("/tournaments")} />
+            <NavTile icon="mail-outline" label="Invites" onPress={() => router.push("/invites")} />
+            <NavTile icon="diamond-outline" label="Subscribe" tone="purple" onPress={() => router.push("/subscribe")} />
+            {["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(String(profile?.globalRole || "")) && (
+              <NavTile icon="shield-checkmark-outline" label="Staff" tone="gold" onPress={() => router.push("/staff")} />
+            )}
+            <NavTile icon="settings-outline" label="Settings" onPress={() => router.push("/settings")} />
+            <NavTile icon="share-social-outline" label="Share" onPress={() => Share.share({ message: `Join me on Weered — ${WEB_BASE}`, url: WEB_BASE }).catch(() => {})} />
           </View>
-          <View className="flex-row mb-2">
-            <Pressable
-              onPress={() => router.push("/activity")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Activity</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/news")}
-              className="flex-1 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">News</Text>
-            </Pressable>
-          </View>
-          <View className="flex-row mb-2">
-            <Pressable
-              onPress={() => router.push("/hot")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">🔥 Hot</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/notoriety")}
-              className="flex-1 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Notoriety</Text>
-            </Pressable>
-          </View>
-          <View className="flex-row mb-2">
-            <Pressable
-              onPress={() => router.push("/crews")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Crews</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/forum")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Forum</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/challenges")}
-              className="flex-1 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Challenges</Text>
-            </Pressable>
-          </View>
-          <View className="flex-row mb-2">
-            <Pressable
-              onPress={() => router.push("/tournaments")}
-              className="flex-1 mr-2 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">🏆 Tournaments</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/invites")}
-              className="flex-1 bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
-            >
-              <Text className="text-weered-text font-semibold text-center">Invites</Text>
-            </Pressable>
-          </View>
-          <Pressable
-            onPress={() => router.push("/subscribe")}
-            className="bg-panel border border-weered/40 px-4 py-3 rounded-xl active:opacity-80 mb-2"
-          >
-            <Text className="text-weered font-semibold text-center">💎 Subscribe</Text>
-          </Pressable>
-          {["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(String(profile?.globalRole || "")) && (
-            <Pressable
-              onPress={() => router.push("/staff")}
-              className="bg-panel border border-amber-500/40 px-4 py-3 rounded-xl active:opacity-80 mb-2"
-            >
-              <Text className="text-amber-400 font-semibold text-center">Staff console</Text>
-            </Pressable>
-          )}
-          <Pressable
-            onPress={() => router.push("/settings")}
-            className="bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80 mb-2"
-          >
-            <Text className="text-weered-text font-semibold text-center">Settings · Blocked users</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => Share.share({
-              message: `Join me on Weered — ${WEB_BASE}`,
-              url: WEB_BASE,
-            }).catch(() => {})}
-            className="bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80 mb-2"
-          >
-            <Text className="text-weered-text font-semibold text-center">📤 Share Weered</Text>
-          </Pressable>
+
           <Pressable
             onPress={() => Alert.alert("Sign out?", "You'll need to sign in again to use Weered.", [
               { text: "Cancel", style: "cancel" },
-              { text: "Sign out", style: "destructive", onPress: signOut },
+              {
+                text: "Sign out", style: "destructive",
+                onPress: () => { signOut(); router.replace("/login"); },
+              },
             ])}
-            className="bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
+            className="active:opacity-80 mt-4 mx-1"
+            style={{
+              backgroundColor: "rgba(239,68,68,0.1)",
+              borderWidth: 1,
+              borderColor: "rgba(239,68,68,0.3)",
+              paddingVertical: 14,
+              borderRadius: 4,
+            }}
           >
-            <Text className="text-red-400 font-semibold text-center">Sign out</Text>
+            <Text style={{ color: "#ef4444", fontFamily: "monospace", fontWeight: "900", textAlign: "center", letterSpacing: 2, textTransform: "uppercase", fontSize: 13 }}>
+              Sign out
+            </Text>
           </Pressable>
+
+          <FooterLinks />
 
           <View className="items-center mt-6 mb-2">
             <Text className="text-weered-muted/60 text-[10px]">
@@ -367,11 +314,132 @@ export default function Me() {
   );
 }
 
+function FooterLinks() {
+  const [open, setOpen] = useState(false);
+  const links: { label: string; path: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { label: "About",         path: "/about",      icon: "information-circle-outline" },
+    { label: "Premium",       path: "/premium",    icon: "diamond-outline" },
+    { label: "Guidelines",    path: "/guidelines", icon: "book-outline" },
+    { label: "Contact",       path: "/contact",    icon: "mail-outline" },
+    { label: "Apply to Mod",  path: "/apply",      icon: "shield-outline" },
+    { label: "Terms",         path: "/terms",      icon: "document-text-outline" },
+    { label: "Privacy",       path: "/privacy",    icon: "lock-closed-outline" },
+  ];
+  return (
+    <View className="mt-5">
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        className="active:opacity-80 mx-1"
+        style={{
+          backgroundColor: "#15131a",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.08)",
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderRadius: 4,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <View className="flex-row items-center">
+          <Ionicons name="link-outline" size={14} color="rgba(203,213,225,0.7)" />
+          <Text style={{ color: "rgba(203,213,225,0.8)", fontFamily: "monospace", fontWeight: "900", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginLeft: 8 }}>
+            About & Links
+          </Text>
+        </View>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={14} color="rgba(203,213,225,0.5)" />
+      </Pressable>
+      {open && (
+        <View className="mx-1 mt-1" style={{ backgroundColor: "#0d0c12", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", borderRadius: 4 }}>
+          {links.map((l, i) => (
+            <Pressable
+              key={l.path}
+              onPress={() => WebBrowser.openBrowserAsync(`${WEB_BASE}${l.path}`).catch(() => {})}
+              className="active:opacity-60"
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                flexDirection: "row",
+                alignItems: "center",
+                borderBottomWidth: i === links.length - 1 ? 0 : 1,
+                borderBottomColor: "rgba(255,255,255,0.05)",
+              }}
+            >
+              <Ionicons name={l.icon} size={14} color="rgba(203,213,225,0.6)" />
+              <Text style={{ color: "rgba(203,213,225,0.85)", fontFamily: "monospace", fontWeight: "700", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", marginLeft: 10, flex: 1 }}>
+                {l.label}
+              </Text>
+              <Ionicons name="open-outline" size={13} color="rgba(203,213,225,0.4)" />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View className="px-4 pt-5">
-      <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">{title}</Text>
+    <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+      <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>{title}</Text>
       {children}
+    </View>
+  );
+}
+
+function NavTile({
+  icon, label, onPress, tone = "default",
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  tone?: "default" | "gold" | "purple" | "red";
+}) {
+  const colors = {
+    default: { bg: "#15131a", border: "rgba(255,255,255,0.1)",  icon: "#d1d5db", text: "rgba(243,244,246,0.92)", shadow: "transparent" },
+    gold:    { bg: "#1a1408", border: "rgba(245,183,0,0.45)",   icon: "#f5b700", text: "#f5b700",                shadow: "#f5b700" },
+    purple:  { bg: "#160a24", border: "rgba(88,0,229,0.5)",     icon: "#a78bfa", text: "#a78bfa",                shadow: "#5800E5" },
+    red:     { bg: "#1a0a0a", border: "rgba(239,68,68,0.4)",    icon: "#f87171", text: "#f87171",                shadow: "#ef4444" },
+  };
+  const c = colors[tone];
+  return (
+    <View style={{ width: "33.333%", padding: 4 }}>
+      <Pressable
+        onPress={onPress}
+        style={{
+          backgroundColor: c.bg,
+          borderWidth: 1,
+          borderColor: c.border,
+          borderRadius: 4,
+          paddingVertical: 18,
+          paddingHorizontal: 4,
+          minHeight: 92,
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: c.shadow,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: tone === "default" ? 0 : 0.3,
+          shadowRadius: 6,
+          elevation: tone === "default" ? 0 : 2,
+        }}
+      >
+        <Ionicons name={icon} size={28} color={c.icon} />
+        <Text
+          numberOfLines={1}
+          style={{
+            color: c.text,
+            fontFamily: "monospace",
+            fontWeight: "900",
+            fontSize: 10,
+            letterSpacing: 1.3,
+            textTransform: "uppercase",
+            marginTop: 8,
+          }}
+        >
+          {label}
+        </Text>
+      </Pressable>
     </View>
   );
 }

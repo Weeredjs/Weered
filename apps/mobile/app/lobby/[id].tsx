@@ -20,6 +20,8 @@ import { MlbPanel } from "@/components/MlbPanel";
 import { PgaPanel } from "@/components/PgaPanel";
 import { WindrosePanel } from "@/components/WindrosePanel";
 import { GenericGamePanel } from "@/components/GenericGamePanel";
+import { PokerPanel } from "@/components/PokerPanel";
+import { LobbyPresence } from "@/components/LobbyPresence";
 
 type Room = {
   id: string;
@@ -106,12 +108,21 @@ export default function LobbyDetail() {
   const isMod = (membership?.roleLevel ?? 0) >= 2 || isGlobalStaff;
 
   return (
-    <SafeAreaView edges={["bottom"]} className="flex-1 bg-weered-bg">
+    <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: "#0c0b0a" }}>
       <Stack.Screen
         options={{
           title: lobby?.name || "Lobby",
           headerRight: () => (
             <View className="flex-row items-center mr-2">
+              {!!membership && (
+                <Pressable
+                  onPress={() => router.push(`/room/${lobbyId}`)}
+                  hitSlop={8}
+                  className="mr-3 active:opacity-70"
+                >
+                  <Text className="text-weered font-semibold">💬 Chat</Text>
+                </Pressable>
+              )}
               {isMod && (
                 <Pressable
                   onPress={() => router.push(`/admin/${lobbyId}`)}
@@ -150,7 +161,8 @@ export default function LobbyDetail() {
         <FlatList
           data={rooms}
           keyExtractor={(r) => r.id}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          style={{ backgroundColor: "#0c0b0a" }}
+          contentContainerStyle={{ paddingBottom: 24, backgroundColor: "#0c0b0a" }}
           refreshControl={
             <RefreshControl
               refreshing={lobbyQ.isRefetching || roomsQ.isRefetching}
@@ -162,25 +174,25 @@ export default function LobbyDetail() {
             <View>
               <LobbyBanner url={lobby.bannerUrl} accent={accent} />
 
-              <View className="px-4 pt-4 pb-5 border-b border-border/40">
-                <View className="flex-row items-center">
-                  <View className="mr-3">
+              <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", backgroundColor: "#0c0b0a" }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View style={{ marginRight: 12 }}>
                     <LobbyLogo name={lobby.name} url={lobby.logoUrl} accent={accent} size={56} />
                   </View>
-                  <View className="flex-1">
-                    <View className="flex-row items-center flex-wrap">
-                      <Text className="text-weered-text font-bold text-lg" numberOfLines={1}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+                      <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "900", fontSize: 18, letterSpacing: 0.3 }}>
                         {lobby.name}
                       </Text>
                       {lobby.verified && (
-                        <Text className="text-weered ml-1.5 text-sm font-bold">✓</Text>
+                        <Text style={{ color: "#5800E5", marginLeft: 6, fontSize: 13, fontWeight: "900" }}>✓</Text>
                       )}
                       {lobby.moduleType && lobby.moduleType !== "NONE" && lobby.moduleType !== "FEED" && (
                         <ModuleBadge type={lobby.moduleType} accent={lobby.accentColor} />
                       )}
                     </View>
                     {!!lobby.description && (
-                      <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>
+                      <Text numberOfLines={2} style={{ color: "rgba(203,213,225,0.75)", fontSize: 12, marginTop: 3 }}>
                         {lobby.description}
                       </Text>
                     )}
@@ -205,6 +217,8 @@ export default function LobbyDetail() {
                 )}
               </View>
 
+              <LobbyPresence lobbyId={lobbyId} />
+
               {lobby.moduleType === "RIOT" && <LeaguePanel lobbyId={lobbyId} />}
               {lobby.moduleType === "FORTNITE" && <FortnitePanel lobbyId={lobbyId} />}
               {lobby.moduleType === "TRADING" && <TradingPanel lobbyId={lobbyId} />}
@@ -213,6 +227,7 @@ export default function LobbyDetail() {
               {lobby.moduleType === "MLB" && <MlbPanel lobbyId={lobbyId} />}
               {lobby.moduleType === "PGA" && <PgaPanel lobbyId={lobbyId} />}
               {lobby.moduleType === "WINDROSE" && <WindrosePanel lobbyId={lobbyId} />}
+              {lobby.moduleType === "POKER" && <PokerPanel lobbyId={lobbyId} />}
               {lobby.moduleType === "CS2" && <GenericGamePanel lobbyId={lobbyId} label="Counter-Strike 2" twitchGame="Counter-Strike" />}
               {lobby.moduleType === "DOTA2" && <GenericGamePanel lobbyId={lobbyId} label="Dota 2" twitchGame="Dota 2" />}
               {lobby.moduleType === "POE" && <GenericGamePanel lobbyId={lobbyId} label="Path of Exile" twitchGame="Path of Exile" />}

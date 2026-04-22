@@ -36,9 +36,9 @@ export default function RootLayout() {
           <StatusBar style="light" />
           <Stack
             screenOptions={{
-              headerStyle: { backgroundColor: "#0c0b0a" },
+              headerStyle: { backgroundColor: "#000" },
               headerTintColor: "rgba(243,244,246,.96)",
-              headerTitleStyle: { fontWeight: "700" },
+              headerTitleStyle: { fontFamily: "monospace", fontWeight: "900", letterSpacing: 1.2, fontSize: 15 },
               contentStyle: { backgroundColor: "#0c0b0a" },
               animation: "slide_from_right",
               headerRight: () => <HeaderActions />,
@@ -78,6 +78,7 @@ export default function RootLayout() {
             <Stack.Screen name="invite/[token]" options={{ title: "Invite" }} />
             <Stack.Screen name="subscribe" options={{ title: "Subscribe" }} />
             <Stack.Screen name="reader" options={{ title: "Reader" }} />
+            <Stack.Screen name="poker/[tableId]" options={{ title: "Poker" }} />
             <Stack.Screen name="search" options={{ title: "Search" }} />
           </Stack>
           </ActionSheetProvider>

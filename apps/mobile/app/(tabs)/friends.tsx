@@ -62,8 +62,8 @@ export default function Friends() {
   const [tab, setTab] = useState<Tab>("friends");
 
   return (
-    <SafeAreaView edges={[]} className="flex-1 bg-weered-bg">
-      <View className="flex-row border-b border-border/40">
+    <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: "#0c0b0a" }}>
+      <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)", backgroundColor: "#000" }}>
         <TabButton label="Friends" active={tab === "friends"} onPress={() => setTab("friends")} />
         <TabButton label="Requests" active={tab === "requests"} onPress={() => setTab("requests")} />
       </View>
@@ -76,12 +76,22 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
   return (
     <Pressable
       onPress={onPress}
-      className="flex-1 items-center py-3"
-      style={{ borderBottomWidth: 2, borderBottomColor: active ? "#5800E5" : "transparent" }}
+      style={{
+        flex: 1,
+        alignItems: "center",
+        paddingVertical: 14,
+        borderBottomWidth: 2,
+        borderBottomColor: active ? "#5800E5" : "transparent",
+      }}
     >
       <Text
-        className="text-sm font-bold tracking-wide"
-        style={{ color: active ? "#ffffff" : "rgba(180,180,190,0.7)" }}
+        style={{
+          fontFamily: "monospace",
+          fontSize: 12,
+          fontWeight: "900",
+          letterSpacing: 1.4,
+          color: active ? "#ffffff" : "rgba(180,180,190,0.7)",
+        }}
       >
         {label.toUpperCase()}
       </Text>
@@ -123,6 +133,8 @@ function FriendsList() {
   return (
     <FlatList
       data={flat}
+      style={{ backgroundColor: "#0c0b0a" }}
+      contentContainerStyle={{ backgroundColor: "#0c0b0a" }}
       keyExtractor={(item: any, i) => item.header ? `h-${item.header}` : item.id}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#5800E5" />
@@ -130,7 +142,7 @@ function FriendsList() {
       renderItem={({ item }: any) => {
         if (item.header) {
           return (
-            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-1">
+            <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 }}>
               {item.header}
             </Text>
           );
@@ -138,9 +150,9 @@ function FriendsList() {
         return <FriendRow friend={item} />;
       }}
       ListEmptyComponent={
-        <View className="px-8 py-16 items-center">
-          <Text className="text-weered-muted text-sm">No friends yet.</Text>
-          <Text className="text-weered-muted/70 text-xs mt-2 text-center">
+        <View style={{ paddingHorizontal: 32, paddingVertical: 64, alignItems: "center" }}>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontSize: 13 }}>No friends yet.</Text>
+          <Text style={{ color: "rgba(203,213,225,0.5)", fontSize: 11, marginTop: 8, textAlign: "center" }}>
             Tap someone in a room to send a friend request.
           </Text>
         </View>
@@ -153,32 +165,48 @@ function FriendRow({ friend }: { friend: Friend }) {
   return (
     <Pressable
       onPress={() => router.push(`/user/${friend.id}`)}
-      className="flex-row items-center px-4 py-3 active:bg-panel"
+      style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 }}
     >
-      <View className="mr-3">
+      <View style={{ marginRight: 12 }}>
         <Avatar name={friend.name} url={friend.avatar} size={40} away={friend.isAway} online={friend.online} />
       </View>
-      <View className="flex-1">
-        <Text className="text-weered-text font-semibold text-base" numberOfLines={1}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "800", fontSize: 14, letterSpacing: 0.3 }}>
           {friend.name}
         </Text>
         {friend.online ? (
           friend.isAway ? (
-            <Text className="text-amber-400 text-xs">Lying low{friend.roomName ? ` · ${friend.roomName}` : ""}</Text>
+            <Text style={{ color: "#fbbf24", fontSize: 11 }}>Lying low{friend.roomName ? ` · ${friend.roomName}` : ""}</Text>
           ) : friend.roomName ? (
-            <Text className="text-green-400 text-xs" numberOfLines={1}>In {friend.roomName}</Text>
+            <Text numberOfLines={1} style={{ color: "#22c55e", fontSize: 11 }}>In {friend.roomName}</Text>
           ) : (
-            <Text className="text-green-400 text-xs">Online</Text>
+            <Text style={{ color: "#22c55e", fontSize: 11 }}>Online</Text>
           )
         ) : (
-          <Text className="text-weered-muted text-xs">Offline</Text>
+          <Text style={{ color: "rgba(203,213,225,0.6)", fontSize: 11 }}>Offline</Text>
         )}
         {friend.livePresence && (
-          <Text className="text-xs mt-0.5" numberOfLines={1} style={{ color: presenceColor(friend.livePresence.source) }}>
+          <Text numberOfLines={1} style={{ fontSize: 11, marginTop: 2, color: presenceColor(friend.livePresence.source) }}>
             {friend.livePresence.activity}
           </Text>
         )}
       </View>
+      {friend.online && friend.roomId && (
+        <Pressable
+          onPress={(e) => { e.stopPropagation(); router.push((friend as any).roomIsLobby ? `/lobby/${friend.roomId}` : `/room/${friend.roomId}`); }}
+          style={{ backgroundColor: "#5800E5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, marginLeft: 8 }}
+        >
+          <Text style={{ color: "#fff", fontFamily: "monospace", fontSize: 11, fontWeight: "900", letterSpacing: 1 }}>JOIN</Text>
+        </Pressable>
+      )}
+      {friend.online && !friend.roomId && (
+        <Pressable
+          onPress={(e) => { e.stopPropagation(); router.push(`/dm/${friend.id}`); }}
+          style={{ backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, marginLeft: 8 }}
+        >
+          <Text style={{ color: "rgba(203,213,225,0.85)", fontFamily: "monospace", fontSize: 11, fontWeight: "900", letterSpacing: 1 }}>DM</Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -221,41 +249,43 @@ function RequestsList() {
   return (
     <FlatList
       data={requests}
+      style={{ backgroundColor: "#0c0b0a" }}
+      contentContainerStyle={{ backgroundColor: "#0c0b0a" }}
       keyExtractor={(r) => r.id}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#5800E5" />
       }
-      ItemSeparatorComponent={() => <View className="h-px bg-border/40 mx-4" />}
+      ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.06)", marginHorizontal: 16 }} />}
       renderItem={({ item }) => (
-        <View className="flex-row items-center px-4 py-3">
-          <View className="mr-3">
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
+          <View style={{ marginRight: 12 }}>
             <Avatar name={item.fromName} url={item.fromAvatar} size={40} />
           </View>
-          <View className="flex-1">
-            <Text className="text-weered-text font-semibold" numberOfLines={1}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "800", fontSize: 14 }}>
               {item.fromName}
             </Text>
-            <Text className="text-weered-muted text-xs">wants to be friends</Text>
+            <Text style={{ color: "rgba(203,213,225,0.6)", fontSize: 11 }}>wants to be friends</Text>
           </View>
           <Pressable
             onPress={() => accept.mutate(item.id)}
             disabled={accept.isPending}
-            className="bg-weered px-4 py-2 rounded-lg active:opacity-80 mr-2"
+            style={{ backgroundColor: "#5800E5", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4, marginRight: 8 }}
           >
-            <Text className="text-white font-bold text-xs">Accept</Text>
+            <Text style={{ color: "#fff", fontFamily: "monospace", fontWeight: "900", fontSize: 11, letterSpacing: 1 }}>ACCEPT</Text>
           </Pressable>
           <Pressable
             onPress={() => decline.mutate(item.id)}
             disabled={decline.isPending}
-            className="bg-panel border border-border px-3 py-2 rounded-lg active:opacity-80"
+            style={{ backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4 }}
           >
-            <Text className="text-weered-muted font-bold text-xs">Decline</Text>
+            <Text style={{ color: "rgba(203,213,225,0.85)", fontFamily: "monospace", fontWeight: "900", fontSize: 11, letterSpacing: 1 }}>DECLINE</Text>
           </Pressable>
         </View>
       )}
       ListEmptyComponent={
-        <View className="px-8 py-16 items-center">
-          <Text className="text-weered-muted text-sm">No pending requests.</Text>
+        <View style={{ paddingHorizontal: 32, paddingVertical: 64, alignItems: "center" }}>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontSize: 13 }}>No pending requests.</Text>
         </View>
       }
     />

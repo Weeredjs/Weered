@@ -37,21 +37,23 @@ export function ProfileBody({ profile, hidePlatforms }: { profile: Profile; hide
 
   return (
     <View>
-      <View className="px-4 pt-5 flex-row">
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 20 }}>
         <Stat label="Notoriety" value={profile.notoriety?.toLocaleString() ?? "0"} />
+        <View style={{ width: 1, height: 36, backgroundColor: "rgba(245,183,0,0.25)" }} />
         <Stat label="Rank" value={profile.notorietyRank ? `#${profile.notorietyRank}` : "—"} />
+        <View style={{ width: 1, height: 36, backgroundColor: "rgba(245,183,0,0.25)" }} />
         <Stat label="Hosted" value={profile.roomsHosted?.toString() ?? "0"} />
       </View>
 
       {!hidePlatforms && platforms.length > 0 && (
-        <View className="px-4 pt-5">
-          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">
+        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
             Linked platforms
           </Text>
           {platforms.map((p) => (
-            <View key={p.label} className="flex-row py-1.5">
-              <Text className="text-weered-muted text-sm w-20">{p.label}</Text>
-              <Text className="text-weered-text text-sm flex-1" numberOfLines={1}>
+            <View key={p.label} style={{ flexDirection: "row", paddingVertical: 6 }}>
+              <Text style={{ color: "rgba(203,213,225,0.6)", fontFamily: "monospace", fontSize: 12, width: 80 }}>{p.label}</Text>
+              <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontSize: 13, fontWeight: "700", flex: 1 }}>
                 {p.value}
               </Text>
             </View>
@@ -60,20 +62,20 @@ export function ProfileBody({ profile, hidePlatforms }: { profile: Profile; hide
       )}
 
       {(profile.joinedAt || profile.lastSeen) && (
-        <View className="px-4 pt-5">
-          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">
+        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
             Activity
           </Text>
           {profile.joinedAt && (
-            <View className="flex-row py-1.5">
-              <Text className="text-weered-muted text-sm w-20">Joined</Text>
-              <Text className="text-weered-text text-sm flex-1">{formatDate(profile.joinedAt)}</Text>
+            <View style={{ flexDirection: "row", paddingVertical: 6 }}>
+              <Text style={{ color: "rgba(203,213,225,0.6)", fontFamily: "monospace", fontSize: 12, width: 80 }}>Joined</Text>
+              <Text style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontSize: 13, fontWeight: "700", flex: 1 }}>{formatDate(profile.joinedAt)}</Text>
             </View>
           )}
           {profile.lastSeen && (
-            <View className="flex-row py-1.5">
-              <Text className="text-weered-muted text-sm w-20">Last seen</Text>
-              <Text className="text-weered-text text-sm flex-1">{formatRelative(profile.lastSeen)}</Text>
+            <View style={{ flexDirection: "row", paddingVertical: 6 }}>
+              <Text style={{ color: "rgba(203,213,225,0.6)", fontFamily: "monospace", fontSize: 12, width: 80 }}>Last seen</Text>
+              <Text style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontSize: 13, fontWeight: "700", flex: 1 }}>{formatRelative(profile.lastSeen)}</Text>
             </View>
           )}
         </View>
@@ -84,9 +86,9 @@ export function ProfileBody({ profile, hidePlatforms }: { profile: Profile; hide
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-1 items-center">
-      <Text className="text-weered-text text-xl font-black">{value}</Text>
-      <Text className="text-weered-muted text-xs uppercase tracking-wide mt-0.5">{label}</Text>
+    <View style={{ flex: 1, alignItems: "center" }}>
+      <Text style={{ color: "rgba(243,244,246,0.98)", fontFamily: "monospace", fontSize: 22, fontWeight: "900", letterSpacing: -0.5 }}>{value}</Text>
+      <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 10, fontWeight: "800", letterSpacing: 1.8, textTransform: "uppercase", marginTop: 3 }}>{label}</Text>
     </View>
   );
 }

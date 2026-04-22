@@ -13,9 +13,11 @@ module.exports = {
           text: "rgba(243,244,246,0.96)",
           muted: "rgba(203,213,225,0.72)",
         },
+        gold: "#f5b700",
       },
       fontFamily: {
         sans: ["System"],
+        mono: ["monospace"],
       },
     },
   },
