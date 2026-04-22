@@ -4625,12 +4625,12 @@ app.post("/dm/:peerId", async (req, reply) => {
     { url: "https://www.polygon.com/rss/index.xml",                                          category: "gaming",  source: "Polygon",     icon: "https://www.polygon.com/favicon.ico" },
     { url: "https://kotaku.com/rss",                                                         category: "gaming",  source: "Kotaku",      icon: "https://kotaku.com/favicon.ico" },
     { url: "https://www.gamespot.com/feeds/news/",                                           category: "gaming",  source: "GameSpot",    icon: "https://www.gamespot.com/favicon.ico" },
-    { url: "https://news.google.com/rss/search?q=video+games+when:1d&hl=en-US&gl=US&ceid=US:en", category: "gaming", source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    { url: "https://www.ign.com/rss/articles?tags=games",                                    category: "gaming",  source: "IGN",         icon: "https://www.ign.com/favicon.ico" },
     // Finance
     { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html",                          category: "finance", source: "CNBC",        icon: "https://www.cnbc.com/favicon.ico" },
     { url: "https://www.marketwatch.com/rss/topstories",                                     category: "finance", source: "MarketWatch", icon: "https://www.marketwatch.com/favicon.ico" },
     { url: "https://feeds.bloomberg.com/markets/news.rss",                                   category: "finance", source: "Bloomberg",   icon: "https://www.bloomberg.com/favicon.ico" },
-    { url: "https://news.google.com/rss/search?q=stock+market+OR+finance+when:1d&hl=en-US&gl=US&ceid=US:en", category: "finance", source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    { url: "https://feeds.reuters.com/reuters/businessNews",                                 category: "finance", source: "Reuters",     icon: "https://www.reuters.com/favicon.ico" },
   ];
 
   async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {
@@ -13247,6 +13247,20 @@ Rules:
       return reply.send({ ok: true, bounties: rows });
     } catch (e) {
       console.error("[windrose/bounties GET]", e);
+      return reply.code(500).send({ ok: false, error: "fetch_failed" });
+    }
+  });
+
+  // GET /windrose/bounties/:id — single bounty, public (for shareable pages)
+  app.get("/windrose/bounties/:id", async (req, reply) => {
+    const id = String((req.params as any).id || "");
+    if (!id) return reply.code(400).send({ ok: false, error: "id_required" });
+    try {
+      const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+      if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
+      return reply.send({ ok: true, bounty: b });
+    } catch (e) {
+      console.error("[windrose/bounties/:id GET]", e);
       return reply.code(500).send({ ok: false, error: "fetch_failed" });
     }
   });
