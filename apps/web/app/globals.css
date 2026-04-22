@@ -5195,7 +5195,14 @@ html[data-weered-lobby="destiny2"] .weered-rr-join {
   color: #ffb066 !important;
   font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   font-weight: 700 !important;
-  letter-spacing: 2.2px !important;
+  /* Letter-spacing tightened 2.2 → 1.4px so the wider uppercase TRANSMAT
+     wordmark fits inside the user-corner frame. The destiny uppercase
+     style still reads clearly at this track. Min-width: 0 lets flex
+     shrink the button below its intrinsic content size if needed. */
+  letter-spacing: 1.4px !important;
+  min-width: 0 !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
   text-transform: uppercase;
   font-size: 11px !important;
   border-radius: 2px !important;
