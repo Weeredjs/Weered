@@ -869,6 +869,29 @@ export default function LobbyChatPanel(
   const [text, setText] = useState("");
   const [mentionState, setMentionState] = useState<{ query: string; start: number; index: number } | null>(null);
   const lastTypingSentRef = useRef<number>(0);
+
+  // ── Unread 'NEW' divider — snapshot the last-read timestamp per room on
+  //    mount / room change. Divider renders above the first message newer
+  //    than the snapshot. Stays stable for the session; localStorage is
+  //    updated on scroll-to-bottom + send so next visit hydrates fresh. ──
+  const [readTsSnapshot, setReadTsSnapshot] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!effectiveRoomId) return;
+    try {
+      const stored = Number(localStorage.getItem(`weered:lastRead:${effectiveRoomId}`)) || 0;
+      if (stored === 0) {
+        const now = Date.now();
+        localStorage.setItem(`weered:lastRead:${effectiveRoomId}`, String(now));
+        setReadTsSnapshot(now);
+      } else {
+        setReadTsSnapshot(stored);
+      }
+    } catch { setReadTsSnapshot(Date.now()); }
+  }, [effectiveRoomId]);
+  const markRoomReadNow = useCallback(() => {
+    if (!effectiveRoomId) return;
+    try { localStorage.setItem(`weered:lastRead:${effectiveRoomId}`, String(Date.now())); } catch {}
+  }, [effectiveRoomId]);
   const broadcastTyping = useCallback(() => {
     const now = Date.now();
     if (now - lastTypingSentRef.current < 2500) return; // throttle to ~2.5s
@@ -992,6 +1015,18 @@ export default function LobbyChatPanel(
     return () => cancelAnimationFrame(id);
   }, [msgs.length, effectiveRoomId]);
 
+  // When user scrolls within a few pixels of the bottom of the chat list,
+  // mark the room as caught-up so the NEW divider drops on next mount.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) markRoomReadNow();
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [markRoomReadNow, effectiveRoomId]);
+
   const onSend = () => {
     if (!canType) return;
     const msg = String(text || "").trim();
@@ -1034,6 +1069,7 @@ export default function LobbyChatPanel(
     try { ctx?.sendChat?.(msg, replyingTo ? { replyToId: replyingTo.id } : undefined); } catch {}
     setText("");
     setReplyingTo(null);
+    markRoomReadNow();
   };
 
   return (
@@ -1144,6 +1180,17 @@ export default function LobbyChatPanel(
             const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
             const mId = String(m?.id || "");
             const meId = String(ctx?.me?.id || "");
+            const msgTs = Number(m?.ts || 0);
+            const prevTs = i > 0 ? Number(msgs[i - 1]?.ts || 0) : 0;
+            const myMsg = !!(meId && String(m?.user?.id || m?.userId || "") === meId);
+            // Show the NEW divider above the first message newer than the
+            // snapshot the user mounted with. Skip the divider for own
+            // messages so it never lands awkwardly above a send-receipt.
+            const showNewDivider =
+              !myMsg &&
+              readTsSnapshot > 0 &&
+              msgTs > readTsSnapshot &&
+              (i === 0 || prevTs <= readTsSnapshot);
             const meName = String(ctx?.me?.name || "");
             const msgUserId = String(m?.user?.id || m?.userId || "");
             const isMine = !!(meId && msgUserId === meId) || !!(meName && uname === meName);
@@ -1173,8 +1220,21 @@ export default function LobbyChatPanel(
             }
 
             return (
+              <React.Fragment key={mId || i}>
+                {showNewDivider && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    margin: "10px 0 6px",
+                    color: "#ef4444",
+                    fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase",
+                    fontFamily: "ui-monospace, monospace",
+                  }}>
+                    <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(239,68,68,.45), rgba(239,68,68,.45))" }} />
+                    <span style={{ whiteSpace: "nowrap", textShadow: "0 0 6px rgba(239,68,68,.35)" }}>New</span>
+                    <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(239,68,68,.45), rgba(239,68,68,.45), transparent)" }} />
+                  </div>
+                )}
               <div
-                key={mId || i}
                 data-chat-message
                 data-msg-id={mId}
                 onMouseEnter={() => mId && setHoveredMsgId(mId)}
@@ -1438,6 +1498,7 @@ export default function LobbyChatPanel(
                   </div>
                 )}
               </div>
+              </React.Fragment>
             );
           })
         )}
