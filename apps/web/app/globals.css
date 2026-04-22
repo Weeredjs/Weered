@@ -3349,6 +3349,31 @@ button:hover, [role="button"]:hover {
   .weered-chat-fullscreen { left: 0 !important; }
 }
 
+/* ── Chat member rail (Pass 3c) ────────────────────────────
+   The right-hand member list is hidden by default — the docked
+   chat panels are too narrow for it. When the chat is promoted
+   to fullscreen ("Dial In"), we unlock the rail so the room
+   feels like a real Discord-style channel. */
+.weered-chat-members {
+  display: none;
+}
+.weered-chat-fullscreen .weered-chat-members {
+  display: flex !important;
+  flex-direction: column;
+  width: 240px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(124, 58, 237, 0.18);
+  background: rgba(10, 10, 18, 0.35);
+  overflow-y: auto;
+  padding: 14px 12px;
+  gap: 2px;
+}
+@media (max-width: 899px) {
+  /* On narrow screens the member rail eats too much of the chat column;
+     hide it even in fullscreen and let the chat breathe. */
+  .weered-chat-fullscreen .weered-chat-members { display: none !important; }
+}
+
 /* Rails: sticky, panel-styled */
 .weered-left,
 .weered-right {
