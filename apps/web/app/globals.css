@@ -3838,7 +3838,12 @@ main {
   /* padding + border + min-height set by the shared rule above.
      Flex layout positions the title (left) and sub caption (right)
      within the padded container. Baseline-align keeps both titles on
-     the same baseline as their left-title counterparts. */
+     the same baseline as their left-title counterparts.
+     Shift the left padding a few px inward so the PRESENCE wordmark
+     sits a smidge left of where the shared rule would place it — the
+     flex gap + sub caption on the right made it read heavier on the
+     right side than the other section titles. */
+  padding-left: 12px !important;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
