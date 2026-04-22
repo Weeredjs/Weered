@@ -5060,36 +5060,27 @@ html[data-weered-lobby="destiny2"] .weered-usercorner::after {
   pointer-events: none;
   z-index: 2;
 }
+/* Destiny hex ornaments — pulled OUT to sit on the border corners like
+   decorative rivets, rather than inside the box overlapping content.
+   Negative offsets + z-index keep them visible as corner studs. */
 html[data-weered-lobby="destiny2"] .weered-rr-section::before,
 html[data-weered-lobby="destiny2"] .weered-left-section::before,
 html[data-weered-lobby="destiny2"] .weered-presence::before,
-html[data-weered-lobby="destiny2"] .weered-usercorner::before { top: 6px; left: 6px; }
+html[data-weered-lobby="destiny2"] .weered-usercorner::before { top: -4px; left: -4px; }
 html[data-weered-lobby="destiny2"] .weered-rr-section::after,
 html[data-weered-lobby="destiny2"] .weered-left-section::after,
 html[data-weered-lobby="destiny2"] .weered-presence::after,
-html[data-weered-lobby="destiny2"] .weered-usercorner::after { top: 6px; right: 6px; }
-
-/* ── Destiny hexagon accommodation: keep the ornaments, push content
-      inward so titles/buttons don't sit on top of the 10px hexagons at
-      each panel corner. Adds ~22px inset on titles and key action rows. */
-html[data-weered-lobby="destiny2"] .weered-left-title,
-html[data-weered-lobby="destiny2"] .weered-rr-section-title,
-html[data-weered-lobby="destiny2"] .weered-presence-title {
-  padding-left: 22px !important;
-  padding-right: 22px !important;
-}
+html[data-weered-lobby="destiny2"] .weered-usercorner::after { top: -4px; right: -4px; }
+/* Same for the lobby-header-row ornaments (INVITE button area). */
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before { left: -4px !important; top: -4px !important; }
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after  { right: -4px !important; top: -4px !important; }
+/* Ensure sections clip nothing at the corners so the protruding hexes render. */
+html[data-weered-lobby="destiny2"] .weered-rr-section,
+html[data-weered-lobby="destiny2"] .weered-left-section,
+html[data-weered-lobby="destiny2"] .weered-presence,
+html[data-weered-lobby="destiny2"] .weered-usercorner,
 html[data-weered-lobby="destiny2"] .weered-lobby-header-row {
-  padding-left: 26px !important;
-  padding-right: 26px !important;
-}
-html[data-weered-lobby="destiny2"] .weered-usercorner {
-  padding-top: 22px !important;
-}
-/* Rail-tab doesn't get the hexagon ornaments but we keep its padding
-   honest so the icons don't crowd the edges under Destiny sizing. */
-html[data-weered-lobby="destiny2"] .weered-rail-tab {
-  padding-top: 32px !important;
-  padding-bottom: 32px !important;
+  overflow: visible !important;
 }
 
 /* Typography */
