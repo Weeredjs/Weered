@@ -745,6 +745,8 @@ type PublishedCrew = {
   updatedAt: string;
   bountyKills?: number;
   bountyEarned?: number;
+  ownerId?: string;
+  ownerName?: string;
 };
 
 type CrewLeaderboardData = {
@@ -912,7 +914,13 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
 
       {crews.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
-          {crews.map(c => <CrewProfileCard key={c.id} crew={c} />)}
+          {crews.map(c => (
+            <CrewProfileCard
+              key={c.id}
+              crew={c}
+              isMember={myCrews.some(mc => mc.id === c.id)}
+            />
+          ))}
         </div>
       )}
 
@@ -991,8 +999,22 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-function CrewProfileCard({ crew }: { crew: PublishedCrew }) {
+function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: boolean }) {
   const accent = crew.accentColor && /^#[0-9a-f]{6}$/i.test(crew.accentColor) ? crew.accentColor : PAL.brass;
+
+  function askToJoin() {
+    if (!crew.ownerId) return;
+    // Dock opens a DM thread with the leader. DockShell listens for this
+    // event and pops the DM tab with the right peer selected.
+    try {
+      window.dispatchEvent(new CustomEvent("weered:dock:open", {
+        detail: {
+          mode: "dm",
+          peer: { id: crew.ownerId, name: crew.ownerName || crew.name },
+        },
+      }));
+    } catch { /* ignore */ }
+  }
   return (
     <div style={{
       ...S.card,
@@ -1064,7 +1086,7 @@ function CrewProfileCard({ crew }: { crew: PublishedCrew }) {
           </div>
         )}
 
-        {crew.recruiting && crew.recruitingNote && (
+        {crew.recruiting && (
           <div style={{
             padding: "8px 10px",
             background: "rgba(93,183,101,0.08)",
@@ -1072,8 +1094,29 @@ function CrewProfileCard({ crew }: { crew: PublishedCrew }) {
             borderRadius: 2,
             fontSize: 11, color: PAL.parchment, lineHeight: 1.5, fontStyle: "italic",
           }}>
-            <div style={{ ...S.label, fontSize: 8, marginBottom: 3, color: "#5db765" }}>Looking for</div>
-            {crew.recruitingNote.length > 140 ? `${crew.recruitingNote.slice(0, 140)}…` : crew.recruitingNote}
+            {crew.recruitingNote && (
+              <>
+                <div style={{ ...S.label, fontSize: 8, marginBottom: 3, color: "#5db765" }}>Looking for</div>
+                <div style={{ marginBottom: crew.ownerId && !isMember ? 8 : 0 }}>
+                  {crew.recruitingNote.length > 140 ? `${crew.recruitingNote.slice(0, 140)}…` : crew.recruitingNote}
+                </div>
+              </>
+            )}
+            {crew.ownerId && !isMember && (
+              <button
+                type="button"
+                onClick={askToJoin}
+                style={{
+                  ...S.btnPrimary,
+                  background: `linear-gradient(180deg, rgba(93,183,101,0.22), rgba(93,183,101,0.10))`,
+                  borderColor: "rgba(93,183,101,0.5)",
+                  color: "#8edc93",
+                  padding: "7px 14px", fontSize: 11, letterSpacing: "1.5px",
+                }}
+              >
+                Ask to Join →
+              </button>
+            )}
           </div>
         )}
 
