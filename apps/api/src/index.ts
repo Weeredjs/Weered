@@ -1140,6 +1140,7 @@ function buildStatePayload(room: RoomState) {
     muted: Array.from(room.muted.values()),
     activeModule: room.activeModule || null,
     launch: room.launch ? serializeLaunch(room) : null,
+    pinned: Array.from(((room as any).pinned as Set<string> | undefined) || []),
   };
 }
 
@@ -5335,6 +5336,32 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
             return;
           }
           await doJoin(ws, roomId);
+          return;
+        }
+
+        // ── Pin / unpin messages ───────────────────────────────────────
+        // Mods + owners can pin up to 10 messages in a room. State is
+        // held on room.pinned (Set<msgId>) in memory and broadcast as
+        // chat:pins whenever it changes. Clients render a strip at the
+        // top of chat listing pinned messages.
+        if (msg.type === "chat:pin" || msg.type === "chat:unpin") {
+          if (!ws.user?.id || !ws.joinedRoomId) return;
+          const room = rooms.get(ws.joinedRoomId);
+          if (!room) return;
+          if (!isModOrOwner(room, ws.user.id, ws.user.globalRole)) return;
+          const msgId = String((msg as any).msgId || "");
+          if (!msgId) return;
+          (room as any).pinned = (room as any).pinned || new Set<string>();
+          if (msg.type === "chat:pin") {
+            if ((room as any).pinned.size >= 10) {
+              send(ws, { type: "chat:pin:error", reason: "Pinned limit is 10. Unpin one first." });
+              return;
+            }
+            (room as any).pinned.add(msgId);
+          } else {
+            (room as any).pinned.delete(msgId);
+          }
+          broadcast(room, { type: "chat:pins", roomId: room.roomId, pinned: Array.from((room as any).pinned) });
           return;
         }
 
