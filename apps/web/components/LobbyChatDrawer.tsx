@@ -14,9 +14,29 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
   const [open, setOpen] = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
   const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [fullscreen, setFullscreen] = useState(() => {
+    try { return typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"; } catch { return false; }
+  });
   const openRef = useRef(false);
 
   const ctx = useWeered() as any;
+
+  const toggleFullscreen = () => {
+    setFullscreen(v => {
+      try { localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1"); } catch {}
+      return !v;
+    });
+    setOpen(true); // always open when expanding
+    setUnread(0);
+  };
+
+  // ESC to exit fullscreen
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggleFullscreen(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
 
   // accent with fallback
   const ac = accentColor || "#7C3AED";
@@ -97,6 +117,24 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           z-index: 50; overflow: hidden;
           box-shadow: -8px 0 40px rgba(0,0,0,0.45), inset 1px 0 0 rgba(255,255,255,0.04);
           animation: drawerSlideIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        /* Fullscreen mode — the .weered-chat-fullscreen class (defined in
+           globals.css) carries the responsive left offsets that leave the
+           left rail visible. We override the drawer's own positioning + size
+           so the full-overlay treatment takes over cleanly. */
+        .lobby-chat-drawer.weered-chat-fullscreen {
+          position: fixed !important;
+          top: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: auto !important;
+          max-width: none !important;
+          border-radius: 0 !important;
+          border-left: 1px solid ${acMid} !important;
+          background: rgba(8, 8, 20, 0.97) !important;
+          z-index: 120 !important;
+          animation: none !important;
+          box-shadow: -12px 0 60px rgba(0,0,0,0.55);
         }
         @media (max-width: 767px) {
           .lobby-chat-drawer {
@@ -213,7 +251,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
       {/* Drawer panel */}
       {mounted && open && (
         <div
-          className="lobby-chat-drawer"
+          className={`lobby-chat-drawer${fullscreen ? " weered-chat-fullscreen" : ""}`}
           onTouchStart={e => { (e.currentTarget as any)._swipe = { x: e.touches[0].clientX, t: Date.now() }; }}
           onTouchMove={e => {
             const s = (e.currentTarget as any)._swipe; if (!s) return;
@@ -240,9 +278,51 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
             </svg>
             <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: ac }}>swipe to close</span>
           </div>
-          <div className="lobby-drawer-header" style={{ position: "relative", zIndex: 1 }}>
-            <span className="lobby-drawer-title">{title}</span>
-            <div className="lobby-drawer-close" onClick={() => setOpen(false)}>✕</div>
+          <div className="lobby-drawer-header" style={{ position: "relative", zIndex: 1, gap: 8 }}>
+            <span className="lobby-drawer-title">
+              {title}{fullscreen ? " · Fullscreen" : ""}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                title={fullscreen ? "Collapse chat (Esc)" : "Go fullscreen — room to breathe"}
+                aria-label={fullscreen ? "Collapse chat" : "Go fullscreen"}
+                className="weered-chat-fullscreen-cta"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 12px 5px 10px",
+                  borderRadius: 7,
+                  border: `1px solid ${fullscreen ? `${ac}b0` : acMid}`,
+                  background: fullscreen
+                    ? `linear-gradient(135deg, ${ac}55, ${ac}30)`
+                    : `linear-gradient(135deg, ${ac}35, ${ac}18)`,
+                  color: fullscreen ? "#fff" : ac,
+                  fontFamily: "inherit",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  transition: "all .15s",
+                }}
+              >
+                {fullscreen ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    <span>Collapse</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    <span>Dial In</span>
+                  </>
+                )}
+              </button>
+              {!fullscreen && (
+                <div className="lobby-drawer-close" onClick={() => setOpen(false)}>✕</div>
+              )}
+            </div>
           </div>
           <div style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1, paddingBottom: 32 }}>
             <LobbyChatPanel roomId={roomId} embedded={true} />
