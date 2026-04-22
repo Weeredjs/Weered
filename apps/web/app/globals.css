@@ -3722,12 +3722,22 @@ main {
   border-radius: 14px;
   overflow: hidden;
 }
+/* Left-rail section title bars (CLANS / PRESENCE / FAVORITES / RECENT)
+   all share these dimensions so the three titles visually line up at
+   the same horizontal inset and vertical height, regardless of whether
+   the title is a single block (left-title) or a flex row with a sub
+   caption (presence-head). */
+.weered-left-title,
+.weered-presence-head {
+  padding: 16px 16px 14px !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+  box-sizing: border-box;
+  min-height: 46px;
+}
 .weered-left-title {
-  padding: 16px 16px 14px;
   font-size: 12px;
   font-weight: 900;
   opacity: 0.85;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
 }
 
 /* Right-rail section container gets breathing room at top + horizontal inset
@@ -3825,11 +3835,11 @@ main {
      hover tints. */
 }
 .weered-presence-head {
-  padding: 16px 16px 14px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+  /* padding + border + min-height set by the shared rule above.
+     Flex layout positions the title (left) and sub caption (right)
+     within the padded container. Baseline-align keeps both titles on
+     the same baseline as their left-title counterparts. */
   display: flex;
-  /* Baseline-align so the PRESENCE title sits at the same vertical
-     latitude as CLANS / RECENT / FAVORITES titles in the same rail. */
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
