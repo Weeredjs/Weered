@@ -13235,16 +13235,19 @@ Rules:
     const q: any = (req as any).query || {};
     const status = typeof q.status === "string" ? q.status.toUpperCase() : "";
     const mine = q.mine === "1" || q.mine === "true";
+    const target = typeof q.target === "string" ? q.target.trim() : "";
     const where: any = { lobbyId: "windrose" };
     if (["OPEN","CLAIMED","SETTLED","CANCELLED"].includes(status)) where.status = status;
     if (mine && u) where.OR = [{ posterId: u.id }, { claimantId: u.id }];
+    // target filter: case-insensitive match on the in-game handle
+    if (target) where.targetHandle = { equals: target, mode: "insensitive" };
     try {
       const rows = await (prisma as any).windroseBounty.findMany({
         where,
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-        take: 100,
+        take: 200,
       });
-      return reply.send({ ok: true, bounties: rows });
+      return reply.send({ ok: true, bounties: rows, target: target || null });
     } catch (e) {
       console.error("[windrose/bounties GET]", e);
       return reply.code(500).send({ ok: false, error: "fetch_failed" });

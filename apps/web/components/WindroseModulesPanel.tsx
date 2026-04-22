@@ -1638,6 +1638,9 @@ function BountiesTab() {
   // Dossier modal — click any name in a bounty card
   const [dossierUserId, setDossierUserId] = useState<string | null>(null);
 
+  // Rap sheet filter — click a target handle to scope to their history
+  const [targetFilter, setTargetFilter] = useState<string>("");
+
   // Who am I
   const [myId, setMyId] = useState<string>("");
   useEffect(() => {
@@ -1661,18 +1664,23 @@ function BountiesTab() {
         const j = await apiFetch("/windrose/bounties/leaderboard");
         setLeaderboard(j?.ok ? (j as LeaderboardData) : null);
       } else {
-        const qs = filter === "MINE" ? "?mine=1"
-          : filter === "OPEN"    ? "?status=OPEN"
-          : filter === "CLAIMED" ? "?status=CLAIMED"
-          : filter === "SETTLED" ? "?status=SETTLED"
-          : "";
+        const params = new URLSearchParams();
+        if (targetFilter) {
+          params.set("target", targetFilter); // rap-sheet view ignores status + mine filters
+        } else {
+          if (filter === "MINE")    params.set("mine", "1");
+          if (filter === "OPEN")    params.set("status", "OPEN");
+          if (filter === "CLAIMED") params.set("status", "CLAIMED");
+          if (filter === "SETTLED") params.set("status", "SETTLED");
+        }
+        const qs = params.toString() ? `?${params.toString()}` : "";
         const j = await apiFetch(`/windrose/bounties${qs}`);
         if (j?.ok && Array.isArray(j.bounties)) setBounties(j.bounties);
         else setBounties([]);
       }
     } catch { setBounties([]); setLeaderboard(null); }
     setLoading(false);
-  }, [filter]);
+  }, [filter, targetFilter]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -1839,8 +1847,30 @@ function BountiesTab() {
         </div>
       </div>
 
-      {/* Filter strip */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {/* Rap-sheet banner — scopes list to every bounty on one target */}
+      {targetFilter && (
+        <div style={{
+          ...S.card,
+          padding: "14px 20px",
+          display: "flex", alignItems: "center", gap: 14,
+          borderColor: PAL.blood,
+          background: `radial-gradient(ellipse 80% 60% at 10% 0%, ${PAL.blood}20 0%, transparent 65%), ${S.card.background}`,
+        }}>
+          <SkullIcon size={18} color={PAL.blood} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...S.label, fontSize: 9, color: PAL.blood, marginBottom: 3 }}>Rap Sheet</div>
+            <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.brassHi, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Every bounty on {targetFilter}
+            </div>
+          </div>
+          <button type="button" style={{ ...S.btn, fontSize: 10, padding: "6px 14px" }} onClick={() => setTargetFilter("")}>
+            Clear ✕
+          </button>
+        </div>
+      )}
+
+      {/* Filter strip — hidden when a target filter is active */}
+      {!targetFilter && <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {([
           { id: "OPEN", label: "Open" },
           { id: "CLAIMED", label: "Claimed" },
@@ -1864,13 +1894,13 @@ function BountiesTab() {
             {t.label}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* List — or leaderboards */}
       {loading ? (
         <LoadingState label={filter === "LEADERBOARD" ? "Tallying the tales..." : "Combing the wanted posters..."} />
       ) : filter === "LEADERBOARD" ? (
-        <BountyLeaderboard data={leaderboard} />
+        <BountyLeaderboard data={leaderboard} onPickTarget={(h) => { setTargetFilter(h); setFilter("OPEN"); }} />
       ) : !bounties || bounties.length === 0 ? (
         <EmptyState
           icon="🏴‍☠️"
@@ -1889,6 +1919,7 @@ function BountiesTab() {
               onReject={() => rejectBounty(b.id)}
               onCancel={() => cancelBounty(b.id)}
               onOpenHunter={(uid) => setDossierUserId(uid)}
+              onFilterTarget={(h) => setTargetFilter(h)}
             />
           ))}
         </div>
@@ -1912,7 +1943,7 @@ function BountiesTab() {
   );
 }
 
-function BountyLeaderboard({ data }: { data: LeaderboardData | null }) {
+function BountyLeaderboard({ data, onPickTarget }: { data: LeaderboardData | null; onPickTarget: (handle: string) => void }) {
   if (!data) {
     return <EmptyState icon="⚑" title="No legends yet" hint="Once the first bounty settles, the Hall of Fame opens its doors." />;
   }
@@ -1943,6 +1974,7 @@ function BountyLeaderboard({ data }: { data: LeaderboardData | null }) {
               primary: r.targetHandle,
               secondary: `${r.openCount} bounty${r.openCount === 1 ? "" : "ies"} open`,
               value: r.totalAmount,
+              onClick: () => onPickTarget(r.targetHandle),
             }))}
           />
           <LeaderboardColumn
@@ -1999,7 +2031,7 @@ function LeaderboardColumn({
   title, caption, rows, emptyLabel,
 }: {
   title: string; caption: string; emptyLabel: string;
-  rows: { key: string; rank: number; primary: string; secondary: string; value: number }[];
+  rows: { key: string; rank: number; primary: string; secondary: string; value: number; onClick?: () => void }[];
 }) {
   return (
     <div style={{ ...S.card, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -2019,13 +2051,21 @@ function LeaderboardColumn({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {rows.map(r => (
-            <div key={r.key} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 10px",
-              background: r.rank === 1 ? `${PAL.brass}12` : r.rank === 2 ? `${PAL.brass}08` : r.rank === 3 ? `${PAL.brass}05` : "transparent",
-              border: `1px solid ${r.rank <= 3 ? `${PAL.brass}25` : `${PAL.brass}10`}`,
-              borderRadius: 2,
-            }}>
+            <div key={r.key}
+              onClick={r.onClick}
+              title={r.onClick ? "See all bounties on this target" : undefined}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 10px",
+                background: r.rank === 1 ? `${PAL.brass}12` : r.rank === 2 ? `${PAL.brass}08` : r.rank === 3 ? `${PAL.brass}05` : "transparent",
+                border: `1px solid ${r.rank <= 3 ? `${PAL.brass}25` : `${PAL.brass}10`}`,
+                borderRadius: 2,
+                cursor: r.onClick ? "pointer" : "default",
+                transition: "border-color .15s, background .15s",
+              }}
+              onMouseEnter={e => { if (r.onClick) (e.currentTarget as HTMLElement).style.borderColor = PAL.brass; }}
+              onMouseLeave={e => { if (r.onClick) (e.currentTarget as HTMLElement).style.borderColor = r.rank <= 3 ? `${PAL.brass}25` : `${PAL.brass}10`; }}
+            >
               <span style={{
                 width: 22, textAlign: "center",
                 fontFamily: WR_FONT_DISPLAY,
@@ -2070,7 +2110,7 @@ function LeaderboardColumn({
   );
 }
 
-function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunter }: {
+function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunter, onFilterTarget }: {
   b: Bounty;
   meId: string;
   onClaim: () => void;
@@ -2078,6 +2118,7 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
   onReject: () => void;
   onCancel: () => void;
   onOpenHunter: (userId: string) => void;
+  onFilterTarget: (handle: string) => void;
 }) {
   const mine = !!meId && meId === b.posterId;
   const mineClaim = !!meId && meId === b.claimantId;
@@ -2100,9 +2141,16 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
           <div style={{ ...S.label, fontSize: 9, marginBottom: 2 }}>
             <SkullIcon size={10} /> Wanted
           </div>
-          <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.parchment, lineHeight: 1.1, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <button
+            type="button"
+            onClick={() => onFilterTarget(b.targetHandle)}
+            title="See all bounties on this target"
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "block", textAlign: "left", maxWidth: "100%", fontFamily: WR_FONT_DISPLAY, fontSize: 20, color: PAL.parchment, lineHeight: 1.1, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            onMouseEnter={e => (e.currentTarget.style.color = PAL.brassHi)}
+            onMouseLeave={e => (e.currentTarget.style.color = PAL.parchment)}
+          >
             {b.targetHandle}
-          </div>
+          </button>
           {b.targetServer && (
             <div style={{ fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               on {b.targetServer}
