@@ -166,6 +166,24 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // Chat state — open on desktop, collapsed on mobile
   const [chatOpen, setChatOpen]         = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
+  const [chatFullscreen, setChatFullscreen] = useState(() => {
+    try { return typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"; } catch { return false; }
+  });
+  const toggleChatFullscreen = () => {
+    setChatFullscreen(v => {
+      try { localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1"); } catch {}
+      return !v;
+    });
+    // Ensure the panel is open when expanding to full
+    setChatOpen(true);
+  };
+  // ESC to exit fullscreen
+  useEffect(() => {
+    if (!chatFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggleChatFullscreen(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chatFullscreen]);
   const [chatUnread, setChatUnread]     = useState(false);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
@@ -914,25 +932,48 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             (e.currentTarget as any)._swipe = null;
             (e.currentTarget as any)._swipeDx = 0;
           }}
+          className={chatFullscreen ? "weered-chat-fullscreen" : ""}
           style={{
-            position: isMobile ? "fixed" : "absolute",
-            bottom: isMobile ? 56 : 0,
-            right: 0,
-            ...(isMobile
-              ? { top: 0, left: 0, width: chatOpen ? "100%" : 0 }
-              : { height: CHAT_HEIGHT_DESKTOP, width: chatOpen ? CHAT_WIDTH : 0 }
-            ),
-            overflow: "hidden",
-            borderLeft: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.22)" : "none",
-            borderTop: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.15)" : "none",
-            borderRadius: chatOpen && !isMobile ? "10px 0 0 0" : 0,
-            background: isMobile ? "rgba(8,8,20,0.97)" : "rgba(8,8,20,0.52)",
-            backdropFilter: "blur(28px) saturate(1.6)",
-            WebkitBackdropFilter: "blur(28px) saturate(1.6)",
-            display: "flex",
-            flexDirection: "column",
-            zIndex: 99,
-            transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
+            // Fullscreen overrides everything else — fixed viewport overlay
+            // that covers the main content + right rail, leaves the left
+            // rail alone. The CSS class handles responsive left offsets.
+            ...(chatFullscreen ? {
+              position: "fixed",
+              top: 0, right: 0, bottom: 0,
+              // left handled by CSS class for responsiveness
+              width: "auto",
+              height: "auto",
+              borderLeft: "1px solid rgba(124,58,237,0.22)",
+              borderTop: "none",
+              borderRadius: 0,
+              background: "rgba(8,8,20,0.97)",
+              backdropFilter: "blur(28px) saturate(1.6)",
+              WebkitBackdropFilter: "blur(28px) saturate(1.6)",
+              display: "flex",
+              flexDirection: "column" as const,
+              zIndex: 120,
+              transition: "none",
+              overflow: "hidden",
+            } : {
+              position: isMobile ? "fixed" as const : "absolute" as const,
+              bottom: isMobile ? 56 : 0,
+              right: 0,
+              ...(isMobile
+                ? { top: 0, left: 0, width: chatOpen ? "100%" : 0 }
+                : { height: CHAT_HEIGHT_DESKTOP, width: chatOpen ? CHAT_WIDTH : 0 }
+              ),
+              overflow: "hidden",
+              borderLeft: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.22)" : "none",
+              borderTop: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.15)" : "none",
+              borderRadius: chatOpen && !isMobile ? "10px 0 0 0" : 0,
+              background: isMobile ? "rgba(8,8,20,0.97)" : "rgba(8,8,20,0.52)",
+              backdropFilter: "blur(28px) saturate(1.6)",
+              WebkitBackdropFilter: "blur(28px) saturate(1.6)",
+              display: "flex",
+              flexDirection: "column" as const,
+              zIndex: 99,
+              transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
+            })
           }}
         >
           {chatOpen && (
@@ -951,14 +992,32 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#a78bfa" }}>swipe to close</span>
                 </div>
               )}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0, position: "relative", zIndex: 1 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>Chat</span>
-                <button
-                  onClick={() => setChatOpen(false)}
-                  style={{ width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  &times;
-                </button>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0, position: "relative", zIndex: 1, gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>
+                  Chat{chatFullscreen ? " · Fullscreen" : ""}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <button
+                    onClick={toggleChatFullscreen}
+                    title={chatFullscreen ? "Collapse chat (Esc)" : "Expand chat"}
+                    aria-label={chatFullscreen ? "Collapse chat" : "Expand chat"}
+                    style={{ width: 22, height: 22, borderRadius: 5, border: "1px solid rgba(124,58,237,0.22)", background: chatFullscreen ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.04)", color: chatFullscreen ? "rgba(196,181,253,0.95)" : "rgba(167,139,250,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s, color .15s" }}
+                  >
+                    {chatFullscreen ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    )}
+                  </button>
+                  {!chatFullscreen && (
+                    <button
+                      onClick={() => setChatOpen(false)}
+                      style={{ width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
               </div>
               <RoomChatPanel
                 roomId={roomId}
