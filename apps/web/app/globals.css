@@ -3821,7 +3821,9 @@ main {
   padding: 10px 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.10);
   display: flex;
-  align-items: flex-end;
+  /* Baseline-align so the PRESENCE title sits at the same vertical
+     latitude as CLANS / RECENT / FAVORITES titles in the same rail. */
+  align-items: baseline;
   justify-content: space-between;
   gap: 10px;
 }
