@@ -61,6 +61,7 @@ type Ctx = {
   moduleByRoom: Record<string, ModuleState>;
   ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
   launchByRoom: Record<string, LaunchSnapshot | null>;
+  typingByRoom: Record<string, { userId: string; name: string; ts: number }[]>;
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
@@ -191,6 +192,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
+  const [typingByRoom,  setTypingByRoom ] = useState<Record<string, { userId: string; name: string; ts: number }[]>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
   const [passwordRoomId, setPasswordRoomId] = useState("");
   const [passwordError,  setPasswordError ] = useState("");
@@ -431,6 +433,23 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
           }
           return rid;
+        });
+        return;
+      }
+
+      // Chat typing indicator — someone in the same room is typing. We store
+      // the latest timestamp per user and let the UI (LobbyChatPanel)
+      // auto-expire stale entries after ~5s.
+      if (msg.type === "chat:typing") {
+        const rid = String(msg.roomId || "");
+        const u = msg.user as { id: string; name: string } | undefined;
+        if (!rid || !u?.id) return;
+        // Skip echoes of our own typing — no point showing ourselves
+        if (me?.id && u.id === me.id) return;
+        setTypingByRoom(prev => {
+          const cur = prev[rid] ? prev[rid].filter(e => e.userId !== u.id) : [];
+          cur.push({ userId: u.id, name: u.name, ts: Date.now() });
+          return { ...prev, [rid]: cur };
         });
         return;
       }
@@ -758,6 +777,26 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("weered:ws:send", handler);
   }, []);
 
+  // ─── Chat typing — auto-expire stale entries every second ────────────────
+  useEffect(() => {
+    const TYPING_TTL_MS = 5000;
+    const t = setInterval(() => {
+      const now = Date.now();
+      setTypingByRoom(prev => {
+        let changed = false;
+        const next: Record<string, { userId: string; name: string; ts: number }[]> = {};
+        for (const [rid, list] of Object.entries(prev)) {
+          const fresh = list.filter(e => now - e.ts < TYPING_TTL_MS);
+          if (fresh.length !== list.length) changed = true;
+          if (fresh.length > 0) next[rid] = fresh;
+          else if (list.length > 0) changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+
   // ─── Idle + manual-away presence ───────────────────────────────────────────
   // Auto-idle fires "Lying low" after 5 min of no input. A manual toggle
   // (via setAway below) pins the status and disables the auto timer until the
@@ -940,6 +979,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
     usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom,
+    typingByRoom,
     moduleState, setModuleState,
     rooms, join, leave, knock,
     devLogin, logout,
