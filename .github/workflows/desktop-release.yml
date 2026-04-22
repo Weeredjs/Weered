@@ -46,15 +46,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Install pnpm
+        # Must run BEFORE setup-node — setup-node@v5 auto-caches pnpm if it
+        # finds a lockfile, and needs pnpm already on PATH to do that.
+        # Version is read from package.json's "packageManager" field.
+        uses: pnpm/action-setup@v4
+
       - name: Install Node
         uses: actions/setup-node@v5
         with:
           node-version: 20
-
-      - name: Install pnpm
-        # Version comes from package.json's "packageManager" field — don't
-        # also specify it here or the action errors out.
-        uses: pnpm/action-setup@v4
+          cache: pnpm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
