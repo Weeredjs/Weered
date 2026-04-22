@@ -97,9 +97,11 @@ function normalizeInbound(msg: any) {
 function applySettingsToDom(s: any) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  // Only set theme if settings has one; otherwise leave whatever the boot
-  // script / ProfileSheet put there (prevents clobbering ishimura with "stone").
-  if (s?.theme) root.setAttribute("data-weered-theme", String(s.theme));
+  // Default theme is "press" until the vertical-picker / theme selector are
+  // re-enabled. If user-saved settings have a theme, honor it; otherwise
+  // fall back to press so we don't show whatever stale value the boot
+  // script left behind.
+  root.setAttribute("data-weered-theme", String(s?.theme || "press"));
   root.setAttribute("data-weered-density",      String(s?.density      ?? "comfortable"));
   root.setAttribute("data-weered-reduce-motion", s?.reduceMotion ? "1" : "0");
 }

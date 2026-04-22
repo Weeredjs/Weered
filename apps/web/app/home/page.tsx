@@ -938,7 +938,9 @@ export default function HomePage() {
       `}</style>
 
       <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
-      <VerticalPicker />
+      {/* VerticalPicker disabled for now — Press is the default theme until
+          we re-enable per-vertical theme selection. Restore by uncommenting:
+          <VerticalPicker /> */}
     </div>
   );
 }

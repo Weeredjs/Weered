@@ -1,6 +1,6 @@
 import "./globals.css";
 import React from "react";
-import { Pirata_One, Cormorant_Garamond, Rajdhani } from "next/font/google";
+import { Pirata_One, Cormorant_Garamond, Rajdhani, Barlow_Condensed } from "next/font/google";
 
 // Preloaded / self-hosted via next/font so lobby theme typography is
 // reliable on first paint (no FOUC). Exposed as CSS variables that
@@ -24,6 +24,14 @@ const rajdhani = Rajdhani({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-rajdhani",
+  display: "swap",
+  preload: true,
+});
+// Default UI font — the Destiny lobby's nav font promoted to global.
+const barlow = Barlow_Condensed({
+  weight: ["400", "500", "600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-barlow",
   display: "swap",
   preload: true,
 });
@@ -147,7 +155,7 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable}`}>
+    <html lang="en" className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
