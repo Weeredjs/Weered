@@ -4953,20 +4953,21 @@ app.post("/dm/:peerId", async (req, reply) => {
       } else {
         const version = latest.tag_name.replace(/^desktop-v/, "");
 
-        // Build the platforms map. We need both the asset URL and its .sig file.
+        // Build the platforms map. .sig file is optional — without it the
+        // entry still serves the landing page download URL but Tauri's
+        // auto-updater will skip the platform (it requires signatures).
         const platforms: DesktopReleaseManifest["platforms"] = {};
         for (const [target, matcher] of Object.entries(TAURI_TARGET_MATCHERS)) {
           const asset = latest.assets.find((a) => matcher.test(a.name));
           if (!asset) continue;
           const sigAsset = latest.assets.find((a) => a.name === `${asset.name}.sig`);
-          if (!sigAsset) continue; // Skip platforms without a signature — Tauri rejects unsigned updates.
-          // Tauri expects the signature *contents* in the manifest, not the URL.
           let signature = "";
-          try {
-            const sigRes = await fetch(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
-            if (sigRes.ok) signature = (await sigRes.text()).trim();
-          } catch {}
-          if (!signature) continue;
+          if (sigAsset) {
+            try {
+              const sigRes = await fetch(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
+              if (sigRes.ok) signature = (await sigRes.text()).trim();
+            } catch {}
+          }
           platforms[target] = { signature, url: asset.browser_download_url };
         }
 
@@ -4996,7 +4997,11 @@ app.post("/dm/:peerId", async (req, reply) => {
       if (!manifest) return reply.code(204).send();
       const { version, target } = req.params;
       if (manifest.version === version) return reply.code(204).send();
-      if (!manifest.platforms[target]) return reply.code(204).send();
+      const plat = manifest.platforms[target];
+      // Tauri auto-updater requires a signature; if we don't have one,
+      // pretend there's no update for this platform. Landing page download
+      // links still work via /desktop/latest.
+      if (!plat || !plat.signature) return reply.code(204).send();
       return reply.send(manifest);
     },
   );
