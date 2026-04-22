@@ -996,23 +996,50 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>
                   Chat{chatFullscreen ? " · Fullscreen" : ""}
                 </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
                     onClick={toggleChatFullscreen}
-                    title={chatFullscreen ? "Collapse chat (Esc)" : "Expand chat"}
-                    aria-label={chatFullscreen ? "Collapse chat" : "Expand chat"}
-                    style={{ width: 22, height: 22, borderRadius: 5, border: "1px solid rgba(124,58,237,0.22)", background: chatFullscreen ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.04)", color: chatFullscreen ? "rgba(196,181,253,0.95)" : "rgba(167,139,250,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s, color .15s" }}
+                    title={chatFullscreen ? "Collapse chat (Esc)" : "Go fullscreen — room to breathe"}
+                    aria-label={chatFullscreen ? "Collapse chat" : "Go fullscreen"}
+                    className="weered-chat-fullscreen-cta"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px 5px 10px",
+                      borderRadius: 7,
+                      border: `1px solid ${chatFullscreen ? "rgba(124,58,237,0.6)" : "rgba(124,58,237,0.45)"}`,
+                      background: chatFullscreen
+                        ? "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(167,139,250,0.22))"
+                        : "linear-gradient(135deg, rgba(124,58,237,0.22), rgba(167,139,250,0.10))",
+                      color: chatFullscreen ? "rgba(237,223,255,1)" : "rgba(196,181,253,0.95)",
+                      fontFamily: "inherit",
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      boxShadow: chatFullscreen
+                        ? "0 0 12px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.08)"
+                        : "0 0 8px rgba(124,58,237,0.18), inset 0 1px 0 rgba(255,255,255,0.05)",
+                      transition: "all .15s",
+                    }}
                   >
                     {chatFullscreen ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                      <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                        <span>Collapse</span>
+                      </>
                     ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                      <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                        <span>Dial In</span>
+                      </>
                     )}
                   </button>
                   {!chatFullscreen && (
                     <button
                       onClick={() => setChatOpen(false)}
-                      style={{ width: 20, height: 20, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      title="Close chat"
+                      style={{ width: 22, height: 22, borderRadius: 5, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.5)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       &times;
                     </button>
