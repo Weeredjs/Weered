@@ -23,9 +23,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     : "CANCELLED";
   const title = `${b.amount.toLocaleString()} Paper on ${b.targetHandle} · Windrose Bounty`;
   const description = b.status === "SETTLED"
-    ? `${b.claimantName || "A hunter"} claimed ${b.amount.toLocaleString()} Paper on ${b.targetHandle}. Posted by ${b.posterName}.`
+    ? `${b.claimantName || "A hunter"} delivered on ${b.targetHandle} for ${b.amount.toLocaleString()} Paper. Posted by ${b.posterName}.`
     : b.status === "OPEN"
-    ? `${b.amount.toLocaleString()} Paper on ${b.targetHandle}'s head. Posted by ${b.posterName}. [${status}]`
+    ? `${b.amount.toLocaleString()} Paper on ${b.targetHandle}. Posted by ${b.posterName}. [${status}]`
     : `Bounty on ${b.targetHandle} — ${b.amount.toLocaleString()} Paper. [${status}]`;
   return {
     title,

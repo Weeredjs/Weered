@@ -466,9 +466,9 @@ function ActivityRow({ event, alt }: { event: ActivityEvent; alt: boolean }) {
     const subject = event.subject || "…";
     switch (event.kind) {
       case "bounty_post":
-        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> put <span style={{ color: PAL.brassHi, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{amt} Paper</span> on <strong style={{ color: PAL.blood, fontStyle: "normal" }}>{subject}</strong>'s head</>;
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> put <span style={{ color: PAL.brassHi, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{amt} Paper</span> on <strong style={{ color: PAL.blood, fontStyle: "normal" }}>{subject}</strong></>;
       case "bounty_settle":
-        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> cashed in <span style={{ color: "#5db765", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{amt} Paper</span> on <strong style={{ color: PAL.blood, fontStyle: "normal" }}>{subject}</strong></>;
+        return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> delivered on <strong style={{ color: PAL.blood, fontStyle: "normal" }}>{subject}</strong> · <span style={{ color: "#5db765", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{amt} Paper</span></>;
       case "bounty_cancel":
         return <><strong style={{ color: PAL.parchment, fontStyle: "normal" }}>{actor}</strong> pulled their bounty on <strong style={{ color: PAL.parchDim, fontStyle: "normal" }}>{subject}</strong></>;
       case "crew_publish":
@@ -1135,7 +1135,7 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
               <span style={{ color: PAL.parchment, fontWeight: 600, fontFamily: WR_FONT_DISPLAY, fontSize: 13, marginRight: 4 }}>
                 {(crew.bountyKills || 0).toLocaleString()}
               </span>
-              kills
+              delivered
             </span>
             <span style={{ color: `${PAL.brass}60` }}>·</span>
             <span>
@@ -1206,7 +1206,7 @@ function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: 
                 <StatTile label="Crews listed" value={d.stats.crewCount.toLocaleString()} />
                 <StatTile label="Total members" value={d.stats.totalMembers.toLocaleString()} highlight />
                 <StatTile label="Recruiting now" value={d.stats.recruitingCount.toLocaleString()} />
-                <StatTile label="Bounty kills" value={d.stats.totalKills.toLocaleString()} highlight />
+                <StatTile label="Bounties delivered" value={d.stats.totalKills.toLocaleString()} highlight />
               </div>
 
               {/* Three boards */}
@@ -1223,8 +1223,8 @@ function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: 
                   <CrewLeaderColumn
                     title="Most Decorated"
                     caption="Paper earned on the bounty board"
-                    rows={d.mostDecorated.map((c, i) => ({ ...c, rank: i + 1, value: c.bountyEarned, sub: `${c.bountyKills} kill${c.bountyKills === 1 ? "" : "s"}` }))}
-                    emptyLabel="No crew's settled a bounty yet."
+                    rows={d.mostDecorated.map((c, i) => ({ ...c, rank: i + 1, value: c.bountyEarned, sub: `${c.bountyKills} bount${c.bountyKills === 1 ? "y" : "ies"} delivered` }))}
+                    emptyLabel="No crew's delivered a bounty yet."
                     valueKey="Paper"
                   />
                   <CrewLeaderColumn
@@ -1731,10 +1731,10 @@ function BountiesTab() {
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ ...S.label, marginBottom: 4 }}>The Bounty Board</div>
             <h3 style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 24, color: PAL.brassHi, margin: 0, letterSpacing: "0.5px" }}>
-              Dead or alive.
+              Put a price on anything.
             </h3>
             <div style={{ fontSize: 13, color: PAL.parchDim, marginTop: 6, fontStyle: "italic", lineHeight: 1.55 }}>
-              Post a Paper bounty on any sailor. A hunter submits proof of the kill, you confirm, and the Paper's theirs. Your stake's escrowed the moment you post — refunded only on cancel.
+              Paper bounty on whatever you want hunted down — a sailor, a Kraken tooth, a lighthouse seed, a cargo run. A hunter delivers proof, you confirm, Paper changes hands. Stake's escrowed the moment you post — refunded only on cancel.
             </div>
           </div>
           <div style={{ display: "flex", gap: 22, flexShrink: 0, alignItems: "flex-start" }}>
@@ -1750,7 +1750,7 @@ function BountiesTab() {
                     <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.parchment, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                       {myDossier.hunter.kills}
                     </div>
-                    <div style={{ fontSize: 9, color: PAL.parchDim, fontFamily: WR_FONT_MONO, letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>kills</div>
+                    <div style={{ fontSize: 9, color: PAL.parchDim, fontFamily: WR_FONT_MONO, letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>delivered</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: "#5db765", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
@@ -1800,12 +1800,15 @@ function BountiesTab() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
           <div>
-            <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>In-game handle *</div>
+            <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Mark *</div>
             <input
               value={target} onChange={e => setTarget(e.target.value.slice(0, 60))}
-              placeholder="BlackbeardXL"
+              placeholder="BlackbeardXL · Kraken tooth · Rum run to Tortuga"
               style={S.input as React.CSSProperties}
             />
+            <div style={{ fontSize: 9, color: PAL.parchDim, marginTop: 3, fontStyle: "italic" }}>
+              Sailor, beast, cargo, location — whatever you want hunted.
+            </div>
           </div>
           <div>
             <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Server (optional)</div>
@@ -1825,10 +1828,10 @@ function BountiesTab() {
           </div>
         </div>
         <div style={{ marginTop: 10 }}>
-          <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Reason (optional)</div>
+          <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Terms (optional)</div>
           <textarea
             value={reason} onChange={e => setReason(e.target.value.slice(0, 400))}
-            placeholder="Ganked my galleon loaded with silks. Wants a reckoning."
+            placeholder="What counts as delivered. A grudge, a trade, a dare — spell it out so the hunter knows what proof you'll accept."
             style={{ ...S.input, minHeight: 54, fontFamily: WR_FONT_SERIF, fontStyle: "italic" } as React.CSSProperties}
           />
         </div>
@@ -1905,7 +1908,7 @@ function BountiesTab() {
         <EmptyState
           icon="🏴‍☠️"
           title={filter === "MINE" ? "You've posted nothing." : "No bounties yet."}
-          hint={filter === "MINE" ? "Your name's clean. For now." : "Be the first to put a price on someone's head."}
+          hint={filter === "MINE" ? "No marks on your tally — yet." : "Be the first to put a price on the board."}
         />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
@@ -1979,13 +1982,13 @@ function BountyLeaderboard({ data, onPickTarget }: { data: LeaderboardData | nul
           />
           <LeaderboardColumn
             title="Top Hunters"
-            caption="Most Paper earned from confirmed kills"
+            caption="Most Paper earned on delivered bounties"
             emptyLabel="No one's cashed in yet."
             rows={topHunters.map((r, i) => ({
               key: r.userId,
               rank: i + 1,
               primary: r.userName,
-              secondary: `${r.kills} confirmed kill${r.kills === 1 ? "" : "s"}`,
+              secondary: `${r.kills} delivered`,
               value: r.totalEarned,
             }))}
           />
@@ -2340,7 +2343,7 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
                 <span style={{ color: "#5db765" }}>⚔</span> As Hunter
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-                <DossierStat label="Kills" value={d.hunter.kills.toLocaleString()} />
+                <DossierStat label="Delivered" value={d.hunter.kills.toLocaleString()} />
                 <DossierStat label="Earned" value={d.hunter.totalEarned.toLocaleString()} sub="Paper" highlight />
                 <DossierStat
                   label="Biggest Hit"
@@ -2360,7 +2363,7 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
               )}
               {d.hunter.recentKills.length > 0 && (
                 <div style={{ marginTop: 10, padding: "10px 12px", background: `${PAL.brass}06`, border: `1px solid ${PAL.brass}18`, borderRadius: 2 }}>
-                  <div style={{ ...S.label, fontSize: 9, marginBottom: 6 }}>Recent Kills</div>
+                  <div style={{ ...S.label, fontSize: 9, marginBottom: 6 }}>Recent Deliveries</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {d.hunter.recentKills.map(k => (
                       <div key={k.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: PAL.parchment }}>
@@ -2498,11 +2501,11 @@ function ClaimModal({ bounty, onClose, onSubmitted }: { bounty: Bounty; onClose:
           {bounty.amount.toLocaleString()} Paper if the poster confirms the kill.
         </div>
 
-        <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Proof · what happened *</div>
+        <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>Proof · what you delivered *</div>
         <textarea
           value={proofNote}
           onChange={e => setProofNote(e.target.value.slice(0, 500))}
-          placeholder="Sank their galleon off the east archipelago, had them on stream. VOD timestamp 1:42:10. Screenshot below."
+          placeholder="Sank their galleon / Dropped off the rum / Brought back the Kraken tooth — whatever the bounty asked for. Link a screenshot or clip below if you've got one."
           style={{ ...S.input, minHeight: 90, fontFamily: WR_FONT_SERIF, fontStyle: "italic" } as React.CSSProperties}
         />
 
