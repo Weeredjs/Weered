@@ -57,6 +57,7 @@ enum ModuleType {
   DND
   POE
   WINDROSE
+  REDDIT
 }
 
 model NewsArticle {
