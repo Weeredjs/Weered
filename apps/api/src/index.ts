@@ -13967,6 +13967,55 @@ Rules:
     }
   }
 
+  // POST /paper/tip — /tip @user <amount> from chat. Paper flows through
+  // awardPaper so both wallets stay on the ledger. Caps abuse with a
+  // per-transfer ceiling + self-tip guard + user-existence check.
+  const TIP_MIN = 1;
+  const TIP_MAX = 100_000;
+  app.post("/paper/tip", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const toUsername = String(body.toUsername || "").trim();
+    const amount = Math.floor(Number(body.amount) || 0);
+    const note = String(body.note || "").trim().slice(0, 200);
+    if (!toUsername) return reply.code(400).send({ ok: false, error: "recipient_required" });
+    if (amount < TIP_MIN) return reply.code(400).send({ ok: false, error: "amount_too_low", message: `Minimum tip is ${TIP_MIN} Paper.` });
+    if (amount > TIP_MAX) return reply.code(400).send({ ok: false, error: "amount_too_high", message: `Maximum tip is ${TIP_MAX.toLocaleString()} Paper.` });
+
+    try {
+      // Lookup recipient by case-insensitive name
+      const recipient = await prisma.user.findFirst({
+        where: { name: { equals: toUsername, mode: "insensitive" } },
+        select: { id: true, name: true },
+      });
+      if (!recipient) return reply.code(404).send({ ok: false, error: "recipient_not_found", message: `No user named @${toUsername}.` });
+      if (recipient.id === u.id) return reply.code(400).send({ ok: false, error: "cannot_self_tip" });
+
+      // Debit sender first — awardPaper guards against going negative
+      const debit = await awardPaper(u.id, "SPEND_GIFT", -amount, `Tip to ${recipient.name}${note ? ` · ${note}` : ""}`, recipient.id);
+      if (!debit) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
+
+      // Credit recipient
+      const credit = await awardPaper(recipient.id, "EARN_GIFT", amount, `Tip from ${u.name || u.id}${note ? ` · ${note}` : ""}`, u.id);
+      if (!credit) {
+        // Refund sender if credit failed
+        await awardPaper(u.id, "ADJUSTMENT", amount, "Tip refund (credit failed)").catch(() => {});
+        return reply.code(500).send({ ok: false, error: "credit_failed" });
+      }
+
+      return reply.send({
+        ok: true,
+        recipient: { id: recipient.id, name: recipient.name },
+        amount,
+        balance: debit.balance,
+      });
+    } catch (e) {
+      console.error("[paper/tip]", e);
+      return reply.code(500).send({ ok: false, error: "tip_failed" });
+    }
+  });
+
   // GET /paper/wallet — current balance + recent transactions
   app.get("/paper/wallet", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);

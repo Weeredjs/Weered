@@ -11,6 +11,25 @@ import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
 import RoleIcon, { TierIcon } from "./RoleIcon";
 
+// ── @mention detection — scans backwards from the caret for an unbroken
+// @token. Requires whitespace or input-start before the @. Returns the
+// query (may be empty right after typing @) and the @ offset. ──
+function detectMentionAtCaret(value: string, caret: number): { query: string; start: number } | null {
+  let i = caret - 1;
+  while (i >= 0) {
+    const ch = value[i];
+    if (ch === "@") {
+      if (i === 0 || /\s/.test(value[i - 1])) {
+        return { query: value.slice(i + 1, caret), start: i };
+      }
+      return null;
+    }
+    if (/\s/.test(ch)) return null;
+    i--;
+  }
+  return null;
+}
+
 // ── Username styling by rank — role takes priority over tier ──
 function nameStyleFor(role?: string, tier?: string): React.CSSProperties {
   const r = String(role || "").toUpperCase();
@@ -28,7 +47,13 @@ function nameStyleFor(role?: string, tier?: string): React.CSSProperties {
 // ── Slash command handler — returns true if the input was a command ──
 function runSlashCommand(
   raw: string,
-  opts: { me?: any; send: (body: string) => void; openGif: (query?: string) => void; clear: () => void }
+  opts: {
+    me?: any;
+    send: (body: string) => void;
+    openGif: (query?: string) => void;
+    clear: () => void;
+    tip: (toUsername: string, amount: number, note: string) => void;
+  }
 ): boolean {
   if (!raw.startsWith("/")) return false;
   const [cmdRaw, ...rest] = raw.slice(1).split(/\s+/);
@@ -41,6 +66,18 @@ function runSlashCommand(
       opts.send(`*${meName} ${args}*`);
       opts.clear();
       return true;
+    case "tip": {
+      // /tip @alice 100 keep up the good work
+      const m = args.match(/^@?([a-zA-Z0-9][a-zA-Z0-9_-]{0,31})\s+(\d[\d,]*)(?:\s+(.+))?$/);
+      if (!m) { weeredToast.error("Usage: /tip @user <amount> [note]"); return true; }
+      const toUsername = m[1];
+      const amount = parseInt(m[2].replace(/,/g, ""), 10);
+      const note = (m[3] || "").trim();
+      if (!Number.isFinite(amount) || amount < 1) { weeredToast.error("Tip amount must be at least 1 Paper."); return true; }
+      opts.tip(toUsername, amount, note);
+      opts.clear();
+      return true;
+    }
     case "shrug":
       opts.send(`${args ? args + " " : ""}¯\\_(ツ)_/¯`);
       opts.clear();
@@ -76,13 +113,13 @@ function runSlashCommand(
     case "help":
     case "commands": {
       const help = [
-        "**Slash commands available:**",
-        "• `/me <action>` — action emote",
-        "• `/shrug`, `/tableflip`, `/unflip`, `/flip` — classics",
-        "• `/roll 2d20` — dice roll (supports modifiers: `/roll 1d20+3`)",
-        "• `/giphy <query>` — opens GIF picker",
+        "Slash commands:",
+        "/me <action> — action emote",
+        "/tip @user <amount> [note] — send Paper",
+        "/shrug · /tableflip · /unflip · /flip — classics",
+        "/roll 2d20 — dice roll (modifiers: /roll 1d20+3)",
+        "/giphy <query> — opens GIF picker",
       ].join("\n");
-      // Self-render via toast (don't send to chat)
       weeredToast(help);
       opts.clear();
       return true;
@@ -98,6 +135,212 @@ const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
 const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 const TENOR_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+// ── Weered URL embeds — render a themed inline card for internal
+// bounty / hunter / crew links so they preview rich right in chat. ──
+const WEERED_BOUNTY_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/bounty\/([^\s/?#]+)/i;
+const WEERED_HUNTER_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/hunter\/([^\s/?#]+)/i;
+const WEERED_CREW_RE   = /(?:https?:\/\/[^\s/]+)?\/crew\/([^\s/?#]+)/i;
+
+type WeeredEmbedKind = "bounty" | "hunter" | "crew";
+function detectWeeredEmbed(url: string): { kind: WeeredEmbedKind; id: string } | null {
+  let m = url.match(WEERED_BOUNTY_RE); if (m) return { kind: "bounty", id: decodeURIComponent(m[1]) };
+  m = url.match(WEERED_HUNTER_RE);     if (m) return { kind: "hunter", id: decodeURIComponent(m[1]) };
+  m = url.match(WEERED_CREW_RE);       if (m) return { kind: "crew",   id: decodeURIComponent(m[1]) };
+  return null;
+}
+
+// Tiny in-memory cache so repeat embeds of the same entity don't refetch.
+const embedCache = new Map<string, any>();
+
+function WeeredBountyEmbed({ id, href }: { id: string; href: string }) {
+  const [data, setData] = useState<any>(() => embedCache.get(`bounty:${id}`) ?? null);
+  useEffect(() => {
+    if (data) return;
+    let cancelled = false;
+    fetch(`${API}/windrose/bounties/${encodeURIComponent(id)}`).then(r => r.json()).then(j => {
+      if (!cancelled && j?.ok && j.bounty) { embedCache.set(`bounty:${id}`, j.bounty); setData(j.bounty); }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [id, data]);
+  if (!data) return <EmbedSkeleton href={href} label="Windrose · Bounty" />;
+  const statusColor =
+    data.status === "OPEN"    ? "#5db765" :
+    data.status === "CLAIMED" ? "#e8c48a" :
+    data.status === "SETTLED" ? "#c9a066" : "#a54848";
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
+      <div style={{
+        borderRadius: 3, border: `1px solid ${statusColor}55`,
+        background: "radial-gradient(ellipse at 0% 0%, rgba(163,61,61,0.14), transparent 60%), linear-gradient(180deg, rgba(25,40,62,0.85), rgba(14,24,38,0.95))",
+        overflow: "hidden", maxWidth: 340, padding: "12px 14px",
+        display: "flex", flexDirection: "column", gap: 6,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#c9a066", opacity: 0.8 }}>
+            ☠ Windrose Bounty
+          </span>
+          <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: statusColor }}>
+            {data.status}
+          </span>
+        </div>
+        <div style={{ fontFamily: "'Pirata One', Georgia, serif", fontSize: 22, color: "#e8c48a", lineHeight: 1.1, letterSpacing: "0.3px", textShadow: "0 2px 6px rgba(201,160,102,.3)" }}>
+          {data.targetHandle}
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+          <span style={{ fontFamily: "'Pirata One', Georgia, serif", fontSize: 20, color: "#fcd34d", fontVariantNumeric: "tabular-nums" }}>
+            {Number(data.amount || 0).toLocaleString()}
+          </span>
+          <span style={{ fontSize: 9, color: "#a89775", letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: "ui-monospace, monospace" }}>Paper</span>
+        </div>
+        {data.reason && (
+          <div style={{ fontSize: 12, color: "#e4d4b0", lineHeight: 1.4, fontStyle: "italic", opacity: 0.85 }}>
+            "{String(data.reason).slice(0, 120)}{String(data.reason).length > 120 ? "…" : ""}"
+          </div>
+        )}
+        <div style={{ fontSize: 10, color: "#a89775", fontStyle: "italic", marginTop: 2 }}>
+          posted by {data.posterName}
+          {data.claimantName ? ` · delivered by ${data.claimantName}` : ""}
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function WeeredHunterEmbed({ id, href }: { id: string; href: string }) {
+  const [data, setData] = useState<any>(() => embedCache.get(`hunter:${id}`) ?? null);
+  useEffect(() => {
+    if (data) return;
+    let cancelled = false;
+    fetch(`${API}/windrose/hunter/${encodeURIComponent(id)}`).then(r => r.json()).then(j => {
+      if (!cancelled && j?.ok) { embedCache.set(`hunter:${id}`, j); setData(j); }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [id, data]);
+  if (!data) return <EmbedSkeleton href={href} label="Windrose · Hunter" />;
+  const u = data.user; const h = data.hunter;
+  const tier = h.kills >= 40 ? { label: "Reaper", color: "#a33d3d" }
+             : h.kills >= 15 ? { label: "Marshal", color: "#e8c48a" }
+             : h.kills >= 5  ? { label: "Tracker", color: "#f97316" }
+             : h.kills >= 1  ? { label: "Outlaw", color: "#5db765" }
+             : null;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
+      <div style={{
+        borderRadius: 3, border: "1px solid rgba(201,160,102,0.45)",
+        background: "linear-gradient(180deg, rgba(25,40,62,0.85), rgba(14,24,38,0.95))",
+        overflow: "hidden", maxWidth: 340, padding: "12px 14px",
+        display: "flex", gap: 12, alignItems: "center",
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 3, flexShrink: 0,
+          background: u.avatar ? `url(${u.avatar}) center/cover` : `linear-gradient(135deg, ${u.avatarColor || "#c9a066"}, #8a6b3e)`,
+          border: "2px solid rgba(201,160,102,0.6)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "'Pirata One', Georgia, serif", fontSize: 22, color: "#0a1424", fontWeight: 700,
+        }}>
+          {!u.avatar && (u.name || "?").slice(0, 1).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#c9a066", opacity: 0.75 }}>
+            Hunter Dossier
+          </div>
+          <div style={{ fontFamily: "'Pirata One', Georgia, serif", fontSize: 18, color: "#e8c48a", letterSpacing: "0.3px", marginTop: 1 }}>
+            {u.name}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4, fontSize: 11, color: "#a89775", fontFamily: "ui-monospace, monospace" }}>
+            <span><strong style={{ color: "#e4d4b0", fontFamily: "'Pirata One', Georgia, serif", fontSize: 13 }}>{h.kills.toLocaleString()}</strong> delivered</span>
+            <span>·</span>
+            <span><strong style={{ color: "#fcd34d", fontFamily: "'Pirata One', Georgia, serif", fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{h.totalEarned.toLocaleString()}</strong> earned</span>
+            {h.rank && <><span>·</span><span>rank <strong style={{ color: "#e8c48a" }}>#{h.rank}</strong></span></>}
+          </div>
+          {tier && (
+            <div style={{ marginTop: 4 }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "2px 8px", fontSize: 8, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase",
+                fontFamily: "ui-monospace, monospace",
+                color: tier.color, background: `${tier.color}15`, border: `1px solid ${tier.color}50`,
+              }}>
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: tier.color }} />
+                {tier.label}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function WeeredCrewEmbed({ id, href }: { id: string; href: string }) {
+  const [data, setData] = useState<any>(() => embedCache.get(`crew:${id}`) ?? null);
+  useEffect(() => {
+    if (data) return;
+    let cancelled = false;
+    fetch(`${API}/crews/${encodeURIComponent(id)}`).then(r => r.json()).then(j => {
+      if (!cancelled && j?.ok && j.crew) { embedCache.set(`crew:${id}`, j.crew); setData(j.crew); }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [id, data]);
+  if (!data) return <EmbedSkeleton href={href} label="Crew" />;
+  const accent = data.accentColor && /^#[0-9a-f]{6}$/i.test(data.accentColor) ? data.accentColor : "#c9a066";
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
+      <div style={{
+        borderRadius: 3, border: `1px solid ${accent}55`,
+        background: `linear-gradient(180deg, ${accent}10, rgba(14,24,38,0.95))`,
+        overflow: "hidden", maxWidth: 340, padding: "12px 14px",
+        display: "flex", gap: 12, alignItems: "center",
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 3, flexShrink: 0,
+          background: data.logoUrl ? `url(${data.logoUrl}) center/cover` : `linear-gradient(135deg, ${accent}, #8a6b3e)`,
+          border: `2px solid ${accent}aa`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "'Pirata One', Georgia, serif", fontSize: 18, color: "#0a1424", fontWeight: 700,
+        }}>
+          {!data.logoUrl && (data.tag || data.name || "?").slice(0, 2).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: accent, opacity: 0.8 }}>
+            ⚑ Crew
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 1 }}>
+            <span style={{ fontFamily: "'Pirata One', Georgia, serif", fontSize: 18, color: "#e8c48a", letterSpacing: "0.3px" }}>
+              {data.name}
+            </span>
+            {data.tag && (
+              <span style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: accent, letterSpacing: "1px" }}>
+                [{data.tag}]
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4, fontSize: 11, color: "#a89775", fontFamily: "ui-monospace, monospace" }}>
+            <span><strong style={{ color: "#e4d4b0" }}>{data.memberCount}</strong> members</span>
+            {data.homePort && <><span>·</span><span style={{ color: "#e4d4b0" }}>{data.homePort}</span></>}
+            {data.recruiting && <><span>·</span><span style={{ color: "#5db765" }}>recruiting</span></>}
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function EmbedSkeleton({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
+      <div style={{
+        borderRadius: 3, border: "1px solid rgba(201,160,102,0.22)",
+        background: "rgba(14,24,38,0.55)",
+        maxWidth: 340, padding: "12px 14px",
+        fontSize: 11, color: "rgba(168,151,117,0.6)", fontStyle: "italic",
+      }}>
+        {label} · loading…
+      </div>
+    </a>
+  );
+}
 
 function LinkPreviewCard({ url }: { url: string }) {
   const [data, setData] = useState<any>(null);
@@ -152,6 +395,7 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
   if (!text) return null;
   const imageUrls: string[] = [];
   const linkUrls: string[] = [];
+  const weeredEmbeds: { url: string; kind: WeeredEmbedKind; id: string }[] = [];
 
   // Process line-by-line for block-level (blockquote) + inline tokens
   const lines = text.split(/\n/);
@@ -161,7 +405,7 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
   for (const line of lines) {
     const isQuote = /^>\s?/.test(line);
     const content = isQuote ? line.replace(/^>\s?/, "") : line;
-    const inlineNode = renderInline(content, imageUrls, linkUrls, onMentionClick);
+    const inlineNode = renderInline(content, imageUrls, linkUrls, weeredEmbeds, onMentionClick);
     if (isQuote) {
       blockNodes.push(
         <div key={blockKey++} style={{
@@ -192,7 +436,15 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
           />
         </a>
       ))}
-      {linkUrls.slice(0, 1).map((url, i) => (
+      {/* Weered URL embeds — take priority over the generic link preview */}
+      {weeredEmbeds.slice(0, 2).map((e, i) => {
+        if (e.kind === "bounty") return <WeeredBountyEmbed key={`wb-${i}`} id={e.id} href={e.url} />;
+        if (e.kind === "hunter") return <WeeredHunterEmbed key={`wh-${i}`} id={e.id} href={e.url} />;
+        if (e.kind === "crew")   return <WeeredCrewEmbed   key={`wc-${i}`} id={e.id} href={e.url} />;
+        return null;
+      })}
+      {/* Generic link preview — one max, and only if no Weered embed claimed it */}
+      {weeredEmbeds.length === 0 && linkUrls.slice(0, 1).map((url, i) => (
         <LinkPreviewCard key={`lp-${i}`} url={url} />
       ))}
     </>
@@ -203,6 +455,7 @@ function renderInline(
   text: string,
   imageUrls: string[],
   linkUrls: string[],
+  weeredEmbeds: { url: string; kind: WeeredEmbedKind; id: string }[],
   onMentionClick?: (handle: string) => void,
 ): React.ReactNode {
   if (!text) return null;
@@ -263,8 +516,13 @@ function renderInline(
           color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2, wordBreak: "break-all",
         }}>{t.value}</a>
       );
-      if (IMG_EXT.test(t.value) || TENOR_RE.test(t.value)) imageUrls.push(t.value);
-      else linkUrls.push(t.value);
+      if (IMG_EXT.test(t.value) || TENOR_RE.test(t.value)) {
+        imageUrls.push(t.value);
+      } else {
+        const weered = detectWeeredEmbed(t.value);
+        if (weered) weeredEmbeds.push({ url: t.value, kind: weered.kind, id: weered.id });
+        else linkUrls.push(t.value);
+      }
     } else if (t.kind === "mention") {
       const handle = t.value;
       parts.push(
@@ -596,6 +854,7 @@ export default function LobbyChatPanel(
   const roomLabel = effectiveRoomId;
 
   const [text, setText] = useState("");
+  const [mentionState, setMentionState] = useState<{ query: string; start: number; index: number } | null>(null);
   const lastTypingSentRef = useRef<number>(0);
   const broadcastTyping = useCallback(() => {
     const now = Date.now();
@@ -603,6 +862,38 @@ export default function LobbyChatPanel(
     lastTypingSentRef.current = now;
     try { (ctx as any)?.sendRaw?.({ type: "chat:typing" }); } catch { /* noop */ }
   }, [ctx]);
+
+  // ── @mention autocomplete ────────────────────────────────────────────────
+  // Filter from the room's presence list when the user has an open @ token.
+  const mentionCandidates = useMemo(() => {
+    if (!mentionState) return [] as any[];
+    const q = mentionState.query.toLowerCase();
+    const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+    const myId = String(ctx?.me?.id || "");
+    return roomUsers
+      .filter(u => u?.id && u.id !== myId && u?.name && u.name.toLowerCase().startsWith(q))
+      .slice(0, 6);
+  }, [mentionState, ctx?.usersByRoom, effectiveRoomId, ctx?.me?.id]);
+
+  const acceptMention = useCallback((username: string) => {
+    setMentionState(s => {
+      if (!s) return null;
+      const before = text.slice(0, s.start);
+      const after  = text.slice(s.start + 1 + s.query.length);
+      const next = `${before}@${username} ${after}`;
+      setText(next);
+      // Restore caret position right after the inserted mention + space
+      setTimeout(() => {
+        const el = inputRef.current;
+        if (el) {
+          const pos = before.length + username.length + 2;
+          el.focus();
+          try { el.setSelectionRange(pos, pos); } catch {}
+        }
+      }, 0);
+      return null;
+    });
+  }, [text]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiCat, setEmojiCat] = useState(0);
   const [gifOpen, setGifOpen] = useState(false);
@@ -692,13 +983,38 @@ export default function LobbyChatPanel(
     if (!canType) return;
     const msg = String(text || "").trim();
     if (!msg) return;
-    // Slash-command intercept — /me, /roll, /shrug, /tableflip, /giphy, etc.
+    // Slash-command intercept — /me, /roll, /shrug, /tableflip, /giphy, /tip, etc.
     if (msg.startsWith("/")) {
       const handled = runSlashCommand(msg, {
         me: ctx?.me,
         send: (body: string) => { try { ctx?.sendChat?.(body, replyingTo ? { replyToId: replyingTo.id } : undefined); } catch {} },
         openGif: (_q?: string) => { setGifOpen(true); setEmojiOpen(false); },
         clear: () => { setText(""); setReplyingTo(null); },
+        tip: (toUsername: string, amount: number, note: string) => {
+          // HTTP call so Paper flows through the ledger; on success the chat
+          // beacon is sent as a normal message so it renders just like any
+          // other chat entry (with role badge + markdown).
+          const token = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
+          fetch(`${API}/paper/tip`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ toUsername, amount, note }),
+          })
+            .then(r => r.json())
+            .then(j => {
+              if (j?.ok) {
+                const recipientName = j.recipient?.name || toUsername;
+                const noteStr = note ? ` — *${note}*` : "";
+                try {
+                  ctx?.sendChat?.(`💰 tipped **${recipientName}** \`${amount.toLocaleString()} Paper\`${noteStr}`);
+                } catch {}
+                weeredToast.success(`Sent ${amount.toLocaleString()} Paper to ${recipientName}. Balance: ${Number(j.balance || 0).toLocaleString()}`);
+              } else {
+                weeredToast.error(j?.message || j?.error || "Tip failed.");
+              }
+            })
+            .catch(() => weeredToast.error("Tip failed — network error."));
+        },
       });
       if (handled) return;
     }
@@ -1062,6 +1378,72 @@ export default function LobbyChatPanel(
       {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
         <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
+          {/* @mention autocomplete — floats above the composer when active */}
+          {mentionState && mentionCandidates.length > 0 && (
+            <div style={{
+              position: "absolute",
+              left: 10, right: 10,
+              bottom: "calc(100% - 4px)",
+              background: "var(--weered-panel2, rgba(18,18,26,.98))",
+              border: "1px solid var(--weered-border, rgba(124,58,237,.35))",
+              borderRadius: 10,
+              boxShadow: "0 10px 32px rgba(0,0,0,.55)",
+              padding: 4,
+              maxHeight: 240,
+              overflowY: "auto",
+              zIndex: 40,
+            }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "var(--weered-muted, rgba(148,163,184,.65))", padding: "4px 8px 6px" }}>
+                Mention · {mentionCandidates.length === 1 ? "1 match" : `${mentionCandidates.length} matches`}
+              </div>
+              {mentionCandidates.map((u: any, i: number) => {
+                const role = u?.globalRole;
+                const tier = u?.tier;
+                const nstyle = nameStyleFor(role, tier);
+                const active = i === mentionState.index;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); acceptMention(u.name); }}
+                    onMouseEnter={() => setMentionState(s => s ? { ...s, index: i } : null)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      width: "100%", padding: "7px 10px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: active ? "rgba(124,58,237,.18)" : "transparent",
+                      color: "inherit",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                      background: u.avatar ? "rgba(255,255,255,.08)" : avatarBg(u.name, false, u.avatarColor),
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 11, fontWeight: 800, color: "#fff", overflow: "hidden",
+                    }}>
+                      {u.avatar ? <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : String(u.name || "?").slice(0, 1).toUpperCase()}
+                    </div>
+                    <span style={{ ...nstyle, fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                      {u.name}
+                    </span>
+                    {role && String(role).toUpperCase() !== "USER" && (
+                      <RoleIcon role={String(role).toUpperCase()} size={12} style={{ flexShrink: 0 }} />
+                    )}
+                    {tier && String(tier).toUpperCase() !== "INNOCENT" && (
+                      <TierIcon tier={String(tier).toUpperCase()} size={12} style={{ flexShrink: 0 }} />
+                    )}
+                  </button>
+                );
+              })}
+              <div style={{ fontSize: 9, color: "var(--weered-muted, rgba(148,163,184,.45))", padding: "6px 10px 2px", fontStyle: "italic" }}>
+                ↑↓ to browse · Tab / Enter to select · Esc to close
+              </div>
+            </div>
+          )}
           {replyingTo && (
             <div style={{
               display: "flex", alignItems: "center", gap: 8,
@@ -1090,8 +1472,25 @@ export default function LobbyChatPanel(
             <input
               ref={inputRef}
               value={text}
-              onChange={(e) => { setText(e.target.value); if (e.target.value.length > 0) broadcastTyping(); }}
-              placeholder={canType ? "Message... (/ for commands)" : chatBlocked ? "Chat is locked." : "Join/admit required..."}
+              onChange={(e) => {
+                const v = e.target.value;
+                setText(v);
+                if (v.length > 0) broadcastTyping();
+                const caret = e.target.selectionStart ?? v.length;
+                const m = detectMentionAtCaret(v, caret);
+                setMentionState(m ? { ...m, index: 0 } : null);
+              }}
+              onSelect={(e) => {
+                const el = e.currentTarget;
+                const m = detectMentionAtCaret(el.value, el.selectionStart ?? el.value.length);
+                setMentionState(prev => {
+                  if (!m) return null;
+                  // Preserve selected index if query hasn't changed
+                  if (prev && prev.query === m.query && prev.start === m.start) return prev;
+                  return { ...m, index: 0 };
+                });
+              }}
+              placeholder={canType ? "Message... (/ for commands · @ to mention)" : chatBlocked ? "Chat is locked." : "Join/admit required..."}
               disabled={!canType}
               style={{
                 flex: 1, minWidth: 0, padding: "8px 12px", borderRadius: 10,
@@ -1101,7 +1500,20 @@ export default function LobbyChatPanel(
                 cursor: canType ? "text" : "not-allowed",
                 boxSizing: "border-box" as any,
               }}
-              onKeyDown={(e) => { if (e.key === "Enter" && canSend) onSend(); }}
+              onKeyDown={(e) => {
+                if (mentionState && mentionCandidates.length > 0) {
+                  if (e.key === "ArrowDown") { e.preventDefault(); setMentionState(s => s ? { ...s, index: Math.min(mentionCandidates.length - 1, s.index + 1) } : null); return; }
+                  if (e.key === "ArrowUp")   { e.preventDefault(); setMentionState(s => s ? { ...s, index: Math.max(0, s.index - 1) } : null); return; }
+                  if (e.key === "Tab" || e.key === "Enter") {
+                    e.preventDefault();
+                    const sel = mentionCandidates[mentionState.index];
+                    if (sel?.name) acceptMention(sel.name);
+                    return;
+                  }
+                  if (e.key === "Escape") { e.preventDefault(); setMentionState(null); return; }
+                }
+                if (e.key === "Enter" && canSend) onSend();
+              }}
             />
             <button
               onClick={() => { setGifOpen(v => !v); setEmojiOpen(false); }}
