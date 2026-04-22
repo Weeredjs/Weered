@@ -44,17 +44,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
 
       - name: Install pnpm
+        # Version comes from package.json's "packageManager" field — don't
+        # also specify it here or the action errors out.
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
