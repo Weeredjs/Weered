@@ -23,14 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS Apple Silicon
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            args: "--target aarch64-apple-darwin"
-          # macOS Intel
-          - platform: macos-latest
-            target: x86_64-apple-darwin
-            args: "--target x86_64-apple-darwin"
           # Linux
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
@@ -39,6 +31,10 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             args: ""
+          # macOS builds intentionally disabled for v0.1.x — see #TODO-mac.
+          # Re-enable by adding back macos-latest entries with aarch64 +
+          # x86_64 targets. Mac users can use the PWA install path until
+          # the native shell ships.
 
     runs-on: ${{ matrix.platform }}
 
