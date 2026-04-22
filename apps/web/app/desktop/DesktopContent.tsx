@@ -1,6 +1,15 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+
+type LatestRelease = {
+  version: string;
+  pub_date: string;
+  notes: string;
+  downloads: Record<string, string>; // tauri target -> url
+};
 
 const FEATURES: { icon: string; title: string; body: string }[] = [
   { icon: "▣", title: "System tray",        body: "Stays online in your tray. One click and you're back in the lobby." },
@@ -11,13 +20,45 @@ const FEATURES: { icon: string; title: string; body: string }[] = [
   { icon: "⟲", title: "Auto-update",         body: "Background updates, no nagware. Restart and you're on the latest." },
 ];
 
-const PLATFORMS: { id: string; label: string; sub: string; href: string | null }[] = [
-  { id: "windows", label: "Windows",     sub: "Win 10 / 11 · NSIS installer · ~6 MB",   href: null },
-  { id: "macos",   label: "macOS",       sub: "10.15+ · Universal DMG · ~8 MB",         href: null },
-  { id: "linux",   label: "Linux",       sub: "AppImage · DEB · ~7 MB",                 href: null },
+type Platform = {
+  id: "windows" | "macos-intel" | "macos-arm" | "linux";
+  label: string;
+  sub: string;
+  target: string;       // tauri target string used in /desktop/updates/:target
+  detect: (ua: string, plat: string) => boolean;
+};
+
+const PLATFORMS: Platform[] = [
+  { id: "windows",     label: "Windows",        sub: "Win 10 / 11 · NSIS installer",       target: "windows-x86_64",  detect: (_ua, p) => p.includes("Win") },
+  { id: "macos-arm",   label: "macOS (Apple)",  sub: "Apple Silicon · DMG",                target: "darwin-aarch64",  detect: (ua, p) => p.includes("Mac") && /arm|aarch/i.test(ua) },
+  { id: "macos-intel", label: "macOS (Intel)",  sub: "10.15+ · DMG",                       target: "darwin-x86_64",   detect: (ua, p) => p.includes("Mac") && !/arm|aarch/i.test(ua) },
+  { id: "linux",       label: "Linux",          sub: "AppImage",                            target: "linux-x86_64",    detect: (_ua, p) => /Linux|X11/i.test(p) },
 ];
 
 export default function DesktopContent() {
+  const [release, setRelease] = useState<LatestRelease | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [primaryPlatform, setPrimaryPlatform] = useState<Platform["id"] | null>(null);
+
+  useEffect(() => {
+    // Detect the visitor's OS so we can highlight the right download.
+    if (typeof window !== "undefined") {
+      const ua = window.navigator.userAgent || "";
+      const plat = window.navigator.platform || "";
+      const match = PLATFORMS.find((p) => p.detect(ua, plat));
+      if (match) setPrimaryPlatform(match.id);
+    }
+    // Fetch latest release info from API. Safe fallback: if it fails or
+    // returns null, we just show "Coming soon" tiles (current behavior).
+    fetch(`${API_BASE}/desktop/latest`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.ok && data.release) setRelease(data.release as LatestRelease);
+      })
+      .catch(() => { /* silent — page degrades to "Coming soon" */ })
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <>
       <style>{`
@@ -98,19 +139,42 @@ export default function DesktopContent() {
             </div>
           </div>
 
-          <h2 className="dt-section-h">Download</h2>
+          <h2 className="dt-section-h">Download{release ? ` · v${release.version}` : ""}</h2>
           <div className="dt-platforms">
-            {PLATFORMS.map((p) => (
-              <div key={p.id} className="dt-plat">
-                <div className="dt-soon">Coming soon</div>
-                <div className="dt-plat-name">{p.label}</div>
-                <div className="dt-plat-sub">{p.sub}</div>
-                <span className={p.href ? "dt-plat-cta live" : "dt-plat-cta"}>
-                  {p.href ? "Download" : "In testing"}
-                </span>
-              </div>
-            ))}
+            {PLATFORMS.map((p) => {
+              const url = release?.downloads?.[p.target] || null;
+              const isPrimary = primaryPlatform === p.id;
+              return (
+                <div key={p.id} className="dt-plat" style={isPrimary ? { borderColor: "#f5b700", boxShadow: "0 4px 16px rgba(245,183,0,0.3)" } : undefined}>
+                  {!url && !loading && <div className="dt-soon">Coming soon</div>}
+                  {isPrimary && url && <div className="dt-soon" style={{ color: "#f5b700", borderColor: "rgba(245,183,0,0.7)", background: "rgba(245,183,0,0.15)" }}>Recommended</div>}
+                  <div className="dt-plat-name">{p.label}</div>
+                  <div className="dt-plat-sub">{p.sub}</div>
+                  {url ? (
+                    <a className="dt-plat-cta live" href={url} download style={{ textDecoration: "none", display: "inline-block" }}>
+                      Download
+                    </a>
+                  ) : (
+                    <span className="dt-plat-cta">{loading ? "Checking…" : "In testing"}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
+          {release && (
+            <div style={{ marginTop: 14, fontSize: 11, color: "rgba(203,213,225,0.5)", letterSpacing: 0.5 }}>
+              Released {new Date(release.pub_date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+              {" · "}
+              <a href="https://github.com/Weeredjs/Weered/releases" target="_blank" rel="noreferrer" style={{ color: "#a78bfa", textDecoration: "none" }}>
+                All releases →
+              </a>
+            </div>
+          )}
+          {!release && !loading && (
+            <div style={{ marginTop: 14, fontSize: 11, color: "rgba(203,213,225,0.5)", letterSpacing: 0.5 }}>
+              First public release is in testing. The PWA install (below) works today.
+            </div>
+          )}
 
           <div className="dt-pwa">
             <div className="dt-pwa-h">Want it now? Install as a PWA.</div>
