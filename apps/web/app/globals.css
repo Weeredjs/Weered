@@ -3241,9 +3241,10 @@ html, body {
   overflow-x: hidden;
   background: var(--weered-bg);
   color: var(--weered-text);
-  /* Default UI font — Barlow Condensed, lifted from the Destiny lobby nav.
-     Specific lobby themes (Windrose, Destiny, etc.) override per-element. */
-  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif;
+  /* Default UI font — Rajdhani, the Destiny lobby chrome font. Crisp,
+     condensed, slightly futuristic. Per-lobby themes (Windrose, etc.)
+     still override via more specific selectors. */
+  font-family: var(--font-rajdhani), 'Rajdhani', 'Bank Gothic', 'Arial Narrow', ui-sans-serif, sans-serif;
 }
 
 a {
@@ -3258,7 +3259,7 @@ h1, h2, h3, h4, strong, legend, label {
 }
 
 button, input, textarea, select {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-family: var(--font-rajdhani), 'Rajdhani', 'Bank Gothic', 'Arial Narrow', ui-sans-serif, sans-serif;
 }
 
 input, textarea, select {
