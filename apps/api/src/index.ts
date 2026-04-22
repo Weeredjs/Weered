@@ -13340,6 +13340,14 @@ Rules:
           claimedAt: new Date(),
         },
       });
+      wrCache.delete("wr:activity");
+      // Ping the poster — someone's claimed your bounty
+      sendPush(b.posterId, {
+        title: "Claim on your bounty",
+        body: `${claimantName} claims ${b.amount.toLocaleString()} Paper on ${b.targetHandle}. Review the proof.`,
+        url: "/lobby/windrose",
+        tag: `windrose:bounty:${b.id}`,
+      }).catch(() => {});
       return reply.send({ ok: true, bounty: updated });
     } catch (e) {
       console.error("[windrose/bounties claim]", e);
@@ -13366,6 +13374,15 @@ Rules:
       });
       wrCache.delete("wr:bounties:leaderboard");
       wrCache.delete("wr:activity");
+      // Ping the hunter — payout is yours
+      if (b.claimantId) {
+        sendPush(b.claimantId, {
+          title: "Bounty paid",
+          body: `${b.amount.toLocaleString()} Paper just hit your wallet. ${b.targetHandle} is settled.`,
+          url: "/store",
+          tag: `windrose:bounty:${b.id}:settled`,
+        }).catch(() => {});
+      }
       return reply.send({ ok: true, bounty: updated });
     } catch (e) {
       console.error("[windrose/bounties settle]", e);
@@ -13383,10 +13400,21 @@ Rules:
     if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
     if (b.status !== "CLAIMED") return reply.code(400).send({ ok: false, error: "not_claimed" });
     try {
+      const rejectedClaimantId = b.claimantId;
       const updated = await (prisma as any).windroseBounty.update({
         where: { id },
         data: { status: "OPEN", claimantId: null, claimantName: null, proofNote: null, proofImageUrl: null, claimedAt: null },
       });
+      wrCache.delete("wr:activity");
+      // Ping the spurned hunter — back to the hunt
+      if (rejectedClaimantId) {
+        sendPush(rejectedClaimantId, {
+          title: "Claim rejected",
+          body: `Your claim on ${b.targetHandle} was rejected. The bounty's back on the board.`,
+          url: "/lobby/windrose",
+          tag: `windrose:bounty:${b.id}:rejected`,
+        }).catch(() => {});
+      }
       return reply.send({ ok: true, bounty: updated });
     } catch (e) {
       console.error("[windrose/bounties reject]", e);
@@ -13419,6 +13447,52 @@ Rules:
       return reply.code(500).send({ ok: false, error: "cancel_failed" });
     }
   });
+
+  // ── Bounty auto-expire worker ─────────────────────────────────────────
+  // Any OPEN bounty older than BOUNTY_EXPIRY_DAYS gets auto-cancelled and
+  // the poster refunded, so the board doesn't silt up with zombie posts.
+  // Safe to run on every instance because the sweep is idempotent — the
+  // status guard on the update means a second runner just no-ops.
+  const BOUNTY_EXPIRY_DAYS = 21;
+  async function sweepExpiredBounties() {
+    try {
+      const cutoff = new Date(Date.now() - BOUNTY_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+      const stale = await (prisma as any).windroseBounty.findMany({
+        where: { lobbyId: "windrose", status: "OPEN", createdAt: { lt: cutoff } },
+        take: 100,
+      });
+      if (stale.length === 0) return;
+      for (const b of stale) {
+        // Refund the poster's escrow
+        const refund = await awardPaper(b.posterId, "ADJUSTMENT", b.amount, `Bounty expired · refund`, b.id);
+        if (!refund) continue;
+        try {
+          await (prisma as any).windroseBounty.update({
+            where: { id: b.id },
+            data: { status: "CANCELLED", cancelledAt: new Date() },
+          });
+          sendPush(b.posterId, {
+            title: "Bounty expired",
+            body: `Your ${b.amount.toLocaleString()} Paper on ${b.targetHandle} went unclaimed. Refunded to your wallet.`,
+            url: "/lobby/windrose",
+            tag: `windrose:bounty:${b.id}:expired`,
+          }).catch(() => {});
+        } catch (e) {
+          // If the update failed, un-refund so we don't double-pay on the next sweep
+          await awardPaper(b.posterId, "ADJUSTMENT", -b.amount, `Bounty expire rollback`, b.id).catch(() => {});
+          console.error("[windrose/bounties expire]", e);
+        }
+      }
+      wrCache.delete("wr:bounties:leaderboard");
+      wrCache.delete("wr:activity");
+      console.log(`[windrose] auto-expired ${stale.length} bounty(ies)`);
+    } catch (e) {
+      console.error("[windrose/bounties sweep]", e);
+    }
+  }
+  // Run hourly + on boot (after a short delay so the app is fully up)
+  setInterval(() => { void sweepExpiredBounties(); }, 60 * 60 * 1000);
+  setTimeout(() => { void sweepExpiredBounties(); }, 30 * 1000);
 
   // GET /windrose/bounties/leaderboard — hall-of-fame aggregates
   // Three boards + a stats strip. Cached 5 min to keep the query cheap.
