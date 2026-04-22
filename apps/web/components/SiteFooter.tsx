@@ -77,6 +77,8 @@ export default function SiteFooter() {
         <nav className="site-footer-nav">
           <Link href="/about">about</Link>
           <div className="site-footer-divider" />
+          <Link href="/desktop">desktop app</Link>
+          <div className="site-footer-divider" />
           <Link href="/premium">premium</Link>
           <div className="site-footer-divider" />
           <Link href="/terms">terms</Link>
