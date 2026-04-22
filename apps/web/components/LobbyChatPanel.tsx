@@ -139,7 +139,7 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
 }
 
 // ── GIF Picker (Tenor) ──
-const TENOR_API_KEY = "AIza_REDACTED_TENOR_KEY"; // Tenor public/free key
+const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY || "";
 const TENOR_URL = "https://tenor.googleapis.com/v2";
 
 function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
