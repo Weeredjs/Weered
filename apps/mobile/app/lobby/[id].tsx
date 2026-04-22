@@ -22,35 +22,16 @@ import { WindrosePanel } from "@/components/WindrosePanel";
 import { GenericGamePanel } from "@/components/GenericGamePanel";
 import { PokerPanel } from "@/components/PokerPanel";
 import { LobbyPresence } from "@/components/LobbyPresence";
+import type {
+  Lobby,
+  Room,
+  LobbyMembership,
+  JoinRequest,
+  LobbyDetailResponse as LobbyDetail,
+  RoomsResponse,
+} from "@weered/shared";
 
-type Room = {
-  id: string;
-  name: string;
-  description: string | null;
-  locked: boolean;
-  pinned: boolean;
-  isEvent: boolean;
-  ownerId: string;
-  onlineCount: number;
-  onlineUsers: { id: string; name: string; avatar?: string }[];
-  _count: { members: number };
-};
-
-type Lobby = {
-  id: string;
-  name: string;
-  description: string | null;
-  verified: boolean;
-  accentColor: string | null;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  moduleType: string | null;
-};
-
-type Membership = { role: string; roleLevel: number } | null;
-type JoinRequest = { status: "PENDING" | "APPROVED" | "DENIED"; denyReason?: string | null } | null;
-type LobbyDetail = { ok: boolean; lobby: Lobby & { rooms: Room[]; joinMode?: string }; membership: Membership; joinRequest: JoinRequest };
-type RoomsResponse = { ok: boolean; rooms: Room[] };
+type Membership = LobbyMembership | null;
 
 export default function LobbyDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -276,7 +257,7 @@ function JoinButton({
   membership, joinRequest, isOwner, joinMode, pending, onJoin, onLeave,
 }: {
   membership: Membership;
-  joinRequest: JoinRequest;
+  joinRequest: JoinRequest | null;
   isOwner: boolean;
   joinMode?: string;
   pending: boolean;

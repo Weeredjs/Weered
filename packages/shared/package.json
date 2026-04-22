@@ -1,0 +1,17 @@
+{
+  "name": "@weered/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript types and constants used by web, mobile, and desktop clients. The API is the source of truth; these types mirror its response shapes.",
+  "types": "./src/index.ts",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
