@@ -9,6 +9,89 @@ import EmptyState from "./EmptyState";
 import { weeredConfirm } from "../lib/confirm";
 import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
+import RoleIcon, { TierIcon } from "./RoleIcon";
+
+// ── Username styling by rank — role takes priority over tier ──
+function nameStyleFor(role?: string, tier?: string): React.CSSProperties {
+  const r = String(role || "").toUpperCase();
+  const t = String(tier || "").toUpperCase();
+  if (r === "GOD")     return { color: "#fcd34d", textShadow: "0 0 10px rgba(252,211,77,0.45)" };
+  if (r === "STAFF")   return { color: "#60a5fa", textShadow: "0 0 8px rgba(96,165,250,0.35)" };
+  if (r === "SUPPORT") return { color: "#c4b5fd", textShadow: "0 0 8px rgba(196,181,253,0.35)" };
+  if (r === "MOD")     return { color: "#34d399", textShadow: "0 0 6px rgba(52,211,153,0.30)" };
+  if (t === "KINGPIN") return { color: "#fcd34d", textShadow: "0 0 6px rgba(252,211,77,0.35)" };
+  if (t === "FELON")   return { color: "#fb923c", textShadow: "0 0 5px rgba(251,146,60,0.30)" };
+  if (t === "INDICTED")return { color: "#a78bfa" };
+  return {};
+}
+
+// ── Slash command handler — returns true if the input was a command ──
+function runSlashCommand(
+  raw: string,
+  opts: { me?: any; send: (body: string) => void; openGif: (query?: string) => void; clear: () => void }
+): boolean {
+  if (!raw.startsWith("/")) return false;
+  const [cmdRaw, ...rest] = raw.slice(1).split(/\s+/);
+  const cmd = cmdRaw.toLowerCase();
+  const args = rest.join(" ").trim();
+  const meName = String(opts.me?.name || "someone");
+  switch (cmd) {
+    case "me":
+      if (!args) { weeredToast.error("Usage: /me does something"); return true; }
+      opts.send(`*${meName} ${args}*`);
+      opts.clear();
+      return true;
+    case "shrug":
+      opts.send(`${args ? args + " " : ""}¯\\_(ツ)_/¯`);
+      opts.clear();
+      return true;
+    case "tableflip":
+      opts.send(`${args ? args + " " : ""}(╯°□°)╯︵ ┻━┻`);
+      opts.clear();
+      return true;
+    case "unflip":
+      opts.send(`${args ? args + " " : ""}┬─┬ ノ( ゜-゜ノ)`);
+      opts.clear();
+      return true;
+    case "flip":
+      opts.send(`${args ? args + " " : ""}（ノಠ益ಠ）ノ彡┻━┻`);
+      opts.clear();
+      return true;
+    case "roll": {
+      const m = args.match(/^(\d*)d(\d+)(?:\s*([+\-]\s*\d+))?$/i) || ["", "1", "20"];
+      const n = Math.max(1, Math.min(20, parseInt(m[1] || "1", 10) || 1));
+      const sides = Math.max(2, Math.min(1000, parseInt(m[2] || "20", 10) || 20));
+      const mod = m[3] ? parseInt(m[3].replace(/\s+/g, ""), 10) : 0;
+      const rolls = Array.from({ length: n }, () => Math.floor(Math.random() * sides) + 1);
+      const sum = rolls.reduce((a, b) => a + b, 0) + mod;
+      const breakdown = n === 1 ? `${rolls[0]}` : `${rolls.join(" + ")}${mod ? ` ${mod >= 0 ? "+" : "-"} ${Math.abs(mod)}` : ""} = ${sum}`;
+      opts.send(`🎲 \`${n}d${sides}${mod ? (mod >= 0 ? `+${mod}` : mod) : ""}\` → ${breakdown}`);
+      opts.clear();
+      return true;
+    }
+    case "giphy":
+      opts.openGif(args || undefined);
+      opts.clear();
+      return true;
+    case "help":
+    case "commands": {
+      const help = [
+        "**Slash commands available:**",
+        "• `/me <action>` — action emote",
+        "• `/shrug`, `/tableflip`, `/unflip`, `/flip` — classics",
+        "• `/roll 2d20` — dice roll (supports modifiers: `/roll 1d20+3`)",
+        "• `/giphy <query>` — opens GIF picker",
+      ].join("\n");
+      // Self-render via toast (don't send to chat)
+      weeredToast(help);
+      opts.clear();
+      return true;
+    }
+    default:
+      weeredToast.error(`Unknown command: /${cmdRaw}`);
+      return true;
+  }
+}
 
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
@@ -53,72 +136,50 @@ function LinkPreviewCard({ url }: { url: string }) {
 }
 
 const MENTION_BODY_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
+const BOLD_RE = /\*\*([^*\n]+?)\*\*/g;     // **bold**
+const ITALIC_RE = /(^|[^*])\*([^*\n]+?)\*(?!\*)/g;  // *italic* (not part of **)
+const CODE_RE = /`([^`\n]+?)`/g;           // `inline code`
+
+type InlineTok = {
+  kind: "url" | "mention" | "bold" | "italic" | "code";
+  start: number;
+  end: number;
+  value: string;      // for bold/italic/code this is the inner text
+  raw: string;        // the matched raw including markers
+};
 
 function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (handle: string) => void }) {
   if (!text) return null;
   const imageUrls: string[] = [];
   const linkUrls: string[] = [];
 
-  // Collect URL + mention matches, then render left-to-right
-  type Tok = { kind: "url" | "mention"; start: number; end: number; value: string };
-  const toks: Tok[] = [];
-  URL_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = URL_RE.exec(text)) !== null) {
-    toks.push({ kind: "url", start: m.index, end: m.index + m[0].length, value: m[0] });
-  }
-  MENTION_BODY_RE.lastIndex = 0;
-  while ((m = MENTION_BODY_RE.exec(text)) !== null) {
-    // Avoid matching an @ that's inside a URL we already captured
-    const inUrl = toks.some(t => t.kind === "url" && m!.index >= t.start && m!.index < t.end);
-    if (inUrl) continue;
-    toks.push({ kind: "mention", start: m.index, end: m.index + m[0].length, value: m[1] });
-  }
-  toks.sort((a, b) => a.start - b.start);
+  // Process line-by-line for block-level (blockquote) + inline tokens
+  const lines = text.split(/\n/);
+  const blockNodes: React.ReactNode[] = [];
+  let blockKey = 0;
 
-  const parts: React.ReactNode[] = [];
-  let cursor = 0;
-  let key = 0;
-  for (const t of toks) {
-    if (t.start > cursor) parts.push(text.slice(cursor, t.start));
-    if (t.kind === "url") {
-      const url = t.value;
-      parts.push(
-        <a key={key++} href={url} target="_blank" rel="noopener noreferrer" style={{
-          color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2,
-          wordBreak: "break-all",
-        }}>{url}</a>
+  for (const line of lines) {
+    const isQuote = /^>\s?/.test(line);
+    const content = isQuote ? line.replace(/^>\s?/, "") : line;
+    const inlineNode = renderInline(content, imageUrls, linkUrls, onMentionClick);
+    if (isQuote) {
+      blockNodes.push(
+        <div key={blockKey++} style={{
+          borderLeft: "3px solid var(--weered-accent-ring, rgba(124,58,237,0.55))",
+          paddingLeft: 8,
+          color: "var(--weered-muted, rgba(148,163,184,.85))",
+          margin: "2px 0",
+        }}>{inlineNode}</div>
       );
-      if (IMG_EXT.test(url) || TENOR_RE.test(url)) imageUrls.push(url);
-      else linkUrls.push(url);
     } else {
-      const handle = t.value;
-      parts.push(
-        <span
-          key={key++}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onMentionClick) onMentionClick(handle);
-          }}
-          style={{
-            display: "inline-block",
-            padding: "0 4px",
-            borderRadius: 4,
-            background: "var(--weered-accent-bg, rgba(124,58,237,0.18))",
-            color: "var(--weered-accent-text, rgba(196,181,253,0.95))",
-            fontWeight: 700,
-            cursor: onMentionClick ? "pointer" : "default",
-          }}
-        >@{handle}</span>
-      );
+      blockNodes.push(<React.Fragment key={blockKey++}>{inlineNode}</React.Fragment>);
+      if (blockKey < lines.length) blockNodes.push(<br key={`br-${blockKey}`} />);
     }
-    cursor = t.end;
   }
-  if (cursor < text.length) parts.push(text.slice(cursor));
 
   return (
     <>
-      <div style={{ opacity: 0.95, wordBreak: "break-word" }}>{parts}</div>
+      <div style={{ opacity: 0.95, wordBreak: "break-word" }}>{blockNodes}</div>
       {imageUrls.map((src, i) => (
         <a key={`img-${i}`} href={src} target="_blank" rel="noopener noreferrer">
           <img
@@ -136,6 +197,109 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
       ))}
     </>
   );
+}
+
+function renderInline(
+  text: string,
+  imageUrls: string[],
+  linkUrls: string[],
+  onMentionClick?: (handle: string) => void,
+): React.ReactNode {
+  if (!text) return null;
+
+  // Collect all tokens, then render left-to-right. Tokens that overlap get
+  // filtered — URL wins over mention (the @ may be in a URL); code wins over
+  // bold/italic (ticks are most explicit); bold wins over italic.
+  const toks: InlineTok[] = [];
+  let m: RegExpExecArray | null;
+
+  URL_RE.lastIndex = 0;
+  while ((m = URL_RE.exec(text)) !== null) {
+    toks.push({ kind: "url", start: m.index, end: m.index + m[0].length, value: m[0], raw: m[0] });
+  }
+  MENTION_BODY_RE.lastIndex = 0;
+  while ((m = MENTION_BODY_RE.exec(text)) !== null) {
+    if (toks.some(t => t.kind === "url" && m!.index >= t.start && m!.index < t.end)) continue;
+    toks.push({ kind: "mention", start: m.index, end: m.index + m[0].length, value: m[1], raw: m[0] });
+  }
+  CODE_RE.lastIndex = 0;
+  while ((m = CODE_RE.exec(text)) !== null) {
+    toks.push({ kind: "code", start: m.index, end: m.index + m[0].length, value: m[1], raw: m[0] });
+  }
+  BOLD_RE.lastIndex = 0;
+  while ((m = BOLD_RE.exec(text)) !== null) {
+    // Skip if inside code
+    if (toks.some(t => t.kind === "code" && m!.index >= t.start && m!.index < t.end)) continue;
+    toks.push({ kind: "bold", start: m.index, end: m.index + m[0].length, value: m[1], raw: m[0] });
+  }
+  ITALIC_RE.lastIndex = 0;
+  while ((m = ITALIC_RE.exec(text)) !== null) {
+    const starStart = m.index + m[1].length;
+    const innerStart = starStart + 1;
+    const innerEnd = innerStart + m[2].length;
+    // Skip if inside code or bold
+    if (toks.some(t => (t.kind === "code" || t.kind === "bold") && starStart >= t.start && starStart < t.end)) continue;
+    toks.push({ kind: "italic", start: starStart, end: innerEnd + 1, value: m[2], raw: m[0].slice(m[1].length) });
+  }
+  toks.sort((a, b) => a.start - b.start);
+
+  // Filter overlapping tokens (keep earlier-start)
+  const keep: InlineTok[] = [];
+  let prevEnd = -1;
+  for (const t of toks) {
+    if (t.start < prevEnd) continue;
+    keep.push(t);
+    prevEnd = t.end;
+  }
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+  for (const t of keep) {
+    if (t.start > cursor) parts.push(text.slice(cursor, t.start));
+    if (t.kind === "url") {
+      parts.push(
+        <a key={key++} href={t.value} target="_blank" rel="noopener noreferrer" style={{
+          color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2, wordBreak: "break-all",
+        }}>{t.value}</a>
+      );
+      if (IMG_EXT.test(t.value) || TENOR_RE.test(t.value)) imageUrls.push(t.value);
+      else linkUrls.push(t.value);
+    } else if (t.kind === "mention") {
+      const handle = t.value;
+      parts.push(
+        <span
+          key={key++}
+          onClick={(e) => { e.stopPropagation(); if (onMentionClick) onMentionClick(handle); }}
+          style={{
+            display: "inline-block", padding: "0 4px", borderRadius: 4,
+            background: "var(--weered-accent-bg, rgba(124,58,237,0.18))",
+            color: "var(--weered-accent-text, rgba(196,181,253,0.95))",
+            fontWeight: 700,
+            cursor: onMentionClick ? "pointer" : "default",
+          }}
+        >@{handle}</span>
+      );
+    } else if (t.kind === "bold") {
+      parts.push(<strong key={key++} style={{ fontWeight: 800 }}>{t.value}</strong>);
+    } else if (t.kind === "italic") {
+      parts.push(<em key={key++} style={{ fontStyle: "italic" }}>{t.value}</em>);
+    } else if (t.kind === "code") {
+      parts.push(
+        <code key={key++} style={{
+          fontFamily: "ui-monospace, monospace",
+          fontSize: "0.92em",
+          background: "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 4,
+          padding: "0 5px",
+        }}>{t.value}</code>
+      );
+    }
+    cursor = t.end;
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return parts;
 }
 
 // ── GIF Picker (Tenor) ──
@@ -432,6 +596,13 @@ export default function LobbyChatPanel(
   const roomLabel = effectiveRoomId;
 
   const [text, setText] = useState("");
+  const lastTypingSentRef = useRef<number>(0);
+  const broadcastTyping = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2500) return; // throttle to ~2.5s
+    lastTypingSentRef.current = now;
+    try { (ctx as any)?.sendRaw?.({ type: "chat:typing" }); } catch { /* noop */ }
+  }, [ctx]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiCat, setEmojiCat] = useState(0);
   const [gifOpen, setGifOpen] = useState(false);
@@ -521,6 +692,16 @@ export default function LobbyChatPanel(
     if (!canType) return;
     const msg = String(text || "").trim();
     if (!msg) return;
+    // Slash-command intercept — /me, /roll, /shrug, /tableflip, /giphy, etc.
+    if (msg.startsWith("/")) {
+      const handled = runSlashCommand(msg, {
+        me: ctx?.me,
+        send: (body: string) => { try { ctx?.sendChat?.(body, replyingTo ? { replyToId: replyingTo.id } : undefined); } catch {} },
+        openGif: (_q?: string) => { setGifOpen(true); setEmojiOpen(false); },
+        clear: () => { setText(""); setReplyingTo(null); },
+      });
+      if (handled) return;
+    }
     try { ctx?.sendChat?.(msg, replyingTo ? { replyToId: replyingTo.id } : undefined); } catch {}
     setText("");
     setReplyingTo(null);
@@ -608,20 +789,35 @@ export default function LobbyChatPanel(
                   )}
                 </div>
                 <div style={{ minWidth: 0, flex: 1, opacity: deletedAt ? 0.55 : 1 }}>
-                  <div
-                    data-chat-username
-                    style={{ fontWeight: 800, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "baseline", gap: 6 }}
-                    onMouseEnter={e => {
-                      const uid = msgUserId;
-                      if (uid) openHover(uid, uname, e.currentTarget as HTMLElement);
-                    }}
-                    onMouseLeave={() => hoverClose(160)}
-                  >
-                    <span>{uname}</span>
-                    {editedAt > 0 && !deletedAt && (
-                      <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>(edited)</span>
-                    )}
-                  </div>
+                  {(() => {
+                    // Cross-reference this user's live role/tier from presence so the
+                    // chat message shows their GTA rank as a visual cue — colored name
+                    // + inline role icon + tier chip. Falls back gracefully.
+                    const roomUsers = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+                    const umeta = msgUserId ? roomUsers.find((u: any) => u?.id === msgUserId) : undefined;
+                    const uRole = umeta?.globalRole || m?.user?.globalRole;
+                    const uTier = umeta?.tier       || m?.user?.tier;
+                    const nameStyle = nameStyleFor(uRole, uTier);
+                    return (
+                      <div
+                        data-chat-username
+                        style={{ fontWeight: 800, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}
+                        onMouseEnter={e => { if (msgUserId) openHover(msgUserId, uname, e.currentTarget as HTMLElement); }}
+                        onMouseLeave={() => hoverClose(160)}
+                      >
+                        <span style={nameStyle}>{uname}</span>
+                        {uRole && String(uRole).toUpperCase() !== "USER" && (
+                          <RoleIcon role={String(uRole).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
+                        )}
+                        {uTier && String(uTier).toUpperCase() !== "INNOCENT" && (
+                          <TierIcon tier={String(uTier).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
+                        )}
+                        {editedAt > 0 && !deletedAt && (
+                          <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))", marginLeft: 2 }}>(edited)</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {(m as any).replyTo?.id && !deletedAt && (
                     <button
                       type="button"
@@ -825,6 +1021,44 @@ export default function LobbyChatPanel(
         )}
       </div>
 
+      {/* Typing indicator — who's currently composing in this room */}
+      {(() => {
+        const typing = (ctx?.typingByRoom?.[effectiveRoomId] || []).filter((e: any) => e.userId !== ctx?.me?.id);
+        if (!typing.length) return null;
+        const names = typing.slice(0, 3).map((t: any) => t.name);
+        const rest = typing.length - names.length;
+        const label = names.length === 1
+          ? `${names[0]} is typing…`
+          : names.length === 2
+            ? `${names[0]} and ${names[1]} are typing…`
+            : rest > 0
+              ? `${names.join(", ")} and ${rest} other${rest === 1 ? "" : "s"} are typing…`
+              : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} are typing…`;
+        return (
+          <div style={{
+            padding: "4px 14px 2px",
+            fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.70))",
+            fontStyle: "italic",
+            display: "flex", alignItems: "center", gap: 6,
+            flexShrink: 0,
+            minHeight: 18,
+          }}>
+            <span style={{ display: "inline-flex", gap: 2 }}>
+              <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out infinite" }} />
+              <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out 0.2s infinite" }} />
+              <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out 0.4s infinite" }} />
+            </span>
+            {label}
+            <style>{`
+              @keyframes weered-typing {
+                0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+                30% { opacity: 1; transform: translateY(-2px); }
+              }
+            `}</style>
+          </div>
+        );
+      })()}
+
       {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
         <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
@@ -856,8 +1090,8 @@ export default function LobbyChatPanel(
             <input
               ref={inputRef}
               value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={canType ? "Message..." : chatBlocked ? "Chat is locked." : "Join/admit required..."}
+              onChange={(e) => { setText(e.target.value); if (e.target.value.length > 0) broadcastTyping(); }}
+              placeholder={canType ? "Message... (/ for commands)" : chatBlocked ? "Chat is locked." : "Join/admit required..."}
               disabled={!canType}
               style={{
                 flex: 1, minWidth: 0, padding: "8px 12px", borderRadius: 10,

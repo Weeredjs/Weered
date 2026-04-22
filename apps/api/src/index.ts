@@ -5338,6 +5338,22 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
           return;
         }
 
+        // ── Chat typing indicator ──────────────────────────────────────
+        // Clients send chat:typing while the composer has focus + input.
+        // Broadcast a minimal payload (id, name) to the room. Clients
+        // self-expire stale entries after ~5s, so no server-side state.
+        if (msg.type === "chat:typing") {
+          if (!ws.user?.id || !ws.joinedRoomId) return;
+          const room = rooms.get(ws.joinedRoomId);
+          if (!room || !room.users.has(ws.user.id)) return;
+          broadcast(room, {
+            type: "chat:typing",
+            roomId: room.roomId,
+            user: { id: ws.user.id, name: ws.user.name },
+          });
+          return;
+        }
+
         if (msg.type === "presence:idle") {
           if (!ws.user) return;
           const away = Boolean(msg.away);
