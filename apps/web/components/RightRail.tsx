@@ -224,25 +224,18 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
     <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Rooms</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {lobbyId && (
-            <div className="weered-rr-id-chip" style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.70)", background: "rgba(88,0,229,.10)", border: "1px solid rgba(88,0,229,.20)", borderRadius: 6, padding: "2px 7px" }}>
-              {lobbyId}
-            </div>
-          )}
-          <button
-            className="weered-rr-primary"
-            onClick={() => setShowCreate(o => !o)}
-            style={{
-              padding: "3px 9px", borderRadius: 7, fontSize: 11, fontWeight: 700,
-              border: showCreate ? "1px solid rgba(88,0,229,.50)" : "1px solid rgba(88,0,229,.25)",
-              background: showCreate ? "rgba(88,0,229,.15)" : "rgba(88,0,229,.08)",
-              color: "rgba(167,139,250,.9)", cursor: "pointer", transition: "all .15s",
-            }}
-          >
-            {showCreate ? "✕" : "+ Room"}
-          </button>
-        </div>
+        <button
+          className="weered-rr-primary"
+          onClick={() => setShowCreate(o => !o)}
+          style={{
+            padding: "3px 9px", borderRadius: 7, fontSize: 11, fontWeight: 700,
+            border: showCreate ? "1px solid rgba(88,0,229,.50)" : "1px solid rgba(88,0,229,.25)",
+            background: showCreate ? "rgba(88,0,229,.15)" : "rgba(88,0,229,.08)",
+            color: "rgba(167,139,250,.9)", cursor: "pointer", transition: "all .15s",
+          }}
+        >
+          {showCreate ? "✕" : "+ Room"}
+        </button>
       </div>
 
       {/* ── Create Room Overlay ── */}

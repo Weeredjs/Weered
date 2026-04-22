@@ -3723,11 +3723,18 @@ main {
   overflow: hidden;
 }
 .weered-left-title {
-  padding: 10px 12px;
+  padding: 16px 16px 14px;
   font-size: 12px;
   font-weight: 900;
   opacity: 0.85;
   border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+}
+
+/* Right-rail section container gets breathing room at top + horizontal inset
+   so the section title bar isn't pressed against the box edges. Existing
+   inner lists ride inside this pad cleanly. */
+.weered-rr-section {
+  padding: 10px 12px 6px;
 }
 .weered-left-link {
   display: flex;
@@ -3818,7 +3825,7 @@ main {
      hover tints. */
 }
 .weered-presence-head {
-  padding: 10px 12px;
+  padding: 16px 16px 14px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.10);
   display: flex;
   /* Baseline-align so the PRESENCE title sits at the same vertical
