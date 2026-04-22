@@ -38,6 +38,7 @@
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
+    "react-native-svg": "^15.15.4",
     "react-native-web": "latest",
     "tailwindcss": "^3.4.17",
     "zustand": "latest"

@@ -7,6 +7,7 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -16,6 +17,9 @@ import { useAuth } from "@/stores/auth";
 import { LobbyLogo } from "@/components/LobbyLogo";
 import { ModuleBadge } from "@/components/ModuleBadge";
 import { SiteBanner } from "@/components/SiteBanner";
+import { StampHeader, StreetCard, Tag } from "@/components/Brand";
+import { resolveImageUrl } from "@/lib/config";
+import { Ionicons } from "@expo/vector-icons";
 
 type Lobby = {
   id: string;
@@ -98,25 +102,52 @@ export default function Lobbies() {
   const error = searching ? searchQ.error : listQ.error;
 
   return (
-    <SafeAreaView edges={[]} className="flex-1 bg-weered-bg">
+    <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: "#0c0b0a" }}>
       <SiteBanner />
-      <View className="px-3 py-2 border-b border-border/40 flex-row items-center">
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          backgroundColor: "#000",
+          borderBottomWidth: 1.5,
+          borderBottomColor: "rgba(88,0,229,0.4)",
+        }}
+      >
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search lobbies or rooms"
-          placeholderTextColor="rgba(160,160,170,0.6)"
+          placeholder="SEARCH LOBBIES · ROOMS"
+          placeholderTextColor="rgba(160,160,170,0.5)"
           autoCorrect={false}
           autoCapitalize="none"
           clearButtonMode="while-editing"
-          className="bg-panel text-weered-text px-3 py-2 rounded-lg flex-1"
-          style={{ fontSize: 15 }}
+          style={{
+            flex: 1,
+            fontSize: 13,
+            fontFamily: "monospace",
+            fontWeight: "700",
+            letterSpacing: 1,
+            color: "rgba(243,244,246,0.96)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+            paddingHorizontal: 12, paddingVertical: 10,
+            borderRadius: 4,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+          }}
         />
         <Pressable
           onPress={() => router.push("/lobby/new")}
-          className="bg-weered px-3 py-2 rounded-lg ml-2 active:opacity-80"
+          style={{
+            marginLeft: 8,
+            backgroundColor: "#5800E5",
+            paddingHorizontal: 14, paddingVertical: 10,
+            borderRadius: 4,
+            shadowColor: "#5800E5", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 3,
+          }}
         >
-          <Text className="text-white font-bold">+ New</Text>
+          <Text style={{ color: "#fff", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase" }}>+ New</Text>
         </Pressable>
       </View>
 
@@ -134,8 +165,9 @@ export default function Lobbies() {
         <FlatList
           data={discoverLobbies}
           keyExtractor={(l) => l.id}
-          contentContainerStyle={{ paddingVertical: 8 }}
-          ItemSeparatorComponent={() => <View className="h-px bg-border/40 mx-4" />}
+          style={{ backgroundColor: "#0b0a0f" }}
+          contentContainerStyle={{ paddingVertical: 8, backgroundColor: "#0b0a0f" }}
+          ItemSeparatorComponent={() => <View className="h-0" />}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -147,34 +179,108 @@ export default function Lobbies() {
           ListHeaderComponent={
             !searching ? (
               <View>
-                {featuredQ.data?.lobby && (
-                  <Pressable
-                    onPress={() => router.push(`/lobby/${featuredQ.data!.lobby!.id}`)}
-                    className="mx-3 mt-3 mb-2 rounded-xl overflow-hidden active:opacity-90"
-                    style={{ backgroundColor: (featuredQ.data.lobby.accentColor || "#5800E5") + "15", borderWidth: 1, borderColor: (featuredQ.data.lobby.accentColor || "#5800E5") + "55" }}
-                  >
-                    <View className="p-3 flex-row items-center">
-                      <LobbyLogo name={featuredQ.data.lobby.name} url={featuredQ.data.lobby.logoUrl} accent={featuredQ.data.lobby.accentColor} size={56} />
-                      <View className="flex-1 ml-3">
-                        <Text className="text-weered text-[10px] font-bold uppercase tracking-wider">★ Featured</Text>
-                        <Text className="text-weered-text font-bold text-base" numberOfLines={1}>{featuredQ.data.lobby.name}</Text>
-                        {!!featuredQ.data.lobby.description && (
-                          <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>{featuredQ.data.lobby.description}</Text>
-                        )}
-                        {(featuredQ.data.lobby as any)._count && (
-                          <Text className="text-weered-muted text-xs mt-1">
-                            {(featuredQ.data.lobby as any)._count.rooms} rooms · {(featuredQ.data.lobby as any)._count.members} members
-                          </Text>
-                        )}
-                      </View>
+                <Pressable
+                  onPress={() => router.push(`/room/lobby`)}
+                  className="active:opacity-90"
+                  style={{
+                    marginHorizontal: 12, marginTop: 12, marginBottom: 8,
+                    overflow: "hidden",
+                    borderRadius: 4,
+                    borderWidth: 1.5,
+                    borderColor: "rgba(88,0,229,0.5)",
+                    backgroundColor: "#120A22",
+                    shadowColor: "#5800E5",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 10,
+                    elevation: 4,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", padding: 12 }}>
+                    <View
+                      style={{
+                        width: 44, height: 44, borderRadius: 4,
+                        backgroundColor: "#5800E5",
+                        alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      <Ionicons name="home" size={22} color="#fff" />
                     </View>
-                  </Pressable>
-                )}
+                    <View style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+                      <Text style={{ color: "#5800E5", fontFamily: "monospace", fontWeight: "900", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase" }}>
+                        Home Lobby
+                      </Text>
+                      <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "900", fontSize: 15, letterSpacing: 0.5, marginTop: 2 }}>
+                        The Streets
+                      </Text>
+                      <Text numberOfLines={1} style={{ color: "rgba(160,160,170,0.85)", fontSize: 11, marginTop: 2 }}>
+                        Global chat + presence · everyone's here.
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="rgba(160,160,170,0.7)" style={{ marginLeft: 6 }} />
+                  </View>
+                </Pressable>
+                {featuredQ.data?.lobby && (() => {
+                  const banner = resolveImageUrl(featuredQ.data.lobby.bannerUrl);
+                  const lob = featuredQ.data.lobby;
+                  const count = (lob as any)._count;
+                  return (
+                    <Pressable
+                      onPress={() => router.push(`/lobby/${lob.id}`)}
+                      className="active:opacity-90"
+                      style={{
+                        marginHorizontal: 12, marginTop: 12, marginBottom: 8,
+                        overflow: "hidden",
+                        backgroundColor: "#1a1408",
+                        borderWidth: 1.5,
+                        borderColor: "#f5b700",
+                        borderRadius: 4,
+                        shadowColor: "#f5b700",
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 10,
+                        elevation: 4,
+                      }}
+                    >
+                      {!!banner && (
+                        <View style={{ position: "relative" }}>
+                          <Image source={{ uri: banner }} style={{ width: "100%", height: 130 }} resizeMode="cover" />
+                          <View style={{ position: "absolute", top: 10, left: 10 }}>
+                            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#1a1408", borderWidth: 1.5, borderColor: "#f5b700", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.6, shadowRadius: 4, elevation: 3 }}>
+                              <Text style={{ color: "#f5b700", fontFamily: "monospace", fontWeight: "900", fontSize: 11, letterSpacing: 1.4 }}>★ FEATURED</Text>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                      <View style={{ flexDirection: "row", alignItems: "center", padding: 12, backgroundColor: "#1a1408" }}>
+                        <LobbyLogo name={lob.name} url={lob.logoUrl} accent={lob.accentColor} size={52} />
+                        <View style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+                          {!banner && (
+                            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
+                              <Tag tone="gold">★ FEATURED</Tag>
+                            </View>
+                          )}
+                          <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "900", fontSize: 17, letterSpacing: 0.5 }}>
+                            {lob.name}
+                          </Text>
+                          {!!lob.description && (
+                            <Text numberOfLines={2} style={{ color: "rgba(160,160,170,0.85)", fontSize: 11, marginTop: 2 }}>
+                              {lob.description}
+                            </Text>
+                          )}
+                          {count && (
+                            <Text numberOfLines={1} style={{ color: "rgba(245,183,0,0.7)", fontFamily: "monospace", fontSize: 10, fontWeight: "700", letterSpacing: 1, marginTop: 4 }}>
+                              {count.rooms} ROOMS · {count.members} MEMBERS
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })()}
                 {(recentsQ.data?.recents?.length ?? 0) > 0 && (
                   <>
-                    <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-2 pb-1">
-                      Recent
-                    </Text>
+                    <StampHeader tone="gold">Recent</StampHeader>
                     <View className="flex-row flex-wrap px-2 pb-2">
                       {recentsQ.data!.recents!.slice(0, 6).map((r) => (
                         <Pressable
@@ -183,10 +289,17 @@ export default function Lobbies() {
                             if (r.roomId) router.push(`/room/${r.roomId}`);
                             else if (r.lobbyId) router.push(`/lobby/${r.lobbyId}`);
                           }}
-                          className="bg-panel border border-border px-3 py-1.5 rounded-full m-1 active:opacity-70 flex-row items-center"
+                          className="m-1 active:opacity-70 flex-row items-center"
+                          style={{
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.12)",
+                            paddingHorizontal: 12, paddingVertical: 6,
+                            borderRadius: 3,
+                          }}
                         >
-                          {r.roomId ? <Text className="text-weered-muted text-xs mr-1">#</Text> : null}
-                          <Text className="text-weered-text text-xs font-semibold" numberOfLines={1}>
+                          {r.roomId ? <Text className="text-weered-muted text-xs mr-1" style={{ fontFamily: "monospace" }}>#</Text> : null}
+                          <Text className="text-weered-text text-xs" style={{ fontFamily: "monospace", fontWeight: "700", letterSpacing: 0.5 }} numberOfLines={1}>
                             {r.name}
                           </Text>
                         </Pressable>
@@ -196,18 +309,11 @@ export default function Lobbies() {
                 )}
                 {myLobbies.length > 0 && (
                   <>
-                    <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-2 pb-1">
-                      My lobbies · {myLobbies.length}
-                    </Text>
-                    {myLobbies.map((l, i) => (
-                      <View key={l.id}>
-                        {i > 0 && <View className="h-px bg-border/40 mx-4" />}
-                        <LobbyRow lobby={l} />
-                      </View>
+                    <StampHeader tone="purple">My Lobbies · {myLobbies.length}</StampHeader>
+                    {myLobbies.map((l) => (
+                      <LobbyRow key={l.id} lobby={l} />
                     ))}
-                    <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-5 pb-1">
-                      Discover
-                    </Text>
+                    <StampHeader tone="purple">Discover</StampHeader>
                   </>
                 )}
               </View>
@@ -260,45 +366,64 @@ export default function Lobbies() {
 }
 
 function LobbyRow({ lobby }: { lobby: Lobby }) {
+  const banner = resolveImageUrl(lobby.bannerUrl);
+  const accent = lobby.accentColor || "#5800E5";
+  const rooms = lobby._count?.rooms ?? 0;
+  const members = lobby._count?.members ?? 0;
+  const notch = lobby.pinned ? "#f5b700" : lobby.verified ? "#5800E5" : null;
   return (
     <Pressable
       onPress={() => router.push(`/lobby/${lobby.id}`)}
-      className="flex-row items-center px-4 py-3 active:bg-panel"
+      className="active:opacity-90"
+      style={{
+        marginHorizontal: 12, marginVertical: 6,
+        overflow: "hidden",
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: notch || "rgba(255,255,255,0.08)",
+        backgroundColor: "#15131a",
+        minHeight: 78,
+      }}
     >
-      <View className="mr-3">
-        <LobbyLogo name={lobby.name} url={lobby.logoUrl} accent={lobby.accentColor} size={48} />
-      </View>
-
-      <View className="flex-1">
-        <View className="flex-row items-center flex-wrap">
-          <Text className="text-weered-text font-bold text-base" numberOfLines={1}>
-            {lobby.name}
-          </Text>
-          {lobby.verified && <Text className="text-weered ml-1.5 text-xs font-bold">✓</Text>}
-          {lobby.pinned && <Text className="text-amber-400 ml-1.5 text-xs">★</Text>}
-          {lobby.moduleType && lobby.moduleType !== "NONE" && lobby.moduleType !== "FEED" && (
-            <ModuleBadge type={lobby.moduleType} accent={lobby.accentColor} />
-          )}
+      {!!notch && (
+        <View style={{ position: "absolute", top: 0, right: 0, width: 0, height: 0,
+          borderTopWidth: 14, borderLeftWidth: 14,
+          borderTopColor: notch, borderLeftColor: "transparent",
+          zIndex: 2,
+        }} />
+      )}
+      {!!banner && (
+        <Image
+          source={{ uri: banner }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.7 }}
+          resizeMode="cover"
+        />
+      )}
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(8,7,12,0.55)" }} />
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 12 }}>
+        <View style={{ marginRight: 12 }}>
+          <LobbyLogo name={lobby.name} url={lobby.logoUrl} accent={accent} size={44} />
         </View>
-        {!!lobby.description && (
-          <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={1}>
-            {lobby.description}
-          </Text>
-        )}
-        <View className="flex-row mt-1">
-          <Text className="text-weered-muted text-xs">
-            <Text className="text-green-400">●</Text> {lobby.onlineCount ?? 0} online
-          </Text>
-          {lobby._count && (
-            <>
-              <Text className="text-weered-muted text-xs ml-3">
-                {lobby._count.rooms} {lobby._count.rooms === 1 ? "room" : "rooms"}
-              </Text>
-              <Text className="text-weered-muted text-xs ml-3">
-                {lobby._count.members} {lobby._count.members === 1 ? "member" : "members"}
-              </Text>
-            </>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+            <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.98)", fontFamily: "monospace", fontWeight: "900", fontSize: 14, letterSpacing: 0.3, maxWidth: "75%" }}>
+              {lobby.name}
+            </Text>
+            {lobby.verified && <Text style={{ color: "#5800E5", marginLeft: 6, fontSize: 11, fontWeight: "900" }}>✓</Text>}
+            {lobby.pinned && <Text style={{ color: "#f5b700", marginLeft: 6, fontSize: 11 }}>★</Text>}
+            {lobby.moduleType && lobby.moduleType !== "NONE" && lobby.moduleType !== "FEED" && (
+              <ModuleBadge type={lobby.moduleType} accent={lobby.accentColor} />
+            )}
+          </View>
+          {!!lobby.description && (
+            <Text numberOfLines={1} style={{ color: "rgba(210,210,220,0.75)", fontSize: 11, marginTop: 2 }}>
+              {lobby.description}
+            </Text>
           )}
+          <Text numberOfLines={1} style={{ color: "rgba(180,180,190,0.8)", fontSize: 10, fontFamily: "monospace", letterSpacing: 0.5, marginTop: 3 }}>
+            <Text style={{ color: "#22c55e" }}>●</Text>
+            {` ${lobby.onlineCount ?? 0} ONLINE  ·  ${rooms} ROOM${rooms === 1 ? "" : "S"}  ·  ${members} MEMBER${members === 1 ? "" : "S"}`}
+          </Text>
         </View>
       </View>
     </Pressable>

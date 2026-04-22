@@ -39,28 +39,28 @@ export function BungieLinkButton() {
   const unlinked = !q.data?.linked || q.data?.error === "token_expired";
 
   return (
-    <View className="mx-4 mt-3">
+    <View style={{ marginHorizontal: 16, marginTop: 12 }}>
       {q.isLoading ? (
-        <View className="bg-panel border border-border rounded-xl px-4 py-3 flex-row items-center">
+        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", borderRadius: 4, paddingHorizontal: 14, paddingVertical: 12 }}>
           <ActivityIndicator color="#5800E5" />
-          <Text className="text-weered-muted text-sm ml-3">Checking Bungie link…</Text>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontSize: 12, marginLeft: 10 }}>Checking Bungie link…</Text>
         </View>
       ) : unlinked ? (
         <Pressable
           onPress={() => link.mutate()}
           disabled={link.isPending}
-          className="bg-panel border border-amber-500/40 px-4 py-3 rounded-xl active:opacity-80"
+          style={{ backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(245,158,11,0.4)", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4 }}
         >
-          <Text className="text-amber-400 text-center font-bold">
-            {link.isPending ? "Opening Bungie…" : "Link Bungie account (Destiny 2)"}
+          <Text style={{ color: "#fbbf24", textAlign: "center", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>
+            {link.isPending ? "Opening Bungie…" : "Link Bungie · Destiny 2"}
           </Text>
           {q.data?.error === "token_expired" && (
-            <Text className="text-weered-muted text-xs text-center mt-1">Session expired — tap to re-link.</Text>
+            <Text style={{ color: "rgba(203,213,225,0.6)", fontSize: 10, textAlign: "center", marginTop: 3 }}>Session expired — tap to re-link.</Text>
           )}
         </Pressable>
       ) : (
-        <View className="bg-panel border border-green-500/30 px-4 py-3 rounded-xl">
-          <Text className="text-green-400 text-center font-bold">✓ Bungie linked{q.data?.displayName ? ` · ${q.data.displayName}` : ""}</Text>
+        <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(34,197,94,0.3)", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4 }}>
+          <Text style={{ color: "#22c55e", textAlign: "center", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1 }}>✓ BUNGIE LINKED{q.data?.displayName ? ` · ${q.data.displayName}` : ""}</Text>
         </View>
       )}
     </View>

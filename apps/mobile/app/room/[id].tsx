@@ -23,6 +23,7 @@ import { RosterModal } from "@/components/RosterModal";
 import { GifPicker } from "@/components/GifPicker";
 import { useActionSheet } from "@/components/ActionSheet";
 import { ReportModal } from "@/components/ReportModal";
+import { RoomNpcsButton } from "@/components/RoomNpcs";
 
 const QUICK_REACTS = ["👍", "❤️", "😂", "🔥", "🎉", "😮", "😢", "👀"];
 
@@ -314,16 +315,19 @@ export default function Room() {
         options={{
           title: roomName,
           headerRight: () => (
+            <View className="flex-row items-center mr-2">
+              <RoomNpcsButton roomId={roomId} />
             <Pressable
               onPress={() => Share.share({
                 url: `${WEB_BASE}/room/${roomId}`,
                 message: `Join ${roomName} on Weered — ${WEB_BASE}/room/${roomId}`,
               }).catch(() => {})}
               hitSlop={8}
-              className="mr-2 active:opacity-70"
+              className="active:opacity-70"
             >
               <Text className="text-weered font-semibold">Share</Text>
             </Pressable>
+            </View>
           ),
         }}
       />

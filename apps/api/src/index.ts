@@ -4620,6 +4620,17 @@ app.post("/dm/:peerId", async (req, reply) => {
     // Google News (no images but good for headlines)
     { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",        source: "Google News", icon: "https://news.google.com/favicon.ico" },
     { url: "https://news.google.com/rss/search?q=canada+when:1d&hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    // Gaming
+    { url: "https://www.eurogamer.net/?format=rss",                                          category: "gaming",  source: "Eurogamer",   icon: "https://www.eurogamer.net/favicon.ico" },
+    { url: "https://www.polygon.com/rss/index.xml",                                          category: "gaming",  source: "Polygon",     icon: "https://www.polygon.com/favicon.ico" },
+    { url: "https://kotaku.com/rss",                                                         category: "gaming",  source: "Kotaku",      icon: "https://kotaku.com/favicon.ico" },
+    { url: "https://www.gamespot.com/feeds/news/",                                           category: "gaming",  source: "GameSpot",    icon: "https://www.gamespot.com/favicon.ico" },
+    { url: "https://news.google.com/rss/search?q=video+games+when:1d&hl=en-US&gl=US&ceid=US:en", category: "gaming", source: "Google News", icon: "https://news.google.com/favicon.ico" },
+    // Finance
+    { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html",                          category: "finance", source: "CNBC",        icon: "https://www.cnbc.com/favicon.ico" },
+    { url: "https://www.marketwatch.com/rss/topstories",                                     category: "finance", source: "MarketWatch", icon: "https://www.marketwatch.com/favicon.ico" },
+    { url: "https://feeds.bloomberg.com/markets/news.rss",                                   category: "finance", source: "Bloomberg",   icon: "https://www.bloomberg.com/favicon.ico" },
+    { url: "https://news.google.com/rss/search?q=stock+market+OR+finance+when:1d&hl=en-US&gl=US&ceid=US:en", category: "finance", source: "Google News", icon: "https://news.google.com/favicon.ico" },
   ];
 
   async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {

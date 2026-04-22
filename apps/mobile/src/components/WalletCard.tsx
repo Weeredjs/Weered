@@ -35,18 +35,18 @@ export function WalletCard() {
   const balance = q.data?.balance ?? 0;
 
   return (
-    <View className="mx-4 mt-4 bg-panel border border-border rounded-xl p-4">
-      <View className="flex-row items-center">
-        <View className="flex-1">
-          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-0.5">Paper</Text>
-          <Text className="text-weered-text font-black text-2xl">{balance.toLocaleString()}</Text>
+    <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", borderRadius: 4, padding: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 10, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 2 }}>Paper</Text>
+          <Text style={{ color: "rgba(243,244,246,0.98)", fontFamily: "monospace", fontWeight: "900", fontSize: 22 }}>{balance.toLocaleString()}</Text>
         </View>
         <Pressable
           onPress={() => daily.mutate()}
           disabled={daily.isPending}
-          className="bg-weered px-4 py-2 rounded-lg active:opacity-80"
+          style={{ backgroundColor: "#5800E5", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4 }}
         >
-          <Text className="text-white font-bold text-sm">
+          <Text style={{ color: "#fff", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>
             {daily.isPending ? "…" : "Daily +25"}
           </Text>
         </Pressable>

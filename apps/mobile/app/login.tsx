@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert, TextInput } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Alert, TextInput, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { API_BASE } from "@/lib/config";
 import { useAuth } from "@/stores/auth";
 import { api } from "@/lib/api";
+import { StreetButton } from "@/components/Brand";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -81,75 +82,166 @@ export default function Login() {
   return (
     <SafeAreaView className="flex-1 bg-weered-bg">
       <View className="flex-1 items-center justify-center px-8">
-        <Text className="text-weered-text text-2xl font-bold mb-2">Sign in</Text>
-        <Text className="text-weered-muted text-sm text-center mb-8">
-          Google is recommended. Username/password available as fallback.
+        <Image
+          source={require("../assets/logo.png")}
+          style={{ width: 140, height: 140, marginBottom: 12 }}
+          resizeMode="contain"
+        />
+        <Text style={{ fontFamily: "monospace", fontSize: 36, fontWeight: "900", letterSpacing: -1, color: "rgba(243,244,246,0.96)" }}>
+          WEERED
         </Text>
+        <Text style={{ fontFamily: "monospace", fontSize: 11, fontWeight: "700", color: "#f5b700", letterSpacing: 2, marginTop: 4 }}>
+          LOBBIES · CREWS · CRIME
+        </Text>
+        <View style={{ width: 80, height: 2, backgroundColor: "#5800E5", marginTop: 16, marginBottom: 28 }} />
 
         <Pressable
           onPress={onGoogle}
           disabled={busy}
-          className="bg-white px-8 py-4 rounded-xl active:opacity-80 flex-row items-center"
-          style={{ minWidth: 240, justifyContent: "center" }}
+          className="bg-white active:opacity-80 flex-row items-center"
+          style={{
+            minWidth: 260, justifyContent: "center",
+            paddingVertical: 14, paddingHorizontal: 24,
+            borderRadius: 4,
+            shadowColor: "#fff", shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15, shadowRadius: 10, elevation: 3,
+          }}
         >
           {busy && !showPassword ? (
             <ActivityIndicator color="#5800E5" />
           ) : (
-            <Text className="text-black font-bold text-base">Continue with Google</Text>
+            <Text style={{ color: "#111", fontFamily: "monospace", fontWeight: "900", fontSize: 14, letterSpacing: 1.4, textTransform: "uppercase" }}>
+              Continue with Google
+            </Text>
           )}
         </Pressable>
 
         {!showPassword ? (
-          <Pressable onPress={() => setShowPassword(true)} hitSlop={6} className="mt-6">
-            <Text className="text-weered-muted text-sm">Use username & password instead</Text>
-          </Pressable>
+          <>
+            <View className="flex-row items-center mt-5 mb-4" style={{ width: 260 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.12)" }} />
+              <Text style={{ marginHorizontal: 10, color: "rgba(203,213,225,0.6)", fontFamily: "monospace", fontSize: 10, letterSpacing: 1.5, fontWeight: "800" }}>OR</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.12)" }} />
+            </View>
+            <View className="flex-row" style={{ gap: 8 }}>
+              <Pressable
+                onPress={() => { setMode("login"); setShowPassword(true); }}
+                className="active:opacity-80"
+                style={{
+                  backgroundColor: "#5800E5",
+                  paddingVertical: 12, paddingHorizontal: 20,
+                  borderRadius: 4,
+                  shadowColor: "#5800E5", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 3,
+                }}
+              >
+                <Text style={{ color: "#fff", fontFamily: "monospace", fontWeight: "900", fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase" }}>
+                  Sign in
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setMode("register"); setShowPassword(true); }}
+                className="active:opacity-80"
+                style={{
+                  backgroundColor: "transparent",
+                  borderWidth: 2, borderColor: "#f5b700",
+                  paddingVertical: 10, paddingHorizontal: 20,
+                  borderRadius: 4,
+                }}
+              >
+                <Text style={{ color: "#f5b700", fontFamily: "monospace", fontWeight: "900", fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase" }}>
+                  Register
+                </Text>
+              </Pressable>
+            </View>
+          </>
         ) : (
           <View className="mt-6 w-full max-w-sm">
-            <View className="flex-row justify-center mb-3">
+            <View className="flex-row justify-center mb-4">
               <Pressable
                 onPress={() => setMode("login")}
-                className={`px-4 py-1.5 rounded-full mr-2 ${mode === "login" ? "bg-weered" : "bg-panel border border-border"}`}
+                className="active:opacity-80"
+                style={{
+                  paddingHorizontal: 16, paddingVertical: 8,
+                  marginRight: 4,
+                  backgroundColor: mode === "login" ? "#5800E5" : "transparent",
+                  borderWidth: 1, borderColor: mode === "login" ? "#5800E5" : "rgba(255,255,255,0.15)",
+                  borderRadius: 4,
+                }}
               >
-                <Text className={`text-xs font-bold ${mode === "login" ? "text-white" : "text-weered-muted"}`}>Sign in</Text>
+                <Text style={{ color: mode === "login" ? "#fff" : "rgba(203,213,225,0.7)", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1.2 }}>
+                  SIGN IN
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => setMode("register")}
-                className={`px-4 py-1.5 rounded-full ${mode === "register" ? "bg-weered" : "bg-panel border border-border"}`}
+                className="active:opacity-80"
+                style={{
+                  paddingHorizontal: 16, paddingVertical: 8,
+                  backgroundColor: mode === "register" ? "#f5b700" : "transparent",
+                  borderWidth: 1, borderColor: mode === "register" ? "#f5b700" : "rgba(255,255,255,0.15)",
+                  borderRadius: 4,
+                }}
               >
-                <Text className={`text-xs font-bold ${mode === "register" ? "text-white" : "text-weered-muted"}`}>Create account</Text>
+                <Text style={{ color: mode === "register" ? "#1a1408" : "rgba(203,213,225,0.7)", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1.2 }}>
+                  REGISTER
+                </Text>
               </Pressable>
             </View>
             <TextInput
               value={username}
               onChangeText={setUsername}
-              placeholder="username"
-              placeholderTextColor="rgba(160,160,170,0.6)"
+              placeholder="USERNAME"
+              placeholderTextColor="rgba(160,160,170,0.5)"
               autoCapitalize="none"
               autoCorrect={false}
-              className="bg-panel border border-border text-weered-text px-3 py-2.5 rounded-lg mb-2"
-              style={{ fontSize: 16 }}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+                paddingHorizontal: 12, paddingVertical: 12,
+                borderRadius: 4,
+                color: "rgba(243,244,246,0.96)",
+                fontFamily: "monospace", fontSize: 14, fontWeight: "700", letterSpacing: 1,
+                marginBottom: 8,
+              }}
             />
             <TextInput
               value={password}
               onChangeText={setPassword}
-              placeholder="password"
-              placeholderTextColor="rgba(160,160,170,0.6)"
+              placeholder="PASSWORD"
+              placeholderTextColor="rgba(160,160,170,0.5)"
               secureTextEntry
               autoCapitalize="none"
-              className="bg-panel border border-border text-weered-text px-3 py-2.5 rounded-lg mb-3"
-              style={{ fontSize: 16 }}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+                paddingHorizontal: 12, paddingVertical: 12,
+                borderRadius: 4,
+                color: "rgba(243,244,246,0.96)",
+                fontFamily: "monospace", fontSize: 14, fontWeight: "700", letterSpacing: 1,
+                marginBottom: 12,
+              }}
             />
             <Pressable
               onPress={onPassword}
               disabled={busy || !username.trim() || !password.trim()}
-              className="bg-weered px-6 py-3 rounded-xl active:opacity-80"
+              className="active:opacity-80"
+              style={{
+                backgroundColor: mode === "register" ? "#f5b700" : "#5800E5",
+                paddingVertical: 14,
+                borderRadius: 4,
+                opacity: busy || !username.trim() || !password.trim() ? 0.5 : 1,
+                shadowColor: mode === "register" ? "#f5b700" : "#5800E5",
+                shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 3,
+              }}
             >
-              <Text className="text-white font-bold text-center">
+              <Text style={{ color: mode === "register" ? "#1a1408" : "#fff", fontFamily: "monospace", fontWeight: "900", textAlign: "center", fontSize: 14, letterSpacing: 1.6, textTransform: "uppercase" }}>
                 {busy ? "…" : mode === "login" ? "Sign in" : "Create account"}
               </Text>
             </Pressable>
-            <Pressable onPress={() => { setShowPassword(false); setUsername(""); setPassword(""); }} hitSlop={6} className="mt-3">
-              <Text className="text-weered-muted text-xs text-center">Use Google instead</Text>
+            <Pressable onPress={() => { setShowPassword(false); setUsername(""); setPassword(""); }} hitSlop={6} className="mt-4">
+              <Text style={{ color: "rgba(203,213,225,0.6)", fontFamily: "monospace", fontSize: 11, textAlign: "center", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                · back to Google ·
+              </Text>
             </Pressable>
           </View>
         )}

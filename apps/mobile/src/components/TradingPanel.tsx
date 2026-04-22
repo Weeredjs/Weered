@@ -4,7 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { router } from "expo-router";
 
-type Tab = "portfolio" | "markets" | "leaderboard" | "competitions";
+type Tab = "portfolio" | "markets" | "history" | "leaderboard" | "competitions";
+
+type ClosedPosition = { id: string; symbol: string; side: string; quantity: number; entryPrice: number; closePrice: number; pnl: number; openedAt: string; closedAt: string };
+type Order = { id: string; symbol: string; side: string; orderType: string; quantity: number; price: number; status: string; createdAt: string; filledAt: string | null };
+type HistoryResp = { ok: boolean; orders: Order[]; closedPositions: ClosedPosition[] };
 
 type Symbol = { symbol: string; name: string; price: number | null };
 type Position = {
@@ -29,16 +33,18 @@ export function TradingPanel({ lobbyId }: { lobbyId: string }) {
     <View className="border-t border-border/40 pt-3">
       <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">FakeOut · paper trading</Text>
 
-      <View className="flex-row border-b border-border/30">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4 }} className="border-b border-border/30">
         <TabBtn label="Portfolio" active={tab === "portfolio"} onPress={() => setTab("portfolio")} />
         <TabBtn label="Markets" active={tab === "markets"} onPress={() => setTab("markets")} />
+        <TabBtn label="History" active={tab === "history"} onPress={() => setTab("history")} />
         <TabBtn label="Leaderboard" active={tab === "leaderboard"} onPress={() => setTab("leaderboard")} />
         <TabBtn label="Comps" active={tab === "competitions"} onPress={() => setTab("competitions")} />
-      </View>
+      </ScrollView>
 
       <View className="min-h-[160px]">
         {tab === "portfolio" && <PortfolioTab lobbyId={lobbyId} />}
         {tab === "markets" && <MarketsTab lobbyId={lobbyId} />}
+        {tab === "history" && <HistoryTab lobbyId={lobbyId} />}
         {tab === "leaderboard" && <LeaderboardTab lobbyId={lobbyId} />}
         {tab === "competitions" && <CompetitionsTab lobbyId={lobbyId} />}
       </View>
@@ -48,7 +54,7 @@ export function TradingPanel({ lobbyId }: { lobbyId: string }) {
 
 function TabBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} className="flex-1 py-2.5 items-center active:opacity-70" style={{ borderBottomWidth: 2, borderBottomColor: active ? "#5800E5" : "transparent" }}>
+    <Pressable onPress={onPress} className="px-3 py-2.5 active:opacity-70" style={{ borderBottomWidth: 2, borderBottomColor: active ? "#5800E5" : "transparent" }}>
       <Text className={`text-xs font-bold ${active ? "text-weered" : "text-weered-muted"}`}>{label}</Text>
     </Pressable>
   );
@@ -92,7 +98,7 @@ function PortfolioTab({ lobbyId }: { lobbyId: string }) {
       {a.positions.length === 0 && (
         <Text className="text-weered-muted text-sm px-4 py-3">No open positions. Switch to Markets to trade.</Text>
       )}
-      {a.positions.map((p) => {
+      {a.positions.length > 0 && a.positions.map((p) => {
         const pnlC = p.unrealizedPnl >= 0 ? "text-green-400" : "text-red-400";
         return (
           <View key={p.id} className="px-4 py-2.5 border-b border-border/20">
@@ -284,6 +290,63 @@ type Competition = {
   startTime: string; endTime: string;
 };
 type CompsResp = { ok: boolean; competitions: Competition[] };
+
+function HistoryTab({ lobbyId }: { lobbyId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["trading-history", lobbyId],
+    queryFn: () => api<HistoryResp>(`/trading/history/${lobbyId}`),
+  });
+
+  const reset = useMutation({
+    mutationFn: () => api(`/trading/reset/${lobbyId}`, { method: "POST" }),
+    onSuccess: () => {
+      Alert.alert("Reset", "Account back to $100k. Positions cleared.");
+      qc.invalidateQueries({ queryKey: ["trading-account", lobbyId] });
+      qc.invalidateQueries({ queryKey: ["trading-history", lobbyId] });
+    },
+    onError: (e: any) => Alert.alert("Couldn't reset", e?.message || "Unknown error"),
+  });
+
+  if (q.isLoading) return <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>;
+  const closed = q.data?.closedPositions ?? [];
+
+  return (
+    <View className="py-2">
+      <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">Closed positions · {closed.length}</Text>
+      {closed.length === 0 && (
+        <Text className="text-weered-muted text-sm text-center py-3">No closed positions yet.</Text>
+      )}
+      {closed.map((p) => {
+        const pnlColor = p.pnl >= 0 ? "text-green-400" : "text-red-400";
+        return (
+          <View key={p.id} className="px-4 py-2 border-b border-border/20">
+            <View className="flex-row items-center">
+              <Text className="text-weered-text font-bold flex-1">{p.symbol}</Text>
+              <Text className={`text-xs font-bold mr-2 ${p.side === "BUY" ? "text-green-400" : "text-red-400"}`}>{p.side === "BUY" ? "LONG" : "SHORT"}</Text>
+              <Text className={`text-sm font-bold ${pnlColor}`}>{p.pnl >= 0 ? "+" : ""}{p.pnl.toFixed(2)}</Text>
+            </View>
+            <Text className="text-weered-muted text-xs">
+              {p.quantity} @ ${p.entryPrice.toFixed(2)} → ${p.closePrice.toFixed(2)} · {new Date(p.closedAt).toLocaleDateString()}
+            </Text>
+          </View>
+        );
+      })}
+
+      <View className="px-4 pt-4 pb-2">
+        <Pressable
+          onPress={() => Alert.alert("Reset account?", "Wipes your positions and orders. Balance resets to $100k.", [
+            { text: "Cancel", style: "cancel" },
+            { text: "Reset", style: "destructive", onPress: () => reset.mutate() },
+          ])}
+          className="bg-panel border border-red-500/40 px-4 py-2.5 rounded-lg active:opacity-70"
+        >
+          <Text className="text-red-400 text-center font-bold">Reset account (back to $100k)</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
 
 function CompetitionsTab({ lobbyId }: { lobbyId: string }) {
   const qc = useQueryClient();

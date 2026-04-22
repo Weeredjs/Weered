@@ -129,9 +129,11 @@ function ActivityRow({ item }: { item: FeedItem }) {
   );
 }
 
-function formatRelative(ts: number): string {
+function formatRelative(ts: number | string): string {
   try {
-    const diff = Date.now() - ts;
+    const t = typeof ts === "number" ? ts : new Date(ts).getTime();
+    if (!Number.isFinite(t)) return "";
+    const diff = Date.now() - t;
     const mins = Math.floor(diff / 60_000);
     if (mins < 1) return "just now";
     if (mins < 60) return `${mins}m ago`;

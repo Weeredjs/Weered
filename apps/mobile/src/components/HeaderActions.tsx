@@ -103,7 +103,7 @@ export function HeaderActions() {
   const notifCount = notifQ.data?.count ?? 0;
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", marginRight: 48 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}>
       <IconButton icon="search-outline" count={0} accent="#5800E5" onPress={() => router.push("/search")} />
       <IconButton icon="chatbubble-outline" count={dmCount} accent="#5800E5" onPress={() => router.push("/dms")} />
       <IconButton icon="notifications-outline" count={notifCount} accent="#ef4444" onPress={() => router.push("/notifications")} />

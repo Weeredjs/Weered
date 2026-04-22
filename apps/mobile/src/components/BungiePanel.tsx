@@ -4,10 +4,33 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { LfgPanel } from "@/components/LfgPanel";
 
-type Tab = "streams" | "weekly" | "xur" | "lookup" | "lfg";
+type Tab = "mine" | "streams" | "weekly" | "xur" | "lookup" | "lfg";
 
 type Stream = { userLogin: string; userName: string; title: string; viewerCount: number; thumbnailUrl: string };
 type StreamsResp = { ok: boolean; streams?: Stream[] };
+
+type Character = {
+  characterId: string;
+  className?: string;
+  race?: string;
+  gender?: string;
+  light?: number;
+  emblemUrl?: string | null;
+  emblemPath?: string | null;
+  backgroundUrl?: string | null;
+  dateLastPlayed?: string;
+  equipped?: { itemHash: number; name?: string; iconUrl?: string; tierType?: string; itemType?: string }[];
+};
+type MeResp = {
+  ok: boolean;
+  linked?: boolean;
+  displayName?: string;
+  platform?: string;
+  externalId?: string;
+  characters?: Character[];
+  error?: string;
+  message?: string;
+};
 
 type Milestone = {
   hash: string;
@@ -31,13 +54,14 @@ type XurItem = {
 type XurResp = { ok: boolean; available: boolean; items: XurItem[] | null; message?: string; error?: string };
 
 export function BungiePanel({ lobbyId }: { lobbyId: string }) {
-  const [tab, setTab] = useState<Tab>("streams");
+  const [tab, setTab] = useState<Tab>("mine");
 
   return (
     <View className="border-t border-border/40 pt-3">
       <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">Destiny 2</Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12 }}>
+        <TabBtn label="🛡 My Guardian" active={tab === "mine"} onPress={() => setTab("mine")} />
         <TabBtn label="📺 Streams" active={tab === "streams"} onPress={() => setTab("streams")} />
         <TabBtn label="🗓 Weekly" active={tab === "weekly"} onPress={() => setTab("weekly")} />
         <TabBtn label="🧑‍🚀 Xur" active={tab === "xur"} onPress={() => setTab("xur")} />
@@ -46,12 +70,76 @@ export function BungiePanel({ lobbyId }: { lobbyId: string }) {
       </ScrollView>
 
       <View className="min-h-[160px]">
+        {tab === "mine" && <MyGuardianTab />}
         {tab === "streams" && <StreamsTab />}
         {tab === "weekly" && <WeeklyTab />}
         {tab === "xur" && <XurTab />}
         {tab === "lookup" && <LookupTab />}
         {tab === "lfg" && <LfgPanel lobbyId={lobbyId} />}
       </View>
+    </View>
+  );
+}
+
+function MyGuardianTab() {
+  const q = useQuery({
+    queryKey: ["bungie-me"],
+    queryFn: () => api<MeResp>("/bungie/me"),
+    staleTime: 60_000,
+  });
+
+  if (q.isLoading) return <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>;
+  if (!q.data?.linked) {
+    return (
+      <View className="py-6 px-4 items-center">
+        <Text className="text-weered-muted text-sm text-center mb-1">Link your Bungie account to see your guardians.</Text>
+        <Text className="text-weered-muted text-xs text-center">Link from Me tab → Link Bungie account.</Text>
+      </View>
+    );
+  }
+  if (q.data.error === "token_expired") {
+    return <Text className="text-amber-400 text-sm text-center py-6 px-4">Bungie session expired. Re-link from Me tab.</Text>;
+  }
+  const chars = q.data.characters || [];
+  if (chars.length === 0) return <Text className="text-weered-muted text-sm text-center py-6">No characters found.</Text>;
+
+  return (
+    <View className="py-3">
+      <Text className="text-weered-text font-bold text-base px-4 pb-2">{q.data.displayName}</Text>
+      {chars.map((c) => (
+        <View key={c.characterId} className="mx-3 mb-3 overflow-hidden" style={{ borderRadius: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+          {c.backgroundUrl && (
+            <Image source={{ uri: c.backgroundUrl }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.4 }} resizeMode="cover" />
+          )}
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }} />
+          <View className="p-3 flex-row items-center">
+            {c.emblemUrl && (
+              <Image source={{ uri: c.emblemUrl }} style={{ width: 40, height: 40, borderRadius: 4 }} />
+            )}
+            <View className="flex-1 ml-3">
+              <Text className="text-weered-text font-bold">{c.className}</Text>
+              <Text className="text-weered-muted text-xs">{c.race} {c.gender}</Text>
+            </View>
+            <View className="items-end">
+              <Text className="text-amber-400 font-black text-xl">{c.light}</Text>
+              <Text className="text-weered-muted text-[10px] uppercase">Light</Text>
+            </View>
+          </View>
+          {(c.equipped?.length ?? 0) > 0 && (
+            <View className="p-3 pt-0">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {c.equipped!.slice(0, 12).map((it, i) => (
+                  <View key={`${it.itemHash}-${i}`} style={{ marginRight: 4, width: 40, height: 40, borderRadius: 4, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
+                    {it.iconUrl && (
+                      <Image source={{ uri: it.iconUrl }} style={{ width: "100%", height: "100%", borderRadius: 3 }} />
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      ))}
     </View>
   );
 }
