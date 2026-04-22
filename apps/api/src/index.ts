@@ -4886,6 +4886,33 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, banner: siteBanner });
   });
 
+  // ── Desktop app updater (Tauri) ─────────────────────────────────────────────
+  // Tauri's updater plugin polls this endpoint on launch. Returning 204 means
+  // "no update available" — clients stay on their current shell. When we
+  // publish a new release, populate the `desktopRelease` object below with
+  // the signed manifest. See apps/desktop/README.md for the wire format.
+
+  type DesktopReleaseManifest = {
+    version: string;
+    notes: string;
+    pub_date: string;
+    platforms: Record<string, { signature: string; url: string }>;
+  } | null;
+
+  let desktopRelease: DesktopReleaseManifest = null;
+
+  app.get<{ Params: { target: string; version: string } }>(
+    "/desktop/updates/:target/:version",
+    async (req, reply) => {
+      if (!desktopRelease) return reply.code(204).send();
+      const { version, target } = req.params;
+      // Skip if user is already on the latest version, or platform isn't shipped.
+      if (desktopRelease.version === version) return reply.code(204).send();
+      if (!desktopRelease.platforms[target]) return reply.code(204).send();
+      return reply.send(desktopRelease);
+    },
+  );
+
   app.post("/staff/banner", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });

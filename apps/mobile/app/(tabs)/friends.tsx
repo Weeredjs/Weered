@@ -13,39 +13,12 @@ import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Avatar } from "@/components/Avatar";
-
-type LivePresence = {
-  source: "STEAM" | "TWITCH" | "XBOX";
-  activity: string;
-  detail?: string | null;
-} | null;
-
-type Friend = {
-  id: string;
-  name: string;
-  avatar?: string | null;
-  avatarColor?: string | null;
-  globalRole?: string | null;
-  tier?: string | null;
-  online: boolean;
-  isAway?: boolean;
-  roomId?: string | null;
-  roomName?: string | null;
-  roomIsLobby?: boolean;
-  livePresence?: LivePresence;
-};
-
-type FriendRequest = {
-  id: string;
-  fromId: string;
-  fromName: string;
-  fromAvatar?: string | null;
-  status: "PENDING" | "ACCEPTED" | "DECLINED";
-  createdAt: string;
-};
-
-type FriendsResponse = { ok?: boolean; friends: Friend[] };
-type RequestsResponse = { ok?: boolean; requests: FriendRequest[] };
+import type {
+  Friend,
+  FriendRequest,
+  FriendsResponse,
+  FriendRequestsResponse as RequestsResponse,
+} from "@weered/shared";
 
 const PRESENCE_COLORS: Record<string, string> = {
   STEAM: "#66c0f4",

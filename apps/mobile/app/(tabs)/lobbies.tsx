@@ -20,34 +20,7 @@ import { SiteBanner } from "@/components/SiteBanner";
 import { StampHeader, StreetCard, Tag } from "@/components/Brand";
 import { resolveImageUrl } from "@/lib/config";
 import { Ionicons } from "@expo/vector-icons";
-
-type Lobby = {
-  id: string;
-  name: string;
-  description: string | null;
-  verified: boolean;
-  pinned: boolean;
-  moduleType: string | null;
-  accentColor: string | null;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  onlineCount: number;
-  _count: { rooms: number; members: number };
-};
-
-type LobbiesResponse = { ok: boolean; lobbies: Lobby[] };
-type SearchResponse = {
-  ok: boolean;
-  pinned: (Lobby & { websiteUrl?: string | null })[];
-  rooms: {
-    id: string;
-    name: string;
-    locked: boolean;
-    lobbyId: string;
-    lobby: { id: string; name: string; accentColor: string | null; logoUrl: string | null };
-    _count: { members: number };
-  }[];
-};
+import type { Lobby, LobbiesResponse, LobbySearchResponse as SearchResponse } from "@weered/shared";
 
 export default function Lobbies() {
   const [query, setQuery] = useState("");

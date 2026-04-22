@@ -12,14 +12,7 @@ import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
-
-type FeedItem =
-  | { type: "dm"; id: string; text: string; preview?: string; fromId: string; fromName: string; ts: number }
-  | { type: "notification"; id: string; subType?: string; text: string; body?: string; actionUrl?: string | null; actorName?: string; read: boolean; ts: number }
-  | { type: "notoriety"; id: string; text: string; points: number; action?: string; ts: number }
-  | { type: "friend"; id: string; text: string; friendName?: string; ts: number };
-
-type FeedResponse = { ok: boolean; feed: FeedItem[] };
+import type { ActivityFeedItem as FeedItem, ActivityFeedResponse as FeedResponse } from "@weered/shared";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 

@@ -19,8 +19,7 @@ import { ProfileBody, type Profile } from "@/components/ProfileBody";
 import { BadgesSection } from "@/components/BadgesSection";
 import { ReportModal } from "@/components/ReportModal";
 import { RoleChip, TierChip } from "@/components/RoleIcon";
-
-type FriendState = "none" | "pending_sent" | "pending_received" | "friends";
+import type { FriendState } from "@weered/shared";
 
 export default function UserProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();

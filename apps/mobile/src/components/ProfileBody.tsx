@@ -1,23 +1,8 @@
 import { View, Text } from "react-native";
+import type { Profile } from "@weered/shared";
 
-export type Profile = {
-  id: string;
-  name: string;
-  bio?: string | null;
-  notoriety?: number;
-  notorietyRank?: number | null;
-  tier?: string | null;
-  globalRole?: string | null;
-  joinedAt?: string | null;
-  lastSeen?: string | null;
-  roomsHosted?: number;
-  avatar?: string | null;
-  avatarColor?: string | null;
-  steamId?: string | null;
-  twitchLogin?: string | null;
-  xboxGamertag?: string | null;
-  gameAccounts?: { platform: string; handle: string }[];
-};
+// Re-export so existing `import { type Profile } from "@/components/ProfileBody"` still works.
+export type { Profile };
 
 export function ProfileBody({ profile, hidePlatforms }: { profile: Profile; hidePlatforms?: boolean }) {
   const platforms: { label: string; value: string }[] = [];
