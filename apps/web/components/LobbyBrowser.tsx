@@ -18,19 +18,7 @@ const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
 
 /* ---------- Types ---------- */
 
-type Lobby = {
-  id: string;
-  name: string;
-  description: string | null;
-  verified: boolean;
-  pinned: boolean;
-  moduleType: string | null;
-  accentColor: string | null;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  _count: { rooms: number; members: number };
-  onlineCount: number;
-};
+import type { Lobby } from "@weered/shared";
 
 /* ---------- Helpers ---------- */
 
