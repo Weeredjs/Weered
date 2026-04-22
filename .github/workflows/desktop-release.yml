@@ -93,6 +93,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
+          # Use pnpm instead of the action's default npm — our monorepo is pnpm.
+          tauriScript: pnpm tauri
           tagName: ${{ github.event.inputs.tag_name || github.ref_name }}
           releaseName: "Weered Desktop ${{ github.event.inputs.tag_name || github.ref_name }}"
           releaseBody: |
