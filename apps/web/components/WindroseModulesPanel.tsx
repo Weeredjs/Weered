@@ -2154,6 +2154,17 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
           >{b.posterName}</button>
           {" "}· {timeAgo(b.createdAt)}
         </span>
+        <span style={{ flex: 1 }} />
+        <a
+          href={`/windrose/bounty/${encodeURIComponent(b.id)}`}
+          target="_blank" rel="noopener noreferrer"
+          title="Open the shareable bounty page"
+          style={{ fontSize: 10, color: PAL.parchDim, textDecoration: "none", fontFamily: WR_FONT_MONO, letterSpacing: "0.5px", padding: "2px 6px", border: `1px solid ${PAL.brass}20`, transition: "border-color .15s" }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = `${PAL.brass}55`)}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = `${PAL.brass}20`)}
+        >
+          share ↗
+        </a>
       </div>
 
       {/* Actions */}
