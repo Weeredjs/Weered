@@ -1,0 +1,102 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Weered",
+  "version": "0.1.0",
+  "identifier": "ca.weered.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "https://weered.ca",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Weered",
+        "url": "https://weered.ca",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": false,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": true,
+        "skipTaskbar": false,
+        "backgroundColor": "#0c0b0a",
+        "titleBarStyle": "Visible",
+        "windowEffects": {
+          "effects": [],
+          "state": "active"
+        }
+      }
+    ],
+    "security": {
+      "csp": null,
+      "dangerousDisableAssetCspModification": false,
+      "capabilities": ["default"]
+    },
+    "withGlobalTauri": false,
+    "trayIcon": {
+      "iconPath": "icons/tray.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false,
+      "tooltip": "Weered"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "SocialNetworking",
+    "shortDescription": "Weered — lobbies, crews, crime",
+    "longDescription": "Weered is a real-time community platform — game lobbies, crews, voice/video, presence, and chat. Spiritual successor to MPlayer.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "Weered",
+    "homepage": "https://weered.ca",
+    "copyright": "© 2026 Weered",
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.15",
+      "exceptionDomain": "weered.ca",
+      "signingIdentity": null
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["weered"]
+      }
+    },
+    "updater": {
+      "endpoints": [
+        "https://weered.ca/desktop/updates/{{target}}/{{current_version}}"
+      ],
+      "dialog": false,
+      "pubkey": ""
+    }
+  }
+}

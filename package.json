@@ -4,7 +4,11 @@
   "packageManager": "pnpm@10.29.3",
   "scripts": {
     "infra:up": "docker compose up -d postgres redis livekit",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "desktop": "pnpm --filter @weered/desktop dev",
+    "desktop:build": "pnpm --filter @weered/desktop build",
+    "mobile": "pnpm --filter @weered/mobile start:go",
+    "web": "pnpm --filter @weered/web dev"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
