@@ -3310,6 +3310,25 @@ button:hover, [role="button"]:hover {
   overflow: hidden;
 }
 
+/* Chat fullscreen CTA — the "Dial In" button. Subtle breathing glow
+   to make it look like an invitation, not a hidden toggle. */
+@keyframes weered-chat-fullscreen-cta-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(124,58,237,0.18), inset 0 1px 0 rgba(255,255,255,0.05); }
+  50%      { box-shadow: 0 0 14px rgba(124,58,237,0.38), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+.weered-chat-fullscreen-cta {
+  animation: weered-chat-fullscreen-cta-pulse 3.4s ease-in-out infinite;
+}
+.weered-chat-fullscreen-cta:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(124,58,237,0.35), rgba(167,139,250,0.18)) !important;
+  border-color: rgba(167,139,250,0.70) !important;
+  color: #fff !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-chat-fullscreen-cta { animation: none; }
+}
+
 /* Chat fullscreen overlay — covers everything except the left rail.
    Left offset matches shell padding + left-rail width + gap at each
    breakpoint, so the chat tucks right up against the rail and stops. */
@@ -3394,7 +3413,11 @@ button:hover, [role="button"]:hover {
   top: 12px;
   width: 32px;
   flex: 0 0 32px;
-  max-height: calc(100vh - 24px);
+  /* Keep it a short compact pill that hovers near the top, instead of
+     stretching the whole viewport like a side-stripe. */
+  align-self: flex-start;
+  height: auto;
+  max-height: 160px;
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 10px;
   background: var(--weered-panel);
