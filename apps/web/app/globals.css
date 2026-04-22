@@ -3409,15 +3409,14 @@ button:hover, [role="button"]:hover {
 
 /* ── Right rail collapse tab — glowing edge tab ──────────── */
 .weered-rail-tab {
-  position: sticky;
-  top: 12px;
   width: 32px;
   flex: 0 0 32px;
-  /* Keep it a short compact pill that hovers near the top, instead of
-     stretching the whole viewport like a side-stripe. */
-  align-self: flex-start;
+  /* Anchor it centered vertically at roughly the same latitude as the
+     CHAT tab on the chat panel, so the two side-tabs visually line up. */
+  align-self: center;
   height: auto;
-  max-height: 160px;
+  min-height: 420px;
+  max-height: 640px;
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 10px;
   background: var(--weered-panel);
@@ -3425,12 +3424,18 @@ button:hover, [role="button"]:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 14px;
   cursor: pointer;
   color: rgba(255,255,255,.4);
   transition: all 0.2s;
-  padding: 12px 0;
+  padding: 28px 0;
   font-family: inherit;
+}
+/* A bit more prominent label at larger size so it reads like a tab, not a chip. */
+.weered-rail-tab .weered-rail-tab-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  opacity: 0.7;
 }
 .weered-rail-tab:hover {
   background: rgba(255,255,255,.06);
@@ -4492,6 +4497,48 @@ html[data-weered-lobby="windrose"] .weered-rr-join:hover {
     inset 0 1px 0 rgba(232,196,138,0.20);
 }
 
+/* Chips that were defaulting to purple now read as Windrose brass.
+   Covers the context-ID pill ("windrose"), the small create-room panel,
+   the mod controls panel, and the right-rail status chip (CHAT OPEN/LOCKED). */
+html[data-weered-lobby="windrose"] .weered-rr-id-chip {
+  background: rgba(201,160,102,0.14) !important;
+  border: 1px solid rgba(201,160,102,0.40) !important;
+  color: #e8c48a !important;
+  border-radius: 3px !important;
+  font-family: var(--font-cormorant), Georgia, serif !important;
+  letter-spacing: 1.4px !important;
+  text-transform: uppercase;
+}
+html[data-weered-lobby="windrose"] .weered-rr-create-panel {
+  background: linear-gradient(180deg, rgba(36,55,82,0.70) 0%, rgba(20,34,56,0.82) 100%) !important;
+  border: 1px solid rgba(201,160,102,0.35) !important;
+  border-radius: 3px !important;
+}
+html[data-weered-lobby="windrose"] .weered-rr-create-title {
+  color: #e8c48a !important;
+  font-family: var(--font-cormorant), Georgia, serif !important;
+  letter-spacing: 1.8px !important;
+}
+html[data-weered-lobby="windrose"] .weered-rr-mod-panel {
+  background: linear-gradient(180deg, rgba(36,55,82,0.60) 0%, rgba(20,34,56,0.78) 100%) !important;
+  border: 1px solid rgba(201,160,102,0.30) !important;
+  border-radius: 3px !important;
+}
+html[data-weered-lobby="windrose"] .weered-rr-mod-panel button {
+  font-family: var(--font-cormorant), Georgia, serif !important;
+  letter-spacing: 1.4px !important;
+  text-transform: uppercase;
+  border-radius: 3px !important;
+}
+/* Status chip: keep the semantic state colours (amber = locked,
+   green = open) but re-frame with a brass-parchment typography so it
+   doesn't look out of place against the rest of the brass UI. */
+html[data-weered-lobby="windrose"] .weered-rr-status-chip {
+  font-family: var(--font-cormorant), Georgia, serif !important;
+  letter-spacing: 1.8px !important;
+  border-radius: 2px !important;
+}
+
 html[data-weered-lobby="windrose"] .weered-rr-search,
 html[data-weered-lobby="windrose"] .weered-presence-search,
 html[data-weered-lobby="windrose"] .weered-input {
@@ -5019,6 +5066,29 @@ html[data-weered-lobby="destiny2"] .weered-rr-section::after,
 html[data-weered-lobby="destiny2"] .weered-left-section::after,
 html[data-weered-lobby="destiny2"] .weered-presence::after,
 html[data-weered-lobby="destiny2"] .weered-usercorner::after { top: 6px; right: 6px; }
+
+/* ── Destiny hexagon accommodation: keep the ornaments, push content
+      inward so titles/buttons don't sit on top of the 10px hexagons at
+      each panel corner. Adds ~22px inset on titles and key action rows. */
+html[data-weered-lobby="destiny2"] .weered-left-title,
+html[data-weered-lobby="destiny2"] .weered-rr-section-title,
+html[data-weered-lobby="destiny2"] .weered-presence-title {
+  padding-left: 22px !important;
+  padding-right: 22px !important;
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row {
+  padding-left: 26px !important;
+  padding-right: 26px !important;
+}
+html[data-weered-lobby="destiny2"] .weered-usercorner {
+  padding-top: 22px !important;
+}
+/* Rail-tab doesn't get the hexagon ornaments but we keep its padding
+   honest so the icons don't crowd the edges under Destiny sizing. */
+html[data-weered-lobby="destiny2"] .weered-rail-tab {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
 
 /* Typography */
 html[data-weered-lobby="destiny2"] .weered-left-title,
