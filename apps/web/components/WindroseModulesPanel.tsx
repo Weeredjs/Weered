@@ -1387,6 +1387,54 @@ function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
   );
 }
 
+// ═══ Hunter / Poster tier titles ═══════════════════════════════════════════
+// Pure derivation from kill count / post count. Used on the dossier header,
+// next to names in bounty cards, and wherever a hunter's record is shown.
+
+type TierInfo = { label: string; color: string; glow: string; min: number };
+
+const HUNTER_TIERS: TierInfo[] = [
+  { label: "Reaper",   color: "#a33d3d", glow: "rgba(163,61,61,.35)",  min: 40 },
+  { label: "Marshal",  color: "#e8c48a", glow: "rgba(232,196,138,.35)", min: 15 },
+  { label: "Tracker",  color: "#f97316", glow: "rgba(249,115,22,.35)",  min: 5  },
+  { label: "Outlaw",   color: "#5db765", glow: "rgba(93,183,101,.30)",  min: 1  },
+];
+const POSTER_TIERS: TierInfo[] = [
+  { label: "Kingmaker", color: "#e8c48a", glow: "rgba(232,196,138,.35)", min: 40 },
+  { label: "Broker",    color: "#c9a066", glow: "rgba(201,160,102,.30)", min: 15 },
+  { label: "Runner",    color: "#f97316", glow: "rgba(249,115,22,.30)",  min: 5  },
+  { label: "Informant", color: "#4a8a9d", glow: "rgba(74,138,157,.30)",  min: 1  },
+];
+
+function hunterTier(kills: number): TierInfo | null {
+  return HUNTER_TIERS.find(t => kills >= t.min) || null;
+}
+function posterTier(posts: number): TierInfo | null {
+  return POSTER_TIERS.find(t => posts >= t.min) || null;
+}
+
+function TierBadge({ tier, size = "sm" }: { tier: TierInfo | null; size?: "sm" | "md" }) {
+  if (!tier) return null;
+  const sm = size === "sm";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: sm ? 3 : 5,
+      padding: sm ? "2px 7px" : "3px 10px",
+      fontSize: sm ? 9 : 11,
+      fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase",
+      fontFamily: WR_FONT_MONO,
+      color: tier.color,
+      background: `${tier.color}15`,
+      border: `1px solid ${tier.color}50`,
+      boxShadow: `0 0 8px ${tier.glow}`,
+      flexShrink: 0,
+    }}>
+      <span style={{ width: sm ? 4 : 5, height: sm ? 4 : 5, borderRadius: "50%", background: tier.color }} />
+      {tier.label}
+    </span>
+  );
+}
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
@@ -1629,7 +1677,10 @@ function BountiesTab() {
             {/* Hunter dossier — only shows once the user has any bounty history */}
             {myDossier && (myDossier.hunter.kills > 0 || myDossier.poster.postedCount > 0) && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, paddingRight: 22, borderRight: `1px solid ${PAL.brass}25` }}>
-                <div style={{ ...S.label, fontSize: 9 }}>Your Hunter Record</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ ...S.label, fontSize: 9 }}>Your Hunter Record</div>
+                  <TierBadge tier={hunterTier(myDossier.hunter.kills)} />
+                </div>
                 <div style={{ display: "flex", gap: 18, alignItems: "flex-end" }}>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 22, color: PAL.parchment, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
@@ -2149,12 +2200,16 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
               }}>
                 {!d.user.avatar && (d.user.name || "?").slice(0, 1).toUpperCase()}
               </div>
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 24, color: PAL.brassHi, letterSpacing: "0.3px", lineHeight: 1.1 }}>
                   {d.user.name}
                 </div>
                 <div style={{ fontSize: 11, color: PAL.parchDim, marginTop: 4, fontFamily: WR_FONT_MONO, letterSpacing: "0.5px" }}>
                   {d.hunter.kills > 0 || d.poster.postedCount > 0 ? "ACTIVE ON THE BOUNTY BOARD" : "NO BOUNTY ACTIVITY YET"}
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                  <TierBadge tier={hunterTier(d.hunter.kills)} size="md" />
+                  <TierBadge tier={posterTier(d.poster.postedCount)} size="md" />
                 </div>
               </div>
             </div>
@@ -2251,7 +2306,15 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
               )}
             </section>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <a
+                href={`/windrose/hunter/${encodeURIComponent(userId)}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ ...S.btn, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10 }}
+                title="Open the shareable dossier page"
+              >
+                Share · Open Full Dossier →
+              </a>
               <button type="button" style={S.btn} onClick={onClose}>Close</button>
             </div>
           </div>
