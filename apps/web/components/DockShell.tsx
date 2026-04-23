@@ -63,7 +63,7 @@ const WEERED_THEMES: Record<WeeredThemeName, any> = {
 
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
-  const t = WEERED_THEMES[name] || WEERED_THEMES.ishimura;
+  const t = WEERED_THEMES[name] || WEERED_THEMES.press;
   const root = document.documentElement;
   Object.entries({ "--weered-bg":t.bg,"--weered-panel":t.panel,"--weered-panel2":t.panel2,"--weered-bd":t.bd,"--weered-bd2":t.bd2,"--weered-text":t.text,"--weered-muted":t.muted,"--weered-accent-bg":t.accentBg,"--weered-accent-ring":t.accentRing,"--weered-accent-text":t.accentText }).forEach(([k,v]) => root.style.setProperty(k, v));
   root.setAttribute("data-weered-theme", name);
@@ -169,17 +169,26 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("dms");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
-  const [theme, setTheme] = useState<WeeredThemeName>("ishimura");
+  const [theme, setTheme] = useState<WeeredThemeName>("press");
+  const [themeHydrated, setThemeHydrated] = useState(false);
 
-  // Hydrate theme from localStorage after mount (avoids SSR mismatch)
+  // Hydrate theme from localStorage after mount (avoids SSR mismatch).
+  // Until this runs, we must NOT persist the default — otherwise the
+  // hardcoded initial state pollutes weered_theme_v2 on first visit
+  // and overrides the boot script's actual default.
   useEffect(() => {
     try {
       const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
       if (["slate","zinc","stone","gray","ishimura","broadcast","press"].includes(v)) setTheme(v as WeeredThemeName);
     } catch {}
+    setThemeHydrated(true);
   }, []);
 
-  useEffect(() => { try { localStorage.setItem(WEERED_THEME_KEY,theme); } catch {} applyWeeredTheme(theme); }, [theme]);
+  useEffect(() => {
+    if (!themeHydrated) return;
+    try { localStorage.setItem(WEERED_THEME_KEY, theme); } catch {}
+    applyWeeredTheme(theme);
+  }, [theme, themeHydrated]);
 
   useEffect(() => {
     if (props.forceMode) { setDockMode(props.forceMode); if (props.forceMode==="rail") setOpen(true); return; }
