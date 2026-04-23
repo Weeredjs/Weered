@@ -374,11 +374,17 @@ export default function LobbyPage() {
   const loggedIn = myLobbies.length > 0;
 
   return (
-    // height:100% alone doesn't fill reliably (shell padding + fixed footer
-    // math leaves a dead zone). Clamp to the viewport minus the fixed
-    // footer so the panel always reaches the footer edge.
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "calc(100vh - 28px)", minHeight: 0 }}>
-      <LobbyHeaderBar />
+    // Wrap in a position:relative host so the absolute-filled inner
+    // wrapper resolves against *this* element (not the body). Using
+    // explicit 100vh on the host bypasses the flex/padding chain that
+    // was leaving a dead zone at the bottom of the panel.
+    <div style={{ position: "relative", width: "100%", height: "100vh", minHeight: 0 }}>
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, bottom: 28,
+        display: "flex", flexDirection: "column", gap: 12,
+        minHeight: 0,
+      }}>
+        <LobbyHeaderBar />
 
       <div style={{
         flex: 1, minHeight: 0, position: "relative",
@@ -497,6 +503,7 @@ export default function LobbyPage() {
         </div>
 
         <LobbyChatDrawer roomId="room:lobby" title="Lobby Chat" />
+      </div>
       </div>
     </div>
   );
