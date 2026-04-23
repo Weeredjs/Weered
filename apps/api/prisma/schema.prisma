@@ -1704,3 +1704,106 @@ model MarketListing {
   @@index([itemRarity, status])
 }
 
+// ── Mods ────────────────────────────────────────────────────
+// Lobby-scoped mod catalog. Nexus is the source of truth; we
+// cache metadata and layer crew-scoped intelligence on top.
+// Discovery is intentionally subtle — no rails tab, just chat
+// embeds, profile lines, and slash commands.
+
+enum ModSource {
+  NEXUS
+  CURSEFORGE
+  MODDB
+  STEAM_WORKSHOP
+}
+
+enum ModCrewRole {
+  RECOMMENDED
+  REQUIRED
+  BANNED
+}
+
+model Mod {
+  id            String     @id @default(cuid())
+  source        ModSource  @default(NEXUS)
+  sourceId      String
+  gameSlug      String     @default("windrose")
+  name          String
+  summary       String     @default("")
+  description   String     @default("")
+  author        String     @default("")
+  category      String     @default("")
+  thumbnailUrl  String?
+  sourceUrl     String?
+  endorsements  Int        @default(0)
+  downloads     Int        @default(0)
+  sourceUpdatedAt DateTime?
+  fetchedAt     DateTime   @default(now())
+
+  versions      ModVersion[]
+  crewMods      CrewMod[]
+  installs      UserModInstall[]
+
+  @@unique([source, sourceId])
+  @@index([gameSlug, endorsements])
+  @@index([gameSlug, sourceUpdatedAt])
+}
+
+model ModVersion {
+  id         String    @id @default(cuid())
+  modId      String
+  version    String
+  fileId     String?
+  fileName   String?
+  sizeKb     Int       @default(0)
+  compat     String    @default("")
+  changelog  String    @default("")
+  uploadedAt DateTime?
+  isPrimary  Boolean   @default(false)
+
+  mod Mod @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@index([modId, uploadedAt])
+}
+
+model CrewMod {
+  id        String      @id @default(cuid())
+  crewId    String
+  modId     String
+  role      ModCrewRole @default(RECOMMENDED)
+  note      String      @default("")
+  addedById String
+  addedAt   DateTime    @default(now())
+
+  mod Mod @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@unique([crewId, modId])
+  @@index([crewId])
+}
+
+model CrewModLoadout {
+  id          String   @id @default(cuid())
+  crewId      String
+  name        String
+  description String   @default("")
+  modIds      String[] @default([])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([crewId])
+}
+
+model UserModInstall {
+  id          String   @id @default(cuid())
+  userId      String
+  modId       String
+  version     String   @default("")
+  installedAt DateTime @default(now())
+
+  mod Mod @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, modId])
+  @@index([userId])
+}
+
