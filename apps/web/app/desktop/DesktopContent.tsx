@@ -64,13 +64,15 @@ export default function DesktopContent() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Syne:wght@700;800;900&display=swap');
         .dt-root {
-          min-height: 100vh;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
           background: #0c0b0a;
           color: rgba(243,244,246,0.96);
           font-family: 'DM Mono', monospace;
           padding: 80px 24px 60px;
           position: relative;
-          overflow-x: hidden;
+          box-sizing: border-box;
         }
         .dt-root::before {
           content: '';
