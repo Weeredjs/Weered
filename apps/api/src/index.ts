@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 import * as Sentry from "@sentry/node";
 if (process.env.SENTRY_DSN_API) {
   Sentry.init({
@@ -4055,7 +4057,6 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     return reply.send({ ok: true });
   });
 
- "dotenv/config";
   // ── DM Routes ──────────────────────────────────────────────────────────────
 
   // GET /dm/conversations — all peers with message history
