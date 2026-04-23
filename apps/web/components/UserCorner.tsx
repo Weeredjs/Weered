@@ -165,6 +165,53 @@ export default function UserCorner() {
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
+  // Primary crew + notoriety rank — used to flesh out the identity card
+  // into something that actually feels like an ID badge.
+  const [primaryCrew, setPrimaryCrew] = useState<{ id: string; name: string; tag: string; logoUrl: string | null; accentColor: string | null } | null>(null);
+  const [notorietyRank, setNotorietyRank] = useState<string>("");
+  useEffect(() => {
+    if (!me?.id) { setPrimaryCrew(null); setNotorietyRank(""); return; }
+    let cancelled = false;
+    const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+    fetch(`${API_BASE}/profile/${encodeURIComponent(me.id)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(r => r.json()).then(j => {
+      if (cancelled) return;
+      if (j?.primaryCrew) {
+        setPrimaryCrew({
+          id: j.primaryCrew.id,
+          name: j.primaryCrew.name,
+          tag: j.primaryCrew.tag || "",
+          logoUrl: j.primaryCrew.logoUrl || null,
+          accentColor: j.primaryCrew.accentColor || null,
+        });
+      } else { setPrimaryCrew(null); }
+      if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [me?.id, API_BASE]);
+
+  // Accent color cascade for the ID card: role color > crew accent > neutral.
+  const bestRoleForAccent = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
+  const roleAccentHex =
+    bestRoleForAccent === "GOD"     ? "#facc15" :
+    bestRoleForAccent === "ADMIN"   ? "#f87171" :
+    bestRoleForAccent === "STAFF"   ? "#60a5fa" :
+    bestRoleForAccent === "SUPPORT" ? "#34d399" :
+    bestRoleForAccent === "OWNER"   ? "#fb923c" :
+    bestRoleForAccent === "MOD"     ? "#a78bfa" :
+    null;
+  const crewAccentHex = primaryCrew?.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : null;
+  const cardAccent = roleAccentHex || crewAccentHex || "#7C3AED";
+
+  // Short hash of the user's cuid for the ID badge line — reads "technical"
+  // without exposing raw internal IDs.
+  const idHash = useMemo(() => {
+    const raw = String(me?.id || "");
+    if (!raw) return "";
+    return raw.slice(-8).toUpperCase();
+  }, [me?.id]);
+
   const chipStyle = (r: string) => {
     const c = ROLE_COLORS[r];
     if (!c) return {};
@@ -177,11 +224,75 @@ export default function UserCorner() {
       style={{
         position: "relative",
         borderRadius: 16,
-        border: "1px solid rgba(148,163,184,.13)",
-        background: "rgba(255,255,255,.03)",
+        border: `1px solid ${cardAccent}24`,
+        background: `
+          linear-gradient(180deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,.015) 40%, rgba(0,0,0,.18) 100%),
+          linear-gradient(135deg, ${cardAccent}10 0%, transparent 55%)
+        `,
         marginBottom: 4,
+        boxShadow: `
+          inset 0 1px 0 rgba(255,255,255,.06),
+          inset 0 -1px 0 rgba(0,0,0,.35),
+          0 0 0 1px rgba(0,0,0,.2),
+          0 8px 24px rgba(0,0,0,.25),
+          0 0 30px ${cardAccent}08
+        `,
+        overflow: "hidden",
       }}
     >
+      {/* Technical scan-line overlay — very subtle, adds the "this is my
+          rig" feel without overpowering. Pure CSS, no image. */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          backgroundImage: `repeating-linear-gradient(180deg, transparent 0 3px, rgba(255,255,255,.014) 3px 4px)`,
+          mixBlendMode: "overlay",
+          opacity: 0.6,
+        }}
+      />
+      {/* Corner bracket marks — four L-shaped ticks in the accent color so
+          the card reads as a framed ID badge, not a generic box. */}
+      {[
+        { top: 6, left: 6, rotate: 0 },
+        { top: 6, right: 6, rotate: 90 },
+        { bottom: 6, right: 6, rotate: 180 },
+        { bottom: 6, left: 6, rotate: 270 },
+      ].map((pos, i) => (
+        <span
+          key={i}
+          aria-hidden
+          style={{
+            position: "absolute",
+            width: 8, height: 8,
+            borderTop: `1.5px solid ${cardAccent}78`,
+            borderLeft: `1.5px solid ${cardAccent}78`,
+            transform: `rotate(${pos.rotate}deg)`,
+            pointerEvents: "none",
+            ...(pos as any),
+          }}
+        />
+      ))}
+      {/* Top ID strip — tiny tech-feel row with the ID hash + rank.
+          Reads as a serial number / badge header. */}
+      {(idHash || notorietyRank) && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 8, padding: "7px 14px 0",
+          fontSize: 9, fontWeight: 800, letterSpacing: "1.8px",
+          textTransform: "uppercase",
+          color: `${cardAccent}c0`,
+          fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+          position: "relative", zIndex: 1,
+        }}>
+          <span style={{ opacity: 0.85 }}>ID · {idHash || "----"}</span>
+          {notorietyRank && (
+            <span style={{ opacity: 0.85, color: "rgba(240,232,214,.7)" }}>
+              {notorietyRank}
+            </span>
+          )}
+        </div>
+      )}
       {/* Lobby logo / brand watermark */}
       {lobbyLogo ? (
         <div style={{
@@ -219,20 +330,37 @@ export default function UserCorner() {
           color: "inherit", textAlign: "left",
         }}
       >
-        {/* Avatar */}
-        <div style={{
-          width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-          background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
-          boxShadow: `0 0 18px ${avatarBg(name, true)}55`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 16, fontWeight: 950, color: "#fff",
-          overflow: "hidden",
-        }}>
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            initial
-          )}
+        {/* Avatar — framed like an ID photo: accent ring + small online dot */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{
+            width: 42, height: 42, borderRadius: "50%",
+            background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
+            boxShadow: `
+              0 0 0 2px ${cardAccent}55,
+              0 0 0 3px rgba(0,0,0,.35),
+              0 0 14px ${cardAccent}40,
+              inset 0 2px 0 rgba(255,255,255,.18)
+            `,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 17, fontWeight: 950, color: "#fff",
+            overflow: "hidden",
+          }}>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              initial
+            )}
+          </div>
+          <span
+            aria-hidden
+            style={{
+              position: "absolute", bottom: -1, right: -1,
+              width: 12, height: 12, borderRadius: "50%",
+              background: isAway ? "#facc15" : "#22c55e",
+              boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.8)",
+              border: "2px solid rgba(10,10,18,.85)",
+            }}
+          />
         </div>
 
         {/* Name + chips */}
@@ -287,8 +415,45 @@ export default function UserCorner() {
         </div>
       </button>
 
+      {/* Crew badge — "repping" flair row. Clicks through to the crew page. */}
+      {primaryCrew && (() => {
+        const ca = primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : cardAccent;
+        return (
+          <a
+            href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
+            title={`${primaryCrew.name}${primaryCrew.tag ? ` · [${primaryCrew.tag}]` : ""}`}
+            style={{
+              display: "flex", alignItems: "center", gap: 9,
+              margin: "0 12px 4px",
+              padding: "6px 9px",
+              borderRadius: 10,
+              border: `1px solid ${ca}38`,
+              background: `linear-gradient(90deg, ${ca}18 0%, ${ca}06 60%, transparent 100%)`,
+              textDecoration: "none", color: "inherit",
+              position: "relative", zIndex: 1,
+            }}
+          >
+            <div style={{
+              width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+              backgroundImage: primaryCrew.logoUrl ? `url(${primaryCrew.logoUrl})` : `linear-gradient(135deg, ${ca}, #8a6b3e)`,
+              backgroundSize: "cover", backgroundPosition: "center",
+              border: `1px solid ${ca}aa`,
+              boxShadow: `0 0 6px ${ca}44`,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "1.5px", textTransform: "uppercase", color: `${ca}e0`, opacity: 0.85 }}>
+                Crew {primaryCrew.tag ? `· [${primaryCrew.tag}]` : ""}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(240,232,214,.9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {primaryCrew.name}
+              </div>
+            </div>
+          </a>
+        );
+      })()}
+
       {/* Status toggle — click to flip between Online and Lying low */}
-      <div style={{ padding: "2px 12px 4px" }}>
+      <div style={{ padding: "2px 12px 4px", position: "relative", zIndex: 1 }}>
         <button
           type="button"
           onClick={() => { if (typeof setAway === "function") setAway(!isAway); }}

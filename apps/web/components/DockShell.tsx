@@ -364,11 +364,24 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
     if (typeof window==="undefined") return;
     const h=(ev:any)=>{
       const d=ev?.detail;
-      if (!d||d.mode!=="dm") return;
+      if (!d) return;
+      // Plain tab-switch form: { tab: "crew" | "friends" | "dms" | "room" }
+      // Used by the rail-side quick-launch stack so clicking Crew/Friends/
+      // DMs from the collapsed rail lands you on the right Burner tab.
+      if (typeof d.tab === "string") {
+        const t = String(d.tab).toLowerCase();
+        if (t === "room" || t === "dms" || t === "friends" || t === "crew") {
+          setTab(t as any);
+          setOpen(true);
+          return;
+        }
+      }
+      if (d.mode!=="dm") return;
       const peerName=pickFirstString(d?.peer?.name,d?.peerName,d?.peer,"");
       const peerId=pickFirstString(d?.peer?.id,d?.peerId,"");
       if (!peerName&&!peerId) return;
       setTab("dms");
+      setOpen(true);
       setDmThreads(cur=>{
         const ex=cur.find(t=>t.peerId===peerId||t.peerName.toLowerCase()===peerName.toLowerCase());
         if (ex){setDmActivePeerId(ex.peerId);return cur;}

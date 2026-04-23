@@ -3437,6 +3437,74 @@ button:hover, [role="button"]:hover {
 }
 
 /* ── Right rail collapse tab — glowing edge tab ──────────── */
+/* Stack container that holds rail-side quick buttons + the Panel tab.
+   Lives in the collapsed right-rail slot. */
+.weered-rail-stack {
+  width: 48px;
+  flex: 0 0 48px;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 420px;
+  max-height: 640px;
+}
+.weered-rail-stack .weered-rail-tab {
+  width: 32px;
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: 260px;
+}
+
+/* Rail-side quick-launch buttons — colorful, square-ish, stacked above
+   the Panel tab. Writing-mode-vertical label matches the tab underneath. */
+.weered-rail-quick {
+  width: 44px;
+  height: 72px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 0;
+  border-width: 1px;
+  border-style: solid;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s, box-shadow 0.18s;
+  backdrop-filter: blur(6px);
+}
+.weered-rail-quick:hover {
+  transform: translateX(-2px) scale(1.03);
+  filter: brightness(1.12) saturate(1.15);
+}
+.weered-rail-quick:active {
+  transform: translateX(-1px) scale(0.98);
+}
+.weered-rail-quick-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
+}
+.weered-rail-quick-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  opacity: 0.92;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Hide the rail stack on narrow/mobile widths where the mobile bottom
+   nav already provides friend/DM/crew access. */
+@media (max-width: 1099px) {
+  .weered-rail-stack { display: none !important; }
+}
+
 .weered-rail-tab {
   width: 32px;
   flex: 0 0 32px;
