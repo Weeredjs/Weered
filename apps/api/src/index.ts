@@ -55,7 +55,7 @@ function isAIAvailable(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
-const prisma = new PrismaClient();
+import { prisma } from "./lib/prisma";
 
 const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
 
