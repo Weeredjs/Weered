@@ -13329,8 +13329,8 @@ Rules:
   }, DISSOLUTION_INTERVAL_MS);
 
   // ── Challenge tracking worker ──────────────────────────────────────────────
-  if (BUNGIE_API_KEY) {
-    setBungieApiKey(BUNGIE_API_KEY);
+  if (process.env.BUNGIE_API_KEY) {
+    setBungieApiKey(process.env.BUNGIE_API_KEY);
     startChallengeWorker(prisma, awardNotoriety, (userId, event) => {
       for (const sock of wss.clients) {
         if ((sock as any).user?.id === userId) {
