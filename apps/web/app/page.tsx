@@ -48,11 +48,12 @@ function InitialSplash() {
       minHeight: "100vh",
       display: "grid",
       placeItems: "center",
-      background: "#080810",
-      color: "rgba(243,244,246,.55)",
-      fontFamily: "'DM Mono', monospace",
-      fontSize: 12,
-      letterSpacing: "0.08em",
+      background: "#1a1a1c",
+      color: "rgba(198,188,168,.65)",
+      fontFamily: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif",
+      fontSize: 13,
+      fontWeight: 600,
+      letterSpacing: "0.18em",
       textTransform: "uppercase",
     }}>
       connecting…
@@ -66,12 +67,11 @@ function Landing({ nextPath }: { nextPath: string }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
         .lp-root {
           min-height: 100vh;
-          background: #080810;
-          color: rgba(243,244,246,0.95);
-          font-family: 'DM Mono', monospace;
+          background: #1a1a1c;
+          color: rgba(240,232,214,0.96);
+          font-family: var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif;
           position: relative;
           overflow-x: hidden;
         }
@@ -80,8 +80,8 @@ function Landing({ nextPath }: { nextPath: string }) {
           position: fixed;
           inset: 0;
           background:
-            radial-gradient(ellipse 80% 50% at 10% 0%, rgba(124,58,237,0.18) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 40% at 90% 100%, rgba(217,70,239,0.10) 0%, transparent 55%);
+            radial-gradient(ellipse 80% 50% at 10% 0%, rgba(217,169,66,0.10) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 90% 100%, rgba(183,138,40,0.08) 0%, transparent 55%);
           pointer-events: none;
           z-index: 0;
         }
@@ -90,8 +90,8 @@ function Landing({ nextPath }: { nextPath: string }) {
           position: fixed;
           inset: 0;
           background-image:
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            linear-gradient(rgba(217,169,66,0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(217,169,66,0.035) 1px, transparent 1px);
           background-size: 48px 48px;
           pointer-events: none;
           z-index: 0;
@@ -111,23 +111,27 @@ function Landing({ nextPath }: { nextPath: string }) {
           display: flex;
           align-items: center;
           gap: 10px;
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', 'Rajdhani', sans-serif;
           font-weight: 800;
-          font-size: 20px;
-          letter-spacing: -0.02em;
-          color: rgba(243,244,246,0.98);
+          font-size: 22px;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
+          color: rgba(240,232,214,0.98);
         }
         .lp-brand img {
           width: 28px;
           height: 28px;
-          border-radius: 7px;
+          border-radius: 4px;
         }
         .lp-nav-links {
           display: flex;
           gap: 24px;
           align-items: center;
-          font-size: 12px;
-          color: rgba(148,163,184,0.65);
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          color: rgba(198,188,168,0.70);
+          text-transform: uppercase;
         }
         .lp-nav-links a {
           color: inherit;
@@ -135,26 +139,28 @@ function Landing({ nextPath }: { nextPath: string }) {
           transition: color 0.15s;
         }
         .lp-nav-links a:hover {
-          color: rgba(196,181,253,0.95);
+          color: rgba(217,169,66,0.95);
         }
         .lp-getin {
           padding: 8px 16px;
-          border-radius: 9px;
-          background: rgba(124,58,237,0.18);
-          border: 1px solid rgba(124,58,237,0.45);
-          color: rgba(196,181,253,0.95);
-          font-family: 'DM Mono', monospace;
-          font-size: 12px;
-          font-weight: 700;
+          border-radius: 4px;
+          background: rgba(217,169,66,0.14);
+          border: 1px solid rgba(217,169,66,0.50);
+          color: #e6bd6e;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
+          font-size: 13px;
+          font-weight: 800;
           text-decoration: none;
-          letter-spacing: 0.04em;
-          box-shadow: 0 2px 8px rgba(124,58,237,0.18), inset 0 1px 0 rgba(255,255,255,0.06);
+          letter-spacing: 0.10em;
+          text-transform: uppercase;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,248,220,0.08);
           transition: all 0.15s;
         }
         .lp-getin:hover {
-          background: rgba(124,58,237,0.28);
-          border-color: rgba(124,58,237,0.6);
-          box-shadow: 0 4px 18px rgba(124,58,237,0.32);
+          background: rgba(217,169,66,0.22);
+          border-color: rgba(217,169,66,0.72);
+          color: #f3d48a;
+          box-shadow: 0 4px 14px rgba(217,169,66,0.22), inset 0 1px 0 rgba(255,248,220,0.12);
           transform: translateY(-1px);
         }
         .lp-hero {
@@ -167,30 +173,32 @@ function Landing({ nextPath }: { nextPath: string }) {
         }
         .lp-eyebrow {
           font-size: 11px;
-          letter-spacing: 0.24em;
+          letter-spacing: 0.32em;
           text-transform: uppercase;
-          color: rgba(196,181,253,0.75);
+          color: rgba(217,169,66,0.85);
           margin-bottom: 20px;
-          font-weight: 500;
+          font-weight: 700;
         }
         .lp-headline {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', 'Rajdhani', sans-serif;
           font-weight: 800;
-          font-size: clamp(36px, 7vw, 76px);
-          line-height: 1.02;
-          letter-spacing: -0.035em;
-          background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(196,181,253,0.85) 100%);
+          font-size: clamp(42px, 8vw, 96px);
+          line-height: 0.98;
+          letter-spacing: -0.01em;
+          text-transform: uppercase;
+          background: linear-gradient(180deg, #f0e8d6 0%, #e6bd6e 55%, #a87a1c 100%);
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
           color: transparent;
+          text-shadow: 0 2px 0 rgba(0,0,0,0.25);
           margin: 0 0 22px;
           animation: lpFade 0.7s cubic-bezier(0.22,1,0.36,1) both;
         }
         .lp-sub {
-          font-size: clamp(14px, 1.6vw, 17px);
-          color: rgba(203,213,225,0.72);
-          max-width: 620px;
+          font-size: clamp(15px, 1.6vw, 18px);
+          color: rgba(240,232,214,0.74);
+          max-width: 640px;
           margin: 0 auto 40px;
           line-height: 1.6;
           animation: lpFade 0.9s cubic-bezier(0.22,1,0.36,1) 0.08s both;
@@ -202,44 +210,50 @@ function Landing({ nextPath }: { nextPath: string }) {
           animation: lpFade 1s cubic-bezier(0.22,1,0.36,1) 0.15s both;
         }
         .lp-btn-primary {
-          padding: 14px 28px;
-          border-radius: 12px;
-          font-family: 'DM Mono', monospace;
-          font-size: 14px;
+          padding: 14px 30px;
+          border-radius: 4px;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
+          font-size: 15px;
           font-weight: 800;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
           text-decoration: none;
-          background: linear-gradient(135deg, #7C3AED 0%, #D946EF 100%);
-          color: #fff;
+          background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
+          color: #1a1a1c;
           box-shadow:
-            0 0 0 1px rgba(255,255,255,0.05),
-            0 8px 32px rgba(124,58,237,0.35),
-            inset 0 1px 0 rgba(255,255,255,0.18);
+            inset 0 1px 0 rgba(255,248,220,0.35),
+            inset 0 -1px 0 rgba(0,0,0,0.25),
+            0 2px 0 rgba(0,0,0,0.3),
+            0 8px 24px rgba(217,169,66,0.25);
           transition: all 0.18s cubic-bezier(0.22,1,0.36,1);
         }
         .lp-btn-primary:hover {
           transform: translateY(-1px);
+          background: linear-gradient(180deg, #f3d48a 0%, #e6bd6e 50%, #b78a28 100%);
           box-shadow:
-            0 0 0 1px rgba(255,255,255,0.08),
-            0 12px 40px rgba(124,58,237,0.5),
-            inset 0 1px 0 rgba(255,255,255,0.24);
+            inset 0 1px 0 rgba(255,248,220,0.45),
+            inset 0 -1px 0 rgba(0,0,0,0.25),
+            0 4px 0 rgba(0,0,0,0.3),
+            0 12px 32px rgba(217,169,66,0.38);
         }
         .lp-btn-secondary {
-          padding: 13px 22px;
-          border-radius: 12px;
-          font-family: 'DM Mono', monospace;
-          font-size: 13px;
+          padding: 13px 24px;
+          border-radius: 4px;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
+          font-size: 14px;
           font-weight: 700;
-          color: rgba(203,213,225,0.78);
+          letter-spacing: 0.10em;
+          text-transform: uppercase;
+          color: rgba(240,232,214,0.80);
           text-decoration: none;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(217,169,66,0.25);
+          background: rgba(32,32,34,0.60);
           transition: all 0.15s;
         }
         .lp-btn-secondary:hover {
-          color: rgba(243,244,246,0.98);
-          border-color: rgba(255,255,255,0.18);
-          background: rgba(255,255,255,0.05);
+          color: #f3d48a;
+          border-color: rgba(217,169,66,0.55);
+          background: rgba(217,169,66,0.10);
         }
 
         .lp-section {
@@ -250,18 +264,21 @@ function Landing({ nextPath }: { nextPath: string }) {
           padding: 40px 32px;
         }
         .lp-section-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
-          font-size: clamp(24px, 3vw, 32px);
-          letter-spacing: -0.02em;
+          font-size: clamp(28px, 3.2vw, 40px);
+          letter-spacing: 0.01em;
+          text-transform: uppercase;
           margin: 0 0 14px;
-          color: rgba(243,244,246,0.98);
+          color: rgba(240,232,214,0.98);
+          border-left: 3px solid #d9a942;
+          padding-left: 14px;
         }
         .lp-section-sub {
-          font-size: 14px;
-          color: rgba(148,163,184,0.7);
+          font-size: 15px;
+          color: rgba(198,188,168,0.72);
           margin: 0 0 32px;
-          max-width: 560px;
+          max-width: 580px;
           line-height: 1.55;
         }
 
@@ -272,33 +289,45 @@ function Landing({ nextPath }: { nextPath: string }) {
         }
         .lp-card {
           padding: 22px 20px 20px;
-          border-radius: 14px;
-          border: 1px solid rgba(124,58,237,0.18);
-          background: rgba(12,12,20,0.85);
-          backdrop-filter: blur(16px);
+          border-radius: 4px;
+          border: 0;
+          background: linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.97) 100%);
+          box-shadow:
+            inset 0 1px 0 rgba(255,248,220,0.05),
+            inset 0 -1px 0 rgba(0,0,0,0.5),
+            0 0 0 1px rgba(217,169,66,0.18),
+            0 2px 0 rgba(0,0,0,0.25),
+            0 6px 18px rgba(0,0,0,0.35);
           transition: all 0.2s;
         }
         .lp-card:hover {
-          border-color: rgba(124,58,237,0.4);
           transform: translateY(-2px);
-          box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 24px rgba(124,58,237,0.1);
+          box-shadow:
+            inset 0 1px 0 rgba(255,248,220,0.08),
+            inset 0 -1px 0 rgba(0,0,0,0.5),
+            0 0 0 1px rgba(217,169,66,0.45),
+            0 4px 0 rgba(0,0,0,0.28),
+            0 14px 32px rgba(0,0,0,0.45),
+            0 0 24px rgba(217,169,66,0.08);
         }
         .lp-card-icon {
           font-size: 22px;
           margin-bottom: 10px;
           display: block;
+          filter: sepia(0.4) hue-rotate(-15deg) saturate(0.9);
         }
         .lp-card-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
-          font-size: 15px;
-          letter-spacing: -0.01em;
+          font-size: 16px;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
           margin: 0 0 6px;
-          color: rgba(243,244,246,0.98);
+          color: #e6bd6e;
         }
         .lp-card-body {
-          font-size: 12px;
-          color: rgba(148,163,184,0.72);
+          font-size: 13px;
+          color: rgba(240,232,214,0.72);
           line-height: 1.55;
           margin: 0;
         }
@@ -314,32 +343,35 @@ function Landing({ nextPath }: { nextPath: string }) {
           gap: 14px;
           align-items: flex-start;
           padding: 14px 18px;
-          border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.06);
-          background: rgba(255,255,255,0.02);
+          border-radius: 4px;
+          border: 1px solid rgba(217,169,66,0.14);
+          background: rgba(32,32,34,0.55);
+          box-shadow: inset 0 1px 0 rgba(255,248,220,0.03);
         }
         .lp-diff-mark {
           flex-shrink: 0;
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
+          width: 24px;
+          height: 24px;
+          border-radius: 3px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 13px;
           font-weight: 800;
-          background: rgba(124,58,237,0.16);
-          color: rgba(196,181,253,0.95);
-          border: 1px solid rgba(124,58,237,0.3);
+          background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
+          color: #1a1a1c;
+          box-shadow:
+            inset 0 1px 0 rgba(255,248,220,0.35),
+            inset 0 -1px 0 rgba(0,0,0,0.25);
           margin-top: 1px;
         }
         .lp-diff-text {
-          font-size: 13px;
-          color: rgba(203,213,225,0.85);
+          font-size: 14px;
+          color: rgba(240,232,214,0.82);
           line-height: 1.55;
         }
         .lp-diff-text strong {
-          color: rgba(243,244,246,0.98);
+          color: #e6bd6e;
           font-weight: 700;
         }
 
@@ -350,23 +382,29 @@ function Landing({ nextPath }: { nextPath: string }) {
           margin: 80px auto 40px;
           padding: 48px 32px;
           text-align: center;
-          border-radius: 20px;
-          border: 1px solid rgba(124,58,237,0.24);
-          background: rgba(12,12,20,0.85);
-          backdrop-filter: blur(16px);
-          box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 60px rgba(124,58,237,0.08);
+          border-radius: 4px;
+          border: 0;
+          background: linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.97) 100%);
+          box-shadow:
+            inset 0 1px 0 rgba(255,248,220,0.05),
+            inset 0 -1px 0 rgba(0,0,0,0.5),
+            0 0 0 1px rgba(217,169,66,0.28),
+            0 4px 0 rgba(0,0,0,0.3),
+            0 24px 80px rgba(0,0,0,0.5),
+            0 0 60px rgba(217,169,66,0.06);
         }
         .lp-foot-cta h3 {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
-          font-size: clamp(22px, 3vw, 32px);
-          letter-spacing: -0.02em;
+          font-size: clamp(26px, 3vw, 38px);
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
           margin: 0 0 10px;
-          color: rgba(243,244,246,0.98);
+          color: rgba(240,232,214,0.98);
         }
         .lp-foot-cta p {
-          font-size: 14px;
-          color: rgba(148,163,184,0.7);
+          font-size: 15px;
+          color: rgba(198,188,168,0.75);
           margin: 0 0 26px;
           line-height: 1.55;
         }
@@ -380,9 +418,11 @@ function Landing({ nextPath }: { nextPath: string }) {
           justify-content: center;
           align-items: center;
           padding: 30px 32px 40px;
-          font-size: 11px;
-          color: rgba(148,163,184,0.45);
-          letter-spacing: 0.04em;
+          font-size: 12px;
+          color: rgba(198,188,168,0.50);
+          letter-spacing: 0.10em;
+          text-transform: uppercase;
+          font-weight: 600;
         }
         .lp-footer a {
           color: inherit;
@@ -390,10 +430,10 @@ function Landing({ nextPath }: { nextPath: string }) {
           transition: color 0.15s;
         }
         .lp-footer a:hover {
-          color: rgba(203,213,225,0.85);
+          color: rgba(217,169,66,0.90);
         }
         .lp-footer-sep {
-          color: rgba(148,163,184,0.2);
+          color: rgba(217,169,66,0.28);
         }
 
         @keyframes lpFade {
