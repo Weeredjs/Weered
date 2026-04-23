@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useWeered } from "../../../components/WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -51,6 +52,34 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   // Crew loadout — fetched lazily; hidden if empty (no "look what we have!")
   const [crewMods, setCrewMods] = useState<any[]>([]);
   const [loadoutOpen, setLoadoutOpen] = useState(false);
+  const [showAddMod, setShowAddMod] = useState(false);
+
+  // Is the viewer a crew officer+ ? Enables add/remove affordances.
+  const ctx: any = useWeered();
+  const meId: string = String(ctx?.me?.id || "");
+  const myMembership = useMemo(
+    () => (c?.members || []).find((m: CrewMember) => m.userId === meId) || null,
+    [c?.members, meId],
+  );
+  const canManageLoadout = !!myMembership && (myMembership.role === "LEADER" || myMembership.role === "OFFICER");
+
+  async function refreshLoadout() {
+    try {
+      const r = await fetch(`${API}/crews/${encodeURIComponent(crewId)}/loadout`);
+      const j = await r.json();
+      if (Array.isArray(j?.crewMods)) setCrewMods(j.crewMods);
+    } catch {}
+  }
+
+  async function removeMod(modId: string) {
+    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+    if (!token) return;
+    await fetch(`${API}/crews/${encodeURIComponent(crewId)}/mods/${encodeURIComponent(modId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+    await refreshLoadout();
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -243,9 +272,10 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
               </div>
             )}
 
-            {/* Loadout — collapsed by default; hidden entirely if empty.
+            {/* Loadout — collapsed by default. Hidden to non-managers if
+                empty. Managers see it always so they can add mods.
                 No callout styling, no badge, just a header row that expands. */}
-            {crewMods.length > 0 && (
+            {(crewMods.length > 0 || canManageLoadout) && (
               <div style={{ ...plaqueStyle(), padding: "14px 22px", marginBottom: 14 }}>
                 <div
                   onClick={() => setLoadoutOpen(o => !o)}
@@ -260,42 +290,89 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                   </div>
                 </div>
                 {loadoutOpen && (
-                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
-                    {crewMods.map((cm: any) => {
-                      const m = cm.mod || {};
-                      return (
-                        <a
-                          key={cm.id}
-                          href={m.sourceUrl || "#"}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                  <>
+                    {crewMods.length === 0 && (
+                      <div style={{ marginTop: 14, padding: "18px 12px", fontSize: 13, color: PAL.parchDim, fontStyle: "italic", textAlign: "center", opacity: 0.7 }}>
+                        No mods in the kit yet. Add one and your crew sees it in chat, hover cards, and here.
+                      </div>
+                    )}
+                    {crewMods.length > 0 && (
+                      <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+                        {crewMods.map((cm: any) => {
+                          const m = cm.mod || {};
+                          return (
+                            <div key={cm.id} style={{ position: "relative" }}>
+                              <a
+                                href={m.sourceUrl || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 10,
+                                  padding: "8px 10px",
+                                  background: `${PAL.ink}40`,
+                                  border: `1px solid ${PAL.brass}25`,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                <div style={{
+                                  width: 32, height: 32, borderRadius: 2, flexShrink: 0,
+                                  background: m.thumbnailUrl ? `url(${m.thumbnailUrl}) center/cover` : `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
+                                  border: `1px solid ${PAL.brass}40`,
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 12, color: PAL.parchment, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: WR_DISPLAY, letterSpacing: "0.2px" }}>
+                                    {m.name || "Unnamed mod"}
+                                  </div>
+                                  <div style={{ fontSize: 9, color: PAL.parchDim, fontFamily: WR_MONO, letterSpacing: "0.8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {m.author ? `by ${m.author}` : ""}{cm.role && cm.role !== "RECOMMENDED" ? ` · ${String(cm.role).toLowerCase()}` : ""}
+                                  </div>
+                                </div>
+                              </a>
+                              {canManageLoadout && (
+                                <button
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); void removeMod(m.id); }}
+                                  aria-label={`Remove ${m.name || "mod"} from kit`}
+                                  style={{
+                                    position: "absolute", top: 4, right: 4,
+                                    width: 18, height: 18, padding: 0,
+                                    border: `1px solid ${PAL.brass}40`, background: `${PAL.ink}cc`,
+                                    color: PAL.parchDim, fontSize: 11, lineHeight: 1, cursor: "pointer",
+                                    borderRadius: 2,
+                                  }}
+                                  title="Remove from kit"
+                                >×</button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {canManageLoadout && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${PAL.brass}15`, display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          onClick={() => setShowAddMod(true)}
                           style={{
-                            display: "flex", alignItems: "center", gap: 10,
-                            padding: "8px 10px",
-                            background: `${PAL.ink}40`,
-                            border: `1px solid ${PAL.brass}25`,
-                            textDecoration: "none",
+                            padding: "6px 14px", fontSize: 10, fontWeight: 800,
+                            letterSpacing: "2px", textTransform: "uppercase",
+                            color: PAL.parchment, background: `linear-gradient(180deg, ${PAL.brassHi}33, ${PAL.brass}22)`,
+                            border: `1px solid ${PAL.brass}55`, cursor: "pointer",
+                            fontFamily: WR_MONO,
                           }}
                         >
-                          <div style={{
-                            width: 32, height: 32, borderRadius: 2, flexShrink: 0,
-                            background: m.thumbnailUrl ? `url(${m.thumbnailUrl}) center/cover` : `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
-                            border: `1px solid ${PAL.brass}40`,
-                          }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, color: PAL.parchment, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: WR_DISPLAY, letterSpacing: "0.2px" }}>
-                              {m.name || "Unnamed mod"}
-                            </div>
-                            <div style={{ fontSize: 9, color: PAL.parchDim, fontFamily: WR_MONO, letterSpacing: "0.8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {m.author ? `by ${m.author}` : ""}{cm.role && cm.role !== "RECOMMENDED" ? ` · ${String(cm.role).toLowerCase()}` : ""}
-                            </div>
-                          </div>
-                        </a>
-                      );
-                    })}
-                  </div>
+                          + Add mod
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
+            )}
+            {showAddMod && canManageLoadout && (
+              <AddModDialog
+                crewId={crewId}
+                onClose={() => setShowAddMod(false)}
+                onAdded={() => { setShowAddMod(false); void refreshLoadout(); }}
+              />
             )}
 
             {/* Roster */}
@@ -356,4 +433,127 @@ function plaqueStyle(): React.CSSProperties {
     border: `1px solid ${PAL.brass}35`,
     background: `linear-gradient(180deg, ${PAL.stormMid}c0 0%, ${PAL.stormDeep}e0 100%)`,
   };
+}
+
+// ── Add-mod dialog — minimal search + pick flow ────────────────────────────
+function AddModDialog({
+  crewId, onClose, onAdded,
+}: { crewId: string; onClose: () => void; onAdded: () => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = query.trim();
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/mods?gameSlug=windrose&limit=20${q ? `&search=${encodeURIComponent(q)}` : ""}`);
+        const j = await r.json();
+        setResults(Array.isArray(j?.mods) ? j.mods : []);
+      } catch { setResults([]); }
+      finally { setLoading(false); }
+    }, 180);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  async function pick(modId: string) {
+    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+    if (!token) return;
+    setSubmitting(modId);
+    try {
+      const r = await fetch(`${API}/crews/${encodeURIComponent(crewId)}/mods`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ modId, role: "RECOMMENDED" }),
+      });
+      if (r.ok) onAdded();
+    } catch {}
+    finally { setSubmitting(null); }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(10,18,32,0.72)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          ...plaqueStyle(), maxWidth: 560, width: "100%", maxHeight: "80vh",
+          display: "flex", flexDirection: "column", padding: 18,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75 }}>
+            Add to loadout
+          </div>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={onClose}
+            style={{ background: "transparent", border: "none", color: PAL.parchDim, fontSize: 16, cursor: "pointer", padding: "2px 8px" }}
+          >×</button>
+        </div>
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search Windrose mods…"
+          style={{
+            padding: "10px 12px", fontSize: 14, fontFamily: WR_SERIF,
+            background: `${PAL.ink}80`, border: `1px solid ${PAL.brass}40`,
+            color: PAL.parchment, outline: "none", marginBottom: 12,
+          }}
+        />
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+          {loading && results.length === 0 && (
+            <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic", padding: 12, textAlign: "center" }}>
+              Searching the Nexus catalog…
+            </div>
+          )}
+          {!loading && results.length === 0 && (
+            <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic", padding: 12, textAlign: "center" }}>
+              {query ? `No mods match "${query}".` : "No mods cached yet."}
+            </div>
+          )}
+          {results.map((m: any) => (
+            <button
+              key={m.id}
+              onClick={() => void pick(m.id)}
+              disabled={submitting === m.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+                background: `${PAL.ink}40`, border: `1px solid ${PAL.brass}25`,
+                color: PAL.parchment, textAlign: "left", cursor: submitting === m.id ? "wait" : "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              <div style={{
+                width: 36, height: 36, flexShrink: 0,
+                background: m.thumbnailUrl ? `url(${m.thumbnailUrl}) center/cover` : `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
+                border: `1px solid ${PAL.brass}40`,
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: PAL.parchment, fontFamily: WR_DISPLAY, letterSpacing: "0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.name}
+                </div>
+                <div style={{ fontSize: 10, color: PAL.parchDim, fontFamily: WR_MONO, letterSpacing: "0.6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.author ? `by ${m.author}` : ""}{m.endorsements ? ` · ✦ ${Number(m.endorsements).toLocaleString()}` : ""}
+                </div>
+              </div>
+              <span style={{ fontSize: 10, fontFamily: WR_MONO, color: PAL.brass, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                {submitting === m.id ? "…" : "Add"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }

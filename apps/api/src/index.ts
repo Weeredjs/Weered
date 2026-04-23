@@ -5365,7 +5365,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     if (!crewId || !modId) return reply.code(400).send({ error: "missing_fields" });
 
     const membership = await (prisma as any).crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
-    if (!membership || !["OWNER", "ADMIN"].includes(String(membership.role))) {
+    if (!membership || !["LEADER", "OFFICER"].includes(String(membership.role))) {
       return reply.code(403).send({ error: "not_authorized" });
     }
     if (!["RECOMMENDED", "REQUIRED", "BANNED"].includes(role)) {
@@ -5388,7 +5388,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const { crewId, modId } = (req.params as any) || {};
     const membership = await (prisma as any).crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
-    if (!membership || !["OWNER", "ADMIN"].includes(String(membership.role))) {
+    if (!membership || !["LEADER", "OFFICER"].includes(String(membership.role))) {
       return reply.code(403).send({ error: "not_authorized" });
     }
     try { await (prisma as any).crewMod.delete({ where: { crewId_modId: { crewId, modId } } }); } catch {}
