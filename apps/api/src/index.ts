@@ -5499,8 +5499,13 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     return reply.send({ ok: true });
   });
 
-  app.listen({ host: "0.0.0.0", port: HTTP_PORT });
-  app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
+  try {
+    await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
+    app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
+  } catch (err) {
+    app.log.error({ err }, `FATAL: failed to bind HTTP port ${HTTP_PORT}`);
+    process.exit(1);
+  }
 
   // ── WebSocket server ──────────────────────────────────────────────────────────
 
