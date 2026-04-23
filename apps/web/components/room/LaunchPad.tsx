@@ -15,9 +15,18 @@ import { useWeered, type LaunchSnapshot, type LaunchTarget } from "../WeeredProv
  * Server-side resets the fired state 60s after fire so the room can queue
  * the next match without anyone having to re-configure.
  */
-export default function LaunchPad({ roomId }: { roomId: string }) {
+// Module types whose rooms use a `steam://connect/IP:PORT` flow for
+// joining servers together — MPlayer-style. Destiny/League/Fortnite
+// launch via their own clients so the pad is meaningless there.
+const STEAM_LAUNCH_MODULE_TYPES = new Set([
+  "WINDROSE",
+]);
+
+export default function LaunchPad({ roomId, moduleType }: { roomId: string; moduleType?: string }) {
   const ctx: any = useWeered();
   const launch: LaunchSnapshot | null = (ctx?.launchByRoom || {})[roomId] ?? null;
+  // Lobby-type gate runs *after* hooks so hook ordering stays consistent.
+  const steamLaunchable = !!moduleType && STEAM_LAUNCH_MODULE_TYPES.has(String(moduleType).toUpperCase());
   const users: any[] = Array.isArray(ctx?.usersByRoom?.[roomId]) ? ctx.usersByRoom[roomId] : [];
   const me = ctx?.me;
   const meId = String(me?.id || "");
@@ -58,6 +67,10 @@ export default function LaunchPad({ roomId }: { roomId: string }) {
     const t = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(t);
   }, [firedAt]);
+
+  // All hooks above this line. Bail out for lobbies that don't use a
+  // steam://connect-style launch flow (Destiny, League, Fortnite, etc.).
+  if (!steamLaunchable) return null;
 
   // Launch time: host fires, countdown runs 3.5s, then the LAUNCH button appears
   const COUNTDOWN_MS = 3500;

@@ -532,7 +532,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       />
 
       {/* ── Launch Pad (MPlayer-style game launcher) ── */}
-      <LaunchPad roomId={roomId} />
+      <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
       {/* ── Voice available prompt — hidden when Voice tab is active (VoiceStage has its own) ── */}
       {voicePrompt && stageMode !== "voice" && voice.connState !== "connected" && voice.connState !== "connecting" && (
