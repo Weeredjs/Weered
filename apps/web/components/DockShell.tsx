@@ -77,7 +77,14 @@ const ROLE_DISPLAY_DOCK: Record<string, string> = {
   GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "LOOKOUT",
   MOD: "CAPTAIN", OWNER: "FOUNDER",
 };
-function roleDisplayDock(dbRole: string): string { return ROLE_DISPLAY_DOCK[dbRole] || dbRole; }
+const ROLE_DISPLAY_DOCK_WINDROSE: Record<string, string> = {
+  GOD: "ADMIRAL", ADMIN: "FIRST MATE", STAFF: "BOATSWAIN", SUPPORT: "LOOKOUT",
+  MOD: "QUARTERMASTER", OWNER: "CAPTAIN",
+};
+function roleDisplayDock(dbRole: string, lobbyTheme?: string | null): string {
+  if (lobbyTheme === "windrose" && ROLE_DISPLAY_DOCK_WINDROSE[dbRole]) return ROLE_DISPLAY_DOCK_WINDROSE[dbRole];
+  return ROLE_DISPLAY_DOCK[dbRole] || dbRole;
+}
 
 function b64UrlDecode(input: string): string {
   try {

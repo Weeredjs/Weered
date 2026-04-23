@@ -84,7 +84,14 @@ const ROLE_DISPLAY: Record<string, string> = {
   GOD: "Godfather", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Backup",
   MOD: "Captain", OWNER: "Founder",
 };
-function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase(); }
+const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
+  GOD: "Admiral", ADMIN: "First Mate", STAFF: "Boatswain", SUPPORT: "Lookout",
+  MOD: "Quartermaster", OWNER: "Captain",
+};
+function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
+  if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole]) return ROLE_DISPLAY_WINDROSE[dbRole];
+  return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase();
+}
 
 // ── Role icons — emoji, readable at any size ─────────────────────────────────
 // ── Role icons — brand PNGs via RoleIcon component ──────────────────────────

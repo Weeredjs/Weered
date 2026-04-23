@@ -19,6 +19,10 @@ type Profile = {
   steamId?: string | null;
   twitchLogin?: string | null;
   xboxGamertag?: string | null;
+  primaryCrew?: {
+    id: string; name: string; tag: string;
+    logoUrl: string | null; accentColor: string | null; role: string;
+  } | null;
 };
 
 type GuardianInfo = {
@@ -294,6 +298,42 @@ export default function UserHoverCard({
             )}
           </div>
         )}
+
+        {/* Crew flair — subtle row: icon + name + tag. Links to crew page.
+            Hidden if user isn't in a crew so there's no empty slot. */}
+        {profile?.primaryCrew && (() => {
+          const pc = profile.primaryCrew;
+          const accent = pc.accentColor && /^#[0-9a-f]{6}$/i.test(pc.accentColor) ? pc.accentColor : "#c9a066";
+          return (
+            <a
+              href={`/crew/${encodeURIComponent(pc.id)}`}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "6px 8px", marginBottom: 10, borderRadius: 6,
+                background: `${accent}10`, border: `1px solid ${accent}22`,
+                textDecoration: "none", color: "inherit",
+              }}
+              title={`${pc.name}${pc.tag ? ` · [${pc.tag}]` : ""}`}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: 3, flexShrink: 0,
+                backgroundImage: pc.logoUrl ? `url(${pc.logoUrl})` : `linear-gradient(135deg, ${accent}, #8a6b3e)`,
+                backgroundSize: "cover", backgroundPosition: "center",
+                border: `1px solid ${accent}aa`,
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: accent, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {pc.name}
+                </div>
+                {pc.tag && (
+                  <div style={{ fontSize: 9, opacity: 0.55, fontFamily: "ui-monospace, monospace", letterSpacing: "0.5px" }}>
+                    [{pc.tag}] · {String(pc.role).toLowerCase()}
+                  </div>
+                )}
+              </div>
+            </a>
+          );
+        })()}
 
         {/* Identity glossary — role, tier, linked platforms */}
         {profile && (() => {

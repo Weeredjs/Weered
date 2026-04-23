@@ -26,12 +26,20 @@ function normRole(x: string) {
   return s.slice(0, 14);
 }
 
-// Street hierarchy display names
+// Street hierarchy display names — defaults to GTA/mafia.
 const ROLE_DISPLAY: Record<string, string> = {
   GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "BACKUP",
   MOD: "CAPTAIN", OWNER: "FOUNDER", MEMBER: "MEMBER",
 };
-function roleDisplay(dbRole: string): string { return ROLE_DISPLAY[dbRole] || dbRole; }
+// Lobby-scoped overrides — Windrose speaks pirate.
+const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
+  GOD: "ADMIRAL", ADMIN: "FIRST MATE", STAFF: "BOATSWAIN", SUPPORT: "LOOKOUT",
+  MOD: "QUARTERMASTER", OWNER: "CAPTAIN", MEMBER: "CREWMATE",
+};
+function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
+  if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole]) return ROLE_DISPLAY_WINDROSE[dbRole];
+  return ROLE_DISPLAY[dbRole] || dbRole;
+}
 
 const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }> = {
   GOD:     { border: "rgba(250,204,21,.38)",  bg: "rgba(234,179,8,.18)",   color: "#fde68a" },
@@ -248,7 +256,7 @@ export default function UserCorner() {
                   background: "rgba(255,255,255,.06)",
                   ...chipStyle(bestRole),
                 }}>
-                  {roleDisplay(bestRole)}
+                  {roleDisplay(bestRole, lobbyTheme)}
                 </span>
               );
             })()}
@@ -410,17 +418,31 @@ export default function UserCorner() {
             el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.40)" : "rgba(88,0,229,.35)";
           }}
         >
-          {/* Burner phone icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
-            <rect x="6" y="2" width="12" height="20" rx="3" strokeWidth="2" />
-            <rect x="9" y="5" width="6" height="6" rx="1.5" strokeWidth="1.5" opacity=".55" />
-            <circle cx="10" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
-            <circle cx="14" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
-            <circle cx="10" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
-            <circle cx="14" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
-            <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
-            <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
-          </svg>
+          {/* Icon — phone by default; bottle for Windrose so the button
+              matches the "Bottle" label and the pirate aesthetic. */}
+          {lobbyTheme === "windrose" ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
+              {/* bottle neck */}
+              <rect x="10" y="2" width="4" height="5" strokeWidth="1.5" />
+              {/* bottle shoulder/body */}
+              <path d="M9 7 Q7 9 7 11 L7 21 Q7 22 8 22 L16 22 Q17 22 17 21 L17 11 Q17 9 15 7 Z" strokeWidth="1.8" />
+              {/* label band */}
+              <rect x="8" y="13" width="8" height="5" strokeWidth="1" opacity=".45" />
+              {/* cork top highlight */}
+              <line x1="10" y1="2" x2="14" y2="2" strokeWidth="1.5" opacity=".65" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
+              <rect x="6" y="2" width="12" height="20" rx="3" strokeWidth="2" />
+              <rect x="9" y="5" width="6" height="6" rx="1.5" strokeWidth="1.5" opacity=".55" />
+              <circle cx="10" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
+              <circle cx="14" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
+              <circle cx="10" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
+              <circle cx="14" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
+              <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
+              <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" opacity=".45" />
+            </svg>
+          )}
 
           <span>{burnerLabel}</span>
 
