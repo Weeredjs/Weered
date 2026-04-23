@@ -26,7 +26,7 @@ type AuditItem = {
   targetId?: string; targetName?: string; note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[] };
+type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
@@ -418,7 +418,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         setUsersByRoom(prev => ({ ...prev, [rid]: list }));
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), thumbnail: msg.thumbnail || undefined, ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
+          [rid]: {
+            name: String(msg.name || rid),
+            locked: Boolean(msg.locked),
+            chatDisabled: Boolean(msg.chatDisabled ?? false),
+            thumbnail: msg.thumbnail || undefined,
+            ownerId: String(msg.ownerId || ""),
+            mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
+            description: msg.description || undefined,
+            iconUrl: msg.iconUrl || undefined,
+            bannerUrl: msg.bannerUrl || undefined,
+            accentColor: msg.accentColor || undefined,
+          },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
         // Extract active module state sent on join

@@ -420,6 +420,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     : "";
 
   // ─── Details panel ────────────────────────────────────────────────────────
+  // Is the viewer the room owner? Enables the appearance editor card.
+  const meId: string = String(w?.me?.id || "");
+  const roomOwnerId: string = String(w?.meta?.ownerId || "");
+  const isRoomOwner = !!meId && meId === roomOwnerId;
+
   const detailsPanel = (
     <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0 pr-0.5">
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
@@ -431,6 +436,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <CopyButton value={shareUrl} label="Copy link" copiedLabel="Copied" className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors" />
         </div>
       </div>
+
+      {isRoomOwner && (
+        <RoomAppearanceEditor
+          roomId={roomId}
+          initial={{
+            iconUrl: w?.meta?.iconUrl || "",
+            bannerUrl: w?.meta?.bannerUrl || "",
+            accentColor: w?.meta?.accentColor || "",
+            description: w?.meta?.description || "",
+          }}
+        />
+      )}
 
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
         <div className="flex items-center justify-between mb-2">
@@ -513,6 +530,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         memberCount={memberCount}
         locked={locked}
         thumbnail={roomThumbnail}
+        iconUrl={w?.meta?.iconUrl || null}
+        bannerUrl={w?.meta?.bannerUrl || null}
+        accentColor={w?.meta?.accentColor || null}
         pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
         users={Array.isArray(w?.users) ? w.users : []}
         lobbyName={lobbyContext?.name || w?.meta?.lobbyName || null}
@@ -1115,6 +1135,127 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
+    </div>
+  );
+}
+
+// ── Room appearance editor — owner-only card in the Details panel ───────────
+// Intentionally kept tiny: URL paste + color picker + short description. File
+// upload comes later; right now this unblocks Windrose rooms getting their
+// own faces like the pinned/event rooms already have.
+function RoomAppearanceEditor({
+  roomId,
+  initial,
+}: {
+  roomId: string;
+  initial: { iconUrl: string; bannerUrl: string; accentColor: string; description: string };
+}) {
+  const [iconUrl, setIconUrl] = useState(initial.iconUrl || "");
+  const [bannerUrl, setBannerUrl] = useState(initial.bannerUrl || "");
+  const [accentColor, setAccentColor] = useState(initial.accentColor || "");
+  const [description, setDescription] = useState(initial.description || "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const dirty =
+    iconUrl !== (initial.iconUrl || "") ||
+    bannerUrl !== (initial.bannerUrl || "") ||
+    accentColor !== (initial.accentColor || "") ||
+    description !== (initial.description || "");
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+      const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+      const body: any = {
+        iconUrl: iconUrl.trim() || null,
+        bannerUrl: bannerUrl.trim() || null,
+        accentColor: accentColor.trim() || null,
+        description: description,
+      };
+      const r = await fetch(`${API}/rooms/${encodeURIComponent(roomId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (j?.ok) setMsg({ kind: "ok", text: "Saved. Everyone in the room sees it now." });
+      else setMsg({ kind: "err", text: j?.error || "Save failed." });
+    } catch {
+      setMsg({ kind: "err", text: "Network error." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35">Appearance</div>
+        <span className="text-[9px] rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-amber-200/70">owner</span>
+      </div>
+
+      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Icon URL</label>
+      <input
+        value={iconUrl}
+        onChange={(e) => setIconUrl(e.target.value)}
+        placeholder="https://…/icon.png"
+        className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20 mb-2 font-mono"
+      />
+
+      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Banner URL</label>
+      <input
+        value={bannerUrl}
+        onChange={(e) => setBannerUrl(e.target.value)}
+        placeholder="https://…/banner.jpg"
+        className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20 mb-2 font-mono"
+      />
+
+      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Accent color</label>
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          type="color"
+          value={accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#5800E5"}
+          onChange={(e) => setAccentColor(e.target.value)}
+          className="h-7 w-10 rounded border border-white/10 bg-transparent cursor-pointer"
+        />
+        <input
+          value={accentColor}
+          onChange={(e) => setAccentColor(e.target.value)}
+          placeholder="#5800E5"
+          className="flex-1 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20 font-mono"
+        />
+        {accentColor && (
+          <button type="button" onClick={() => setAccentColor("")} className="text-[10px] text-white/35 hover:text-white/70 px-1">clear</button>
+        )}
+      </div>
+
+      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Description</label>
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={2}
+        placeholder="What is this room about?"
+        className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-[12px] text-white/70 placeholder:text-white/25 outline-none focus:border-white/20 resize-none mb-2"
+      />
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!dirty || saving}
+          onClick={save}
+          className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-1.5 text-[11px] text-amber-200/80 font-semibold hover:bg-amber-400/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+        </button>
+        {msg && (
+          <span className={`text-[10px] ${msg.kind === "ok" ? "text-emerald-300/80" : "text-red-300/80"}`}>
+            {msg.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
