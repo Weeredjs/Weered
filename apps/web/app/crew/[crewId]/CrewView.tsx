@@ -48,6 +48,9 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   const [loading, setLoading] = useState(!initial);
   const [err, setErr] = useState<string | null>(!initial ? "Crew not found." : null);
   const [copied, setCopied] = useState(false);
+  // Crew loadout — fetched lazily; hidden if empty (no "look what we have!")
+  const [crewMods, setCrewMods] = useState<any[]>([]);
+  const [loadoutOpen, setLoadoutOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +65,15 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
       .catch(() => { if (!cancelled) { setErr("Couldn't load this crew."); setLoading(false); } });
     return () => { cancelled = true; };
   }, [crewId, initial]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/crews/${encodeURIComponent(crewId)}/loadout`)
+      .then(r => r.json())
+      .then(j => { if (!cancelled && Array.isArray(j?.crewMods)) setCrewMods(j.crewMods); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [crewId]);
 
   function copyLink() {
     try {
@@ -228,6 +240,61 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                 <div style={{ fontSize: 14, color: PAL.parchment, lineHeight: 1.55, fontStyle: "italic" }}>
                   {c.recruitingNote}
                 </div>
+              </div>
+            )}
+
+            {/* Loadout — collapsed by default; hidden entirely if empty.
+                No callout styling, no badge, just a header row that expands. */}
+            {crewMods.length > 0 && (
+              <div style={{ ...plaqueStyle(), padding: "14px 22px", marginBottom: 14 }}>
+                <div
+                  onClick={() => setLoadoutOpen(o => !o)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}
+                >
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75 }}>
+                    Loadout ({crewMods.length})
+                  </div>
+                  <div style={{ flex: 1 }} />
+                  <div style={{ fontSize: 10, color: PAL.parchDim, opacity: 0.6, fontFamily: WR_MONO, letterSpacing: "1.5px" }}>
+                    {loadoutOpen ? "—" : "+"}
+                  </div>
+                </div>
+                {loadoutOpen && (
+                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+                    {crewMods.map((cm: any) => {
+                      const m = cm.mod || {};
+                      return (
+                        <a
+                          key={cm.id}
+                          href={m.sourceUrl || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "8px 10px",
+                            background: `${PAL.ink}40`,
+                            border: `1px solid ${PAL.brass}25`,
+                            textDecoration: "none",
+                          }}
+                        >
+                          <div style={{
+                            width: 32, height: 32, borderRadius: 2, flexShrink: 0,
+                            background: m.thumbnailUrl ? `url(${m.thumbnailUrl}) center/cover` : `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
+                            border: `1px solid ${PAL.brass}40`,
+                          }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: PAL.parchment, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: WR_DISPLAY, letterSpacing: "0.2px" }}>
+                              {m.name || "Unnamed mod"}
+                            </div>
+                            <div style={{ fontSize: 9, color: PAL.parchDim, fontFamily: WR_MONO, letterSpacing: "0.8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {m.author ? `by ${m.author}` : ""}{cm.role && cm.role !== "RECOMMENDED" ? ` · ${String(cm.role).toLowerCase()}` : ""}
+                            </div>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

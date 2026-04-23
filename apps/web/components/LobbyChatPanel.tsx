@@ -110,6 +110,31 @@ function runSlashCommand(
       opts.openGif(args || undefined);
       opts.clear();
       return true;
+    case "mod":
+    case "mods": {
+      // `/mod <query>` searches the cached Nexus catalog and drops a chip in chat.
+      // `/mods` alone (no args) posts your crew's top mods as a subtle teaser.
+      const query = args;
+      void (async () => {
+        try {
+          if (!query) {
+            // No query → show what this is. Keep copy low-key: we're not pitching.
+            weeredToast("/mod <name> — drop a Windrose mod into chat. Try: /mod qol plus");
+            return;
+          }
+          const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+          const r = await fetch(`${API}/mods?search=${encodeURIComponent(query)}&limit=1&gameSlug=windrose`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const j = await r.json();
+          const hit = (j?.mods || [])[0];
+          if (!hit?.sourceUrl) { weeredToast.error(`No mod matched "${query}".`); return; }
+          opts.send(hit.sourceUrl);
+        } catch { weeredToast.error("Mod lookup failed."); }
+      })();
+      opts.clear();
+      return true;
+    }
     case "help":
     case "commands": {
       const help = [
@@ -141,12 +166,16 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WEERED_BOUNTY_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/bounty\/([^\s/?#]+)/i;
 const WEERED_HUNTER_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/hunter\/([^\s/?#]+)/i;
 const WEERED_CREW_RE   = /(?:https?:\/\/[^\s/]+)?\/crew\/([^\s/?#]+)/i;
+// Nexus mod links inline-preview for Windrose only — keeps the surface subtle
+// (drop a link, get a card; no advertising of the feature).
+const NEXUS_MOD_RE     = /(?:https?:\/\/)?(?:www\.)?nexusmods\.com\/(windrose)\/mods\/(\d+)/i;
 
-type WeeredEmbedKind = "bounty" | "hunter" | "crew";
+type WeeredEmbedKind = "bounty" | "hunter" | "crew" | "nexus";
 function detectWeeredEmbed(url: string): { kind: WeeredEmbedKind; id: string } | null {
   let m = url.match(WEERED_BOUNTY_RE); if (m) return { kind: "bounty", id: decodeURIComponent(m[1]) };
   m = url.match(WEERED_HUNTER_RE);     if (m) return { kind: "hunter", id: decodeURIComponent(m[1]) };
   m = url.match(WEERED_CREW_RE);       if (m) return { kind: "crew",   id: decodeURIComponent(m[1]) };
+  m = url.match(NEXUS_MOD_RE);         if (m) return { kind: "nexus",  id: m[2] };
   return null;
 }
 
@@ -327,6 +356,93 @@ function WeeredCrewEmbed({ id, href }: { id: string; href: string }) {
   );
 }
 
+function NexusModEmbed({ id, href }: { id: string; href: string }) {
+  const [data, setData] = useState<any>(() => embedCache.get(`nexus:${id}`) ?? null);
+  useEffect(() => {
+    if (data) return;
+    let cancelled = false;
+    const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+    fetch(`${API}/mods/nexus:${encodeURIComponent(id)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(r => r.json()).then(j => {
+      if (!cancelled && j?.mod) { embedCache.set(`nexus:${id}`, j); setData(j); }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [id, data]);
+  if (!data) return <EmbedSkeleton href={href} label="Windrose · Mod" />;
+  const mod = data.mod;
+  const crewCount = Number(data.crewCount || 0);
+  // NXM deep-link — Vortex / Vercadi's Mod Manager register this protocol.
+  // No fileId until we fetch versions, so link the generic mod page in NXM
+  // form; the Mod Manager figures out the rest.
+  const nxmHref = `nxm://windrose/mods/${encodeURIComponent(id)}`;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
+      <div style={{
+        borderRadius: 3, border: "1px solid rgba(201,160,102,0.33)",
+        background: "linear-gradient(180deg, rgba(36,28,18,0.85), rgba(14,24,38,0.95))",
+        overflow: "hidden", maxWidth: 340, padding: "12px 14px",
+        display: "flex", gap: 12, alignItems: "flex-start",
+      }}>
+        <div style={{
+          width: 54, height: 54, borderRadius: 3, flexShrink: 0,
+          background: mod.thumbnailUrl ? `url(${mod.thumbnailUrl}) center/cover` : "linear-gradient(135deg,#c9a066,#8a6b3e)",
+          border: "1px solid rgba(201,160,102,0.5)",
+        }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#c9a066", opacity: 0.8 }}>
+              ⛬ Windrose · Mod
+            </span>
+            {mod.endorsements > 0 && (
+              <span style={{ fontSize: 10, color: "#a89775", fontFamily: "ui-monospace, monospace" }}>
+                ✦ {Number(mod.endorsements).toLocaleString()}
+              </span>
+            )}
+          </div>
+          <div style={{ fontFamily: "'Pirata One', Georgia, serif", fontSize: 18, color: "#e8c48a", lineHeight: 1.1, letterSpacing: "0.3px", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {mod.name}
+          </div>
+          {mod.author && (
+            <div style={{ fontSize: 10, color: "#a89775", fontStyle: "italic", marginTop: 2 }}>
+              by {mod.author}
+            </div>
+          )}
+          {mod.summary && (
+            <div style={{ fontSize: 11, color: "#e4d4b0", lineHeight: 1.4, marginTop: 4, opacity: 0.85, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {String(mod.summary).slice(0, 180)}
+            </div>
+          )}
+          {crewCount > 0 && (
+            <div style={{ fontSize: 10, color: "#5db765", marginTop: 6, fontWeight: 700, letterSpacing: "0.5px" }}>
+              {crewCount === 1 ? "1 crewmate runs this" : `${crewCount} crewmates run this`}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); try { window.location.href = nxmHref; } catch {} }}
+              style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase",
+                padding: "4px 8px", borderRadius: 3, border: "1px solid rgba(201,160,102,0.5)",
+                color: "#e8c48a", background: "rgba(201,160,102,0.08)", cursor: "pointer",
+              }}
+              title="Open in your Mod Manager"
+            >
+              Install
+            </span>
+            <span style={{
+              fontSize: 9, fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase",
+              padding: "4px 8px", color: "#a89775",
+            }}>
+              Nexus ↗
+            </span>
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
 function EmbedSkeleton({ href, label }: { href: string; label: string }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
@@ -441,6 +557,7 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
         if (e.kind === "bounty") return <WeeredBountyEmbed key={`wb-${i}`} id={e.id} href={e.url} />;
         if (e.kind === "hunter") return <WeeredHunterEmbed key={`wh-${i}`} id={e.id} href={e.url} />;
         if (e.kind === "crew")   return <WeeredCrewEmbed   key={`wc-${i}`} id={e.id} href={e.url} />;
+        if (e.kind === "nexus")  return <NexusModEmbed     key={`wn-${i}`} id={e.id} href={e.url} />;
         return null;
       })}
       {/* Generic link preview — one max, and only if no Weered embed claimed it */}
@@ -819,7 +936,13 @@ export default function LobbyChatPanel(
   const { replaceTop } = useOverlay();
   const ctx: any = useWeered();
 
+  // Map currentLobbyId → module type the hover card expects. Keeps the
+  // "Running N mods" line scoped to Windrose context only.
+  const _lobbyMod =
+    String(ctx?.currentLobbyId || "").toLowerCase() === "windrose" ? "WINDROSE" :
+    undefined;
   const { openHover, scheduleClose: hoverClose, card: hoverCard } = useUserHover({
+    lobbyModuleType: _lobbyMod,
     onViewProfile: (id) => replaceTop("profile", { userId: id }),
     onMessage: (id, name) => {
       try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", peer: { id, name } } })); } catch {}

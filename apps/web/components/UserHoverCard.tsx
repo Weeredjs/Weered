@@ -141,6 +141,17 @@ export default function UserHoverCard({
       .catch(() => {});
   }, [lobbyModuleType, profile?.name]);
 
+  // Fetch Windrose mod kit — subtle line, only when the hover is on a
+  // Windrose lobby. Nothing fancy; just "Running N mods" if they have any.
+  const [modCount, setModCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!userId || lobbyModuleType !== "WINDROSE") { setModCount(null); return; }
+    fetch(`${API}/users/${encodeURIComponent(userId)}/mods`)
+      .then(r => r.json())
+      .then(d => setModCount(Array.isArray(d?.installs) ? d.installs.length : 0))
+      .catch(() => setModCount(null));
+  }, [userId, lobbyModuleType]);
+
   // Fetch badges
   useEffect(() => {
     if (!userId) return;
@@ -409,6 +420,23 @@ export default function UserHoverCard({
                 <span style={{ fontSize: 9, opacity: 0.3, alignSelf: "center" }}>+{badges.length - 8}</span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Windrose mod kit — one-line teaser, click to view full list.
+            Intentionally quiet: no section header, no chrome. */}
+        {lobbyModuleType === "WINDROSE" && modCount !== null && modCount > 0 && (
+          <div
+            onClick={() => onViewProfile?.(userId)}
+            style={{
+              marginBottom: 10, padding: "5px 10px", borderRadius: 6,
+              fontSize: 10, fontWeight: 600, letterSpacing: "0.3px",
+              color: "rgba(201,160,102,0.85)", cursor: "pointer",
+              fontStyle: "italic", opacity: 0.82,
+            }}
+            title="Open profile to see their mod kit"
+          >
+            Running {modCount} mod{modCount === 1 ? "" : "s"} · view kit
           </div>
         )}
 

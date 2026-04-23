@@ -475,7 +475,11 @@ export default function LeftRail() {
 
   // ── Presence popover ───────────────────────────────────────────────────────
   // User hover card (replaces old presence popover)
+  const _lobbyMod =
+    String(currentLobbyId || "").toLowerCase() === "windrose" ? "WINDROSE" :
+    undefined;
   const { openHover, scheduleClose, cancelClose, card: hoverCard } = useUserHover({
+    lobbyModuleType: _lobbyMod,
     onViewProfile: (id) => replaceTop("profile", { userId: id }),
     onMessage: (id, name) => {
       try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { mode: "dm", peer: { id, name } } })); } catch {}
