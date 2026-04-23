@@ -374,7 +374,10 @@ export default function LobbyPage() {
   const loggedIn = myLobbies.length > 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%", minHeight: 0 }}>
+    // height:100% alone doesn't fill reliably (shell padding + fixed footer
+    // math leaves a dead zone). Clamp to the viewport minus the fixed
+    // footer so the panel always reaches the footer edge.
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "calc(100vh - 28px)", minHeight: 0 }}>
       <LobbyHeaderBar />
 
       <div style={{
