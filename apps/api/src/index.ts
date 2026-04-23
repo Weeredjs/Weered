@@ -13,6 +13,7 @@ import mlbRoutes from "./routes/mlb";
 import pgaRoutes from "./routes/pga";
 import tenorRoutes from "./routes/tenor";
 import twitchRoutes from "./routes/twitch";
+import youtubeRoutes from "./routes/youtube";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -5144,46 +5145,8 @@ app.post("/dm/:peerId", async (req, reply) => {
     return reply.send({ ok: true, banner: siteBanner });
   });
 
-  // ── YouTube Search ──────────────────────────────────────────────────────────
-
-  app.get("/youtube/search", async (req, reply) => {
-    const q = String((req.query as any).q || "").trim();
-    if (!q) return reply.send({ results: [] });
-
-    const ytKey = process.env.YOUTUBE_API_KEY;
-    if (!ytKey) {
-      // Fallback: use YouTube's public suggestion/search endpoint (no key needed)
-      try {
-        const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D`;
-        const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ&format=json`);
-        // Can't scrape YouTube reliably without a key — return empty with hint
-        return reply.send({ results: [], hint: "YOUTUBE_API_KEY not configured" });
-      } catch {
-        return reply.send({ results: [], hint: "YOUTUBE_API_KEY not configured" });
-      }
-    }
-
-    try {
-      const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&q=${encodeURIComponent(q)}&key=${ytKey}`;
-      const res = await fetch(apiUrl);
-      const data = await res.json();
-      if (data.error) {
-        console.error("[yt-search] API error:", data.error.message);
-        return reply.code(500).send({ results: [], error: data.error.message });
-      }
-      const results = (data.items || []).map((item: any) => ({
-        videoId: item.id?.videoId,
-        title: item.snippet?.title,
-        channel: item.snippet?.channelTitle,
-        thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url,
-        publishedAt: item.snippet?.publishedAt,
-      }));
-      return reply.send({ results });
-    } catch (e: any) {
-      console.error("[yt-search]", e);
-      return reply.code(500).send({ results: [], error: "Search failed" });
-    }
-  });
+  // ── YouTube Search — extracted to routes/youtube.ts ────────────────────────
+  await app.register(youtubeRoutes);
 
   // ── AI Endpoints ────────────────────────────────────────────────────────────
 
