@@ -5499,13 +5499,8 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     return reply.send({ ok: true });
   });
 
-  try {
-    await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
-    app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
-  } catch (err) {
-    app.log.error({ err }, `FATAL: failed to bind HTTP port ${HTTP_PORT}`);
-    process.exit(1);
-  }
+  // app.listen() moved to the end of main() — routes after this point would
+  // throw FST_ERR_INSTANCE_ALREADY_LISTENING if we awaited it here.
 
   // ── WebSocket server ──────────────────────────────────────────────────────────
 
@@ -15276,6 +15271,15 @@ Rules:
 
   // ── Nexus Mods poller ──────────────────────────────────────────────────────
   startNexusPoller(prisma);
+
+  // ── HTTP listen — must be the LAST step so all routes are registered ──────
+  try {
+    await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
+    app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
+  } catch (err) {
+    app.log.error({ err }, `FATAL: failed to bind HTTP port ${HTTP_PORT}`);
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {
