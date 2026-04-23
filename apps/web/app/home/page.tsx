@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useWeered } from "../../components/WeeredProvider";
 import { avatarBg } from "../../lib/avatarColor";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
@@ -771,21 +772,36 @@ export default function HomePage() {
             Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
+        <Link
+          href="/desktop"
+          style={{
+            background: "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))",
+            border: "1px solid rgba(245,183,0,0.25)", borderRadius: 8, padding: "7px 12px",
+            color: "#f5b700", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+            letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", textDecoration: "none",
+            display: "inline-flex", alignItems: "center", gap: 6,
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.22), rgba(245,183,0,0.08))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.45)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.25)"; }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+          Desktop app
+        </Link>
+        <button
+          onClick={() => setShowShowcase(true)}
+          style={{
+            background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
+            border: "1px solid rgba(124,58,237,0.25)", borderRadius: 8, padding: "7px 14px",
+            color: "#a78bfa", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+            letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit",
+          }}
+          onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.15))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.4)"; }}
+          onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.25)"; }}
+        >
+          What can you do here?
+        </button>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,.25)", fontSize: 14, pointerEvents: "none" }}>&#8981;</span>
-          <button
-            onClick={() => setShowShowcase(true)}
-            style={{
-              background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
-              border: "1px solid rgba(124,58,237,0.25)", borderRadius: 8, padding: "7px 14px",
-              color: "#a78bfa", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-              letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", marginRight: 6,
-            }}
-            onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.15))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.4)"; }}
-            onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.25)"; }}
-          >
-            What can you do here?
-          </button>
           <input data-weered-search value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby... ( / )"
             style={{
               background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
