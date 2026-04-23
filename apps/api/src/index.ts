@@ -11,6 +11,8 @@ if (process.env.SENTRY_DSN_API) {
 import Fastify from "fastify";
 import mlbRoutes from "./routes/mlb";
 import pgaRoutes from "./routes/pga";
+import tenorRoutes from "./routes/tenor";
+import twitchRoutes from "./routes/twitch";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -10254,120 +10256,12 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // ── TWITCH INTEGRATION ─────────────────────────────────────────────────────
+  // ── TENOR + TWITCH — extracted to routes/tenor.ts and routes/twitch.ts ─────
   // ══════════════════════════════════════════════════════════════════════════════
 
-  const TWITCH_CLIENT_ID     = process.env.TWITCH_CLIENT_ID || "";
-  const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
-  let twitchAppToken = "";
-  let twitchTokenExp = 0;
+  await app.register(tenorRoutes);
+  await app.register(twitchRoutes);
 
-  async function getTwitchAppToken(): Promise<string> {
-    if (twitchAppToken && Date.now() < twitchTokenExp) return twitchAppToken;
-    if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return "";
-    try {
-      const res = await fetch("https://id.twitch.tv/oauth2/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: TWITCH_CLIENT_ID,
-          client_secret: TWITCH_CLIENT_SECRET,
-          grant_type: "client_credentials",
-        }),
-      });
-      const data = await res.json();
-      twitchAppToken = data.access_token || "";
-      twitchTokenExp = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
-      console.log("[twitch] app token acquired");
-      return twitchAppToken;
-    } catch (e) {
-      console.error("[twitch] token error", e);
-      return "";
-    }
-  }
-
-  // GET /tenor/featured + /tenor/search — Giphy-backed proxy (kept under /tenor/* for mobile compat)
-  // Normalizes Giphy's shape into the Tenor-like shape the mobile client expects:
-  //   results: [{ id, media_formats: { tinygif: { url, dims }, gif: { url } } }]
-  const GIPHY_KEY = process.env.GIPHY_API_KEY || "";
-  const gifCache = new Map<string, { data: any; expiresAt: number }>();
-  async function giphyFetch(endpoint: "trending" | "search", params: Record<string, string>) {
-    if (!GIPHY_KEY) return { data: [] };
-    const qs = new URLSearchParams({ api_key: GIPHY_KEY, limit: "20", rating: "pg-13", ...params }).toString();
-    const cacheKey = `${endpoint}?${qs}`;
-    const hit = gifCache.get(cacheKey);
-    if (hit && hit.expiresAt > Date.now()) return hit.data;
-    try {
-      const res = await fetch(`https://api.giphy.com/v1/gifs/${endpoint}?${qs}`);
-      const j = await res.json();
-      gifCache.set(cacheKey, { data: j, expiresAt: Date.now() + 10 * 60 * 1000 });
-      return j;
-    } catch (e) {
-      return { data: [] };
-    }
-  }
-  function normalizeGiphy(items: any[]) {
-    return items.map((g: any) => {
-      const tiny = g.images?.fixed_width_small || g.images?.fixed_height_small || g.images?.preview_gif;
-      const full = g.images?.original || g.images?.fixed_height || tiny;
-      return {
-        id: g.id,
-        media_formats: {
-          tinygif: { url: tiny?.url, dims: [Number(tiny?.width) || 200, Number(tiny?.height) || 200] },
-          gif: { url: full?.url },
-        },
-      };
-    });
-  }
-  app.get("/tenor/featured", async (_req, reply) => {
-    const data = await giphyFetch("trending", {});
-    return reply.send({ ok: true, results: normalizeGiphy(data.data || []) });
-  });
-  app.get("/tenor/search", async (req, reply) => {
-    const q = String((req as any).query?.q || "").trim();
-    if (!q) return reply.send({ ok: true, results: [] });
-    const data = await giphyFetch("search", { q });
-    return reply.send({ ok: true, results: normalizeGiphy(data.data || []) });
-  });
-
-  // GET /twitch/streams?game=Destiny+2 — top live streams for a game
-  app.get("/twitch/streams", async (req, reply) => {
-    const token = await getTwitchAppToken();
-    if (!token) return reply.send({ ok: true, streams: [], error: "twitch_not_configured" });
-
-    const gameName = String((req as any).query?.game || "Destiny 2");
-
-    try {
-      // First get game ID
-      const gameRes = await fetch(`https://api.twitch.tv/helix/games?name=${encodeURIComponent(gameName)}`, {
-        headers: { "Client-ID": TWITCH_CLIENT_ID, "Authorization": `Bearer ${token}` },
-      });
-      const gameData = await gameRes.json();
-      const gameId = gameData?.data?.[0]?.id;
-      if (!gameId) return reply.send({ ok: true, streams: [] });
-
-      // Get top streams
-      const streamRes = await fetch(`https://api.twitch.tv/helix/streams?game_id=${gameId}&first=12&sort=viewers`, {
-        headers: { "Client-ID": TWITCH_CLIENT_ID, "Authorization": `Bearer ${token}` },
-      });
-      const streamData = await streamRes.json();
-      const streams = (streamData?.data || []).map((s: any) => ({
-        id: s.id,
-        userName: s.user_name,
-        userLogin: s.user_login,
-        title: s.title,
-        viewerCount: s.viewer_count,
-        thumbnailUrl: (s.thumbnail_url || "").replace("{width}", "320").replace("{height}", "180"),
-        language: s.language,
-        startedAt: s.started_at,
-      }));
-
-      return reply.send({ ok: true, streams, gameId, gameName });
-    } catch (e) {
-      console.error("[twitch streams]", e);
-      return reply.send({ ok: true, streams: [], error: "fetch_failed" });
-    }
-  });
 
   // ══════════════════════════════════════════════════════════════════════════════
   // ── MLB STATS API INTEGRATION — extracted to routes/mlb.ts ──────────────────
