@@ -446,8 +446,11 @@ export default function LobbyIdPage() {
           gameName={hasModules ? gameName : undefined}
         />
 
-        {/* Gate: show join screen if not a member */}
-        {memberChecked && !isMember && lobbyInfo ? (
+        {/* Gate: force the join screen only for lobbies that truly require
+            an access decision (password, approval, paid). OPEN lobbies are
+            now browseable without joining — membership is opt-in via the
+            Join button in the tab bar. */}
+        {memberChecked && !isMember && lobbyInfo && lobbyInfo.joinMode && lobbyInfo.joinMode !== "OPEN" ? (
           <LobbyJoinGate
             lobbyId={lobbyId}
             lobbyInfo={lobbyInfo}
@@ -484,6 +487,37 @@ export default function LobbyIdPage() {
                 )}
               </TabBtn>
               <TabBtn active={view === "events"} accent={accent} onClick={() => setView("events")}>Events</TabBtn>
+
+              {/* Join button — opt-in membership for browseable (OPEN) lobbies.
+                  Hidden once you're a member (Leave replaces it). Also hidden
+                  for gated modes (PASSWORD/APPROVAL/PAID) — those use the
+                  full gate screen instead. */}
+              {memberChecked && !membership && !isStaff && !isOwner && (!lobbyInfo?.joinMode || lobbyInfo.joinMode === "OPEN") && me?.id && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/join`, {
+                        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+                        body: "{}",
+                      });
+                      const j = await res.json();
+                      if (j.ok) loadLobby();
+                    } catch {}
+                  }}
+                  style={{
+                    marginLeft: 4, padding: "5px 12px", borderRadius: 7,
+                    border: `1px solid ${accent}55`, background: `${accent}12`,
+                    fontSize: 10, color: accent, cursor: "pointer",
+                    fontWeight: 700, letterSpacing: "0.04em",
+                    transition: "all .15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${accent}22`; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = `${accent}12`; }}
+                  title="Join this lobby — adds it to Your Lobbies"
+                >
+                  + Join
+                </button>
+              )}
 
               {/* Leave button */}
               {membership && membership.roleLevel < 5 && (

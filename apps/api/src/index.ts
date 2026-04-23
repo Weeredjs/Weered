@@ -3085,6 +3085,15 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
         select: { gameType: true, displayName: true, platform: true, createdAt: true },
       });
 
+      // Primary crew (earliest-joined). Used as repping flair next to the
+      // user's name in chat + hover cards. If the user's in multiple crews
+      // we surface the oldest one — "your first ship" wins by default.
+      const primaryMembership = await (prisma as any).crewMember.findFirst({
+        where: { userId: u.id },
+        orderBy: { joinedAt: "asc" },
+        include: { crew: { select: { id: true, name: true, tag: true, logoUrl: true, accentColor: true } } },
+      });
+
       const nRank = getNotorietyRank(u.notoriety ?? 0);
       return reply.send({
         id: u.id,
@@ -3109,6 +3118,16 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
           platform: a.platform,
           linkedAt: a.createdAt.toISOString(),
         })),
+        primaryCrew: primaryMembership?.crew
+          ? {
+              id: primaryMembership.crew.id,
+              name: primaryMembership.crew.name,
+              tag: primaryMembership.crew.tag || "",
+              logoUrl: primaryMembership.crew.logoUrl || null,
+              accentColor: primaryMembership.crew.accentColor || null,
+              role: primaryMembership.role,
+            }
+          : null,
       });
     } catch (e) {
       console.error("[profile GET]", e);

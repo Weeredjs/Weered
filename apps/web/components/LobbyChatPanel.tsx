@@ -155,6 +155,64 @@ function runSlashCommand(
   }
 }
 
+// ── Crew flair — tiny icon/tag chip rendered beside a user's name to
+// show which crew they rep. Backed by a module-level cache + inflight
+// dedupe so an active chat doesn't fan out a fetch per message. ──
+type CrewFlairData = { tag: string; logoUrl: string | null; accentColor: string | null } | null;
+const crewFlairCache = new Map<string, CrewFlairData>();
+const crewFlairInflight = new Map<string, Promise<void>>();
+
+function CrewFlair({ userId, size = 13 }: { userId: string; size?: number }) {
+  const [flair, setFlair] = useState<CrewFlairData | undefined>(() =>
+    crewFlairCache.has(userId) ? crewFlairCache.get(userId)! : undefined,
+  );
+  useEffect(() => {
+    if (flair !== undefined) return;
+    if (!userId) return;
+    const existing = crewFlairInflight.get(userId);
+    if (existing) { existing.then(() => setFlair(crewFlairCache.get(userId) ?? null)); return; }
+    const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+    const p = fetch(`${API}/profile/${encodeURIComponent(userId)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(r => r.json()).then(j => {
+      const pc = j?.primaryCrew;
+      crewFlairCache.set(userId, pc ? { tag: String(pc.tag || ""), logoUrl: pc.logoUrl || null, accentColor: pc.accentColor || null } : null);
+    }).catch(() => { crewFlairCache.set(userId, null); }).finally(() => {
+      crewFlairInflight.delete(userId);
+      setFlair(crewFlairCache.get(userId) ?? null);
+    });
+    crewFlairInflight.set(userId, p);
+  }, [userId, flair]);
+  if (!flair) return null;
+  const accent = flair.accentColor && /^#[0-9a-f]{6}$/i.test(flair.accentColor) ? flair.accentColor : "rgba(201,160,102,0.7)";
+  if (flair.logoUrl) {
+    return (
+      <span
+        title={`Crew: [${flair.tag || ""}]`}
+        style={{
+          width: size, height: size, borderRadius: 3, display: "inline-block",
+          backgroundImage: `url(${flair.logoUrl})`, backgroundSize: "cover", backgroundPosition: "center",
+          border: `1px solid ${accent}`, flexShrink: 0,
+        }}
+      />
+    );
+  }
+  if (flair.tag) {
+    return (
+      <span
+        title={`Crew: [${flair.tag}]`}
+        style={{
+          fontSize: Math.max(8, size - 4), fontWeight: 800, letterSpacing: "1px",
+          padding: "0 4px", borderRadius: 2, color: accent,
+          border: `1px solid ${accent}`, fontFamily: "ui-monospace, monospace",
+          lineHeight: `${size}px`,
+        }}
+      >{flair.tag}</span>
+    );
+  }
+  return null;
+}
+
 // ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
 const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
@@ -1403,6 +1461,7 @@ export default function LobbyChatPanel(
                         {uTier && String(uTier).toUpperCase() !== "INNOCENT" && (
                           <TierIcon tier={String(uTier).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
                         )}
+                        {msgUserId && <CrewFlair userId={msgUserId} size={13} />}
                         {editedAt > 0 && !deletedAt && (
                           <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))", marginLeft: 2 }}>(edited)</span>
                         )}
@@ -2004,6 +2063,7 @@ export default function LobbyChatPanel(
                     </span>
                     {role && role !== "USER" && <RoleIcon role={role} size={11} />}
                     {tier && tier !== "INNOCENT" && <TierIcon tier={tier} size={11} />}
+                    {u.id && <CrewFlair userId={u.id} size={11} />}
                   </button>
                 );
               })}
