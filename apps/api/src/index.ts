@@ -121,6 +121,10 @@ type LaunchState = {
 type RoomState = {
   roomId: string;
   name?: string;
+  description?: string;
+  iconUrl?: string;
+  bannerUrl?: string;
+  accentColor?: string;
   thumbnail?: string;
   lobbyId?: string;
   users: Map<string, RoomUser>;
@@ -928,6 +932,10 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }
   } else {
     r.name = dbRoom.name || "";
+    r.description = (dbRoom as any).description || undefined;
+    r.iconUrl = (dbRoom as any).iconUrl || undefined;
+    r.bannerUrl = (dbRoom as any).bannerUrl || undefined;
+    r.accentColor = (dbRoom as any).accentColor || undefined;
     r.locked = Boolean(dbRoom.locked);
     r.pinned = Boolean((dbRoom as any).pinned);
     r.isEvent = Boolean((dbRoom as any).isEvent);
@@ -1138,6 +1146,10 @@ function buildStatePayload(room: RoomState) {
   return {
     type: "presence:state", roomId: room.roomId, name: room.name || room.roomId,
     thumbnail: room.thumbnail || null, lobbyId: room.lobbyId || null,
+    description: room.description || "",
+    iconUrl: room.iconUrl || null,
+    bannerUrl: room.bannerUrl || null,
+    accentColor: room.accentColor || null,
     users, count: users.length - (isAIAvailable() ? 1 : 0), locked: Boolean(room.locked),
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
@@ -2600,9 +2612,80 @@ async function main() {
 
   app.get("/rooms/:roomId", async (req, reply) => {
     const roomId = String((req as any).params?.roomId || "");
-    const r = await prisma.room.findUnique({ where: { id: roomId } });
+    const r: any = await prisma.room.findUnique({ where: { id: roomId } });
     if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
-    return reply.send({ ok: true, room: { id: r.id, roomId: r.id, name: r.name || r.id, locked: Boolean(r.locked) } });
+    return reply.send({
+      ok: true,
+      room: {
+        id: r.id,
+        roomId: r.id,
+        name: r.name || r.id,
+        description: r.description || "",
+        locked: Boolean(r.locked),
+        pinned: Boolean(r.pinned),
+        isEvent: Boolean(r.isEvent),
+        ownerId: r.ownerId || null,
+        lobbyId: r.lobbyId || null,
+        iconUrl: r.iconUrl || null,
+        bannerUrl: r.bannerUrl || null,
+        accentColor: r.accentColor || null,
+      },
+    });
+  });
+
+  // PATCH /rooms/:roomId — owner / staff edit room appearance + description.
+  // Kept narrow on purpose: name / password / lobby moves stay with the
+  // existing room admin flow. This is just "make the room look yours".
+  app.patch("/rooms/:roomId", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const roomId = String((req.params as any).roomId || "");
+    const r: any = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    const isOwner = r.ownerId && r.ownerId === u.id;
+    const globalRole = String((u as any).globalRole || "USER").toUpperCase();
+    const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(globalRole);
+    if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "not_authorized" });
+
+    const body: any = (req as any).body || {};
+    const data: any = {};
+    if (typeof body.description === "string") data.description = body.description.slice(0, 500);
+    if (typeof body.iconUrl === "string" || body.iconUrl === null) data.iconUrl = body.iconUrl ? String(body.iconUrl).slice(0, 600) : null;
+    if (typeof body.bannerUrl === "string" || body.bannerUrl === null) data.bannerUrl = body.bannerUrl ? String(body.bannerUrl).slice(0, 600) : null;
+    if (typeof body.accentColor === "string" || body.accentColor === null) {
+      const v = body.accentColor ? String(body.accentColor).trim() : null;
+      if (v && !/^#[0-9a-f]{6}$/i.test(v)) return reply.code(400).send({ ok: false, error: "bad_accent" });
+      data.accentColor = v;
+    }
+    if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_changes" });
+
+    const updated: any = await (prisma as any).room.update({ where: { id: roomId }, data });
+
+    // Push the new appearance into any live in-memory room state and
+    // rebroadcast so every connected socket sees the change immediately.
+    const live = rooms.get(normalizeRoomId(roomId));
+    if (live) {
+      if ("description" in data) live.description = updated.description || undefined;
+      if ("iconUrl" in data) live.iconUrl = updated.iconUrl || undefined;
+      if ("bannerUrl" in data) live.bannerUrl = updated.bannerUrl || undefined;
+      if ("accentColor" in data) live.accentColor = updated.accentColor || undefined;
+      const payload = buildStatePayload(live);
+      for (const sock of live.sockets) send(sock as any, payload);
+    }
+
+    return reply.send({
+      ok: true,
+      room: {
+        id: updated.id,
+        name: updated.name,
+        description: updated.description || "",
+        iconUrl: updated.iconUrl || null,
+        bannerUrl: updated.bannerUrl || null,
+        accentColor: updated.accentColor || null,
+      },
+    });
   });
 
   // ── NPC API (AI-driven NPCs in rooms) ───────────────────────────────────────

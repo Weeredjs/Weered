@@ -255,6 +255,12 @@ model Room {
   passwordHash String?
   ownerId   String?
   lobbyId   String?
+  // Owner-authored appearance — surfaces in the room header and room cards.
+  // Icon mirrors the pinned/event aesthetic (small square badge); banner is
+  // a wide image behind the header; accent tints UI chrome.
+  iconUrl     String?
+  bannerUrl   String?
+  accentColor String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

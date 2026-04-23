@@ -98,6 +98,9 @@ export default function RoomHeader({
   memberCount,
   locked,
   thumbnail,
+  iconUrl,
+  bannerUrl,
+  accentColor,
   pills,
   users,
   lobbyName,
@@ -111,6 +114,9 @@ export default function RoomHeader({
   memberCount?: number;
   locked?: boolean;
   thumbnail?: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  accentColor?: string | null;
   pills?: ModulePill[];
   users?: any[];
   lobbyName?: string | null;
@@ -121,7 +127,12 @@ export default function RoomHeader({
   showDetails?: boolean;
 }) {
   const activeModule = pills?.find(p => p.active);
-  const activeAccent = activeModule ? getAccent(activeModule.id) : "#5800E5";
+  // Room-owner accent takes priority over active-module tint. Gives rooms
+  // a consistent look even as the user flips between Voice / YouTube / etc.
+  const roomAccent = accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : null;
+  const activeAccent = roomAccent || (activeModule ? getAccent(activeModule.id) : "#5800E5");
+  // Banner wash: prefer owner-set banner, fall back to module thumbnail.
+  const washUrl = bannerUrl || thumbnail;
   const userArr = Array.isArray(users) ? users : [];
   const count = memberCount ?? userArr.length;
 
@@ -133,15 +144,17 @@ export default function RoomHeader({
     }}>
       {/* ── Ambient layers ── */}
 
-      {/* Thumbnail wash */}
-      {thumbnail && (
+      {/* Thumbnail / banner wash — owner-set bannerUrl wins, so the room
+          brand stays consistent when the active module changes. When bannerUrl
+          is set we pump the opacity up a bit so it actually reads. */}
+      {washUrl && (
         <div style={{
           position: "absolute", inset: 0, zIndex: 0,
-          backgroundImage: `url(${thumbnail})`,
+          backgroundImage: `url(${washUrl})`,
           backgroundSize: "cover", backgroundPosition: "center",
-          opacity: 0.08,
-          filter: "blur(20px) saturate(1.8)",
-          transform: "scale(1.2)",
+          opacity: bannerUrl ? 0.18 : 0.08,
+          filter: bannerUrl ? "blur(8px) saturate(1.4)" : "blur(20px) saturate(1.8)",
+          transform: bannerUrl ? "scale(1.05)" : "scale(1.2)",
           pointerEvents: "none",
         }} />
       )}
@@ -193,9 +206,20 @@ export default function RoomHeader({
         {/* ── Row 1: Identity bar ── */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
 
-          {/* Lobby logo + room identity */}
+          {/* Room icon (owner-set) wins over lobby logo; both fall back to
+              a letter tile. Gives each room its own face when it wants one. */}
           <div style={{ display: "flex", alignItems: "center", gap: 9, flex: 1, minWidth: 0 }}>
-            {lobbyLogo ? (
+            {iconUrl ? (
+              <div style={{
+                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                background: "rgba(0,0,0,.4)",
+                border: `1px solid ${activeAccent}33`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden",
+                backgroundImage: `url(${iconUrl})`,
+                backgroundSize: "cover", backgroundPosition: "center",
+              }} title={title} />
+            ) : lobbyLogo ? (
               <div style={{
                 width: 30, height: 30, borderRadius: 8, flexShrink: 0,
                 background: "rgba(0,0,0,.4)",
