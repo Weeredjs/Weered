@@ -337,18 +337,40 @@ export default function ShellGate({
 
         <main className="weered-center">{children}</main>
 
-        {/* Collapse/expand tab — always visible on the right edge */}
+        {/* Collapse/expand tab — always visible on the right edge, with a
+            vertical stack of quick-launch buttons above it that each open
+            a specific Burner tab. Hidden when the rail is expanded. */}
         {rightCollapsed ? (
-          <button
-            type="button"
-            title="Expand panel"
-            onClick={toggleRight}
-            className="weered-rail-tab weered-rail-tab-glow"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M15 3v18" /><polyline points="10 8 7 12 10 16" /></svg>
-            <span className="weered-rail-tab-label">Panel</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="2" /><circle cx="12" cy="5" r="2" /><circle cx="12" cy="19" r="2" /></svg>
-          </button>
+          <div className="weered-rail-stack">
+            <RailQuickButton
+              kind="crew"
+              label="Crew"
+              title="Open Crew"
+              onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { tab: "crew" } })); } catch {} }}
+            />
+            <RailQuickButton
+              kind="friends"
+              label="Friends"
+              title="Open Friends"
+              onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { tab: "friends" } })); } catch {} }}
+            />
+            <RailQuickButton
+              kind="dms"
+              label="DMs"
+              title="Open Messages"
+              onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { tab: "dms" } })); } catch {} }}
+            />
+            <button
+              type="button"
+              title="Expand panel"
+              onClick={toggleRight}
+              className="weered-rail-tab weered-rail-tab-glow"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M15 3v18" /><polyline points="10 8 7 12 10 16" /></svg>
+              <span className="weered-rail-tab-label">Panel</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="2" /><circle cx="12" cy="5" r="2" /><circle cx="12" cy="19" r="2" /></svg>
+            </button>
+          </div>
         ) : (
           <aside className="weered-right">
             {/* Collapse button — prominent, top-right */}
@@ -381,3 +403,61 @@ export default function ShellGate({
     </>
   );
 }
+
+// ── Rail-side quick-launch buttons ──────────────────────────────────────────
+// Stacked above the collapsed Panel tab. Each fires weered:dock:open with a
+// specific tab so the Burner comes up pre-targeted. Hidden on mobile/narrow
+// where the mobile nav already serves this role.
+type QuickKind = "crew" | "friends" | "dms";
+
+function RailQuickButton({
+  kind, label, title, onClick,
+}: { kind: QuickKind; label: string; title: string; onClick: () => void }) {
+  const palette = QUICK_PALETTE[kind];
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="weered-rail-quick"
+      style={{
+        background: palette.bg,
+        borderColor: palette.border,
+        boxShadow: `0 0 16px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(0,0,0,.35)`,
+        color: palette.fg,
+      }}
+    >
+      <span className="weered-rail-quick-icon">
+        {kind === "crew" ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* shield crest */}
+            <path d="M12 3 L20 6 V12 C20 16.5 16.5 20 12 21 C7.5 20 4 16.5 4 12 V6 Z" />
+            <path d="M9 11 L11 13 L15 9" />
+          </svg>
+        ) : kind === "friends" ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* two people */}
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3.5 20 C4 16.5 6 15 9 15 C12 15 14 16.5 14.5 20" />
+            <circle cx="16.5" cy="9" r="2.4" />
+            <path d="M15 20.5 C15.5 17.5 17 16.5 19 16.5 C20.3 16.5 21.3 17.1 21.7 18" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* message bubble */}
+            <path d="M4 6 C4 4.9 4.9 4 6 4 H18 C19.1 4 20 4.9 20 6 V15 C20 16.1 19.1 17 18 17 H11 L7 21 V17 H6 C4.9 17 4 16.1 4 15 Z" />
+            <line x1="8" y1="9" x2="16" y2="9" opacity=".6" />
+            <line x1="8" y1="12" x2="14" y2="12" opacity=".6" />
+          </svg>
+        )}
+      </span>
+      <span className="weered-rail-quick-label">{label}</span>
+    </button>
+  );
+}
+
+const QUICK_PALETTE: Record<QuickKind, { bg: string; border: string; glow: string; fg: string }> = {
+  crew:    { bg: "linear-gradient(180deg, rgba(217,169,66,0.25) 0%, rgba(138,107,62,0.32) 100%)",   border: "rgba(217,169,66,0.55)",  glow: "rgba(217,169,66,0.18)", fg: "#f3d48a" },
+  friends: { bg: "linear-gradient(180deg, rgba(52,211,153,0.22) 0%, rgba(16,122,88,0.30) 100%)",    border: "rgba(52,211,153,0.50)",  glow: "rgba(52,211,153,0.16)", fg: "#a7f3d0" },
+  dms:     { bg: "linear-gradient(180deg, rgba(167,139,250,0.26) 0%, rgba(124,58,237,0.32) 100%)",  border: "rgba(167,139,250,0.52)", glow: "rgba(124,58,237,0.22)", fg: "#d8caff" },
+};
