@@ -21,7 +21,7 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
 
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
-  const t = WEERED_THEMES[name] || WEERED_THEMES.ishimura;
+  const t = WEERED_THEMES[name] || WEERED_THEMES.press;
   const root = document.documentElement;
   Object.entries({ "--weered-bg":t.bg,"--weered-panel":t.panel,"--weered-panel2":t.panel2,"--weered-bd":t.bd,"--weered-bd2":t.bd2,"--weered-text":t.text,"--weered-muted":t.muted,"--weered-accent-bg":t.accentBg,"--weered-accent-ring":t.accentRing,"--weered-accent-text":t.accentText }).forEach(([k,v]) => root.style.setProperty(k, v));
   root.setAttribute("data-weered-theme", name);
