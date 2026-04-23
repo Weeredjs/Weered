@@ -374,7 +374,7 @@ export default function LobbyPage() {
   const loggedIn = myLobbies.length > 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "calc(100vh - 32px)", minHeight: 0, paddingBottom: 32 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%", minHeight: 0 }}>
       <LobbyHeaderBar />
 
       <div style={{
