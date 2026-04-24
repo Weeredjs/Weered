@@ -604,6 +604,9 @@ app.get("/lobbies/:id/admin", async (req, reply) => {
       keywords: lobby.keywords, enabledModules: lobby.enabledModules,
       roleNames,
       joinMode: lobby.joinMode || "OPEN", joinPassword: lobby.joinPassword || null,
+      blockedWords: (lobby as any).blockedWords || [],
+      blockedDomains: (lobby as any).blockedDomains || [],
+      newAccountChatHours: (lobby as any).newAccountChatHours ?? 0,
     },
     members,
     rooms: roomList.map((r: any) => ({
@@ -644,6 +647,47 @@ app.patch("/lobbies/:id/admin/branding", async (req, reply) => {
     data: { id: randomUUID(), lobbyId: ctx.lobby.id, type: "branding_update", actorId: ctx.user.id, actorName: ctx.user.name, note: Object.keys(data).join(", ") },
   });
   return reply.send({ ok: true, updated: Object.keys(data) });
+});
+
+// PATCH /lobbies/:id/admin/moderation — AutoMod-light: blocked words,
+// blocked domains, new-account chat cooldown. Edit-branding perm covers it.
+app.patch("/lobbies/:id/admin/moderation", async (req, reply) => {
+  const ctx = await lobbyAdminAccess(req, reply, 4);
+  if (!ctx) return;
+  if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
+    return reply.code(403).send({ ok: false, error: "no_permission" });
+  }
+  const body: any = (req as any).body || {};
+  const cleanList = (arr: unknown, max = 100) =>
+    Array.isArray(arr)
+      ? Array.from(new Set(arr.map(s => String(s || "").trim().toLowerCase()).filter(s => s.length > 0 && s.length <= 60))).slice(0, max)
+      : null;
+
+  const data: any = {};
+  if (body.blockedWords !== undefined) {
+    const v = cleanList(body.blockedWords);
+    if (v === null) return reply.code(400).send({ ok: false, error: "blockedWords_invalid" });
+    data.blockedWords = v;
+  }
+  if (body.blockedDomains !== undefined) {
+    const v = cleanList(body.blockedDomains);
+    if (v === null) return reply.code(400).send({ ok: false, error: "blockedDomains_invalid" });
+    data.blockedDomains = v;
+  }
+  if (body.newAccountChatHours !== undefined) {
+    const n = Math.max(0, Math.min(720, Number(body.newAccountChatHours) || 0));
+    data.newAccountChatHours = n;
+  }
+  if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_changes" });
+
+  await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data });
+  await (prisma as any).lobbyAudit.create({
+    data: {
+      id: randomUUID(), lobbyId: ctx.lobby.id, type: "moderation_update",
+      actorId: ctx.user.id, actorName: ctx.user.name, note: JSON.stringify(data),
+    },
+  });
+  return reply.send({ ok: true, ...data });
 });
 
 // PATCH /lobbies/:id/admin/modules
