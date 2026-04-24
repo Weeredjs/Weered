@@ -117,6 +117,27 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const CHAT_WIDTH = isMobile ? CHAT_WIDTH_MOBILE : CHAT_WIDTH_DESKTOP;
   const CHAT_HEIGHT = isMobile ? "100%" : CHAT_HEIGHT_DESKTOP;
 
+  // Fetch room metadata so we can honor the creator's defaultModule on first join.
+  // Only applies before any serverModule broadcast wins (see selfSetRef logic below).
+  const initialModuleAppliedRef = useRef(false);
+  useEffect(() => {
+    if (initialModuleAppliedRef.current) return;
+    if (!roomId) return;
+    let cancelled = false;
+    fetch(`https://api.weered.ca/rooms/${encodeURIComponent(roomId)}`)
+      .then(r => r.json())
+      .then(j => {
+        if (cancelled || initialModuleAppliedRef.current) return;
+        const dm = j?.room?.defaultModule;
+        if (typeof dm === "string" && dm && dm !== "voice") {
+          setStageMode(dm as StageMode);
+        }
+        initialModuleAppliedRef.current = true;
+      })
+      .catch(() => { initialModuleAppliedRef.current = true; });
+    return () => { cancelled = true; };
+  }, [roomId]);
+
   // Lobby context for this room
   const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string; enabledModules?: string[] } | null>(null);
   const currentLobbyId = w?.currentLobbyId || null;

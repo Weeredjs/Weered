@@ -153,7 +153,11 @@ app.post("/rooms", async (req, reply) => {
     if (!isStaff && !isLobbyOwner) isEvent = false;
   }
 
-  await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, isEvent } as any });
+  // Optional: creator can pre-pick which stage module the room opens with.
+  const VALID_MODULES = ["voice", "youtube", "twitch", "browser", "article", "video", "screen", "fakeout", "poker", "destiny", "league", "fortnite", "pubg", "hq", "cs2", "dota2", "study", "dnd"];
+  const rawDM = typeof body.defaultModule === "string" ? body.defaultModule.trim().toLowerCase() : "";
+  const defaultModule = VALID_MODULES.includes(rawDM) ? rawDM : null;
+  await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, isEvent, defaultModule } as any });
 
   // Make creator the owner in RoomMember
   if (ownerId) {
@@ -170,7 +174,7 @@ app.post("/rooms", async (req, reply) => {
   if (ownerId) r.ownerId = ownerId;
   if (passwordHash) r.passwordHash = passwordHash;
   rooms.set(id, r);
-  return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash, isEvent } });
+  return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash, isEvent, defaultModule } });
 });
 
 app.get("/rooms/:roomId", async (req, reply) => {
@@ -192,6 +196,7 @@ app.get("/rooms/:roomId", async (req, reply) => {
       iconUrl: r.iconUrl || null,
       bannerUrl: r.bannerUrl || null,
       accentColor: r.accentColor || null,
+      defaultModule: r.defaultModule || null,
     },
   });
 });
