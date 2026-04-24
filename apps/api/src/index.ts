@@ -23,6 +23,7 @@ import badgesRoutes from "./routes/badges";
 import tournamentsRoutes from "./routes/tournaments";
 import lfgRoutes from "./routes/lfg";
 import paperRoutes from "./routes/paper";
+import invitesRoutes from "./routes/invites";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -4025,153 +4026,9 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
     return reply.send({ ok: true });
   });
 
-// ── Invites ──────────────────────────────────────────────────────────────────
+// ── Invites — extracted to routes/invites.ts ────────────────────────────────
+  await app.register(invitesRoutes, { authFromHeader, awardNotoriety, getGlobalRole, canAssignRoles, WEB_URL } as any);
 
-  // POST /invites — create an invite link
-  app.post("/invites", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const body: any = (req.body as any) || {};
-    const type     = String(body.type || "PLATFORM").toUpperCase();
-    const targetId = body.targetId ? String(body.targetId) : null;
-    const maxUses  = Math.min(Math.max(Number(body.maxUses) || 1, 1), 100);
-    const note     = body.note ? String(body.note).slice(0, 200) : null;
-    const ttlHours = Number(body.ttlHours) || 0;
-    const expiresAt = ttlHours > 0 ? new Date(Date.now() + ttlHours * 3600 * 1000) : null;
-    const validTypes = ["PLATFORM", "ROOM", "LOBBY", "CREW"];
-    if (!validTypes.includes(type)) return reply.code(400).send({ ok: false, error: "invalid_type" });
-    const invite = await prisma.invite.create({
-      data: { type: type as any, targetId, createdBy: u.id, note, maxUses, expiresAt },
-    });
-    return reply.send({ ok: true, invite: { token: invite.token, type: invite.type, targetId: invite.targetId, maxUses, expiresAt, url: `${WEB_URL}/invite/${invite.token}` } });
-  });
-
-  // GET /invites/mine — list my created invites
-  app.get("/invites/mine", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const invites = await prisma.invite.findMany({
-      where: { createdBy: u.id },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
-    return reply.send({ ok: true, invites: invites.map((i: { token: any; }) => ({ ...i, url: `${WEB_URL}/invite/${i.token}` })) });
-  });
-
-  // GET /invites/:token — resolve invite (public)
-  app.get("/invites/:token", async (req, reply) => {
-    const token = String((req as any).params?.token || "");
-    const invite = await prisma.invite.findUnique({ where: { token } });
-    if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (invite.expiresAt && invite.expiresAt < new Date()) return reply.code(410).send({ ok: false, error: "expired" });
-    if (invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
-    // Resolve target name
-    let targetName = "";
-    if (invite.targetId) {
-      if (invite.type === "ROOM") {
-        const r = await prisma.room.findUnique({ where: { id: invite.targetId }, select: { name: true } }).catch(() => null);
-        targetName = r?.name || invite.targetId;
-      } else if (invite.type === "LOBBY") {
-        const l = await prisma.lobby.findUnique({ where: { id: invite.targetId }, select: { name: true } }).catch(() => null);
-        targetName = l?.name || invite.targetId;
-      } else if (invite.type === "CREW") {
-        const c = await prisma.crew.findUnique({ where: { id: invite.targetId }, select: { name: true, tag: true } }).catch(() => null);
-        targetName = c ? `${c.name} [${c.tag}]` : invite.targetId;
-      }
-    }
-    const creator = await prisma.user.findUnique({ where: { id: invite.createdBy }, select: { name: true, usernameKey: true } }).catch(() => null);
-    return reply.send({ ok: true, invite: { ...invite, targetName, creatorName: creator?.name || creator?.usernameKey || "unknown" } });
-  });
-
-  // POST /invites/:token/accept — accept invite
-  app.post("/invites/:token/accept", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const token = String((req as any).params?.token || "");
-    const invite = await prisma.invite.findUnique({ where: { token } });
-    if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (invite.expiresAt && invite.expiresAt < new Date()) return reply.code(410).send({ ok: false, error: "expired" });
-    if (invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
-
-    // Increment uses
-    await prisma.invite.update({ where: { token }, data: { uses: { increment: 1 } } });
-
-    // Perform join action
-    let redirect = "/lobby";
-    if (invite.type === "ROOM" && invite.targetId) {
-      // Add as room member
-      await prisma.roomMember.upsert({
-        where: { roomId_userId: { roomId: invite.targetId, userId: u.id } },
-        create: { roomId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
-        update: {},
-      }).catch(() => {});
-      redirect = `/room/${encodeURIComponent(invite.targetId)}`;
-    } else if (invite.type === "LOBBY" && invite.targetId) {
-      await prisma.lobbyMember.upsert({
-        where: { lobbyId_userId: { lobbyId: invite.targetId, userId: u.id } },
-        create: { lobbyId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
-        update: {},
-      }).catch(() => {});
-      redirect = `/lobby/${encodeURIComponent(invite.targetId)}`;
-    } else if (invite.type === "CREW" && invite.targetId) {
-      await prisma.crewMember.upsert({
-        where: { crewId_userId: { crewId: invite.targetId, userId: u.id } },
-        create: { crewId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
-        update: {},
-      }).catch(() => {});
-      awardNotoriety(u.id, "CREW_JOINED").catch(() => {});
-      redirect = "/lobby";
-    }
-
-    // Send DM notification to invite creator
-    if (invite.createdBy !== u.id) {
-      const msg = invite.type === "PLATFORM"
-        ? `${u.name} joined Weered using your invite!`
-        : `${u.name} joined via your ${invite.type.toLowerCase()} invite${invite.targetId ? ` (${invite.targetId})` : ""}.`;
-      await prisma.directMessage.create({
-        data: { fromId: u.id, toId: invite.createdBy, body: msg },
-      }).catch(() => {});
-    }
-
-    return reply.send({ ok: true, redirect, type: invite.type, targetId: invite.targetId });
-  });
-
-  // POST /invites/send — send invite to a user by username (creates invite + DM)
-  app.post("/invites/send", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const body: any = (req.body as any) || {};
-    const username = String(body.username || "").toLowerCase().trim();
-    const type     = String(body.type || "PLATFORM").toUpperCase();
-    const targetId = body.targetId ? String(body.targetId) : null;
-    if (!username) return reply.code(400).send({ ok: false, error: "username_required" });
-    const target = await prisma.user.findFirst({ where: { OR: [{ usernameKey: username }, { name: { equals: username, mode: "insensitive" } }] }, select: { id: true, name: true } });
-    if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
-    if (target.id === u.id) return reply.code(400).send({ ok: false, error: "cannot_invite_self" });
-    // Create single-use invite
-    const invite = await prisma.invite.create({
-      data: { type: type as any, targetId, createdBy: u.id, maxUses: 1, expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000) },
-    });
-    const inviteUrl = `${WEB_URL}/invite/${invite.token}`;
-    const msg = type === "PLATFORM"
-      ? `${u.name} invited you to join Weered! ${inviteUrl}`
-      : `${u.name} invited you to join a ${type.toLowerCase()}. ${inviteUrl}`;
-    await prisma.directMessage.create({ data: { fromId: u.id, toId: target.id, body: msg } });
-    return reply.send({ ok: true, token: invite.token, url: inviteUrl, sentTo: target.name });
-  });
-
-  // DELETE /invites/:token — revoke invite
-  app.delete("/invites/:token", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const token = String((req as any).params?.token || "");
-    const invite = await prisma.invite.findUnique({ where: { token } });
-    if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
-    const role = await getGlobalRole(u.id);
-    if (invite.createdBy !== u.id && !canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    await prisma.invite.delete({ where: { token } });
-    return reply.send({ ok: true });
-  });
 
   // ── DM Routes ──────────────────────────────────────────────────────────────
 
