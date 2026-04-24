@@ -3442,14 +3442,13 @@ button:hover, [role="button"]:hover {
 .weered-rail-stack {
   width: 48px;
   flex: 0 0 48px;
-  align-self: stretch;
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
-  padding: 14px 0 24px;
-  min-height: 420px;
+  padding: 14px 0 14px;
 }
 .weered-rail-logo {
   width: 36px;
@@ -3474,10 +3473,7 @@ button:hover, [role="button"]:hover {
 .weered-rail-logo:hover img {
   filter: drop-shadow(0 0 16px rgba(124, 58, 237, 0.55));
 }
-/* Push the Panel tab to the bottom so logo+quick-buttons cluster up top */
-.weered-rail-stack .weered-rail-tab {
-  margin-top: auto;
-}
+/* Panel tab sits flush under the DMs button — no auto-margin push to bottom. */
 .weered-rail-stack .weered-rail-tab {
   width: 32px;
   flex: 0 0 auto;
