@@ -364,7 +364,7 @@ export default function UserCorner() {
         </div>
 
         {/* Name + chips */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, paddingRight: 44 }}>
           <div style={{
             fontSize: 13, fontWeight: 900, letterSpacing: "-.1px",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",

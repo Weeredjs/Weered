@@ -469,16 +469,11 @@ export default function LobbyIdPage() {
             }}>
               <TabBtn active={view === "rooms"} accent={accent} onClick={() => setView("rooms")}>Rooms</TabBtn>
               {hasModules && (
-                <TabBtn active={view === "modules"} accent={accent} onClick={() => setView("modules")}>
-                  {lobbyInfo?.moduleType === "TWITCH" && (
-                    <TwitchIcon
-                      size={12}
-                      color={view === "modules" ? "#9146FF" : "rgba(148,163,184,.5)"}
-                      style={{ marginRight: 5 }}
-                    />
-                  )}
-                  Modules
-                </TabBtn>
+                <ModulesTab
+                  active={view === "modules"}
+                  moduleType={lobbyInfo?.moduleType}
+                  onClick={() => setView("modules")}
+                />
               )}
               <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>
                 Feed
@@ -634,6 +629,39 @@ function TabBtn({ active, accent, onClick, children }: { active: boolean; accent
       fontFamily: "inherit",
     }}>
       {children}
+    </button>
+  );
+}
+
+const MODULE_CHIP_LABEL: Record<string, string> = {
+  RIOT: "LoL", FORTNITE: "Fortnite", TWITCH: "Twitch", BUNGIE: "Destiny",
+  DOTA2: "Dota 2", CS2: "CS2", PUBG: "PUBG", MLB: "MLB", PGA: "PGA",
+  DND: "D&D", POE: "PoE", POKER: "Poker", TRADING: "Trade", NEWS: "News",
+  STUDY: "Study", MARATHON: "Marathon", WINDROSE: "Windrose",
+  HEADQUARTERS: "HQ",
+};
+
+function ModulesTab({ active, moduleType, onClick }: { active: boolean; moduleType?: string | null; onClick: () => void }) {
+  const mt = String(moduleType || "").toUpperCase();
+  const chipLabel = MODULE_CHIP_LABEL[mt] || (mt && mt !== "NONE" ? mt : null);
+  return (
+    <button
+      onClick={onClick}
+      className={`weered-modules-tab${active ? " is-active" : ""}`}
+      style={{
+        padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
+        fontFamily: "inherit",
+        display: "inline-flex", alignItems: "center",
+      }}
+    >
+      <span className="weered-modules-sparkle" aria-hidden>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z" fill="currentColor" />
+          <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" fill="currentColor" opacity="0.7" />
+        </svg>
+      </span>
+      Modules
+      {chipLabel && <span className="weered-modules-chip">{chipLabel}</span>}
     </button>
   );
 }
