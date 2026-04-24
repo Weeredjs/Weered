@@ -1,0 +1,344 @@
+import type { FastifyInstance } from "fastify";
+import { prisma } from "../lib/prisma";
+
+// /friends, /recents, /blocks, /users/:userId/block, /reports —
+// user-facing social-graph and content-moderation endpoints. Mod-side
+// /staff/reports/* stays in main() and will move with the staff
+// extraction (more shared helpers there).
+type Opts = {
+  authFromHeader: (h?: string) => { id: string; name: string } | null;
+  verifyToken: (token: string) => { id: string; name: string } | null;
+  awardNotoriety: (userId: string, action: string) => Promise<number | null>;
+  createNotification: (opts: any) => Promise<any>;
+  rooms: Map<string, { name?: string; users: Map<string, any> }>;
+};
+
+export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
+  const { authFromHeader, verifyToken, awardNotoriety, createNotification, rooms } = opts;
+
+  // ── Friends ─────────────────────────────────────────────────────────────
+
+  app.get("/friends", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const db = prisma as any;
+    const links = await db.friendRequest.findMany({
+      where: { status: "ACCEPTED", OR: [{ fromId: u.id }, { toId: u.id }] },
+    });
+    const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
+    const profiles = peerIds.length
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true } as any })
+      : [];
+    const presenceMap = new Map<string, { roomId: string; roomName: string; isAway: boolean }>();
+    for (const p of profiles) {
+      for (const [rid, rs] of rooms) {
+        const entry = rs.users.get((p as any).id);
+        if (entry) {
+          presenceMap.set((p as any).id, { roomId: rid, roomName: rs.name || rid, isAway: Boolean((entry as any).isAway) });
+          break;
+        }
+      }
+    }
+    const activeRoomIds = [...new Set([...presenceMap.values()].map(v => v.roomId))];
+    const lobbySet = activeRoomIds.length
+      ? new Set((await prisma.lobby.findMany({ where: { id: { in: activeRoomIds } }, select: { id: true } })).map(l => l.id))
+      : new Set<string>();
+    const out = profiles.map((p: any) => {
+      const pres = presenceMap.get(p.id);
+      const roomId = pres?.roomId ?? null;
+      const roomName = pres?.roomName ?? null;
+      return { ...p, online: roomId !== null, roomId, roomName, roomIsLobby: roomId ? lobbySet.has(roomId) : false, isAway: Boolean(pres?.isAway), livePresence: p.livePresence || null };
+    });
+    return reply.send({ friends: out });
+  });
+
+  app.get("/friends/requests", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const db = prisma as any;
+    const reqs = await db.friendRequest.findMany({ where: { toId: u.id, status: "PENDING" }, orderBy: { createdAt: "desc" } });
+    const fromIds = (reqs as any[]).map((r: any) => r.fromId);
+    const senders = fromIds.length ? await prisma.user.findMany({ where: { id: { in: fromIds } }, select: { id: true, name: true } }) : [];
+    const senderMap = new Map(senders.map(s => [s.id, s.name]));
+    return reply.send({ requests: (reqs as any[]).map((r: any) => ({ ...r, fromName: senderMap.get(r.fromId) ?? r.fromId })) });
+  });
+
+  app.post("/friends/request/:userId", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const toId = String((req.params as any).userId || "").trim();
+    if (!toId || toId === u.id) return reply.code(400).send({ error: "Invalid target" });
+    const target = await prisma.user.findUnique({ where: { id: toId }, select: { id: true } });
+    if (!target) return reply.code(404).send({ error: "User not found" });
+    const db = prisma as any;
+    const fr = await db.friendRequest.upsert({
+      where: { fromId_toId: { fromId: u.id, toId } },
+      update: { status: "PENDING", updatedAt: new Date() },
+      create: { fromId: u.id, toId, status: "PENDING" },
+    });
+    createNotification({ userId: toId, type: "FRIEND_REQUEST", title: `${u.name} sent you a friend request`, actorId: u.id, actorName: u.name, actionUrl: "/home" }).catch(() => {});
+    return reply.send({ ok: true, request: fr });
+  });
+
+  app.post("/friends/accept/:requestId", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const id = String((req.params as any).requestId || "").trim();
+    const db = prisma as any;
+    const fr = await db.friendRequest.findUnique({ where: { id } });
+    if (!fr || fr.toId !== u.id) return reply.code(403).send({ error: "Not your request" });
+    await db.friendRequest.update({ where: { id }, data: { status: "ACCEPTED" } });
+    await db.friendRequest.upsert({
+      where: { fromId_toId: { fromId: u.id, toId: fr.fromId } },
+      update: { status: "ACCEPTED" },
+      create: { fromId: u.id, toId: fr.fromId, status: "ACCEPTED" },
+    });
+    awardNotoriety(u.id, "FRIEND_ADDED").catch(() => {});
+    awardNotoriety(fr.fromId, "FRIEND_ADDED").catch(() => {});
+    createNotification({ userId: fr.fromId, type: "FRIEND_ACCEPTED", title: `${u.name} accepted your friend request`, actorId: u.id, actorName: u.name, actionUrl: "/home" }).catch(() => {});
+    return reply.send({ ok: true });
+  });
+
+  app.post("/friends/decline/:requestId", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const id = String((req.params as any).requestId || "").trim();
+    const db = prisma as any;
+    const fr = await db.friendRequest.findUnique({ where: { id } });
+    if (!fr || fr.toId !== u.id) return reply.code(403).send({ error: "Not your request" });
+    await db.friendRequest.update({ where: { id }, data: { status: "DECLINED" } });
+    return reply.send({ ok: true });
+  });
+
+  app.delete("/friends/:userId", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const peerId = String((req.params as any).userId || "").trim();
+    const db = prisma as any;
+    await db.friendRequest.deleteMany({ where: { OR: [{ fromId: u.id, toId: peerId }, { fromId: peerId, toId: u.id }] } });
+    return reply.send({ ok: true });
+  });
+
+  // ── Recents ─────────────────────────────────────────────────────────────
+
+  app.get("/recents", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ error: "unauthorized" });
+
+    const visits = await prisma.recentVisit.findMany({
+      where: { userId: user.id },
+      orderBy: { visitedAt: "desc" },
+      take: 10,
+    });
+
+    const lobbyIds = visits.filter(v => v.lobbyId).map(v => v.lobbyId!);
+    const lobbies = lobbyIds.length
+      ? await prisma.lobby.findMany({
+          where: { id: { in: lobbyIds } },
+          select: {
+            id: true, name: true, description: true,
+            logoUrl: true, bannerUrl: true, accentColor: true, pinned: true,
+          },
+        })
+      : [];
+    const lobbyMap = new Map(lobbies.map(l => [l.id, l]));
+
+    const roomIds = visits.filter(v => v.roomId && !v.lobbyId).map(v => v.roomId!);
+    const roomRows = roomIds.length
+      ? await prisma.room.findMany({
+          where: { id: { in: roomIds } },
+          select: {
+            id: true, name: true, lobbyId: true,
+            lobby: { select: { id: true, name: true, logoUrl: true, accentColor: true } },
+          },
+        })
+      : [];
+    const roomMap = new Map(roomRows.map(r => [r.id, r]));
+
+    const recents = visits.map(v => {
+      if (v.lobbyId) {
+        const lobby = lobbyMap.get(v.lobbyId);
+        return {
+          lobbyId: v.lobbyId,
+          roomId: null,
+          name: lobby?.name || v.name || v.lobbyId,
+          logoUrl: lobby?.logoUrl || null,
+          bannerUrl: lobby?.bannerUrl || null,
+          accentColor: lobby?.accentColor || null,
+          pinned: lobby?.pinned ?? true,
+          visitedAt: v.visitedAt,
+        };
+      }
+      if (v.roomId) {
+        const room = roomMap.get(v.roomId);
+        return {
+          lobbyId: room?.lobbyId || null,
+          lobbyName: room?.lobby?.name || null,
+          roomId: v.roomId,
+          name: room?.name || v.name || v.roomId,
+          logoUrl: room?.lobby?.logoUrl || null,
+          accentColor: room?.lobby?.accentColor || null,
+          pinned: false,
+          visitedAt: v.visitedAt,
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    return reply.send({ ok: true, recents });
+  });
+
+  app.post("/recents", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ error: "unauthorized" });
+
+    const { roomId, lobbyId } = req.body as any;
+    if (!roomId && !lobbyId) return reply.code(400).send({ error: "roomId or lobbyId required" });
+
+    try {
+      if (lobbyId) {
+        const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, select: { name: true } });
+        const existing = await prisma.recentVisit.findFirst({ where: { userId: user.id, lobbyId } });
+        if (existing) {
+          await prisma.recentVisit.update({ where: { id: existing.id }, data: { visitedAt: new Date(), name: lobby?.name || lobbyId } });
+        } else {
+          await prisma.recentVisit.create({ data: { userId: user.id, lobbyId, name: lobby?.name || lobbyId } });
+        }
+      } else if (roomId) {
+        const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true, lobbyId: true } });
+        const existing = await prisma.recentVisit.findFirst({ where: { userId: user.id, roomId } });
+        if (existing) {
+          await prisma.recentVisit.update({ where: { id: existing.id }, data: { visitedAt: new Date(), name: room?.name || roomId } });
+        } else {
+          await prisma.recentVisit.create({ data: { userId: user.id, roomId, lobbyId: room?.lobbyId || null, name: room?.name || roomId } });
+        }
+      }
+      return reply.send({ ok: true });
+    } catch (e: any) {
+      console.error("[recents POST]", e.message);
+      return reply.code(500).send({ error: e.message });
+    }
+  });
+
+  app.delete("/recents/:id", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ error: "unauthorized" });
+
+    const { id } = req.params as any;
+    try {
+      await prisma.recentVisit.deleteMany({ where: { id, userId: user.id } });
+      return reply.send({ ok: true });
+    } catch (e: any) {
+      return reply.code(500).send({ error: e.message });
+    }
+  });
+
+  // ── Blocks ─────────────────────────────────────────────────────────────
+
+  app.get("/blocks", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const rows = await (prisma as any).userBlock.findMany({
+      where: { blockerId: u.id },
+      orderBy: { createdAt: "desc" },
+    });
+    const ids = rows.map((r: any) => r.blockedId);
+    const users = ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, avatarColor: true } as any }) : [];
+    const nameMap = new Map(users.map((x: any) => [x.id, x]));
+    return reply.send({
+      blocks: rows.map((r: any) => ({
+        id: r.id, userId: r.blockedId, createdAt: r.createdAt.toISOString(),
+        name: (nameMap.get(r.blockedId) as any)?.name || r.blockedId,
+        avatarColor: (nameMap.get(r.blockedId) as any)?.avatarColor || null,
+        reason: r.reason || null,
+      })),
+    });
+  });
+
+  app.post("/users/:userId/block", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const targetId = String((req as any).params?.userId || "");
+    if (!targetId || targetId === u.id) return reply.code(400).send({ ok: false, error: "invalid_target" });
+    const body: any = (req as any).body || {};
+    const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : null;
+    try {
+      await (prisma as any).userBlock.upsert({
+        where: { blockerId_blockedId: { blockerId: u.id, blockedId: targetId } },
+        update: { reason },
+        create: { blockerId: u.id, blockedId: targetId, reason },
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      return reply.code(500).send({ ok: false, error: "block_failed" });
+    }
+  });
+
+  app.delete("/users/:userId/block", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const targetId = String((req as any).params?.userId || "");
+    if (!targetId) return reply.code(400).send({ ok: false, error: "invalid_target" });
+    try {
+      await (prisma as any).userBlock.deleteMany({ where: { blockerId: u.id, blockedId: targetId } });
+      return reply.send({ ok: true });
+    } catch (e) {
+      return reply.code(500).send({ ok: false, error: "unblock_failed" });
+    }
+  });
+
+  // ── Reports (user-side; staff/reports stays in main) ───────────────────
+
+  const VALID_REPORT_REASONS = new Set(["SPAM", "HARASSMENT", "HATE_SPEECH", "THREATS", "NSFW", "MINOR_SAFETY", "IMPERSONATION", "SELF_HARM", "OTHER"]);
+  const VALID_TARGET_TYPES = new Set(["MESSAGE", "USER", "ROOM", "LOBBY"]);
+
+  app.post("/reports", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const targetType = String(body.targetType || "").toUpperCase();
+    const targetId = String(body.targetId || "").trim();
+    const reason = String(body.reason || "").toUpperCase();
+    const context = body.context ? String(body.context).trim().slice(0, 100) : null;
+    const note = body.note ? String(body.note).slice(0, 500) : null;
+    if (!VALID_TARGET_TYPES.has(targetType)) return reply.code(400).send({ ok: false, error: "invalid_target_type" });
+    if (!targetId) return reply.code(400).send({ ok: false, error: "missing_target_id" });
+    if (!VALID_REPORT_REASONS.has(reason)) return reply.code(400).send({ ok: false, error: "invalid_reason" });
+
+    const recent = await (prisma as any).report.count({
+      where: { reporterId: u.id, createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } },
+    });
+    if (recent >= 5) return reply.code(429).send({ ok: false, error: "report_rate_limit" });
+
+    let bodySnapshot: string | null = null;
+    if (targetType === "MESSAGE") {
+      try {
+        const m = await (prisma as any).roomMessage.findUnique({ where: { id: targetId }, select: { body: true } });
+        if (m?.body) bodySnapshot = String(m.body).slice(0, 500);
+      } catch {}
+      if (!bodySnapshot) {
+        try {
+          const dm = await (prisma as any).directMessage.findUnique({ where: { id: targetId }, select: { body: true } });
+          if (dm?.body) bodySnapshot = String(dm.body).slice(0, 500);
+        } catch {}
+      }
+      if (!bodySnapshot) {
+        try {
+          const cm = await (prisma as any).crewMessage.findUnique({ where: { id: targetId }, select: { body: true } });
+          if (cm?.body) bodySnapshot = String(cm.body).slice(0, 500);
+        } catch {}
+      }
+    }
+
+    const row = await (prisma as any).report.create({
+      data: { reporterId: u.id, targetType, targetId, context, reason, note, bodySnapshot },
+    });
+    return reply.send({ ok: true, id: row.id });
+  });
+}
