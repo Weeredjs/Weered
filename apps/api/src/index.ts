@@ -2443,6 +2443,21 @@ async function main() {
   // GET /lobbies — all lobbies with live counts
 
 
+  // ── Lobby admin access helper (used by lobbies, events, billing plugins) ──
+  // Returns null and sends an error response if access is denied; caller checks.
+  async function lobbyAdminAccess(req: any, reply: any, minLevel = 4): Promise<{ user: any; lobby: any; member: any; globalRole: any; overrideRole: string | null } | null> {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) { reply.code(401).send({ ok: false, error: "unauthorized" }); return null; }
+    const lobbyId = String((req as any).params?.id || (req as any).params?.lobbyId || "");
+    const lobby = await (prisma as any).lobby.findUnique({ where: { id: lobbyId } });
+    if (!lobby) { reply.code(404).send({ ok: false, error: "lobby_not_found" }); return null; }
+    const gr = await getGlobalRole(u.id);
+    if (canAccessStaff(gr)) return { user: u, lobby, member: null, globalRole: gr, overrideRole: gr };
+    const member = await (prisma as any).lobbyMember.findUnique({ where: { lobbyId_userId: { lobbyId, userId: u.id } } });
+    if (!member || (member.roleLevel ?? 1) < minLevel) { reply.code(403).send({ ok: false, error: "forbidden" }); return null; }
+    return { user: u, lobby, member, globalRole: gr, overrideRole: null };
+  }
+
   // ── Lobbies — extracted to routes/lobbies.ts ──────────────────────────────
   await app.register(lobbiesRoutes, {
     authFromHeader, verifyToken, getGlobalRole, canAccessStaff, getLobbyRole,
