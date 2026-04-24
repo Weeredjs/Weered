@@ -125,6 +125,33 @@ const CREATE_LABELS: Record<string, { btn: string; title: string; placeholder: s
 };
 const DEFAULT_LABEL = { btn: "Create Room", title: "Create Room", placeholder: "Room name…", icon: "+" };
 
+// Which default-module options to surface in the create form, per lobby moduleType.
+// The room canvas already enforces what's allowed at runtime; this is only the
+// "what does the room open with" hint for the creator.
+const MODULE_OPTIONS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
+  POKER:    [{ value: "voice", label: "Voice" }, { value: "poker", label: "Poker Table" }],
+  TRADING:  [{ value: "voice", label: "Voice" }, { value: "fakeout", label: "FakeOut Trading" }, { value: "video", label: "Video" }, { value: "screen", label: "Screen Share" }],
+  BUNGIE:   [{ value: "voice", label: "Voice" }, { value: "destiny", label: "Destiny" }, { value: "youtube", label: "YouTube" }, { value: "twitch", label: "Twitch" }],
+  RIOT:     [{ value: "voice", label: "Voice" }, { value: "league", label: "League" }, { value: "youtube", label: "YouTube" }, { value: "twitch", label: "Twitch" }],
+  FORTNITE: [{ value: "voice", label: "Voice" }, { value: "fortnite", label: "Fortnite" }, { value: "youtube", label: "YouTube" }, { value: "twitch", label: "Twitch" }],
+  PUBG:     [{ value: "voice", label: "Voice" }, { value: "pubg", label: "PUBG" }, { value: "youtube", label: "YouTube" }, { value: "twitch", label: "Twitch" }],
+  CS2:      [{ value: "voice", label: "Voice" }, { value: "cs2", label: "CS2" }, { value: "youtube", label: "YouTube" }, { value: "twitch", label: "Twitch" }],
+  DOTA2:    [{ value: "voice", label: "Voice" }, { value: "dota2", label: "Dota 2" }, { value: "youtube", label: "YouTube" }, { value: "twitch", label: "Twitch" }],
+  STUDY:    [{ value: "voice", label: "Voice" }, { value: "study", label: "Focus Timer" }, { value: "video", label: "Video" }],
+  DND:      [{ value: "voice", label: "Voice" }, { value: "dnd", label: "D&D Tools" }, { value: "youtube", label: "YouTube" }, { value: "browser", label: "Browser" }],
+  HEADQUARTERS: [{ value: "voice", label: "Voice" }, { value: "hq", label: "HQ Dashboard" }, { value: "video", label: "Video" }, { value: "screen", label: "Screen Share" }],
+  NEWS:     [{ value: "voice", label: "Voice" }, { value: "article", label: "Article Reader" }, { value: "browser", label: "Browser" }],
+};
+const DEFAULT_MODULE_OPTIONS = [
+  { value: "voice", label: "Voice" },
+  { value: "youtube", label: "YouTube" },
+  { value: "twitch", label: "Twitch" },
+  { value: "browser", label: "Browser" },
+  { value: "video", label: "Video" },
+  { value: "screen", label: "Screen Share" },
+  { value: "article", label: "Article Reader" },
+];
+
 export default function LobbyRoomDirectory({
   lobbyId,
   accentColor,
@@ -149,6 +176,8 @@ export default function LobbyRoomDirectory({
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const moduleOptions = MODULE_OPTIONS_BY_TYPE[moduleType || ""] || DEFAULT_MODULE_OPTIONS;
+  const [defaultModule, setDefaultModule] = useState<string>(moduleOptions[0]?.value || "voice");
 
   const accent = accentColor || "#5800E5";
   const LIVE_COLOR = "#22c55e";
@@ -180,7 +209,7 @@ export default function LobbyRoomDirectory({
       const res = await fetch(`${API}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ name: trimmed, lobbyId }),
+        body: JSON.stringify({ name: trimmed, lobbyId, defaultModule }),
       });
       const j = await res.json();
       if (j.ok) {
@@ -266,6 +295,20 @@ export default function LobbyRoomDirectory({
               >
                 {creating ? "…" : "Go"}
               </button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,.5)", letterSpacing: ".06em", textTransform: "uppercase" }}>opens with</span>
+              <select
+                value={defaultModule}
+                onChange={e => setDefaultModule(e.target.value)}
+                style={{
+                  flex: 1, padding: "6px 10px", borderRadius: 8,
+                  border: `1px solid ${accent}22`, background: "rgba(0,0,0,.3)",
+                  color: "rgba(243,244,246,.9)", fontSize: 12, outline: "none",
+                }}
+              >
+                {moduleOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
             </div>
             {createError && <div style={{ fontSize: 11, color: "#ef4444" }}>{createError}</div>}
           </div>

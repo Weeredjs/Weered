@@ -261,6 +261,8 @@ model Room {
   iconUrl     String?
   bannerUrl   String?
   accentColor String?
+  // Which stage module the room opens with on first join. Owner-set at create.
+  defaultModule String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

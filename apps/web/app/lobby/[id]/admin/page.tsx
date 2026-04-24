@@ -119,8 +119,8 @@ function AdminPresence({ lobbyId, roleNames }: { lobbyId: string; roleNames: Rec
 
   return (
     <div>
-      <div style={S.label}>Team Online</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <div style={S.label}>Team Online · {users.length}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 220, overflowY: "auto", paddingRight: 4 }}>
         {users.length === 0 && <div style={{ fontSize: 11, opacity: 0.35 }}>No one else here.</div>}
         {users.map((u: any, i: number) => {
           const name = String(u?.name ?? "?");
@@ -270,19 +270,29 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
 // ── Modules Tab ──────────────────────────────────────────────────────────────
 
 const ALL_MODULES = [
-  { key: "voice",   label: "Voice (LiveKit)", desc: "Real-time voice chat in rooms" },
-  { key: "youtube", label: "YouTube Sync",     desc: "Synced video playback" },
-  { key: "video",   label: "Video/Screenshare", desc: "Camera and screen sharing" },
-  { key: "twitch",  label: "Twitch Embed",     desc: "Live Twitch stream embed" },
-  { key: "custom",  label: "Custom Embed",     desc: "Custom iframe integration" },
-  { key: "reddit",  label: "Reddit Feed",      desc: "Subreddit content browser" },
-  { key: "fakeout", label: "FakeOut Trading",  desc: "Paper trading with live charts and leaderboards" },
+  { key: "voice",   label: "Voice (LiveKit)",   desc: "Real-time voice chat in rooms" },
+  { key: "youtube", label: "YouTube Sync",      desc: "Synced video playback" },
+  { key: "video",   label: "Video / Camera",    desc: "Webcam grids and video calls" },
+  { key: "screen",  label: "Screen Share",      desc: "Presenter-style screen broadcasting" },
+  { key: "twitch",  label: "Twitch Embed",      desc: "Live Twitch stream embed" },
+  { key: "browser", label: "Browser",           desc: "Co-browse external pages in-room" },
+  { key: "article", label: "Article Reader",    desc: "Long-form reading with synced presence" },
+  { key: "custom",  label: "Custom Embed",      desc: "Custom iframe integration" },
+  { key: "reddit",  label: "Reddit Feed",       desc: "Subreddit content browser" },
+  { key: "fakeout", label: "FakeOut Trading",   desc: "Paper trading with live charts and leaderboards" },
+  { key: "hq",      label: "HQ",                desc: "Headquarters dashboard module" },
 ];
 
 function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => void }) {
   const [enabled, setEnabled] = useState<string[]>(lobby.enabledModules || []);
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState("");
+
+  // Resync local state when the lobby refreshes (otherwise the toggles
+  // visually stick to their pre-save state on reload).
+  React.useEffect(() => {
+    setEnabled(lobby.enabledModules || []);
+  }, [lobby.enabledModules]);
 
   function toggle(key: string) {
     setEnabled(prev => prev.includes(key) ? prev.filter(m => m !== key) : [...prev, key]);
@@ -1421,7 +1431,7 @@ export default function LobbyAdminPage() {
       <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}>
 
         {/* Left: nav + presence */}
-        <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2, minHeight: 0 }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Navigation</div>
           {visibleNav.map(item => (
             <button key={item.id} onClick={() => setNav(item.id)}
