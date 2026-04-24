@@ -3442,14 +3442,41 @@ button:hover, [role="button"]:hover {
 .weered-rail-stack {
   width: 48px;
   flex: 0 0 48px;
-  align-self: center;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 14px 0 24px;
   min-height: 420px;
-  max-height: 640px;
+}
+.weered-rail-logo {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+  transition: filter 0.15s, transform 0.15s;
+}
+.weered-rail-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.35));
+}
+.weered-rail-logo:hover {
+  transform: translateY(-1px);
+}
+.weered-rail-logo:hover img {
+  filter: drop-shadow(0 0 16px rgba(124, 58, 237, 0.55));
+}
+/* Push the Panel tab to the bottom so logo+quick-buttons cluster up top */
+.weered-rail-stack .weered-rail-tab {
+  margin-top: auto;
 }
 .weered-rail-stack .weered-rail-tab {
   width: 32px;

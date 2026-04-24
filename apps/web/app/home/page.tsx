@@ -815,8 +815,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* SCROLL AREA */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 40px" }}>
+      {/* SCROLL AREA — bottom padding clears the 28px SiteFooter (fixed) plus
+          a small breath. Anything more leaves a dead gap between the last
+          row of cards and the footer nav. */}
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 36px" }}>
 
         {/* HERO BANNER */}
         <div style={{ paddingTop: 16 }}>

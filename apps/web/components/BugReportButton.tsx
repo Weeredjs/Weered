@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+
+// Pages where the floating button overlaps real content (staff chat panel,
+// in-room voice/video controls, lobby admin chat). On these we hide the
+// pill — feedback is still reachable from the SiteFooter when present.
+const HIDE_ON_PREFIXES = ["/staff", "/room/", "/lobby/"];
 
 function authHeader(): Record<string, string> {
   try {
@@ -20,12 +26,17 @@ const CATEGORY_LABELS: Record<Category, { label: string; placeholder: string }> 
 };
 
 export default function BugReportButton() {
+  const pathname = usePathname() || "";
+  const hidden = HIDE_ON_PREFIXES.some(p => pathname === p || pathname.startsWith(p));
+
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<Category>("BUG");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
+
+  if (hidden) return null;
 
   async function submit() {
     setErr("");
@@ -59,19 +70,21 @@ export default function BugReportButton() {
         onClick={() => { setOpen(true); setErr(""); setDone(false); }}
         title="Report a bug"
         style={{
+          // Sits ABOVE the SiteFooter (28px tall, fixed bottom) with a small
+          // gap so it never overlaps the footer nav links on the right side.
           position: "fixed",
-          bottom: 14,
-          right: 14,
+          bottom: 36,
+          right: 12,
           zIndex: 9998,
           background: "rgba(20,18,28,0.85)",
           border: "1px solid rgba(124,58,237,0.35)",
           color: "rgba(216,180,254,0.85)",
-          padding: "7px 13px",
+          padding: "5px 11px",
           borderRadius: 999,
           fontFamily: "ui-monospace, SFMono-Regular, monospace",
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: 700,
-          letterSpacing: 0.6,
+          letterSpacing: 0.5,
           cursor: "pointer",
           backdropFilter: "blur(8px)",
           boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
