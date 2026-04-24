@@ -89,6 +89,8 @@ const NAV_ITEMS = [
   { id: "events",    label: "Events",         icon: "📅", minRole: "STAFF" },
   { id: "broadcast", label: "Broadcast",     icon: "📢", minRole: "STAFF" },
   { id: "reports",   label: "Reports",       icon: "🚩", minRole: "SUPPORT" },
+  { id: "appeals",   label: "Ban Appeals",   icon: "⚖️", minRole: "SUPPORT" },
+  { id: "bugs",      label: "Bug Reports",   icon: "🐛", minRole: "SUPPORT" },
   { id: "audit",     label: "Audit Log",     icon: "📋", minRole: "STAFF" },
   { id: "outreach",  label: "Outreach",      icon: "📧", minRole: "STAFF" },
   { id: "files",     label: "Files",         icon: "🗂️", minRole: "GOD" },
@@ -648,6 +650,249 @@ const REASON_LABELS: Record<string, string> = {
   THREATS: "Threats", NSFW: "NSFW", MINOR_SAFETY: "Minor safety",
   IMPERSONATION: "Impersonation", SELF_HARM: "Self-harm", OTHER: "Other",
 };
+
+// ── Ban Appeals tab ──────────────────────────────────────────────────────────
+
+type AppealRow = {
+  id: string;
+  userId: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+  reviewerNote: string | null;
+  reviewedAt: string | null;
+  user: { id: string; name: string; banReason: string | null; bannedAt: string | null; bannedBy: string | null };
+};
+
+function AppealsTab() {
+  const [rows, setRows] = useState<AppealRow[]>([]);
+  const [filter, setFilter] = useState<"PENDING" | "ALL">("PENDING");
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("");
+  const [noteFor, setNoteFor] = useState<Record<string, string>>({});
+
+  async function load() {
+    setLoading(true);
+    const j = await apiFetch(`/staff/ban-appeals?status=${filter}`);
+    setLoading(false);
+    if (j.ok) setRows(j.rows || []);
+  }
+
+  useEffect(() => { load(); }, [filter]);
+
+  async function review(id: string, decision: "APPROVED" | "DENIED") {
+    const note = (noteFor[id] || "").trim();
+    const j = await apiFetch(`/staff/ban-appeals/${encodeURIComponent(id)}/review`, {
+      method: "POST",
+      body: JSON.stringify({ decision, note }),
+    });
+    if (j.ok) {
+      setMsg(decision === "APPROVED" ? "Approved — user unbanned." : "Denied.");
+      setNoteFor(prev => { const next = { ...prev }; delete next[id]; return next; });
+      load();
+    } else {
+      setMsg(j.message || j.error || "Failed.");
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {(["PENDING", "ALL"] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: filter === f ? "rgba(124,58,237,.20)" : "transparent", color: filter === f ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.7)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {f}
+            </button>
+          ))}
+        </div>
+        {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+      </div>
+
+      {loading && <div style={{ opacity: 0.5, fontSize: 13, padding: 30, textAlign: "center" }}>Loading…</div>}
+      {!loading && rows.length === 0 && (
+        <div style={{ opacity: 0.4, fontSize: 13, padding: 40, textAlign: "center" }}>
+          {filter === "PENDING" ? "No pending appeals. Calm waters." : "Nothing here."}
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {rows.map(r => (
+          <div key={r.id} style={{ ...S.card, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{r.user.name}</span>
+                <span style={{ marginLeft: 10, fontSize: 11, opacity: 0.5, fontFamily: "monospace" }}>{r.user.id.slice(-8)}</span>
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.5 }}>{new Date(r.createdAt).toLocaleString()}</div>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ ...S.label, marginBottom: 4 }}>original ban reason</div>
+              <div style={{ fontSize: 12, color: "rgba(252,165,165,0.85)", padding: "8px 12px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 6 }}>
+                {r.user.banReason || <span style={{ opacity: 0.5, fontStyle: "italic" }}>none recorded</span>}
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ ...S.label, marginBottom: 4 }}>their appeal</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(243,244,246,0.9)", whiteSpace: "pre-wrap", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 6 }}>
+                {r.reason}
+              </div>
+            </div>
+            {r.status === "PENDING" ? (
+              <>
+                <input
+                  value={noteFor[r.id] || ""}
+                  onChange={e => setNoteFor(p => ({ ...p, [r.id]: e.target.value }))}
+                  placeholder="Optional note (shown to user with the decision)"
+                  style={{ ...S.input, marginBottom: 8 }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => review(r.id, "APPROVED")}
+                    style={{ ...S.btnPri, padding: "8px 18px", background: "rgba(34,197,94,0.20)", border: "1px solid rgba(34,197,94,0.40)" }}>
+                    Approve · Unban
+                  </button>
+                  <button onClick={() => review(r.id, "DENIED")}
+                    style={{ ...S.danger, padding: "8px 18px" }}>
+                    Deny
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, opacity: 0.6, padding: "8px 0" }}>
+                <span style={{ fontWeight: 700, color: r.status === "APPROVED" ? "rgb(110,231,183)" : "rgb(252,165,165)" }}>{r.status}</span>
+                {r.reviewedAt && <span style={{ marginLeft: 8 }}>{new Date(r.reviewedAt).toLocaleString()}</span>}
+                {r.reviewerNote && <div style={{ marginTop: 6, fontStyle: "italic" }}>note: {r.reviewerNote}</div>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Bug Reports tab ──────────────────────────────────────────────────────────
+
+type BugRow = {
+  id: string;
+  userId: string | null;
+  category: string;
+  page: string;
+  userAgent: string;
+  body: string;
+  status: string;
+  createdAt: string;
+  closedAt: string | null;
+  staffNote: string | null;
+  user: { id: string; name: string } | null;
+};
+
+const CATEGORY_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  BUG:                  { label: "BUG",      color: "rgb(252,165,165)", bg: "rgba(239,68,68,0.10)" },
+  LOBBY_MODULE_REQUEST: { label: "MODULE",   color: "rgb(216,180,254)", bg: "rgba(124,58,237,0.10)" },
+  FEEDBACK:             { label: "FEEDBACK", color: "rgb(252,211,77)",  bg: "rgba(245,158,11,0.10)" },
+};
+
+function BugsTab() {
+  const [rows, setRows] = useState<BugRow[]>([]);
+  const [filter, setFilter] = useState<"OPEN" | "ALL">("OPEN");
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("");
+  const [noteFor, setNoteFor] = useState<Record<string, string>>({});
+
+  async function load() {
+    setLoading(true);
+    const j = await apiFetch(`/staff/bugs?status=${filter}`);
+    setLoading(false);
+    if (j.ok) setRows(j.rows || []);
+  }
+
+  useEffect(() => { load(); }, [filter]);
+
+  async function close(id: string) {
+    const note = (noteFor[id] || "").trim();
+    const j = await apiFetch(`/staff/bugs/${encodeURIComponent(id)}/close`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+    if (j.ok) {
+      setMsg("Closed.");
+      setNoteFor(prev => { const next = { ...prev }; delete next[id]; return next; });
+      load();
+    } else setMsg(j.message || j.error || "Failed.");
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {(["OPEN", "ALL"] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: filter === f ? "rgba(124,58,237,.20)" : "transparent", color: filter === f ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.7)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {f}
+            </button>
+          ))}
+        </div>
+        {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
+      </div>
+
+      {loading && <div style={{ opacity: 0.5, fontSize: 13, padding: 30, textAlign: "center" }}>Loading…</div>}
+      {!loading && rows.length === 0 && (
+        <div style={{ opacity: 0.4, fontSize: 13, padding: 40, textAlign: "center" }}>
+          {filter === "OPEN" ? "No open bug reports." : "Nothing here."}
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {rows.map(r => (
+          <div key={r.id} style={{ ...S.card, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                {(() => {
+                  const c = CATEGORY_BADGE[r.category] || CATEGORY_BADGE.BUG;
+                  return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, padding: "2px 8px", borderRadius: 4, color: c.color, background: c.bg, border: `1px solid ${c.color.replace("rgb", "rgba").replace(")", ",0.25)")}` }}>{c.label}</span>;
+                })()}
+                <span style={{ fontSize: 12, fontFamily: "monospace", color: r.user ? "rgba(216,180,254,.85)" : "rgba(148,163,184,.5)", fontWeight: 700 }}>
+                  {r.user?.name || "anonymous"}
+                </span>
+                {r.page && <span style={{ fontSize: 11, fontFamily: "monospace", opacity: 0.55 }}>{r.page}</span>}
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.5 }}>{new Date(r.createdAt).toLocaleString()}</div>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(243,244,246,0.92)", whiteSpace: "pre-wrap", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 6, marginBottom: 10 }}>
+              {r.body}
+            </div>
+            {r.userAgent && (
+              <div style={{ fontSize: 10, fontFamily: "monospace", color: "rgba(148,163,184,0.45)", marginBottom: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {r.userAgent}
+              </div>
+            )}
+            {r.status === "OPEN" ? (
+              <>
+                <input
+                  value={noteFor[r.id] || ""}
+                  onChange={e => setNoteFor(p => ({ ...p, [r.id]: e.target.value }))}
+                  placeholder="Optional internal note"
+                  style={{ ...S.input, marginBottom: 8 }}
+                />
+                <button onClick={() => close(r.id)}
+                  style={{ ...S.btnPri, padding: "8px 18px" }}>
+                  Mark Closed
+                </button>
+              </>
+            ) : (
+              <div style={{ fontSize: 12, opacity: 0.6 }}>
+                <span style={{ fontWeight: 700, color: "rgb(148,163,184)" }}>CLOSED</span>
+                {r.closedAt && <span style={{ marginLeft: 8 }}>{new Date(r.closedAt).toLocaleString()}</span>}
+                {r.staffNote && <div style={{ marginTop: 6, fontStyle: "italic" }}>note: {r.staffNote}</div>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ReportsTab() {
   const [reports, setReports] = useState<ReportRow[]>([]);
@@ -1842,6 +2087,8 @@ export default function StaffPage() {
             {nav === "audit"     && <AuditTab />}
             {nav === "broadcast" && <BroadcastTab />}
             {nav === "reports"   && <ReportsTab />}
+            {nav === "appeals"   && <AppealsTab />}
+            {nav === "bugs"      && <BugsTab />}
             {nav === "outreach"  && <OutreachTab />}
             {nav === "files"     && <FilesTab />}
             {nav === "config"  && <ConfigTab />}

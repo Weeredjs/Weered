@@ -49,6 +49,7 @@ import PushPrompt from "../components/PushPrompt";
 import InstallPrompt from "../components/InstallPrompt";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import CookieConsent from "../components/CookieConsent";
+import BugReportButton from "../components/BugReportButton";
 
 export const metadata = {
   title: {
@@ -181,6 +182,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <InstallPrompt />
             <KeyboardShortcuts />
             <CookieConsent />
+            <BugReportButton />
             <div className="weered-trademark-footer">
               Game names, logos, and trademarks are the property of their respective owners. Weered is not affiliated with or endorsed by any game publisher or platform.
             </div>
