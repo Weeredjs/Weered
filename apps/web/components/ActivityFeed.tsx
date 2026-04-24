@@ -144,6 +144,9 @@ export default function ActivityFeed() {
   }, []);
 
   if (!loaded) return null;
+  // Hide the whole section when there's nothing to show — otherwise the
+  // empty state leaves a dead band between the lobby grid and the footer.
+  if (feed.length === 0) return null;
 
   const visible = expanded ? feed : feed.slice(0, 10);
   const hasMore = feed.length > 10 && !expanded;

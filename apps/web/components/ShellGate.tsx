@@ -342,6 +342,11 @@ export default function ShellGate({
             a specific Burner tab. Hidden when the rail is expanded. */}
         {rightCollapsed ? (
           <div className="weered-rail-stack">
+            {/* Logo at the top of the collapsed rail — fills the otherwise-empty
+                space and gives the collapsed shell a brand anchor. */}
+            <a href="/home" className="weered-rail-logo" title="Home">
+              <img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered" />
+            </a>
             <RailQuickButton
               kind="crew"
               label="Crew"
