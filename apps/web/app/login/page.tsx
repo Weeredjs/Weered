@@ -385,7 +385,12 @@ function LoginForm() {
             </>
           )}
 
-          <label className="wl-label">password</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <label className="wl-label">password</label>
+            {mode === "login" && (
+              <a href="/forgot-password" style={{ fontSize: 10, color: "rgba(167,139,250,0.55)", textDecoration: "underline", textUnderlineOffset: 2, fontFamily: "'DM Mono', monospace" }}>forgot?</a>
+            )}
+          </div>
           <input className="wl-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
             placeholder="••••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"}
             onKeyDown={e => { if (e.key === "Enter") submit(); }} />
