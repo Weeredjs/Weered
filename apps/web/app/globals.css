@@ -5562,3 +5562,60 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
     animation: none !important;
   }
 }
+
+/* Modules tab — eye-catcher aura to pull users off the default Rooms tab
+   into the module integration. Only animates when the tab is INACTIVE. */
+@keyframes weeredModulesAura {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(250, 204, 21, .22),
+      0 0 14px -2px rgba(250, 204, 21, .28),
+      inset 0 0 12px -4px rgba(250, 204, 21, .18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(250, 204, 21, .38),
+      0 0 22px -2px rgba(250, 204, 21, .55),
+      inset 0 0 14px -3px rgba(250, 204, 21, .30);
+  }
+}
+.weered-modules-tab {
+  position: relative;
+  background: linear-gradient(135deg, rgba(250,204,21,.08) 0%, rgba(249,115,22,.06) 55%, rgba(168,85,247,.08) 100%) !important;
+  animation: weeredModulesAura 2.6s ease-in-out infinite;
+  color: rgba(253, 224, 71, .95) !important;
+}
+.weered-modules-tab:hover {
+  background: linear-gradient(135deg, rgba(250,204,21,.18) 0%, rgba(249,115,22,.12) 55%, rgba(168,85,247,.16) 100%) !important;
+}
+.weered-modules-tab.is-active {
+  animation: none;
+  background: linear-gradient(135deg, rgba(250,204,21,.28) 0%, rgba(249,115,22,.20) 55%, rgba(168,85,247,.24) 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, .45),
+    0 0 18px -3px rgba(250, 204, 21, .45);
+  color: #fde68a !important;
+}
+.weered-modules-sparkle {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 5px;
+  filter: drop-shadow(0 0 4px rgba(250, 204, 21, .6));
+}
+.weered-modules-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  background: rgba(250, 204, 21, .14);
+  border: 1px solid rgba(250, 204, 21, .35);
+  color: #fde68a;
+  vertical-align: middle;
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-modules-tab { animation: none; }
+}
