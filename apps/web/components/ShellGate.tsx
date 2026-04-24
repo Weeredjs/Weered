@@ -345,7 +345,7 @@ export default function ShellGate({
             {/* Logo at the top of the collapsed rail — fills the otherwise-empty
                 space and gives the collapsed shell a brand anchor. */}
             <a href="/home" className="weered-rail-logo" title="Home">
-              <img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered" />
+              <img src="/brand/logo/weered-logo-128.png" alt="Weered" />
             </a>
             <RailQuickButton
               kind="crew"
