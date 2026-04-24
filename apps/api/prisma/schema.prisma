@@ -428,6 +428,54 @@ model User {
   inventory        UserItem[]
   marketListings   MarketListing[]   @relation("MarketSeller")
   communityServers CommunityServer[]
+  banAppeals       BanAppeal[]       @relation("BanAppealUser")
+  bugReports       BugReport[]       @relation("BugReportSubmitter")
+}
+
+// —— Ban Court ——————————————————————————————————————————————————————————————
+// Banned users submit an appeal here. Staff triages from /staff/bans.
+// The user-facing list of currently banned users lives at /ban-court.
+
+model BanAppeal {
+  id           String    @id @default(cuid())
+  userId       String
+  reason       String    // user's explanation, ≤ 2000 chars
+  status       String    @default("PENDING") // PENDING, APPROVED, DENIED
+  createdAt    DateTime  @default(now())
+  reviewedBy   String?   // staff userId
+  reviewerNote String?   // optional note shown back to the appellant
+  reviewedAt   DateTime?
+
+  user         User      @relation("BanAppealUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+// —— In-app bug reports ——————————————————————————————————————————————————————
+// Submitted from anywhere in the app via the BugReportButton. Staff triages
+// from the staff dashboard. Open / Closed only — keep it simple.
+
+model BugReport {
+  id           String   @id @default(cuid())
+  userId       String?  // null for anonymous reports (we still capture browser/page)
+  // BUG = something broke. LOBBY_MODULE_REQUEST = lobby owner asking for a
+  // custom module / config. FEEDBACK = generic suggestion. Same queue, the
+  // category just routes triage attention.
+  category     String   @default("BUG")
+  page         String   @default("") // window.location.pathname at submit time
+  userAgent    String   @default("")
+  body         String   // user description, ≤ 4000 chars
+  status       String   @default("OPEN") // OPEN, CLOSED
+  staffNote    String?
+  createdAt    DateTime @default(now())
+  closedAt     DateTime?
+  closedBy     String?
+
+  user User? @relation("BugReportSubmitter", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([category, status])
 }
 
 // —— Site Config (key-value) ————————————————————————————————————————————————

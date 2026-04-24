@@ -41,6 +41,7 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
+import supportRoutes from "./routes/support";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -5970,6 +5971,10 @@ async function main() {
   }
   await app.register(tradingRoutes, {
     authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser,
+  } as any);
+
+  await app.register(supportRoutes, {
+    authFromHeader, getGlobalRole, canAccessStaff,
   } as any);
 
 
