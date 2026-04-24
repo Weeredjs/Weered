@@ -15,7 +15,6 @@ type Opts = {
   canAssignRoles: (role: string | null) => boolean;
   globalAudit: (actorId: string, actorName: string, type: string, targetId?: string, note?: string, meta?: any) => Promise<void>;
   broadcast: (room: any, payload: any) => void;
-  broadcastBanner: () => void;
   broadcastEvent: (title: string, when: Date) => void;
   rooms: Map<string, any>;
   send: (sock: any, payload: any) => void;
@@ -30,7 +29,7 @@ type Opts = {
 export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader, getGlobalRole, canAccessStaff, canAssignRoles, globalAudit,
-    broadcast, broadcastBanner, broadcastEvent, rooms, send, wss, shortRoomId,
+    broadcast, broadcastEvent, rooms, send, wss, shortRoomId,
     getAllSiteConfig, setSiteConfig, SITE_CONFIG_DEFAULTS, getSiteConfig,
   } = opts;
 
@@ -435,17 +434,9 @@ app.post("/staff/rooms/:roomId/close", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.post("/staff/banner", async (req, reply) => {
-  const u = authFromHeader((req as any).headers?.authorization);
-  if (!u) return reply.code(401).send({ ok: false });
-  const role = await getGlobalRole(u.id);
-  if (!canAccessStaff(role)) return reply.code(403).send({ ok: false });
-  const { message, level, clear } = (req as any).body || {};
-  if (clear) { siteBanner = null; return reply.send({ ok: true, banner: null }); }
-  if (!message) return reply.code(400).send({ ok: false, error: "message required" });
-  siteBanner = { message, level: level || "info", from: u.name, ts: 1 };
-  return reply.send({ ok: true, banner: siteBanner });
-});
+// /staff/banner stays in main() — mutates the siteBanner module-level state
+// shared with the public GET /banner route. Re-extract once that becomes a
+// shared lib-state module.
 
 app.get("/staff/reports", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);

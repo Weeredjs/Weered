@@ -2474,7 +2474,7 @@ async function main() {
   // ── Staff — extracted to routes/staff.ts ──────────────────────────────────
   await app.register(staffRoutes, {
     authFromHeader, getGlobalRole, canAccessStaff, canAssignRoles, globalAudit,
-    broadcast, broadcastBanner, broadcastEvent, rooms, send, wss, shortRoomId,
+    broadcast, broadcastEvent, rooms, send, wss, shortRoomId,
     getAllSiteConfig, setSiteConfig, SITE_CONFIG_DEFAULTS, getSiteConfig,
   } as any);
 
@@ -3421,6 +3421,19 @@ async function main() {
   };
 
   app.get("/banner", async (_req, reply) => {
+    return reply.send({ ok: true, banner: siteBanner });
+  });
+
+  // /staff/banner stays here with /banner — both mutate/read siteBanner.
+  app.post("/staff/banner", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false });
+    const { message, level, clear } = (req as any).body || {};
+    if (clear) { siteBanner = null; return reply.send({ ok: true, banner: null }); }
+    if (!message) return reply.code(400).send({ ok: false, error: "message required" });
+    siteBanner = { message, level: level || "info", from: u.name, ts: 1 };
     return reply.send({ ok: true, banner: siteBanner });
   });
 
