@@ -3,6 +3,8 @@
 import React, { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+
 function LoginForm() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -15,6 +17,49 @@ function LoginForm() {
   const [busy, setBusy]         = useState(false);
   const [err, setErr]           = useState("");
   const [pendingEmail, setPendingEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captchaRef = React.useRef<HTMLDivElement | null>(null);
+  const captchaWidgetIdRef = React.useRef<string | null>(null);
+
+  // Render Turnstile only on the register tab and only if a site key is configured.
+  React.useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || mode !== "register") return;
+    let cancelled = false;
+    const ensureScript = () =>
+      new Promise<void>((resolve) => {
+        if ((window as any).turnstile) return resolve();
+        const existing = document.querySelector('script[data-weered-turnstile="1"]');
+        if (existing) {
+          existing.addEventListener("load", () => resolve(), { once: true });
+          return;
+        }
+        const s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        s.async = true;
+        s.defer = true;
+        s.dataset.weeredTurnstile = "1";
+        s.onload = () => resolve();
+        document.head.appendChild(s);
+      });
+    ensureScript().then(() => {
+      if (cancelled || !captchaRef.current || !(window as any).turnstile) return;
+      captchaWidgetIdRef.current = (window as any).turnstile.render(captchaRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: "dark",
+        callback: (tok: string) => setCaptchaToken(tok),
+        "expired-callback": () => setCaptchaToken(""),
+        "error-callback": () => setCaptchaToken(""),
+      });
+    });
+    return () => {
+      cancelled = true;
+      if (captchaWidgetIdRef.current && (window as any).turnstile) {
+        try { (window as any).turnstile.remove(captchaWidgetIdRef.current); } catch {}
+        captchaWidgetIdRef.current = null;
+      }
+      setCaptchaToken("");
+    };
+  }, [mode]);
 
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
@@ -34,11 +79,15 @@ function LoginForm() {
     setErr("");
     if (!u || !p) return setErr("Username and password required.");
     if (mode === "register" && !e) return setErr("Email address required.");
+    if (mode === "register" && TURNSTILE_SITE_KEY && !captchaToken) {
+      return setErr("Please complete the captcha.");
+    }
     setBusy(true);
     try {
       const url = mode === "register" ? `${API}/auth/register` : `${API}/auth/login`;
       const body: any = { username: u, password: p };
       if (mode === "register") body.email = e;
+      if (mode === "register" && captchaToken) body.captchaToken = captchaToken;
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -340,6 +389,10 @@ function LoginForm() {
           <input className="wl-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
             placeholder="••••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"}
             onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+
+          {mode === "register" && TURNSTILE_SITE_KEY && (
+            <div ref={captchaRef} style={{ marginTop: 16, display: "flex", justifyContent: "center" }} />
+          )}
 
           {err && <div className="wl-error">{err}</div>}
 

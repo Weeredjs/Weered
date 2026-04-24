@@ -2177,6 +2177,46 @@ async function runFeedWorker() {
 async function main() {
   const app = Fastify({ logger: true });
 
+  // Rate limiting — defends auth/signup against brute force and bot signups.
+  // Global default is generous; auth routes opt into stricter per-route limits below.
+  const { default: rateLimit } = await import("@fastify/rate-limit");
+  await app.register(rateLimit, {
+    global: true,
+    max: 600,
+    timeWindow: "1 minute",
+    keyGenerator: (req) => {
+      const fwd = (req.headers["x-forwarded-for"] as string | undefined) || "";
+      return fwd.split(",")[0].trim() || req.ip;
+    },
+    errorResponseBuilder: (_req, ctx) => ({
+      error: "rate_limited",
+      message: "Too many requests. Slow down.",
+      retryAfterSec: Math.ceil(ctx.ttl / 1000),
+    }),
+  });
+
+  // Cloudflare Turnstile verifier — gated behind TURNSTILE_SECRET. Without
+  // the secret set this is a no-op so the existing flow keeps working until
+  // keys are provisioned. Site key lives client-side as NEXT_PUBLIC_TURNSTILE_SITE_KEY.
+  async function verifyCaptcha(token: unknown, ip: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+    const secret = process.env.TURNSTILE_SECRET;
+    if (!secret) return { ok: true }; // gating disabled
+    if (typeof token !== "string" || !token) return { ok: false, reason: "missing_captcha" };
+    try {
+      const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ secret, response: token, remoteip: ip }).toString(),
+      });
+      const j = (await r.json().catch(() => null)) as { success?: boolean; "error-codes"?: string[] } | null;
+      if (!j?.success) return { ok: false, reason: (j?.["error-codes"]?.[0] ?? "captcha_failed") };
+      return { ok: true };
+    } catch (e) {
+      console.warn("[turnstile] verify error:", e);
+      return { ok: false, reason: "captcha_unreachable" };
+    }
+  }
+
   // Store raw body for Stripe webhook signature verification
   app.addHook("preParsing", async (req, _reply, payload) => {
     if (req.url === "/subscribe/webhook") {
@@ -2249,7 +2289,9 @@ async function main() {
   });
 
   // Auth: dev-login
-  app.post("/auth/dev-login", async (req, reply) => {
+  app.post("/auth/dev-login", {
+    config: { rateLimit: { max: 30, timeWindow: "10 minutes" } },
+  }, async (req, reply) => {
     const body: any = (req as any).body || {};
     const raw = typeof body.username === "string" ? body.username : "";
     let name = (raw || "").trim().slice(0, 32);
@@ -2268,15 +2310,20 @@ async function main() {
     reply.code(r.statusCode).headers(r.headers).send(r.json());
   });
 
-  // Auth: register
-  app.post("/auth/register", async (req, reply) => {
+  // Auth: register — 5 attempts/IP/hour, plus Turnstile if configured.
+  app.post("/auth/register", {
+    config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
     const body: any = (req as any).body || {};
     const rawU = typeof body.username === "string" ? body.username : "";
     const rawP = typeof body.password === "string" ? body.password : "";
+    const captchaToken = body.captchaToken ?? body.turnstileToken;
     const username = (rawU || "").trim().toLowerCase().slice(0, 32);
     const password = (rawP || "").trim();
     if (!username || !password) return reply.code(400).send({ error: "Missing username/password" });
     if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
+    const cap = await verifyCaptcha(captchaToken, req.ip);
+    if (!cap.ok) return reply.code(400).send({ error: "captcha_required", reason: cap.reason });
     const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
     if (existing) return reply.code(409).send({ error: "Username already exists" });
     const reserved = await isNameReserved(username, "USERNAME");
@@ -2288,8 +2335,11 @@ async function main() {
     return reply.send({ token, user });
   });
 
-  // Auth: login
-  app.post("/auth/login", async (req, reply) => {
+  // Auth: login — 20 attempts/IP/15min. Username-level limiting would require a
+  // stateful store (redis); IP-level keeps it simple and still defeats spray attacks.
+  app.post("/auth/login", {
+    config: { rateLimit: { max: 20, timeWindow: "15 minutes" } },
+  }, async (req, reply) => {
     const body: any = (req as any).body || {};
     const rawU = typeof body.username === "string" ? body.username : "";
     const rawP = typeof body.password === "string" ? body.password : "";
