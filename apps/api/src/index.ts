@@ -56,6 +56,7 @@ import { join } from "path";
 import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
 import { startNexusPoller, fetchAndUpsertMod } from "./nexusPoller";
 import webpush from "web-push";
+import { sendMail, buildVerifyEmail, buildResetEmail } from "./lib/email";
 
 // ── Anthropic AI SDK (optional) ──────────────────────────────────────────────
 let _anthropicModule: any = null;
@@ -2318,22 +2319,132 @@ async function main() {
     const body: any = (req as any).body || {};
     const rawU = typeof body.username === "string" ? body.username : "";
     const rawP = typeof body.password === "string" ? body.password : "";
+    const rawE = typeof body.email === "string" ? body.email : "";
     const captchaToken = body.captchaToken ?? body.turnstileToken;
     const username = (rawU || "").trim().toLowerCase().slice(0, 32);
     const password = (rawP || "").trim();
+    const email = (rawE || "").trim().toLowerCase().slice(0, 254) || null;
     if (!username || !password) return reply.code(400).send({ error: "Missing username/password" });
     if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(400).send({ error: "Invalid email" });
     const cap = await verifyCaptcha(captchaToken, req.ip);
     if (!cap.ok) return reply.code(400).send({ error: "captcha_required", reason: cap.reason });
     const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
     if (existing) return reply.code(409).send({ error: "Username already exists" });
+    if (email) {
+      const emailTaken = await prisma.localAuth.findUnique({ where: { email } }).catch(() => null);
+      if (emailTaken) return reply.code(409).send({ error: "Email already in use" });
+    }
     const reserved = await isNameReserved(username, "USERNAME");
     if (reserved) return reply.code(403).send({ error: "This username is reserved and cannot be used." });
-    const user = await prisma.user.create({ data: { name: username, usernameKey: username } });
+    const user = await prisma.user.create({ data: { name: username, usernameKey: username, email } });
     const passwordHash = await bcrypt.hash(password, 10);
-    await prisma.localAuth.create({ data: { username, passwordHash, userId: user.id } });
+
+    // Verification token only generated when email provided. 24h expiry.
+    let verifyToken: string | null = null;
+    let verifyTokenExp: Date | null = null;
+    if (email) {
+      verifyToken = randomBytes(32).toString("hex");
+      verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
+    await prisma.localAuth.create({
+      data: {
+        username, passwordHash, userId: user.id, email,
+        ...(verifyToken ? { verifyToken, verifyTokenExp } : {}),
+      },
+    });
+    if (email && verifyToken) {
+      const tmpl = buildVerifyEmail({ username, token: verifyToken });
+      sendMail({ to: email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
+    }
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
-    return reply.send({ token, user });
+    return reply.send({ token, user, pendingVerification: Boolean(email) });
+  });
+
+  // Auth: verify email — token comes from the link in the verification email.
+  app.post("/auth/verify-email", {
+    config: { rateLimit: { max: 30, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const token = typeof body.token === "string" ? body.token.trim() : "";
+    if (!token) return reply.code(400).send({ error: "Missing token" });
+    const la = await prisma.localAuth.findUnique({ where: { verifyToken: token } }).catch(() => null);
+    if (!la) return reply.code(400).send({ error: "Invalid or expired token" });
+    if (la.verifyTokenExp && la.verifyTokenExp.getTime() < Date.now()) {
+      return reply.code(400).send({ error: "Token expired" });
+    }
+    await prisma.localAuth.update({
+      where: { id: la.id },
+      data: { emailVerified: true, verifyToken: null, verifyTokenExp: null },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // Auth: resend verification email — by username so the user can request it
+  // even if they don't remember which email they used. Always returns ok to
+  // avoid leaking whether the username exists.
+  app.post("/auth/resend-verification", {
+    config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const username = (typeof body.username === "string" ? body.username : "").trim().toLowerCase().slice(0, 32);
+    if (!username) return reply.send({ ok: true });
+    const la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
+    if (la && la.email && !la.emailVerified) {
+      const verifyToken = randomBytes(32).toString("hex");
+      const verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await prisma.localAuth.update({ where: { id: la.id }, data: { verifyToken, verifyTokenExp } });
+      const tmpl = buildVerifyEmail({ username, token: verifyToken });
+      sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
+    }
+    return reply.send({ ok: true });
+  });
+
+  // Auth: forgot password — body is { username } OR { email }. Always returns
+  // ok regardless of whether the account exists (prevents email enumeration).
+  app.post("/auth/forgot-password", {
+    config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const username = (typeof body.username === "string" ? body.username : "").trim().toLowerCase().slice(0, 32);
+    const email = (typeof body.email === "string" ? body.email : "").trim().toLowerCase().slice(0, 254);
+    let la = null as any;
+    if (username) la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
+    else if (email) la = await prisma.localAuth.findUnique({ where: { email } }).catch(() => null);
+    if (la && la.email) {
+      const resetToken = randomBytes(32).toString("hex");
+      const resetExp = new Date(Date.now() + 60 * 60 * 1000); // 1h
+      await prisma.localAuth.update({
+        where: { id: la.id },
+        data: { passwordResetToken: resetToken, passwordResetTokenExp: resetExp },
+      });
+      const tmpl = buildResetEmail({ username: la.username, token: resetToken });
+      sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
+    }
+    return reply.send({ ok: true });
+  });
+
+  // Auth: reset password — { token, password }. Validates token + expiry,
+  // sets new password, invalidates token.
+  app.post("/auth/reset-password", {
+    config: { rateLimit: { max: 10, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
+    const body: any = (req as any).body || {};
+    const token = typeof body.token === "string" ? body.token.trim() : "";
+    const password = typeof body.password === "string" ? body.password.trim() : "";
+    if (!token || !password) return reply.code(400).send({ error: "Missing token or password" });
+    if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
+    const la = await prisma.localAuth.findUnique({ where: { passwordResetToken: token } }).catch(() => null);
+    if (!la) return reply.code(400).send({ error: "Invalid or expired token" });
+    if (la.passwordResetTokenExp && la.passwordResetTokenExp.getTime() < Date.now()) {
+      return reply.code(400).send({ error: "Token expired" });
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    await prisma.localAuth.update({
+      where: { id: la.id },
+      data: { passwordHash, passwordResetToken: null, passwordResetTokenExp: null },
+    });
+    return reply.send({ ok: true });
   });
 
   // Auth: login — 20 attempts/IP/15min. Username-level limiting would require a
