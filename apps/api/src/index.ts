@@ -2189,6 +2189,7 @@ async function main() {
       return fwd.split(",")[0].trim() || req.ip;
     },
     errorResponseBuilder: (_req, ctx) => ({
+      statusCode: 429,
       error: "rate_limited",
       message: "Too many requests. Slow down.",
       retryAfterSec: Math.ceil(ctx.ttl / 1000),
