@@ -22,6 +22,7 @@ import windroseRoutes from "./routes/windrose";
 import badgesRoutes from "./routes/badges";
 import tournamentsRoutes from "./routes/tournaments";
 import lfgRoutes from "./routes/lfg";
+import paperRoutes from "./routes/paper";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -10657,97 +10658,9 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
     }
   }
 
-  // POST /paper/tip — /tip @user <amount> from chat. Paper flows through
-  // awardPaper so both wallets stay on the ledger. Caps abuse with a
-  // per-transfer ceiling + self-tip guard + user-existence check.
-  const TIP_MIN = 1;
-  const TIP_MAX = 100_000;
-  app.post("/paper/tip", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const body: any = (req as any).body || {};
-    const toUsername = String(body.toUsername || "").trim();
-    const amount = Math.floor(Number(body.amount) || 0);
-    const note = String(body.note || "").trim().slice(0, 200);
-    if (!toUsername) return reply.code(400).send({ ok: false, error: "recipient_required" });
-    if (amount < TIP_MIN) return reply.code(400).send({ ok: false, error: "amount_too_low", message: `Minimum tip is ${TIP_MIN} Paper.` });
-    if (amount > TIP_MAX) return reply.code(400).send({ ok: false, error: "amount_too_high", message: `Maximum tip is ${TIP_MAX.toLocaleString()} Paper.` });
+  // ── Paper routes — extracted to routes/paper.ts ────────────────────────
+  await app.register(paperRoutes, { authFromHeader, awardPaper } as any);
 
-    try {
-      // Lookup recipient by case-insensitive name
-      const recipient = await prisma.user.findFirst({
-        where: { name: { equals: toUsername, mode: "insensitive" } },
-        select: { id: true, name: true },
-      });
-      if (!recipient) return reply.code(404).send({ ok: false, error: "recipient_not_found", message: `No user named @${toUsername}.` });
-      if (recipient.id === u.id) return reply.code(400).send({ ok: false, error: "cannot_self_tip" });
-
-      // Debit sender first — awardPaper guards against going negative
-      const debit = await awardPaper(u.id, "SPEND_GIFT", -amount, `Tip to ${recipient.name}${note ? ` · ${note}` : ""}`, recipient.id);
-      if (!debit) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
-
-      // Credit recipient
-      const credit = await awardPaper(recipient.id, "EARN_GIFT", amount, `Tip from ${u.name || u.id}${note ? ` · ${note}` : ""}`, u.id);
-      if (!credit) {
-        // Refund sender if credit failed
-        await awardPaper(u.id, "ADJUSTMENT", amount, "Tip refund (credit failed)").catch(() => {});
-        return reply.code(500).send({ ok: false, error: "credit_failed" });
-      }
-
-      return reply.send({
-        ok: true,
-        recipient: { id: recipient.id, name: recipient.name },
-        amount,
-        balance: debit.balance,
-      });
-    } catch (e) {
-      console.error("[paper/tip]", e);
-      return reply.code(500).send({ ok: false, error: "tip_failed" });
-    }
-  });
-
-  // GET /paper/wallet — current balance + recent transactions
-  app.get("/paper/wallet", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-
-    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
-    const txns = await (prisma as any).paperTransaction.findMany({
-      where: { userId: u.id },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
-
-    return reply.send({
-      ok: true,
-      balance: (user as any)?.paper || 0,
-      transactions: txns.map((t: any) => ({ ...t, createdAt: t.createdAt?.toISOString() })),
-    });
-  });
-
-  // POST /paper/daily — claim daily Paper bonus
-  app.post("/paper/daily", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-
-    // Check cooldown (24h)
-    const lastDaily = await (prisma as any).paperTransaction.findFirst({
-      where: { userId: u.id, type: "EARN_DAILY" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (lastDaily) {
-      const since = Date.now() - new Date(lastDaily.createdAt).getTime();
-      if (since < 86400000) {
-        const nextAt = new Date(new Date(lastDaily.createdAt).getTime() + 86400000);
-        return reply.send({ ok: false, error: "cooldown", nextAt: nextAt.toISOString() });
-      }
-    }
-
-    const result = await awardPaper(u.id, "EARN_DAILY", 25, "Daily login bonus");
-    if (!result) return reply.send({ ok: false, error: "failed" });
-    return reply.send({ ok: true, awarded: 25, balance: result.balance });
-  });
 
   // ── Poker — REST Endpoints ────────────────────────────────────────────────
 
