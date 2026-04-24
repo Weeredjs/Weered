@@ -114,6 +114,18 @@ model Lobby {
   // Revenue sharing — manual payout percentage for lobby owner (0-100)
   revenueSharePct Float @default(0)
 
+  // ── AutoMod-light ─────────────────────────────────────────────────────────
+  // Owner-configurable per-lobby moderation. The chat WS handler checks these
+  // before persisting/broadcasting a message.
+  // - blockedWords: case-insensitive substring matches; matched messages are
+  //   silently dropped (sender sees a soft notice).
+  // - blockedDomains: substrings matched against any URL in the message.
+  // - newAccountChatHours: messages from accounts younger than N hours are
+  //   blocked. 0 = disabled.
+  blockedWords        String[] @default([])
+  blockedDomains      String[] @default([])
+  newAccountChatHours Int      @default(0)
+
   rooms       Room[]
   members     LobbyMember[]
   bans        LobbyBan[]

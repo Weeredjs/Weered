@@ -4162,6 +4162,56 @@ async function main() {
           // Rate limit
           const rate = checkChatRateLimit(ws.user.id);
           if (!rate.ok) { send(ws, { type: "chat:rejected", roomId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
+          // AutoMod-light: lobby-owner-configurable filters. Cached on the
+          // room object; refreshed lazily after 60s. Owner edits flush the
+          // cache via /lobbies/:id/admin/moderation handler below.
+          if (room.lobbyId) {
+            const cache = (room as any).modPolicy as { blockedWords: string[]; blockedDomains: string[]; newAccountChatHours: number; expiresAt: number } | undefined;
+            let policy = cache && cache.expiresAt > Date.now() ? cache : null;
+            if (!policy) {
+              try {
+                const l: any = await (prisma as any).lobby.findUnique({
+                  where: { id: room.lobbyId },
+                  select: { blockedWords: true, blockedDomains: true, newAccountChatHours: true },
+                });
+                policy = {
+                  blockedWords: Array.isArray(l?.blockedWords) ? l.blockedWords : [],
+                  blockedDomains: Array.isArray(l?.blockedDomains) ? l.blockedDomains : [],
+                  newAccountChatHours: Number(l?.newAccountChatHours || 0),
+                  expiresAt: Date.now() + 60_000,
+                };
+                (room as any).modPolicy = policy;
+              } catch { policy = { blockedWords: [], blockedDomains: [], newAccountChatHours: 0, expiresAt: Date.now() + 60_000 }; }
+            }
+            // 1. New-account chat cooldown
+            if (policy.newAccountChatHours > 0) {
+              try {
+                const u = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { createdAt: true } });
+                if (u && (Date.now() - u.createdAt.getTime()) < policy.newAccountChatHours * 3600 * 1000) {
+                  send(ws, { type: "chat:rejected", roomId, reason: "account_too_new", message: `New accounts must wait ${policy.newAccountChatHours}h before chatting in this lobby.` });
+                  return;
+                }
+              } catch {}
+            }
+            // 2. Blocked words (case-insensitive substring)
+            if (policy.blockedWords.length > 0) {
+              const lower = body.toLowerCase();
+              const hit = policy.blockedWords.find(w => w && lower.includes(String(w).toLowerCase()));
+              if (hit) {
+                send(ws, { type: "chat:rejected", roomId, reason: "blocked_word" });
+                return;
+              }
+            }
+            // 3. Blocked domains (substring match against any URL)
+            if (policy.blockedDomains.length > 0) {
+              const urls = body.match(/https?:\/\/[^\s)]+/gi) || [];
+              const bad = urls.find(u => policy!.blockedDomains.some(d => d && u.toLowerCase().includes(String(d).toLowerCase())));
+              if (bad) {
+                send(ws, { type: "chat:rejected", roomId, reason: "blocked_domain" });
+                return;
+              }
+            }
+          }
           // Optional reply-to — snapshot parent from in-memory room.msgs
           let replyTo: ReplyTo | undefined;
           const replyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
