@@ -5704,8 +5704,9 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   background: rgba(255, 255, 255, .06);
   color: rgba(243, 244, 246, 1);
 }
-.weered-logo-menu-item > span:first-of-type {
+.weered-logo-menu-label {
   flex: 1;
+  text-align: left;
 }
 .weered-logo-menu-item.is-danger {
   color: rgba(239, 68, 68, .75);
