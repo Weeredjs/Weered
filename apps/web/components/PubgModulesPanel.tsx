@@ -99,7 +99,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   return (
     <>
       {activeStream && (
-        <div style={{ ...S.card, padding: 0, marginBottom: 12, overflow: "hidden", border: `1px solid ${accentColor}55` }}>
+        <div style={{ ...S.card, padding: 0, marginBottom: 12, overflow: "hidden", border: `1px solid ${accentColor}55`, flexShrink: 0 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${parentHost}&muted=true`}
             width="100%" height="380" style={{ border: "none", display: "block" }} allowFullScreen

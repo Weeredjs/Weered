@@ -39,7 +39,7 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-const NO_SHELL_ROUTES = ["/login", "/register", "/staff", "/about", "/premium", "/contact"];
+const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact"];
 
 // ── Icon strip SVGs (sharp, bold, 20×20 on 24-viewBox) ──────────────────────
 const ICO_NAV = (
