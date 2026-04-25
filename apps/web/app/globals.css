@@ -3451,29 +3451,29 @@ button:hover, [role="button"]:hover {
   padding: 14px 0 14px;
 }
 .weered-rail-logo {
-  width: 36px;
-  height: 36px;
-  padding: 4px;
-  box-sizing: border-box;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
   flex-shrink: 0;
   margin-bottom: 6px;
-  transition: filter 0.15s, transform 0.15s;
+  background: transparent;
+  border: none;
+  transition: transform 0.15s;
 }
 .weered-rail-logo img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.35));
+  filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.45));
+  transition: filter 0.18s;
 }
 .weered-rail-logo:hover {
   transform: translateY(-1px);
 }
 .weered-rail-logo:hover img {
-  filter: drop-shadow(0 0 16px rgba(124, 58, 237, 0.55));
+  filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.75));
 }
 /* Panel tab sits flush under the DMs button — no auto-margin push to bottom. */
 .weered-rail-stack .weered-rail-tab {
@@ -5634,18 +5634,17 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 }
 @keyframes weeredLogoBellPulse {
   0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(245, 158, 11, .35),
-      0 0 14px -2px rgba(245, 158, 11, .35);
+    filter:
+      drop-shadow(0 0 12px rgba(124, 58, 237, 0.45))
+      drop-shadow(0 0 8px rgba(245, 158, 11, 0.45));
   }
   50% {
-    box-shadow:
-      0 0 0 1px rgba(245, 158, 11, .55),
-      0 0 22px -2px rgba(245, 158, 11, .65);
+    filter:
+      drop-shadow(0 0 18px rgba(124, 58, 237, 0.65))
+      drop-shadow(0 0 14px rgba(245, 158, 11, 0.75));
   }
 }
-.weered-logo-menu-btn.is-hot {
-  border-radius: 8px;
+.weered-logo-menu-btn.is-hot img {
   animation: weeredLogoBellPulse 2.2s ease-in-out infinite;
 }
 .weered-logo-menu-badge {
