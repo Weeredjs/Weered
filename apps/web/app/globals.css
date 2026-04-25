@@ -5667,14 +5667,11 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   pointer-events: none;
 }
 .weered-logo-menu-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 1000;
+  z-index: 99999;
   min-width: 220px;
   padding: 6px;
   border-radius: 12px;
-  background: rgba(15, 17, 27, .96);
+  background: rgba(15, 17, 27, .97);
   border: 1px solid rgba(148, 163, 184, .18);
   box-shadow:
     0 12px 32px rgba(0, 0, 0, .55),
@@ -5684,6 +5681,8 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   display: flex;
   flex-direction: column;
   gap: 1px;
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
 }
 .weered-logo-menu-item {
   display: flex;
@@ -5742,13 +5741,37 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   background: rgba(148, 163, 184, .12);
 }
 
-/* The bell that now sits beneath the W in the collapsed rail-stack. */
-.weered-rail-bell-wrap {
-  display: flex;
+/* DM unread badge on the rail-stack DMs button. Same visual language as
+   the W logo's notification badge so the rail reads as one system. */
+.weered-rail-quick-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
+  border: 2px solid rgba(10, 10, 18, .92);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, .45);
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes weeredQuickBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(239,68,68,.35), 0 0 12px rgba(239,68,68,.35); }
+  50%      { box-shadow: 0 0 0 1px rgba(239,68,68,.55), 0 0 18px rgba(239,68,68,.55); }
+}
+.weered-rail-quick.is-hot {
+  animation: weeredQuickBadgePulse 2.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .weered-logo-menu-btn.is-hot { animation: none; }
+  .weered-logo-menu-btn.is-hot,
+  .weered-rail-quick.is-hot { animation: none; }
 }

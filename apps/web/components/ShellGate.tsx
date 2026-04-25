@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
 import { LogoMenu } from "./LogoMenu";
-import { NotificationBell } from "./NotificationCenter";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -301,6 +300,22 @@ export default function ShellGate({
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
+  // DM unread badge for the rail-stack DMs button. DockShell broadcasts
+  // weered:dock:unread when the count changes; localStorage is the fallback
+  // so the badge survives page reloads.
+  const [dmUnread, setDmUnread] = useState<number>(() => {
+    try { return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0); }
+    catch { return 0; }
+  });
+  useEffect(() => {
+    const onUnread = (e: Event) => {
+      const count = Math.max(0, Number((e as CustomEvent).detail?.count) || 0);
+      setDmUnread(count);
+    };
+    window.addEventListener("weered:dock:unread", onUnread);
+    return () => window.removeEventListener("weered:dock:unread", onUnread);
+  }, []);
+
   // Persist right rail collapse state
   useEffect(() => {
     const saved = localStorage.getItem("weered_right_collapsed");
@@ -344,14 +359,11 @@ export default function ShellGate({
             a specific Burner tab. Hidden when the rail is expanded. */}
         {rightCollapsed ? (
           <div className="weered-rail-stack">
-            {/* Logo at the top of the collapsed rail — now also the menu
-                anchor for profile / settings / status / log out. The bell
-                sits directly under it so notifications live in the same
-                visual zone as the brand mark. */}
+            {/* Logo at the top of the collapsed rail — also the menu anchor
+                for profile / settings / status / notifications / log out.
+                Notifications live behind the W's badge ring (no separate
+                bell). DM unread count rides on the DMs button below. */}
             <LogoMenu />
-            <div className="weered-rail-bell-wrap">
-              <NotificationBell />
-            </div>
             <RailQuickButton
               kind="crew"
               label="Crew"
@@ -367,7 +379,8 @@ export default function ShellGate({
             <RailQuickButton
               kind="dms"
               label="DMs"
-              title="Open Messages"
+              title={dmUnread > 0 ? `${dmUnread} unread` : "Open Messages"}
+              badge={dmUnread}
               onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { tab: "dms" } })); } catch {} }}
             />
             <button
@@ -421,22 +434,27 @@ export default function ShellGate({
 type QuickKind = "crew" | "friends" | "dms";
 
 function RailQuickButton({
-  kind, label, title, onClick,
-}: { kind: QuickKind; label: string; title: string; onClick: () => void }) {
+  kind, label, title, onClick, badge,
+}: { kind: QuickKind; label: string; title: string; onClick: () => void; badge?: number }) {
   const palette = QUICK_PALETTE[kind];
+  const hot = (badge ?? 0) > 0;
   return (
     <button
       type="button"
       title={title}
       onClick={onClick}
-      className="weered-rail-quick"
+      className={`weered-rail-quick${hot ? " is-hot" : ""}`}
       style={{
         background: palette.bg,
         borderColor: palette.border,
         boxShadow: `0 0 16px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(0,0,0,.35)`,
         color: palette.fg,
+        position: "relative",
       }}
     >
+      {hot && (
+        <span className="weered-rail-quick-badge">{badge! > 99 ? "99+" : badge}</span>
+      )}
       <span className="weered-rail-quick-icon">
         {kind === "crew" ? (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
