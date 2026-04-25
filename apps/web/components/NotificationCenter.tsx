@@ -125,6 +125,13 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // External open trigger — fired by LogoMenu's "Notifications" item.
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("weered:notifications:open", handler);
+    return () => window.removeEventListener("weered:notifications:open", handler);
+  }, []);
+
   const markAllRead = async () => {
     const tok = getToken();
     if (!tok) return;
