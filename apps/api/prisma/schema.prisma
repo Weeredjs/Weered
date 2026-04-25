@@ -676,6 +676,12 @@ model GroupMessage {
   editedAt  DateTime?
   deletedAt DateTime?
 
+  // Reply-to — snapshot of the parent so the preview survives edits / deletes.
+  replyToId       String?
+  replyToUserId   String?
+  replyToUserName String?
+  replyToBody     String?
+
   thread GroupThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   sender User        @relation("GroupMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
