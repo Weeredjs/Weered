@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 
@@ -2945,6 +2946,11 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
   const [activeStream, setActiveStream] = useState<string | null>(null);
 
   useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
+
+  useEffect(() => {
     const game = encodeURIComponent(gameName || "Windrose");
     apiFetch(`/twitch/streams?game=${game}&first=20`).then(j => {
       if (j?.ok && Array.isArray(j.streams)) setStreams(j.streams);
@@ -3120,6 +3126,7 @@ export default function WindroseModulesPanel({
   style?: React.CSSProperties;
 }) {
   const [tab, setTab] = useState<TabId>("flagship");
+  useWatchHere(React.useCallback(() => { setTab("streams"); }, []));
 
   return (
     <>

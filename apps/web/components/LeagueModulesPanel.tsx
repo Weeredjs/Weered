@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -87,6 +88,11 @@ function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }:
   const [loading, setLoading] = useState(true);
   const [activeStream, setActiveStream] = useState<string | null>(null);
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
+
+  useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
 
   useEffect(() => {
     apiFetch(`/twitch/streams?game=${encodeURIComponent(gameName)}`)
@@ -580,6 +586,7 @@ export default function LeagueModulesPanel({
   style?: React.CSSProperties;
 }) {
   const [tab, setTab] = useState<TabId>("streams");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [champions, setChampions] = useState<any[]>([]);
 
   // Load champion data on mount (needed for name/image resolution)

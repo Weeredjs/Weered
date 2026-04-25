@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import EmptyState from "./EmptyState";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -1162,6 +1163,12 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
+  const [activeStream, setActiveStream] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -1173,8 +1180,10 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
 
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
+  const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
+
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Scrying for live streams...</div>;
-  if (streams.length === 0) return (
+  if (streams.length === 0 && !activeStream) return (
     <div style={{ textAlign: "center", padding: 30 }}>
       <div style={{ fontSize: 32, marginBottom: 8 }}>📺</div>
       <div style={{ fontSize: 13, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>Nobody streaming D&D right now.</div>
@@ -1183,6 +1192,23 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
 
   return (
     <>
+      {activeStream && (
+        <div style={{ ...S.card, padding: 0, marginBottom: 12, overflow: "hidden", border: `1px solid ${ACCENT}55` }}>
+          <iframe
+            src={`https://player.twitch.tv/?channel=${activeStream}&parent=${parentHost}&muted=true`}
+            width="100%" height="380" style={{ border: "none", display: "block" }} allowFullScreen
+            title={`${activeStream} live stream`}
+          />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: `${ACCENT}10`, borderTop: `1px solid ${ACCENT}35` }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 8px #ef4444" }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{activeStream}</span>
+              <span style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".06em", textTransform: "uppercase" }}>Live · Watching in the lobby</span>
+            </span>
+            <button type="button" onClick={() => setActiveStream(null)} style={{ ...S.btn, fontSize: 11 }}>Close</button>
+          </div>
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
           <div key={s.userLogin} onClick={() => setInterceptStream(s)} style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
@@ -1198,7 +1224,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
           </div>
         ))}
       </div>
-      <StreamInterceptModal stream={interceptStream} lobbyId={lobbyId} onClose={() => setInterceptStream(null)} onWatchHere={() => setInterceptStream(null)} />
+      <StreamInterceptModal stream={interceptStream} lobbyId={lobbyId} onClose={() => setInterceptStream(null)} onWatchHere={(s) => { setActiveStream(s.userLogin); setInterceptStream(null); }} />
     </>
   );
 }
@@ -1214,6 +1240,7 @@ export default function DndModulesPanel({
 }) {
   const accent = accentColor || ACCENT;
   const [tab, setTab] = useState<TabId>("compendium");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [compTab, setCompTab] = useState<CompTabId>("spells");
 
   return (

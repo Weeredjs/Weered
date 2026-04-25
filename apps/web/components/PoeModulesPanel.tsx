@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const POE_NINJA = "https://poe.ninja/api/data";
@@ -850,6 +851,11 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
   const [activeStream, setActiveStream] = useState<string | null>(null);
 
+  useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent("Path of Exile")}&first=20`);
@@ -952,6 +958,7 @@ export default function PoeModulesPanel({
 }: Props) {
   const accent = accentColor || ACCENT_POE;
   const [tab, setTab] = useState<TabId>("economy");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [league, setLeague] = useState(DEFAULT_LEAGUE);
 
   return (

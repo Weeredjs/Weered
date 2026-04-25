@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -799,6 +800,11 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
 
   useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
+
+  useEffect(() => {
     apiFetch(`/twitch/streams?game=${encodeURIComponent("Baseball")}`)
       .then(j => { setStreams(j.streams || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -1172,6 +1178,7 @@ export default function MlbModulesPanel({
   style?: React.CSSProperties;
 }) {
   const [tab, setTab] = useState<TabId>("scoreboard");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [jumpToPlayer, setJumpToPlayer] = useState<{ id: string | number; name: string } | null>(null);
 
   function handleLeaderPlayerClick(id: string | number, name: string) {
