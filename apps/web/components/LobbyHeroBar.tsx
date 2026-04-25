@@ -48,21 +48,24 @@ export default function LobbyHeroBar({
   const accent  = accentColor || "#7C3AED";
   const initial = (lobbyName || lobbyId || "L").charAt(0).toUpperCase();
 
-  // Banner rotation for STUDY lobbies (4 gorgeous university quad images)
+  // Banner rotation for STUDY / NHL pool lobbies. Only kicks in when the
+  // lobby has no manual bannerUrl saved. A manually set banner is always
+  // authoritative so admin uploads aren't trampled by the rotating pool.
   const ROTATING_BANNERS: Record<string, string[]> = {
     STUDY: ["/brand/lobbies/study-banner-1.png", "/brand/lobbies/study-banner-2.png", "/brand/lobbies/study-banner-3.png", "/brand/lobbies/study-banner-4.png"],
     NHL: ["/brand/lobbies/nhl-banner-1.png", "/brand/lobbies/nhl-banner-2.png", "/brand/lobbies/nhl-banner-3.png", "/brand/lobbies/nhl-banner-4.png"],
   };
   const [rotatingBanner, setRotatingBanner] = useState<string | null>(null);
   useEffect(() => {
+    if (bannerUrl) { setRotatingBanner(null); return; }
     const pool = ROTATING_BANNERS[moduleType || ""] || (lobbyId === "nhl" ? ROTATING_BANNERS.NHL : null);
     if (!pool) return;
     const pick = () => pool[Math.floor(Math.random() * pool.length)];
     setRotatingBanner(pick());
     const iv = setInterval(() => setRotatingBanner(pick()), 30000);
     return () => clearInterval(iv);
-  }, [moduleType, lobbyId]);
-  const effectiveBanner = rotatingBanner || bannerUrl;
+  }, [moduleType, lobbyId, bannerUrl]);
+  const effectiveBanner = bannerUrl || rotatingBanner;
 
   const twitchGame = gameName || MODULE_GAME[moduleType || ""] || "";
 
