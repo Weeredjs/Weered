@@ -300,20 +300,28 @@ export default function ShellGate({
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
-  // DM unread badge for the rail-stack DMs button. DockShell broadcasts
-  // weered:dock:unread when the count changes; localStorage is the fallback
-  // so the badge survives page reloads.
-  const [dmUnread, setDmUnread] = useState<number>(() => {
+  // Rail-stack DMs button reflects DM + group activity. DockShell publishes
+  // weered:dock:unread (DM threads). GroupsTab publishes weered:groups:unread.
+  // localStorage stores the DM half so the badge survives reloads.
+  const [dmUnreadOnly, setDmUnreadOnly] = useState<number>(() => {
     try { return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0); }
     catch { return 0; }
   });
+  const [groupUnread, setGroupUnread] = useState<number>(0);
+  const dmUnread = dmUnreadOnly + groupUnread;
   useEffect(() => {
-    const onUnread = (e: Event) => {
-      const count = Math.max(0, Number((e as CustomEvent).detail?.count) || 0);
-      setDmUnread(count);
+    const onDm = (e: Event) => {
+      setDmUnreadOnly(Math.max(0, Number((e as CustomEvent).detail?.count) || 0));
     };
-    window.addEventListener("weered:dock:unread", onUnread);
-    return () => window.removeEventListener("weered:dock:unread", onUnread);
+    const onGroup = (e: Event) => {
+      setGroupUnread(Math.max(0, Number((e as CustomEvent).detail?.count) || 0));
+    };
+    window.addEventListener("weered:dock:unread", onDm);
+    window.addEventListener("weered:groups:unread", onGroup);
+    return () => {
+      window.removeEventListener("weered:dock:unread", onDm);
+      window.removeEventListener("weered:groups:unread", onGroup);
+    };
   }, []);
 
   // Persist right rail collapse state

@@ -10,6 +10,8 @@ type Opts = {
   dmDeliver: (peerId: string, payload: any) => void;
   isUserOnline: (userId: string) => boolean;
   sendPush: (userId: string, payload: { title: string; body: string; url?: string; tag?: string }) => Promise<void>;
+  resolveMentions?: (text: string, actorId: string) => Promise<{ id: string; name: string }[]>;
+  createNotification?: (opts: any) => Promise<void>;
 };
 
 const MAX_MEMBERS = 24;       // viewer + 23 others
@@ -17,7 +19,7 @@ const MAX_BODY    = 2000;
 const MAX_NAME    = 60;
 
 export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, dmDeliver, isUserOnline, sendPush } = opts;
+  const { authFromHeader, dmDeliver, isUserOnline, sendPush, resolveMentions, createNotification } = opts;
 
   // Helper: fetch active member IDs for a thread. Excludes left members.
   async function activeMemberIds(threadId: string): Promise<string[]> {
@@ -217,10 +219,14 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     if (!m) return reply.code(403).send({ error: "Not a member" });
     try {
       const latest = await (prisma as any).groupMessage.findMany({
-        where: { threadId: id, deletedAt: null },
+        where: { threadId: id },
         orderBy: { createdAt: "desc" },
         take: 50,
-        select: { id: true, threadId: true, senderId: true, body: true, createdAt: true, editedAt: true },
+        select: {
+          id: true, threadId: true, senderId: true, body: true,
+          createdAt: true, editedAt: true, deletedAt: true,
+          replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true,
+        },
       });
       const messages = latest.reverse();
       await (prisma as any).groupMember.update({
@@ -233,6 +239,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
           ...mm,
           createdAt: mm.createdAt.toISOString(),
           editedAt: mm.editedAt?.toISOString() ?? null,
+          deletedAt: mm.deletedAt?.toISOString() ?? null,
         })),
       });
     } catch (e) {
@@ -254,17 +261,41 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     const m = await requireMember(id, viewer.id);
     if (!m) return reply.code(403).send({ error: "Not a member" });
 
+    // Reply snapshot — only allowed to a message in the same thread.
+    let replyData: any = {};
+    const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
+    if (rawReplyToId) {
+      try {
+        const parent = await (prisma as any).groupMessage.findUnique({
+          where: { id: rawReplyToId },
+          select: { id: true, threadId: true, senderId: true, body: true, deletedAt: true },
+        });
+        if (parent && !parent.deletedAt && parent.threadId === id) {
+          const parentUser = await (prisma as any).user.findUnique({
+            where: { id: parent.senderId }, select: { name: true },
+          });
+          replyData = {
+            replyToId: parent.id,
+            replyToUserId: parent.senderId,
+            replyToUserName: parentUser?.name || "?",
+            replyToBody: String(parent.body || "").slice(0, 120),
+          };
+        }
+      } catch {}
+    }
+
     try {
       const msg = await (prisma as any).groupMessage.create({
-        data: { threadId: id, senderId: viewer.id, body: text },
-        select: { id: true, threadId: true, senderId: true, body: true, createdAt: true },
+        data: { threadId: id, senderId: viewer.id, body: text, ...replyData },
+        select: {
+          id: true, threadId: true, senderId: true, body: true, createdAt: true,
+          replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true,
+        },
       });
       await (prisma as any).groupThread.update({
         where: { id },
         data: { lastMessageAt: msg.createdAt },
       });
-      // Sender's own row marks read on send so the message doesn't count
-      // against their own unread total.
       await (prisma as any).groupMember.update({
         where: { threadId_userId: { threadId: id, userId: viewer.id } },
         data: { lastReadAt: msg.createdAt },
@@ -281,7 +312,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       };
       deliverToMembers(memberIds, payload);
 
-      // Push to offline members (skip sender)
+      // Push to offline members (skip sender).
       const offlinePushes = memberIds
         .filter(uid => uid !== viewer.id && !isUserOnline(uid))
         .map(uid => sendPush(uid, {
@@ -292,9 +323,112 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         }).catch(() => {}));
       Promise.all(offlinePushes).catch(() => {});
 
+      // @mention notifications — only ping mentioned users who are
+      // active members of this thread.
+      if (resolveMentions && createNotification) {
+        (async () => {
+          try {
+            const mentioned = await resolveMentions(text, viewer.id);
+            if (!mentioned.length) return;
+            const memberSet = new Set(memberIds);
+            for (const u of mentioned) {
+              if (!memberSet.has(u.id)) continue;
+              if (u.id === viewer.id) continue;
+              createNotification({
+                userId: u.id,
+                type: "MENTION",
+                title: `${viewer.name} mentioned you in a group`,
+                body: text.slice(0, 120),
+                actorId: viewer.id,
+                actorName: viewer.name,
+                actionUrl: "/home",
+                meta: { groupId: id },
+              }).catch(() => {});
+            }
+          } catch {}
+        })();
+      }
+
       return reply.send({ ok: true, message: payload.message });
     } catch (e) {
       console.error("[groups/messages POST]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
+  // PATCH /groups/:id/messages/:msgId — edit own message within 15 min.
+  app.patch("/groups/:id/messages/:msgId", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const { id, msgId } = req.params as any;
+    const m = await requireMember(id, viewer.id);
+    if (!m) return reply.code(403).send({ error: "Not a member" });
+    const body: any = (req as any).body || {};
+    const text = typeof body.body === "string" ? body.body.trim().slice(0, MAX_BODY) : "";
+    if (!text) return reply.code(400).send({ error: "Empty message" });
+    try {
+      const existing = await (prisma as any).groupMessage.findUnique({
+        where: { id: msgId },
+        select: { id: true, threadId: true, senderId: true, body: true, createdAt: true, deletedAt: true },
+      });
+      if (!existing || existing.threadId !== id) return reply.code(404).send({ error: "Not found" });
+      if (existing.deletedAt) return reply.code(400).send({ error: "Deleted" });
+      if (existing.senderId !== viewer.id) return reply.code(403).send({ error: "Not your message" });
+      if (Date.now() - new Date(existing.createdAt).getTime() > 15 * 60 * 1000) {
+        return reply.code(400).send({ error: "Too old to edit" });
+      }
+      const updated = await (prisma as any).groupMessage.update({
+        where: { id: msgId },
+        data: { body: text, editedAt: new Date() },
+        select: { id: true, threadId: true, body: true, editedAt: true },
+      });
+      const memberIds = await activeMemberIds(id);
+      deliverToMembers(memberIds, {
+        type: "group:edited",
+        threadId: id,
+        msgId,
+        body: updated.body,
+        editedAt: updated.editedAt.toISOString(),
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      console.error("[groups/messages PATCH]", e);
+      return reply.code(500).send({ error: "Server error" });
+    }
+  });
+
+  // DELETE /groups/:id/messages/:msgId — soft delete (own message, or any
+  // for OWNER).
+  app.delete("/groups/:id/messages/:msgId", async (req, reply) => {
+    const viewer = authFromHeader((req.headers as any).authorization);
+    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    const { id, msgId } = req.params as any;
+    const m = await requireMember(id, viewer.id);
+    if (!m) return reply.code(403).send({ error: "Not a member" });
+    try {
+      const existing = await (prisma as any).groupMessage.findUnique({
+        where: { id: msgId },
+        select: { id: true, threadId: true, senderId: true, deletedAt: true },
+      });
+      if (!existing || existing.threadId !== id) return reply.code(404).send({ error: "Not found" });
+      if (existing.deletedAt) return reply.send({ ok: true });
+      const isOwn = existing.senderId === viewer.id;
+      if (!isOwn && m.role !== "OWNER") return reply.code(403).send({ error: "Not allowed" });
+      const now = new Date();
+      await (prisma as any).groupMessage.update({
+        where: { id: msgId },
+        data: { deletedAt: now, body: "" },
+      });
+      const memberIds = await activeMemberIds(id);
+      deliverToMembers(memberIds, {
+        type: "group:deleted",
+        threadId: id,
+        msgId,
+        deletedAt: now.toISOString(),
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      console.error("[groups/messages DELETE]", e);
       return reply.code(500).send({ error: "Server error" });
     }
   });

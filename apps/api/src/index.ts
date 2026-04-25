@@ -3424,7 +3424,7 @@ async function main() {
 
   // ── DM — extracted to routes/dm.ts ────────────────────────────────────────
   await app.register(dmRoutes, { authFromHeader, resolveUserId, fetchReactionsForTargets, dmDeliver, isUserOnline, sendPush } as any);
-  await app.register(groupRoutes, { authFromHeader, resolveUserId, dmDeliver, isUserOnline, sendPush } as any);
+  await app.register(groupRoutes, { authFromHeader, resolveUserId, dmDeliver, isUserOnline, sendPush, resolveMentions, createNotification } as any);
 
 
 
