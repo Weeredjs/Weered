@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ODOTA = "https://api.opendota.com/api";
@@ -973,6 +974,11 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
   const [activeStream, setActiveStream] = useState<string | null>(null);
 
+  useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent("Dota 2")}&first=20`);
@@ -1069,6 +1075,7 @@ export default function Dota2ModulesPanel({
   style,
 }: Props) {
   const [tab, setTab] = useState<TabId>("lfg");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
 
   // Shared hero name map fetched once, used by Player Lookup and Live Matches
   const [heroMap, setHeroMap] = useState<Record<number, string>>({});

@@ -30,6 +30,7 @@ import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
+import { useWatchHere } from "../../../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -291,6 +292,11 @@ export default function LobbyIdPage() {
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
   const [memberChecked, setMemberChecked] = useState(false);
   const [view, setView] = useState<"rooms" | "feed" | "modules" | "events">("rooms");
+
+  // Banner "Watch Here" click → flip to the Modules tab so the inline player
+  // can mount. The active modules panel listens to the same event to switch
+  // its own sub-tab to Streams and pre-load the channel.
+  useWatchHere(React.useCallback(() => { setView("modules"); }, []));
   const [feedHasNew, setFeedHasNew] = useState(false);
 
   // Check for new feed posts

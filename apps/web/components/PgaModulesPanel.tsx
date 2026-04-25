@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -719,6 +720,11 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
 
   useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
+
+  useEffect(() => {
     apiFetch(`/twitch/streams?game=${encodeURIComponent("Golf")}`)
       .then(j => { setStreams(j.streams || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -960,6 +966,7 @@ export default function PgaModulesPanel({
   style?: React.CSSProperties;
 }) {
   const [tab, setTab] = useState<TabId>("leaderboard");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>

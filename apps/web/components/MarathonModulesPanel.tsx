@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 // ── Twitch Glitch icon ──────────────────────────────────────────────────────
 
@@ -75,6 +76,11 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
   const [loading, setLoading] = useState(true);
   const [activeStream, setActiveStream] = useState<string | null>(null);
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
+
+  useEffect(() => {
+    const ch = consumePendingStream();
+    if (ch) setActiveStream(ch);
+  }, []);
 
   useEffect(() => {
     apiFetch(`/twitch/streams?game=${encodeURIComponent("Marathon")}`)
@@ -807,6 +813,7 @@ export default function MarathonModulesPanel({
   const accent = accentColor || DEFAULT_ACCENT;
   const T = makeTheme(accent);
   const [tab, setTab] = useState<TabId>("streams");
+  useWatchHere(useCallback(() => { setTab("streams"); }, []));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, position: "relative", ...style }}>
