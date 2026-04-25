@@ -9,6 +9,7 @@ import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
 import { weeredConfirm } from "../lib/confirm";
 import PresenceRow from "./PresenceRow";
+import { LogoMenu } from "./LogoMenu";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -805,9 +806,9 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   if (!mounted) return (
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <a href="/home" className="weered-rail-logo" title="Home" style={{ flexShrink: 0, marginBottom: 0 }}>
-          <img src="/brand/logo/weered-logo-128.png" alt="Weered" />
-        </a>
+        <div style={{ flexShrink: 0 }}>
+          <LogoMenu />
+        </div>
         <div>
           <div style={{ fontWeight: 800, fontSize: 13 }}>Control Panel</div>
           <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>loading…</div>
@@ -820,9 +821,9 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <a href="/home" className="weered-rail-logo" title="Home" style={{ flexShrink: 0, marginBottom: 0 }}>
-            <img src="/brand/logo/weered-logo-128.png" alt="Weered" />
-          </a>
+          <div style={{ flexShrink: 0 }}>
+            <LogoMenu />
+          </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 13 }}>Control Panel</div>
             <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>context: {resolvedLobbyId}</div>

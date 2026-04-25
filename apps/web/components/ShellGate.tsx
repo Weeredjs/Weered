@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
+import { LogoMenu } from "./LogoMenu";
+import { NotificationBell } from "./NotificationCenter";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -342,11 +344,14 @@ export default function ShellGate({
             a specific Burner tab. Hidden when the rail is expanded. */}
         {rightCollapsed ? (
           <div className="weered-rail-stack">
-            {/* Logo at the top of the collapsed rail — fills the otherwise-empty
-                space and gives the collapsed shell a brand anchor. */}
-            <a href="/home" className="weered-rail-logo" title="Home">
-              <img src="/brand/logo/weered-logo-128.png" alt="Weered" />
-            </a>
+            {/* Logo at the top of the collapsed rail — now also the menu
+                anchor for profile / settings / status / log out. The bell
+                sits directly under it so notifications live in the same
+                visual zone as the brand mark. */}
+            <LogoMenu />
+            <div className="weered-rail-bell-wrap">
+              <NotificationBell />
+            </div>
             <RailQuickButton
               kind="crew"
               label="Crew"

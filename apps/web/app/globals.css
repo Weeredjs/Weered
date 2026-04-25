@@ -5619,3 +5619,136 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 @media (prefers-reduced-motion: reduce) {
   .weered-modules-tab { animation: none; }
 }
+
+/* Logo menu — W mark in the rail-stack and Control Panel header doubles
+   as the user menu (profile / settings / status / log out) and shows a
+   notification badge ring when there's unread activity. */
+.weered-logo-menu-root {
+  position: relative;
+  display: inline-block;
+}
+.weered-logo-menu-btn {
+  position: relative;
+}
+@keyframes weeredLogoBellPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(245, 158, 11, .35),
+      0 0 14px -2px rgba(245, 158, 11, .35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(245, 158, 11, .55),
+      0 0 22px -2px rgba(245, 158, 11, .65);
+  }
+}
+.weered-logo-menu-btn.is-hot {
+  border-radius: 8px;
+  animation: weeredLogoBellPulse 2.2s ease-in-out infinite;
+}
+.weered-logo-menu-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(10, 10, 18, .9);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, .4);
+  pointer-events: none;
+}
+.weered-logo-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1000;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(15, 17, 27, .96);
+  border: 1px solid rgba(148, 163, 184, .18);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, .55),
+    0 0 0 1px rgba(124, 58, 237, .15),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.weered-logo-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(243, 244, 246, .85);
+  text-align: left;
+  transition: background .12s, color .12s;
+}
+.weered-logo-menu-item:hover {
+  background: rgba(255, 255, 255, .06);
+  color: rgba(243, 244, 246, 1);
+}
+.weered-logo-menu-item > span:first-of-type {
+  flex: 1;
+}
+.weered-logo-menu-item.is-danger {
+  color: rgba(239, 68, 68, .75);
+}
+.weered-logo-menu-item.is-danger:hover {
+  background: rgba(239, 68, 68, .12);
+  color: rgba(252, 165, 165, 1);
+}
+.weered-logo-menu-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+.weered-logo-menu-status {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, .7);
+}
+.weered-logo-menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(148, 163, 184, .12);
+}
+
+/* The bell that now sits beneath the W in the collapsed rail-stack. */
+.weered-rail-bell-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-logo-menu-btn.is-hot { animation: none; }
+}

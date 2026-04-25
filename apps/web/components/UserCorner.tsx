@@ -6,7 +6,6 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
-import { NotificationBell } from "./NotificationCenter";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -50,13 +49,6 @@ const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }>
   MOD:     { border: "rgba(88,0,229,.34)", bg: "rgba(88,0,229,.18)",  color: "rgba(243,244,246,.85)" },
 };
 
-const IconSettings = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-    <circle cx="12" cy="12" r="2.5" />
-    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" />
-  </svg>
-);
-
 const IconDock = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="4" width="20" height="14" rx="3" />
@@ -65,7 +57,7 @@ const IconDock = () => (
 );
 
 export default function UserCorner() {
-  const { me, role, globalRole, currentLobbyId, logout, isAway, setAway } = useWeered() as any;
+  const { me, role, globalRole, currentLobbyId, isAway, setAway } = useWeered() as any;
   const { openSheet } = useOverlay();
 
   // Reactive lobby-theme detection for vocabulary swap
@@ -488,64 +480,18 @@ export default function UserCorner() {
         </button>
       </div>
 
-      {/* Notoriety XP bar + notification bell */}
+      {/* Notoriety XP bar (notifications + settings + logout moved to W logo menu) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px 0" }}>
         <div style={{ flex: 1 }}>
           <NotorietyBar compact />
         </div>
-        <NotificationBell />
       </div>
 
-      {/* Action strip */}
+      {/* Action strip — Burner only; settings/logout live in the W logo menu */}
       <div style={{
         display: "flex", gap: 6, padding: "8px 12px 10px",
         borderTop: "1px solid rgba(255,255,255,.05)",
       }}>
-        {/* Settings — visible, with label */}
-        <button
-          type="button"
-          className="weered-uc-action"
-          onClick={() => openSheet("settings")}
-          title="Settings"
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 6, padding: "8px 14px",
-            background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.10)",
-            borderRadius: 10, cursor: "pointer",
-            color: "rgba(255,255,255,.55)", fontFamily: "inherit",
-            fontSize: 11, fontWeight: 700,
-            transition: "all 0.15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(255,255,255,.12)"; el.style.borderColor = "rgba(255,255,255,.20)"; el.style.color = "rgba(255,255,255,.80)"; }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(255,255,255,.06)"; el.style.borderColor = "rgba(255,255,255,.10)"; el.style.color = "rgba(255,255,255,.55)"; }}
-        >
-          <IconSettings />
-          <span>Settings</span>
-        </button>
-
-        {/* Logout */}
-        <button
-          type="button"
-          className="weered-uc-action"
-          onClick={() => { if (logout) logout(); else { try { localStorage.removeItem("weered_token"); window.location.href = "/login"; } catch {} } }}
-          title="Log out"
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "8px 10px",
-            background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)",
-            borderRadius: 10, cursor: "pointer",
-            color: "rgba(239,68,68,.5)", fontFamily: "inherit",
-            fontSize: 11, fontWeight: 700,
-            transition: "all 0.15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(239,68,68,.1)"; el.style.borderColor = "rgba(239,68,68,.25)"; el.style.color = "rgba(239,68,68,.8)"; }}
-          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(255,255,255,.04)"; el.style.borderColor = "rgba(255,255,255,.08)"; el.style.color = "rgba(239,68,68,.5)"; }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-        </button>
-
         {/* BURNER PHONE — loud, unmissable */}
         <button
           type="button"
