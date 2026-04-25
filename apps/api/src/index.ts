@@ -857,7 +857,11 @@ async function seedLobbies() {
     try {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        update: { name: l.name, description: l.description, pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? undefined, logoUrl: (l as any).logoUrl ?? undefined, bannerUrl: (l as any).bannerUrl ?? undefined, websiteUrl: (l as any).websiteUrl ?? undefined },
+        // Update only code-authoritative fields. Branding (name, description,
+        // accentColor, logoUrl, bannerUrl, websiteUrl, keywords) is admin-
+        // editable via /lobbies/:id/admin/branding — re-applying the seed
+        // value on every API restart was wiping admin changes.
+        update: { pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
         create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
       });
     } catch (e) { console.warn("seedLobbies:", l.id, e); }
