@@ -76,9 +76,9 @@ fi
 
 # ── Sign (Tauri auto-signs when env vars are set, but defense-in-depth) ──────
 echo ">> Signing artifacts"
-pnpm tauri signer sign -f "$KEY_PATH" -p "" "$NSIS" 2>&1 | tail -5
+pnpm tauri signer sign --private-key-path "$KEY_PATH" --password "" "$NSIS" 2>&1 | tail -5
 if [ -f "$MSI" ]; then
-  pnpm tauri signer sign -f "$KEY_PATH" -p "" "$MSI" 2>&1 | tail -5
+  pnpm tauri signer sign --private-key-path "$KEY_PATH" --password "" "$MSI" 2>&1 | tail -5
 fi
 
 # ── Publish ──────────────────────────────────────────────────────────────────
