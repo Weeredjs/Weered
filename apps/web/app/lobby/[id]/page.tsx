@@ -30,7 +30,7 @@ import ForumPage from "../../../components/forum/ForumPage";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
-import { useWatchHere } from "../../../lib/useWatchHere";
+import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -297,6 +297,11 @@ export default function LobbyIdPage() {
   // can mount. The active modules panel listens to the same event to switch
   // its own sub-tab to Streams and pre-load the channel.
   useWatchHere(React.useCallback(() => { setView("modules"); }, []));
+
+  // Drop any leftover pending stream when entering a different lobby so a
+  // banner click on one lobby doesn't auto-play in a lobby the user
+  // navigates to a few seconds later.
+  useEffect(() => { clearPendingStream(); }, [lobbyId]);
   const [feedHasNew, setFeedHasNew] = useState(false);
 
   // Check for new feed posts
