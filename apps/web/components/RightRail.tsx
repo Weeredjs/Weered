@@ -610,10 +610,10 @@ function FriendsPanel() {
     const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
     const userId      = String(f.id ?? f.userId ?? f.username ?? "");
     const rawRoomId   = String(f.roomId || "").replace(/^room:/, "");
-    const isLobby     = f.roomIsLobby === true
-      || (f.roomName || "").toLowerCase().includes("lobby")
-      || rawRoomId === "lobby"
-      || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/.test(rawRoomId) && rawRoomId.length < 30);
+    // Trust the API's roomIsLobby verdict. The previous regex heuristic
+    // matched almost any lowercase roomId as a lobby and was sending Join
+    // clicks to /lobby/* even when the friend was in a sub-room.
+    const isLobby     = f.roomIsLobby === true || rawRoomId === "lobby";
     const joinHref    = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
 
     const platforms = {
@@ -740,12 +740,10 @@ function CrewPanel() {
           {allMembers.map((m: any) => {
             const userId     = String(m.userId ?? m.id ?? "");
             const rawRoomId  = String(m.roomId || "").replace(/^room:/, "");
-            // ── Use roomIsLobby from API, fall back to smart detection ──
-            // Lobby slugs are always lowercase (destiny2, warframe), random IDs have mixed case (zbZTrF)
-            const isLobby    = m.roomIsLobby === true
-              || (m.roomName || "").toLowerCase().includes("lobby")
-              || rawRoomId === "lobby"
-              || (rawRoomId.length > 2 && !rawRoomId.startsWith("article_") && /^[a-z][a-z0-9._-]+$/.test(rawRoomId) && rawRoomId.length < 30);
+            // Trust the API's roomIsLobby verdict. Old regex heuristic was
+            // routing Join clicks to /lobby/* even when the crewmate was in
+            // a sub-room (e.g. Crucible inside destiny2-crucible).
+            const isLobby    = m.roomIsLobby === true || rawRoomId === "lobby";
             const joinHref   = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
             return (
               <div key={m.userId}
