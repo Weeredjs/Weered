@@ -3,6 +3,12 @@
 import { useEffect } from "react";
 
 const PENDING_KEY = "__weeredPendingStream" as const;
+const TTL_MS = 3000;
+
+interface PendingStash {
+  channel: string;
+  ts: number;
+}
 
 /**
  * Subscribe to the banner-area "Watch Here" event. LobbyHeroBar dispatches
@@ -10,16 +16,21 @@ const PENDING_KEY = "__weeredPendingStream" as const;
  * from the stream prompt. The lobby page uses this to switch its view to
  * Modules; each modules panel uses it to switch its own sub-tab to Streams.
  *
- * The channel is also stashed on the window so the streams sub-component
- * (which mounts after the panel switches tabs) can read and consume it on
- * its own mount, avoiding a race between the event and the late mount.
+ * The channel is also stashed on the window with a timestamp so the streams
+ * sub-component (which mounts after the panel switches tabs) can read and
+ * consume it on its own mount, avoiding a race between the event and the
+ * late mount. Stale stashes (older than TTL_MS) are ignored on consume so
+ * a click on one lobby's banner doesn't leak into a different lobby that
+ * the user navigates to seconds later.
  */
 export function useWatchHere(handler: (channel: string) => void) {
   useEffect(() => {
     const listener = (e: Event) => {
       const ch = (e as CustomEvent).detail?.channel;
       if (typeof ch === "string" && ch) {
-        try { (window as any)[PENDING_KEY] = ch; } catch {}
+        try {
+          (window as any)[PENDING_KEY] = { channel: ch, ts: Date.now() } as PendingStash;
+        } catch {}
         handler(ch);
       }
     };
@@ -31,15 +42,25 @@ export function useWatchHere(handler: (channel: string) => void) {
 /**
  * Streams sub-components call this on mount to consume any pending channel
  * left by a banner Watch Here click. Returns the channel and clears the
- * stash so subsequent mounts don't re-trigger.
+ * stash. Returns null if the stash is older than TTL_MS so a stale click
+ * from a previous lobby doesn't auto-play here.
  */
 export function consumePendingStream(): string | null {
   try {
-    const v = (window as any)[PENDING_KEY];
-    if (typeof v === "string" && v) {
+    const v = (window as any)[PENDING_KEY] as PendingStash | undefined;
+    if (v && typeof v.channel === "string" && v.channel) {
       delete (window as any)[PENDING_KEY];
-      return v;
+      if (typeof v.ts === "number" && Date.now() - v.ts > TTL_MS) return null;
+      return v.channel;
     }
   } catch {}
   return null;
+}
+
+/**
+ * Lobby page calls this on lobby change so a banner Watch Here click on
+ * one lobby doesn't auto-play on a different lobby the user navigates to.
+ */
+export function clearPendingStream() {
+  try { delete (window as any)[PENDING_KEY]; } catch {}
 }
