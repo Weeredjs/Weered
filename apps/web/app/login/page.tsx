@@ -332,7 +332,7 @@ function LoginForm() {
       <div className="wl-root">
         <div className="wl-card">
           <div className="wl-brand">
-            <div className="wl-logo"><img src="/brand/logo/weered-logo-512.png" alt="Weered" /></div>
+            <div className="wl-logo"><img src="/brand/logo/weered-logo-128.png" alt="Weered" /></div>
             <div>
               <div className="wl-brand-name">weered</div>
               <div className="wl-brand-sub">enter the portal</div>
