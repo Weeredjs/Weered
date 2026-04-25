@@ -6,6 +6,7 @@ import { avatarBg } from "../lib/avatarColor";
 import CrewChatPanel from "./CrewChatPanel";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import GroupsTab from "./GroupsTab";
 import { weeredConfirm } from "../lib/confirm";
 
 type DmReaction = { emoji: string; count: number; users: string[] };
@@ -173,7 +174,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const { me, wsReady, wsState, activeRoomId, joinedRoomId, users, msgs, meta, admin, role, joinStatus, sendChat, logout, renameRoom, lockRoom, unlockRoom, knock, admit } = ctx || {};
 
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("dms");
+  const [tab, setTab] = useState<"room"|"dms"|"groups"|"friends"|"crew">("dms");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
   const [theme, setTheme] = useState<WeeredThemeName>("press");
@@ -491,6 +492,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
         <SegmentedControl
           tabs={[
             {id:"dms",label:"Messages",badge:totalUnread},
+            {id:"groups",label:"Groups"},
             {id:"friends",label:"Friends"},
             {id:"room",label:"Room"},
             {id:"crew",label:"Crew"},
@@ -840,6 +842,9 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               </>
             )}
           </div>
+
+        ) : tab==="groups" ? (
+          <GroupsTab apiBase={apiBase} token={tokenMaybe || ""} meId={String(me?.id || "")} />
 
         ) : tab==="friends" ? (
           <FriendsTab

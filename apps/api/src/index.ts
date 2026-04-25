@@ -34,6 +34,7 @@ import crewsRoutes from "./routes/crews";
 import forumRoutes from "./routes/forum";
 import eventsRoutes from "./routes/events";
 import dmRoutes from "./routes/dm";
+import groupRoutes from "./routes/groups";
 import billingRoutes from "./routes/billing";
 import activityRoutes from "./routes/activity";
 import staffOpsRoutes from "./routes/staffOps";
@@ -3423,6 +3424,7 @@ async function main() {
 
   // ── DM — extracted to routes/dm.ts ────────────────────────────────────────
   await app.register(dmRoutes, { authFromHeader, resolveUserId, fetchReactionsForTargets, dmDeliver, isUserOnline, sendPush } as any);
+  await app.register(groupRoutes, { authFromHeader, resolveUserId, dmDeliver, isUserOnline, sendPush } as any);
 
 
 
