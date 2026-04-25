@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
 import { LobbyRole } from "@prisma/client";
 
