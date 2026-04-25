@@ -148,36 +148,39 @@ export function LogoMenu() {
             <>
               <button type="button" role="menuitem" className="weered-logo-menu-item" onClick={goHome}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l9-9 9 9" /><path d="M5 10v10h14V10" /></svg>
-                <span>Home</span>
+                <span className="weered-logo-menu-label">Home</span>
               </button>
               <button type="button" role="menuitem" className="weered-logo-menu-item" onClick={openProfile}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7" /></svg>
-                <span>View profile</span>
+                <span className="weered-logo-menu-label">View profile</span>
               </button>
               <button type="button" role="menuitem" className="weered-logo-menu-item" onClick={showNotifs}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z" /><path d="M10 21a2 2 0 004 0" /></svg>
-                <span>Notifications</span>
+                <span className="weered-logo-menu-label">Notifications</span>
                 {hot && <span className="weered-logo-menu-pill">{unreadCount > 99 ? "99+" : unreadCount}</span>}
               </button>
               <button type="button" role="menuitem" className="weered-logo-menu-item" onClick={toggleAway}>
-                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 14, height: 14 }}>
+                <span aria-hidden style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 14, height: 14, flexShrink: 0,
+                }}>
                   <span style={{
                     width: 10, height: 10, borderRadius: "50%",
                     background: isAway ? "#facc15" : "#22c55e",
                     boxShadow: isAway ? "0 0 6px rgba(250,204,21,.7)" : "0 0 6px rgba(34,197,94,.8)",
                   }} />
                 </span>
-                <span>{isAway ? "Come back" : "Lying low"}</span>
+                <span className="weered-logo-menu-label">{isAway ? "Come back" : "Lying low"}</span>
                 <span className="weered-logo-menu-status">{isAway ? "AFK" : "Online"}</span>
               </button>
               <button type="button" role="menuitem" className="weered-logo-menu-item" onClick={openSettings}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></svg>
-                <span>Settings</span>
+                <span className="weered-logo-menu-label">Settings</span>
               </button>
               <div className="weered-logo-menu-divider" />
               <button type="button" role="menuitem" className="weered-logo-menu-item is-danger" onClick={doLogout}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                <span>Log out</span>
+                <span className="weered-logo-menu-label">Log out</span>
               </button>
             </>
           ) : (
