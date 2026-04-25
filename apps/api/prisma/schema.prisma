@@ -423,6 +423,9 @@ model User {
 
   dmSent           DirectMessage[]  @relation("DMSent")
   dmReceived       DirectMessage[]  @relation("DMReceived")
+  groupThreadsOwned GroupThread[]    @relation("GroupCreator")
+  groupMemberships GroupMember[]
+  groupMessagesSent GroupMessage[]   @relation("GroupMessageSender")
   blocksSent       UserBlock[]      @relation("BlocksSent")
   blocksReceived   UserBlock[]      @relation("BlocksReceived")
   reportsFiled     Report[]         @relation("ReportsFiled")
@@ -626,6 +629,57 @@ model DirectMessage {
 
   @@index([fromId, toId, createdAt])
   @@index([toId, readAt])
+}
+
+// ── Group messages ──────────────────────────────────────────────────────────
+// Discord-style group threads. A creator spins one up with N friends; any
+// member can send. lastReadAt on the membership row drives unread counts.
+model GroupThread {
+  id          String   @id @default(cuid())
+  name        String?  // optional thread title; falls back to member-name list
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Bumped on every new message so thread list ordering doesn't need to
+  // re-aggregate from GroupMessage.
+  lastMessageAt DateTime @default(now())
+
+  createdBy   User           @relation("GroupCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  messages    GroupMessage[]
+
+  @@index([lastMessageAt])
+}
+
+model GroupMember {
+  id         String   @id @default(cuid())
+  threadId   String
+  userId     String
+  role       String   @default("MEMBER") // OWNER | MEMBER
+  joinedAt   DateTime @default(now())
+  lastReadAt DateTime @default(now())
+  leftAt     DateTime?
+
+  thread GroupThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+  @@index([userId, leftAt])
+}
+
+model GroupMessage {
+  id        String    @id @default(cuid())
+  threadId  String
+  senderId  String
+  body      String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  deletedAt DateTime?
+
+  thread GroupThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User        @relation("GroupMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
 }
 
 // ── User blocks ─────────────────────────────────────────────────────────────

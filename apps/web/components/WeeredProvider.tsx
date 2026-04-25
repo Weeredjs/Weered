@@ -342,6 +342,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:reaction") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:reaction", { detail: msg })); } catch {}
       }
+      // Forward group thread events to DOM (created / message / renamed /
+      // member add/remove). GroupsTab subscribes via window listeners.
+      if (msg.type === "group:created" || msg.type === "group:message" ||
+          msg.type === "group:renamed" || msg.type === "group:members:added" ||
+          msg.type === "group:members:removed") {
+        try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
+      }
       // Forward notification events to DOM
       if (msg.type === "notification:new") {
         try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
