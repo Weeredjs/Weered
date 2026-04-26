@@ -3321,8 +3321,19 @@ button:hover, [role="button"]:hover {
 .weered-center {
   flex: 1 1 auto;
   min-width: 0;
-  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
+/* Direct child of weered-center fills the column. Home/lobby/etc all
+   use `height: 100%` on their top-level div which doesn't always
+   resolve through flex-stretched parents in WebKit/Chromium — this
+   adds a real flex constraint so the chain is unambiguous. */
+.weered-center > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Chat fullscreen CTA — the "Dial In" button. Subtle breathing glow
