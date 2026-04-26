@@ -8,7 +8,7 @@ export default function TermsContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .legal-root {
           min-height: 100vh;
           background: #050810;
@@ -50,7 +50,7 @@ export default function TermsContent() {
         }
         .legal-inner.visible { opacity: 1; transform: translateY(0); }
         .legal-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: clamp(32px, 7vw, 56px);
           letter-spacing: -2px;

@@ -91,7 +91,7 @@ export default function PremiumPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .prem-root {
           min-height: 100vh;
           background: #050810;
@@ -141,7 +141,7 @@ export default function PremiumPage() {
           margin-bottom: 16px;
         }
         .prem-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: clamp(36px, 6vw, 64px);
           letter-spacing: -2px;
@@ -188,7 +188,7 @@ export default function PremiumPage() {
           font-weight: 700;
         }
         .prem-tier-name {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 22px;
           letter-spacing: -0.5px;
@@ -197,7 +197,7 @@ export default function PremiumPage() {
         .prem-price {
           font-size: 32px;
           font-weight: 700;
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           letter-spacing: -1px;
           margin-bottom: 2px;
           line-height: 1;

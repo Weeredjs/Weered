@@ -121,7 +121,7 @@ export default function ApplyPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
 
         .mod-root {
           height: 100%;
@@ -173,7 +173,7 @@ export default function ApplyPage() {
           margin-bottom: 12px;
         }
         .mod-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: clamp(28px, 5vw, 44px);
           letter-spacing: -1.5px;
@@ -202,7 +202,7 @@ export default function ApplyPage() {
           margin-bottom: 20px;
         }
         .mod-card-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 16px;
           color: rgba(255,255,255,0.85);
@@ -311,7 +311,7 @@ export default function ApplyPage() {
           display: block;
         }
         .mod-success-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 20px;
           color: rgba(88,0,229,0.9);

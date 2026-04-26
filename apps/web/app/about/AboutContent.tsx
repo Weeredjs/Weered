@@ -21,7 +21,7 @@ export default function AboutContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .about-root {
           height: 100%;
           overflow-y: auto;
@@ -65,7 +65,7 @@ export default function AboutContent() {
         }
         .about-inner.visible { opacity: 1; transform: translateY(0); }
         .about-wordmark {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: clamp(52px, 10vw, 96px);
           letter-spacing: -4px;

@@ -8,7 +8,7 @@ export default function GuidelinesContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .legal-root {
           min-height: 100vh;
           background: #050810;
@@ -47,7 +47,7 @@ export default function GuidelinesContent() {
         }
         .legal-inner.visible { opacity: 1; transform: translateY(0); }
         .legal-title {
-          font-family: 'Syne', sans-serif; font-weight: 900;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif; font-weight: 900;
           font-size: clamp(32px, 7vw, 56px); letter-spacing: -2px; line-height: 1.1;
           background: linear-gradient(135deg, #fff 0%, rgba(167,139,250,0.8) 60%, rgba(124,58,237,0.6) 100%);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;

@@ -41,7 +41,7 @@ export default function ContactContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .ct-root {
           min-height: 100vh;
           background: #050810;
@@ -90,7 +90,7 @@ export default function ContactContent() {
           margin-bottom: 12px;
         }
         .ct-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: clamp(32px, 6vw, 52px);
           letter-spacing: -2px;
@@ -176,7 +176,7 @@ export default function ContactContent() {
         }
         .ct-sent-icon { font-size: 36px; margin-bottom: 16px; }
         .ct-sent-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 22px;
           color: rgba(167,139,250,0.9);

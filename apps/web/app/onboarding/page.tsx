@@ -99,7 +99,7 @@ function OnboardingForm() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .wo-root {
           min-height: 100vh;
           background: #080810;
@@ -172,7 +172,7 @@ function OnboardingForm() {
           border: 1px solid rgba(124,58,237,0.45);
           border-radius: 12px;
           color: white;
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
@@ -194,18 +194,18 @@ function OnboardingForm() {
               width: 40, height: 40, borderRadius: 10,
               background: "linear-gradient(135deg, #7C3AED, #D946EF)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: "white",
+              fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, color: "white",
               boxShadow: "0 0 24px rgba(124,58,237,0.35)",
             }}>w</div>
             <div>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px" }}>weered</div>
+              <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px" }}>weered</div>
               <div style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", marginTop: 3, letterSpacing: "0.04em" }}>claim your handle</div>
             </div>
           </div>
 
           {/* Heading */}
           <div style={{ marginBottom: 6 }}>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
+            <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 22, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
               Pick your handle.
             </div>
             <div style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", marginTop: 8, lineHeight: 1.65 }}>

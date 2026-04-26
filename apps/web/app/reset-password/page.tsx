@@ -76,7 +76,7 @@ function ResetInner() {
             <button
               onClick={submit}
               disabled={busy || !token}
-              style={{ width: "100%", marginTop: 18, padding: 14, background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(217,70,239,0.75))", border: "1px solid rgba(124,58,237,0.45)", borderRadius: 12, color: "white", fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.5 : 1 }}
+              style={{ width: "100%", marginTop: 18, padding: 14, background: "linear-gradient(135deg, rgba(124,58,237,0.85), rgba(217,70,239,0.75))", border: "1px solid rgba(124,58,237,0.45)", borderRadius: 12, color: "white", fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.5 : 1 }}
             >
               {busy ? "working..." : "update password"}
             </button>
