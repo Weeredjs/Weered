@@ -1037,6 +1037,32 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
   const tagRadius = tagShape === "square" ? 0 : tagShape === "pill" ? 999 : 4;
   const validPillBg = f.pillBgColor && /^#[0-9a-f]{6}$/i.test(f.pillBgColor) ? f.pillBgColor : null;
 
+  // Pill bg intensity — viewer-chosen multiplier (0-100, default 60)
+  const [pillIntensity, setPillIntensity] = React.useState<number>(60);
+  React.useEffect(() => {
+    const read = () => {
+      try {
+        const raw = localStorage.getItem("weered:pillBgIntensity");
+        const n = raw == null ? 60 : Math.max(0, Math.min(100, Number(raw)));
+        if (Number.isFinite(n)) setPillIntensity(n);
+      } catch {}
+    };
+    read();
+    const onChange = () => read();
+    window.addEventListener("weered:pillBgIntensity", onChange);
+    return () => window.removeEventListener("weered:pillBgIntensity", onChange);
+  }, []);
+
+  const pillTint = (() => {
+    if (!validPillBg) return undefined;
+    const r = parseInt(validPillBg.slice(1, 3), 16);
+    const g = parseInt(validPillBg.slice(3, 5), 16);
+    const b = parseInt(validPillBg.slice(5, 7), 16);
+    const a = pillIntensity / 100;
+    if (a <= 0.01) return undefined;
+    return `linear-gradient(90deg, rgba(${r},${g},${b},${a.toFixed(3)}) 0%, rgba(${r},${g},${b},${(a * 0.45).toFixed(3)}) 60%, transparent 100%)`;
+  })();
+
   const secondary = (() => {
     if (f.online) {
       if (f.isAway) return f.roomName ? `lying low in ${f.roomName}` : "lying low";
@@ -1054,7 +1080,7 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
       display:"flex", alignItems:"center", gap:10,
       padding:"7px 14px",
       borderBottom:"1px solid var(--weered-bd)",
-      background: validPillBg ? `linear-gradient(90deg, ${validPillBg}28 0%, ${validPillBg}10 60%, transparent 100%)` : undefined,
+      background: pillTint,
     }}>
       <div style={{ position:"relative" as const }}>
         <Avatar name={f.name||"?"} size={32} chosenColor={f.avatarColor} src={f.avatar} />
