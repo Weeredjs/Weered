@@ -2862,22 +2862,34 @@ async function main() {
         await awardNotoriety(viewer.id, "BIO_COMPLETE");
       }
 
-      // If avatarColor or avatar changed, update all live sockets for this user and re-broadcast
-      // presence in every room they're in so other clients see the change instantly
-      if (avatarColor !== undefined || avatar !== undefined) {
+      // If any visible field changed, update all live sockets for this user
+      // and re-broadcast presence in every room they're in so other clients
+      // see the change instantly. Without this, viewers would only see the
+      // updated colours after a fresh /friends fetch or a page reload.
+      const visibleChanged =
+        avatarColor !== undefined || avatar !== undefined
+        || panelBgColor !== undefined || panelAccentColor !== undefined
+        || pillBgColor !== undefined  || pillAccentColor !== undefined;
+      if (visibleChanged) {
         if (avatar !== undefined && avatar) awardNotoriety(viewer.id, "AVATAR_SET").catch(() => {});
         for (const sock of wss.clients) {
           const s = sock as Sock;
           if (s.user?.id === viewer.id) {
-            if (avatarColor !== undefined) s.user.avatarColor = avatarColor;
-            if (avatar !== undefined) s.user.avatar = avatar || undefined;
+            if (avatarColor !== undefined)      s.user.avatarColor = avatarColor;
+            if (avatar !== undefined)           s.user.avatar = avatar || undefined;
+            if (panelBgColor !== undefined)     (s.user as any).panelBgColor     = panelBgColor     || undefined;
+            if (panelAccentColor !== undefined) (s.user as any).panelAccentColor = panelAccentColor || undefined;
+            if (pillBgColor !== undefined)      (s.user as any).pillBgColor      = pillBgColor      || undefined;
+            if (pillAccentColor !== undefined)  (s.user as any).pillAccentColor  = pillAccentColor  || undefined;
             if (s.roomId) {
               const room = rooms.get(s.roomId);
               if (room) {
                 const entry = room.users.get(viewer.id);
                 if (entry) {
-                  if (avatarColor !== undefined) (entry as any).avatarColor = avatarColor;
-                  if (avatar !== undefined) (entry as any).avatar = avatar || undefined;
+                  if (avatarColor !== undefined)      (entry as any).avatarColor = avatarColor;
+                  if (avatar !== undefined)           (entry as any).avatar      = avatar || undefined;
+                  if (pillBgColor !== undefined)      (entry as any).pillBgColor = pillBgColor || undefined;
+                  if (pillAccentColor !== undefined)  (entry as any).pillAccentColor = pillAccentColor || undefined;
                 }
                 publishState(room);
               }
