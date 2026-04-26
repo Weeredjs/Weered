@@ -102,6 +102,26 @@ export default async function twitchRoutes(app: FastifyInstance) {
       return reply.send(empty);
     }
 
+    // Helper: find a lobby that matches a game name, so we can route the
+    // Join Room button to a real lobby (everyone clicking lands in the same
+    // place to watch together).
+    async function resolveLobbyForGame(gameName: string): Promise<string | null> {
+      const g = gameName.toLowerCase().trim();
+      try {
+        // Try exact name match first, then keyword match
+        const exact = await (prisma as any).lobby.findFirst({
+          where: { name: { equals: gameName, mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (exact?.id) return exact.id;
+        const byKeyword = await (prisma as any).lobby.findFirst({
+          where: { keywords: { has: g } },
+          select: { id: true },
+        });
+        return byKeyword?.id || null;
+      } catch { return null; }
+    }
+
     // 1. Linked Weered users currently live
     try {
       const linked: any[] = await (prisma as any).user.findMany({
@@ -118,9 +138,17 @@ export default async function twitchRoutes(app: FastifyInstance) {
         if (streams.length > 0) {
           const top = streams.sort((a: any, b: any) => b.viewer_count - a.viewer_count)[0];
           const weeredUser = linked.find(u => u.twitchLogin?.toLowerCase() === top.user_login?.toLowerCase());
+          // For a Weered user streaming, route to the lobby matching the
+          // game they're streaming, if we have one.
+          const joinLobbyId = top.game_name ? await resolveLobbyForGame(top.game_name) : null;
           const payload = {
             ok: true,
-            stream: { ...shapeStream(top), source: "user", weeredUser: weeredUser ? { id: weeredUser.id, name: weeredUser.name, avatar: weeredUser.avatar } : null },
+            stream: {
+              ...shapeStream(top),
+              source: "user",
+              weeredUser: weeredUser ? { id: weeredUser.id, name: weeredUser.name, avatar: weeredUser.avatar } : null,
+              joinLobbyId,
+            },
           };
           featuredCache = { ts: Date.now(), payload };
           return reply.send(payload);
@@ -148,7 +176,7 @@ export default async function twitchRoutes(app: FastifyInstance) {
           if (top) {
             const payload = {
               ok: true,
-              stream: { ...shapeStream(top), source: "game", gameName: featuredLobbyName },
+              stream: { ...shapeStream(top), source: "game", gameName: featuredLobbyName, joinLobbyId: featuredId },
             };
             featuredCache = { ts: Date.now(), payload };
             return reply.send(payload);
@@ -167,9 +195,10 @@ export default async function twitchRoutes(app: FastifyInstance) {
         const data = await helixGet(`streams?game_id=${gameId}&first=1&sort=viewers`);
         const top = data?.data?.[0];
         if (top) {
+          const lolLobbyId = await resolveLobbyForGame("League of Legends");
           const payload = {
             ok: true,
-            stream: { ...shapeStream(top), source: "fallback", gameName: "League of Legends" },
+            stream: { ...shapeStream(top), source: "fallback", gameName: "League of Legends", joinLobbyId: lolLobbyId },
           };
           featuredCache = { ts: Date.now(), payload };
           return reply.send(payload);
