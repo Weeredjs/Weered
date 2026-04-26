@@ -765,6 +765,7 @@ type MyCrew = {
   logoUrl?: string | null;
   bannerUrl?: string | null;
   accentColor?: string | null;
+  tagShape?: string | null;
   homePort?: string | null;
   recruiting: boolean;
   recruitingNote: string;
@@ -1327,6 +1328,7 @@ function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
   const [logoUrl, setLogoUrl] = useState(crew.logoUrl || "");
   const [bannerUrl, setBannerUrl] = useState(crew.bannerUrl || "");
   const [accentColor, setAccentColor] = useState(crew.accentColor || "");
+  const [tagShape, setTagShape] = useState((crew as any).tagShape || "rounded");
   const [homePort, setHomePort] = useState(crew.homePort || "");
   const [recruiting, setRecruiting] = useState(crew.recruiting);
   const [recruitingNote, setRecruitingNote] = useState(crew.recruitingNote);
@@ -1344,7 +1346,7 @@ function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
       method: "PATCH",
       body: JSON.stringify({
         name, tag, description,
-        logoUrl, bannerUrl, accentColor,
+        logoUrl, bannerUrl, accentColor, tagShape,
         homePort, recruiting, recruitingNote,
         publicInLobbies: Array.from(lobbies),
       }),
@@ -1386,7 +1388,7 @@ function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
           </Labeled>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10, marginTop: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 10, marginTop: 10 }}>
           <Labeled label="Accent color">
             <input
               value={accentColor}
@@ -1394,6 +1396,17 @@ function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
               placeholder="#c9a066"
               style={{ ...S.input, fontFamily: WR_FONT_MONO, textTransform: "lowercase" } as React.CSSProperties}
             />
+          </Labeled>
+          <Labeled label="Tag shape">
+            <select
+              value={tagShape}
+              onChange={e => setTagShape(e.target.value)}
+              style={{ ...S.input, fontFamily: WR_FONT_MONO } as React.CSSProperties}
+            >
+              <option value="rounded">Rounded</option>
+              <option value="square">Square</option>
+              <option value="pill">Pill</option>
+            </select>
           </Labeled>
           <Labeled label="Home port">
             <input value={homePort} onChange={e => setHomePort(e.target.value.slice(0, 80))} placeholder="Tortuga · EU-3" style={S.input as React.CSSProperties} />

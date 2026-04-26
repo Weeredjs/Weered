@@ -103,7 +103,35 @@ export default function UserCorner() {
   React.useEffect(() => {
     const handler = () => forceUpdate(n => n + 1);
     window.addEventListener("weered:avatarColor", handler);
-    return () => window.removeEventListener("weered:avatarColor", handler);
+    window.addEventListener("weered:profileColors", handler);
+    return () => {
+      window.removeEventListener("weered:avatarColor", handler);
+      window.removeEventListener("weered:profileColors", handler);
+    };
+  }, []);
+
+  // Live profile colour overrides — read from localStorage cache so changes
+  // from the settings sheet apply instantly without round-tripping the WS.
+  const [colorOverrides, setColorOverrides] = React.useState<{
+    panelBgColor?: string | null;
+    panelAccentColor?: string | null;
+  }>({});
+  React.useEffect(() => {
+    const read = () => {
+      try {
+        const raw = localStorage.getItem("weered_user");
+        if (!raw) return;
+        const u = JSON.parse(raw);
+        setColorOverrides({
+          panelBgColor: u?.panelBgColor || null,
+          panelAccentColor: u?.panelAccentColor || null,
+        });
+      } catch {}
+    };
+    read();
+    const onColors = () => read();
+    window.addEventListener("weered:profileColors", onColors);
+    return () => window.removeEventListener("weered:profileColors", onColors);
   }, []);
 
   // Dock unread badge — two sources:
@@ -183,7 +211,12 @@ export default function UserCorner() {
     return () => { cancelled = true; };
   }, [me?.id, API_BASE]);
 
-  // Accent color cascade for the ID card: role color > crew accent > neutral.
+  // Accent color cascade for the ID card: user override > role color > crew accent > neutral.
+  // panelAccentColor is the user's own customization (settings sheet color picker).
+  const rawPanelAccent = colorOverrides.panelAccentColor || me?.panelAccentColor;
+  const rawPanelBg     = colorOverrides.panelBgColor     || me?.panelBgColor;
+  const userPanelAccent = (rawPanelAccent && /^#[0-9a-f]{6}$/i.test(rawPanelAccent)) ? rawPanelAccent : null;
+  const userPanelBg     = (rawPanelBg     && /^#[0-9a-f]{6}$/i.test(rawPanelBg))     ? rawPanelBg     : null;
   const bestRoleForAccent = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
   const roleAccentHex =
     bestRoleForAccent === "GOD"     ? "#facc15" :
@@ -194,7 +227,7 @@ export default function UserCorner() {
     bestRoleForAccent === "MOD"     ? "#a78bfa" :
     null;
   const crewAccentHex = primaryCrew?.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : null;
-  const cardAccent = roleAccentHex || crewAccentHex || "#7C3AED";
+  const cardAccent = userPanelAccent || roleAccentHex || crewAccentHex || "#7C3AED";
 
   // Short hash of the user's cuid for the ID badge line — reads "technical"
   // without exposing raw internal IDs.
@@ -217,7 +250,9 @@ export default function UserCorner() {
         position: "relative",
         borderRadius: 16,
         border: `1px solid ${cardAccent}24`,
-        background: `
+        background: userPanelBg
+          ? `linear-gradient(180deg, ${userPanelBg}f5 0%, ${userPanelBg}cc 100%), linear-gradient(135deg, ${cardAccent}18 0%, transparent 55%)`
+          : `
           linear-gradient(180deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,.015) 40%, rgba(0,0,0,.18) 100%),
           linear-gradient(135deg, ${cardAccent}10 0%, transparent 55%)
         `,

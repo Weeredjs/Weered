@@ -592,6 +592,7 @@ export default function LeftRail() {
                   livePresence={u?.livePresence}
                   secondaryText={secondary}
                   platforms={platforms}
+                  pillBgColor={u?.pillBgColor}
                   onClick={() => replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })}
                   compact
                 />

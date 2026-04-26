@@ -1160,11 +1160,13 @@ function buildStatePayload(room: RoomState) {
   const roleMap       = new Map<string, string>();
   const colorMap      = new Map<string, string>();
   const avatarMap     = new Map<string, string>();
+  const pillBgMap     = new Map<string, string>();
   for (const s of room.sockets) {
     if (s.user?.id) {
       if (s.user.globalRole)  roleMap.set(s.user.id, s.user.globalRole);
       if (s.user.avatarColor) colorMap.set(s.user.id, s.user.avatarColor);
       if (s.user.avatar)      avatarMap.set(s.user.id, s.user.avatar);
+      if ((s.user as any).pillBgColor) pillBgMap.set(s.user.id, (s.user as any).pillBgColor);
     }
   }
   const users = Array.from(room.users.values()).map((u) => ({
@@ -1173,6 +1175,7 @@ function buildStatePayload(room: RoomState) {
     globalRole:  (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
     avatarColor: (u.id ? colorMap.get(u.id) : undefined) ?? (u as any).avatarColor ?? undefined,
     avatar:      (u.id ? avatarMap.get(u.id) : undefined) ?? (u as any).avatar ?? undefined,
+    pillBgColor: (u.id ? pillBgMap.get(u.id) : undefined) ?? (u as any).pillBgColor ?? undefined,
   }));
   // Inject The Operator as a virtual presence if AI is available
   if (isAIAvailable()) {
@@ -1894,7 +1897,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
     const u = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true },
+      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true } as any,
     });
     return {
       ...user,
@@ -1906,6 +1909,9 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
       twitchLogin: u?.twitchLogin ?? undefined,
       xboxGamertag: u?.xboxGamertag ?? undefined,
       livePresence: u?.livePresence ?? null,
+      panelBgColor: (u as any)?.panelBgColor ?? undefined,
+      panelAccentColor: (u as any)?.panelAccentColor ?? undefined,
+      pillBgColor: (u as any)?.pillBgColor ?? undefined,
     } as any;
   } catch { return user; }
 }
@@ -2756,7 +2762,7 @@ async function main() {
       const primaryMembership = await (prisma as any).crewMember.findFirst({
         where: { userId: u.id },
         orderBy: { joinedAt: "asc" },
-        include: { crew: { select: { id: true, name: true, tag: true, logoUrl: true, accentColor: true } } },
+        include: { crew: { select: { id: true, name: true, tag: true, logoUrl: true, accentColor: true, tagShape: true } } },
       });
 
       const nRank = getNotorietyRank(u.notoriety ?? 0);
@@ -2790,6 +2796,7 @@ async function main() {
               tag: primaryMembership.crew.tag || "",
               logoUrl: primaryMembership.crew.logoUrl || null,
               accentColor: primaryMembership.crew.accentColor || null,
+              tagShape: primaryMembership.crew.tagShape || "rounded",
               role: primaryMembership.role,
             }
           : null,
@@ -2810,13 +2817,37 @@ async function main() {
     const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 280) : undefined;
     const avatarColor = typeof body.avatarColor === "string" ? body.avatarColor.slice(0, 20) : undefined;
     const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 500) : undefined;
-    if (bio === undefined && avatarColor === undefined && avatar === undefined) return reply.code(400).send({ error: "Nothing to update" });
+
+    // Profile customization (Phase 1: colors). Accept either a valid #RRGGBB
+    // hex or empty string to clear. Anything else is silently dropped.
+    const isHex = (s: string) => /^#[0-9a-f]{6}$/i.test(s);
+    const normColor = (raw: any): string | null | undefined => {
+      if (typeof raw !== "string") return undefined;
+      const t = raw.trim();
+      if (t === "") return null;
+      return isHex(t) ? t : undefined;
+    };
+    const panelBgColor = normColor(body.panelBgColor);
+    const panelAccentColor = normColor(body.panelAccentColor);
+    const pillBgColor = normColor(body.pillBgColor);
+
+    if (
+      bio === undefined && avatarColor === undefined && avatar === undefined
+      && panelBgColor === undefined && panelAccentColor === undefined && pillBgColor === undefined
+    ) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
       const u = await prisma.user.update({
         where: { id: viewer.id },
-        data: { ...(bio !== undefined && { bio }), ...(avatarColor !== undefined && { avatarColor }), ...(avatar !== undefined && { avatar: avatar || null }) },
-        select: { id: true, bio: true },
+        data: {
+          ...(bio !== undefined && { bio }),
+          ...(avatarColor !== undefined && { avatarColor }),
+          ...(avatar !== undefined && { avatar: avatar || null }),
+          ...(panelBgColor !== undefined && { panelBgColor }),
+          ...(panelAccentColor !== undefined && { panelAccentColor }),
+          ...(pillBgColor !== undefined && { pillBgColor }),
+        } as any,
+        select: { id: true, bio: true } as any,
       });
 
       // Award notoriety for completing bio (one-time)
@@ -3805,7 +3836,7 @@ async function main() {
             try { ws.close(4003, "banned"); } catch {}
             return;
           }
-          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar } });
+          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar, panelBgColor: (ws.user as any).panelBgColor, panelAccentColor: (ws.user as any).panelAccentColor, pillBgColor: (ws.user as any).pillBgColor } });
           // Award daily active notoriety (cooldown-gated, fires at most once per 24h)
           awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
           // Crew presence: notify crew mates this user came online

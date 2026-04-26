@@ -388,6 +388,15 @@ model User {
   googleId    String?    @unique
   avatar      String?
   avatarColor String?
+
+  // ── Profile customization (Phase 1: colors only) ──────────────────────
+  // panelBgColor + panelAccentColor drive the user's own ID badge in the
+  // right rail (UserCorner). pillBgColor tints how this user appears in
+  // friends/presence lists when seen by others. Validated as #RRGGBB.
+  panelBgColor      String?
+  panelAccentColor  String?
+  pillBgColor       String?
+
   notoriety   Int        @default(0)
   paper       Int        @default(0)   // spendable virtual currency
   tier        UserTier   @default(INNOCENT)
@@ -803,6 +812,8 @@ model Crew {
   logoUrl          String?
   bannerUrl        String?
   accentColor      String?   // "#xxxxxx"
+  // Crew tag display shape — drives the [TAG] chip rendering in friends/profile
+  tagShape         String    @default("rounded")  // rounded | square | diamond
   homePort         String?   // free text — "Tortuga", "Caribbean-3 server", etc.
   recruiting       Boolean   @default(false)
   recruitingNote   String    @default("")

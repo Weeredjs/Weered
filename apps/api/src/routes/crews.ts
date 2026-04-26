@@ -205,6 +205,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     if (typeof body.logoUrl === "string")         data.logoUrl = body.logoUrl.trim().slice(0, 500) || null;
     if (typeof body.bannerUrl === "string")       data.bannerUrl = body.bannerUrl.trim().slice(0, 500) || null;
     if (typeof body.accentColor === "string")     data.accentColor = /^#[0-9a-f]{6}$/i.test(body.accentColor) ? body.accentColor : null;
+    if (typeof body.tagShape === "string" && /^(rounded|square|pill)$/.test(body.tagShape)) data.tagShape = body.tagShape;
     if (typeof body.homePort === "string")        data.homePort = body.homePort.trim().slice(0, 80) || null;
     if (typeof body.recruiting === "boolean")     data.recruiting = body.recruiting;
     if (typeof body.recruitingNote === "string")  data.recruitingNote = body.recruitingNote.trim().slice(0, 400);

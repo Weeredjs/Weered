@@ -672,6 +672,7 @@ function FriendsPanel() {
           roomName={f.roomName}
           secondaryText={friendSecondary}
           platforms={platforms}
+          pillBgColor={f.pillBgColor}
           onClick={() => userId && openSheet("profile", { userId })}
           action={joinLink}
           compact
