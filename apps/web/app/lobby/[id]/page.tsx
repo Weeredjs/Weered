@@ -303,21 +303,33 @@ export default function LobbyIdPage() {
   // navigates to a few seconds later.
   useEffect(() => { clearPendingStream(); }, [lobbyId]);
 
-  // Auto-play a streamer passed via ?stream=<twitch_login>. The home
-  // page's "Join Room" button on the featured stream card uses this so
-  // everyone landing here from the same featured-stream click ends up
-  // watching the same channel together. Defer one frame so the lobby
-  // useEffect above (clearPendingStream) runs first; dispatching the
-  // event re-stashes the channel and switches view → modules → streams.
+  // Auto-play a streamer handed off from the home page's "Join Room"
+  // click. The home page stashes { channel, ts } on window under a
+  // dedicated key (so the clearPendingStream wipe above doesn't touch
+  // it), then navigates here. We read it on mount, fire the existing
+  // watchhere event after a longer delay so all child effects have
+  // committed, and the lobby tab + modules panel chain takes care of
+  // the rest. Also accept ?stream= as a URL fallback for direct links.
   const searchParams = useSearchParams();
   useEffect(() => {
-    const ch = searchParams?.get("stream");
+    if (typeof window === "undefined") return;
+    let ch: string | null = null;
+    try {
+      const v = (window as any).__weeredHomeJoinStream as { channel?: string; ts?: number } | undefined;
+      if (v?.channel && typeof v.ts === "number" && Date.now() - v.ts < 8000) {
+        ch = v.channel;
+      }
+      delete (window as any).__weeredHomeJoinStream;
+    } catch {}
+    if (!ch) ch = searchParams?.get("stream") || null;
     if (!ch) return;
+
+    const channel = ch;
     const t = setTimeout(() => {
       try {
-        window.dispatchEvent(new CustomEvent("weered:stream:watchhere", { detail: { channel: ch } }));
+        window.dispatchEvent(new CustomEvent("weered:stream:watchhere", { detail: { channel } }));
       } catch {}
-    }, 50);
+    }, 200);
     return () => clearTimeout(t);
   }, [searchParams, lobbyId]);
   const [feedHasNew, setFeedHasNew] = useState(false);
