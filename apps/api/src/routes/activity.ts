@@ -109,8 +109,15 @@ app.get("/unfurl", async (req, reply) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
+    // Twitterbot UA is whitelisted by major sites (YouTube, Reddit, Twitter,
+    // most news/CDN sites) for OG metadata serving. Custom WeeredBot UA was
+    // getting empty/blocked HTML responses.
     const res = await fetch(url, {
-      headers: { "User-Agent": "WeeredBot/1.0 (link preview)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
       signal: controller.signal,
       redirect: "follow",
     });
@@ -121,7 +128,7 @@ app.get("/unfurl", async (req, reply) => {
     if (!contentType.includes("text/html")) return reply.send({ ok: false });
 
     const html = await res.text();
-    const first4k = html.slice(0, 8000); // only parse head
+    const first4k = html.slice(0, 16000); // parse a bigger head window — some sites push og: tags down past 8K
 
     const og = (prop: string) => {
       const m = first4k.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']+)["']`, "i"))

@@ -13,7 +13,7 @@ import { weeredConfirm } from "../lib/confirm";
 type DmReaction = { emoji: string; count: number; users: string[] };
 type DmReplyTo = { id: string; userName: string; body: string };
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null; reactions?: DmReaction[]; replyToId?: string | null; replyToUserId?: string | null; replyToUserName?: string | null; replyToBody?: string | null };
-type DmThread = { peerId: string; peerName: string; peerAvatar?: string | null; peerOnline?: boolean; msgs: DmMsg[]; unread: number };
+type DmThread = { peerId: string; peerName: string; peerAvatar?: string | null; peerAvatarColor?: string | null; peerOnline?: boolean; msgs: DmMsg[]; unread: number };
 
 const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 const TENOR_DM_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
@@ -278,14 +278,14 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
         // Update existing threads with avatar/online from server, keep msgs.
         for (const t of cur) {
           const c=j.conversations.find((x:any)=>(x.id||x.peerId)===t.peerId);
-          if (c) merged.push({...t, peerName:c.name||c.usernameKey||t.peerName, peerAvatar:c.avatar??t.peerAvatar??null, peerOnline:!!c.online, unread:c.unread??t.unread});
+          if (c) merged.push({...t, peerName:c.name||c.usernameKey||t.peerName, peerAvatar:c.avatar??t.peerAvatar??null, peerAvatarColor:c.avatarColor??t.peerAvatarColor??null, peerOnline:!!c.online, unread:c.unread??t.unread});
           else merged.push(t);
         }
         // Add any new conversations we didn't have locally yet.
         for (const c of j.conversations) {
           const id=c.id||c.peerId;
           if (byId.has(id)) continue;
-          merged.push({peerId:id, peerName:c.name||c.usernameKey||id, peerAvatar:c.avatar??null, peerOnline:!!c.online, msgs:[], unread:c.unread||0});
+          merged.push({peerId:id, peerName:c.name||c.usernameKey||id, peerAvatar:c.avatar??null, peerAvatarColor:c.avatarColor??null, peerOnline:!!c.online, msgs:[], unread:c.unread||0});
         }
         return merged;
       });
@@ -304,7 +304,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
             if (!Array.isArray(conv?.conversations)) return;
             setDmThreads(cur=>{
               const existing=new Set(cur.map((t:DmThread)=>t.peerId));
-              const incoming=conv.conversations.filter((c:any)=>!existing.has(c.id||c.peerId)).map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.id,peerAvatar:c.avatar??null,peerOnline:!!c.online,msgs:[],unread:c.unread||0}));
+              const incoming=conv.conversations.filter((c:any)=>!existing.has(c.id||c.peerId)).map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.id,peerAvatar:c.avatar??null,peerAvatarColor:c.avatarColor??null,peerOnline:!!c.online,msgs:[],unread:c.unread||0}));
               return [...cur,...incoming];
             });
           }).catch(()=>{});
@@ -613,7 +613,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                   </button>
                   <div style={{ position:"relative" }}>
-                    <Avatar name={dmActive.peerName} size={30} src={dmActive.peerAvatar} />
+                    <Avatar name={dmActive.peerName} size={30} src={dmActive.peerAvatar} chosenColor={dmActive.peerAvatarColor || undefined} />
                     {dmActive.peerOnline && (
                       <span style={{ position:"absolute",bottom:-1,right:-1,width:9,height:9,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
                     )}
@@ -773,7 +773,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     );
                   }) : (
                     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8 }}>
-                      <Avatar name={dmActive.peerName} size={56} src={dmActive.peerAvatar} />
+                      <Avatar name={dmActive.peerName} size={56} src={dmActive.peerAvatar} chosenColor={dmActive.peerAvatarColor || undefined} />
                       <span style={{ fontSize:14, fontWeight:700, color:"var(--weered-text)" }}>{dmActive.peerName}</span>
                       <span style={{ color:"var(--weered-muted)", fontSize:12 }}>Start the conversation</span>
                     </div>
@@ -842,7 +842,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
                         >
                           <div style={{ position:"relative", flexShrink:0 }}>
-                            <Avatar name={t.peerName} size={42} src={t.peerAvatar} />
+                            <Avatar name={t.peerName} size={42} src={t.peerAvatar} chosenColor={t.peerAvatarColor || undefined} />
                             {t.peerOnline && (
                               <span style={{ position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
                             )}

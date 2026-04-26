@@ -33,7 +33,7 @@ app.get("/dm/conversations", async (req, reply) => {
     if (m.toId === viewer.id && !m.readAt) peers.get(peerId).unread++;
   }
   const peerIds = Array.from(peers.keys());
-  const users = await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, usernameKey: true, avatar: true } });
+  const users = await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, usernameKey: true, avatar: true, avatarColor: true } as any });
   const result = users.map(u => ({ ...u, online: isUserOnline(u.id), ...peers.get(u.id) }));
   return reply.send({ ok: true, conversations: result });
 });
