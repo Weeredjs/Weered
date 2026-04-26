@@ -15,9 +15,22 @@
       "type": "image/png"
     },
     {
+      "src": "/brand/logo/weered-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/brand/logo/weered-logo-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/logo/weered-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/brand/logo/weered-logo-512.png",
@@ -25,5 +38,7 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "categories": ["social", "games", "entertainment"],
+  "orientation": "any"
 }
