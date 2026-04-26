@@ -815,10 +815,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* SCROLL AREA — SiteFooter is now a real layout child below the
-          shell, so no padding-bottom hack is needed to clear it. Cards
-          end right above the footer naturally. */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 12px" }}>
+      {/* SCROLL AREA — small bottom breath; the shell already reserves
+          28px below for the SiteFooter via .weered-shell.has-footer, so
+          we just need a tiny gap above the footer line. */}
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
 
         {/* HERO BANNER */}
         <div style={{ paddingTop: 16 }}>

@@ -3294,28 +3294,22 @@ button:hover, [role="button"]:hover {
 /* =============================================
    3-COLUMN APP SHELL
    ============================================= */
-/* Shell frame is the viewport-tall flex column that holds the shell row
-   (left rail, center, right rail) above and the SiteFooter below. The
-   footer is now a real layout child instead of a fixed overlay so the
-   home scroll area can extend cleanly to right above it without needing
-   a bottom-padding hack. */
-.weered-shell-frame {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
 .weered-shell {
   display: flex;
   gap: 16px;
   padding: 16px 16px 0 16px;
   align-items: stretch;
   width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
+  height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
+}
+/* Reserve 28px at the bottom of the shell when the SiteFooter is
+   rendered (everything except /room and /lobby pages). Children
+   stretch to the inner content area, so rails and scroll views end
+   right above the footer instead of stretching behind it. */
+.weered-shell.has-footer {
+  padding-bottom: 28px;
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
