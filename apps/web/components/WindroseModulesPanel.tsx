@@ -2960,7 +2960,6 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
 
   useEffect(() => {
     const ch = consumePendingStream();
-    console.log("[live-handoff] STREAMS tab mount, consumePendingStream", { channel: ch });
     if (ch) setActiveStream(ch);
   }, []);
 
@@ -3148,15 +3147,12 @@ export default function WindroseModulesPanel({
     try {
       if (typeof window !== "undefined") {
         const v = (window as any).__weeredPendingStream as { channel?: string; ts?: number } | undefined;
-        const ageMs = v?.ts ? Date.now() - v.ts : -1;
-        const isFresh = !!v?.channel && typeof v?.ts === "number" && ageMs >= 0 && ageMs < 5000;
-        console.log("[live-handoff] WINDROSE panel mount, initial tab", { stashChannel: v?.channel, ageMs, isFresh, chosenTab: isFresh ? "streams" : "flagship" });
-        if (isFresh) return "streams";
+        if (v?.channel && typeof v.ts === "number" && Date.now() - v.ts < 5000) return "streams";
       }
     } catch {}
     return "flagship";
   });
-  useWatchHere(React.useCallback((ch: string) => { console.log("[live-handoff] WINDROSE useWatchHere fired", { channel: ch }); setTab("streams"); }, []));
+  useWatchHere(React.useCallback(() => { setTab("streams"); }, []));
 
   return (
     <>

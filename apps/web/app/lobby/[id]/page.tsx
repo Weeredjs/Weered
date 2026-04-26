@@ -296,7 +296,7 @@ export default function LobbyIdPage() {
   // Banner "Watch Here" click → flip to the Modules tab so the inline player
   // can mount. The active modules panel listens to the same event to switch
   // its own sub-tab to Streams and pre-load the channel.
-  useWatchHere(React.useCallback((ch: string) => { console.log("[live-handoff] LOBBY useWatchHere fired", { channel: ch }); setView("modules"); }, []));
+  useWatchHere(React.useCallback(() => { setView("modules"); }, []));
 
   // Drop any leftover pending stream when entering a different lobby so a
   // banner click on one lobby doesn't auto-play in a lobby the user
@@ -314,28 +314,21 @@ export default function LobbyIdPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     let ch: string | null = null;
-    let source = "none";
     try {
       const v = (window as any).__weeredHomeJoinStream as { channel?: string; ts?: number } | undefined;
       if (v?.channel && typeof v.ts === "number" && Date.now() - v.ts < 8000) {
         ch = v.channel;
-        source = "stash";
       }
       delete (window as any).__weeredHomeJoinStream;
     } catch {}
-    if (!ch) {
-      const fromUrl = searchParams?.get("stream");
-      if (fromUrl) { ch = fromUrl; source = "url"; }
-    }
-    console.log("[live-handoff] LOBBY mount handoff check", { lobbyId, channel: ch, source });
+    if (!ch) ch = searchParams?.get("stream") || null;
     if (!ch) return;
 
     const channel = ch;
     const t = setTimeout(() => {
-      console.log("[live-handoff] LOBBY dispatching watchhere", { channel });
       try {
         window.dispatchEvent(new CustomEvent("weered:stream:watchhere", { detail: { channel } }));
-      } catch (e) { console.warn("[live-handoff] dispatch threw", e); }
+      } catch {}
     }, 200);
     return () => clearTimeout(t);
   }, [searchParams, lobbyId]);
@@ -389,7 +382,11 @@ export default function LobbyIdPage() {
             _count:         j.lobby._count,
             tiers:          j.lobby.tiers || [],
           });
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE") {
+          // Auto-open Modules for any lobby that has them (mirrors the
+          // hasModules check below). Without this, the data fetch race
+          // would override view → rooms a few hundred ms after a Watch
+          // Here / Join Room dispatch set it to modules.
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE") {
             setView("modules");
           } else {
             setView("rooms");
