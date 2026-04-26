@@ -316,6 +316,7 @@ function ProfileCustomizationSection() {
   const [panelBgColor, setPanelBgColor] = React.useState<string>("");
   const [panelAccentColor, setPanelAccentColor] = React.useState<string>("");
   const [pillBgColor, setPillBgColor] = React.useState<string>("");
+  const [pillAccentColor, setPillAccentColor] = React.useState<string>("");
   const [savedMsg, setSavedMsg] = React.useState<string>("");
 
   React.useEffect(() => {
@@ -326,13 +327,14 @@ function ProfileCustomizationSection() {
         if (u?.panelBgColor) setPanelBgColor(u.panelBgColor);
         if (u?.panelAccentColor) setPanelAccentColor(u.panelAccentColor);
         if (u?.pillBgColor) setPillBgColor(u.pillBgColor);
+        if (u?.pillAccentColor) setPillAccentColor(u.pillAccentColor);
       }
     } catch {}
   }, []);
 
   // Debounced save — fires 400ms after the last colour change
   const saveTimer = React.useRef<any>(null);
-  function scheduleSave(field: "panelBgColor" | "panelAccentColor" | "pillBgColor", value: string) {
+  function scheduleSave(field: "panelBgColor" | "panelAccentColor" | "pillBgColor" | "pillAccentColor", value: string) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const tok = token();
@@ -362,7 +364,7 @@ function ProfileCustomizationSection() {
     }, 400);
   }
 
-  function clearField(field: "panelBgColor" | "panelAccentColor" | "pillBgColor", setter: (v: string) => void) {
+  function clearField(field: "panelBgColor" | "panelAccentColor" | "pillBgColor" | "pillAccentColor", setter: (v: string) => void) {
     setter("");
     scheduleSave(field, "");
   }
@@ -392,6 +394,13 @@ function ProfileCustomizationSection() {
         value={pillBgColor}
         onChange={(v) => { setPillBgColor(v); scheduleSave("pillBgColor", v); }}
         onClear={() => clearField("pillBgColor", setPillBgColor)}
+      />
+      <ColorPickerRow
+        label="Pill accent stripe"
+        hint="The vertical bar on the left edge of your row. Default uses your role/tier color."
+        value={pillAccentColor}
+        onChange={(v) => { setPillAccentColor(v); scheduleSave("pillAccentColor", v); }}
+        onClear={() => clearField("pillAccentColor", setPillAccentColor)}
       />
       <PillIntensityRow />
       {savedMsg && (

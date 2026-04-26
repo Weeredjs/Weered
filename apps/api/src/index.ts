@@ -1161,12 +1161,14 @@ function buildStatePayload(room: RoomState) {
   const colorMap      = new Map<string, string>();
   const avatarMap     = new Map<string, string>();
   const pillBgMap     = new Map<string, string>();
+  const pillAccentMap = new Map<string, string>();
   for (const s of room.sockets) {
     if (s.user?.id) {
       if (s.user.globalRole)  roleMap.set(s.user.id, s.user.globalRole);
       if (s.user.avatarColor) colorMap.set(s.user.id, s.user.avatarColor);
       if (s.user.avatar)      avatarMap.set(s.user.id, s.user.avatar);
       if ((s.user as any).pillBgColor) pillBgMap.set(s.user.id, (s.user as any).pillBgColor);
+      if ((s.user as any).pillAccentColor) pillAccentMap.set(s.user.id, (s.user as any).pillAccentColor);
     }
   }
   const users = Array.from(room.users.values()).map((u) => ({
@@ -1176,6 +1178,7 @@ function buildStatePayload(room: RoomState) {
     avatarColor: (u.id ? colorMap.get(u.id) : undefined) ?? (u as any).avatarColor ?? undefined,
     avatar:      (u.id ? avatarMap.get(u.id) : undefined) ?? (u as any).avatar ?? undefined,
     pillBgColor: (u.id ? pillBgMap.get(u.id) : undefined) ?? (u as any).pillBgColor ?? undefined,
+    pillAccentColor: (u.id ? pillAccentMap.get(u.id) : undefined) ?? (u as any).pillAccentColor ?? undefined,
   }));
   // Inject The Operator as a virtual presence if AI is available
   if (isAIAvailable()) {
@@ -1897,7 +1900,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
     const u = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true } as any,
+      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true, pillAccentColor: true } as any,
     });
     return {
       ...user,
@@ -1912,6 +1915,7 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
       panelBgColor: (u as any)?.panelBgColor ?? undefined,
       panelAccentColor: (u as any)?.panelAccentColor ?? undefined,
       pillBgColor: (u as any)?.pillBgColor ?? undefined,
+      pillAccentColor: (u as any)?.pillAccentColor ?? undefined,
     } as any;
   } catch { return user; }
 }
@@ -2830,10 +2834,12 @@ async function main() {
     const panelBgColor = normColor(body.panelBgColor);
     const panelAccentColor = normColor(body.panelAccentColor);
     const pillBgColor = normColor(body.pillBgColor);
+    const pillAccentColor = normColor(body.pillAccentColor);
 
     if (
       bio === undefined && avatarColor === undefined && avatar === undefined
-      && panelBgColor === undefined && panelAccentColor === undefined && pillBgColor === undefined
+      && panelBgColor === undefined && panelAccentColor === undefined
+      && pillBgColor === undefined && pillAccentColor === undefined
     ) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
@@ -2846,6 +2852,7 @@ async function main() {
           ...(panelBgColor !== undefined && { panelBgColor }),
           ...(panelAccentColor !== undefined && { panelAccentColor }),
           ...(pillBgColor !== undefined && { pillBgColor }),
+          ...(pillAccentColor !== undefined && { pillAccentColor }),
         } as any,
         select: { id: true, bio: true } as any,
       });
@@ -3836,7 +3843,7 @@ async function main() {
             try { ws.close(4003, "banned"); } catch {}
             return;
           }
-          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar, panelBgColor: (ws.user as any).panelBgColor, panelAccentColor: (ws.user as any).panelAccentColor, pillBgColor: (ws.user as any).pillBgColor } });
+          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar, panelBgColor: (ws.user as any).panelBgColor, panelAccentColor: (ws.user as any).panelAccentColor, pillBgColor: (ws.user as any).pillBgColor, pillAccentColor: (ws.user as any).pillAccentColor } });
           // Award daily active notoriety (cooldown-gated, fires at most once per 24h)
           awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
           // Crew presence: notify crew mates this user came online

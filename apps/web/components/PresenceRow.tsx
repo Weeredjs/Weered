@@ -107,6 +107,9 @@ export interface PresenceRowProps {
 
   // User-customizable pill background (#RRGGBB). Tints the row background.
   pillBgColor?: string | null;
+  // User-customizable left-edge stripe colour. Overrides the role/tier-
+  // derived stripe when set.
+  pillAccentColor?: string | null;
 }
 
 export default function PresenceRow({
@@ -127,8 +130,10 @@ export default function PresenceRow({
   activeGlow,
   compact,
   pillBgColor,
+  pillAccentColor,
 }: PresenceRowProps) {
   const validPillBg = pillBgColor && /^#[0-9a-f]{6}$/i.test(pillBgColor) ? pillBgColor : null;
+  const validPillAccent = pillAccentColor && /^#[0-9a-f]{6}$/i.test(pillAccentColor) ? pillAccentColor : null;
 
   // Viewer's chosen intensity (0-100). Lives in localStorage so it's a per-
   // viewer preference — controls how strongly OTHER users' pillBgColors
@@ -212,9 +217,10 @@ export default function PresenceRow({
   const showPsn    = !!platforms?.psn    && activePlatformKey !== "PSN" && activePlatformKey !== "PLAYSTATION";
   const hasPlatforms = showSteam || showTwitch || showXbox || showPsn;
 
-  // Accent stripe color — role takes priority over tier
+  // Accent stripe color — user override > role > tier
   const accentStripe =
-    globalRole === "GOD"     ? "#fcd34d"      // GOD: gold
+    validPillAccent ? validPillAccent
+    : globalRole === "GOD"     ? "#fcd34d"      // GOD: gold
     : globalRole === "STAFF"   ? "#60a5fa"      // STAFF: blue
     : globalRole === "SUPPORT" ? "#5800E5"      // SUPPORT: Weered purple
     : globalRole === "MOD"     ? "#34d399"      // MOD: emerald

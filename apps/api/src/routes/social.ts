@@ -28,7 +28,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true } as any })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true, pillAccentColor: true } as any })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string; isAway: boolean }>();
     for (const p of profiles) {
