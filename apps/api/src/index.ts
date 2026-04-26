@@ -1248,6 +1248,14 @@ function leaveRoom(ws: Sock) {
     if (!userHasOtherSocket) {
       const existed = room.users.delete(ws.user.id);
       if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
+      // Record last-seen so the friends list can show "Last seen in <x>"
+      // on the offline row. Stamp the room name (falls back to roomId).
+      const userId = ws.user.id;
+      const location = (room as any).name || roomId;
+      (prisma as any).user.update({
+        where: { id: userId },
+        data: { lastSeenAt: new Date(), lastSeenLocation: location },
+      }).catch(() => {});
       // Drop any launch slot/ready entries the user held
       if (room.launch) {
         const hadSlot = room.launch.slots.delete(ws.user.id);

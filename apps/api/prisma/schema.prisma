@@ -418,6 +418,12 @@ model User {
   locationH3        String?    // H3 hex index (resolution 7 ≈ 5km)
   locationUpdatedAt DateTime?
 
+  // Last-seen presence — set when the user's last WS socket disconnects.
+  // Used by the friends list to show "Last seen in <room> · 2h ago" on
+  // offline rows.
+  lastSeenAt        DateTime?
+  lastSeenLocation  String?
+
   createdAt         DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 

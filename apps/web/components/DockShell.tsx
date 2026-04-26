@@ -998,16 +998,81 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
   );
 }
 
+// Tier display chip — shows the user's paid tier above the row.
+const FRIEND_TIER_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+  KINGPIN:  { label: "KINGPIN",  color: "#fde68a", bg: "rgba(252,211,77,.15)" },
+  FELON:    { label: "FELON",    color: "#fdba74", bg: "rgba(249,115,22,.15)" },
+  INDICTED: { label: "INDICTED", color: "rgba(243,244,246,.85)", bg: "rgba(88,0,229,.15)" },
+};
+const FRIEND_ROLE_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+  GOD:     { label: "GOD",     color: "#fde68a", bg: "rgba(234,179,8,.18)" },
+  ADMIN:   { label: "ADMIN",   color: "#fca5a5", bg: "rgba(239,68,68,.14)" },
+  STAFF:   { label: "STAFF",   color: "#93c5fd", bg: "rgba(59,130,246,.14)" },
+  SUPPORT: { label: "SUPPORT", color: "#6ee7b7", bg: "rgba(16,185,129,.14)" },
+  MOD:     { label: "MOD",     color: "rgba(216,180,254,.95)", bg: "rgba(124,58,237,.14)" },
+};
+
+function lastSeenAgo(iso?: string | null): string {
+  if (!iso) return "";
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 0) return "";
+  const m = Math.floor(ms / 60000);
+  if (m < 1)   return "just now";
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)   return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:string,i:string)=>void; onJoin:(r:string)=>void; onRemove:(id:string)=>void }) {
+  const role = String(f.globalRole || "").toUpperCase();
+  const tier = String(f.tier || "").toUpperCase();
+  const roleChip = FRIEND_ROLE_LABEL[role];
+  const tierChip = FRIEND_TIER_LABEL[tier];
+  const crewTag = f.primaryCrew?.tag ? `[${f.primaryCrew.tag}]` : "";
+  const crewAccent = f.primaryCrew?.accentColor || "rgba(124,58,237,.85)";
+
+  const secondary = (() => {
+    if (f.online) {
+      if (f.isAway) return f.roomName ? `lying low in ${f.roomName}` : "lying low";
+      return f.roomName ? `in ${f.roomName}` : "online";
+    }
+    if (f.lastSeenLocation && f.lastSeenAt) {
+      return `last seen in ${f.lastSeenLocation} · ${lastSeenAgo(f.lastSeenAt)}`;
+    }
+    if (f.lastSeenAt) return `last seen ${lastSeenAgo(f.lastSeenAt)}`;
+    return "offline";
+  })();
+
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:"1px solid var(--weered-bd)" }}>
       <div style={{ position:"relative" as const }}>
-        <Avatar name={f.name||"?"} size={34} chosenColor={f.avatarColor} />
-        <span style={{ position:"absolute" as const, bottom:0, right:0, width:9, height:9, borderRadius:999, background:f.online?"#22c55e":"rgba(255,255,255,.2)", border:"2px solid var(--weered-panel2)" }} />
+        <Avatar name={f.name||"?"} size={34} chosenColor={f.avatarColor} src={f.avatar} />
+        <span style={{ position:"absolute" as const, bottom:0, right:0, width:9, height:9, borderRadius:999, background:f.online?(f.isAway?"#facc15":"#22c55e"):"rgba(255,255,255,.2)", border:"2px solid var(--weered-panel2)" }} />
       </div>
       <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontWeight:600, fontSize:13 }}>@{f.name}</div>
-        <div style={{ fontSize:11, color:"var(--weered-muted)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const }}>{f.online?(f.roomName?`in ${f.roomName}`:"online"):"offline"}</div>
+        <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0 }}>
+          <span style={{ fontWeight:700, fontSize:13, color:"var(--weered-text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const }}>{f.name}</span>
+          {crewTag && (
+            <span title={f.primaryCrew?.name || ""}
+              style={{ fontSize:9, fontWeight:900, padding:"1px 5px", borderRadius:4, color:crewAccent, background:`${crewAccent}1f`, border:`1px solid ${crewAccent}40`, letterSpacing:".05em", flexShrink:0, fontFamily:"ui-monospace, 'JetBrains Mono', monospace" }}>
+              {crewTag}
+            </span>
+          )}
+          {roleChip && (
+            <span style={{ fontSize:9, fontWeight:900, padding:"1px 5px", borderRadius:4, color:roleChip.color, background:roleChip.bg, letterSpacing:".06em", flexShrink:0 }}>
+              {roleChip.label}
+            </span>
+          )}
+          {tierChip && (
+            <span style={{ fontSize:9, fontWeight:900, padding:"1px 5px", borderRadius:4, color:tierChip.color, background:tierChip.bg, letterSpacing:".06em", flexShrink:0 }}>
+              {tierChip.label}
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize:11, color:"var(--weered-muted)", marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const }}>{secondary}</div>
       </div>
       <div style={{ display:"flex", gap:4 }}>
         <button onClick={()=>onMessage(f.name,f.id)} style={{ padding:"5px 9px", borderRadius:8, border:"1px solid var(--weered-bd2)", background:"rgba(255,255,255,.05)", color:"var(--weered-text)", fontSize:11, cursor:"pointer", fontWeight:600 }}>DM</button>
