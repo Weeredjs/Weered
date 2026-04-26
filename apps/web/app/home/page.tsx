@@ -347,14 +347,21 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
 
   if (!stream) return null;
 
-  // Click Join Room → land on the lobby with ?stream=<login>; the lobby
-  // page reads that and dispatches the existing watchhere event so the
-  // modules panel auto-jumps to Streams + plays the channel inline.
+  // Click Join Room → stash the channel under a dedicated key the lobby
+  // page reads on mount, then navigate. Using a separate key means the
+  // lobby's existing clearPendingStream call (which wipes the regular
+  // __weeredPendingStream stash on every lobby change) doesn't eat our
+  // hand-off. The lobby re-fires the watchhere event after its own
+  // effects settle, which flips view → modules and plays the channel.
   const handleJoinRoom = () => {
     if (!stream.joinLobbyId) return;
     const login = stream.userLogin || "";
-    const qs = login ? `?stream=${encodeURIComponent(login)}` : "";
-    router.push(`/lobby/${encodeURIComponent(stream.joinLobbyId)}${qs}`);
+    if (login) {
+      try {
+        (window as any).__weeredHomeJoinStream = { channel: login, ts: Date.now() };
+      } catch {}
+    }
+    router.push(`/lobby/${encodeURIComponent(stream.joinLobbyId)}`);
   };
 
   const sourceLabel =
