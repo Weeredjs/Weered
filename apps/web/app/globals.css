@@ -4492,7 +4492,12 @@ html[data-weered-lobby="windrose"] .weered-shell::after {
   53%      { box-shadow: 0 0 22px rgba(232,196,138,0.26), inset 0 0 10px rgba(232,196,138,0.10); }
 }
 
-html[data-weered-lobby="windrose"] .weered-shell,
+/* Shell stays position: fixed so the layout stays pinned to viewport
+   edges; only the children get position: relative for the stacking
+   context they need above the lobby's background art. */
+html[data-weered-lobby="windrose"] .weered-shell {
+  z-index: 2;
+}
 html[data-weered-lobby="windrose"] .weered-left,
 html[data-weered-lobby="windrose"] .weered-right,
 html[data-weered-lobby="windrose"] .weered-center {
@@ -5171,7 +5176,10 @@ html[data-weered-lobby="destiny2"] video {
   position: relative;
   z-index: 3;
 }
-html[data-weered-lobby="destiny2"] .weered-shell,
+/* Shell stays position: fixed; only children get relative + z-index. */
+html[data-weered-lobby="destiny2"] .weered-shell {
+  z-index: 2;
+}
 html[data-weered-lobby="destiny2"] .weered-left,
 html[data-weered-lobby="destiny2"] .weered-right,
 html[data-weered-lobby="destiny2"] .weered-center {
