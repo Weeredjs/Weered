@@ -40,15 +40,6 @@ function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
   return ROLE_DISPLAY[dbRole] || dbRole;
 }
 
-const ROLE_COLORS: Record<string, { border: string; bg: string; color: string }> = {
-  GOD:     { border: "rgba(250,204,21,.38)",  bg: "rgba(234,179,8,.18)",   color: "#fde68a" },
-  ADMIN:   { border: "rgba(248,113,113,.34)", bg: "rgba(239,68,68,.14)",   color: "#fca5a5" },
-  STAFF:   { border: "rgba(96,165,250,.34)",  bg: "rgba(59,130,246,.14)",  color: "#93c5fd" },
-  SUPPORT: { border: "rgba(52,211,153,.34)",  bg: "rgba(16,185,129,.14)",  color: "#6ee7b7" },
-  OWNER:   { border: "rgba(249,115,22,.34)",  bg: "rgba(234,88,12,.14)",   color: "#fdba74" },
-  MOD:     { border: "rgba(88,0,229,.34)", bg: "rgba(88,0,229,.18)",  color: "rgba(243,244,246,.85)" },
-};
-
 const IconDock = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="4" width="20" height="14" rx="3" />
@@ -237,12 +228,6 @@ export default function UserCorner() {
     return raw.slice(-8).toUpperCase();
   }, [me?.id]);
 
-  const chipStyle = (r: string) => {
-    const c = ROLE_COLORS[r];
-    if (!c) return {};
-    return { borderColor: c.border, background: c.bg, color: c.color };
-  };
-
   return (
     <div
       className="weered-usercorner"
@@ -314,34 +299,15 @@ export default function UserCorner() {
           }}
         />
       ))}
-      {/* Top ID strip — tiny tech-feel row with the ID hash + rank.
-          Reads as a serial number / badge header. */}
-      {(idHash || notorietyRank) && (
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: 8, padding: "7px 14px 0",
-          fontSize: 9, fontWeight: 800, letterSpacing: "1.8px",
-          textTransform: "uppercase",
-          color: `${cardAccent}c0`,
-          fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-          position: "relative", zIndex: 1,
-        }}>
-          <span style={{ opacity: 0.85 }}>ID · {idHash || "----"}</span>
-          {notorietyRank && (
-            <span style={{ opacity: 0.85, color: "rgba(240,232,214,.7)" }}>
-              {notorietyRank}
-            </span>
-          )}
-        </div>
-      )}
-      {/* Lobby logo / brand watermark */}
+      {/* Lobby logo / brand watermark — small, anchored top-right of card */}
       {lobbyLogo ? (
         <div style={{
           position: "absolute", top: 6, right: 8,
-          width: 36, height: 36, borderRadius: 8,
+          width: 26, height: 26, borderRadius: 6,
           overflow: "hidden", pointerEvents: "none", userSelect: "none",
-          opacity: 0.7,
+          opacity: 0.55,
           display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2,
         }}>
           <img
             src={lobbyLogo}
@@ -349,41 +315,89 @@ export default function UserCorner() {
             style={{ width: "100%", height: "100%", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(0,0,0,.4))" }}
           />
         </div>
-      ) : (
-        <div style={{
-          position: "absolute", top: 8, right: 10,
-          opacity: 0.045, pointerEvents: "none", userSelect: "none",
-          fontSize: 11, fontWeight: 900, letterSpacing: "3px", textTransform: "uppercase",
-          color: lobbyAccent || undefined,
-        }}>
-          WEERED
-        </div>
-      )}
+      ) : null}
 
-      {/* Main identity row */}
+      {/* ─────────────────────────────────────────────────────────────────
+          HEADER TICKER — single mono line carrying the technical metadata:
+          ID · [TAG] · RANK. The crew tag links to the crew page; the rank
+          is the user's current Notoriety title. Reads like the top of a
+          mafia file folder.
+          ───────────────────────────────────────────────────────────── */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "9px 14px 9px",
+        paddingRight: lobbyLogo ? 42 : 14,
+        fontSize: 9, fontWeight: 800, letterSpacing: "1.6px",
+        textTransform: "uppercase",
+        color: `${cardAccent}cc`,
+        fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+        position: "relative", zIndex: 1,
+        minWidth: 0,
+      }}>
+        <span style={{ flexShrink: 0 }}>ID · {idHash || "————"}</span>
+        {primaryCrew?.tag && (() => {
+          const ca = primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : cardAccent;
+          return (
+            <>
+              <span aria-hidden style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
+              <a
+                href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
+                title={primaryCrew.name || ""}
+                style={{ color: ca, textDecoration: "none", flexShrink: 0 }}
+              >
+                [{primaryCrew.tag}]
+              </a>
+            </>
+          );
+        })()}
+        {notorietyRank && (
+          <>
+            <span aria-hidden style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
+            <span style={{
+              color: "rgba(240,232,214,.78)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              minWidth: 0,
+            }}>
+              {notorietyRank}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Perforation divider — dashed line, GTA file-folder feel */}
+      <div aria-hidden style={{
+        height: 0, borderTop: `1px dashed ${cardAccent}28`,
+        margin: "0 12px", position: "relative", zIndex: 1,
+      }} />
+
+      {/* ─────────────────────────────────────────────────────────────────
+          IDENTITY ZONE — bigger framed avatar + name in display type +
+          role/tier as inline mono labels (no chip backgrounds) + crew
+          name as a quiet italic line. Click anywhere opens profile.
+          ───────────────────────────────────────────────────────────── */}
       <button
         type="button"
         onClick={() => openSheet("profile", { userId: profileUserId })}
         style={{
-          display: "flex", alignItems: "center", gap: 11,
+          display: "flex", alignItems: "center", gap: 12,
           width: "100%", padding: "12px 14px 10px",
           background: "none", border: "none", cursor: "pointer",
           color: "inherit", textAlign: "left",
+          position: "relative", zIndex: 1,
         }}
       >
-        {/* Avatar — framed like an ID photo: accent ring + small online dot */}
         <div style={{ position: "relative", flexShrink: 0 }}>
           <div style={{
-            width: 42, height: 42, borderRadius: "50%",
+            width: 52, height: 52, borderRadius: "50%",
             background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
             boxShadow: `
-              0 0 0 2px ${cardAccent}55,
+              0 0 0 2px ${cardAccent}66,
               0 0 0 3px rgba(0,0,0,.35),
-              0 0 14px ${cardAccent}40,
+              0 0 18px ${cardAccent}40,
               inset 0 2px 0 rgba(255,255,255,.18)
             `,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 17, fontWeight: 950, color: "#fff",
+            fontSize: 21, fontWeight: 950, color: "#fff",
             overflow: "hidden",
           }}>
             {avatarUrl ? (
@@ -395,7 +409,7 @@ export default function UserCorner() {
           <span
             aria-hidden
             style={{
-              position: "absolute", bottom: -1, right: -1,
+              position: "absolute", bottom: 0, right: 0,
               width: 12, height: 12, borderRadius: "50%",
               background: isAway ? "#facc15" : "#22c55e",
               boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.8)",
@@ -404,142 +418,123 @@ export default function UserCorner() {
           />
         </div>
 
-        {/* Name + chips */}
-        <div style={{ flex: 1, minWidth: 0, paddingRight: 44 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Name in display type — big, condensed, uppercase to read as
+              a card heading rather than a label */}
           <div style={{
-            fontSize: 13, fontWeight: 900, letterSpacing: "-.1px",
+            fontFamily: "'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif",
+            fontSize: 22, fontWeight: 800, letterSpacing: "0.5px",
+            textTransform: "uppercase",
+            lineHeight: 1.0,
+            color: "rgba(243,244,246,.97)",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            color: "rgba(243,244,246,.95)",
           }}>
             {name}
           </div>
-          <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
-            {/* Pill 1: Best contextual role (global > room) */}
-            {(() => {
-              const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
-              if (!bestRole) return null;
-              return (
-                <span style={{
-                  fontSize: 10, fontWeight: 900, padding: "2px 7px",
-                  borderRadius: 999, border: "1px solid rgba(148,163,184,.22)",
-                  background: "rgba(255,255,255,.06)",
-                  ...chipStyle(bestRole),
-                }}>
-                  {roleDisplay(bestRole, lobbyTheme)}
-                </span>
-              );
-            })()}
-            {/* Pill 2: Paid tier */}
-            {(() => {
-              const tier = String(me?.tier || "").toUpperCase();
-              if (!tier || tier === "INNOCENT") return null;
-              const tierStyles: Record<string, { border: string; bg: string; color: string; icon: React.ReactNode }> = {
-                KINGPIN:  { border: "rgba(252,211,77,.45)",  bg: "rgba(252,211,77,.15)", color: "#fde68a", icon: <TierIcon tier="KINGPIN" size={11} /> },
-                FELON:    { border: "rgba(249,115,22,.45)",  bg: "rgba(249,115,22,.15)", color: "#fdba74", icon: <TierIcon tier="FELON" size={11} /> },
-                INDICTED: { border: "rgba(88,0,229,.40)",    bg: "rgba(88,0,229,.15)",   color: "rgba(243,244,246,.85)", icon: <TierIcon tier="INDICTED" size={11} /> },
-              };
-              const s = tierStyles[tier];
-              if (!s) return null;
-              return (
-                <span style={{
-                  fontSize: 10, fontWeight: 900, padding: "2px 7px",
-                  borderRadius: 999, border: `1px solid ${s.border}`,
-                  background: s.bg, color: s.color,
-                  display: "inline-flex", alignItems: "center", gap: 3,
-                }}>
-                  <span style={{ fontSize: 9 }}>{s.icon}</span>
-                  {tier}
-                </span>
-              );
-            })()}
-          </div>
+
+          {/* Inline role + tier as colored mono labels — no chip bg */}
+          {(() => {
+            const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
+            const tier = String(me?.tier || "").toUpperCase();
+            const showTier = tier && tier !== "INNOCENT";
+            if (!bestRole && !showTier) return null;
+
+            const roleColor =
+              bestRole === "GOD"     ? "#fde68a" :
+              bestRole === "ADMIN"   ? "#fca5a5" :
+              bestRole === "STAFF"   ? "#93c5fd" :
+              bestRole === "SUPPORT" ? "#6ee7b7" :
+              bestRole === "MOD"     ? "rgba(216,180,254,.95)" :
+              "rgba(243,244,246,.85)";
+
+            const tierColor =
+              tier === "KINGPIN"  ? "#fde68a" :
+              tier === "FELON"    ? "#fdba74" :
+              tier === "INDICTED" ? "rgba(216,180,254,.95)" :
+              "rgba(243,244,246,.85)";
+
+            return (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 7,
+                marginTop: 5,
+                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                fontSize: 9, fontWeight: 900, letterSpacing: "1.5px",
+                textTransform: "uppercase",
+                minWidth: 0, flexWrap: "wrap" as const,
+              }}>
+                {bestRole && (
+                  <span style={{ color: roleColor, flexShrink: 0 }}>
+                    {roleDisplay(bestRole, lobbyTheme)}
+                  </span>
+                )}
+                {bestRole && showTier && (
+                  <span aria-hidden style={{ opacity: 0.35, flexShrink: 0 }}>·</span>
+                )}
+                {showTier && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: tierColor, flexShrink: 0 }}>
+                    <TierIcon tier={tier as any} size={11} />
+                    {tier}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Crew name — quiet italic line */}
+          {primaryCrew?.name && (
+            <div style={{
+              fontSize: 11, fontStyle: "italic",
+              color: "rgba(240,232,214,.62)",
+              marginTop: 5,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {primaryCrew.name}
+            </div>
+          )}
         </div>
       </button>
 
-      {/* Crew badge — "repping" flair row. Clicks through to the crew page. */}
-      {primaryCrew && (() => {
-        const ca = primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : cardAccent;
-        return (
-          <a
-            href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
-            title={`${primaryCrew.name}${primaryCrew.tag ? ` · [${primaryCrew.tag}]` : ""}`}
-            style={{
-              display: "flex", alignItems: "center", gap: 9,
-              margin: "0 12px 4px",
-              padding: "6px 9px",
-              borderRadius: 10,
-              border: `1px solid ${ca}38`,
-              background: `linear-gradient(90deg, ${ca}18 0%, ${ca}06 60%, transparent 100%)`,
-              textDecoration: "none", color: "inherit",
-              position: "relative", zIndex: 1,
-            }}
-          >
-            <div style={{
-              width: 22, height: 22, borderRadius: 4, flexShrink: 0,
-              backgroundImage: primaryCrew.logoUrl ? `url(${primaryCrew.logoUrl})` : `linear-gradient(135deg, ${ca}, #8a6b3e)`,
-              backgroundSize: "cover", backgroundPosition: "center",
-              border: `1px solid ${ca}aa`,
-              boxShadow: `0 0 6px ${ca}44`,
-            }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "1.5px", textTransform: "uppercase", color: `${ca}e0`, opacity: 0.85 }}>
-                Crew {primaryCrew.tag ? `· [${primaryCrew.tag}]` : ""}
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(240,232,214,.9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {primaryCrew.name}
-              </div>
-            </div>
-          </a>
-        );
-      })()}
-
-      {/* Status toggle — click to flip between Online and Lying low */}
-      <div style={{ padding: "2px 12px 4px", position: "relative", zIndex: 1 }}>
+      {/* Status link — small mono line, sits flush left under identity */}
+      <div style={{ padding: "0 14px 10px", position: "relative", zIndex: 1 }}>
         <button
           type="button"
           onClick={() => { if (typeof setAway === "function") setAway(!isAway); }}
           title={isAway ? "You're lying low. Click to come back online." : "Click to lie low (manual AFK)."}
           style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "4px 10px 4px 8px",
-            borderRadius: 999,
-            border: `1px solid ${isAway ? "rgba(250,204,21,.35)" : "rgba(34,197,94,.30)"}`,
-            background: isAway ? "rgba(250,204,21,.10)" : "rgba(34,197,94,.08)",
-            color: isAway ? "#fde68a" : "rgba(187,247,208,.9)",
-            fontFamily: "inherit", fontSize: 10, fontWeight: 800,
-            letterSpacing: ".3px", textTransform: "uppercase",
-            cursor: "pointer", transition: "background .15s, border-color .15s",
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = isAway ? "rgba(250,204,21,.16)" : "rgba(34,197,94,.14)";
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = isAway ? "rgba(250,204,21,.10)" : "rgba(34,197,94,.08)";
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: 0, background: "none", border: "none",
+            color: isAway ? "rgba(253,224,71,.85)" : "rgba(187,247,208,.78)",
+            fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+            fontSize: 9, fontWeight: 800,
+            letterSpacing: "1.5px", textTransform: "uppercase",
+            cursor: "pointer",
           }}
         >
           <span style={{
-            width: 8, height: 8, borderRadius: "50%",
+            width: 6, height: 6, borderRadius: "50%",
             background: isAway ? "#facc15" : "#22c55e",
-            boxShadow: isAway ? "0 0 6px rgba(250,204,21,.6)" : "0 0 6px rgba(34,197,94,.7)",
+            boxShadow: isAway ? "0 0 5px rgba(250,204,21,.6)" : "0 0 5px rgba(34,197,94,.7)",
             flexShrink: 0,
           }} />
           {isAway ? "Lying low" : "Online"}
         </button>
       </div>
 
-      {/* Notoriety XP bar (notifications + settings + logout moved to W logo menu) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px 0" }}>
-        <div style={{ flex: 1 }}>
-          <NotorietyBar compact />
-        </div>
+      {/* Perforation divider above footer */}
+      <div aria-hidden style={{
+        height: 0, borderTop: `1px dashed ${cardAccent}28`,
+        margin: "0 12px", position: "relative", zIndex: 1,
+      }} />
+
+      {/* Notoriety XP bar — full-width inside the footer zone */}
+      <div style={{ padding: "8px 12px 4px", position: "relative", zIndex: 1 }}>
+        <NotorietyBar compact />
       </div>
 
       {/* Action strip — Burner only; settings/logout live in the W logo menu */}
       <div style={{
-        display: "flex", gap: 6, padding: "8px 12px 10px",
-        borderTop: "1px solid rgba(255,255,255,.05)",
+        display: "flex", gap: 6, padding: "6px 12px 10px",
+        position: "relative", zIndex: 1,
       }}>
         {/* BURNER PHONE — loud, unmissable */}
         <button
