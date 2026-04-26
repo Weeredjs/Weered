@@ -218,10 +218,16 @@ const TABS = [
   { id: "crew"     as const, label: "Crew Finder" },
   { id: "bounties" as const, label: "Bounties" },
   { id: "ports"    as const, label: "Ports of Call" },
+  { id: "mods"     as const, label: "Mods" },
   { id: "streams"  as const, label: "Streams" },
   { id: "about"    as const, label: "About" },
 ];
 type TabId = typeof TABS[number]["id"];
+
+// Slim tab set used inside rooms — Bounties / Ports of Call / Mods.
+// The lobby-wide tabs (Flagship, Log, Crew Finder, Streams, About) don't
+// belong inside a single room's stage.
+const SLIM_TAB_IDS: TabId[] = ["bounties", "ports", "mods"];
 
 // ═══ Live Player Counter ═══════════════════════════════════════════════════════
 
@@ -3049,6 +3055,122 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
 
 // ═══ Tab: About ════════════════════════════════════════════════════════════════
 
+// ═══ Tab: Mods (Nexus) ═══════════════════════════════════════════════════════
+
+interface ModRow {
+  id: string;
+  name: string;
+  author: string | null;
+  summary: string | null;
+  thumbnailUrl: string | null;
+  sourceUrl: string | null;
+  endorsements: number;
+  downloads: number;
+  source: string;
+  sourceUpdatedAt: string | null;
+}
+
+function ModsTab() {
+  const [mods, setMods] = useState<ModRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"endorsed" | "downloads" | "updated" | "new">("endorsed");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const params = new URLSearchParams({ gameSlug: "windrose", sort, limit: "50" });
+    if (search.trim()) params.set("search", search.trim());
+    apiFetch(`/mods?${params.toString()}`).then((j: any) => {
+      if (cancelled) return;
+      setMods(Array.isArray(j?.mods) ? j.mods : []);
+      setLoading(false);
+    }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [search, sort]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Controls */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search mods, authors, summaries..."
+          style={{ ...S.input, flex: 1, minWidth: 220 } as React.CSSProperties}
+        />
+        <select
+          value={sort}
+          onChange={e => setSort(e.target.value as any)}
+          style={{ ...S.input, fontFamily: WR_FONT_MONO, minWidth: 130 } as React.CSSProperties}
+        >
+          <option value="endorsed">Most endorsed</option>
+          <option value="downloads">Most downloaded</option>
+          <option value="updated">Recently updated</option>
+          <option value="new">Newest</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Hauling mods from the depths..." />
+      ) : mods.length === 0 ? (
+        <EmptyState icon="🪝" title="No mods found" hint={search ? "Try a different search." : "The poller hasn't surfaced any Windrose mods yet."} />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+          {mods.map(m => (
+            <a
+              key={m.id}
+              href={m.sourceUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ ...S.card, padding: 0, overflow: "hidden", textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column" }}
+            >
+              <div style={{
+                width: "100%", aspectRatio: "16 / 9",
+                background: m.thumbnailUrl
+                  ? `url(${m.thumbnailUrl}) center/cover`
+                  : `linear-gradient(135deg, ${PAL.stormMid}, ${PAL.stormDeep})`,
+                position: "relative",
+              }}>
+                <span style={{
+                  position: "absolute", top: 6, left: 6,
+                  padding: "2px 7px",
+                  background: `${PAL.brass}25`,
+                  border: `1px solid ${PAL.brass}80`,
+                  color: PAL.brassHi,
+                  fontSize: 9, fontWeight: 800, letterSpacing: "1px",
+                  fontFamily: WR_FONT_MONO,
+                }}>
+                  {m.source.toUpperCase()}
+                </span>
+              </div>
+              <div style={{ padding: "10px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontFamily: WR_FONT_DISPLAY, fontSize: 14, color: PAL.brassHi, letterSpacing: "0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.name}
+                </div>
+                {m.author && (
+                  <div style={{ fontSize: 11, color: PAL.parchDim, fontStyle: "italic" }}>
+                    by {m.author}
+                  </div>
+                )}
+                {m.summary && (
+                  <div style={{ fontSize: 11, color: PAL.parchment, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {m.summary}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 12, marginTop: "auto", paddingTop: 6, fontFamily: WR_FONT_MONO, fontSize: 10, color: PAL.parchDim }}>
+                  <span title="Endorsements">👍 {m.endorsements.toLocaleString()}</span>
+                  <span title="Downloads">⬇ {m.downloads.toLocaleString()}</span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AboutTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 760 }}>
@@ -3132,13 +3254,24 @@ export default function WindroseModulesPanel({
   gameName,
   accentColor: _accent,
   style,
+  slim,
 }: {
   lobbyId: string;
   gameName: string;
   accentColor?: string;
   style?: React.CSSProperties;
+  // When true, only Bounties / Ports of Call / Mods are shown — used
+  // when this panel is dropped into a single room's stage instead of
+  // the lobby-wide modules view.
+  slim?: boolean;
 }) {
+  const visibleTabs = useMemo(
+    () => slim ? TABS.filter(t => SLIM_TAB_IDS.includes(t.id)) : TABS,
+    [slim],
+  );
   const [tab, setTab] = useState<TabId>(() => {
+    // Slim (room) mode opens on bounties.
+    if (slim) return "bounties";
     // If we landed here from a "Watch Here" / home Join Room click that
     // already stashed a pending stream, open directly on Streams instead
     // of the flagship tab. The watchhere event itself fires *before* this
@@ -3152,7 +3285,7 @@ export default function WindroseModulesPanel({
     } catch {}
     return "flagship";
   });
-  useWatchHere(React.useCallback(() => { setTab("streams"); }, []));
+  useWatchHere(React.useCallback(() => { if (!slim) setTab("streams"); }, [slim]));
 
   return (
     <>
@@ -3197,7 +3330,9 @@ export default function WindroseModulesPanel({
       `}</style>
 
       <div style={{ ...S.shell, ...(style || {}), flex: "initial", minHeight: "auto", overflow: "visible" }}>
-        {/* Plaque header */}
+        {/* Plaque header — full hero on lobby panel; suppressed in slim
+            (room) mode where the room stage already owns the chrome. */}
+        {!slim && (
         <div style={S.plaque}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3224,10 +3359,11 @@ export default function WindroseModulesPanel({
             </div>
           </div>
         </div>
+        )}
 
         {/* Tabs */}
         <div style={S.tabBar}>
-          {TABS.map(t => (
+          {visibleTabs.map(t => (
             <button
               key={t.id}
               className={`windrose-tab ${tab === t.id ? "active" : ""}`}
@@ -3245,6 +3381,7 @@ export default function WindroseModulesPanel({
           {tab === "crew"     && <CrewTab lobbyId={lobbyId} />}
           {tab === "bounties" && <BountiesTab />}
           {tab === "ports"    && <PortsOfCallTab />}
+          {tab === "mods"     && <ModsTab />}
           {tab === "streams"  && <StreamsTab gameName={gameName} lobbyId={lobbyId} />}
           {tab === "about"    && <AboutTab />}
         </div>
