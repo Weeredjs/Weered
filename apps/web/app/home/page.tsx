@@ -233,8 +233,18 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
 // Lead card for the Live Now section. Pulled from /live/featured which
 // runs a cascade: Weered users currently live → top stream of the
 // featured lobby's game → League of Legends fallback (always populated).
+// Click the thumbnail or Watch button to play the Twitch embed inline.
 function FeaturedStreamCard({ stream }: { stream: any }) {
+  const [playing, setPlaying] = React.useState(false);
+  const [muted, setMuted] = React.useState(true);
+
+  // Stop playback when the underlying stream changes (e.g. /live/featured
+  // poll returns a different streamer) so we don't render an iframe for a
+  // user who's no longer being shown.
+  React.useEffect(() => { setPlaying(false); }, [stream?.userLogin]);
+
   if (!stream) return null;
+
   const sourceLabel =
     stream.source === "user"
       ? (stream.weeredUser?.name ? `${stream.weeredUser.name} on Weered` : "Live on Weered")
@@ -245,79 +255,178 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
     stream.source === "user" ? "#a78bfa"
     : stream.source === "game" ? "#f5b700"
     : "#9146ff";
-  const watchUrl = `https://www.twitch.tv/${encodeURIComponent(stream.userLogin || "")}`;
+
+  const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
+  const embedUrl = `https://player.twitch.tv/?channel=${encodeURIComponent(stream.userLogin || "")}&parent=${encodeURIComponent(parentHost)}&autoplay=true&muted=${muted ? "true" : "false"}`;
+
+  // 16:9 thumbnail at 320×180 — big enough to actually watch in-place
+  // without taking over the page.
+  const thumbWidth = 320;
+  const thumbHeight = 180;
 
   return (
-    <a
-      href={watchUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+    <div
       style={{
-        display: "grid", gridTemplateColumns: "180px 1fr",
+        display: "grid", gridTemplateColumns: `${thumbWidth}px 1fr`,
         gap: 14, padding: 0, marginBottom: 12,
         background: "rgba(255,255,255,.02)",
         border: `1px solid ${sourceColor}24`,
         borderRadius: 12, overflow: "hidden",
-        textDecoration: "none", color: "inherit",
+        color: "inherit",
         transition: "border-color .15s, transform .15s",
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}66`; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}24`; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}66`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}24`; }}
     >
-      {/* Thumbnail */}
-      <div style={{ position: "relative", width: 180, height: 100, background: "rgba(0,0,0,.6)", flexShrink: 0 }}>
-        {stream.thumbnailUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={stream.thumbnailUrl} alt={stream.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      {/* Thumbnail / inline player */}
+      <div style={{ position: "relative", width: thumbWidth, height: thumbHeight, background: "rgba(0,0,0,.6)", flexShrink: 0 }}>
+        {playing ? (
+          <>
+            <iframe
+              src={embedUrl}
+              title={stream.title || stream.userName}
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              style={{ width: "100%", height: "100%", border: 0, display: "block" }}
+            />
+            <button
+              type="button"
+              onClick={() => setPlaying(false)}
+              title="Stop"
+              style={{
+                position: "absolute", top: 6, right: 6,
+                width: 24, height: 24, borderRadius: 4,
+                border: "1px solid rgba(255,255,255,.18)",
+                background: "rgba(0,0,0,.7)", color: "#fff",
+                cursor: "pointer", fontFamily: "inherit",
+                fontSize: 14, lineHeight: 1, fontWeight: 700,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                zIndex: 2,
+              }}
+            >×</button>
+            <button
+              type="button"
+              onClick={() => setMuted(m => !m)}
+              title={muted ? "Unmute" : "Mute"}
+              style={{
+                position: "absolute", top: 6, right: 36,
+                width: 24, height: 24, borderRadius: 4,
+                border: "1px solid rgba(255,255,255,.18)",
+                background: "rgba(0,0,0,.7)", color: "#fff",
+                cursor: "pointer", fontFamily: "inherit",
+                fontSize: 11, lineHeight: 1, fontWeight: 700,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                zIndex: 2,
+              }}
+            >{muted ? "🔇" : "🔊"}</button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPlaying(true)}
+            style={{
+              width: "100%", height: "100%", padding: 0,
+              border: 0, background: "none", cursor: "pointer",
+              position: "relative", display: "block",
+            }}
+            aria-label={`Play ${stream.userName || stream.userLogin}`}
+          >
+            {stream.thumbnailUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={stream.thumbnailUrl} alt={stream.title || ""} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            )}
+            {/* Big play overlay so it reads as clickable */}
+            <span
+              aria-hidden
+              style={{
+                position: "absolute", top: "50%", left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 54, height: 54, borderRadius: "50%",
+                background: "rgba(0,0,0,.55)", border: "2px solid rgba(255,255,255,.85)",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontSize: 18,
+                boxShadow: "0 4px 16px rgba(0,0,0,.5)",
+              }}
+            >▶</span>
+          </button>
         )}
+
+        {/* LIVE pip — always visible */}
         <div style={{
           position: "absolute", top: 6, left: 6,
           display: "flex", alignItems: "center", gap: 4,
           padding: "2px 6px", borderRadius: 4,
           background: "rgba(220,38,38,.92)", color: "#fff",
           fontSize: 9, fontWeight: 900, letterSpacing: "1px", textTransform: "uppercase",
+          pointerEvents: "none", zIndex: 1,
         }}>
           <span style={{ width: 4, height: 4, borderRadius: 999, background: "#fff" }} />
           Live
         </div>
-        <div style={{
-          position: "absolute", bottom: 6, right: 6,
-          padding: "2px 6px", borderRadius: 4,
-          background: "rgba(0,0,0,.75)", color: "#fff",
-          fontSize: 10, fontWeight: 700, fontFamily: "monospace",
-        }}>
-          {(stream.viewerCount ?? 0).toLocaleString()} watching
-        </div>
+        {/* Viewer count — hidden once playing so it doesn't cover the player UI */}
+        {!playing && (
+          <div style={{
+            position: "absolute", bottom: 6, right: 6,
+            padding: "2px 6px", borderRadius: 4,
+            background: "rgba(0,0,0,.75)", color: "#fff",
+            fontSize: 10, fontWeight: 700, fontFamily: "monospace",
+            pointerEvents: "none",
+          }}>
+            {(stream.viewerCount ?? 0).toLocaleString()} watching
+          </div>
+        )}
       </div>
 
       {/* Body */}
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "10px 14px 10px 0", minWidth: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "12px 14px 12px 0", minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1.6px", textTransform: "uppercase", color: sourceColor, marginBottom: 4 }}>
             {sourceLabel}
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.96)", letterSpacing: "-.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(243,244,246,.96)", letterSpacing: "-.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {stream.userName || stream.userLogin}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)", marginTop: 3, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)", marginTop: 4, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
             {stream.title || ""}
           </div>
         </div>
-        <div style={{
-          display: "inline-flex", alignSelf: "flex-start",
-          alignItems: "center", gap: 5,
-          padding: "5px 11px", borderRadius: 6,
-          background: `${sourceColor}14`,
-          border: `1px solid ${sourceColor}55`,
-          color: sourceColor,
-          fontSize: 10, fontWeight: 800, letterSpacing: "1.2px", textTransform: "uppercase",
-          fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-          marginTop: 8,
-        }}>
-          ▶ Watch on Twitch
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+          <button
+            type="button"
+            onClick={() => setPlaying(p => !p)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "6px 13px", borderRadius: 6,
+              background: playing ? `${sourceColor}26` : `${sourceColor}14`,
+              border: `1px solid ${sourceColor}66`,
+              color: sourceColor,
+              fontSize: 11, fontWeight: 800, letterSpacing: "1.2px", textTransform: "uppercase",
+              fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+              cursor: "pointer",
+            }}
+          >
+            {playing ? "■ Stop" : "▶ Watch here"}
+          </button>
+          <a
+            href={`https://www.twitch.tv/${encodeURIComponent(stream.userLogin || "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex", alignItems: "center",
+              padding: "6px 11px", borderRadius: 6,
+              border: "1px solid rgba(255,255,255,.12)",
+              color: "rgba(255,255,255,.6)",
+              fontSize: 10, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase",
+              fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+              textDecoration: "none",
+            }}
+          >
+            Open on Twitch ↗
+          </a>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
