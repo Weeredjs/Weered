@@ -3312,6 +3312,11 @@ button:hover, [role="button"]:hover {
   padding-bottom: 28px;
 }
 
+/* TEMPORARY DEBUG — outline shell + center so we can see where each
+   element actually ends in the viewport. Remove after diagnosing. */
+.weered-shell { outline: 2px solid lime !important; }
+.weered-center { outline: 2px solid magenta !important; }
+
 .weered-left  { width: 320px; flex: 0 0 320px; }
 .weered-right { width: 340px; flex: 0 0 340px; position: relative; }
 .weered-center {
