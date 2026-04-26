@@ -11,7 +11,7 @@ export default function NotFound() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .nf-root {
           min-height: 100vh;
           background: #080810;
@@ -78,7 +78,7 @@ export default function NotFound() {
           50%      { transform: translateY(-4px); opacity: 0.55; }
         }
         .nf-404 {
-          font-family: 'Syne', 'DM Mono', monospace;
+          font-family: var(--font-barlow), 'Barlow Condensed', 'DM Mono', monospace;
           font-size: 64px;
           font-weight: 800;
           letter-spacing: -0.04em;
@@ -91,7 +91,7 @@ export default function NotFound() {
           color: transparent;
         }
         .nf-title {
-          font-family: 'Syne', 'DM Mono', monospace;
+          font-family: var(--font-barlow), 'Barlow Condensed', 'DM Mono', monospace;
           font-size: 16px;
           font-weight: 700;
           letter-spacing: 0.02em;

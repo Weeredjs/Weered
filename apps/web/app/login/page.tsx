@@ -143,7 +143,7 @@ function LoginForm() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .wl-root {
           min-height: 100vh;
           background: #080810;
@@ -215,7 +215,7 @@ function LoginForm() {
           caret-color: rgba(243,244,246,0.98);
         } 
         .wl-brand-name {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 20px;
           color: rgba(243,244,246,0.98);
@@ -301,7 +301,7 @@ function LoginForm() {
           border: 1px solid rgba(124,58,237,0.45);
           border-radius: 12px;
           color: white;
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
@@ -353,7 +353,7 @@ function LoginForm() {
                   <rect x="8" y="12" width="24" height="17" rx="2" stroke="#a78bfa" strokeWidth="1.5"/>
                 </svg>
               </div>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: "rgba(232,232,240,0.95)", marginBottom: 8 }}>
+              <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, color: "rgba(232,232,240,0.95)", marginBottom: 8 }}>
                 Check your email.
               </div>
               <div style={{ fontSize: 12, color: "rgba(148,163,184,0.6)", lineHeight: 1.8, marginBottom: 20 }}>

@@ -72,7 +72,7 @@ function VerifyEmailInner() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         .ve-root {
           min-height: 100vh;
@@ -116,7 +116,7 @@ function VerifyEmailInner() {
           text-align: center;
         }
         .ve-wordmark {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: 22px;
           letter-spacing: -1px;
@@ -125,7 +125,7 @@ function VerifyEmailInner() {
         }
         .ve-icon { margin: 0 auto 20px; display: flex; justify-content: center; }
         .ve-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 22px;
           color: rgba(232,232,240,0.95);

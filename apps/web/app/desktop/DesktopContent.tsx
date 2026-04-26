@@ -62,7 +62,7 @@ export default function DesktopContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap');
         .dt-root {
           height: 100%;
           overflow-y: auto;
@@ -83,14 +83,14 @@ export default function DesktopContent() {
         }
         .dt-inner { max-width: 880px; margin: 0 auto; position: relative; z-index: 1; }
         .dt-eyebrow { font-size: 11px; letter-spacing: 2.5px; font-weight: 800; color: #f5b700; text-transform: uppercase; margin-bottom: 14px; }
-        .dt-h1 { font-family: 'Syne', sans-serif; font-size: 56px; line-height: 1.05; font-weight: 900; letter-spacing: -1.5px; margin: 0 0 18px; }
+        .dt-h1 { font-family: var(--font-barlow), 'Barlow Condensed', sans-serif; font-size: 56px; line-height: 1.05; font-weight: 900; letter-spacing: -1.5px; margin: 0 0 18px; }
         .dt-h1 em { color: #5800E5; font-style: normal; }
         .dt-lede { font-size: 16px; line-height: 1.6; color: rgba(203,213,225,0.85); max-width: 620px; margin: 0 0 36px; }
         .dt-pitch { display: flex; gap: 28px; flex-wrap: wrap; padding: 18px 22px; border: 1px solid rgba(245,183,0,0.4); border-radius: 6px; background: rgba(245,183,0,0.05); margin-bottom: 48px; }
         .dt-pitch-stat { flex: 1; min-width: 160px; }
-        .dt-pitch-num { font-family: 'Syne', sans-serif; font-weight: 900; font-size: 28px; color: #f5b700; letter-spacing: -1px; }
+        .dt-pitch-num { font-family: var(--font-barlow), 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px; color: #f5b700; letter-spacing: -1px; }
         .dt-pitch-lab { font-size: 11px; letter-spacing: 1.5px; font-weight: 700; color: rgba(203,213,225,0.6); text-transform: uppercase; margin-top: 4px; }
-        .dt-section-h { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; margin: 48px 0 18px; }
+        .dt-section-h { font-family: var(--font-barlow), 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; margin: 48px 0 18px; }
         .dt-section-h::before { content: '·'; color: #5800E5; margin-right: 10px; font-weight: 900; }
         .dt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
         .dt-card { padding: 18px 18px 16px; background: #15131a; border: 1px solid rgba(255,255,255,0.06); border-radius: 5px; }
@@ -99,7 +99,7 @@ export default function DesktopContent() {
         .dt-card-body { font-size: 12px; line-height: 1.55; color: rgba(203,213,225,0.7); }
         .dt-platforms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
         .dt-plat { padding: 22px; background: linear-gradient(180deg, #160a24 0%, #15131a 100%); border: 1.5px solid rgba(88,0,229,0.5); border-radius: 5px; box-shadow: 0 4px 12px rgba(88,0,229,0.2); position: relative; }
-        .dt-plat-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: #fff; margin-bottom: 4px; }
+        .dt-plat-name { font-family: var(--font-barlow), 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: #fff; margin-bottom: 4px; }
         .dt-plat-sub { font-size: 11px; letter-spacing: 1px; color: rgba(203,213,225,0.6); text-transform: uppercase; margin-bottom: 16px; }
         .dt-plat-cta { display: inline-block; padding: 10px 18px; background: rgba(88,0,229,0.15); border: 1px solid rgba(88,0,229,0.4); border-radius: 4px; color: rgba(160,160,170,0.7); font-weight: 800; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; cursor: not-allowed; }
         .dt-plat-cta.live { background: #5800E5; border-color: #5800E5; color: #fff; cursor: pointer; box-shadow: 0 4px 12px rgba(88,0,229,0.5); }

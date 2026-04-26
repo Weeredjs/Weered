@@ -111,7 +111,7 @@ export default function SubscribeContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .sub-root {
           min-height: 100vh;
           background: #050810;
@@ -161,7 +161,7 @@ export default function SubscribeContent() {
           margin-bottom: 16px;
         }
         .sub-title {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 900;
           font-size: clamp(36px, 6vw, 64px);
           letter-spacing: -2px;
@@ -209,7 +209,7 @@ export default function SubscribeContent() {
           font-weight: 700;
         }
         .sub-tier-name {
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-weight: 800;
           font-size: 22px;
           letter-spacing: -0.5px;
@@ -218,7 +218,7 @@ export default function SubscribeContent() {
         .sub-price {
           font-size: 32px;
           font-weight: 700;
-          font-family: 'Syne', sans-serif;
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           letter-spacing: -1px;
           margin-bottom: 2px;
           line-height: 1;
