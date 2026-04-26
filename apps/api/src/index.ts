@@ -2013,7 +2013,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null };
+    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null, pillBgColor: (ws.user as any).pillBgColor ?? undefined, pillAccentColor: (ws.user as any).pillAccentColor ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
