@@ -3294,28 +3294,27 @@ button:hover, [role="button"]:hover {
 /* =============================================
    3-COLUMN APP SHELL
    ============================================= */
+/* Pin the shell to the viewport edges with absolute offsets. When the
+   SiteFooter is rendered, reserve a 28px slot at the bottom via the
+   `bottom` offset rather than padding — this keeps a hard ceiling on
+   children regardless of how % heights cascade through nested flex
+   contexts. */
 .weered-shell {
   display: flex;
   gap: 16px;
   padding: 16px 16px 0 16px;
   align-items: stretch;
-  width: 100%;
-  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
-/* Reserve 28px at the bottom of the shell when the SiteFooter is
-   rendered (everything except /room and /lobby pages). Children
-   stretch to the inner content area, so rails and scroll views end
-   right above the footer instead of stretching behind it. */
 .weered-shell.has-footer {
-  padding-bottom: 28px;
+  bottom: 28px;
 }
-
-/* TEMPORARY DEBUG — outline shell + center so we can see where each
-   element actually ends in the viewport. Remove after diagnosing. */
-.weered-shell { outline: 2px solid lime !important; }
-.weered-center { outline: 2px solid magenta !important; }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
 .weered-right { width: 340px; flex: 0 0 340px; position: relative; }
