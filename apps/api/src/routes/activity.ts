@@ -106,6 +106,32 @@ app.get("/unfurl", async (req, reply) => {
   const cached = unfurlCache.get(url);
   if (cached && cached.expiresAt > Date.now()) return reply.send(cached.data);
 
+  // YouTube serves bots an empty shell — use the public oEmbed endpoint
+  // which is designed exactly for previews.
+  if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
+    try {
+      const oe = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)" },
+      });
+      if (oe.ok) {
+        const j: any = await oe.json();
+        const result = {
+          ok: true,
+          title: j.title || "",
+          description: j.author_name ? `by ${j.author_name}` : "",
+          image: j.thumbnail_url || "",
+          siteName: "YouTube",
+          url,
+        };
+        if (result.title) {
+          unfurlCache.set(url, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });
+        }
+        return reply.send(result);
+      }
+    } catch {}
+    // fall through to generic fetcher if oEmbed fails
+  }
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
