@@ -241,8 +241,8 @@ export default function UserCorner() {
         borderRadius: 16,
         ...(userPanelBg     && { ["--weered-uc-bg" as any]:     userPanelBg }),
         ...(userPanelAccent && { ["--weered-uc-accent" as any]: cardAccent }),
-        // Border: stronger when user-customized so the accent reads.
-        border: `1px solid ${userPanelAccent ? `${cardAccent}88` : `${cardAccent}24`}`,
+        // Border: 2px, stronger alpha when user-customized so the accent reads.
+        border: `2px solid ${userPanelAccent ? `${cardAccent}aa` : `${cardAccent}30`}`,
         // Background: when the user picks a panelBgColor, lay it down as a
         // solid base — no dark overlay washing it out. When no override,
         // fall back to the original glassy stack.
@@ -290,15 +290,16 @@ export default function UserCorner() {
           aria-hidden
           style={{
             position: "absolute",
-            width: 8, height: 8,
-            borderTop: `1.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}78`}`,
-            borderLeft: `1.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}78`}`,
+            width: 11, height: 11,
+            borderTop: `2.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}b0`}`,
+            borderLeft: `2.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}b0`}`,
             transform: `rotate(${pos.rotate}deg)`,
             pointerEvents: "none",
             ...(pos as any),
           }}
         />
       ))}
+      {/* Make corner brackets a touch larger to match the new 2.5px stroke */}
       {/* Lobby logo / brand watermark — small, anchored top-right of card */}
       {lobbyLogo ? (
         <div style={{
@@ -325,12 +326,15 @@ export default function UserCorner() {
           ───────────────────────────────────────────────────────────── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
-        padding: "9px 14px 9px",
+        padding: "10px 14px 9px",
         paddingRight: lobbyLogo ? 42 : 14,
-        fontSize: 9, fontWeight: 800, letterSpacing: "1.6px",
+        // Match the home greeting label (e.g. "GOOD AFTERNOON") — same
+        // condensed display font as the rest of the press theme, slightly
+        // larger and chunkier than monospace.
+        fontFamily: "inherit",
+        fontSize: 11, fontWeight: 900, letterSpacing: "1.4px",
         textTransform: "uppercase",
         color: `${cardAccent}cc`,
-        fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
         position: "relative", zIndex: 1,
         minWidth: 0,
       }}>

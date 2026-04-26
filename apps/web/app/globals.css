@@ -5817,7 +5817,7 @@ html .weered-usercorner[data-custom-bg="1"] {
   background: var(--weered-uc-bg) !important;
 }
 html .weered-usercorner[data-custom-accent="1"] {
-  border: 1px solid color-mix(in srgb, var(--weered-uc-accent) 60%, transparent) !important;
+  border: 2px solid color-mix(in srgb, var(--weered-uc-accent) 70%, transparent) !important;
 }
 /* Drop the inset dark vignette + scan-line texture when the user has
    picked their own bg colour, so the choice reads cleanly. */
