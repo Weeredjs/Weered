@@ -104,6 +104,9 @@ export interface PresenceRowProps {
 
   // Sizing
   compact?: boolean;               // denser row for rails
+
+  // User-customizable pill background (#RRGGBB). Tints the row background.
+  pillBgColor?: string | null;
 }
 
 export default function PresenceRow({
@@ -123,7 +126,9 @@ export default function PresenceRow({
   action,
   activeGlow,
   compact,
+  pillBgColor,
 }: PresenceRowProps) {
+  const validPillBg = pillBgColor && /^#[0-9a-f]{6}$/i.test(pillBgColor) ? pillBgColor : null;
   const initial = (name || "?")[0]?.toUpperCase() || "?";
   const bg = avatar ? "rgba(255,255,255,0.08)" : (avatarColor || avatarBg(name || ""));
   const avatarSize = compact ? 30 : 36;
@@ -192,13 +197,17 @@ export default function PresenceRow({
 
   const inner = (
     <div
-      className="weered-presence-row-inner"
+      className={"weered-presence-row-inner" + (validPillBg ? " has-custom-bg" : "")}
       style={{
         display: "flex", alignItems: "stretch", gap: 10,
-        padding: compact ? "8px 10px 8px 12px" : "10px 12px 10px 14px",
+        padding: compact ? "6px 10px 6px 12px" : "8px 12px 8px 14px",
         cursor: (onClick || href) ? "pointer" : "default",
         position: "relative",
         transition: "background .12s",
+        ...(validPillBg ? {
+          background: `linear-gradient(90deg, ${validPillBg}30 0%, ${validPillBg}12 60%, transparent 100%)`,
+          borderRadius: 8,
+        } : {}),
       }}
     >
       {/* Left accent stripe for role/tier (colored only) */}

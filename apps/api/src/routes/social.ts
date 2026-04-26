@@ -28,7 +28,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true } as any })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true } as any })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string; isAway: boolean }>();
     for (const p of profiles) {
@@ -50,7 +50,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       ? await (prisma as any).crewMember.findMany({
           where: { userId: { in: peerIds } },
           orderBy: { joinedAt: "asc" },
-          include: { crew: { select: { id: true, tag: true, name: true, accentColor: true } } },
+          include: { crew: { select: { id: true, tag: true, name: true, accentColor: true, tagShape: true } } },
         })
       : [];
     const crewByUser = new Map<string, any>();
@@ -69,7 +69,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         roomIsLobby: roomId ? lobbySet.has(roomId) : false,
         isAway: Boolean(pres?.isAway),
         livePresence: p.livePresence || null,
-        primaryCrew: crew ? { id: crew.id, tag: crew.tag, name: crew.name, accentColor: crew.accentColor } : null,
+        primaryCrew: crew ? { id: crew.id, tag: crew.tag, name: crew.name, accentColor: crew.accentColor, tagShape: crew.tagShape || "rounded" } : null,
       };
     });
     return reply.send({ friends: out });

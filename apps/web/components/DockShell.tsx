@@ -1033,6 +1033,9 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
   const tierChip = FRIEND_TIER_LABEL[tier];
   const crewTag = f.primaryCrew?.tag ? `[${f.primaryCrew.tag}]` : "";
   const crewAccent = f.primaryCrew?.accentColor || "rgba(124,58,237,.85)";
+  const tagShape = String(f.primaryCrew?.tagShape || "rounded");
+  const tagRadius = tagShape === "square" ? 0 : tagShape === "pill" ? 999 : 4;
+  const validPillBg = f.pillBgColor && /^#[0-9a-f]{6}$/i.test(f.pillBgColor) ? f.pillBgColor : null;
 
   const secondary = (() => {
     if (f.online) {
@@ -1047,9 +1050,14 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
   })();
 
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:"1px solid var(--weered-bd)" }}>
+    <div style={{
+      display:"flex", alignItems:"center", gap:10,
+      padding:"7px 14px",
+      borderBottom:"1px solid var(--weered-bd)",
+      background: validPillBg ? `linear-gradient(90deg, ${validPillBg}28 0%, ${validPillBg}10 60%, transparent 100%)` : undefined,
+    }}>
       <div style={{ position:"relative" as const }}>
-        <Avatar name={f.name||"?"} size={34} chosenColor={f.avatarColor} src={f.avatar} />
+        <Avatar name={f.name||"?"} size={32} chosenColor={f.avatarColor} src={f.avatar} />
         <span style={{ position:"absolute" as const, bottom:0, right:0, width:9, height:9, borderRadius:999, background:f.online?(f.isAway?"#facc15":"#22c55e"):"rgba(255,255,255,.2)", border:"2px solid var(--weered-panel2)" }} />
       </div>
       <div style={{ flex:1, minWidth:0 }}>
@@ -1057,7 +1065,7 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
           <span style={{ fontWeight:700, fontSize:13, color:"var(--weered-text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" as const }}>{f.name}</span>
           {crewTag && (
             <span title={f.primaryCrew?.name || ""}
-              style={{ fontSize:9, fontWeight:900, padding:"1px 5px", borderRadius:4, color:crewAccent, background:`${crewAccent}1f`, border:`1px solid ${crewAccent}40`, letterSpacing:".05em", flexShrink:0, fontFamily:"ui-monospace, 'JetBrains Mono', monospace" }}>
+              style={{ fontSize:9, fontWeight:900, padding:"1px 5px", borderRadius:tagRadius, color:crewAccent, background:`${crewAccent}1f`, border:`1px solid ${crewAccent}40`, letterSpacing:".05em", flexShrink:0, fontFamily:"ui-monospace, 'JetBrains Mono', monospace" }}>
               {crewTag}
             </span>
           )}

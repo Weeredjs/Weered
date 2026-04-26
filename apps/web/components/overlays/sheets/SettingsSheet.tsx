@@ -181,6 +181,9 @@ export default function SettingsSheet() {
         </Row>
       </Section>
 
+      {/* Profile customization — colors users pick to personalize their card + pill */}
+      <ProfileCustomizationSection />
+
       {/* Behavior */}
       <Section title="Behavior">
         <Row label="Burner default tab" hint="Which tab opens first when you hit Burner.">
@@ -298,6 +301,147 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </div>
       {children}
     </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Profile customization — panel bg/accent + pill bg
+// ───────────────────────────────────────────────────────────────────────────
+
+function ProfileCustomizationSection() {
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
+
+  // Hydrate from cached `me` (auth:ok payload includes these)
+  const [panelBgColor, setPanelBgColor] = React.useState<string>("");
+  const [panelAccentColor, setPanelAccentColor] = React.useState<string>("");
+  const [pillBgColor, setPillBgColor] = React.useState<string>("");
+  const [savedMsg, setSavedMsg] = React.useState<string>("");
+
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem("weered_user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u?.panelBgColor) setPanelBgColor(u.panelBgColor);
+        if (u?.panelAccentColor) setPanelAccentColor(u.panelAccentColor);
+        if (u?.pillBgColor) setPillBgColor(u.pillBgColor);
+      }
+    } catch {}
+  }, []);
+
+  // Debounced save — fires 400ms after the last colour change
+  const saveTimer = React.useRef<any>(null);
+  function scheduleSave(field: "panelBgColor" | "panelAccentColor" | "pillBgColor", value: string) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const tok = token();
+      if (!tok) return;
+      try {
+        const r = await fetch(`${apiBase}/profile/me`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+          body: JSON.stringify({ [field]: value }),
+        });
+        if (r.ok) {
+          // Update cached `me` so UserCorner picks it up on next mount
+          try {
+            const raw = localStorage.getItem("weered_user");
+            if (raw) {
+              const u = JSON.parse(raw);
+              u[field] = value || null;
+              localStorage.setItem("weered_user", JSON.stringify(u));
+            }
+          } catch {}
+          // Tell UserCorner / others to re-render
+          try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { field, value } })); } catch {}
+          setSavedMsg("Saved");
+          setTimeout(() => setSavedMsg(""), 1200);
+        }
+      } catch {}
+    }, 400);
+  }
+
+  function clearField(field: "panelBgColor" | "panelAccentColor" | "pillBgColor", setter: (v: string) => void) {
+    setter("");
+    scheduleSave(field, "");
+  }
+
+  return (
+    <Section title="Profile customization">
+      <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 8 }}>
+        Personalize how you appear in lobbies and on your right-rail card.
+      </div>
+      <ColorPickerRow
+        label="ID badge background"
+        hint="Tints the panel behind your name + role chips."
+        value={panelBgColor}
+        onChange={(v) => { setPanelBgColor(v); scheduleSave("panelBgColor", v); }}
+        onClear={() => clearField("panelBgColor", setPanelBgColor)}
+      />
+      <ColorPickerRow
+        label="ID badge accent"
+        hint="Border, brackets, and avatar ring colour."
+        value={panelAccentColor}
+        onChange={(v) => { setPanelAccentColor(v); scheduleSave("panelAccentColor", v); }}
+        onClear={() => clearField("panelAccentColor", setPanelAccentColor)}
+      />
+      <ColorPickerRow
+        label="Presence pill"
+        hint="How your row appears in friends lists and rails."
+        value={pillBgColor}
+        onChange={(v) => { setPillBgColor(v); scheduleSave("pillBgColor", v); }}
+        onClear={() => clearField("pillBgColor", setPillBgColor)}
+      />
+      {savedMsg && (
+        <div style={{ fontSize: 11, color: "var(--weered-accent-text, rgba(167,139,250,.85))", marginTop: 4, textAlign: "right" }}>
+          {savedMsg}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function ColorPickerRow({
+  label, hint, value, onChange, onClear,
+}: {
+  label: string; hint?: string; value: string;
+  onChange: (v: string) => void; onClear: () => void;
+}) {
+  const safeValue = /^#[0-9a-f]{6}$/i.test(value) ? value : "#5800E5";
+  return (
+    <Row label={label} hint={hint}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <input
+          type="color"
+          value={safeValue}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            width: 36, height: 28, borderRadius: 6,
+            border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
+            background: "transparent", padding: 2, cursor: "pointer",
+          }}
+        />
+        <span style={{ fontFamily: "ui-monospace, 'JetBrains Mono', monospace", fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.75))", minWidth: 64 }}>
+          {value || "default"}
+        </span>
+        {value && (
+          <button
+            type="button"
+            onClick={onClear}
+            style={{
+              padding: "3px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700,
+              border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
+              background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.85))",
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+            title="Reset to default"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+    </Row>
   );
 }
 
