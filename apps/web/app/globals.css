@@ -3327,6 +3327,7 @@ button:hover, [role="button"]:hover {
   min-width: 0;
   height: 100%;
   overflow: hidden;
+  position: relative; /* anchor for child absolute layouts */
 }
 
 /* Chat fullscreen CTA — the "Dial In" button. Subtle breathing glow
