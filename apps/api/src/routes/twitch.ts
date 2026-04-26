@@ -1,9 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /twitch/streams + /live/featured — Helix passthroughs for the home page
-// Live Now section. App-only OAuth token cached in-memory.
-export default async function twitchRoutes(app: FastifyInstance) {
+// /twitch/streams + /live/featured + /live/rooms — Helix + active-room
+// passthroughs for the home page Live Now section. App-only OAuth token
+// cached in-memory.
+type Opts = {
+  rooms?: Map<string, any>;
+};
+
+export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}) {
+  const roomsMap = opts.rooms;
   const TWITCH_CLIENT_ID     = process.env.TWITCH_CLIENT_ID || "";
   const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
   let twitchAppToken = "";
@@ -211,5 +217,93 @@ export default async function twitchRoutes(app: FastifyInstance) {
     const empty = { ok: true, stream: null, source: null };
     featuredCache = { ts: Date.now(), payload: empty };
     return reply.send(empty);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // /live/rooms — active rooms with enrichment for the home Live Now
+  // right-column cards. Returns rooms that currently have ≥1 user, joined
+  // up to a small avatar sample, plus the parent lobby's logo / accent /
+  // name and a friendly "activity" label derived from activeModule.
+  // ──────────────────────────────────────────────────────────────────────
+  function activityLabel(moduleKey: string | null | undefined): string {
+    const k = String(moduleKey || "").toLowerCase();
+    if (k === "youtube" || k === "co_watch")  return "Watching together";
+    if (k === "twitch")                       return "Watching stream";
+    if (k === "voice")                        return "Voice chat";
+    if (k === "feed")                         return "Reading feed";
+    if (k === "trade" || k === "trading")     return "Trading";
+    if (k === "raid" || k === "lfg")          return "Forming party";
+    return "Hanging out";
+  }
+
+  app.get("/live/rooms", async (_req, reply) => {
+    if (!roomsMap) return reply.send({ ok: true, rooms: [] });
+
+    // Pull each room with at least one online user
+    type Active = { id: string; name: string; lobbyId: string | null; userIds: string[]; activeModule: string | null };
+    const active: Active[] = [];
+    for (const [rid, r] of roomsMap as any) {
+      const userIds = Array.from((r.users?.keys?.() || [])) as string[];
+      if (userIds.length === 0) continue;
+      active.push({
+        id: rid,
+        name: r.name || rid,
+        lobbyId: r.lobbyId || null,
+        userIds,
+        activeModule: r.activeModule || null,
+      });
+    }
+    if (active.length === 0) return reply.send({ ok: true, rooms: [] });
+
+    // Batch-resolve lobbies + avatars in two parallel queries
+    const lobbyIds = [...new Set(active.map(r => r.lobbyId).filter(Boolean))] as string[];
+    const allUserIds = [...new Set(active.flatMap(r => r.userIds))];
+
+    const [lobbies, users] = await Promise.all([
+      lobbyIds.length
+        ? (prisma as any).lobby.findMany({
+            where: { id: { in: lobbyIds } },
+            select: { id: true, name: true, logoUrl: true, accentColor: true },
+          })
+        : Promise.resolve([]),
+      allUserIds.length
+        ? prisma.user.findMany({
+            where: { id: { in: allUserIds } },
+            select: { id: true, name: true, avatar: true, avatarColor: true } as any,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const lobbyMap = new Map(lobbies.map((l: any) => [l.id, l]));
+    const userMap  = new Map((users as any[]).map((u: any) => [u.id, u]));
+
+    const out = active
+      .sort((a, b) => b.userIds.length - a.userIds.length)
+      .slice(0, 12)
+      .map(r => {
+        const lobby = r.lobbyId ? lobbyMap.get(r.lobbyId) as any : null;
+        const avatars = r.userIds.slice(0, 5).map(uid => {
+          const u = userMap.get(uid) as any;
+          return {
+            id: uid,
+            name: u?.name || "?",
+            avatar: u?.avatar || null,
+            avatarColor: u?.avatarColor || null,
+          };
+        });
+        return {
+          id: r.id,
+          name: r.name,
+          lobbyId: r.lobbyId,
+          lobbyName: lobby?.name || null,
+          lobbyLogoUrl: lobby?.logoUrl || null,
+          lobbyAccentColor: lobby?.accentColor || null,
+          onlineCount: r.userIds.length,
+          activity: activityLabel(r.activeModule),
+          avatars,
+        };
+      });
+
+    return reply.send({ ok: true, rooms: out });
   });
 }
