@@ -5801,3 +5801,29 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   .weered-logo-menu-btn.is-hot,
   .weered-rail-quick.is-hot { animation: none; }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   User profile customization overrides (panel bg + accent)
+
+   Theme rules above set background/border with !important on the user
+   corner card. When the user picks a custom panel colour, we tag the card
+   with data-custom-bg / data-custom-accent and read the colours from CSS
+   variables set inline by the React component. These rules live at the
+   bottom of the stylesheet so they win the cascade over earlier theme
+   rules with the same specificity + !important.
+   ────────────────────────────────────────────────────────────────────── */
+
+html .weered-usercorner[data-custom-bg="1"] {
+  background: var(--weered-uc-bg) !important;
+}
+html .weered-usercorner[data-custom-accent="1"] {
+  border: 1px solid color-mix(in srgb, var(--weered-uc-accent) 60%, transparent) !important;
+}
+/* Drop the inset dark vignette + scan-line texture when the user has
+   picked their own bg colour, so the choice reads cleanly. */
+html .weered-usercorner[data-custom-bg="1"] {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.25),
+    0 4px 12px rgba(0,0,0,0.25) !important;
+}

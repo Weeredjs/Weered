@@ -246,15 +246,21 @@ export default function UserCorner() {
   return (
     <div
       className="weered-usercorner"
+      // Theme rules use !important on background / border, so we expose the
+      // user's pick via CSS variables that a high-specificity override in
+      // globals.css picks up. data-* flags toggle the override on/off.
+      data-custom-bg={userPanelBg ? "1" : undefined}
+      data-custom-accent={userPanelAccent ? "1" : undefined}
       style={{
         position: "relative",
         borderRadius: 16,
+        ...(userPanelBg     && { ["--weered-uc-bg" as any]:     userPanelBg }),
+        ...(userPanelAccent && { ["--weered-uc-accent" as any]: cardAccent }),
         // Border: stronger when user-customized so the accent reads.
         border: `1px solid ${userPanelAccent ? `${cardAccent}88` : `${cardAccent}24`}`,
         // Background: when the user picks a panelBgColor, lay it down as a
-        // solid base — no dark overlay washing it out — and only tint the
-        // top-right corner with the accent. When no override, fall back to
-        // the original glassy stack.
+        // solid base — no dark overlay washing it out. When no override,
+        // fall back to the original glassy stack.
         background: userPanelBg
           ? `${userPanelBg}`
           : `
