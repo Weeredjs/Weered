@@ -348,6 +348,7 @@ export default function ShellGate({
 
   return (
     <>
+      <div className="weered-shell-frame">
       <div className="weered-shell">
         {/* Full left rail — hidden by CSS at mid/narrow breakpoints */}
         <LeftRailScroll>{left}</LeftRailScroll>
@@ -431,6 +432,7 @@ export default function ShellGate({
       <MobileNav overlay={overlay} setOverlay={setOverlay} />
 
       {!hideFooter && <SiteFooter />}
+      </div>
     </>
   );
 }
