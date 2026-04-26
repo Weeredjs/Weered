@@ -393,12 +393,48 @@ function ProfileCustomizationSection() {
         onChange={(v) => { setPillBgColor(v); scheduleSave("pillBgColor", v); }}
         onClear={() => clearField("pillBgColor", setPillBgColor)}
       />
+      <PillIntensityRow />
       {savedMsg && (
         <div style={{ fontSize: 11, color: "var(--weered-accent-text, rgba(167,139,250,.85))", marginTop: 4, textAlign: "right" }}>
           {savedMsg}
         </div>
       )}
     </Section>
+  );
+}
+
+function PillIntensityRow() {
+  // Local-only preference: how strongly OTHER users' pill colours render in
+  // this user's view of friends/presence lists. 0 = off, 100 = solid.
+  const [val, setVal] = React.useState<number>(60);
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem("weered:pillBgIntensity");
+      const n = raw == null ? 60 : Math.max(0, Math.min(100, Number(raw)));
+      if (Number.isFinite(n)) setVal(n);
+    } catch {}
+  }, []);
+  function update(n: number) {
+    const clamped = Math.max(0, Math.min(100, Math.round(n)));
+    setVal(clamped);
+    try { localStorage.setItem("weered:pillBgIntensity", String(clamped)); } catch {}
+    try { window.dispatchEvent(new CustomEvent("weered:pillBgIntensity", { detail: clamped })); } catch {}
+  }
+  return (
+    <Row label="Pill intensity" hint="How strongly tinted pills render. 0 turns the tint off entirely.">
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <input
+          type="range"
+          min={0} max={100} step={5}
+          value={val}
+          onChange={(e) => update(Number(e.target.value))}
+          style={{ width: 120, accentColor: "var(--weered-accent-text, rgba(167,139,250,.85))" }}
+        />
+        <span style={{ fontFamily: "ui-monospace, 'JetBrains Mono', monospace", fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.75))", minWidth: 32, textAlign: "right" }}>
+          {val}%
+        </span>
+      </div>
+    </Row>
   );
 }
 

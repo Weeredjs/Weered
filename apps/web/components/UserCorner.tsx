@@ -249,9 +249,14 @@ export default function UserCorner() {
       style={{
         position: "relative",
         borderRadius: 16,
-        border: `1px solid ${cardAccent}24`,
+        // Border: stronger when user-customized so the accent reads.
+        border: `1px solid ${userPanelAccent ? `${cardAccent}88` : `${cardAccent}24`}`,
+        // Background: when the user picks a panelBgColor, lay it down as a
+        // solid base — no dark overlay washing it out — and only tint the
+        // top-right corner with the accent. When no override, fall back to
+        // the original glassy stack.
         background: userPanelBg
-          ? `linear-gradient(180deg, ${userPanelBg}f5 0%, ${userPanelBg}cc 100%), linear-gradient(135deg, ${cardAccent}18 0%, transparent 55%)`
+          ? `${userPanelBg}`
           : `
           linear-gradient(180deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,.015) 40%, rgba(0,0,0,.18) 100%),
           linear-gradient(135deg, ${cardAccent}10 0%, transparent 55%)
@@ -268,16 +273,19 @@ export default function UserCorner() {
       }}
     >
       {/* Technical scan-line overlay — very subtle, adds the "this is my
-          rig" feel without overpowering. Pure CSS, no image. */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          backgroundImage: `repeating-linear-gradient(180deg, transparent 0 3px, rgba(255,255,255,.014) 3px 4px)`,
-          mixBlendMode: "overlay",
-          opacity: 0.6,
-        }}
-      />
+          rig" feel without overpowering. Pure CSS, no image. Drop it when
+          the user picked a panel bg colour so we don't wash the choice out. */}
+      {!userPanelBg && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute", inset: 0, pointerEvents: "none",
+            backgroundImage: `repeating-linear-gradient(180deg, transparent 0 3px, rgba(255,255,255,.014) 3px 4px)`,
+            mixBlendMode: "overlay",
+            opacity: 0.6,
+          }}
+        />
+      )}
       {/* Corner bracket marks — four L-shaped ticks in the accent color so
           the card reads as a framed ID badge, not a generic box. */}
       {[
@@ -292,8 +300,8 @@ export default function UserCorner() {
           style={{
             position: "absolute",
             width: 8, height: 8,
-            borderTop: `1.5px solid ${cardAccent}78`,
-            borderLeft: `1.5px solid ${cardAccent}78`,
+            borderTop: `1.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}78`}`,
+            borderLeft: `1.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}78`}`,
             transform: `rotate(${pos.rotate}deg)`,
             pointerEvents: "none",
             ...(pos as any),

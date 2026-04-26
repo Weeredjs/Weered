@@ -129,6 +129,34 @@ export default function PresenceRow({
   pillBgColor,
 }: PresenceRowProps) {
   const validPillBg = pillBgColor && /^#[0-9a-f]{6}$/i.test(pillBgColor) ? pillBgColor : null;
+
+  // Viewer's chosen intensity (0-100). Lives in localStorage so it's a per-
+  // viewer preference — controls how strongly OTHER users' pillBgColors
+  // render in this user's interface.
+  const [pillIntensity, setPillIntensity] = React.useState<number>(60);
+  React.useEffect(() => {
+    const read = () => {
+      try {
+        const raw = localStorage.getItem("weered:pillBgIntensity");
+        const n = raw == null ? 60 : Math.max(0, Math.min(100, Number(raw)));
+        if (Number.isFinite(n)) setPillIntensity(n);
+      } catch {}
+    };
+    read();
+    const onChange = () => read();
+    window.addEventListener("weered:pillBgIntensity", onChange);
+    return () => window.removeEventListener("weered:pillBgIntensity", onChange);
+  }, []);
+
+  const pillTint = (() => {
+    if (!validPillBg) return null;
+    const r = parseInt(validPillBg.slice(1, 3), 16);
+    const g = parseInt(validPillBg.slice(3, 5), 16);
+    const b = parseInt(validPillBg.slice(5, 7), 16);
+    const a = pillIntensity / 100;
+    if (a <= 0.01) return null;
+    return `linear-gradient(90deg, rgba(${r},${g},${b},${a.toFixed(3)}) 0%, rgba(${r},${g},${b},${(a * 0.45).toFixed(3)}) 60%, transparent 100%)`;
+  })();
   const initial = (name || "?")[0]?.toUpperCase() || "?";
   const bg = avatar ? "rgba(255,255,255,0.08)" : (avatarColor || avatarBg(name || ""));
   const avatarSize = compact ? 30 : 36;
@@ -197,15 +225,15 @@ export default function PresenceRow({
 
   const inner = (
     <div
-      className={"weered-presence-row-inner" + (validPillBg ? " has-custom-bg" : "")}
+      className={"weered-presence-row-inner" + (pillTint ? " has-custom-bg" : "")}
       style={{
         display: "flex", alignItems: "stretch", gap: 10,
         padding: compact ? "6px 10px 6px 12px" : "8px 12px 8px 14px",
         cursor: (onClick || href) ? "pointer" : "default",
         position: "relative",
         transition: "background .12s",
-        ...(validPillBg ? {
-          background: `linear-gradient(90deg, ${validPillBg}30 0%, ${validPillBg}12 60%, transparent 100%)`,
+        ...(pillTint ? {
+          background: pillTint,
           borderRadius: 8,
         } : {}),
       }}
@@ -285,15 +313,15 @@ export default function PresenceRow({
       {/* Action slot */}
       {action && <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{action}</div>}
 
-      {/* Platform icon stack — 2-row grid that grows to a second column past
-          two platforms, so the row never stretches vertically */}
+      {/* Platform icon stack — single horizontal row so 1-4 platforms don't
+          force the pill taller than non-platform rows. The earlier 2-row
+          grid was forcing min-height of ~30px on multi-platform pills,
+          making them visibly taller than rows without platforms. */}
       {hasPlatforms && (
         <div style={{
-          display: "grid",
-          gridTemplateRows: "repeat(2, auto)",
-          gridAutoFlow: "column",
-          columnGap: 3, rowGap: 3,
-          alignItems: "center", justifyContent: "center",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
           flexShrink: 0,
           paddingLeft: 4,
           marginLeft: 2,
