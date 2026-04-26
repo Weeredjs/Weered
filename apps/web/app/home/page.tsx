@@ -361,6 +361,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
         (window as any).__weeredHomeJoinStream = { channel: login, ts: Date.now() };
       } catch {}
     }
+    console.log("[live-handoff] HOME click", { lobbyId: stream.joinLobbyId, channel: login, stashed: typeof window !== "undefined" ? !!(window as any).__weeredHomeJoinStream : false });
     router.push(`/lobby/${encodeURIComponent(stream.joinLobbyId)}`);
   };
 
