@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useWeered } from "../../../components/WeeredProvider";
 import { weeredConfirm } from "../../../lib/confirm";
 import LobbyContent from "../../../components/LobbyContent";
@@ -302,6 +302,24 @@ export default function LobbyIdPage() {
   // banner click on one lobby doesn't auto-play in a lobby the user
   // navigates to a few seconds later.
   useEffect(() => { clearPendingStream(); }, [lobbyId]);
+
+  // Auto-play a streamer passed via ?stream=<twitch_login>. The home
+  // page's "Join Room" button on the featured stream card uses this so
+  // everyone landing here from the same featured-stream click ends up
+  // watching the same channel together. Defer one frame so the lobby
+  // useEffect above (clearPendingStream) runs first; dispatching the
+  // event re-stashes the channel and switches view → modules → streams.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const ch = searchParams?.get("stream");
+    if (!ch) return;
+    const t = setTimeout(() => {
+      try {
+        window.dispatchEvent(new CustomEvent("weered:stream:watchhere", { detail: { channel: ch } }));
+      } catch {}
+    }, 50);
+    return () => clearTimeout(t);
+  }, [searchParams, lobbyId]);
   const [feedHasNew, setFeedHasNew] = useState(false);
 
   // Check for new feed posts

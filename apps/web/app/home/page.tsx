@@ -229,12 +229,108 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   );
 }
 
+/* ─── LiveRoomCard ───────────────────────────────────────── */
+// Right-column card on the home Live Now section. Shows the lobby's
+// logo + accent stripe, the room's name + activity, a stack of up to
+// four user avatars from the room, and the live headcount.
+function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned: boolean) => void }) {
+  const accent = (room?.lobbyAccentColor && /^#[0-9a-f]{6}$/i.test(room.lobbyAccentColor)) ? room.lobbyAccentColor : "#7C3AED";
+  const visibleAvatars = (room.avatars || []).slice(0, 4);
+  const overflow = Math.max(0, (room.onlineCount || 0) - visibleAvatars.length);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onJoin(room.id, false)}
+      style={{
+        display: "grid", gridTemplateColumns: "auto 1fr auto", gridTemplateRows: "auto auto",
+        gap: "2px 10px", alignItems: "center",
+        padding: "8px 12px", borderRadius: 10,
+        background: `${accent}08`, border: `1px solid ${accent}24`,
+        color: "inherit", cursor: "pointer", fontFamily: "inherit",
+        transition: "all .15s",
+        width: "100%", textAlign: "left",
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}55`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}24`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
+    >
+      {/* Lobby logo, spans both rows */}
+      <div style={{ gridRow: "1 / span 2", width: 32, height: 32, borderRadius: 6, overflow: "hidden", border: `1px solid ${accent}55`, background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {room.lobbyLogoUrl
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={room.lobbyLogoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          : <span style={{ fontSize: 11, fontWeight: 900, color: accent }}>{(room.lobbyName || room.name || "?").slice(0,1).toUpperCase()}</span>
+        }
+      </div>
+
+      {/* Top row: room name + count */}
+      <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.96)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+          {room.name}
+        </span>
+      </div>
+      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "#22c55e", flexShrink: 0 }}>
+        <PulseDot color="#22c55e" size={4} />
+        {room.onlineCount}
+      </span>
+
+      {/* Bottom row: lobby name · activity + avatar stack */}
+      <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "rgba(255,255,255,.5)" }}>
+        {room.lobbyName && (
+          <>
+            <span style={{ fontWeight: 700, color: `${accent}d0`, letterSpacing: "0.4px", textTransform: "uppercase", fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.lobbyName}</span>
+            <span style={{ opacity: 0.4 }}>·</span>
+          </>
+        )}
+        <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.activity}</span>
+      </div>
+
+      {/* Avatar stack — right side of bottom row */}
+      <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+        {visibleAvatars.map((a: any, i: number) => (
+          <div
+            key={a.id || i}
+            title={a.name}
+            style={{
+              width: 18, height: 18, borderRadius: "50%",
+              marginLeft: i === 0 ? 0 : -6,
+              background: a.avatar ? "rgba(255,255,255,.08)" : (a.avatarColor || "#5800E5"),
+              border: "2px solid rgba(10,10,18,.95)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 9, fontWeight: 800, color: "#fff",
+              overflow: "hidden",
+              zIndex: visibleAvatars.length - i,
+            }}
+          >
+            {a.avatar
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={a.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : (a.name || "?").slice(0, 1).toUpperCase()
+            }
+          </div>
+        ))}
+        {overflow > 0 && (
+          <div style={{
+            width: 18, height: 18, borderRadius: "50%", marginLeft: -6,
+            background: "rgba(255,255,255,.08)", border: "2px solid rgba(10,10,18,.95)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,.7)",
+          }}>
+            +{overflow}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
 /* ─── FeaturedStreamCard ─────────────────────────────────── */
 // Lead card for the Live Now section. Pulled from /live/featured which
 // runs a cascade: Weered users currently live → top stream of the
 // featured lobby's game → League of Legends fallback (always populated).
 // Click the thumbnail or Watch button to play the Twitch embed inline.
-function FeaturedStreamCard({ stream, onJoinLobby }: { stream: any; onJoinLobby: (lobbyId: string) => void }) {
+function FeaturedStreamCard({ stream }: { stream: any }) {
+  const router = useRouter();
   const [playing, setPlaying] = React.useState(false);
   const [muted, setMuted] = React.useState(true);
 
@@ -244,6 +340,16 @@ function FeaturedStreamCard({ stream, onJoinLobby }: { stream: any; onJoinLobby:
   React.useEffect(() => { setPlaying(false); }, [stream?.userLogin]);
 
   if (!stream) return null;
+
+  // Click Join Room → land on the lobby with ?stream=<login>; the lobby
+  // page reads that and dispatches the existing watchhere event so the
+  // modules panel auto-jumps to Streams + plays the channel inline.
+  const handleJoinRoom = () => {
+    if (!stream.joinLobbyId) return;
+    const login = stream.userLogin || "";
+    const qs = login ? `?stream=${encodeURIComponent(login)}` : "";
+    router.push(`/lobby/${encodeURIComponent(stream.joinLobbyId)}${qs}`);
+  };
 
   const sourceLabel =
     stream.source === "user"
@@ -411,7 +517,7 @@ function FeaturedStreamCard({ stream, onJoinLobby }: { stream: any; onJoinLobby:
           {stream.joinLobbyId && (
             <button
               type="button"
-              onClick={() => onJoinLobby(stream.joinLobbyId)}
+              onClick={handleJoinRoom}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
                 padding: "6px 11px", borderRadius: 6,
@@ -436,9 +542,9 @@ function FeaturedStreamCard({ stream, onJoinLobby }: { stream: any; onJoinLobby:
 // Two-column layout: featured stream card on the left (capped width so
 // it doesn't span the page), active room chips stacked on the right
 // filling the rest of the row. Wraps on narrow viewports.
-function LiveTicker({ rooms, onJoin, apiBase }: { rooms: any[]; onJoin: (id: string, pinned: boolean) => void; apiBase: string }) {
+function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: (id: string, pinned: boolean) => void; apiBase: string }) {
   const [stream, setStream] = useState<any>(null);
-  const live = rooms.filter(r => onlineCount(r) > 0);
+  const [liveRooms, setLiveRooms] = useState<any[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -449,17 +555,20 @@ function LiveTicker({ rooms, onJoin, apiBase }: { rooms: any[]; onJoin: (id: str
         if (!cancelled && j?.ok) setStream(j.stream || null);
       } catch {}
     };
-    fetchStream();
-    const t = setInterval(fetchStream, 90000);
-    return () => { cancelled = true; clearInterval(t); };
+    const fetchRooms = async () => {
+      try {
+        const r = await fetch(`${apiBase}/live/rooms`);
+        const j = await r.json();
+        if (!cancelled && j?.ok) setLiveRooms(Array.isArray(j.rooms) ? j.rooms : []);
+      } catch {}
+    };
+    fetchStream(); fetchRooms();
+    const t1 = setInterval(fetchStream, 90000);
+    const t2 = setInterval(fetchRooms, 12000);
+    return () => { cancelled = true; clearInterval(t1); clearInterval(t2); };
   }, [apiBase]);
 
-  if (!stream && live.length === 0) return null;
-
-  // Lobbies are routed to with pinned=true (they're top-level cards in
-  // handleJoin), rooms are pinned=false. The Join Room button on the
-  // featured stream card always targets a lobby.
-  const handleJoinLobby = (lobbyId: string) => onJoin(lobbyId, true);
+  if (!stream && liveRooms.length === 0) return null;
 
   return (
     <div style={{ marginTop: 20 }}>
@@ -474,52 +583,21 @@ function LiveTicker({ rooms, onJoin, apiBase }: { rooms: any[]; onJoin: (id: str
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
         {stream && (
           <div style={{ flex: "1 1 580px", maxWidth: 720, minWidth: 0 }}>
-            <FeaturedStreamCard stream={stream} onJoinLobby={handleJoinLobby} />
+            <FeaturedStreamCard stream={stream} />
           </div>
         )}
 
-        {live.length > 0 && (
+        {liveRooms.length > 0 && (
           <div style={{
-            flex: "1 1 240px",
+            flex: "1 1 280px",
             display: "flex", flexDirection: "column",
-            gap: 6, minWidth: 0,
-            // Match the stream card's height so the column fills its space
-            // instead of stranding empty room beneath it.
+            gap: 8, minWidth: 0,
+            // Match the stream card's height so the column fills its space.
             maxHeight: 220, overflowY: "auto",
           }}>
-            {live.map((r, i) => {
-              const name = roomName(r);
-              const cnt = onlineCount(r);
-              const accent = lobbyAccent(r, i);
-              const parentLobby = r?.lobbyId ? pickFirst(r?.lobbyName, r?.lobbyId, "") : "";
-              return (
-                <button
-                  key={roomId(r)}
-                  type="button"
-                  onClick={() => onJoin(roomId(r), Boolean(r?.pinned))}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "8px 12px", borderRadius: 10,
-                    background: `${accent}08`, border: `1px solid ${accent}18`,
-                    color: "inherit", cursor: "pointer", fontFamily: "inherit",
-                    transition: "all .15s",
-                    width: "100%", textAlign: "left",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}18`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
-                >
-                  {r?.logoUrl && <img src={r.logoUrl} alt={`${roomName(r)} logo`} style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain", flexShrink: 0 }} />}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{name}</span>
-                    {parentLobby && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{parentLobby}</span>}
-                  </div>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e", flexShrink: 0 }}>
-                    <PulseDot color="#22c55e" size={4} />
-                    {cnt}
-                  </span>
-                </button>
-              );
-            })}
+            {liveRooms.map(r => (
+              <LiveRoomCard key={r.id} room={r} onJoin={onJoin} />
+            ))}
           </div>
         )}
       </div>

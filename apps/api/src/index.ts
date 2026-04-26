@@ -5504,7 +5504,7 @@ async function main() {
   // ══════════════════════════════════════════════════════════════════════════════
 
   await app.register(tenorRoutes);
-  await app.register(twitchRoutes);
+  await app.register(twitchRoutes, { rooms } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════
