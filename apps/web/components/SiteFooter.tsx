@@ -16,20 +16,16 @@ export default function SiteFooter() {
     <>
       <style>{`
         .site-footer {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
+          position: relative;
           z-index: 50;
           height: 28px;
+          flex-shrink: 0;
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 0 16px;
           background: rgba(5,8,16,0.85);
           border-top: 1px solid rgba(255,255,255,0.05);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
           font-family: 'DM Mono', monospace, monospace;
         }
         .site-footer-left {
