@@ -494,26 +494,44 @@ export default function UserCorner() {
         </div>
       </button>
 
-      {/* Status link — small mono line, sits flush left under identity */}
+      {/* Status button — small bordered toggle, clearly clickable, sits
+          flush left under identity. Green = online, yellow = lying low. */}
       <div style={{ padding: "0 14px 10px", position: "relative", zIndex: 1 }}>
         <button
           type="button"
           onClick={() => { if (typeof setAway === "function") setAway(!isAway); }}
           title={isAway ? "You're lying low. Click to come back online." : "Click to lie low (manual AFK)."}
           style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: 0, background: "none", border: "none",
-            color: isAway ? "rgba(253,224,71,.85)" : "rgba(187,247,208,.78)",
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "5px 11px",
+            borderRadius: 4,
+            background: isAway
+              ? "rgba(250,204,21,.08)"
+              : "rgba(34,197,94,.06)",
+            border: `1px solid ${isAway ? "rgba(250,204,21,.34)" : "rgba(34,197,94,.30)"}`,
+            color: isAway ? "rgba(253,224,71,.95)" : "rgba(187,247,208,.95)",
             fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
             fontSize: 9, fontWeight: 800,
             letterSpacing: "1.5px", textTransform: "uppercase",
             cursor: "pointer",
+            transition: "background .15s, border-color .15s",
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(0,0,0,.25)`,
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = isAway ? "rgba(250,204,21,.16)" : "rgba(34,197,94,.13)";
+            el.style.borderColor = isAway ? "rgba(250,204,21,.55)" : "rgba(34,197,94,.50)";
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = isAway ? "rgba(250,204,21,.08)" : "rgba(34,197,94,.06)";
+            el.style.borderColor = isAway ? "rgba(250,204,21,.34)" : "rgba(34,197,94,.30)";
           }}
         >
           <span style={{
-            width: 6, height: 6, borderRadius: "50%",
+            width: 7, height: 7, borderRadius: "50%",
             background: isAway ? "#facc15" : "#22c55e",
-            boxShadow: isAway ? "0 0 5px rgba(250,204,21,.6)" : "0 0 5px rgba(34,197,94,.7)",
+            boxShadow: isAway ? "0 0 6px rgba(250,204,21,.7)" : "0 0 6px rgba(34,197,94,.7)",
             flexShrink: 0,
           }} />
           {isAway ? "Lying low" : "Online"}
