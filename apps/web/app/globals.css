@@ -550,9 +550,11 @@ html[data-weered-theme="ishimura"] body::after {
       rgba(0,0,0,0.6) 100%);
 }
 
-/* Rolling scan line beam — sits BEHIND panels, only visible in negative space */
+/* Rolling scan line beam — sits BEHIND panels, only visible in negative space.
+   isolation: isolate alone creates the stacking context the scan beam needs;
+   removed the explicit position: relative so it doesn't override the
+   shell's position: fixed (which pins the layout to viewport edges). */
 html[data-weered-theme="ishimura"] .weered-shell {
-  position: relative;
   isolation: isolate;
 }
 html[data-weered-theme="ishimura"] .weered-shell::before {
@@ -3309,11 +3311,13 @@ button:hover, [role="button"]:hover {
   left: 0;
   right: 0;
   bottom: 0;
+  height: 100vh; /* fallback when a more specific rule forces position: relative */
   overflow: hidden;
   box-sizing: border-box;
 }
 .weered-shell.has-footer {
   bottom: 28px;
+  height: calc(100vh - 28px);
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
