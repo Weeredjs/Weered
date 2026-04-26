@@ -3138,7 +3138,20 @@ export default function WindroseModulesPanel({
   accentColor?: string;
   style?: React.CSSProperties;
 }) {
-  const [tab, setTab] = useState<TabId>("flagship");
+  const [tab, setTab] = useState<TabId>(() => {
+    // If we landed here from a "Watch Here" / home Join Room click that
+    // already stashed a pending stream, open directly on Streams instead
+    // of the flagship tab. The watchhere event itself fires *before* this
+    // panel mounts (the lobby has to switch view → modules first), so the
+    // event listener wouldn't catch it — the window stash is the bridge.
+    try {
+      if (typeof window !== "undefined") {
+        const v = (window as any).__weeredPendingStream as { channel?: string; ts?: number } | undefined;
+        if (v?.channel && typeof v.ts === "number" && Date.now() - v.ts < 5000) return "streams";
+      }
+    } catch {}
+    return "flagship";
+  });
   useWatchHere(React.useCallback(() => { setTab("streams"); }, []));
 
   return (

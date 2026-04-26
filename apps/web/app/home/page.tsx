@@ -254,23 +254,25 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}55`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}24`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
     >
-      {/* Lobby logo, spans both rows */}
-      <div style={{ gridRow: "1 / span 2", width: 32, height: 32, borderRadius: 6, overflow: "hidden", border: `1px solid ${accent}55`, background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        {room.lobbyLogoUrl
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={room.lobbyLogoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-          : <span style={{ fontSize: 11, fontWeight: 900, color: accent }}>{(room.lobbyName || room.name || "?").slice(0,1).toUpperCase()}</span>
-        }
+      {/* Lobby logo, spans both rows. Falls back to the Weered W mark for
+          unbranded lobbies (e.g. "home") so every card has a real glyph. */}
+      <div style={{ gridRow: "1 / span 2", width: 38, height: 38, borderRadius: 8, overflow: "hidden", border: `1px solid ${accent}55`, background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={room.lobbyLogoUrl || "/brand/logo/weered-logo-64.png"}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+        />
       </div>
 
       {/* Top row: room name + count */}
       <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.96)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.96)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
           {room.name}
         </span>
       </div>
-      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "#22c55e", flexShrink: 0 }}>
-        <PulseDot color="#22c55e" size={4} />
+      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "#22c55e", flexShrink: 0 }}>
+        <PulseDot color="#22c55e" size={5} />
         {room.onlineCount}
       </span>
 
@@ -285,21 +287,24 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
         <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.activity}</span>
       </div>
 
-      {/* Avatar stack — right side of bottom row */}
+      {/* Avatar stack — right side of bottom row, larger so the room reads
+          as "people are here" rather than just a count. Avatars without an
+          uploaded image fall back to their avatarColor + initial. */}
       <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
         {visibleAvatars.map((a: any, i: number) => (
           <div
             key={a.id || i}
             title={a.name}
             style={{
-              width: 18, height: 18, borderRadius: "50%",
-              marginLeft: i === 0 ? 0 : -6,
+              width: 26, height: 26, borderRadius: "50%",
+              marginLeft: i === 0 ? 0 : -8,
               background: a.avatar ? "rgba(255,255,255,.08)" : (a.avatarColor || "#5800E5"),
               border: "2px solid rgba(10,10,18,.95)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 9, fontWeight: 800, color: "#fff",
+              fontSize: 11, fontWeight: 800, color: "#fff",
               overflow: "hidden",
               zIndex: visibleAvatars.length - i,
+              boxShadow: "0 1px 3px rgba(0,0,0,.4)",
             }}
           >
             {a.avatar
@@ -311,10 +316,11 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
         ))}
         {overflow > 0 && (
           <div style={{
-            width: 18, height: 18, borderRadius: "50%", marginLeft: -6,
+            width: 26, height: 26, borderRadius: "50%", marginLeft: -8,
             background: "rgba(255,255,255,.08)", border: "2px solid rgba(10,10,18,.95)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,.7)",
+            fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,.75)",
+            boxShadow: "0 1px 3px rgba(0,0,0,.4)",
           }}>
             +{overflow}
           </div>
