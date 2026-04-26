@@ -762,7 +762,10 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    // Pin to weered-center via absolute positioning so the home page
+    // doesn't depend on a percentage-height cascade through flex
+    // ancestors. weered-center is position: relative — this fills it.
+    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* TOP BAR */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
