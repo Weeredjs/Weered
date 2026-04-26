@@ -503,6 +503,8 @@ app.get("/lobbies/:lobbyId/presence", async (req, reply) => {
           twitchLogin: (u as any).twitchLogin,
           xboxGamertag: (u as any).xboxGamertag,
           livePresence: (u as any).livePresence ?? null,
+          pillBgColor: (u as any).pillBgColor ?? null,
+          pillAccentColor: (u as any).pillAccentColor ?? null,
           roomId: room.roomId,
           roomName: room.name || room.roomId,
         });
