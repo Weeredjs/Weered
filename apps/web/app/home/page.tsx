@@ -229,11 +229,119 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   );
 }
 
+/* ─── FeaturedStreamCard ─────────────────────────────────── */
+// Lead card for the Live Now section. Pulled from /live/featured which
+// runs a cascade: Weered users currently live → top stream of the
+// featured lobby's game → League of Legends fallback (always populated).
+function FeaturedStreamCard({ stream }: { stream: any }) {
+  if (!stream) return null;
+  const sourceLabel =
+    stream.source === "user"
+      ? (stream.weeredUser?.name ? `${stream.weeredUser.name} on Weered` : "Live on Weered")
+      : stream.source === "game"
+        ? `Top stream · ${stream.gameName || "Featured game"}`
+        : "Trending on Twitch";
+  const sourceColor =
+    stream.source === "user" ? "#a78bfa"
+    : stream.source === "game" ? "#f5b700"
+    : "#9146ff";
+  const watchUrl = `https://www.twitch.tv/${encodeURIComponent(stream.userLogin || "")}`;
+
+  return (
+    <a
+      href={watchUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "grid", gridTemplateColumns: "180px 1fr",
+        gap: 14, padding: 0, marginBottom: 12,
+        background: "rgba(255,255,255,.02)",
+        border: `1px solid ${sourceColor}24`,
+        borderRadius: 12, overflow: "hidden",
+        textDecoration: "none", color: "inherit",
+        transition: "border-color .15s, transform .15s",
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}66`; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}24`; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+    >
+      {/* Thumbnail */}
+      <div style={{ position: "relative", width: 180, height: 100, background: "rgba(0,0,0,.6)", flexShrink: 0 }}>
+        {stream.thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={stream.thumbnailUrl} alt={stream.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        )}
+        <div style={{
+          position: "absolute", top: 6, left: 6,
+          display: "flex", alignItems: "center", gap: 4,
+          padding: "2px 6px", borderRadius: 4,
+          background: "rgba(220,38,38,.92)", color: "#fff",
+          fontSize: 9, fontWeight: 900, letterSpacing: "1px", textTransform: "uppercase",
+        }}>
+          <span style={{ width: 4, height: 4, borderRadius: 999, background: "#fff" }} />
+          Live
+        </div>
+        <div style={{
+          position: "absolute", bottom: 6, right: 6,
+          padding: "2px 6px", borderRadius: 4,
+          background: "rgba(0,0,0,.75)", color: "#fff",
+          fontSize: 10, fontWeight: 700, fontFamily: "monospace",
+        }}>
+          {(stream.viewerCount ?? 0).toLocaleString()} watching
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "10px 14px 10px 0", minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1.6px", textTransform: "uppercase", color: sourceColor, marginBottom: 4 }}>
+            {sourceLabel}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.96)", letterSpacing: "-.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {stream.userName || stream.userLogin}
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)", marginTop: 3, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {stream.title || ""}
+          </div>
+        </div>
+        <div style={{
+          display: "inline-flex", alignSelf: "flex-start",
+          alignItems: "center", gap: 5,
+          padding: "5px 11px", borderRadius: 6,
+          background: `${sourceColor}14`,
+          border: `1px solid ${sourceColor}55`,
+          color: sourceColor,
+          fontSize: 10, fontWeight: 800, letterSpacing: "1.2px", textTransform: "uppercase",
+          fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+          marginTop: 8,
+        }}>
+          ▶ Watch on Twitch
+        </div>
+      </div>
+    </a>
+  );
+}
+
 /* ─── LiveTicker ─────────────────────────────────────────── */
-function LiveTicker({ rooms, onJoin }: { rooms: any[]; onJoin: (id: string, pinned: boolean) => void }) {
+function LiveTicker({ rooms, onJoin, apiBase }: { rooms: any[]; onJoin: (id: string, pinned: boolean) => void; apiBase: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [stream, setStream] = useState<any>(null);
   const live = rooms.filter(r => onlineCount(r) > 0);
-  if (live.length === 0) return null;
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStream = async () => {
+      try {
+        const r = await fetch(`${apiBase}/live/featured`);
+        const j = await r.json();
+        if (!cancelled && j?.ok) setStream(j.stream || null);
+      } catch {}
+    };
+    fetchStream();
+    const t = setInterval(fetchStream, 90000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [apiBase]);
+
+  if (!stream && live.length === 0) return null;
 
   return (
     <div style={{ marginTop: 20 }}>
@@ -244,41 +352,45 @@ function LiveTicker({ rooms, onJoin }: { rooms: any[]; onJoin: (id: string, pinn
         </span>
         <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
       </div>
-      <div ref={scrollRef} style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
-        {live.map((r, i) => {
-          const name = roomName(r);
-          const cnt = onlineCount(r);
-          const accent = lobbyAccent(r, i);
-          // For rooms inside a lobby, show parent lobby context
-          const parentLobby = r?.lobbyId ? pickFirst(r?.lobbyName, r?.lobbyId, "") : "";
-          return (
-            <button
-              key={roomId(r)}
-              type="button"
-              onClick={() => onJoin(roomId(r), Boolean(r?.pinned))}
-              style={{
-                flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
-                padding: "8px 14px", borderRadius: 10,
-                background: `${accent}08`, border: `1px solid ${accent}18`,
-                color: "inherit", cursor: "pointer", fontFamily: "inherit",
-                transition: "all .15s",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}18`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
-            >
-              {r?.logoUrl && <img src={r.logoUrl} alt={`${roomName(r)} logo`} style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain" }} />}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{name}</span>
-                {parentLobby && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)", whiteSpace: "nowrap" }}>{parentLobby}</span>}
-              </div>
-              <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
-                <PulseDot color="#22c55e" size={4} />
-                {cnt}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+
+      <FeaturedStreamCard stream={stream} />
+
+      {live.length > 0 && (
+        <div ref={scrollRef} style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+          {live.map((r, i) => {
+            const name = roomName(r);
+            const cnt = onlineCount(r);
+            const accent = lobbyAccent(r, i);
+            const parentLobby = r?.lobbyId ? pickFirst(r?.lobbyName, r?.lobbyId, "") : "";
+            return (
+              <button
+                key={roomId(r)}
+                type="button"
+                onClick={() => onJoin(roomId(r), Boolean(r?.pinned))}
+                style={{
+                  flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
+                  padding: "8px 14px", borderRadius: 10,
+                  background: `${accent}08`, border: `1px solid ${accent}18`,
+                  color: "inherit", cursor: "pointer", fontFamily: "inherit",
+                  transition: "all .15s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}18`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
+              >
+                {r?.logoUrl && <img src={r.logoUrl} alt={`${roomName(r)} logo`} style={{ width: 18, height: 18, borderRadius: 4, objectFit: "contain" }} />}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{name}</span>
+                  {parentLobby && <span style={{ fontSize: 9, color: "rgba(255,255,255,.3)", whiteSpace: "nowrap" }}>{parentLobby}</span>}
+                </div>
+                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e" }}>
+                  <PulseDot color="#22c55e" size={4} />
+                  {cnt}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -866,7 +978,7 @@ export default function HomePage() {
         )}
 
         {/* LIVE TICKER */}
-        <LiveTicker rooms={allRooms} onJoin={handleJoin} />
+        <LiveTicker rooms={allRooms} onJoin={handleJoin} apiBase="https://api.weered.ca" />
 
         {/* LOBBIES */}
         {lobbies.length > 0 && (
