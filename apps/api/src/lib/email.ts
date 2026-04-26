@@ -1,7 +1,20 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { Resend } from "resend";
 
+// Transport priority: Resend (HTTPS API) → SMTP (nodemailer) → log-only.
+// DigitalOcean blocks outbound SMTP on droplets by default, so Resend is
+// the production path. SMTP is kept as a fallback for local dev.
+let _resend: Resend | null = null;
 let _transporter: Transporter | null = null;
 let _warnedMissing = false;
+
+function getResend(): Resend | null {
+  if (_resend) return _resend;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  _resend = new Resend(key);
+  return _resend;
+}
 
 function getTransporter(): Transporter | null {
   if (_transporter) return _transporter;
@@ -11,10 +24,6 @@ function getTransporter(): Transporter | null {
   const pass = process.env.SMTP_PASS;
 
   if (!host || host === "mail.yourhostingprovider.com" || !user || !pass) {
-    if (!_warnedMissing) {
-      console.warn("[email] SMTP not configured (need real SMTP_HOST/USER/PASS) — emails will be logged only.");
-      _warnedMissing = true;
-    }
     return null;
   }
 
@@ -30,12 +39,39 @@ function getTransporter(): Transporter | null {
 export type SendMailResult = { ok: true; messageId: string } | { ok: false; error: string; logOnly?: boolean };
 
 export async function sendMail(opts: { to: string; subject: string; html: string; text?: string }): Promise<SendMailResult> {
-  const from = process.env.SMTP_FROM || "Weered <noreply@weered.ca>";
+  const from = process.env.MAIL_FROM || process.env.SMTP_FROM || "Weered <onboarding@resend.dev>";
+
+  const resend = getResend();
+  if (resend) {
+    try {
+      const r = await resend.emails.send({
+        from,
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text || stripHtml(opts.html),
+      });
+      if ((r as any).error) {
+        console.error("[email:resend] send failed:", (r as any).error);
+        return { ok: false, error: String((r as any).error?.message || (r as any).error) };
+      }
+      const id = (r as any).data?.id || "";
+      return { ok: true, messageId: id };
+    } catch (e: any) {
+      console.error("[email:resend] send threw:", e?.message || e);
+      return { ok: false, error: e?.message || "resend_send_failed" };
+    }
+  }
+
   const t = getTransporter();
   if (!t) {
+    if (!_warnedMissing) {
+      console.warn("[email] No transport configured (need RESEND_API_KEY or SMTP_HOST/USER/PASS) — emails will be logged only.");
+      _warnedMissing = true;
+    }
     console.log(`[email:logOnly] to=${opts.to} subject="${opts.subject}"`);
     console.log(`[email:logOnly] body:\n${opts.text || opts.html}`);
-    return { ok: false, error: "smtp_not_configured", logOnly: true };
+    return { ok: false, error: "transport_not_configured", logOnly: true };
   }
   try {
     const info = await t.sendMail({
@@ -47,7 +83,7 @@ export async function sendMail(opts: { to: string; subject: string; html: string
     });
     return { ok: true, messageId: info.messageId };
   } catch (e: any) {
-    console.error("[email] send failed:", e?.message || e);
+    console.error("[email:smtp] send failed:", e?.message || e);
     return { ok: false, error: e?.message || "send_failed" };
   }
 }
