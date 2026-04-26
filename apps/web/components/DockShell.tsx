@@ -7,12 +7,13 @@ import CrewChatPanel from "./CrewChatPanel";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import GroupsTab from "./GroupsTab";
+import LinkPreviewCard from "./LinkPreviewCard";
 import { weeredConfirm } from "../lib/confirm";
 
 type DmReaction = { emoji: string; count: number; users: string[] };
 type DmReplyTo = { id: string; userName: string; body: string };
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null; reactions?: DmReaction[]; replyToId?: string | null; replyToUserId?: string | null; replyToUserName?: string | null; replyToBody?: string | null };
-type DmThread = { peerId: string; peerName: string; msgs: DmMsg[]; unread: number };
+type DmThread = { peerId: string; peerName: string; peerAvatar?: string | null; peerOnline?: boolean; msgs: DmMsg[]; unread: number };
 
 const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 const TENOR_DM_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
@@ -22,31 +23,32 @@ function linkify(text: string): React.ReactNode {
   const parts = text.split(urlRx);
   const nodes: React.ReactNode[] = [];
   const images: string[] = [];
+  const previews: string[] = [];
 
   parts.forEach((p, i) => {
     if (urlRx.test(p)) {
       nodes.push(<a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "rgb(167,139,250)", textDecoration: "underline", wordBreak: "break-all" }}>{p}</a>);
       if (IMG_RE.test(p) || TENOR_DM_RE.test(p)) images.push(p);
+      else previews.push(p);
     } else {
       nodes.push(p);
     }
   });
 
-  if (images.length > 0) {
-    return (
-      <>
-        <div>{nodes}</div>
-        {images.map((src, i) => (
-          <img key={`dm-img-${i}`} src={src} alt="Chat image" loading="lazy" style={{
-            maxWidth: 200, maxHeight: 160, borderRadius: 8, marginTop: 4,
-            border: "1px solid rgba(255,255,255,.1)", display: "block",
-          }} onError={e => (e.currentTarget.style.display = "none")} />
-        ))}
-      </>
-    );
-  }
-
-  return <>{nodes}</>;
+  return (
+    <>
+      <div>{nodes}</div>
+      {images.map((src, i) => (
+        <img key={`dm-img-${i}`} src={src} alt="Chat image" loading="lazy" style={{
+          maxWidth: 200, maxHeight: 160, borderRadius: 8, marginTop: 4,
+          border: "1px solid rgba(255,255,255,.1)", display: "block",
+        }} onError={e => (e.currentTarget.style.display = "none")} />
+      ))}
+      {previews.slice(0, 1).map((url, i) => (
+        <LinkPreviewCard key={`dm-lp-${i}`} url={url} />
+      ))}
+    </>
+  );
 }
 
 const WEERED_THEME_KEY = "weered_theme_v2";
@@ -131,11 +133,24 @@ function fmtDateSep(iso: string): string {
   } catch { return ""; }
 }
 
-function Avatar({ name, size=32, color, isMe, chosenColor }: { name: string; size?: number; color?: string; isMe?: boolean; chosenColor?: string }) {
+function Avatar({ name, size=32, color, isMe, chosenColor, src }: { name: string; size?: number; color?: string; isMe?: boolean; chosenColor?: string; src?: string | null }) {
   const bg = color || avatarBg(name, isMe, chosenColor);
+  const common: React.CSSProperties = {
+    width: size, height: size, borderRadius: 999,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    flexShrink: 0, userSelect: "none" as const, overflow: "hidden",
+  };
+  if (src) {
+    return (
+      <div style={{ ...common, background: bg }}>
+        <img src={src} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+      </div>
+    );
+  }
   return (
-    <div style={{ width:size, height:size, borderRadius:999, background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:size*0.38, fontWeight:700, color:"#fff", flexShrink:0, userSelect:"none" as const }}>
-      {name.slice(0,1).toUpperCase()}
+    <div style={{ ...common, background: bg, fontSize: size * 0.38, fontWeight: 700, color: "#fff" }}>
+      {name.slice(0, 1).toUpperCase()}
     </div>
   );
 }
@@ -258,11 +273,21 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
     fetch(`${apiBase}/dm/conversations`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
       if (!Array.isArray(j?.conversations)) return;
       setDmThreads(cur=>{
-        const existing=new Set(cur.map((t:DmThread)=>t.peerId));
-        const incoming=j.conversations
-          .filter((c:any)=>!existing.has(c.id))
-          .map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.peerId||c.id,msgs:[],unread:c.unread||0}));
-        return [...cur,...incoming];
+        const byId=new Map(cur.map((t:DmThread)=>[t.peerId,t]));
+        const merged:DmThread[]=[];
+        // Update existing threads with avatar/online from server, keep msgs.
+        for (const t of cur) {
+          const c=j.conversations.find((x:any)=>(x.id||x.peerId)===t.peerId);
+          if (c) merged.push({...t, peerName:c.name||c.usernameKey||t.peerName, peerAvatar:c.avatar??t.peerAvatar??null, peerOnline:!!c.online, unread:c.unread??t.unread});
+          else merged.push(t);
+        }
+        // Add any new conversations we didn't have locally yet.
+        for (const c of j.conversations) {
+          const id=c.id||c.peerId;
+          if (byId.has(id)) continue;
+          merged.push({peerId:id, peerName:c.name||c.usernameKey||id, peerAvatar:c.avatar??null, peerOnline:!!c.online, msgs:[], unread:c.unread||0});
+        }
+        return merged;
       });
     }).catch(()=>{});
   },[tokenMaybe,apiBase]);
@@ -279,7 +304,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
             if (!Array.isArray(conv?.conversations)) return;
             setDmThreads(cur=>{
               const existing=new Set(cur.map((t:DmThread)=>t.peerId));
-              const incoming=conv.conversations.filter((c:any)=>!existing.has(c.id||c.peerId)).map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.id,msgs:[],unread:c.unread||0}));
+              const incoming=conv.conversations.filter((c:any)=>!existing.has(c.id||c.peerId)).map((c:any)=>({peerId:c.id||c.peerId,peerName:c.name||c.usernameKey||c.id,peerAvatar:c.avatar??null,peerOnline:!!c.online,msgs:[],unread:c.unread||0}));
               return [...cur,...incoming];
             });
           }).catch(()=>{});
@@ -588,8 +613,10 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                   </button>
                   <div style={{ position:"relative" }}>
-                    <Avatar name={dmActive.peerName} size={30} />
-                    <span style={{ position:"absolute",bottom:-1,right:-1,width:9,height:9,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                    <Avatar name={dmActive.peerName} size={30} src={dmActive.peerAvatar} />
+                    {dmActive.peerOnline && (
+                      <span style={{ position:"absolute",bottom:-1,right:-1,width:9,height:9,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                    )}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <span style={{ fontWeight:700, fontSize:14, color:"var(--weered-text)" }}>{dmActive.peerName}</span>
@@ -746,7 +773,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     );
                   }) : (
                     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8 }}>
-                      <Avatar name={dmActive.peerName} size={56} />
+                      <Avatar name={dmActive.peerName} size={56} src={dmActive.peerAvatar} />
                       <span style={{ fontSize:14, fontWeight:700, color:"var(--weered-text)" }}>{dmActive.peerName}</span>
                       <span style={{ color:"var(--weered-muted)", fontSize:12 }}>Start the conversation</span>
                     </div>
@@ -815,8 +842,10 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
                         >
                           <div style={{ position:"relative", flexShrink:0 }}>
-                            <Avatar name={t.peerName} size={42} />
-                            <span style={{ position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                            <Avatar name={t.peerName} size={42} src={t.peerAvatar} />
+                            {t.peerOnline && (
+                              <span style={{ position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                            )}
                           </div>
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
