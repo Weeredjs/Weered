@@ -248,8 +248,17 @@ export default function PresenceRow({
         }} />
       )}
 
-      {/* Avatar with online pulse + role-tinted ring */}
-      <div style={{ position: "relative", flexShrink: 0 }}>
+      {/* Avatar with online pulse + role-tinted ring.
+          Wrapper has fixed dimensions (avatarSize × avatarSize) and
+          alignSelf: center so it doesn't stretch with the row's
+          alignItems:stretch — otherwise the absolute-positioned online
+          dot tracks the stretched wrapper instead of the avatar circle,
+          and rows with extra-tall content show the dot pushed down. */}
+      <div style={{
+        position: "relative", flexShrink: 0,
+        width: avatarSize, height: avatarSize,
+        alignSelf: "center",
+      }}>
         <div style={{
           width: avatarSize, height: avatarSize, borderRadius: "50%",
           background: bg,
@@ -313,15 +322,18 @@ export default function PresenceRow({
       {/* Action slot */}
       {action && <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{action}</div>}
 
-      {/* Platform icon stack — single horizontal row so 1-4 platforms don't
-          force the pill taller than non-platform rows. The earlier 2-row
-          grid was forcing min-height of ~30px on multi-platform pills,
-          making them visibly taller than rows without platforms. */}
+      {/* Platform icon stack — 2-row grid that grows to additional columns
+          past two platforms, so a 4-icon stack stays compact (2×2). With
+          the avatar wrapper now pinned to a fixed height + alignSelf
+          center, the grid no longer drags the row taller. */}
       {hasPlatforms && (
         <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
+          display: "grid",
+          gridTemplateRows: "repeat(2, auto)",
+          gridAutoFlow: "column",
+          columnGap: 3, rowGap: 3,
+          alignItems: "center", justifyContent: "center",
+          alignSelf: "center",
           flexShrink: 0,
           paddingLeft: 4,
           marginLeft: 2,
