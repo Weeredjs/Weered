@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -110,8 +111,12 @@ export default function LobbySplash({
   }, [lobbyId]);
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
+  // Portal to document.body so the splash escapes the .weered-shell flex
+  // layout. Without this the rail (sibling in the same stacking context)
+  // renders in front of the splash even at z-index 9999.
+  return createPortal(
     <>
       <style>{`
         @keyframes lobby-splash-in {
@@ -310,7 +315,8 @@ export default function LobbySplash({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
