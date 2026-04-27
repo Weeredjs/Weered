@@ -1780,6 +1780,63 @@ function isUserOnline(userId: string): boolean {
   return false;
 }
 
+// ── Operator system user + welcome DM ───────────────────────────────────────
+// "operator" is a reserved mention but we own a real User row for it so the
+// welcome DM can FK against User.id. Cached on first lookup. Created lazily
+// the first time we need it (typically on the first signup).
+let _operatorUserId: string | null = null;
+async function getOperatorUserId(): Promise<string> {
+  if (_operatorUserId) return _operatorUserId;
+  try {
+    const op = await prisma.user.upsert({
+      where: { usernameKey: "operator" },
+      update: {},
+      create: {
+        usernameKey: "operator",
+        name: "The Operator",
+        avatar: "/brand/roles/operator.svg",
+        avatarColor: "#D4A017",
+        bio: "I'm the system. Type /help anywhere if you need a hand.",
+      },
+    });
+    _operatorUserId = op.id;
+    return op.id;
+  } catch (e) {
+    console.error("[getOperatorUserId]", e);
+    throw e;
+  }
+}
+
+// Seed a single welcome DM from The Operator to a freshly-registered user
+// so they have an unread in the Burner on first login. Fire-and-forget.
+async function seedWelcomeDM(toUserId: string): Promise<void> {
+  try {
+    const fromId = await getOperatorUserId();
+    if (fromId === toUserId) return;
+    const body = `Welcome aboard. This is the Burner — your DMs, friends, and crew all dock here. Tap a tab to explore.
+
+We're sailing on the Windrose lobby right now (link in the rail). Find a crew, post a bounty on a Kraken tooth, browse mods. Voice rooms work everywhere.
+
+If you get stuck, just hit me back here. — The Operator 🏴‍☠️`;
+    const dm = await prisma.directMessage.create({
+      data: { fromId, toId: toUserId, body },
+    });
+    dmDeliver(toUserId, {
+      type: "dm:in",
+      dm: {
+        id: dm.id,
+        fromId,
+        toId: toUserId,
+        body: dm.body,
+        createdAt: dm.createdAt,
+        fromName: "The Operator",
+      },
+    });
+  } catch (e) {
+    console.error("[seedWelcomeDM]", e);
+  }
+}
+
 async function sendWebPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
@@ -2381,6 +2438,7 @@ async function main() {
       const tmpl = buildVerifyEmail({ username, token: verifyToken });
       sendMail({ to: email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
     }
+    seedWelcomeDM(user.id).catch(() => {});
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
     return reply.send({ token, user, pendingVerification: Boolean(email) });
   });
@@ -2571,6 +2629,7 @@ async function main() {
       if (!user) {
         const tempName = `g_${googleId.slice(0, 12)}`;
         user = await prisma.user.create({ data: { name: displayName, usernameKey: tempName, googleId, email, avatar } });
+        seedWelcomeDM(user.id).catch(() => {});
       }
       if (user.banned) return reply.redirect(customRedirect ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=account_suspended` : `${WEB_URL}/login?error=account_suspended`);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
