@@ -166,10 +166,10 @@ export default async function WindroseModsPublicPage() {
             work shows up wrong, or you'd prefer it not appear in our catalog,
             email{" "}
             <a
-              href="mailto:hello@weered.ca"
+              href="mailto:support@weered.ca"
               style={{ color: "#d8caff", textDecoration: "underline" }}
             >
-              hello@weered.ca
+              support@weered.ca
             </a>{" "}
             with the mod name and we'll fix or exclude it same-day.
           </div>
