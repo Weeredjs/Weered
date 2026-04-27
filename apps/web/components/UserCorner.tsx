@@ -667,18 +667,32 @@ export default function UserCorner() {
         </button>
       </div>
 
-      {/* Burner phone animations */}
+      {/* Burner phone animations.
+          The hot-state glow used to animate box-shadow directly which is
+          CPU-bound (browsers can't GPU-composite shadow changes — esp.
+          inset shadows). Swapped to a pseudo-element with a static glow
+          + animated opacity, which composites cleanly on the GPU. Same
+          visual, fraction of the CPU. */}
       <style>{`
         @keyframes weered-burner-badge {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.15); }
         }
-        @keyframes weered-burner-glow {
-          0%, 100% { box-shadow: 0 0 8px rgba(245,158,11,.15), inset 0 0 12px rgba(245,158,11,.05); }
-          50% { box-shadow: 0 0 18px rgba(245,158,11,.30), inset 0 0 20px rgba(245,158,11,.08); }
+        @keyframes weered-burner-glow-opacity {
+          0%, 100% { opacity: 0.4; }
+          50%      { opacity: 1; }
         }
-        .weered-burner-hot {
-          animation: weered-burner-glow 2.5s ease-in-out infinite !important;
+        .weered-burner-hot { position: relative; }
+        .weered-burner-hot::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          box-shadow: 0 0 18px rgba(245,158,11,.30);
+          opacity: 0.4;
+          animation: weered-burner-glow-opacity 2.5s ease-in-out infinite;
+          will-change: opacity;
         }
       `}</style>
     </div>

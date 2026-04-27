@@ -72,7 +72,7 @@ export const metadata = {
     siteName: "Weered",
     images: [
       {
-        url: "https://weered.ca/brand/og-image.png",
+        url: "https://weered.ca/og",
         width: 1200,
         height: 630,
         alt: "Weered — Real-Time Community Platform",
@@ -85,7 +85,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Weered — Real-Time Community Platform",
     description: "Lobbies, rooms, presence, and modules. Built for gaming communities.",
-    images: ["https://weered.ca/brand/og-image.png"],
+    images: ["https://weered.ca/og"],
   },
   appleWebApp: {
     capable: true,
