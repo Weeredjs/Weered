@@ -3612,20 +3612,22 @@ button:hover, [role="button"]:hover {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,.1);
-  background: rgba(255,255,255,.05);
-  color: rgba(255,255,255,.45);
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(167,139,250,.45);
+  background: linear-gradient(180deg, rgba(124,58,237,.22) 0%, rgba(88,0,229,.18) 100%);
+  color: rgba(216,202,255,.95);
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
+  box-shadow: 0 0 10px rgba(124,58,237,.18), inset 0 1px 0 rgba(255,255,255,.08);
 }
 .weered-rail-close:hover {
-  background: rgba(255,255,255,.1);
-  color: rgba(255,255,255,.8);
-  border-color: rgba(255,255,255,.2);
+  background: linear-gradient(180deg, rgba(124,58,237,.32) 0%, rgba(88,0,229,.26) 100%);
+  color: #fff;
+  border-color: rgba(167,139,250,.7);
+  box-shadow: 0 0 14px rgba(124,58,237,.30), inset 0 1px 0 rgba(255,255,255,.12);
 }
 
 /* Overlay close button — always visible so panel can be dismissed */
