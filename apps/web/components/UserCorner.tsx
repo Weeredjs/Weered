@@ -9,13 +9,8 @@ import NotorietyBar from "./NotorietyBar";
 
 // Auto-shrink text to fit. Walks `sizes` largest→smallest until the
 // element's scrollWidth fits within its clientWidth. Re-runs whenever
-// the text or size sequence changes. Safe under SSR (uses
-// useLayoutEffect on client only via the ref check).
-function useFitText(
-  ref: React.RefObject<HTMLElement | null>,
-  text: string,
-  sizes: number[],
-): number {
+// the text or size sequence changes.
+function useFitText(ref: any, text: string, sizes: number[]): number {
   const [size, setSize] = useState(sizes[0]);
   // Reset to the largest size whenever the text changes so we always
   // try the biggest fit first.
@@ -26,7 +21,7 @@ function useFitText(
   // size available, step down. Stops when no overflow or we've hit
   // the smallest size.
   useLayoutEffect(() => {
-    const el = ref.current;
+    const el = ref.current as HTMLElement | null;
     if (!el) return;
     if (el.scrollWidth > el.clientWidth + 1) {
       const idx = sizes.indexOf(size);
