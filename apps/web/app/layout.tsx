@@ -43,7 +43,6 @@ import RightRailSwitch from "../components/RightRailSwitch";
 import DockDrawer from "../components/DockDrawer";
 import ShellGate from "../components/ShellGate";
 import LobbyBrowser from "../components/LobbyBrowser";
-import WelcomeModal from "../components/WelcomeModal";
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 import PushPrompt from "../components/PushPrompt";
 import InstallPrompt from "../components/InstallPrompt";
@@ -176,7 +175,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <DockDrawer />
             <LobbyBrowser />
             <OverlayHost />
-            <WelcomeModal />
             <ServiceWorkerRegister />
             <PushPrompt />
             <InstallPrompt />
