@@ -11,6 +11,7 @@ import ActivityFeed from "../../components/ActivityFeed";
 import FeatureShowcase from "../../components/FeatureShowcase";
 import EmptyState from "../../components/EmptyState";
 import VerticalPicker from "../../components/VerticalPicker";
+import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -1297,6 +1298,11 @@ export default function HomePage() {
       {/* VerticalPicker disabled for now — Press is the default theme until
           we re-enable per-vertical theme selection. Restore by uncommenting:
           <VerticalPicker /> */}
+
+      {/* Shared lobby chat — same room:lobby as /lobby uses, so
+          announcements + active chat persist across both surfaces.
+          Frees up the broadcast banner for time-sensitive pushes. */}
+      <LobbyChatDrawer roomId="room:lobby" title="Lobby Chat" />
     </div>
   );
 }
