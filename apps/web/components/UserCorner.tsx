@@ -1,11 +1,42 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
+
+// Auto-shrink text to fit. Walks `sizes` largest→smallest until the
+// element's scrollWidth fits within its clientWidth. Re-runs whenever
+// the text or size sequence changes. Safe under SSR (uses
+// useLayoutEffect on client only via the ref check).
+function useFitText(
+  ref: React.RefObject<HTMLElement | null>,
+  text: string,
+  sizes: number[],
+): number {
+  const [size, setSize] = useState(sizes[0]);
+  // Reset to the largest size whenever the text changes so we always
+  // try the biggest fit first.
+  useLayoutEffect(() => {
+    setSize(sizes[0]);
+  }, [text, sizes[0]]);
+  // After each render, if we still overflow and there's a smaller
+  // size available, step down. Stops when no overflow or we've hit
+  // the smallest size.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.scrollWidth > el.clientWidth + 1) {
+      const idx = sizes.indexOf(size);
+      if (idx >= 0 && idx < sizes.length - 1) {
+        setSize(sizes[idx + 1]);
+      }
+    }
+  });
+  return size;
+}
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -423,18 +454,12 @@ export default function UserCorner() {
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Name in display type — big, condensed, uppercase to read as
-              a card heading rather than a label */}
-          <div style={{
-            fontFamily: "'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif",
-            fontSize: 22, fontWeight: 800, letterSpacing: "0.5px",
-            textTransform: "uppercase",
-            lineHeight: 1.0,
-            color: "rgba(243,244,246,.97)",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {name}
-          </div>
+          {/* Name in display type — big, condensed, uppercase. Auto-fits
+              long names by stepping the font size down until it fits the
+              available width; falls back to ellipsis past the smallest
+              size as a hard safety net. */}
+          <FittedName name={name} />
+        </div>
 
           {/* Inline role + tier as colored mono labels — no chip bg */}
           {(() => {
@@ -673,3 +698,28 @@ const actionBtn: React.CSSProperties = {
   color: "rgba(255,255,255,.45)", fontFamily: "inherit",
   transition: "color 0.12s, background 0.12s",
 };
+
+// Display name that auto-shrinks to fit its container. Steps from 22 →
+// 18 → 16 → 14 px; if the smallest size still overflows, ellipsis kicks
+// in as the hard safety net. Uppercase Barlow Condensed bold matches
+// the rest of the card chrome.
+function FittedName({ name }: { name: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const sizes = useMemo(() => [22, 18, 16, 14], []);
+  const fontSize = useFitText(ref, name, sizes);
+  return (
+    <div
+      ref={ref}
+      style={{
+        fontFamily: "'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif",
+        fontSize, fontWeight: 800, letterSpacing: "0.5px",
+        textTransform: "uppercase",
+        lineHeight: 1.0,
+        color: "rgba(243,244,246,.97)",
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}
+    >
+      {name}
+    </div>
+  );
+}
