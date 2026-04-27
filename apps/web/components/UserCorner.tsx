@@ -454,7 +454,6 @@ export default function UserCorner() {
               available width; falls back to ellipsis past the smallest
               size as a hard safety net. */}
           <FittedName name={name} />
-        </div>
 
           {/* Inline role + tier as colored mono labels — no chip bg */}
           {(() => {
