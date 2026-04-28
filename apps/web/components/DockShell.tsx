@@ -313,7 +313,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
       }).catch(()=>{});
     }
     pollUnread();
-    const t = setInterval(pollUnread, 8000);
+    const t = setInterval(pollUnread, 60000);
     return () => clearInterval(t);
   },[tokenMaybe,apiBase]);
 
@@ -927,7 +927,7 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
   }
 
   React.useEffect(() => { void load(); }, [apiBase, tokenMaybe]);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, [apiBase, tokenMaybe]);
+  React.useEffect(() => { const t = setInterval(load, 60000); return () => clearInterval(t); }, [apiBase, tokenMaybe]);
 
   async function sendRequest() {
     const target = addInput.trim(); if (!target) return;
@@ -1145,7 +1145,7 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
   }
 
   React.useEffect(()=>{void load();},[apiBase,tokenMaybe]);
-  React.useEffect(()=>{const t=setInterval(load,8000);return()=>clearInterval(t);},[apiBase,tokenMaybe]);
+  React.useEffect(()=>{const t=setInterval(load,60000);return()=>clearInterval(t);},[apiBase,tokenMaybe]);
 
   async function createCrew() {
     if (!newName.trim()) return;
