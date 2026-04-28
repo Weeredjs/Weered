@@ -26,10 +26,8 @@ export default function SiteFooter() {
           align-items: center;
           justify-content: space-between;
           padding: 0 16px;
-          background: rgba(5,8,16,0.85);
+          background: rgba(5,8,16,0.96);
           border-top: 1px solid rgba(255,255,255,0.05);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
           font-family: 'DM Mono', monospace, monospace;
         }
         .site-footer-left {
