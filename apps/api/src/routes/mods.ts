@@ -22,7 +22,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const limit = Math.min(100, Math.max(1, Number(q.limit || 50)));
     const offset = Math.max(0, Number(q.offset || 0));
 
-    const where: any = { gameSlug };
+    const where: any = { gameSlug, excluded: false };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
@@ -56,7 +56,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     } else {
       mod = await (prisma as any).mod.findUnique({ where: { id } });
     }
-    if (!mod) return reply.code(404).send({ error: "not_found" });
+    if (!mod || mod.excluded) return reply.code(404).send({ error: "not_found" });
 
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
