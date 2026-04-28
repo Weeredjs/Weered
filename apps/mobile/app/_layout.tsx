@@ -5,12 +5,30 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import { PirataOne_400Regular } from "@expo-google-fonts/pirata-one";
+import {
+  BarlowCondensed_400Regular,
+  BarlowCondensed_500Medium,
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+  BarlowCondensed_800ExtraBold,
+} from "@expo-google-fonts/barlow-condensed";
+import {
+  Rajdhani_400Regular,
+  Rajdhani_500Medium,
+  Rajdhani_600SemiBold,
+  Rajdhani_700Bold,
+} from "@expo-google-fonts/rajdhani";
 import { useAuth } from "@/stores/auth";
 import { attachPresenceIdle } from "@/lib/presence";
 import { attachNotificationTapHandler } from "@/lib/push";
 import { HeaderActions } from "@/components/HeaderActions";
 import { ImageLightboxProvider } from "@/components/ImageLightbox";
 import { ActionSheetProvider } from "@/components/ActionSheet";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,9 +41,26 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const hydrate = useAuth((s) => s.hydrate);
+  const [fontsLoaded, fontsError] = useFonts({
+    PirataOne_400Regular,
+    BarlowCondensed_400Regular,
+    BarlowCondensed_500Medium,
+    BarlowCondensed_600SemiBold,
+    BarlowCondensed_700Bold,
+    BarlowCondensed_800ExtraBold,
+    Rajdhani_400Regular,
+    Rajdhani_500Medium,
+    Rajdhani_600SemiBold,
+    Rajdhani_700Bold,
+  });
   useEffect(() => { hydrate(); }, [hydrate]);
   useEffect(() => attachPresenceIdle(), []);
   useEffect(() => { attachNotificationTapHandler(); }, []);
+  useEffect(() => {
+    if (fontsLoaded || fontsError) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, fontsError]);
+
+  if (!fontsLoaded && !fontsError) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -38,7 +73,7 @@ export default function RootLayout() {
             screenOptions={{
               headerStyle: { backgroundColor: "#000" },
               headerTintColor: "rgba(243,244,246,.96)",
-              headerTitleStyle: { fontFamily: "monospace", fontWeight: "900", letterSpacing: 1.2, fontSize: 15 },
+              headerTitleStyle: { fontFamily: "BarlowCondensed_800ExtraBold", letterSpacing: 1.2, fontSize: 18 },
               contentStyle: { backgroundColor: "#0c0b0a" },
               animation: "slide_from_right",
               headerRight: () => <HeaderActions />,

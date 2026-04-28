@@ -12,10 +12,9 @@ function TabItem({ label, focused, badge }: { label: string; focused: boolean; b
       <Text
         numberOfLines={1}
         style={{
-          fontFamily: "monospace",
-          fontSize: 11,
-          fontWeight: "900",
-          letterSpacing: 1.4,
+          fontFamily: "BarlowCondensed_800ExtraBold",
+          fontSize: 13,
+          letterSpacing: 1.6,
           color: focused ? "#ffffff" : "rgba(180,180,190,0.6)",
         }}
       >
@@ -50,7 +49,7 @@ function TabItem({ label, focused, badge }: { label: string; focused: boolean; b
             borderColor: "#0c0b0a",
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900", fontFamily: "monospace" }}>
+          <Text style={{ color: "#fff", fontSize: 10, fontFamily: "BarlowCondensed_800ExtraBold" }}>
             {badge > 9 ? "9+" : badge}
           </Text>
         </View>
@@ -96,7 +95,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: "#000", shadowColor: "transparent", elevation: 0, borderBottomWidth: 1.5, borderBottomColor: "rgba(245,183,0,0.35)" },
         headerTintColor: "rgba(243,244,246,.96)",
-        headerTitleStyle: { fontFamily: "monospace", fontWeight: "900", letterSpacing: 1.5, fontSize: 16 },
+        headerTitleStyle: { fontFamily: "BarlowCondensed_800ExtraBold", letterSpacing: 1.5, fontSize: 20 },
         headerRight: () => <HeaderActions />,
         tabBarStyle: {
           backgroundColor: "#000",

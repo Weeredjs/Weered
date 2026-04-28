@@ -109,6 +109,15 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@expo-google-fonts/barlow-condensed':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/pirata-one':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/rajdhani':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo/vector-icons':
         specifier: ^15.1.1
         version: 15.1.1(expo-font@55.0.6)(react-native@0.83.4(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -981,8 +990,17 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@expo-google-fonts/barlow-condensed@0.4.1':
+    resolution: {integrity: sha512-9yuXU1MpI4Dw/8rR4pj2EXcT4/31H5+DrrT47auF8IzD9r7SZPRoNVq8clRq7zxOTh7v1gJk3pBhydDVf2x/dA==}
+
   '@expo-google-fonts/material-symbols@0.4.32':
     resolution: {integrity: sha512-+RtX6GNteOQEycWKcliKtHYQ3NvFamuD4ZCb7MLwzImkZwxRXjUO1kSVV5FFB2koK5WNYwUCye2KkDp8LFD1SQ==}
+
+  '@expo-google-fonts/pirata-one@0.4.1':
+    resolution: {integrity: sha512-8wMlG7I58S1vwSJOtu/aDr3ZuDFwvvf+WnGRMcbs/gqEv65l7R4YOCxqUxE6jc7WUJYPr0zM0Pnxox9Pjs48Ow==}
+
+  '@expo-google-fonts/rajdhani@0.4.1':
+    resolution: {integrity: sha512-AQS+20ymwULMvlT9AJlsrgjK2KSI6jW+WenVeFdZgmjC2ZYbWQSotm6PQe9tZx74mBvw+J6X6WorW2B+ISmncg==}
 
   '@expo/cli@55.0.24':
     resolution: {integrity: sha512-Z6Xh0WNTg1LvoZQ77zO3snF2cFiv1xf0VguDlwTL1Ql87oMOp30f7mjl9jeaSHqoWkgiAbmxgCKKIGjVX/keiA==}
@@ -6861,7 +6879,13 @@ snapshots:
   '@esbuild/win32-x64@0.27.3':
     optional: true
 
+  '@expo-google-fonts/barlow-condensed@0.4.1': {}
+
   '@expo-google-fonts/material-symbols@0.4.32': {}
+
+  '@expo-google-fonts/pirata-one@0.4.1': {}
+
+  '@expo-google-fonts/rajdhani@0.4.1': {}
 
   '@expo/cli@55.0.24(@expo/dom-webview@55.0.5)(@expo/metro-runtime@55.0.9)(expo-constants@55.0.14)(expo-font@55.0.6)(expo-router@55.0.12)(expo@55.0.15)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)':
     dependencies:
