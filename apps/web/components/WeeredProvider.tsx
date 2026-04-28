@@ -284,6 +284,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (seg) setCurrentLobbyId(decodeURIComponent(seg));
       return;
     }
+    // /home is the merged Home Lobby — present users as being in room "lobby"
+    // so presence + chat align with the LobbyChatDrawer mounted on the page.
+    // The page joins "lobby" on mount; this just makes the path-driven
+    // activeRoomId agree from the first render.
+    if (pathname === "/home" || pathname.startsWith("/home/")) {
+      activeRoomIdRef.current = "lobby";
+      setActiveRoomId("lobby");
+      return;
+    }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);

@@ -865,10 +865,13 @@ export default function HomePage() {
   const router = useRouter();
   const { rooms, usersByRoom, me, join, joinedRoomId, joinStatus } = useWeered() as any;
 
+  // /home is the merged Home Lobby — share presence + chat with /lobby by
+  // joining the same shared "lobby" room. Lands on the same activeRoomId the
+  // path effect sets in WeeredProvider so joinedStrict resolves true.
   useEffect(() => {
     if (!me?.id) return;
-    if (joinedRoomId === "home" && joinStatus === "joined") return;
-    try { join?.("home"); } catch {}
+    if (joinedRoomId === "lobby" && joinStatus === "joined") return;
+    try { join?.("lobby"); } catch {}
   }, [me?.id, joinedRoomId, joinStatus, join]);
 
   const [search, setSearch] = useState("");
