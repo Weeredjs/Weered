@@ -13,6 +13,9 @@
     "align": "expo install --check"
   },
   "dependencies": {
+    "@expo-google-fonts/barlow-condensed": "^0.4.1",
+    "@expo-google-fonts/pirata-one": "^0.4.1",
+    "@expo-google-fonts/rajdhani": "^0.4.1",
     "@expo/vector-icons": "^15.1.1",
     "@tanstack/react-query": "latest",
     "@weered/shared": "workspace:*",
