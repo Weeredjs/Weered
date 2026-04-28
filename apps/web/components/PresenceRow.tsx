@@ -284,8 +284,7 @@ export default function PresenceRow({
             width: 10, height: 10, borderRadius: "50%",
             background: isAway ? "#facc15" : "#22c55e",
             border: "2px solid var(--weered-bg, #0c0b0a)",
-            boxShadow: isAway ? "0 0 5px rgba(250,204,21,.45)" : "0 0 4px rgba(34,197,94,.45)",
-            animation: isAway ? "none" : "weered-presence-pulse 5s ease-in-out infinite",
+            boxShadow: isAway ? "0 0 5px rgba(250,204,21,.45)" : "0 0 5px rgba(34,197,94,.50)",
           }} />
         )}
       </div>
@@ -377,10 +376,6 @@ function PresenceRowStyles() {
       .weered-presence-row-inner { border-radius: 8px; }
       .weered-presence-row-link:hover .weered-presence-row-inner {
         background: rgba(255,255,255,.045);
-      }
-      @keyframes weered-presence-pulse {
-        0%, 100% { box-shadow: 0 0 4px rgba(34,197,94,.40); }
-        50%      { box-shadow: 0 0 6px rgba(34,197,94,.55); }
       }
       @media (prefers-reduced-motion: reduce) {
         .weered-presence-row-link * { animation: none !important; }
