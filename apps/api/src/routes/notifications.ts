@@ -12,10 +12,11 @@ import { prisma } from "../lib/prisma";
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
   VAPID_PUBLIC: string;
+  sendPush: (userId: string, data: { title: string; body: string; url?: string; tag?: string }) => Promise<void>;
 };
 
 export default async function notificationsRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, VAPID_PUBLIC } = opts;
+  const { authFromHeader, VAPID_PUBLIC, sendPush } = opts;
 
   // ── Web push (VAPID) ────────────────────────────────────────────────
 
@@ -72,6 +73,29 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     if (!token) return reply.code(400).send({ ok: false, error: "invalid_token" });
     await (prisma as any).expoPushToken.deleteMany({ where: { token, userId: u.id } }).catch(() => {});
     return reply.send({ ok: true });
+  });
+
+  // Self-test: fires a push to every registered transport for the caller.
+  // Returns counts of web-push subs + Expo tokens it tried to deliver to so
+  // the client can tell the difference between "no tokens registered" and
+  // "tokens exist but Expo dropped them."
+  app.post("/push/test", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const [webSubs, expoTokens] = await Promise.all([
+      prisma.pushSubscription.count({ where: { userId: u.id } }),
+      (prisma as any).expoPushToken.count({ where: { userId: u.id } }),
+    ]);
+    if (webSubs === 0 && expoTokens === 0) {
+      return reply.send({ ok: false, error: "no_tokens", webSubs, expoTokens });
+    }
+    await sendPush(u.id, {
+      title: "Weered test push",
+      body: "If you can see this, your device is wired up.",
+      url: "/home",
+      tag: "test",
+    });
+    return reply.send({ ok: true, webSubs, expoTokens });
   });
 
   // ── In-app notifications ────────────────────────────────────────────

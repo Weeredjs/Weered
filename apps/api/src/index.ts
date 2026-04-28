@@ -5528,7 +5528,7 @@ async function main() {
   // POST /staff/lobbies/:id/pin — toggle lobby pinned state
 
   // ── Notifications + Push — extracted to routes/notifications.ts ─────────
-  await app.register(notificationsRoutes, { authFromHeader, VAPID_PUBLIC } as any);
+  await app.register(notificationsRoutes, { authFromHeader, VAPID_PUBLIC, sendPush } as any);
 
 
   // GET /staff/roster — list all staff members with roles
