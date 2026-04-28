@@ -55,6 +55,25 @@ export default function Settings() {
     onError: (e: any) => Alert.alert("Couldn't delete", e?.message || "Unknown error"),
   });
 
+  const testPush = useMutation({
+    mutationFn: () => api<{ ok: boolean; error?: string; webSubs: number; expoTokens: number }>("/push/test", {
+      method: "POST",
+    }),
+    onSuccess: (j) => {
+      if (j.ok) {
+        Alert.alert("Test push sent", `Should arrive in a few seconds.\n\nWeb subs: ${j.webSubs}\nExpo tokens: ${j.expoTokens}`);
+      } else if (j.error === "no_tokens") {
+        Alert.alert(
+          "No push tokens registered",
+          "This device hasn't registered for push yet. Sign out and back in, or grant notification permission if you denied earlier.",
+        );
+      } else {
+        Alert.alert("Test failed", j.error || "Unknown error");
+      }
+    },
+    onError: (e: any) => Alert.alert("Test failed", e?.message || "Unknown error"),
+  });
+
   const blocks = q.data?.blocks ?? [];
 
   return (
@@ -95,6 +114,23 @@ export default function Settings() {
             </View>
           </View>
         ))}
+
+        <Text className="text-weered-muted text-xs uppercase tracking-widest px-4 pt-8 pb-1">Notifications</Text>
+        <View className="mx-4 mt-2 mb-2 p-4 bg-panel border border-border rounded-xl">
+          <Text className="text-weered-text font-bold mb-1">Test push notification</Text>
+          <Text className="text-weered-muted text-xs mb-3">
+            Sends a push to this device. If you don't see one, push isn't wired correctly — sign out and back in, or check notification permissions.
+          </Text>
+          <Pressable
+            onPress={() => testPush.mutate()}
+            disabled={testPush.isPending}
+            className="bg-weered px-4 py-2.5 rounded-lg active:opacity-80"
+          >
+            <Text className="text-white text-center font-bold">
+              {testPush.isPending ? "Sending…" : "Send test push"}
+            </Text>
+          </Pressable>
+        </View>
 
         <Text className="text-red-400 text-xs uppercase tracking-widest px-4 pt-8 pb-1">Danger zone</Text>
         <View className="mx-4 mt-2 mb-4 p-4 bg-red-500/5 border border-red-500/30 rounded-xl">
