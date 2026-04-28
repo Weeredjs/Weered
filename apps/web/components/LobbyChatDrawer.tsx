@@ -97,8 +97,8 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           to   { transform: translateX(0);    opacity: 1; }
         }
         @keyframes unreadGlow {
-          0%, 100% { box-shadow: 0 0 8px 0 ${ac}44; }
-          50%      { box-shadow: 0 0 20px 4px ${ac}66, 0 0 40px 8px ${ac}22; }
+          0%, 100% { opacity: 0.85; }
+          50%      { opacity: 1; }
         }
         @keyframes unreadPulse {
           0%, 100% { transform: translateY(-50%) scale(1); }
@@ -109,9 +109,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           top: 0; right: 0; bottom: 4px;
           width: min(340px, 90%);
           display: flex; flex-direction: column;
-          background: rgba(10, 10, 18, 0.82);
-          backdrop-filter: blur(18px) saturate(1.4);
-          -webkit-backdrop-filter: blur(18px) saturate(1.4);
+          background: rgba(10, 10, 18, 0.96);
           border-left: 1px solid ${acDim};
           border-radius: 0 14px 14px 0;
           z-index: 50; overflow: hidden;
@@ -162,7 +160,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           cursor: pointer; z-index: 49;
           transition: background 0.15s, right 0.38s cubic-bezier(0.22, 1, 0.36, 1);
           user-select: none;
-          backdrop-filter: blur(8px);
         }
         @media (max-width: 767px) {
           .lobby-chat-tab {

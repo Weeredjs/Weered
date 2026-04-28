@@ -1579,16 +1579,8 @@ html[data-weered-theme="broadcast"] {
 }
 
 @keyframes broadcastTallyPulse {
-  0%, 100% { box-shadow:
-    inset 0 1px 0 rgba(255,230,160,0.55),
-    inset 0 0 14px rgba(255,200,100,0.22),
-    0 0 0 1px rgba(232,168,60,0.55),
-    0 0 12px rgba(232,168,60,0.30); }
-  50%      { box-shadow:
-    inset 0 1px 0 rgba(255,240,180,0.75),
-    inset 0 0 20px rgba(255,200,100,0.32),
-    0 0 0 1px rgba(240,200,120,0.75),
-    0 0 20px rgba(232,168,60,0.50); }
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
 }
 
 /* Body base */
@@ -3071,8 +3063,7 @@ html[data-weered-theme="press"] *[style*="rgba(244,114,182"] {
     #d946ef 50%,
     #ec4899 80%,
     transparent 100%);
-  background-size: 200% 100%;
-  animation: weeredEventShimmer 4s linear infinite;
+  background-size: 100% 100%;
   z-index: 3;
   pointer-events: none;
   border-radius: inherit;
@@ -3104,8 +3095,7 @@ html[data-weered-theme="press"] *[style*="rgba(244,114,182"] {
     #d946ef 50%,
     #ec4899 80%,
     transparent 100%);
-  background-size: 200% 100%;
-  animation: weeredEventShimmer 4s linear infinite;
+  background-size: 100% 100%;
   z-index: 3;
   pointer-events: none;
   border-radius: 14px 14px 0 0;
@@ -3333,8 +3323,8 @@ button:hover, [role="button"]:hover {
 /* Chat fullscreen CTA — the "Dial In" button. Subtle breathing glow
    to make it look like an invitation, not a hidden toggle. */
 @keyframes weered-chat-fullscreen-cta-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(124,58,237,0.18), inset 0 1px 0 rgba(255,255,255,0.05); }
-  50%      { box-shadow: 0 0 14px rgba(124,58,237,0.38), inset 0 1px 0 rgba(255,255,255,0.08); }
+  0%, 100% { opacity: 0.92; }
+  50%      { opacity: 1; }
 }
 .weered-chat-fullscreen-cta {
   animation: weered-chat-fullscreen-cta-pulse 3.4s ease-in-out infinite;
@@ -3394,7 +3384,10 @@ button:hover, [role="button"]:hover {
   .weered-chat-fullscreen .weered-chat-members { display: none !important; }
 }
 
-/* Rails: sticky, panel-styled */
+/* Rails: sticky, panel-styled. backdrop-filter intentionally omitted —
+   blur on always-visible viewport-sized elements is the single biggest
+   idle-CPU sink on WebView2. The rails sit over a static page background
+   so a slightly more opaque solid panel reads identically. */
 .weered-left,
 .weered-right {
   position: sticky;
@@ -3404,7 +3397,6 @@ button:hover, [role="button"]:hover {
   border: 1px solid var(--weered-border);
   border-radius: 16px;
   background: var(--weered-panel);
-  backdrop-filter: blur(10px);
   overflow-x: hidden;
 }
 
@@ -3516,7 +3508,6 @@ button:hover, [role="button"]:hover {
   cursor: pointer;
   font-family: inherit;
   transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s, box-shadow 0.18s;
-  backdrop-filter: blur(6px);
 }
 .weered-rail-quick:hover {
   transform: translateX(-2px) scale(1.03);
@@ -3600,8 +3591,8 @@ button:hover, [role="button"]:hover {
   animation: railPulse 3s ease-in-out infinite;
 }
 @keyframes railPulse {
-  0%, 100% { box-shadow: 0 0 8px var(--weered-accent-bg, rgba(88,0,229,.12)), inset 0 0 6px var(--weered-accent-bg, rgba(88,0,229,.06)); }
-  50% { box-shadow: 0 0 20px var(--weered-accent-bg, rgba(88,0,229,.3)), inset 0 0 14px var(--weered-accent-bg, rgba(88,0,229,.15)); border-color: var(--weered-accent-ring, rgba(88,0,229,.5)); }
+  0%, 100% { opacity: 0.88; }
+  50%      { opacity: 1; }
 }
 
 /* ── Right rail close button — inside the rail ────────────── */
