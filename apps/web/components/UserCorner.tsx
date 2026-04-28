@@ -167,14 +167,16 @@ export default function UserCorner() {
       setDockUnread(count);
       try { localStorage.setItem("weered:dock:unread", String(count)); } catch {}
     };
-    // Poll localStorage every 2s as fallback for missed events
+    // Poll localStorage every 10s as fallback for missed events. 2s was
+    // overkill — the event listener catches changes instantly and this is
+    // only a safety net for cross-tab updates the listener missed.
     const poll = () => {
       try {
         const v = Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0);
         setDockUnread(v);
       } catch {}
     };
-    const interval = setInterval(poll, 2000);
+    const interval = setInterval(poll, 10000);
     window.addEventListener("weered:dock:unread", onUnread);
     return () => {
       window.removeEventListener("weered:dock:unread", onUnread);

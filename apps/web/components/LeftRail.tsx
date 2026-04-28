@@ -236,7 +236,9 @@ export default function LeftRail() {
       } catch {}
     };
     fetchPresence();
-    const t = setInterval(fetchPresence, 6000);
+    // 20s reconciliation poll — WS push handles real-time presence; this is
+    // only a fallback for missed leave/join broadcasts.
+    const t = setInterval(fetchPresence, 20000);
     return () => { cancelled = true; clearInterval(t); };
   }, [lobbyPresenceId]);
 

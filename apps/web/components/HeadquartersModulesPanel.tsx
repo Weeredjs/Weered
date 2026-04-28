@@ -648,15 +648,17 @@ export default function HeadquartersModulesPanel({ lobbyId, accentColor, style }
     fetchMembers();
   }, [fetchRooms, fetchPresence, fetchMembers]);
 
-  // ── Auto-refresh rooms every 10s ────────────────────────────────────────
+  // ── Auto-refresh rooms every 20s ────────────────────────────────────────
+  // WS broadcasts room create/delete; this is reconciliation only.
   useEffect(() => {
-    const i = setInterval(fetchRooms, 10_000);
+    const i = setInterval(fetchRooms, 20_000);
     return () => clearInterval(i);
   }, [fetchRooms]);
 
-  // ── Auto-refresh presence every 8s ──────────────────────────────────────
+  // ── Auto-refresh presence every 20s ─────────────────────────────────────
+  // WS push handles real-time presence; this is a reconciliation poll.
   useEffect(() => {
-    const i = setInterval(fetchPresence, 8_000);
+    const i = setInterval(fetchPresence, 20_000);
     return () => clearInterval(i);
   }, [fetchPresence]);
 

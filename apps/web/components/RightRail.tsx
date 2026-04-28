@@ -205,7 +205,9 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   }
 
   React.useEffect(() => { void load(); }, [lobbyId]);
-  React.useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, [lobbyId]);
+  // 15s for live room counts. WS broadcasts room create/delete and presence,
+  // so this is reconciliation only.
+  React.useEffect(() => { const t = setInterval(load, 15000); return () => clearInterval(t); }, [lobbyId]);
 
   const filtered = rows
     .filter(r => !q.trim() || (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase()))
@@ -599,7 +601,7 @@ function FriendsPanel() {
     try { const j = await apiFetch("/friends"); setFriends(Array.isArray(j?.friends) ? j.friends : []); } catch {}
   }
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
-  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
   if (!mounted || !friends.length) return null;
   const online  = friends.filter(f => f.online);
@@ -721,7 +723,7 @@ function CrewPanel() {
   React.useEffect(() => { setMounted(true); }, []);
   async function load() { try { const j = await apiFetch("/crews/mine"); setCrews(Array.isArray(j?.crews) ? j.crews : []); } catch {} }
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
-  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
   if (!mounted || !crews.length) return null;
 

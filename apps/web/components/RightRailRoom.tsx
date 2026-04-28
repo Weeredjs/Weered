@@ -73,7 +73,7 @@ function FriendsPanel() {
   }
 
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
-  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
   if (!mounted || !friends.length) return null;
 
@@ -178,7 +178,7 @@ function CrewPanel() {
   }
 
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
-  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 8000); return () => clearInterval(t); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
   if (!mounted || !crews.length) return null;
 
