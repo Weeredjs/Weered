@@ -1890,6 +1890,10 @@ model Mod {
   sourceUpdatedAt DateTime?
   fetchedAt     DateTime   @default(now())
 
+  excluded      Boolean    @default(false)
+  excludedNote  String?
+  excludedAt    DateTime?
+
   versions      ModVersion[]
   crewMods      CrewMod[]
   installs      UserModInstall[]
@@ -1897,6 +1901,7 @@ model Mod {
   @@unique([source, sourceId])
   @@index([gameSlug, endorsements])
   @@index([gameSlug, sourceUpdatedAt])
+  @@index([excluded])
 }
 
 model ModVersion {

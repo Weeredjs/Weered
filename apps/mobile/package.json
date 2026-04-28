@@ -41,6 +41,7 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "^15.15.4",
     "react-native-web": "latest",
+    "react-native-worklets": "0.7.4",
     "tailwindcss": "^3.4.17",
     "zustand": "latest"
   },

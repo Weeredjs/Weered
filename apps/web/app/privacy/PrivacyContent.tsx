@@ -179,7 +179,20 @@ export default function PrivacyContent() {
           </div>
 
           <div className="legal-section">
-            <div className="legal-heading">9. Your Rights (PIPEDA)</div>
+            <div className="legal-heading">9. Public Game Data & Mod Catalog</div>
+            <div className="legal-text">
+              Weered surfaces publicly-available metadata from third-party game services to power features like the mod catalog, live server browser, stream listings, and live player counts. We:
+              <ul>
+                <li><strong>Cache metadata only.</strong> For mods, we cache the name, author, summary, thumbnail URL, endorsement count, and download count — sourced from the public Nexus Mods API. We do <strong>not</strong> rehost mod files. Every install link points to the mod's original Nexus page; downloads happen there, not here.</li>
+                <li><strong>Do not collect Nexus credentials.</strong> Reading the public catalog never requires a Nexus account or API key. We do not ask users for, store, or proxy any third-party API keys.</li>
+                <li><strong>Honour author opt-out.</strong> If you are a mod author and prefer your work not appear in our catalog, email <strong>support@weered.ca</strong> with the mod name. We will hide it from the catalog within one business day. The hide is persistent: even if our poller re-fetches the public Nexus listing, the exclusion stays in effect.</li>
+                <li><strong>Other public game data sources we cache the same way:</strong> Steam (live player counts, public server browser), Twitch (live streams for a given game), Bungie (Destiny 2 public profiles, opt-in linked), Riot (League of Legends summoner stats, opt-in linked), and similar first-party public APIs. None of these require us to store credentials beyond what the user explicitly links.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="legal-section">
+            <div className="legal-heading">10. Your Rights (PIPEDA)</div>
             <div className="legal-text">
               Under Canadian privacy law, you have the right to:
               <ul>
@@ -194,21 +207,21 @@ export default function PrivacyContent() {
           </div>
 
           <div className="legal-section">
-            <div className="legal-heading">10. Children's Privacy</div>
+            <div className="legal-heading">11. Children's Privacy</div>
             <div className="legal-text">
               Weered is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we learn we have collected such information, we will delete it promptly. If you believe a child under 13 has provided us with personal information, please contact us at <strong>privacy@weered.ca</strong>.
             </div>
           </div>
 
           <div className="legal-section">
-            <div className="legal-heading">11. Changes to This Policy</div>
+            <div className="legal-heading">12. Changes to This Policy</div>
             <div className="legal-text">
               We may update this privacy policy from time to time. We will notify users of material changes through the platform or by email. Your continued use of Weered after changes constitutes acceptance.
             </div>
           </div>
 
           <div className="legal-section">
-            <div className="legal-heading">12. Contact</div>
+            <div className="legal-heading">13. Contact</div>
             <div className="legal-text">
               Privacy questions or data requests: <strong>privacy@weered.ca</strong><br />
               General inquiries: <a href="/contact">weered.ca/contact</a>

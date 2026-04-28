@@ -2,11 +2,11 @@
   "expo": {
     "name": "Weered",
     "slug": "weered",
+    "owner": "weered-app",
     "scheme": "weered",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -59,7 +59,10 @@
     "extra": {
       "apiBase": "https://api.weered.ca",
       "wsUrl": "wss://ws.weered.ca",
-      "webBase": "https://weered.ca"
+      "webBase": "https://weered.ca",
+      "eas": {
+        "projectId": "0f724a63-8c65-43e2-b085-fe7d90b6508b"
+      }
     }
   }
 }

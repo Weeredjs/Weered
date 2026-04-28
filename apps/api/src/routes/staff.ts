@@ -758,4 +758,63 @@ app.post("/staff/users/:userId/tier", async (req, reply) => {
   await globalAudit(u.id, u.name, "tier_change", targetId, undefined, { tier });
   return reply.send({ ok: true, tier });
 });
+
+// ── Mods admin (catalog opt-out for authors who request removal) ──────────────
+
+app.get("/staff/mods", async (req, reply) => {
+  const u = authFromHeader((req as any).headers?.authorization);
+  if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+  const role = await getGlobalRole(u.id);
+  if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+  const q: any = (req as any).query || {};
+  const gameSlug = String(q.gameSlug || "windrose").toLowerCase();
+  const search = String(q.search || "").trim();
+  const showExcluded = q.excluded === "1" || q.excluded === "true";
+  const where: any = { gameSlug };
+  if (showExcluded) where.excluded = true;
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { author: { contains: search, mode: "insensitive" } },
+    ];
+  }
+  const mods = await (prisma as any).mod.findMany({
+    where,
+    orderBy: showExcluded ? { excludedAt: "desc" } : { endorsements: "desc" },
+    take: 200,
+    select: {
+      id: true, name: true, author: true, summary: true, sourceUrl: true,
+      thumbnailUrl: true, endorsements: true, downloads: true,
+      excluded: true, excludedNote: true, excludedAt: true,
+    },
+  });
+  return reply.send({ ok: true, mods });
+});
+
+app.patch("/staff/mods/:id", async (req, reply) => {
+  const u = authFromHeader((req as any).headers?.authorization);
+  if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+  const role = await getGlobalRole(u.id);
+  if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+  const id = String((req.params as any).id || "");
+  const b: any = (req as any).body || {};
+  if (typeof b.excluded !== "boolean") {
+    return reply.code(400).send({ ok: false, error: "missing_excluded" });
+  }
+  const existing = await (prisma as any).mod.findUnique({ where: { id } });
+  if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
+  const note = typeof b.note === "string" ? String(b.note).slice(0, 500) : null;
+  const updated = await (prisma as any).mod.update({
+    where: { id },
+    data: {
+      excluded: b.excluded,
+      excludedNote: b.excluded ? (note ?? existing.excludedNote ?? null) : null,
+      excludedAt: b.excluded ? new Date() : null,
+    },
+  });
+  await globalAudit(u.id, u.name, "mod_exclude", id, b.excluded ? (note || "") : "restored", {
+    name: existing.name, author: existing.author, excluded: b.excluded,
+  });
+  return reply.send({ ok: true, mod: updated });
+});
 }
