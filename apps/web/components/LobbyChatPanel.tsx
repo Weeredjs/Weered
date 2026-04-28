@@ -878,8 +878,8 @@ function MoreMenuItem({
 
 function MoreMenu({
   msgId, body, userName, isMine, editable, deletable, roomId,
-  isPinned, canPin,
-  onClose, onAddReaction, onReply, onEdit, onDelete, onTogglePin,
+  isPinned, canPin, canKick,
+  onClose, onAddReaction, onReply, onEdit, onDelete, onTogglePin, onKick,
 }: {
   msgId: string;
   body: string;
@@ -890,12 +890,14 @@ function MoreMenu({
   roomId: string;
   isPinned: boolean;
   canPin: boolean;
+  canKick: boolean;
   onClose: () => void;
   onAddReaction: () => void;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onTogglePin: () => void;
+  onKick: () => void;
 }) {
   const copy = async (txt: string, okMsg: string) => {
     try { await navigator.clipboard.writeText(txt); weeredToast.success(okMsg); }
@@ -977,6 +979,7 @@ function MoreMenu({
       {editable && <MoreMenuItem divider icon={<Icons.Edit />} label="Edit Message" onClick={onEdit} />}
       {deletable && <MoreMenuItem icon={<Icons.Trash />} label="Delete Message" onClick={onDelete} danger />}
       {!isMine && <MoreMenuItem divider icon={<Icons.Flag />} label="Report Message" onClick={handleReport} danger />}
+      {canKick && <MoreMenuItem divider icon={<Icons.Trash />} label={`Kick ${userName} from chat`} onClick={() => { onKick(); onClose(); }} danger />}
     </div>
   );
 }
@@ -1627,6 +1630,8 @@ export default function LobbyChatPanel(
                   const canPin = meIsElevated || (!!meId && (meId === ownerId || mods.includes(meId)));
                   const pinnedSet: string[] = Array.isArray(ctx?.pinnedByRoom?.[effectiveRoomId]) ? ctx.pinnedByRoom[effectiveRoomId] : [];
                   const isPinned = pinnedSet.includes(mId);
+                  const targetRole = String((m?.user?.globalRole || "USER")).toUpperCase();
+                  const canKick = meIsElevated && !isMine && !!msgUserId && targetRole !== "GOD";
                   return (
                     <MoreMenu
                       msgId={mId}
@@ -1638,6 +1643,7 @@ export default function LobbyChatPanel(
                       roomId={effectiveRoomId}
                       isPinned={isPinned}
                       canPin={canPin}
+                      canKick={canKick}
                       onClose={() => setMoreMenuMsgId("")}
                       onAddReaction={() => { setPickerMsgId(mId); setMoreMenuMsgId(""); }}
                       onReply={() => {
@@ -1649,6 +1655,27 @@ export default function LobbyChatPanel(
                       onDelete={() => { handleDelete(); setMoreMenuMsgId(""); }}
                       onTogglePin={() => {
                         try { (ctx as any)?.sendRaw?.({ type: isPinned ? "chat:unpin" : "chat:pin", msgId: mId }); } catch {}
+                      }}
+                      onKick={async () => {
+                        const ok = await weeredConfirm({
+                          title: `Kick ${uname} from chat?`,
+                          body: `They'll be disconnected from every room they're in. Their socket will close. They can rejoin manually unless you also ban.`,
+                          confirmLabel: "Kick",
+                          destructive: true,
+                        });
+                        if (!ok) return;
+                        try {
+                          const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+                          const r = await fetch(`${API}/staff/users/${encodeURIComponent(msgUserId)}/kick`, {
+                            method: "POST",
+                            headers: token
+                              ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+                              : { "Content-Type": "application/json" },
+                          });
+                          const j = await r.json().catch(() => ({}));
+                          if (j?.ok) weeredToast.success(`Kicked ${uname}.`);
+                          else weeredToast.error(j?.error === "forbidden" ? "Not authorized." : j?.error === "cannot_kick_god" ? "Cannot kick GOD." : "Kick failed.");
+                        } catch { weeredToast.error("Kick failed."); }
                       }}
                     />
                   );
