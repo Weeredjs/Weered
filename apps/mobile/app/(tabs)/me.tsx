@@ -28,6 +28,7 @@ import { WalletCard } from "@/components/WalletCard";
 import { BungieLinkButton } from "@/components/BungieLinkButton";
 import { Ionicons } from "@expo/vector-icons";
 import { RoleChip, TierChip } from "@/components/RoleIcon";
+import { FONT, StampHeader } from "@/components/Brand";
 
 const AVATAR_COLORS = [
   "#5800E5", "#e85d75", "#f59e0b", "#22c55e",
@@ -160,8 +161,8 @@ export default function Me() {
               </View>
             )}
           </Pressable>
-          <Text style={{ color: "rgba(203,213,225,0.5)", fontSize: 9, fontFamily: "monospace", letterSpacing: 1.2, marginTop: 6, textTransform: "uppercase" }}>Tap to change · Indicted+</Text>
-          <Text style={{ color: "rgba(243,244,246,0.98)", fontFamily: "monospace", fontWeight: "900", fontSize: 26, letterSpacing: 0.8, marginTop: 8 }}>{me.name}</Text>
+          <Text style={{ color: "rgba(203,213,225,0.5)", fontSize: 10, fontFamily: FONT.uiBold, letterSpacing: 1.4, marginTop: 6, textTransform: "uppercase" }}>Tap to change · Indicted+</Text>
+          <Text style={{ color: "rgba(243,244,246,0.98)", fontFamily: FONT.display, fontSize: 32, letterSpacing: 0.8, marginTop: 8 }}>{me.name}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 6 }}>
             {profile?.globalRole && profile.globalRole !== "USER" && <RoleChip role={profile.globalRole} size={16} />}
             {profile?.tier && profile.tier !== "INNOCENT" && <TierChip tier={profile.tier} size={16} />}
@@ -256,28 +257,39 @@ export default function Me() {
           </View>
         )}
 
-        <View className="px-3 mt-6">
-          <View className="flex-row flex-wrap">
-            <NavTile icon="cash-outline" label="Store" tone="gold" onPress={() => router.push("/store")} />
-            <NavTile icon="bag-handle-outline" label="Inventory" onPress={() => router.push("/inventory")} />
-            <NavTile icon="storefront-outline" label="Market" onPress={() => router.push("/market")} />
-            <NavTile icon="pulse-outline" label="Activity" onPress={() => router.push("/activity")} />
-            <NavTile icon="newspaper-outline" label="News" onPress={() => router.push("/news")} />
-            <NavTile icon="flame-outline" label="Hot" tone="red" onPress={() => router.push("/hot")} />
+        <View style={{ marginTop: 6 }}>
+          <DossierSection title="Identity">
             <NavTile icon="trophy-outline" label="Notoriety" tone="gold" onPress={() => router.push("/notoriety")} />
+            <NavTile icon="bag-handle-outline" label="Inventory" onPress={() => router.push("/inventory")} />
+            <NavTile icon="pulse-outline" label="Activity" onPress={() => router.push("/activity")} />
+          </DossierSection>
+
+          <DossierSection title="Circle">
             <NavTile icon="people-outline" label="Crews" onPress={() => router.push("/crews")} />
             <NavTile icon="chatbubbles-outline" label="Forum" onPress={() => router.push("/forum")} />
+            <NavTile icon="mail-outline" label="Invites" onPress={() => router.push("/invites")} />
+            <NavTile icon="share-social-outline" label="Share" onPress={() => Share.share({ message: `Join me on Weered — ${WEB_BASE}`, url: WEB_BASE }).catch(() => {})} />
+          </DossierSection>
+
+          <DossierSection title="Games & Goods">
+            <NavTile icon="cash-outline" label="Store" tone="gold" onPress={() => router.push("/store")} />
+            <NavTile icon="storefront-outline" label="Market" onPress={() => router.push("/market")} />
             <NavTile icon="flag-outline" label="Challenges" onPress={() => router.push("/challenges")} />
             <NavTile icon="ribbon-outline" label="Tournaments" tone="gold" onPress={() => router.push("/tournaments")} />
-            <NavTile icon="mail-outline" label="Invites" onPress={() => router.push("/invites")} />
+            <NavTile icon="flame-outline" label="Hot" tone="red" onPress={() => router.push("/hot")} />
+            <NavTile icon="newspaper-outline" label="News" onPress={() => router.push("/news")} />
+          </DossierSection>
+
+          <DossierSection title="Account">
+            <NavTile icon="settings-outline" label="Settings" onPress={() => router.push("/settings")} />
             <NavTile icon="diamond-outline" label="Subscribe" tone="purple" onPress={() => router.push("/subscribe")} />
             {["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(String(profile?.globalRole || "")) && (
               <NavTile icon="shield-checkmark-outline" label="Staff" tone="gold" onPress={() => router.push("/staff")} />
             )}
-            <NavTile icon="settings-outline" label="Settings" onPress={() => router.push("/settings")} />
-            <NavTile icon="share-social-outline" label="Share" onPress={() => Share.share({ message: `Join me on Weered — ${WEB_BASE}`, url: WEB_BASE }).catch(() => {})} />
-          </View>
+          </DossierSection>
+        </View>
 
+        <View className="px-3 mt-2">
           <Pressable
             onPress={() => Alert.alert("Sign out?", "You'll need to sign in again to use Weered.", [
               { text: "Cancel", style: "cancel" },
@@ -295,7 +307,7 @@ export default function Me() {
               borderRadius: 4,
             }}
           >
-            <Text style={{ color: "#ef4444", fontFamily: "monospace", fontWeight: "900", textAlign: "center", letterSpacing: 2, textTransform: "uppercase", fontSize: 13 }}>
+            <Text style={{ color: "#ef4444", fontFamily: FONT.uiBold, textAlign: "center", letterSpacing: 2, textTransform: "uppercase", fontSize: 14 }}>
               Sign out
             </Text>
           </Pressable>
@@ -382,8 +394,21 @@ function FooterLinks() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-      <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: "monospace", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>{title}</Text>
+      <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: FONT.uiBold, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 8 }}>{title}</Text>
       {children}
+    </View>
+  );
+}
+
+// Dossier sections — branded folder-tab look. The horizontal rule under
+// the heading + the brass tick borrow from the desktop UserCorner aesthetic.
+function DossierSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={{ marginTop: 14 }}>
+      <StampHeader tone="gold">{title}</StampHeader>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12 }}>
+        {children}
+      </View>
     </View>
   );
 }
@@ -424,15 +449,14 @@ function NavTile({
           elevation: tone === "default" ? 0 : 2,
         }}
       >
-        <Ionicons name={icon} size={28} color={c.icon} />
+        <Ionicons name={icon} size={26} color={c.icon} />
         <Text
           numberOfLines={1}
           style={{
             color: c.text,
-            fontFamily: "monospace",
-            fontWeight: "900",
-            fontSize: 10,
-            letterSpacing: 1.3,
+            fontFamily: FONT.uiBold,
+            fontSize: 11,
+            letterSpacing: 1.4,
             textTransform: "uppercase",
             marginTop: 8,
           }}
