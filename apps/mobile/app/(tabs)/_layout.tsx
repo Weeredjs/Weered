@@ -87,7 +87,7 @@ export default function TabsLayout() {
     enabled: !!token,
   });
   const dmCount = Object.values(dmsQ.data?.counts ?? {}).reduce((a, b) => a + b, 0);
-  const meBadge = dmCount + (notifQ.data?.count ?? 0);
+  const inboxBadge = dmCount + (notifQ.data?.count ?? 0);
 
   return (
     <Tabs
@@ -124,10 +124,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="inbox"
+        options={{
+          title: "Inbox",
+          tabBarIcon: ({ focused }) => <TabItem label="Inbox" focused={focused} badge={inboxBadge} />,
+        }}
+      />
+      <Tabs.Screen
         name="me"
         options={{
           title: "Profile",
-          tabBarIcon: ({ focused }) => <TabItem label="Me" focused={focused} badge={meBadge} />,
+          tabBarIcon: ({ focused }) => <TabItem label="Me" focused={focused} />,
         }}
       />
     </Tabs>
