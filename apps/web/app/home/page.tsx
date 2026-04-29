@@ -100,21 +100,20 @@ function lobbyAccent(r: any, idx: number): string {
   return fallbacks[idx % fallbacks.length];
 }
 
-/* ─── LivePulse dot ──────────────────────────────────────── */
+/* ─── LivePulse dot ──────────────────────────────────────────
+   Originally had a `weered-ripple` infinite scale+opacity animation
+   on every dot. With ~30 lobby cards on /home each rendering one,
+   that's 30+ promoted layers churning Layerize/Pre-paint every
+   frame — caught in a perf recording on 2026-04-29. Static dot with
+   a box-shadow glow reads identically as "live" without the cost. */
 function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
   return (
-    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: size, height: size }}>
-      <span style={{
-        position: "absolute", width: size * 2, height: size * 2, borderRadius: "50%",
-        background: color, opacity: 0.3,
-        animation: "weered-ripple 2s ease-out infinite",
-      }} />
-      <span style={{
-        width: size, height: size, borderRadius: "50%",
-        background: color, boxShadow: `0 0 6px ${color}`,
-        position: "relative", zIndex: 1,
-      }} />
-    </span>
+    <span style={{
+      width: size, height: size, borderRadius: "50%",
+      background: color,
+      boxShadow: `0 0 8px ${color}99, 0 0 0 1px ${color}33`,
+      display: "inline-block", flexShrink: 0,
+    }} />
   );
 }
 
@@ -1291,11 +1290,7 @@ export default function HomePage() {
 
       </div>
 
-      {/* Animations */}
-      <style>{`
-        @keyframes weered-ripple{0%{transform:scale(.5);opacity:.5}100%{transform:scale(2);opacity:0}}
-        div::-webkit-scrollbar{display:none}
-      `}</style>
+      <style>{`div::-webkit-scrollbar{display:none}`}</style>
 
       <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
       {/* VerticalPicker disabled for now — Press is the default theme until
