@@ -1024,7 +1024,22 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
   const admit      = (userId: string) => sendAdmin("room:admit",   { userId });
   const deny       = (userId: string) => sendAdmin("room:deny",    { userId });
 
-  const value: Ctx = {
+  // Stable WS sender — every render used to allocate a fresh closure here,
+  // which broke referential equality for any consumer that put `sendRaw` in
+  // a useEffect dep array (re-running effects on every WS message). useRef
+  // keeps the WS handle live without forcing a re-render or a new closure.
+  const sendRaw = React.useCallback((msg: object) => {
+    try {
+      const ws = (wsRef as any)?.current;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    } catch {}
+  }, []);
+
+  // Memoize the context value so React only notifies consumers when something
+  // they could care about actually changes. Without this, every WS message
+  // (typing pings, presence ticks, etc.) reallocates the value object and
+  // every useWeered() consumer rerenders even if nothing they read changed.
+  const value: Ctx = React.useMemo(() => ({
     apiBase: API, wsUrl: WS_URL,
     token, me, authed, globalRole,
     wsReady, wsState,
@@ -1039,15 +1054,31 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     lockRoom, unlockRoom, joinWithPassword,
     passwordRoomId, passwordError, setPasswordRoomId,
     promote, demote, kick, ban, unban, mute, unmute, admit, deny,
-    sendRaw: (msg: object) => {
-      try {
-        const ws = (wsRef as any)?.current;
-        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-      } catch {}
-    },
+    sendRaw,
     isAway,
     setAway,
-  };
+  }), [
+    token, me, authed, globalRole,
+    wsReady, wsState,
+    activeRoomId, joinedRoomId, currentLobbyId,
+    users, msgs, meta, admin, role, joinStatus, statusByRoom,
+    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom,
+    typingByRoom, pinnedByRoom,
+    moduleState,
+    rooms,
+    passwordRoomId, passwordError,
+    sendRaw, isAway, setAway,
+    // Handlers must be in deps — they rebuild each render and close over
+    // current state via sendAdmin. Excluding them would risk stale closures.
+    // Net: this useMemo only saves allocations when WeeredProvider rerenders
+    // for a non-state-changing reason. The bigger structural win is splitting
+    // this into a stable HandlersContext + a hot StateContext so consumers
+    // only subscribe to what they read. That's a separate refactor.
+    join, leave, knock, sendChat, renameRoom, lockRoom, unlockRoom,
+    joinWithPassword, setPasswordRoomId, devLogin, logout,
+    promote, demote, kick, ban, unban, mute, unmute, admit, deny,
+    setActiveRoomId, setModuleState,
+  ]);
 
   return (
     <WeeredContext.Provider value={value}>
