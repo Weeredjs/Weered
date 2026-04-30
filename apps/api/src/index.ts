@@ -2459,7 +2459,11 @@ async function main() {
       where: { id: la.id },
       data: { emailVerified: true, verifyToken: null, verifyTokenExp: null },
     });
-    return reply.send({ ok: true });
+    const user = await prisma.user.findUnique({ where: { id: la.userId } });
+    if (!user) return reply.code(500).send({ error: "Account record missing" });
+    if (user.banned) return reply.code(403).send({ ok: false, error: "banned" });
+    const sessionToken = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    return reply.send({ ok: true, token: sessionToken, user });
   });
 
   // Auth: resend verification email — by username so the user can request it

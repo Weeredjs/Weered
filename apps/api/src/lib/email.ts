@@ -119,7 +119,7 @@ function shellHtml(opts: { heading: string; body: string; ctaLabel?: string; cta
 }
 
 export function buildVerifyEmail(opts: { username: string; token: string }): { subject: string; html: string } {
-  const url = `${APP_URL}/verify?token=${encodeURIComponent(opts.token)}`;
+  const url = `${APP_URL}/verify-email?token=${encodeURIComponent(opts.token)}`;
   return {
     subject: "Verify your Weered email",
     html: shellHtml({

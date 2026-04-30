@@ -8,19 +8,25 @@ function VerifyEmailInner() {
   const sp = useSearchParams();
   const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-  const [status, setStatus] = useState<"loading" | "success" | "already" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
     const token = sp?.get("token") || "";
     if (!token) { setStatus("error"); setErrMsg("No verification token found."); return; }
 
-    fetch(`${API}/auth/verify-email?token=${encodeURIComponent(token)}`)
-      .then(r => r.json())
-      .then(j => {
-        if (j.ok && j.already) { setStatus("already"); return; }
-        if (!j.ok) { setStatus("error"); setErrMsg(j.error || "Verification failed."); return; }
-        // Store fresh token
+    fetch(`${API}/auth/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then(async r => {
+        const j = await r.json().catch(() => ({} as any));
+        if (!r.ok) {
+          setStatus("error");
+          setErrMsg(j?.error || "Verification failed.");
+          return;
+        }
         if (j.token) localStorage.setItem("weered_token", j.token);
         if (j.user)  localStorage.setItem("weered_user", JSON.stringify(j.user));
         setStatus("success");
@@ -41,12 +47,6 @@ function VerifyEmailInner() {
         <path d="M13 22l7 7 11-13" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
-    already: (
-      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <circle cx="22" cy="22" r="20" fill="rgba(124,58,237,0.1)" stroke="rgba(124,58,237,0.35)" strokeWidth="1.5"/>
-        <path d="M13 22l7 7 11-13" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
     error: (
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
         <circle cx="22" cy="22" r="20" fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" strokeWidth="1.5"/>
@@ -58,14 +58,12 @@ function VerifyEmailInner() {
   const title = {
     loading: "Verifying...",
     success: "You're verified.",
-    already: "Already verified.",
     error:   "Something went wrong.",
   }[status];
 
   const sub = {
     loading: "Checking your verification link.",
     success: "Your account is active. Welcome.",
-    already: "This account was already verified.",
     error:   errMsg || "The link may have expired.",
   }[status];
 
@@ -177,11 +175,6 @@ function VerifyEmailInner() {
           <div className="ve-sub">{sub}</div>
 
           {status === "success" && (
-            <button className="ve-btn" onClick={() => router.replace("/home")}>
-              enter_weered()
-            </button>
-          )}
-          {status === "already" && (
             <button className="ve-btn" onClick={() => router.replace("/home")}>
               enter_weered()
             </button>
