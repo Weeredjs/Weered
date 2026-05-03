@@ -12,6 +12,7 @@ import FeatureShowcase from "../../components/FeatureShowcase";
 import EmptyState from "../../components/EmptyState";
 import VerticalPicker from "../../components/VerticalPicker";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
+import HomeActivityTicker from "../../components/HomeActivityTicker";
 
 /* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
@@ -1161,8 +1162,13 @@ export default function HomePage() {
           we just need a tiny gap above the footer line. */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
 
+        {/* LIVE TICKER — real handles, clickable lobby names */}
+        <div style={{ paddingTop: 14 }}>
+          <HomeActivityTicker />
+        </div>
+
         {/* HERO BANNER */}
-        <div style={{ paddingTop: 16 }}>
+        <div style={{ paddingTop: 14 }}>
           <HeroBanner lobby={featured} onJoin={handleJoin} />
         </div>
 
