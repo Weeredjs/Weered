@@ -42,6 +42,7 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
+import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
 import supportRoutes from "./routes/support";
 import jwt from "jsonwebtoken";
@@ -6356,6 +6357,10 @@ async function main() {
 
   await app.register(tradingRoutes, {
     authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser, operatorCommentateOnTrade,
+  } as any);
+
+  await app.register(characterRoutes, {
+    authFromHeader, getGlobalRole, canAccessStaff,
   } as any);
 
   await app.register(diceRoutes, {
