@@ -4981,8 +4981,13 @@ async function main() {
           return;
         }
 
-        // ── D&D Module — broadcast initiative + dice to room ───────────────────
-        if (msg.type === "dnd:initiative" || msg.type === "dnd:roll") {
+        // ── D&D Module — broadcast initiative + dice + cross-system events to room ───
+        if (
+          msg.type === "dnd:initiative" ||
+          msg.type === "dnd:roll" ||
+          msg.type === "dnd:combatant:damage" ||
+          msg.type === "dnd:combatant:select"
+        ) {
           if (!room.users.has(ws.user.id)) return;
           for (const s of room.sockets) {
             if (s === ws) continue;

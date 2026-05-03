@@ -59,9 +59,10 @@ type WorldNote = {
   body: string;
 };
 
-type SectionId = "ledger" | "sessions" | "npcs" | "threads" | "notes";
+type SectionId = "ledger" | "party" | "sessions" | "npcs" | "threads" | "notes";
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "ledger",   label: "Ledger" },
+  { id: "party",    label: "Party" },
   { id: "sessions", label: "Sessions" },
   { id: "npcs",     label: "NPCs" },
   { id: "threads",  label: "Threads" },
@@ -133,6 +134,7 @@ export default function CampaignLedger({ roomId }: { roomId: string }) {
 
       <div style={{ minHeight: 200 }}>
         {section === "ledger"   && <LedgerSection roomId={roomId} isDM={isDM} members={members} onPartyGoldChange={(g) => setCampaign(c => c ? { ...c, partyGold: g } : c)} />}
+        {section === "party"    && <PartySection roomId={roomId} />}
         {section === "sessions" && <SessionsSection roomId={roomId} isDM={isDM} />}
         {section === "npcs"     && <NpcsSection roomId={roomId} isDM={isDM} />}
         {section === "threads"  && <ThreadsSection roomId={roomId} isDM={isDM} />}
@@ -216,6 +218,7 @@ function LedgerSection({
   const [delta, setDelta] = useState("");
   const [desc, setDesc] = useState("");
   const [awardedTo, setAwardedTo] = useState("");
+  const [distributeXp, setDistributeXp] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -233,6 +236,20 @@ function LedgerSection({
     const n = Math.trunc(Number(delta));
     if (!Number.isFinite(n) || n === 0) return;
     setBusy(true);
+    // XP with distribute=true and no awardedTo → split evenly across all
+    // party characters via the integration endpoint (one entry per char).
+    if (type === "XP" && distributeXp && !awardedTo) {
+      const r = await apiFetch(`/rooms/${roomId}/campaign/ledger/distribute`, {
+        method: "POST",
+        body: JSON.stringify({ delta: n, description: desc.trim() }),
+      });
+      setBusy(false);
+      if (r?.ok && Array.isArray(r.entries)) {
+        setEntries(es => [...r.entries.slice().reverse(), ...es]);
+        setDelta(""); setDesc(""); setAwardedTo("");
+      }
+      return;
+    }
     const r = await apiFetch(`/rooms/${roomId}/campaign/ledger`, {
       method: "POST",
       body: JSON.stringify({ type, delta: n, description: desc.trim(), awardedToUserId: awardedTo || null }),
@@ -302,9 +319,21 @@ function LedgerSection({
               ))}
             </select>
           </div>
+          {type === "XP" && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, opacity: 0.85 }} className="dnd-serif">
+              <input
+                type="checkbox"
+                checked={distributeXp && !awardedTo}
+                disabled={!!awardedTo}
+                onChange={e => setDistributeXp(e.target.checked)}
+              />
+              Distribute to whole party (creates one entry per character)
+              {awardedTo && <span style={{ opacity: .6 }}>— targeting individual; ignored</span>}
+            </label>
+          )}
           <div>
             <button className="dnd-stone-tile" disabled={busy || !delta} onClick={add}>
-              Inscribe
+              {type === "XP" && distributeXp && !awardedTo ? "Distribute XP" : "Inscribe"}
             </button>
           </div>
         </div>
@@ -881,6 +910,64 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+// ── Party section: campaign characters with current HP + derived XP totals.
+// Reads via the cross-system endpoint added by integration glue.
+function PartySection({ roomId }: { roomId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [party, setParty] = useState<any[]>([]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const r = await apiFetch(`/rooms/${roomId}/campaign/party`);
+    if (r?.ok) setParty(r.party || []);
+    setLoading(false);
+  }, [roomId]);
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <div className="dnd-serif" style={{ opacity: .55, padding: 16 }}>Mustering the party…</div>;
+  if (!party.length) {
+    return (
+      <div className="dnd-card" style={{ padding: 16 }}>
+        <div className="dnd-serif" style={{ opacity: .65, fontStyle: "italic" }}>
+          No characters are sworn to this campaign yet. Players: open the Sheets tab and create a character — set its Campaign in the editor.
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="dnd-card" style={{ padding: 12 }}>
+      <div className="dnd-section-label" style={{ marginBottom: 8 }}>Party Roll</div>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        {party.map(c => {
+          const pct = c.hpMax > 0 ? Math.max(0, Math.min(100, (c.hpCurrent / c.hpMax) * 100)) : 0;
+          const hpColor = pct > 50 ? "#22C55E" : pct > 25 ? "#F59E0B" : "#EF4444";
+          return (
+            <li key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 80px", gap: 10, alignItems: "center", padding: "6px 4px", borderBottom: "1px solid rgba(196,165,90,.10)" }}>
+              <div>
+                <div className="dnd-heading" style={{ fontSize: 15, color: ACCENT }}>{c.name}</div>
+                <div className="dnd-serif" style={{ fontSize: 11, opacity: .6 }}>
+                  {c.race ? `${c.race} ` : ""}{c.className || "Adventurer"} · L{c.level}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,.08)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: hpColor }} />
+                </div>
+              </div>
+              <div className="dnd-serif" style={{ fontSize: 12, textAlign: "right" }}>
+                {c.hpCurrent}/{c.hpMax} HP
+              </div>
+              <div className="dnd-heading" style={{ fontSize: 14, color: ACCENT, textAlign: "right" }}>
+                {c.xp.toLocaleString()} xp
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

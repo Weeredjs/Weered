@@ -379,6 +379,75 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true });
   });
 
+  // ── Party (campaign characters with derived XP totals) ─────────────────
+  // Returns the Character rows attached to this campaign plus per-character
+  // XP summed from LedgerEntry XP rows (matched by ownerUserId/awardedToUserId).
+  app.get("/rooms/:roomId/campaign/party", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const { roomId } = req.params as any;
+    const campaign = await getCampaignByRoom(roomId);
+    if (!campaign) return reply.code(404).send({ ok: false, error: "no_campaign" });
+    const characters = await prisma.character.findMany({
+      where: { campaignId: campaign.id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true, name: true, className: true, level: true, race: true,
+        hpCurrent: true, hpMax: true, hpTemp: true, ac: true,
+        ownerUserId: true,
+      },
+    });
+    const xpRows = await prisma.ledgerEntry.groupBy({
+      by: ["awardedToUserId"],
+      where: { campaignId: campaign.id, type: "XP" },
+      _sum: { delta: true },
+    });
+    const xpByUser: Record<string, number> = {};
+    for (const r of xpRows) if (r.awardedToUserId) xpByUser[r.awardedToUserId] = r._sum.delta || 0;
+    const party = characters.map(c => ({ ...c, xp: xpByUser[c.ownerUserId] || 0 }));
+    return reply.send({ ok: true, party });
+  });
+
+  // ── XP distribution — one ledger entry per party character ─────────────
+  // Body: { delta: number, description?: string, characterIds?: string[] }
+  // If characterIds is empty/omitted, distributes to all campaign characters.
+  app.post("/rooms/:roomId/campaign/ledger/distribute", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const { roomId } = req.params as any;
+    const r = await loadCampaignForMutate(roomId, u.id);
+    if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
+    const body = (req.body as any) || {};
+    const delta = Math.trunc(Number(body.delta) || 0);
+    if (!delta) return reply.code(400).send({ ok: false, error: "bad_delta" });
+    const description = String(body.description || "XP").slice(0, 500);
+    const onlyIds: string[] = Array.isArray(body.characterIds) ? body.characterIds.map((x: any) => String(x)) : [];
+    const where: any = { campaignId: r.campaign.id };
+    if (onlyIds.length) where.id = { in: onlyIds };
+    const characters = await prisma.character.findMany({ where, select: { ownerUserId: true } });
+    if (!characters.length) return reply.code(400).send({ ok: false, error: "no_party" });
+    const entries = await prisma.$transaction(
+      characters.map(c =>
+        prisma.ledgerEntry.create({
+          data: {
+            campaignId: r.campaign.id,
+            type: "XP",
+            delta,
+            description,
+            awardedToUserId: c.ownerUserId,
+          },
+        })
+      )
+    );
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (room?.lobbyId) {
+      for (const entry of entries) {
+        broadcastToLobby(room.lobbyId, { type: "campaign:ledger", roomId, entry, partyGold: r.campaign.partyGold });
+      }
+    }
+    return reply.send({ ok: true, awarded: entries.length, entries });
+  });
+
   // ── World notes (hierarchical wiki) ────────────────────────────────────
   app.get("/rooms/:roomId/campaign/notes", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);

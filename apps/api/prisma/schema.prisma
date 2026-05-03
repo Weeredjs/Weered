@@ -2032,6 +2032,7 @@ model Campaign {
   npcs        NpcEncounter[]
   threads     PlotThread[]
   notes       WorldNote[]
+  characters  Character[]
 
   @@index([roomId])
   @@index([dmUserId])
@@ -2145,6 +2146,7 @@ model Character {
   alignment   String  @default("")
   ownerUserId String
   campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   // Optional room scoping. The DM (room owner) sees every character whose
   // roomId matches their room; players see only their own.
   roomId      String?
