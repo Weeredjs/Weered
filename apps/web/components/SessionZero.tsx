@@ -247,8 +247,10 @@ function VisualRoadmap() {
       <Item done text="The four house rooms" />
       <Item done text="Compendium · Tavern Board · NPCs · Streams" />
       <Item done text="Witnessed dice rolls in lobby chat" />
-      <Item done={false} text="Persistent campaign state (sheets, XP, loot)" />
+      <Item done text="Persistent campaign state (sheets, XP, loot)" />
+      <Item done text="Tactical battle map with fog of war + tokens" />
       <Item done={false} text="Multi-DM scheduling overlay" />
+      <Item done={false} text="Compendium → Sheet drag-to-equip" />
       <div style={{ fontSize: 9, color: "rgba(243,244,246,0.4)", marginTop: 6, fontStyle: "italic", letterSpacing: "0.3px" }}>
         DMs who show up first shape what's next.
       </div>
@@ -350,11 +352,53 @@ const PANELS: PanelDef[] = [
     visual: <VisualStreams />,
   },
   {
+    label: "the sheet",
+    title: "Your character. Live, on the table.",
+    body: (
+      <>
+        Open <strong style={{ color: ACCENT }}>Sheets</strong> in the D&amp;D module — your full 5e sheet lives here. Stats, saves, skills, spell slots, inventory, attacks. Click a stat: it rolls. Click an attack: it rolls in chat with a <strong style={{ color: "#f87171" }}>Damage</strong> follow-up button waiting if it hit.
+        <br /><br />
+        The DM sees the whole party at a glance. Players see their own.
+        <br /><br />
+        <span style={{ opacity: 0.55, fontSize: 12 }}>Sheets persist across sessions. No one rebuilds Tuesday.</span>
+      </>
+    ),
+    visual: <VisualWordmark />,
+  },
+  {
+    label: "the battle map",
+    title: "Tokens on a grid. Fog where you want it.",
+    body: (
+      <>
+        Open <strong style={{ color: ACCENT }}>Battle Map</strong>. The DM uploads an image, drops tokens, paints fog. Players drag their tokens. Distance measures itself.
+        <br /><br />
+        When initiative ticks forward, the matching token glows. Click a token to snap the initiative tracker to that combatant. Apply damage from chat — it lands on the token <em>and</em> the tracker, in one click.
+        <br /><br />
+        <span style={{ opacity: 0.55, fontSize: 12 }}>Roll20-grade table state, no extra tab.</span>
+      </>
+    ),
+    visual: <VisualWordmark />,
+  },
+  {
+    label: "the chronicle",
+    title: "The Campaign Ledger remembers everything.",
+    body: (
+      <>
+        Open <strong style={{ color: ACCENT }}>Campaign</strong>. Party gold, loot, XP, session log, NPC encounters, plot threads, world wiki — all in one persistent chronicle per party.
+        <br /><br />
+        Award XP and the whole party gets it in one click. Find an item on a sheet and tap <strong style={{ color: ACCENT }}>→ Ledger</strong>. Spin up an AI NPC and they show up in the encounter index automatically.
+        <br /><br />
+        <span style={{ opacity: 0.55, fontSize: 12 }}>The DM never re-types what already happened.</span>
+      </>
+    ),
+    visual: <VisualWordmark />,
+  },
+  {
     label: "shape what's next",
     title: "If you're a DM, build with me.",
     body: (
       <>
-        Honest about what&apos;s mid-build: <strong style={{ color: ARCANE }}>persistent campaign state</strong> (sheets, XP, loot ledger) and <strong style={{ color: ARCANE }}>multi-DM scheduling</strong>. Roadmap, not vapor.
+        Honest about what&apos;s mid-build: <strong style={{ color: ARCANE }}>multi-DM scheduling</strong> and <strong style={{ color: ARCANE }}>compendium drag-to-sheet</strong>. Roadmap, not vapor.
         <br /><br />
         If you&apos;re a DM with a campaign you want to bring, holler in the <strong style={{ color: ACCENT }}>DM&apos;s Workshop</strong>. The next features get prioritized with the first GMs who show up.
         <br /><br />

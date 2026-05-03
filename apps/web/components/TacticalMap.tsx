@@ -502,6 +502,13 @@ export default function TacticalMap({ roomId }: Props) {
     if (hit) {
       const movable = isDM || hit.ownerId === me?.id;
       setSelectedTokenId(hit.id);
+      if (hit.combatantId) {
+        try {
+          window.dispatchEvent(new CustomEvent("weered:dnd:combatant:select", {
+            detail: { roomId, combatantId: hit.combatantId },
+          }));
+        } catch {}
+      }
       if (movable) {
         const offCx = cell.x - hit.x;
         const offCy = cell.y - hit.y;

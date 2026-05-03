@@ -88,7 +88,7 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorTarget, setEditorTarget] = useState<Character | null>(null);
-  const [rollPrompt, setRollPrompt] = useState<{ label: string; expression: string } | null>(null);
+  const [rollPrompt, setRollPrompt] = useState<{ label: string; expression: string; intent?: string; attackName?: string; damageExpression?: string; characterId?: string } | null>(null);
 
   const reload = useCallback(async () => {
     if (!token) return;
@@ -182,13 +182,13 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
     }
   }
 
-  async function castRoll(expression: string) {
+  async function castRoll(expression: string, meta?: { intent?: string; attackName?: string; damageExpression?: string; characterId?: string }) {
     if (!lobbyId) return;
     try {
       await fetch(`${apiBase}/lobbies/${lobbyId}/dice/roll`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ expression }),
+        body: JSON.stringify({ expression, ...(meta || {}) }),
       });
     } catch {}
     setRollPrompt(null);
@@ -261,7 +261,20 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
           onDelete={() => deleteCharacter(selected)}
           onHp={delta => adjustHp(selected, delta)}
           onToggleSlot={(level, idx) => toggleSlot(selected, level, idx)}
-          onRoll={(label, expression) => setRollPrompt({ label, expression })}
+          onRoll={(label, expression, meta) => setRollPrompt({ label, expression, characterId: selected?.id, ...(meta || {}) })}
+          onLogItem={async (name, qty, notes) => {
+            try {
+              const desc = `${name}${qty > 1 ? ` ×${qty}` : ""}${notes ? ` — ${notes}` : ""}`;
+              const r = await fetch(`${apiBase}/rooms/${encodeURIComponent(roomId)}/campaign/ledger`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ type: "ITEM", delta: qty || 1, description: desc }),
+              });
+              const j = await r.json();
+              if (j?.ok) { try { (await import("../lib/toast")).weeredToast.success(`Logged: ${name}`); } catch {} }
+              else { try { (await import("../lib/toast")).weeredToast.error(j?.error || "Log failed"); } catch {} }
+            } catch { try { (await import("../lib/toast")).weeredToast.error("Log failed"); } catch {} }
+          }}
         />
       )}
 
@@ -280,7 +293,12 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
         <RollPrompt
           label={rollPrompt.label}
           expression={rollPrompt.expression}
-          onCast={() => castRoll(rollPrompt.expression)}
+          onCast={() => castRoll(rollPrompt.expression, {
+            intent: rollPrompt.intent,
+            attackName: rollPrompt.attackName,
+            damageExpression: rollPrompt.damageExpression,
+            characterId: rollPrompt.characterId,
+          })}
           onCancel={() => setRollPrompt(null)}
         />
       )}
@@ -337,7 +355,7 @@ function PartyRow({ c, isSelected, onSelect, onHp }: {
 
 // ── Sheet body ─────────────────────────────────────────────────────────────
 
-function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onRoll }: {
+function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onRoll, onLogItem }: {
   c: Character;
   isOwner: boolean;
   isDM: boolean;
@@ -345,7 +363,8 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
   onDelete: () => void;
   onHp: (delta: number) => void;
   onToggleSlot: (level: string, idx: number) => void;
-  onRoll: (label: string, expression: string) => void;
+  onRoll: (label: string, expression: string, meta?: { intent?: string; attackName?: string; damageExpression?: string }) => void;
+  onLogItem: (name: string, qty: number, notes: string) => void;
 }) {
   const pct = c.hpMax > 0 ? (c.hpCurrent / c.hpMax) * 100 : 0;
   const hpColor = pct > 50 ? "#22C55E" : pct > 25 ? "#F59E0B" : "#EF4444";
@@ -479,12 +498,12 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
                     {a.notes && <div style={{ fontSize: 11, opacity: 0.6, fontFamily: "var(--font-cormorant), serif" }}>{a.notes}</div>}
                   </div>
                   <button className="dnd-stone-tile" style={{ flex: "0 0 auto", padding: "5px 10px", fontSize: 12 }}
-                    onClick={() => onRoll(`${a.name} (attack)`, a.expression)}>
+                    onClick={() => onRoll(`${a.name} (attack)`, a.expression, { intent: "attack", attackName: a.name, damageExpression: a.damage || undefined })}>
                     Hit · {a.expression}
                   </button>
                   {a.damage && (
                     <button className="dnd-stone-tile dnd-stone-tile--dis" style={{ flex: "0 0 auto", padding: "5px 10px", fontSize: 12 }}
-                      onClick={() => onRoll(`${a.name} (damage)`, a.damage)}>
+                      onClick={() => onRoll(`${a.name} (damage)`, a.damage, { intent: "damage", attackName: a.name })}>
                       Dmg · {a.damage}
                     </button>
                   )}
@@ -567,7 +586,7 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
           <div className="dnd-section-label">Inventory</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {c.inventory.map((it, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, padding: "4px 8px", fontSize: 12 }}>
+              <div key={i} style={{ display: "flex", gap: 8, padding: "4px 8px", fontSize: 12, alignItems: "center" }}>
                 <span style={{ flex: 1, fontFamily: "var(--font-cormorant), serif", color: "#F5D58A" }}>
                   {it.name}
                   {it.qty > 1 && <span style={{ opacity: 0.5 }}> ×{it.qty}</span>}
@@ -575,6 +594,18 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
                 {it.equipped && <span style={{ fontSize: 9, color: "#22C55E", fontWeight: 700 }}>EQUIP</span>}
                 {it.attuned && <span style={{ fontSize: 9, color: "#60A5FA", fontWeight: 700 }}>ATTUNED</span>}
                 {it.notes && <span style={{ opacity: 0.5, fontSize: 11 }}>{it.notes}</span>}
+                {(isOwner || isDM) && (
+                  <button
+                    onClick={() => onLogItem(it.name, it.qty || 1, it.notes || "")}
+                    title="Log this item to the Campaign Ledger"
+                    style={{
+                      fontSize: 9, padding: "2px 6px", borderRadius: 3,
+                      background: "rgba(196,165,90,.15)", color: "#C4A55A",
+                      border: "1px solid rgba(196,165,90,.3)", cursor: "pointer",
+                      letterSpacing: ".5px", textTransform: "uppercase", fontWeight: 700,
+                    }}
+                  >→ Ledger</button>
+                )}
               </div>
             ))}
           </div>

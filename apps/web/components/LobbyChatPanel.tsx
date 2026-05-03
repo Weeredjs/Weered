@@ -1118,6 +1118,95 @@ export default function LobbyChatPanel(
   const [emojiCat, setEmojiCat] = useState(0);
   const [gifOpen, setGifOpen] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string>("");
+
+  // ── Damage target picker (cross-system glue) ──
+  // Triggered by the chat dice-chip "Apply to Target" button. Lists map
+  // tokens (fetched lazily) and combatants from window.__weeredInitiative.
+  const [damagePicker, setDamagePicker] = useState<null | { amount: number; attackName: string; sourceMsgId: string }>(null);
+  const [pickerTokens, setPickerTokens] = useState<any[]>([]);
+  const [pickerCombatants, setPickerCombatants] = useState<any[]>([]);
+  useEffect(() => {
+    if (!damagePicker || !effectiveRoomId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const tok = (ctx as any)?.token;
+        const r = await fetch(`${API}/maps/${encodeURIComponent(effectiveRoomId)}`, {
+          headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+        });
+        const j = await r.json();
+        if (!alive) return;
+        setPickerTokens(Array.isArray(j?.tokens) ? j.tokens : []);
+      } catch { if (alive) setPickerTokens([]); }
+      try {
+        const cache = (window as any).__weeredInitiative?.[effectiveRoomId];
+        setPickerCombatants(Array.isArray(cache?.combatants) ? cache.combatants : []);
+      } catch { setPickerCombatants([]); }
+    })();
+    return () => { alive = false; };
+  }, [damagePicker, effectiveRoomId, ctx]);
+
+  async function applyDamageToToken(tokenId: string) {
+    if (!damagePicker) return;
+    const t = pickerTokens.find(x => x.id === tokenId);
+    if (!t) return;
+    const newHp = Math.max(0, (t.hp || 0) - damagePicker.amount);
+    try {
+      const tok = (ctx as any)?.token;
+      await fetch(`${API}/maps/tokens/${encodeURIComponent(tokenId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        body: JSON.stringify({ hp: newHp }),
+      });
+      // If the token is linked to a combatant, also subtract from initiative
+      if (t.combatantId) {
+        try {
+          window.dispatchEvent(new CustomEvent("weered:dnd:combatant:damage", {
+            detail: { roomId: effectiveRoomId, combatantId: t.combatantId, amount: damagePicker.amount },
+          }));
+        } catch {}
+        try { (ctx as any)?.sendRaw?.({ type: "dnd:combatant:damage", roomId: effectiveRoomId, combatantId: t.combatantId, amount: damagePicker.amount }); } catch {}
+      }
+      try { weeredToast.success(`-${damagePicker.amount} HP → ${t.name}`); } catch {}
+    } catch {
+      try { weeredToast.error("Failed to apply damage"); } catch {}
+    }
+    setDamagePicker(null);
+  }
+
+  function applyDamageToCombatant(combatantId: string) {
+    if (!damagePicker) return;
+    const c = pickerCombatants.find(x => x.id === combatantId);
+    try {
+      window.dispatchEvent(new CustomEvent("weered:dnd:combatant:damage", {
+        detail: { roomId: effectiveRoomId, combatantId, amount: damagePicker.amount },
+      }));
+    } catch {}
+    try { (ctx as any)?.sendRaw?.({ type: "dnd:combatant:damage", roomId: effectiveRoomId, combatantId, amount: damagePicker.amount }); } catch {}
+    try { weeredToast.success(`-${damagePicker.amount} HP → ${c?.name || "combatant"}`); } catch {}
+    setDamagePicker(null);
+  }
+
+  async function rollFollowupDamage(meta: any) {
+    const lobbyId = String(ctx?.currentLobbyId || "");
+    if (!lobbyId) { try { weeredToast.error("Not in a lobby"); } catch {}; return; }
+    if (!meta?.damageExpression) return;
+    try {
+      const tok = (ctx as any)?.token;
+      await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/dice/roll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        body: JSON.stringify({
+          expression: meta.damageExpression,
+          intent: "damage",
+          attackName: meta.attackName,
+          characterId: meta.characterId,
+        }),
+      });
+    } catch {
+      try { weeredToast.error("Damage roll failed"); } catch {}
+    }
+  }
   const [editDraft, setEditDraft] = useState<string>("");
   const [hoveredMsgId, setHoveredMsgId] = useState<string>("");
   const [pickerMsgId, setPickerMsgId] = useState<string>("");
@@ -1466,6 +1555,31 @@ export default function LobbyChatPanel(
                   <span style={{ marginLeft: "auto", fontWeight: 800, fontSize: 14, color: chipFg }}>
                     {total}
                   </span>
+                  {/* Cross-system follow-up: attack → "Roll Damage", damage → "Apply to Target" */}
+                  {dMeta.intent === "attack" && dMeta.damageExpression && (
+                    <button
+                      onClick={() => rollFollowupDamage(dMeta)}
+                      style={{
+                        marginLeft: 8, padding: "3px 8px", fontSize: 10, fontWeight: 700,
+                        letterSpacing: "0.5px", textTransform: "uppercase",
+                        background: "rgba(239,68,68,.18)", color: "#f87171",
+                        border: "1px solid rgba(239,68,68,.4)", borderRadius: 3, cursor: "pointer",
+                      }}
+                      title={`Roll ${dMeta.damageExpression}`}
+                    >Damage · {String(dMeta.damageExpression)}</button>
+                  )}
+                  {dMeta.intent === "damage" && (
+                    <button
+                      onClick={() => setDamagePicker({ amount: total, attackName: String(dMeta.attackName || "attack"), sourceMsgId: String(m?.id || "") })}
+                      style={{
+                        marginLeft: 8, padding: "3px 8px", fontSize: 10, fontWeight: 700,
+                        letterSpacing: "0.5px", textTransform: "uppercase",
+                        background: "rgba(196,165,90,.18)", color: "#C4A55A",
+                        border: "1px solid rgba(196,165,90,.4)", borderRadius: 3, cursor: "pointer",
+                      }}
+                      title="Apply this damage to a token or combatant"
+                    >Apply HP →</button>
+                  )}
                 </div>
               );
             }
@@ -2206,7 +2320,85 @@ export default function LobbyChatPanel(
         );
       })()}
     </aside>
-    </div>
+          {damagePicker && (
+        <div
+          onClick={() => setDamagePicker(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,.6)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 10000,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#1a1410", color: "#f3f4f6", border: "1px solid rgba(196,165,90,.4)",
+              borderRadius: 8, padding: 18, minWidth: 360, maxWidth: 520, maxHeight: "80vh", overflow: "auto",
+              fontFamily: "var(--font-cormorant), serif",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontFamily: "var(--font-pirata), serif", fontSize: 18, color: "#F5D58A" }}>
+                Apply {damagePicker.amount} damage
+              </div>
+              <button onClick={() => setDamagePicker(null)} style={{ background: "transparent", border: "none", color: "#888", cursor: "pointer", fontSize: 18 }}>×</button>
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 12 }}>
+              from {damagePicker.attackName}
+            </div>
+
+            {pickerTokens.length === 0 && pickerCombatants.length === 0 && (
+              <div style={{ padding: "16px 0", textAlign: "center", opacity: 0.5 }}>
+                No targets — open the Battle Map or Initiative tab in the D&D module.
+              </div>
+            )}
+
+            {pickerTokens.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1px", opacity: 0.55, marginBottom: 6 }}>MAP TOKENS</div>
+                {pickerTokens.map(t => (
+                  <button
+                    key={`tok-${t.id}`}
+                    onClick={() => applyDamageToToken(t.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: "8px 10px", marginBottom: 4,
+                      background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)",
+                      borderRadius: 4, color: "#f3f4f6", cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: t.color || "#C4A55A" }} />
+                    <span style={{ flex: 1 }}>{t.name}</span>
+                    <span style={{ fontSize: 11, opacity: 0.6 }}>{t.hp}/{t.hpMax} HP</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {pickerCombatants.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1px", opacity: 0.55, marginBottom: 6 }}>INITIATIVE</div>
+                {pickerCombatants.map(c => (
+                  <button
+                    key={`cmb-${c.id}`}
+                    onClick={() => applyDamageToCombatant(c.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: "8px 10px", marginBottom: 4,
+                      background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)",
+                      borderRadius: 4, color: "#f3f4f6", cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>{c.name}</span>
+                    <span style={{ fontSize: 11, opacity: 0.6 }}>{c.hpCurrent}/{c.hpMax} HP</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+</div>
     {hoverCard}
     </>
   );
