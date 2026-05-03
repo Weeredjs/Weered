@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "../WeeredProvider";
 import DndNpcPanel from "./DndNpcPanel";
+import CampaignLedger from "../CampaignLedger";
 
 // ── Style ────────────────────────────────────────────────────────────────────
 
@@ -602,6 +603,7 @@ const STAGE_TABS = [
   { id: "initiative" as const, label: "Initiative", icon: "⚔" },
   { id: "dice" as const,       label: "Dice", icon: "🎲" },
   { id: "npcs" as const,       label: "NPCs", icon: "🧙" },
+  { id: "campaign" as const,   label: "Campaign", icon: "📜" },
   { id: "reference" as const,  label: "Reference", icon: "📖" },
 ];
 type StageTab = typeof STAGE_TABS[number]["id"];
@@ -629,6 +631,7 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
         {tab === "initiative" && <InitiativeTracker roomId={roomId} />}
         {tab === "dice" && <RoomDiceRoller roomId={roomId} />}
         {tab === "npcs" && <DndNpcPanel roomId={roomId} />}
+        {tab === "campaign" && <CampaignLedger roomId={roomId} />}
         {tab === "reference" && <QuickReference />}
       </div>
     </div>
