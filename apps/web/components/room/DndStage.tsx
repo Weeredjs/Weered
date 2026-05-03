@@ -5,6 +5,7 @@ import { useWeered } from "../WeeredProvider";
 import DndNpcPanel from "./DndNpcPanel";
 import CampaignLedger from "../CampaignLedger";
 import CharacterSheet from "../CharacterSheet";
+import TacticalMap from "../TacticalMap";
 
 // ── Style ────────────────────────────────────────────────────────────────────
 
@@ -602,6 +603,7 @@ function QuickReference() {
 
 const STAGE_TABS = [
   { id: "initiative" as const, label: "Initiative", icon: "⚔" },
+  { id: "map" as const,        label: "Battle Map", icon: "🗺" },
   { id: "dice" as const,       label: "Dice", icon: "🎲" },
   { id: "sheets" as const,     label: "Sheets", icon: "📜" },
   { id: "npcs" as const,       label: "NPCs", icon: "🧙" },
@@ -630,8 +632,9 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: "auto", padding: tab === "npcs" ? 0 : 12 }}>
+      <div style={{ flex: 1, overflow: tab === "map" ? "hidden" : "auto", padding: tab === "npcs" || tab === "map" ? 0 : 12 }}>
         {tab === "initiative" && <InitiativeTracker roomId={roomId} />}
+        {tab === "map" && <TacticalMap roomId={roomId} />}
         {tab === "dice" && <RoomDiceRoller roomId={roomId} />}
         {tab === "npcs" && <DndNpcPanel roomId={roomId} />}
         {tab === "campaign" && <CampaignLedger roomId={roomId} />}
