@@ -47,6 +47,8 @@ import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
 import mapsRoutes from "./routes/maps";
 import supportRoutes from "./routes/support";
+import publicRoutes from "./routes/public";
+import { pushActivity, anonymousFor, shouldEmit } from "./lib/publicActivity";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -6334,6 +6336,7 @@ async function main() {
         try { send(s, event); } catch {}
       }
     }
+    try { capturePublicActivity(event, { lobbyId }); } catch {}
   }
   function broadcastToRoom(roomId: string, event: any) {
     for (const sock of wss.clients) {
@@ -6341,6 +6344,87 @@ async function main() {
       if (s.roomId === roomId) {
         try { send(s, event); } catch {}
       }
+    }
+    try { capturePublicActivity(event, { roomId }); } catch {}
+  }
+
+  // Filter and translate selected broadcast events into anonymized public
+  // activity entries for the logged-out landing page ticker. Throttled per
+  // (lobby, kind) so identical chatter doesn't dominate the wall.
+  function capturePublicActivity(event: any, ctx: { lobbyId?: string; roomId?: string }) {
+    const t = String(event?.type || "");
+    if (!t) return;
+    const lobbyHint = ctx.lobbyId || (event?.lobbyId ? String(event.lobbyId) : "");
+    if (t === "dice:roll") {
+      const isCrit = !!event.isNat20;
+      const isFumble = !!event.isNat1;
+      // Always surface crits + fumbles; throttle plain rolls per lobby
+      const key = `dice:${lobbyHint}:${isCrit ? "20" : isFumble ? "1" : "any"}`;
+      if (!isCrit && !isFumble && !shouldEmit(key, 18_000)) return;
+      const who = anonymousFor(lobbyHint);
+      const expr = String(event.expression || "1d20");
+      const total = Number(event.total || 0);
+      const text = isCrit
+        ? `${who} rolled a NAT 20 on ${expr}`
+        : isFumble
+          ? `${who} fumbled a NAT 1 on ${expr}`
+          : `${who} rolled ${expr} → ${total}`;
+      pushActivity({ kind: "dice", lobbyId: lobbyHint, text, accent: isCrit ? "#22c55e" : isFumble ? "#ef4444" : "#D9A942" });
+      return;
+    }
+    if (t === "trading:trade") {
+      const notional = Math.abs(Number(event?.trade?.notional || event?.notional || 0));
+      if (notional < 1000) return;
+      if (!shouldEmit(`trade:${lobbyHint}`, 6_000)) return;
+      const sym = String(event?.trade?.symbol || event?.symbol || "BTCUSDT").replace(/USDT$/i, "");
+      const side = String(event?.trade?.side || event?.side || "").toLowerCase();
+      const who = anonymousFor("fakeout");
+      const text = `${who} ${side === "sell" ? "closed" : "opened"} a $${Math.round(notional).toLocaleString()} ${sym} position`;
+      pushActivity({ kind: "trade", lobbyId: lobbyHint || "fakeout", text, accent: "#22c55e" });
+      return;
+    }
+    if (t === "trading:close" || t === "trading:position-closed") {
+      const pnl = Number(event?.pnl ?? event?.realized ?? 0);
+      if (Math.abs(pnl) < 500) return;
+      if (!shouldEmit(`tradeclose:${lobbyHint}`, 8_000)) return;
+      const who = anonymousFor("fakeout");
+      const sign = pnl >= 0 ? "+" : "-";
+      const text = `${who} closed a position for ${sign}$${Math.abs(Math.round(pnl)).toLocaleString()}`;
+      pushActivity({ kind: "trade", lobbyId: lobbyHint || "fakeout", text, accent: pnl >= 0 ? "#22c55e" : "#ef4444" });
+      return;
+    }
+    if (t === "room:created") {
+      const name = String(event?.room?.name || event?.name || "a new room");
+      if (!shouldEmit(`room:${lobbyHint}:${name}`, 30_000)) return;
+      pushActivity({ kind: "room", lobbyId: lobbyHint, text: `a new room opened: ${name}`, accent: "#D9A942" });
+      return;
+    }
+    if (t === "tavern:posted" || t === "lfg:posted") {
+      if (!shouldEmit(`tavern:${lobbyHint}`, 12_000)) return;
+      const who = anonymousFor(lobbyHint || "dnd");
+      pushActivity({ kind: "tavern", lobbyId: lobbyHint || "dnd", text: `${who} posted to the Tavern Board`, accent: "#D9A942" });
+      return;
+    }
+    if (t === "poker:pot-won" || t === "poker:hand-won") {
+      const amount = Math.abs(Number(event?.amount || event?.pot || 0));
+      if (amount < 200) return;
+      if (!shouldEmit(`poker:${lobbyHint}`, 8_000)) return;
+      const who = anonymousFor("poker");
+      pushActivity({ kind: "poker", lobbyId: lobbyHint || "poker", text: `${who} took a ${amount.toLocaleString()} Paper pot`, accent: "#fcd34d" });
+      return;
+    }
+    if (t === "windrose:bounty:claimed" || t === "windrose:bounty:posted") {
+      if (!shouldEmit(`windrose:${t}`, 10_000)) return;
+      const who = anonymousFor("windrose");
+      const verb = t.endsWith(":posted") ? "posted" : "claimed";
+      pushActivity({ kind: "bounty", lobbyId: lobbyHint || "windrose", text: `${who} ${verb} a bounty`, accent: "#a78bfa" });
+      return;
+    }
+    if (t === "challenge:completed") {
+      if (!shouldEmit(`destiny:${lobbyHint}`, 12_000)) return;
+      const who = anonymousFor("destiny");
+      pushActivity({ kind: "challenge", lobbyId: lobbyHint || "destiny", text: `${who} cleared a Destiny challenge`, accent: "#60a5fa" });
+      return;
     }
   }
   function notifyUser(userId: string, event: any) {
@@ -6402,6 +6486,10 @@ async function main() {
 
   await app.register(supportRoutes, {
     authFromHeader, getGlobalRole, canAccessStaff,
+  } as any);
+
+  await app.register(publicRoutes, {
+    rooms, applyWindroseReel,
   } as any);
 
 
