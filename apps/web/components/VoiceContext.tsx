@@ -230,6 +230,24 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setCameraOn(false); setScreenShareOn(false);
   }, []);
 
+  // ── Voice permission flipped — re-join with a fresh LiveKit token so
+  // the new canPublish grant takes effect. Triggered by WeeredProvider
+  // when the server broadcasts voice:permission for the current user.
+  useEffect(() => {
+    function handler(e: any) {
+      const detail = (e as CustomEvent).detail || {};
+      const rid = String(detail.roomId || "");
+      if (!rid) return;
+      if (!activeRoomId || activeRoomId !== rid) return;
+      const wasMic = !muted;
+      try { roomRef.current?.disconnect(); } catch {}
+      roomRef.current = null;
+      setTimeout(() => { connect(rid, { mic: wasMic }).catch(() => {}); }, 50);
+    }
+    window.addEventListener("weered:voice:permission", handler as any);
+    return () => window.removeEventListener("weered:voice:permission", handler as any);
+  }, [activeRoomId, muted, connect]);
+
   const toggleMute = useCallback(() => {
     const room = roomRef.current; if (!room) return;
     const next = !muted;

@@ -10,6 +10,7 @@ import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
 import CopyButton from "../CopyButton";
+import { weeredToast } from "../../lib/toast";
 
 // ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
 
@@ -106,6 +107,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>("voice");
 
+  // ── Solo viewing — when true, this user's module switches don't
+  // broadcast and incoming module:state events are ignored. Lets one
+  // user watch Twitch while the next watches YouTube in the same room.
+  // Persisted per-room so it survives reload.
+  const SOLO_KEY = `weered:room:${roomId}:solo`;
+  const [soloViewing, setSoloViewing] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem(SOLO_KEY) === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(SOLO_KEY, soloViewing ? "1" : "0"); } catch {}
+  }, [soloViewing, SOLO_KEY]);
+  const soloRef = useRef(soloViewing);
+  useEffect(() => { soloRef.current = soloViewing; }, [soloViewing]);
+
   // Responsive chat width
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -170,7 +187,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   // Lobby-specific theme takeover — persist into room pages too
   useEffect(() => {
-    const THEMEABLE = new Set<string>(["windrose", "destiny2"]);
+    const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd"]);
     const id = lobbyContext?.id;
     if (id && THEMEABLE.has(id)) {
       document.documentElement.setAttribute("data-weered-lobby", id);
@@ -255,6 +272,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       const detail = ev?.detail;
       if (!detail || detail.roomId !== roomId) return;
       if (selfSetRef.current) { selfSetRef.current = false; return; }
+      // Solo viewing: ignore module changes that come from other users.
+      if (soloRef.current) return;
 
       const mod = detail.activeModule;
       if (!mod || !mod.mode) {
@@ -389,7 +408,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [about,       setAbout      ] = useState("");
   const [links,       setLinks      ] = useState<string[]>([]);
   const [newLink,     setNewLink    ] = useState("");
-  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     try {
@@ -422,8 +440,25 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     const newMode = stageMode === id ? null : id;
+    // Disabled-modules guard: the picker should refuse to switch to a
+    // module the owner has disabled. Earlier this check only lived inside
+    // setModuleState (in WeeredProvider), so the local stageMode flipped
+    // before we bailed — user saw the tab change visually even when the
+    // broadcast got blocked. Guard at the click site too.
+    if (newMode) {
+      const disabled: string[] = (w?.meta?.disabledModules as string[] | undefined) || [];
+      const isStaff = ["GOD", "STAFF", "SUPPORT", "ADMIN"].includes(String(w?.globalRole || w?.me?.globalRole || "USER").toUpperCase());
+      const meId = String(w?.me?.id || "");
+      const isOwner = !!(meId && w?.meta?.ownerId === meId);
+      if (disabled.includes(newMode) && !isStaff && !isOwner) {
+        weeredToast.error(`The "${newMode}" module is disabled in this room.`);
+        return;
+      }
+    }
     setStageMode(newMode);
     selfSetRef.current = true;
+    // Solo viewing: skip the broadcast — the room state stays as it was.
+    if (soloViewing) return;
     if (newMode) {
       // Broadcast the new module — for twitch/browser, content will be set when user enters a channel/URL
       const opts: any = {};
@@ -443,80 +478,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     : "";
 
   // ─── Details panel ────────────────────────────────────────────────────────
-  // Is the viewer the room owner? Enables the appearance editor card.
+  // Effective-owner check: actual room owner OR global staff/god roles.
+  // Mods get their own controls via isMod (passed separately to widgets
+  // that distinguish — appearance editor stays owner-only).
   const meId: string = String(w?.me?.id || "");
   const roomOwnerId: string = String(w?.meta?.ownerId || "");
-  const isRoomOwner = !!meId && meId === roomOwnerId;
-
-  const detailsPanel = (
-    <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0 pr-0.5">
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-        <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35 mb-1.5">Room</div>
-        <div className="text-sm font-semibold truncate mb-0.5">{roomLabel}</div>
-        <div className="text-[11px] text-white/35 truncate font-mono mb-2">{roomId}</div>
-        <div className="flex gap-2">
-          <CopyButton value={roomId} label="Copy id" copiedLabel="Copied" className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors" />
-          <CopyButton value={shareUrl} label="Copy link" copiedLabel="Copied" className="text-[11px] rounded-full border border-white/10 px-2.5 py-1 hover:bg-white/[0.07] text-white/50 transition-colors" />
-        </div>
-      </div>
-
-      {isRoomOwner && (
-        <RoomAppearanceEditor
-          roomId={roomId}
-          initial={{
-            iconUrl: w?.meta?.iconUrl || "",
-            bannerUrl: w?.meta?.bannerUrl || "",
-            accentColor: w?.meta?.accentColor || "",
-            description: w?.meta?.description || "",
-          }}
-        />
-      )}
-
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35">About</div>
-          <span className="text-[9px] rounded-full border border-white/10 px-2 py-0.5 text-white/30">local</span>
-        </div>
-        <textarea
-          value={about}
-          onChange={(e) => setAbout(e.target.value)}
-          rows={3}
-          placeholder="Description, rules, context..."
-          className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-[12px] text-white/70 placeholder:text-white/25 outline-none focus:border-white/20 resize-none"
-        />
-      </div>
-
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35">Links</div>
-          <span className="text-[9px] rounded-full border border-white/10 px-2 py-0.5 text-white/30">local</span>
-        </div>
-        <div className="flex gap-2 mb-2">
-          <input
-            value={newLink}
-            onChange={(e) => setNewLink(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addLink()}
-            placeholder="Paste a link..."
-            className="flex-1 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[12px] text-white/70 placeholder:text-white/25 outline-none focus:border-white/20"
-          />
-          <button type="button" onClick={addLink} className="rounded-lg border border-violet-300/20 bg-violet-500/10 px-3 py-1.5 text-[12px] text-violet-200/70 font-semibold hover:bg-violet-500/15 transition-colors">Add</button>
-        </div>
-        {links.length > 0 ? (
-          <div className="space-y-1.5">
-            {links.map((v) => (
-              <div key={v} className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/10 px-3 py-2">
-                <a className="text-[12px] text-white/60 truncate flex-1 hover:underline" href={v} target="_blank" rel="noreferrer">{v}</a>
-                <CopyButton value={v} label="copy" copiedLabel="copied" className="text-[10px] text-white/35 hover:text-white/60 flex-shrink-0" />
-                <button type="button" onClick={() => removeLink(v)} className="text-[10px] text-white/35 hover:text-red-400/70 flex-shrink-0">&times;</button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-[12px] text-white/40">No links yet. Paste one above.</div>
-        )}
-      </div>
-    </div>
-  );
+  const myGlobalRole = String(w?.globalRole || w?.me?.globalRole || "USER").toUpperCase();
+  const isStaffGlobal = ["GOD", "STAFF", "SUPPORT"].includes(myGlobalRole);
+  const isRoomOwner = (!!meId && meId === roomOwnerId) || isStaffGlobal;
+  const isRoomMod = !!(w?.meta?.mods && Array.isArray(w.meta.mods) && w.meta.mods.includes(meId)) || isStaffGlobal;
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -561,7 +531,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         lobbyName={lobbyContext?.name || w?.meta?.lobbyName || null}
         lobbyLogo={lobbyContext?.logoUrl || w?.meta?.lobbyLogo || null}
         onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
-        onDetailsClick={() => setShowDetails(d => !d)}
         onLeave={() => {
           try { w?.leave?.(); } catch {}
           const lobbyId = lobbyContext?.id;
@@ -571,14 +540,29 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             window.location.href = "/home";
           }
         }}
-        showDetails={showDetails}
+      />
+
+      {/* ── Member toolbar — solo viewing + raise hand. Always visible
+          to all members; admin-only voice settings live in the Details
+          panel. ── */}
+      <RoomMemberToolbar
+        soloViewing={soloViewing}
+        setSoloViewing={setSoloViewing}
+        voiceState={w?.voiceByRoom?.[`room:${roomId}`] || w?.voiceByRoom?.[roomId] || null}
+        isOwner={!!isRoomOwner}
+        isMod={!!isRoomMod}
+        meId={String(w?.me?.id || "")}
+        onRaise={() => w?.raiseHand?.()}
+        onLower={() => w?.lowerHand?.()}
       />
 
       {/* ── Launch Pad (MPlayer-style game launcher) ── */}
       <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
-      {/* ── Voice available prompt — hidden when Voice tab is active (VoiceStage has its own) ── */}
-      {voicePrompt && stageMode !== "voice" && voice.connState !== "connected" && voice.connState !== "connecting" && (
+      {/* ── Voice available prompt — canonical Join CTA across every
+          module tab. Hidden once the user is connected to voice. The
+          inline join in RoomStage was removed to avoid duplication. ── */}
+      {voicePrompt && voice.connState !== "connected" && voice.connState !== "connecting" && (
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
@@ -866,36 +850,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   </button>
                 );
               })}
-              <button
-                type="button"
-                onClick={() => setShowDetails(d => !d)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  padding: "6px 14px", borderRadius: 999,
-                  fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-                  fontFamily: "monospace", cursor: "pointer",
-                  marginLeft: "auto", transition: "all 0.15s ease",
-                  border: showDetails ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.06)",
-                  background: showDetails ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.02)",
-                  color: showDetails ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)",
-                }}
-                onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}}
-                onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; }}}
-              >
-                {showDetails ? "✕ close" : "⋯ details"}
-              </button>
             </div>
-          </div>
-        </div>
-
-        {/* ── Details side panel ── */}
-        <div
-          className="flex-shrink-0 border-l border-white/[0.07] overflow-hidden transition-all duration-300 ease-in-out"
-          style={{ width: showDetails ? 240 : 0 }}
-        >
-          <div className="w-[240px] h-full overflow-y-auto p-3 flex flex-col gap-0">
-            <div className="text-[10px] font-bold tracking-[0.12em] uppercase text-white/30 mb-3">Details</div>
-            {detailsPanel}
           </div>
         </div>
 
@@ -1162,123 +1117,92 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   );
 }
 
-// ── Room appearance editor — owner-only card in the Details panel ───────────
-// Intentionally kept tiny: URL paste + color picker + short description. File
-// upload comes later; right now this unblocks Windrose rooms getting their
-// own faces like the pinned/event rooms already have.
-function RoomAppearanceEditor({
-  roomId,
-  initial,
+// ── Room Member Toolbar ────────────────────────────────────────────────
+// Slim bar mounted below the room header. Member-facing actions only —
+// solo viewing toggle (always shown) and raise-hand (only in QUEUED mode
+// when the user isn't already a speaker/mod/owner). Owner/mod controls
+// stay in the Details panel.
+
+function RoomMemberToolbar({
+  soloViewing,
+  setSoloViewing,
+  voiceState,
+  isOwner,
+  isMod,
+  meId,
+  onRaise,
+  onLower,
 }: {
-  roomId: string;
-  initial: { iconUrl: string; bannerUrl: string; accentColor: string; description: string };
+  soloViewing: boolean;
+  setSoloViewing: (v: boolean) => void;
+  voiceState: { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] } | null | undefined;
+  isOwner: boolean;
+  isMod: boolean;
+  meId: string;
+  onRaise: () => void;
+  onLower: () => void;
 }) {
-  const [iconUrl, setIconUrl] = useState(initial.iconUrl || "");
-  const [bannerUrl, setBannerUrl] = useState(initial.bannerUrl || "");
-  const [accentColor, setAccentColor] = useState(initial.accentColor || "");
-  const [description, setDescription] = useState(initial.description || "");
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const mode = voiceState?.mode || "OPEN";
+  const queue = voiceState?.queue || [];
+  const speakers = voiceState?.speakers || [];
+  const handRaised = queue.includes(meId);
+  const isSpeaker = speakers.includes(meId);
 
-  const dirty =
-    iconUrl !== (initial.iconUrl || "") ||
-    bannerUrl !== (initial.bannerUrl || "") ||
-    accentColor !== (initial.accentColor || "") ||
-    description !== (initial.description || "");
-
-  async function save() {
-    setSaving(true);
-    setMsg(null);
-    try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-      const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
-      const body: any = {
-        iconUrl: iconUrl.trim() || null,
-        bannerUrl: bannerUrl.trim() || null,
-        accentColor: accentColor.trim() || null,
-        description: description,
-      };
-      const r = await fetch(`${API}/rooms/${encodeURIComponent(roomId)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
-      const j = await r.json();
-      if (j?.ok) setMsg({ kind: "ok", text: "Saved. Everyone in the room sees it now." });
-      else setMsg({ kind: "err", text: j?.error || "Save failed." });
-    } catch {
-      setMsg({ kind: "err", text: "Network error." });
-    } finally {
-      setSaving(false);
-    }
-  }
+  // What goes here:
+  //   - Solo viewing toggle: always visible (per-user preference)
+  //   - Raise hand: only in QUEUED mode for non-mod non-speaker
+  //   - Speaker badge: in QUEUED mode if you're an approved speaker
+  const showRaise   = mode === "QUEUED" && !isMod && !isOwner && !isSpeaker;
+  const showSpeaker = mode === "QUEUED" && isSpeaker && !isMod && !isOwner;
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] font-semibold tracking-widest uppercase text-white/35">Appearance</div>
-        <span className="text-[9px] rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-amber-200/70">owner</span>
-      </div>
+    <div className="flex items-center gap-2 px-4 py-1.5 border-b border-white/[0.05]" style={{ background: "rgba(8,8,14,0.4)" }}>
+      <button
+        type="button"
+        onClick={() => setSoloViewing(!soloViewing)}
+        title={soloViewing
+          ? "Solo viewing on — your module switches don't broadcast and others' don't affect you."
+          : "Sync viewing — module switches are shared with the room."}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase transition-colors ${
+          soloViewing
+            ? "border-violet-400/40 bg-violet-500/[0.10] text-violet-200"
+            : "border-white/[0.10] bg-white/[0.02] text-white/45 hover:bg-white/[0.05]"
+        }`}
+      >
+        <span style={{ fontSize: 11 }}>{soloViewing ? "◉" : "○"}</span>
+        {soloViewing ? "Solo" : "Synced"}
+      </button>
 
-      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Icon URL</label>
-      <input
-        value={iconUrl}
-        onChange={(e) => setIconUrl(e.target.value)}
-        placeholder="https://…/icon.png"
-        className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20 mb-2 font-mono"
-      />
-
-      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Banner URL</label>
-      <input
-        value={bannerUrl}
-        onChange={(e) => setBannerUrl(e.target.value)}
-        placeholder="https://…/banner.jpg"
-        className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20 mb-2 font-mono"
-      />
-
-      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Accent color</label>
-      <div className="flex items-center gap-2 mb-2">
-        <input
-          type="color"
-          value={accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#5800E5"}
-          onChange={(e) => setAccentColor(e.target.value)}
-          className="h-7 w-10 rounded border border-white/10 bg-transparent cursor-pointer"
-        />
-        <input
-          value={accentColor}
-          onChange={(e) => setAccentColor(e.target.value)}
-          placeholder="#5800E5"
-          className="flex-1 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20 font-mono"
-        />
-        {accentColor && (
-          <button type="button" onClick={() => setAccentColor("")} className="text-[10px] text-white/35 hover:text-white/70 px-1">clear</button>
-        )}
-      </div>
-
-      <label className="block text-[10px] uppercase tracking-wider text-white/40 mb-1">Description</label>
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        rows={2}
-        placeholder="What is this room about?"
-        className="w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-[12px] text-white/70 placeholder:text-white/25 outline-none focus:border-white/20 resize-none mb-2"
-      />
-
-      <div className="flex items-center gap-2">
+      {showRaise && (
         <button
           type="button"
-          disabled={!dirty || saving}
-          onClick={save}
-          className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-1.5 text-[11px] text-amber-200/80 font-semibold hover:bg-amber-400/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={handRaised ? onLower : onRaise}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[10px] font-semibold tracking-wider uppercase transition-colors ${
+            handRaised
+              ? "border-amber-300/45 bg-amber-400/15 text-amber-100"
+              : "border-amber-300/30 bg-amber-400/[0.06] text-amber-200/85 hover:bg-amber-400/15"
+          }`}
         >
-          {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+          <span style={{ fontSize: 11 }}>✋</span>
+          {handRaised ? `Hand raised · #${queue.indexOf(meId) + 1}` : "Raise hand"}
         </button>
-        {msg && (
-          <span className={`text-[10px] ${msg.kind === "ok" ? "text-emerald-300/80" : "text-red-300/80"}`}>
-            {msg.text}
-          </span>
-        )}
-      </div>
+      )}
+
+      {showSpeaker && (
+        <span
+          title="Mod approved you to speak. You can broadcast voice now."
+          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/[0.08] px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-emerald-200/85"
+        >
+          <span style={{ fontSize: 11 }}>●</span> Approved speaker
+        </span>
+      )}
+
+      {mode === "LISTEN_ONLY" && !isMod && !isOwner && (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white/35">
+          Listen only
+        </span>
+      )}
     </div>
   );
 }
+

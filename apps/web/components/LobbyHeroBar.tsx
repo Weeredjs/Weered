@@ -54,6 +54,16 @@ export default function LobbyHeroBar({
   const ROTATING_BANNERS: Record<string, string[]> = {
     STUDY: ["/brand/lobbies/study-banner-1.png", "/brand/lobbies/study-banner-2.png", "/brand/lobbies/study-banner-3.png", "/brand/lobbies/study-banner-4.png"],
     NHL: ["/brand/lobbies/nhl-banner-1.png", "/brand/lobbies/nhl-banner-2.png", "/brand/lobbies/nhl-banner-3.png", "/brand/lobbies/nhl-banner-4.png"],
+    DND: [
+      "/brand/lobbies/dnd/banners/banner-01.webp",
+      "/brand/lobbies/dnd/banners/banner-02.webp",
+      "/brand/lobbies/dnd/banners/banner-03.webp",
+      "/brand/lobbies/dnd/banners/banner-04.webp",
+      "/brand/lobbies/dnd/banners/banner-05.webp",
+      "/brand/lobbies/dnd/banners/banner-06.webp",
+      "/brand/lobbies/dnd/banners/banner-07.webp",
+      "/brand/lobbies/dnd/banners/banner-08.webp",
+    ],
   };
   const [rotatingBanner, setRotatingBanner] = useState<string | null>(null);
   useEffect(() => {
@@ -121,18 +131,20 @@ export default function LobbyHeroBar({
         {/* Left: identity */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 12 }}>
 
-          {/* Logo + name */}
+          {/* Logo + name. Lobbies whose logo art already includes its own
+              frame (D&D shield, etc.) opt out of the inner padding + dark
+              backdrop so the art fills the chip cleanly. */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{
               width: 56, height: 56, borderRadius: 14, flexShrink: 0,
-              background: logoUrl ? "rgba(0,0,0,0.35)" : `${accent}28`,
+              background: logoUrl ? (lobbyId === "dnd" ? "transparent" : "rgba(0,0,0,0.35)") : `${accent}28`,
               border: `2px solid ${accent}60`,
               display: "flex", alignItems: "center", justifyContent: "center",
               overflow: "hidden",
               boxShadow: `0 0 28px ${accent}38, 0 4px 14px rgba(0,0,0,0.5)`,
             }}>
               {logoUrl
-                ? <img src={logoUrl} alt={lobbyName} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 7 }} />
+                ? <img src={logoUrl} alt={lobbyName} style={{ width: "100%", height: "100%", objectFit: "cover", padding: lobbyId === "dnd" ? 0 : 7 }} />
                 : <span style={{ fontSize: 24, fontWeight: 900, color: accent, letterSpacing: "-1px" }}>{initial}</span>
               }
             </div>

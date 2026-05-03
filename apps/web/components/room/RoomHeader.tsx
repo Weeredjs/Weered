@@ -106,9 +106,7 @@ export default function RoomHeader({
   lobbyName,
   lobbyLogo,
   onPillClick,
-  onDetailsClick,
   onLeave,
-  showDetails,
 }: {
   title: string;
   memberCount?: number;
@@ -122,9 +120,7 @@ export default function RoomHeader({
   lobbyName?: string | null;
   lobbyLogo?: string | null;
   onPillClick?: (id: string) => void;
-  onDetailsClick?: () => void;
   onLeave?: () => void;
-  showDetails?: boolean;
 }) {
   const activeModule = pills?.find(p => p.active);
   // Room-owner accent takes priority over active-module tint. Gives rooms
@@ -294,27 +290,6 @@ export default function RoomHeader({
                 {count}
               </span>
             </div>
-
-            {/* Details toggle */}
-            {onDetailsClick && (
-              <button
-                type="button"
-                onClick={onDetailsClick}
-                title={showDetails ? "Close details" : "Room details"}
-                style={{
-                  width: 28, height: 28, borderRadius: 7,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-                  border: showDetails ? "1px solid rgba(255,255,255,.15)" : "1px solid rgba(255,255,255,.06)",
-                  background: showDetails ? "rgba(255,255,255,.07)" : "rgba(255,255,255,.02)",
-                  color: showDetails ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.22)",
-                }}
-                onMouseEnter={e => { if (!showDetails) { e.currentTarget.style.background = "rgba(255,255,255,.05)"; e.currentTarget.style.color = "rgba(255,255,255,.45)"; } }}
-                onMouseLeave={e => { if (!showDetails) { e.currentTarget.style.background = "rgba(255,255,255,.02)"; e.currentTarget.style.color = "rgba(255,255,255,.22)"; } }}
-              >
-                {showDetails ? "✕" : "⋯"}
-              </button>
-            )}
 
             {/* Leave button */}
             {onLeave && (

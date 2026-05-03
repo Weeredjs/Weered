@@ -363,17 +363,19 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const statusLabel = locked ? "LOCKED" : slowSec > 0 ? `SLOW ${slowSec}s` : "UNLOCKED";
 
   return (
-    <div style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
+    <div className="weered-rrr" style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 13 }}>Control Panel</div>
-          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2 }}>context: {roomLabel}</div>
+      {/* Header — status pill moved to its own row below the title so
+          it doesn't collide with the absolute-positioned HIDE button at
+          the top-right of the rail (rendered by ShellGate). */}
+      <div style={{ marginBottom: 4, paddingRight: 60 }}>
+        <div className="weered-rrr-title" style={{ fontWeight: 700, fontSize: 13 }}>Control Panel</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+          <span style={{ fontSize: 11, opacity: 0.55 }}>context: {roomLabel}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".5px", padding: "2px 8px", borderRadius: 999, background: locked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${statusColor}40`, color: statusColor }}>
+            {statusLabel}
+          </span>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".5px", padding: "3px 8px", borderRadius: 999, background: locked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${statusColor}40`, color: statusColor }}>
-          {statusLabel}
-        </span>
       </div>
 
       {/* Quick copy */}
@@ -387,7 +389,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       {allowed && (
         <details open style={{ marginTop: 10 }}>
           <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(167,139,250,.45)", background: "rgba(124,58,237,.18)", userSelect: "none" }}>
-            <span style={{ color: "rgb(233,220,255)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODERATION</span>
+            <span className="weered-rrr-section-label" style={{ color: "rgb(233,220,255)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODERATION</span>
             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
               {knocks.length > 0 && (
                 <span style={{ fontSize: 9, fontWeight: 900, background: "rgba(245,158,11,.85)", color: "#000", borderRadius: 5, padding: "1px 5px" }}>
@@ -576,6 +578,70 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </details>
       )}
 
+      {/* ── Voice settings (mode + queue + speakers) ── */}
+      {allowed && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>VOICE</span>
+            <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>
+              {(ctx?.voiceByRoom?.[`room:${roomId}`]?.mode || ctx?.voiceByRoom?.[roomId]?.mode || "OPEN").toLowerCase()}
+            </span>
+          </summary>
+          <div style={{ marginTop: 8, padding: "0 4px" }}>
+            <VoiceQueueControls
+              isOwner={canMod(myRoomRole) && myRoomRole === "owner" || canMod(myGlobalRole)}
+              isMod={canMod(myRoomRole) || canMod(myGlobalRole)}
+              voiceState={ctx?.voiceByRoom?.[`room:${roomId}`] || ctx?.voiceByRoom?.[roomId] || null}
+              users={people}
+              onSetMode={(m) => ctx?.setVoiceMode?.(m)}
+              onApprove={(uid) => ctx?.approveSpeaker?.(uid)}
+              onRevoke={(uid) => ctx?.revokeSpeaker?.(uid)}
+            />
+          </div>
+        </details>
+      )}
+
+      {/* ── Modules (owner: disable individual modules in this room) ── */}
+      {allowed && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODULES</span>
+            {((ctx?.meta?.disabledModules as string[]) || []).length > 0 && (
+              <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)", fontWeight: 700 }}>
+                {((ctx?.meta?.disabledModules as string[]) || []).length} off
+              </span>
+            )}
+          </summary>
+          <div style={{ marginTop: 8, padding: "0 4px" }}>
+            <RoomModulesEditor
+              roomId={roomId}
+              initial={{ disabledModules: (ctx?.meta?.disabledModules as string[]) || [] }}
+            />
+          </div>
+        </details>
+      )}
+
+      {/* ── Appearance (owner: icon, banner, accent, description) ── */}
+      {allowed && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>APPEARANCE</span>
+            <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>owner</span>
+          </summary>
+          <div style={{ marginTop: 8, padding: "0 4px" }}>
+            <RoomAppearanceEditor
+              roomId={roomId}
+              initial={{
+                iconUrl: ctx?.meta?.iconUrl || "",
+                bannerUrl: ctx?.meta?.bannerUrl || "",
+                accentColor: ctx?.meta?.accentColor || "",
+                description: ctx?.meta?.description || "",
+              }}
+            />
+          </div>
+        </details>
+      )}
+
       {/* Debug */}
       {allowed && (
         <details style={{ marginTop: 8 }}>
@@ -608,6 +674,291 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
           targetName={ctx?.meta?.name || ctx?.metaByRoom?.[roomId]?.name || roomId}
           onClose={() => setShowInvite(false)}
         />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Owner/mod cards migrated from the old Details slide-in panel. They live
+// here now so the right rail is the single admin surface for a room.
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── Room Appearance editor (owner) ──
+function RoomAppearanceEditor({
+  roomId,
+  initial,
+}: {
+  roomId: string;
+  initial: { iconUrl: string; bannerUrl: string; accentColor: string; description: string };
+}) {
+  const [iconUrl, setIconUrl] = useState(initial.iconUrl || "");
+  const [bannerUrl, setBannerUrl] = useState(initial.bannerUrl || "");
+  const [accentColor, setAccentColor] = useState(initial.accentColor || "");
+  const [description, setDescription] = useState(initial.description || "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const dirty =
+    iconUrl !== (initial.iconUrl || "") ||
+    bannerUrl !== (initial.bannerUrl || "") ||
+    accentColor !== (initial.accentColor || "") ||
+    description !== (initial.description || "");
+
+  async function save() {
+    setSaving(true); setMsg(null);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+      const r = await fetch(`${API_BASE}/rooms/${encodeURIComponent(roomId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          iconUrl: iconUrl.trim() || null,
+          bannerUrl: bannerUrl.trim() || null,
+          accentColor: accentColor.trim() || null,
+          description,
+        }),
+      });
+      const j = await r.json();
+      if (j?.ok) setMsg({ kind: "ok", text: "Saved." });
+      else setMsg({ kind: "err", text: j?.error || "Save failed." });
+    } catch { setMsg({ kind: "err", text: "Network error." }); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Icon URL</div>
+        <input
+          value={iconUrl}
+          onChange={e => setIconUrl(e.target.value)}
+          placeholder="https://…/icon.png"
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
+        />
+      </div>
+      <div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Banner URL</div>
+        <input
+          value={bannerUrl}
+          onChange={e => setBannerUrl(e.target.value)}
+          placeholder="https://…/banner.jpg"
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
+        />
+      </div>
+      <div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Accent color</div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="color" value={accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#5800E5"} onChange={e => setAccentColor(e.target.value)} style={{ width: 36, height: 28, borderRadius: 6, border: "1px solid rgba(255,255,255,.10)", background: "transparent", cursor: "pointer" }} />
+          <input value={accentColor} onChange={e => setAccentColor(e.target.value)} placeholder="#5800E5" style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", fontFamily: "monospace" }} />
+          {accentColor && (<button type="button" onClick={() => setAccentColor("")} style={{ background: "none", border: "none", color: "rgba(255,255,255,.4)", fontSize: 10, cursor: "pointer" }}>clear</button>)}
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Description</div>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          rows={2}
+          placeholder="What is this room about?"
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 12, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", resize: "none" }}
+        />
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <button type="button" disabled={!dirty || saving} onClick={save} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(253,230,138)", fontSize: 11, fontWeight: 700, cursor: !dirty || saving ? "default" : "pointer", opacity: !dirty || saving ? 0.4 : 1 }}>
+          {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+        </button>
+        {msg && <span style={{ fontSize: 10, color: msg.kind === "ok" ? "rgb(110,231,183)" : "rgba(252,165,165,.9)" }}>{msg.text}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ── Room Modules editor (owner) — toggle modules to disable ──
+const TOGGLEABLE_MODULES: { id: string; label: string }[] = [
+  { id: "voice", label: "Voice" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" },
+  { id: "browser", label: "Browser" }, { id: "screen", label: "Screen" }, { id: "video", label: "Video" },
+  { id: "article", label: "Article" }, { id: "fakeout", label: "FakeOut" }, { id: "poker", label: "Poker" },
+  { id: "study", label: "Study" }, { id: "dnd", label: "D&D" }, { id: "destiny", label: "Destiny 2" },
+  { id: "league", label: "LoL" }, { id: "fortnite", label: "Fortnite" }, { id: "cs2", label: "CS2" },
+  { id: "dota2", label: "Dota 2" }, { id: "pubg", label: "PUBG" }, { id: "hq", label: "HQ" },
+];
+
+function RoomModulesEditor({
+  roomId,
+  initial,
+}: {
+  roomId: string;
+  initial: { disabledModules: string[] };
+}) {
+  const [disabled, setDisabled] = useState<Set<string>>(() => new Set(initial.disabledModules || []));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const initialSet = useMemo(() => new Set(initial.disabledModules || []), [initial.disabledModules]);
+  const dirty = disabled.size !== initialSet.size || Array.from(disabled).some(m => !initialSet.has(m));
+
+  function toggle(mod: string) {
+    setDisabled(prev => {
+      const next = new Set(prev);
+      if (next.has(mod)) next.delete(mod); else next.add(mod);
+      return next;
+    });
+    setMsg(null);
+  }
+  async function save() {
+    setSaving(true); setMsg(null);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+      const r = await fetch(`${API_BASE}/rooms/${encodeURIComponent(roomId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ disabledModules: Array.from(disabled) }),
+      });
+      const j = await r.json();
+      if (j?.ok) setMsg({ kind: "ok", text: "Saved." });
+      else setMsg({ kind: "err", text: j?.error || "Save failed." });
+    } catch { setMsg({ kind: "err", text: "Network error." }); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ fontSize: 10, opacity: 0.55, lineHeight: 1.4 }}>
+        Click a module to disable it in this room. Members get a toast if they try to switch to it.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+        {TOGGLEABLE_MODULES.map(m => {
+          const isOff = disabled.has(m.id);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => toggle(m.id)}
+              style={{
+                padding: "5px 8px",
+                borderRadius: 6,
+                fontSize: 11,
+                fontFamily: "monospace",
+                textAlign: "left",
+                cursor: "pointer",
+                border: `1px solid ${isOff ? "rgba(239,68,68,.35)" : "rgba(255,255,255,.08)"}`,
+                background: isOff ? "rgba(239,68,68,.08)" : "rgba(255,255,255,.02)",
+                color: isOff ? "rgba(252,165,165,.85)" : "rgba(243,244,246,.55)",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, border: "1px solid", borderColor: isOff ? "rgba(252,165,165,.6)" : "rgba(255,255,255,.2)", background: isOff ? "rgba(239,68,68,.4)" : "transparent" }} />
+              {m.label}{isOff && " ×"}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <button type="button" disabled={!dirty || saving} onClick={save} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(253,230,138)", fontSize: 11, fontWeight: 700, cursor: !dirty || saving ? "default" : "pointer", opacity: !dirty || saving ? 0.4 : 1 }}>
+          {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+        </button>
+        {msg && <span style={{ fontSize: 10, color: msg.kind === "ok" ? "rgb(110,231,183)" : "rgba(252,165,165,.9)" }}>{msg.text}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ── Voice Queue Controls (mod/owner) — mode picker + queue + speakers ──
+function VoiceQueueControls({
+  isOwner,
+  isMod,
+  voiceState,
+  users,
+  onSetMode,
+  onApprove,
+  onRevoke,
+}: {
+  isOwner: boolean;
+  isMod: boolean;
+  voiceState: { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] } | null | undefined;
+  users: any[];
+  onSetMode: (m: "OPEN" | "QUEUED" | "LISTEN_ONLY") => void;
+  onApprove: (userId: string) => void;
+  onRevoke: (userId: string) => void;
+}) {
+  const mode = voiceState?.mode || "OPEN";
+  const queue = voiceState?.queue || [];
+  const speakers = voiceState?.speakers || [];
+  const usersById = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const u of users || []) m.set(String(u.id || ""), u);
+    return m;
+  }, [users]);
+  if (!isOwner && !isMod) return null;
+
+  const MODES: { id: "OPEN" | "QUEUED" | "LISTEN_ONLY"; label: string; hint: string }[] = [
+    { id: "OPEN",        label: "Open",   hint: "Anyone can speak" },
+    { id: "QUEUED",      label: "Queued", hint: "Raise hand → mod approves" },
+    { id: "LISTEN_ONLY", label: "Listen", hint: "Mods/owner only" },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Mode</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+          {MODES.map(m => {
+            const active = mode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onSetMode(m.id)}
+                title={m.hint}
+                style={{
+                  padding: "5px 6px", borderRadius: 6,
+                  fontSize: 10, fontWeight: 700, letterSpacing: ".4px",
+                  textAlign: "left", cursor: "pointer",
+                  border: active ? "1px solid rgba(245,158,11,.45)" : "1px solid rgba(255,255,255,.08)",
+                  background: active ? "rgba(245,158,11,.12)" : "rgba(255,255,255,.02)",
+                  color: active ? "rgb(253,230,138)" : "rgba(243,244,246,.55)",
+                }}
+              >
+                <div style={{ fontSize: 11 }}>{m.label}</div>
+                <div style={{ fontSize: 9, opacity: 0.6, fontWeight: 500, lineHeight: 1.2, marginTop: 2 }}>{m.hint}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {mode !== "OPEN" && queue.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Queue ({queue.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {queue.map(uid => {
+              const u = usersById.get(uid);
+              return (
+                <div key={uid} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 6, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)", padding: "4px 8px" }}>
+                  <span style={{ fontSize: 11, color: "rgba(243,244,246,.75)", fontFamily: "monospace" }}>{u?.name || uid}</span>
+                  <button type="button" onClick={() => onApprove(uid)} style={{ padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(16,185,129,.3)", background: "rgba(16,185,129,.10)", color: "rgb(167,243,208)", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Approve</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {mode !== "OPEN" && speakers.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Speakers ({speakers.length})</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {speakers.map(uid => {
+              const u = usersById.get(uid);
+              return (
+                <span key={uid} style={{ display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, border: "1px solid rgba(16,185,129,.25)", background: "rgba(16,185,129,.08)", padding: "2px 8px", fontSize: 10, color: "rgba(167,243,208,.85)" }}>
+                  {u?.name || uid}
+                  <button type="button" onClick={() => onRevoke(uid)} title="Revoke" style={{ background: "none", border: "none", color: "rgba(167,243,208,.6)", cursor: "pointer", marginLeft: 2 }}>×</button>
+                </span>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );

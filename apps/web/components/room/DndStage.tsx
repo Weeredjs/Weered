@@ -181,8 +181,8 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.9)" }}>Initiative Tracker</span>
-          <span style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginLeft: 8 }}>Round {round}</span>
+          <span className="dnd-heading" style={{ fontSize: 18, color: "#F5D58A" }}>Initiative Tracker</span>
+          <span className="dnd-serif" style={{ fontSize: 12, color: "rgba(201,168,120,.65)", marginLeft: 8, fontStyle: "italic" }}>Round {round}</span>
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           <button style={S.btnPri} onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "+ Add"}</button>
@@ -351,71 +351,163 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
-      {/* Result display */}
-      <div style={{
-        textAlign: "center", padding: "24px 16px", borderRadius: 12,
-        border: `1px solid ${ACCENT}33`,
-        background: lastRoll?.isNat20 ? "rgba(34,197,94,.08)" : lastRoll?.isNat1 ? "rgba(239,68,68,.08)" : `${ACCENT}06`,
-        boxShadow: showFlash ? `0 0 30px ${lastRoll?.isNat20 ? "rgba(34,197,94,.25)" : lastRoll?.isNat1 ? "rgba(239,68,68,.25)" : `${ACCENT}18`}` : "none",
-        transition: "all .3s",
+      {/* Brazier — stone-mouth result panel with pulsing coal glow */}
+      <div className="dnd-brazier" style={{
+        boxShadow: showFlash
+          ? (lastRoll?.isNat20 ? "0 0 56px rgba(122,209,88,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+            : lastRoll?.isNat1 ? "0 0 50px rgba(239,68,68,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+            : "0 0 48px rgba(232,160,74,0.40), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)")
+          : undefined,
       }}>
         {lastRoll ? (
           <>
-            <div style={{ fontSize: 40, fontWeight: 900, color: lastRoll.isNat20 ? "#22C55E" : lastRoll.isNat1 ? "#EF5350" : "rgba(243,244,246,.95)", lineHeight: 1, marginBottom: 6 }}>{lastRoll.total}</div>
-            {lastRoll.isNat20 && <div style={{ fontSize: 12, fontWeight: 800, color: "#22C55E", letterSpacing: 2 }}>NAT 20!</div>}
-            {lastRoll.isNat1 && <div style={{ fontSize: 12, fontWeight: 800, color: "#EF5350", letterSpacing: 2 }}>CRIT FAIL</div>}
-            <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 4 }}>
-              {lastRoll.roller} rolled {lastRoll.expr} [{lastRoll.rolls.join(",")}]
-              {lastRoll.modifier !== 0 && ` ${lastRoll.modifier > 0 ? "+" : ""}${lastRoll.modifier}`}
+            <div className={`dnd-brazier-result${lastRoll.isNat20 ? " is-nat20" : lastRoll.isNat1 ? " is-nat1" : ""}`}>
+              {lastRoll.total}
+            </div>
+            {lastRoll.isNat20 && <div className="dnd-brazier-tag is-nat20">NATURAL 20</div>}
+            {lastRoll.isNat1 && <div className="dnd-brazier-tag is-nat1">CRITICAL FAIL</div>}
+            <div className="dnd-brazier-expr">
+              <strong style={{ color: "#F5D58A", fontStyle: "normal" }}>{lastRoll.roller}</strong>{" rolled "}{lastRoll.expr}
+              {(lastRoll.advantage || lastRoll.disadvantage) && (
+                <span style={{ color: lastRoll.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 600 }}>
+                  {" "}({lastRoll.advantage ? "ADV" : "DIS"})
+                </span>
+              )}
+            </div>
+            <div className="dnd-brazier-rolls">
+              [{lastRoll.rolls.join(", ")}]
+              {lastRoll.dropped && lastRoll.dropped.length > 0 && (
+                <span style={{ textDecoration: "line-through", opacity: 0.4 }}> dropped: {lastRoll.dropped.join(", ")}</span>
+              )}
+              {lastRoll.modifier !== 0 && <span> {lastRoll.modifier > 0 ? "+" : ""}{lastRoll.modifier}</span>}
             </div>
           </>
         ) : (
-          <div style={{ fontSize: 28, opacity: 0.3 }}>🎲</div>
+          <>
+            <div className="dnd-brazier-d20">
+              <RoomD20Icon />
+            </div>
+            <div className="dnd-brazier-prompt">Pick a die. Cast it before the table.</div>
+          </>
         )}
       </div>
 
-      {/* Quick dice */}
-      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+      {/* Carved-stone quick-roll tiles */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {QUICK_DICE.map(d => (
-          <button key={d.label} onClick={() => doRoll(d.expr)} style={{ ...S.btnPri, flex: "1 1 48px", padding: "8px 6px", fontSize: 13, fontWeight: 800, textAlign: "center" }}>{d.label}</button>
+          <button key={d.label} onClick={() => doRoll(d.expr)} className="dnd-stone-tile">
+            {d.label}
+          </button>
         ))}
       </div>
 
       {/* Advantage / Disadvantage */}
-      <div style={{ display: "flex", gap: 6 }}>
-        <button onClick={() => doRoll("d20adv")} style={{ ...S.btn, flex: 1, fontSize: 11, fontWeight: 700, borderColor: "rgba(34,197,94,.25)", color: "#22C55E" }}>ADV</button>
-        <button onClick={() => doRoll("d20dis")} style={{ ...S.btn, flex: 1, fontSize: 11, fontWeight: 700, borderColor: "rgba(239,68,68,.25)", color: "#EF5350" }}>DIS</button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => doRoll("d20adv")} className="dnd-stone-tile dnd-stone-tile--adv" style={{ flex: 1 }}>
+          d20 Advantage
+        </button>
+        <button onClick={() => doRoll("d20dis")} className="dnd-stone-tile dnd-stone-tile--dis" style={{ flex: 1 }}>
+          d20 Disadvantage
+        </button>
       </div>
 
-      {/* Custom */}
-      <div style={{ display: "flex", gap: 6 }}>
-        <input style={{ ...S.input, flex: 1, fontSize: 12 }} placeholder="2d8+5, 4d6..." value={customExpr}
+      {/* Custom — parchment input + Cast button */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          className="dnd-parchment-input"
+          placeholder="2d8+5, d20adv, 4d6, d100..."
+          value={customExpr}
           onChange={e => setCustomExpr(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
         />
-        <button style={S.btnPri} onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}>Roll</button>
+        <button
+          className="dnd-stone-tile"
+          style={{ flex: "0 0 auto", minWidth: 78 }}
+          onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
+        >Cast</button>
       </div>
 
-      {/* Roll history */}
+      {/* Roll history — wooden ledger */}
       {history.length > 0 && (
-        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
-          <div style={{ ...S.label, display: "flex", justifyContent: "space-between" }}>
+        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+          <div className="dnd-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Roll Log</span>
-            <button style={{ ...S.btn, fontSize: 8, padding: "1px 5px" }} onClick={() => setHistory([])}>Clear</button>
+            <button
+              style={{
+                background: "transparent", border: "1px solid rgba(196,165,90,0.25)",
+                color: "rgba(201,168,120,0.6)", fontSize: 10, padding: "2px 8px",
+                borderRadius: 4, cursor: "pointer", fontFamily: "inherit", letterSpacing: ".5px",
+              }}
+              onClick={() => setHistory([])}
+            >Clear</button>
           </div>
           {history.map(r => (
-            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, background: "rgba(255,255,255,.02)" }}>
-              <span style={{ fontSize: 14, fontWeight: 800, minWidth: 32, textAlign: "center", color: r.isNat20 ? "#22C55E" : r.isNat1 ? "#EF5350" : "rgba(243,244,246,.85)" }}>{r.total}</span>
+            <div key={r.id} className={`dnd-history-row${r.isNat20 ? " is-nat20" : r.isNat1 ? " is-nat1" : ""}`}>
+              <span className="dnd-history-total">{r.total}</span>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 10, fontWeight: 600, color: ACCENT }}>{r.roller}</span>
-                <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginLeft: 4 }}>{r.expr} [{r.rolls.join(",")}]</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#F5D58A" }}>{r.roller}</span>
+                <span className="dnd-history-expr" style={{ marginLeft: 6 }}>{r.expr}</span>
+                {(r.advantage || r.disadvantage) && (
+                  <span style={{ fontSize: 10, marginLeft: 6, color: r.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 700, letterSpacing: ".5px" }}>
+                    {r.advantage ? "ADV" : "DIS"}
+                  </span>
+                )}
+                <span style={{ fontSize: 10, color: "rgba(201,168,120,0.45)", marginLeft: 6, fontFamily: "monospace" }}>
+                  [{r.rolls.join(",")}]{r.modifier ? (r.modifier > 0 ? `+${r.modifier}` : r.modifier) : ""}
+                </span>
               </div>
-              <span style={{ fontSize: 8, color: "rgba(148,163,184,.25)" }}>{new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              <span style={{ fontSize: 9, color: "rgba(201,168,120,0.35)", fontFamily: "monospace" }}>
+                {new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
             </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// SVG d20 — empty-state die in the in-room brazier. Mirrors the lobby version.
+function RoomD20Icon() {
+  return (
+    <svg width="96" height="96" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <defs>
+        <linearGradient id="dndDieFillRoom" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7F4422" />
+          <stop offset="55%" stopColor="#5D2F18" />
+          <stop offset="100%" stopColor="#3A1C0E" />
+        </linearGradient>
+        <linearGradient id="dndDieFaceRoom" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(0,0,0,0.10)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.40)" />
+        </linearGradient>
+        <linearGradient id="dndDieEdgeRoom" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F5D58A" />
+          <stop offset="100%" stopColor="#C4A55A" />
+        </linearGradient>
+      </defs>
+      <polygon
+        points="50,5 90,28 90,72 50,95 10,72 10,28"
+        fill="url(#dndDieFillRoom)"
+        stroke="url(#dndDieEdgeRoom)"
+        strokeWidth="1.5"
+      />
+      <polygon
+        points="50,18 78,67 22,67"
+        fill="url(#dndDieFaceRoom)"
+        stroke="rgba(245,213,138,0.40)"
+        strokeWidth="1"
+      />
+      <text
+        x="50" y="56"
+        textAnchor="middle"
+        fontSize="22"
+        fontWeight="700"
+        fill="#F5D58A"
+        fontFamily="var(--font-pirata), 'Pirata One', serif"
+        style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.6))" }}
+      >20</text>
+    </svg>
   );
 }
 
@@ -518,17 +610,15 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
   const [tab, setTab] = useState<StageTab>("initiative");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      {/* Tab bar */}
-      <div style={{ display: "flex", gap: 4, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
+    <div className="weered-dnd-modules" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
+      {/* Tab bar — parchment-pill in-room sub-lectern */}
+      <div style={{ display: "flex", gap: 5, padding: "10px 12px", borderBottom: "1px solid rgba(196,165,90,.18)", flexShrink: 0, flexWrap: "wrap" }}>
         {STAGE_TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            ...S.btn, fontSize: 11, padding: "5px 10px", display: "flex", alignItems: "center", gap: 4,
-            borderColor: tab === t.id ? `${ACCENT}55` : undefined,
-            background: tab === t.id ? `${ACCENT}15` : undefined,
-            color: tab === t.id ? ACCENT : undefined,
-            fontWeight: tab === t.id ? 700 : 500,
-          }}>
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`weered-dnd-tab weered-dnd-tab--small${tab === t.id ? " is-active" : ""}`}
+          >
             <span>{t.icon}</span> {t.label}
           </button>
         ))}

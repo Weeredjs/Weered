@@ -36,8 +36,19 @@ function lobbyHref(id: string): string {
   if (clean.startsWith("room:")) clean = clean.slice(5);
   try { clean = decodeURIComponent(clean); } catch {}
   if (!clean) return "/lobby";
-  // Room prefixes: these are always rooms, never lobbies
-  const ROOM_PREFIXES = ["stream-", "news-", "article-", "watch-"];
+  // Room prefixes: these are always rooms, never lobbies. Includes the
+  // generic content prefixes (stream-, news-, etc) plus seeded house-room
+  // prefixes that follow the <lobbyId>-<slug> naming convention. Without
+  // these, IDs like "fakeout-newcomers" match the lobby-slug regex below
+  // and get misrouted to /lobby/fakeout-newcomers.
+  const ROOM_PREFIXES = [
+    "stream-", "news-", "article-", "watch-",
+    // Seeded house-room prefixes — add here when a new lobby ships
+    // pinned house rooms that follow the <lobbyId>-<slug> convention.
+    "fakeout-", "destiny2-", "dnd-", "windrose-",
+    "mlb-", "league-", "fortnite-", "cs2-", "dota2-", "pubg-", "hq-",
+    "poker-", "study-", "marathon-",
+  ];
   if (ROOM_PREFIXES.some(p => clean.startsWith(p))) return `/room/${encodeURIComponent(clean)}`;
   // Lobby slugs: lowercase with hyphens/dots (e.g. cnc-generals, weered.ca, r/gaming)
   // Room hashes: mixed-case alphanumeric (e.g. XlKwIz, MwlnQa, 7AE05O)
@@ -172,22 +183,23 @@ export default function LeftRail() {
   // Lobby-scoped vocabulary swap
   const isWindrose = lobbyTheme === "windrose";
   const isDestiny  = lobbyTheme === "destiny2";
+  const isDnd      = lobbyTheme === "dnd";
   const navLabels = {
-    lobby:        isWindrose ? "Port"           : isDestiny ? "Tower"             : "Lobby",
-    home:         isWindrose ? "Home"           : isDestiny ? "Relay"             : "Home",
-    forum:        isWindrose ? "Ship's Log"     : isDestiny ? "Vanguard Report"   : "Forum",
-    paper:        isWindrose ? "Doubloons"      : isDestiny ? "Glimmer"           : "Paper",
-    locator:      isWindrose ? "Sextant"        : isDestiny ? "Ghost"             : "Locator",
-    ops:          isWindrose ? "Quartermaster"  : isDestiny ? "Vanguard"          : "Ops",
-    communities:  isWindrose ? "Fleet"          : isDestiny ? "Clans"             : "Communities",
+    lobby:        isWindrose ? "Port"           : isDestiny ? "Tower"             : isDnd ? "Tavern"           : "Lobby",
+    home:         isWindrose ? "Home"           : isDestiny ? "Relay"             : isDnd ? "Hearth"           : "Home",
+    forum:        isWindrose ? "Ship's Log"     : isDestiny ? "Vanguard Report"   : isDnd ? "Tales"            : "Forum",
+    paper:        isWindrose ? "Doubloons"      : isDestiny ? "Glimmer"           : isDnd ? "Gold"             : "Paper",
+    locator:      isWindrose ? "Sextant"        : isDestiny ? "Ghost"             : isDnd ? "Compass"          : "Locator",
+    ops:          isWindrose ? "Quartermaster"  : isDestiny ? "Vanguard"          : isDnd ? "DM Screen"        : "Ops",
+    communities:  isWindrose ? "Fleet"          : isDestiny ? "Clans"             : isDnd ? "Parties"          : "Communities",
   };
   const navIcons = {
-    lobby:   isWindrose ? "⚓" : isDestiny ? "🛡" : "🏠",
-    home:    isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : "📡",
-    forum:   isWindrose ? "📜" : isDestiny ? "📖" : "💬",
-    paper:   isWindrose ? "🪙" : isDestiny ? "💠" : "💵",
-    locator: isWindrose ? "🧭" : isDestiny ? "👁" : "🎯",
-    ops:     isWindrose ? "🗝" : isDestiny ? "⚔" : "⚙",
+    lobby:   isWindrose ? "⚓" : isDestiny ? "🛡" : isDnd ? "🍺" : "🏠",
+    home:    isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : isDnd ? "🔥" : "📡",
+    forum:   isWindrose ? "📜" : isDestiny ? "📖" : isDnd ? "📜" : "💬",
+    paper:   isWindrose ? "🪙" : isDestiny ? "💠" : isDnd ? "🪙" : "💵",
+    locator: isWindrose ? "🧭" : isDestiny ? "👁" : isDnd ? "🗺" : "🎯",
+    ops:     isWindrose ? "🗝" : isDestiny ? "⚔" : isDnd ? "🎲" : "⚙",
   };
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();

@@ -275,6 +275,12 @@ model Room {
   accentColor String?
   // Which stage module the room opens with on first join. Owner-set at create.
   defaultModule String?
+  // Modules the owner has disabled in this room — module:set events that
+  // request a disabled mode are rejected. Empty = nothing disabled.
+  disabledModules String[]  @default([])
+  // Voice publish gating. OPEN = anyone can publish; QUEUED = members
+  // raise hand and a mod approves; LISTEN_ONLY = only mods/owner publish.
+  voiceMode VoiceRoomMode @default(OPEN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1604,11 +1610,23 @@ enum CompetitionStatus {
   ENDED
 }
 
+enum PaperAccountMode {
+  CASUAL    // $100K start — for fun, no Notoriety, low Paper conversion
+  RANKED    // $1K start — counts toward Notoriety, 10× Paper conversion, leaderboards split
+}
+
+enum VoiceRoomMode {
+  OPEN         // anyone in the room can publish mic/camera/screen
+  QUEUED       // raise hand, mod approves before publishing is allowed
+  LISTEN_ONLY  // only mods + owner can publish; queue is disabled
+}
+
 model PaperAccount {
   id           String   @id @default(cuid())
   userId       String
   lobbyId      String
   competitionId String?
+  mode         PaperAccountMode @default(CASUAL)
 
   cashBalance  Float    @default(100000) // starting + remaining cash
   startBalance Float    @default(100000) // frozen at creation for P&L calc
@@ -1619,10 +1637,11 @@ model PaperAccount {
   positions    PaperPosition[]
   orders       PaperOrder[]
 
-  @@unique([userId, lobbyId, competitionId])
+  @@unique([userId, lobbyId, competitionId, mode])
   @@index([lobbyId])
   @@index([competitionId])
   @@index([userId])
+  @@index([lobbyId, mode])
 }
 
 model PaperPosition {
@@ -1638,6 +1657,14 @@ model PaperPosition {
   exitPrice    Float?         // set when closed
   realizedPnl  Float?         // profit/loss when closed
   status       PositionStatus @default(OPEN)
+
+  // Optional auto-exit triggers. The 5s position worker auto-closes the
+  // position when the live mark price crosses one of these. closeReason
+  // records whether a close was manual / SL hit / TP hit for chat chip
+  // annotation.
+  stopLoss     Float?
+  takeProfit   Float?
+  closeReason  String?        // "MANUAL" | "STOP_LOSS" | "TAKE_PROFIT"
 
   openedAt     DateTime       @default(now())
   closedAt     DateTime?
@@ -1962,3 +1989,142 @@ model UserModInstall {
   @@index([userId])
 }
 
+
+// ─── Campaign Ledger (D&D campaign state) ────────────────────────────────
+// Campaign = a persistent tabletop run, anchored to a room (or later a
+// multi-room party). Holds shared gold, loot/xp ledger, session log,
+// NPC encounter index, plot threads, world-note wiki. Spec-B character
+// sheets will replace `characterName` on CampaignMember with an FK.
+
+enum LedgerEntryType {
+  GOLD
+  ITEM
+  XP
+}
+
+enum NpcEncounterStatus {
+  ALIVE
+  DEAD
+  HOSTILE
+  ALLIED
+  UNKNOWN
+}
+
+enum PlotThreadStatus {
+  OPEN
+  CLOSED
+  DORMANT
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  roomId      String
+  name        String
+  description String   @default("")
+  partyGold   Int      @default(0)
+  dmUserId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     CampaignMember[]
+  ledger      LedgerEntry[]
+  sessions    SessionLog[]
+  npcs        NpcEncounter[]
+  threads     PlotThread[]
+  notes       WorldNote[]
+
+  @@index([roomId])
+  @@index([dmUserId])
+}
+
+model CampaignMember {
+  id            String   @id @default(cuid())
+  campaignId    String
+  userId        String
+  characterName String   @default("")
+  joinedAt      DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([userId])
+}
+
+model LedgerEntry {
+  id               String          @id @default(cuid())
+  campaignId       String
+  type             LedgerEntryType
+  delta            Int             @default(0)
+  description      String          @default("")
+  awardedToUserId  String?
+  createdAt        DateTime        @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, createdAt])
+  @@index([campaignId, type])
+}
+
+model SessionLog {
+  id            String   @id @default(cuid())
+  campaignId    String
+  sessionNumber Int
+  dmUserId      String
+  body          String   @default("")
+  createdAt     DateTime @default(now())
+
+  campaign Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  encounters NpcEncounter[]
+
+  @@unique([campaignId, sessionNumber])
+  @@index([campaignId, createdAt])
+}
+
+model NpcEncounter {
+  id                 String             @id @default(cuid())
+  campaignId         String
+  name               String
+  firstMetSessionId  String?
+  status             NpcEncounterStatus @default(UNKNOWN)
+  notes              String             @default("")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  campaign       Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  firstMetSession SessionLog? @relation(fields: [firstMetSessionId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([campaignId, status])
+}
+
+model PlotThread {
+  id         String           @id @default(cuid())
+  campaignId String
+  title      String
+  body       String           @default("")
+  status     PlotThreadStatus @default(OPEN)
+  createdAt  DateTime         @default(now())
+  closedAt   DateTime?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@index([campaignId, createdAt])
+}
+
+model WorldNote {
+  id         String   @id @default(cuid())
+  campaignId String
+  parentId   String?
+  title      String
+  body       String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  parent   WorldNote?  @relation("WorldNoteHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children WorldNote[] @relation("WorldNoteHierarchy")
+
+  @@index([campaignId])
+  @@index([campaignId, parentId])
+}

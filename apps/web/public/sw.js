@@ -1,16 +1,20 @@
 // Weered Service Worker — caching + push notifications
-const CACHE = "weered-v7";
-const SHELL_URLS = ["/home", "/lobby"];
+//
+// v8: HTML is no longer cached. Only fingerprinted static assets from
+// /_next/static/ (immutable by design) and /brand/ images get cached.
+// Navigation requests always hit the network so a fresh build's chunk
+// hashes arrive together with the HTML that references them. Earlier
+// versions pre-cached /home and /lobby and used cache-fallback navigation
+// — that caused soft-refresh to serve stale HTML pointing at dead chunks.
+const CACHE = "weered-v8";
 
-// ── Install: pre-cache app shell ─────────────────────────────────────────
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL_URLS))
-  );
+// ── Install: take over immediately; nothing to pre-cache.
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-// ── Activate: clean old caches, claim clients ────────────────────────────
+// ── Activate: drop every old cache (purges v7's bad HTML pre-cache),
+// then claim all open clients so the new SW is authoritative right away.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -23,11 +27,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache API calls or WebSocket
+  // Never intercept API calls, WebSocket, or non-GET — pass through.
   if (url.pathname.startsWith("/api") || url.protocol === "ws:" || url.protocol === "wss:") return;
   if (event.request.method !== "GET") return;
 
-  // Static assets (JS/CSS/images): cache-first
+  // Fingerprinted static assets: cache-first. Safe — every build emits
+  // new filenames, so cached entries either match exactly or are unused.
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/")) {
     event.respondWith(
       caches.match(event.request).then((cached) =>
@@ -41,19 +46,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigation: network-first with cache fallback
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(event.request, clone));
-          return res;
-        })
-        .catch(() => caches.match(event.request).then((c) => c || caches.match("/home")))
-    );
-    return;
-  }
+  // Everything else (HTML navigations, /_next/data/, RSC payloads, etc.)
+  // — pass through to the network with no cache write. Eliminates the
+  // soft-refresh stale-HTML bug entirely.
 });
 
 // ── Push notification handler ────────────────────────────────────────────

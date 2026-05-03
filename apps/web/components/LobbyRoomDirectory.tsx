@@ -25,6 +25,9 @@ interface RoomData {
   onlineUsers?: RoomUser[];
   pinned?: boolean;
   isEvent?: boolean;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  accentColor?: string | null;
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -178,6 +181,8 @@ export default function LobbyRoomDirectory({
   const [createError, setCreateError] = useState("");
   const moduleOptions = MODULE_OPTIONS_BY_TYPE[moduleType || ""] || DEFAULT_MODULE_OPTIONS;
   const [defaultModule, setDefaultModule] = useState<string>(moduleOptions[0]?.value || "voice");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [disabledModules, setDisabledModules] = useState<Set<string>>(new Set());
 
   const accent = accentColor || "#5800E5";
   const LIVE_COLOR = "#22c55e";
@@ -209,7 +214,12 @@ export default function LobbyRoomDirectory({
       const res = await fetch(`${API}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ name: trimmed, lobbyId, defaultModule }),
+        body: JSON.stringify({
+          name: trimmed,
+          lobbyId,
+          defaultModule,
+          disabledModules: Array.from(disabledModules).filter(m => m !== defaultModule),
+        }),
       });
       const j = await res.json();
       if (j.ok) {
@@ -310,6 +320,54 @@ export default function LobbyRoomDirectory({
                 {moduleOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
+
+            {/* Advanced: disable specific modules. Mods picked here can't be
+                opened in the room. Owner can edit later from room settings. */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(s => !s)}
+                style={{
+                  background: "none", border: "none", padding: 0, cursor: "pointer",
+                  fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
+                  color: "rgba(255,255,255,.4)", fontWeight: 700,
+                }}
+              >
+                {showAdvanced ? "▾" : "▸"} disable specific modules{disabledModules.size > 0 ? ` (${disabledModules.size})` : ""}
+              </button>
+              {showAdvanced && (
+                <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 4 }}>
+                  {moduleOptions.map(opt => {
+                    if (opt.value === defaultModule) return null;
+                    const isOff = disabledModules.has(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setDisabledModules(prev => {
+                          const next = new Set(prev);
+                          if (next.has(opt.value)) next.delete(opt.value);
+                          else next.add(opt.value);
+                          return next;
+                        })}
+                        style={{
+                          padding: "5px 8px", borderRadius: 6,
+                          fontSize: 11, fontFamily: "monospace",
+                          textAlign: "left", cursor: "pointer",
+                          border: `1px solid ${isOff ? "rgba(239,68,68,.35)" : "rgba(255,255,255,.08)"}`,
+                          background: isOff ? "rgba(239,68,68,.08)" : "rgba(255,255,255,.02)",
+                          color: isOff ? "rgba(252,165,165,.85)" : "rgba(243,244,246,.55)",
+                        }}
+                      >
+                        <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, marginRight: 6, border: "1px solid", borderColor: isOff ? "rgba(252,165,165,.6)" : "rgba(255,255,255,.2)", background: isOff ? "rgba(239,68,68,.4)" : "transparent", verticalAlign: "middle" }} />
+                        {opt.label}{isOff && " ×"}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {createError && <div style={{ fontSize: 11, color: "#ef4444" }}>{createError}</div>}
           </div>
         )}
@@ -357,13 +415,13 @@ export default function LobbyRoomDirectory({
             background: accent,
             boxShadow: `0 0 8px ${accent}55`,
           }} />
-          <span style={{
+          <span className="weered-rooms-section-label" style={{
             fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase",
             color: "rgba(255,255,255,.5)",
           }}>
             Rooms
           </span>
-          <span style={{
+          <span className="weered-rooms-section-count" style={{
             fontSize: 10, fontFamily: "monospace", fontWeight: 700,
             color: "rgba(255,255,255,.25)",
             background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.08)",
@@ -371,9 +429,10 @@ export default function LobbyRoomDirectory({
           }}>
             {rooms.length}
           </span>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
+          <div className="weered-rooms-section-divider" style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
 
           <button
+            className="weered-rooms-create-btn"
             onClick={() => { setShowCreate(v => !v); setCreateError(""); }}
             style={{
               padding: "4px 14px", borderRadius: 8, cursor: "pointer",
@@ -392,7 +451,7 @@ export default function LobbyRoomDirectory({
 
         {/* ── Create room form ─────────────────────────────────────────── */}
         {showCreate && (
-          <div style={{
+          <div className="weered-rooms-create-form" style={{
             marginBottom: 18, padding: "14px 16px", borderRadius: 12,
             border: `1px solid ${accent}28`, background: `${accent}08`,
             display: "flex", flexDirection: "column", gap: 10,
@@ -438,15 +497,24 @@ export default function LobbyRoomDirectory({
           gap: 14,
         }}>
           {rooms.map(room => {
-            const icon = roomIcon(room.name, moduleType);
+            // Owner-set iconUrl takes priority over the name-based emoji
+            // fallback. Same for accentColor — owner gradient wins, then
+            // live state, then lobby accent.
+            const customIcon = room.iconUrl ? String(room.iconUrl) : null;
+            const customBanner = room.bannerUrl ? String(room.bannerUrl) : null;
+            const icon: React.ReactNode = customIcon
+              ? <img src={customIcon} alt="" aria-hidden style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : roomIcon(room.name, moduleType);
             const subtitle = room.description || roomSubtitle(room.name);
             const memberCount = room._count?.members ?? 0;
             const liveCount = room.onlineCount ?? 0;
             const isLive = liveCount > 0;
             const onlineUsers: RoomUser[] = room.onlineUsers ?? [];
 
-            // Color strategy: live rooms get green, others use lobby accent
-            const cardColor = isLive ? LIVE_COLOR : accent;
+            // Color strategy: owner accent > live green > lobby accent.
+            const cardColor = (room.accentColor && /^#[0-9a-f]{6}$/i.test(room.accentColor))
+              ? room.accentColor
+              : (isLive ? LIVE_COLOR : accent);
             const angle = meshAngle(room.id);
 
             // CSS custom props for hover styles
@@ -465,6 +533,7 @@ export default function LobbyRoomDirectory({
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleJoin(room); } }}
                 className={`weered-room-card${room.isEvent ? " weered-room-card-event" : ""}`}
+                data-pinned={room.pinned ? "true" : "false"}
                 style={{
                   position: "relative", overflow: "hidden",
                   borderRadius: 14, cursor: "pointer",
@@ -474,6 +543,22 @@ export default function LobbyRoomDirectory({
                   ...cssVars,
                 }}
               >
+                {/* ── Owner banner (renders behind gradient mesh) ───────── */}
+                {customBanner && (
+                  <div aria-hidden style={{
+                    position: "absolute", inset: 0, zIndex: 0,
+                    backgroundImage: `url("${customBanner}")`,
+                    backgroundSize: "cover", backgroundPosition: "center",
+                    opacity: 0.55,
+                  }} />
+                )}
+                {customBanner && (
+                  <div aria-hidden style={{
+                    position: "absolute", inset: 0, zIndex: 0,
+                    background: `linear-gradient(180deg, rgba(10,12,20,.30) 0%, rgba(10,12,20,.65) 60%, rgba(10,12,20,.85) 100%)`,
+                  }} />
+                )}
+
                 {/* ── Gradient mesh background ──────────────────────────── */}
                 <div style={{
                   position: "absolute", inset: 0, zIndex: 0,
@@ -483,6 +568,7 @@ export default function LobbyRoomDirectory({
                     `linear-gradient(${angle}deg, rgba(255,255,255,.02) 0%, rgba(255,255,255,.005) 100%)`,
                   ].join(", "),
                   transition: "opacity .22s",
+                  opacity: customBanner ? 0.4 : 1,
                 }} />
 
                 {/* ── Glass layer ───────────────────────────────────────── */}
@@ -490,8 +576,8 @@ export default function LobbyRoomDirectory({
                   position: "absolute", inset: 0, zIndex: 0,
                   borderRadius: 14,
                   background: "rgba(255,255,255,.02)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
+                  backdropFilter: customBanner ? "blur(2px)" : "blur(12px)",
+                  WebkitBackdropFilter: customBanner ? "blur(2px)" : "blur(12px)",
                 }} />
 
                 {/* Accent top bar */}
@@ -510,19 +596,20 @@ export default function LobbyRoomDirectory({
 
                     {/* Icon box */}
                     <div style={{
-                      width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-                      background: `linear-gradient(135deg, ${cardColor}1a, ${cardColor}0a)`,
+                      width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                      background: customIcon ? "rgba(0,0,0,.25)" : `linear-gradient(135deg, ${cardColor}1a, ${cardColor}0a)`,
                       border: `1px solid ${cardColor}28`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 20,
+                      fontSize: 22,
                       boxShadow: `0 0 16px ${cardColor}10`,
+                      overflow: "hidden",
                     }}>
                       {icon}
                     </div>
 
                     {/* Name + subtitle */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
+                      <div className="weered-room-card-name" style={{
                         fontWeight: 800, fontSize: 15, lineHeight: 1.25,
                         color: "rgba(243,244,246,.95)", letterSpacing: "-0.3px",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -539,7 +626,7 @@ export default function LobbyRoomDirectory({
                         )}
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.name}</span>
                       </div>
-                      <div style={{
+                      <div className="weered-room-subtitle" style={{
                         fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 3,
                         lineHeight: 1.4,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",

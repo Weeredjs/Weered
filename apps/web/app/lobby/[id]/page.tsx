@@ -27,6 +27,7 @@ import PoeModulesPanel from "../../../components/PoeModulesPanel";
 import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
+import TradingFeed from "../../../components/TradingFeed";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
@@ -405,7 +406,7 @@ export default function LobbyIdPage() {
   // that scoped CSS (see globals.css) can hook into for full chrome reskin.
   useEffect(() => {
     if (!lobbyId) return;
-    const THEMEABLE = new Set<string>(["windrose", "destiny2"]);
+    const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd"]);
     if (THEMEABLE.has(lobbyId)) {
       document.documentElement.setAttribute("data-weered-lobby", lobbyId);
       return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
@@ -520,8 +521,8 @@ export default function LobbyIdPage() {
                   onClick={() => setView("modules")}
                 />
               )}
-              <TabBtn active={view === "feed"} accent={undefined} onClick={() => setView("feed")}>
-                Feed
+              <TabBtn active={view === "feed"} accent={accent} onClick={() => setView("feed")}>
+                {lobbyInfo?.moduleType === "TRADING" ? "The Tape" : "Feed"}
                 {feedHasNew && view !== "feed" && (
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e", display: "inline-block", marginLeft: 5, verticalAlign: "middle" }} />
                 )}
@@ -645,6 +646,9 @@ export default function LobbyIdPage() {
                 <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} bannerUrl={lobbyInfo?.bannerUrl} moduleType={lobbyInfo?.moduleType} style={{ flex: 1, minHeight: 0 }} />
               ) : view === "events" ? (
                 <LobbyEvents lobbyId={lobbyId} accent={accent} />
+              ) : view === "feed" && lobbyInfo?.moduleType === "TRADING" ? (
+                /* FakeOut feed = live trade tape, not the forum. */
+                <TradingFeed lobbyId={lobbyId} accent={accent} />
               ) : (
                 <ForumPage lobbyId={lobbyId} lobbyName={lobbyInfo?.name} />
               )}
@@ -666,13 +670,11 @@ export default function LobbyIdPage() {
 
 function TabBtn({ active, accent, onClick, children }: { active: boolean; accent?: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} style={{
-      padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
-      background: active ? (accent ? `${accent}25` : "rgba(88,0,229,.15)") : "transparent",
-      color: active ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.6)",
-      transition: "background .15s",
-      fontFamily: "inherit",
-    }}>
+    <button
+      onClick={onClick}
+      className={`weered-tab-btn${active ? " is-active" : ""}`}
+      style={active && accent ? { borderBottomColor: accent } : undefined}
+    >
       {children}
     </button>
   );
@@ -693,16 +695,10 @@ function ModulesTab({ active, moduleType, onClick }: { active: boolean; moduleTy
     <button
       onClick={onClick}
       className={`weered-modules-tab${active ? " is-active" : ""}`}
-      style={{
-        padding: "5px 14px", borderRadius: 7, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
-        fontFamily: "inherit",
-        display: "inline-flex", alignItems: "center",
-      }}
     >
       <span className="weered-modules-sparkle" aria-hidden>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2z" fill="currentColor" />
-          <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" fill="currentColor" opacity="0.7" />
         </svg>
       </span>
       Modules

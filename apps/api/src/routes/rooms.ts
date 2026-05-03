@@ -157,7 +157,16 @@ app.post("/rooms", async (req, reply) => {
   const VALID_MODULES = ["voice", "youtube", "twitch", "browser", "article", "video", "screen", "fakeout", "poker", "destiny", "league", "fortnite", "pubg", "hq", "cs2", "dota2", "study", "dnd"];
   const rawDM = typeof body.defaultModule === "string" ? body.defaultModule.trim().toLowerCase() : "";
   const defaultModule = VALID_MODULES.includes(rawDM) ? rawDM : null;
-  await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, isEvent, defaultModule } as any });
+  // Owner-curated module disable list — module:set events for these
+  // modes will be rejected by the WS handler. Filtered to known modules
+  // and never includes the chosen default.
+  const rawDisabled = Array.isArray(body.disabledModules) ? body.disabledModules : [];
+  const disabledModules = Array.from(new Set(
+    rawDisabled
+      .map((m: any) => String(m || "").trim().toLowerCase())
+      .filter((m: string) => VALID_MODULES.includes(m) && m !== defaultModule)
+  ));
+  await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, isEvent, defaultModule, disabledModules } as any });
 
   // Make creator the owner in RoomMember
   if (ownerId) {
@@ -174,7 +183,7 @@ app.post("/rooms", async (req, reply) => {
   if (ownerId) r.ownerId = ownerId;
   if (passwordHash) r.passwordHash = passwordHash;
   rooms.set(id, r);
-  return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash, isEvent, defaultModule } });
+  return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash, isEvent, defaultModule, disabledModules } });
 });
 
 app.get("/rooms/:roomId", async (req, reply) => {
@@ -197,6 +206,7 @@ app.get("/rooms/:roomId", async (req, reply) => {
       bannerUrl: r.bannerUrl || null,
       accentColor: r.accentColor || null,
       defaultModule: r.defaultModule || null,
+      disabledModules: Array.isArray(r.disabledModules) ? r.disabledModules : [],
     },
   });
 });
@@ -213,7 +223,9 @@ app.patch("/rooms/:roomId", async (req, reply) => {
   if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
 
   const isOwner = r.ownerId && r.ownerId === u.id;
-  const globalRole = String((u as any).globalRole || "USER").toUpperCase();
+  // Token doesn't carry globalRole — look it up. Otherwise GOD/STAFF/SUPPORT
+  // get blocked here even though they should always be able to edit any room.
+  const globalRole = String((await getGlobalRole(u.id)) || "USER").toUpperCase();
   const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(globalRole);
   if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "not_authorized" });
 
@@ -227,18 +239,37 @@ app.patch("/rooms/:roomId", async (req, reply) => {
     if (v && !/^#[0-9a-f]{6}$/i.test(v)) return reply.code(400).send({ ok: false, error: "bad_accent" });
     data.accentColor = v;
   }
+  if (Array.isArray(body.disabledModules)) {
+    const VALID_MODULES = ["voice", "youtube", "twitch", "browser", "article", "video", "screen", "fakeout", "poker", "destiny", "league", "fortnite", "pubg", "hq", "cs2", "dota2", "study", "dnd"];
+    data.disabledModules = Array.from(new Set(
+      body.disabledModules
+        .map((m: any) => String(m || "").trim().toLowerCase())
+        .filter((m: string) => VALID_MODULES.includes(m))
+    ));
+  }
   if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_changes" });
 
   const updated: any = await (prisma as any).room.update({ where: { id: roomId }, data });
 
   // Push the new appearance into any live in-memory room state and
   // rebroadcast so every connected socket sees the change immediately.
-  const live = rooms.get(normalizeRoomId(roomId));
+  const live: any = rooms.get(normalizeRoomId(roomId));
   if (live) {
     if ("description" in data) live.description = updated.description || undefined;
     if ("iconUrl" in data) live.iconUrl = updated.iconUrl || undefined;
     if ("bannerUrl" in data) live.bannerUrl = updated.bannerUrl || undefined;
     if ("accentColor" in data) live.accentColor = updated.accentColor || undefined;
+    if ("disabledModules" in data) {
+      live.disabledModules = Array.isArray(updated.disabledModules) ? updated.disabledModules : [];
+      // If the currently-active module just got disabled, clear it.
+      if (live.activeModule && live.disabledModules.includes(live.activeModule.mode)) {
+        live.activeModule = null;
+        live.ytState = null;
+        for (const sock of live.sockets) send(sock as any, { type: "module:state", roomId: live.roomId, activeModule: null });
+      }
+      // Push a settings update so clients refresh their picker.
+      for (const sock of live.sockets) send(sock as any, { type: "room:settings", roomId: live.roomId, disabledModules: live.disabledModules });
+    }
     const payload = buildStatePayload(live);
     for (const sock of live.sockets) send(sock as any, payload);
   }
@@ -252,6 +283,7 @@ app.patch("/rooms/:roomId", async (req, reply) => {
       iconUrl: updated.iconUrl || null,
       bannerUrl: updated.bannerUrl || null,
       accentColor: updated.accentColor || null,
+      disabledModules: Array.isArray((updated as any).disabledModules) ? (updated as any).disabledModules : [],
     },
   });
 });

@@ -42,6 +42,136 @@ function presenceHref(roomId: string, roomIsLobby: boolean): string {
 }
 
 // ── AvatarStack ───────────────────────────────────────────────────────────────
+// ── Hooks for lobby-wide discovery data ─────────────────────────────────
+// Both polled at 20s. Used by WhosHerePanel + the empty-state replacements
+// in RoomsPanel / FriendsPanel / CrewPanel so a fresh account never lands
+// on a barren rail.
+function useLobbyPresence(lobbyId: string) {
+  const [users, setUsers] = React.useState<any[]>([]);
+  React.useEffect(() => {
+    if (!lobbyId) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/presence`);
+        if (!alive) return;
+        if (j?.ok && Array.isArray(j.users)) setUsers(j.users);
+      } catch {}
+    };
+    load();
+    const t = setInterval(load, 20000);
+    return () => { alive = false; clearInterval(t); };
+  }, [lobbyId]);
+  return users;
+}
+
+function useLobbyCrews(lobbyId: string, enabled: boolean) {
+  const [crews, setCrews] = React.useState<any[]>([]);
+  React.useEffect(() => {
+    if (!enabled || !lobbyId) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/crews`);
+        if (!alive) return;
+        if (j?.ok && Array.isArray(j.crews)) setCrews(j.crews);
+      } catch {}
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [lobbyId, enabled]);
+  return crews;
+}
+
+// ── Tiny presence avatar (used in WhosHerePanel + discovery cards) ──────
+function PresenceAvatar({ user, size = 28, onClick }: { user: any; size?: number; onClick?: () => void }) {
+  const name = String(user?.name || "?");
+  const initial = name.slice(0, 1).toUpperCase();
+  // avatarBg(name, isMe?, chosenColor?) — passing name first; chosenColor
+  // (the user's stored avatarColor) optionally drives priority. Bug
+  // earlier was calling avatarBg(avatarColor) which set name=undefined
+  // and crashed on name.length for users without an avatarColor.
+  const bg = user?.avatar ? "rgba(255,255,255,.08)" : avatarBg(name, false, user?.avatarColor);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={user?.name || ""}
+      style={{
+        position: "relative", flexShrink: 0,
+        width: size, height: size, borderRadius: 999,
+        background: bg, border: "1px solid rgba(255,255,255,.08)",
+        cursor: onClick ? "pointer" : "default", padding: 0,
+        overflow: "hidden",
+      }}
+    >
+      {user?.avatar
+        ? <img src={user.avatar} alt={user.name || "user"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ fontSize: Math.round(size * 0.42), fontWeight: 700, color: "rgba(243,244,246,.85)" }}>{initial}</span>}
+      <span style={{
+        position: "absolute", bottom: -1, right: -1,
+        width: Math.max(7, size * 0.28), height: Math.max(7, size * 0.28),
+        borderRadius: 999,
+        background: user?.isAway ? "#facc15" : "#22c55e",
+        border: "2px solid rgba(10,10,15,1)",
+      }} />
+    </button>
+  );
+}
+
+// ── WHO'S HERE — slim avatar strip rendered ONLY for new users (no
+// friends, no crew) as filler so the rail doesn't read empty. Established
+// users already see lobby presence in the left rail, so this would be
+// redundant for them. Self filtered out of the count + display.
+function WhosHerePanel({ lobbyId }: { lobbyId: string }) {
+  const ctx: any = useWeered();
+  const meId = String(ctx?.me?.id || "");
+  const { openSheet } = useOverlay();
+  const all = useLobbyPresence(lobbyId);
+  const [eligible, setEligible] = React.useState(false);
+  React.useEffect(() => {
+    let alive = true;
+    Promise.all([
+      apiFetch("/friends").catch(() => ({} as any)),
+      apiFetch("/crews/mine").catch(() => ({} as any)),
+    ]).then(([f, c]) => {
+      if (!alive) return;
+      const friends = Array.isArray(f?.friends) ? f.friends : [];
+      const crews = Array.isArray(c?.crews) ? c.crews : [];
+      if (!friends.length && !crews.length) setEligible(true);
+    });
+    return () => { alive = false; };
+  }, []);
+  if (!eligible) return null;
+  const others = all.filter(u => String(u?.id || "") !== meId);
+  if (!others.length) return null;
+  const visible = others.slice(0, 9);
+  const overflow = Math.max(0, others.length - visible.length);
+  return (
+    <div className="weered-rr-section" style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>
+          Who&apos;s here · {others.length}
+        </div>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+        {visible.map(u => (
+          <PresenceAvatar key={u.id} user={u} size={28} onClick={() => openSheet("profile", { userId: String(u.id) })} />
+        ))}
+        {overflow > 0 && (
+          <div style={{
+            width: 28, height: 28, borderRadius: 999,
+            border: "1px dashed rgba(255,255,255,.18)", background: "rgba(255,255,255,.02)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 10, fontWeight: 700, color: "rgba(243,244,246,.55)",
+          }}>+{overflow}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
   if (!users.length) return null;
   const shown = users.slice(0, 3);
@@ -69,6 +199,51 @@ function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
 }
 
 // ── RoomsPanel ────────────────────────────────────────────────────────────────
+// ── ROOMS empty-state discovery — instead of the dead "No rooms here"
+// message, show who's currently active in the lobby + a Spin-up CTA. ──
+function RoomsEmptyDiscovery({ lobbyId, canPin }: { lobbyId: string; canPin: boolean }) {
+  const ctx: any = useWeered();
+  const meId = String(ctx?.me?.id || "");
+  const { openSheet } = useOverlay();
+  const all = useLobbyPresence(lobbyId);
+  const others = all.filter(u => String(u?.id || "") !== meId);
+  if (!others.length) {
+    return <EmptyState compact title={lobbyId ? "No rooms open here." : "No rooms."} hint={canPin ? "Hit + Room to start one." : "Check back in a minute."} />;
+  }
+  return (
+    <div style={{
+      borderRadius: 10, border: "1px solid rgba(124,58,237,.18)",
+      background: "rgba(124,58,237,.04)", padding: 10,
+      display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: "rgba(216,180,254,.75)" }}>
+        No rooms — but {others.length} {others.length === 1 ? "person is" : "people are"} around
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {others.slice(0, 4).map(u => (
+          <button key={u.id} type="button" onClick={() => openSheet("profile", { userId: String(u.id) })} style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "5px 8px", borderRadius: 7,
+            border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)",
+            cursor: "pointer", textAlign: "left",
+          }}>
+            <PresenceAvatar user={u} size={24} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {u.name}
+              </div>
+              {u.roomName && <div style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>in {u.roomName}</div>}
+            </div>
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, color: "rgba(243,244,246,.4)", fontStyle: "italic", textAlign: "center", paddingTop: 4 }}>
+        {canPin ? "Hit + Room to start something." : "Or wait — someone usually opens one."}
+      </div>
+    </div>
+  );
+}
+
 function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId: string }) {
   const [q,        setQ]        = React.useState("");
   const [rows,     setRows]     = React.useState<RoomRow[]>([]);
@@ -342,7 +517,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 360, overflowY: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.15) transparent" }}>
         {loading && !rows.length && <div style={{ fontSize: 12, opacity: 0.5 }}>Loading…</div>}
         {!loading && !filtered.length && (
-          <EmptyState compact title={lobbyId ? "No rooms open here." : "No rooms."} hint={canPin ? "Hit + Room to start one." : "Check back in a minute."} />
+          <RoomsEmptyDiscovery lobbyId={lobbyId} canPin={canPin} />
         )}
         {filtered.slice(0, 40).map(rm => {
           const active      = rm.id === currentRoomId;
@@ -350,11 +525,17 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
           const liveCount   = liveWsUsers.length || rm.users;
           const isLive      = liveCount > 0;
 
-          // Mini icon based on room name
+          // Mini icon: owner-set iconUrl wins. Otherwise falls back to
+          // the emoji-by-name heuristic below. Owner appearance overrides
+          // everything so a custom icon shows up in the rail too.
           const n = (rm.name || "").toLowerCase();
           const isWindrose = lobbyId === "windrose" || rm.lobbyId === "windrose";
-          const icon: React.ReactNode =
-              isWindrose && (n.includes("helm") || n.includes("wheel"))   ? "⚓"
+          const customIcon = (rm as any).iconUrl ? String((rm as any).iconUrl) : null;
+          const customBanner = (rm as any).bannerUrl ? String((rm as any).bannerUrl) : null;
+          const customAccent = (rm as any).accentColor ? String((rm as any).accentColor) : null;
+          const icon: React.ReactNode = customIcon
+            ? <img src={customIcon} alt="" aria-hidden style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : isWindrose && (n.includes("helm") || n.includes("wheel"))   ? "⚓"
             : isWindrose && (n.includes("crew") || n.includes("mate"))    ? "🏴\u200d☠️"
             : isWindrose && n.includes("captain")                         ? "🧭"
             : isWindrose && (n.includes("log") || n.includes("journal"))  ? "📖"
@@ -368,19 +549,19 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 <img
                   src="/brand/lobbies/windrose-logo-official.png"
                   alt=""
-                  width={14}
-                  height={14}
+                  width={22}
+                  height={22}
                   aria-hidden
                   style={{ objectFit: "contain" }}
                 />
               )
             : "◆";
 
-          // Color: live = green, active = accent, default = subtle
-          const cardAccent = isLive ? "#22c55e" : active ? "#5800E5" : "rgba(255,255,255,.08)";
-          const borderColor = active ? "rgba(88,0,229,.45)" : isLive ? "rgba(34,197,94,.25)" : "rgba(255,255,255,.06)";
-          const bg = active ? "rgba(88,0,229,.08)" : isLive ? "rgba(34,197,94,.04)" : "rgba(255,255,255,.015)";
-          const hoverBg = active ? "rgba(88,0,229,.14)" : isLive ? "rgba(34,197,94,.08)" : "rgba(255,255,255,.04)";
+          // Color: owner accent wins. Else live = green, active = violet, default = subtle.
+          const cardAccent = customAccent || (isLive ? "#22c55e" : active ? "#5800E5" : "rgba(255,255,255,.08)");
+          const borderColor = customAccent ? `${customAccent}55` : (active ? "rgba(88,0,229,.45)" : isLive ? "rgba(34,197,94,.25)" : "rgba(255,255,255,.06)");
+          const bg = customAccent ? `${customAccent}10` : (active ? "rgba(88,0,229,.08)" : isLive ? "rgba(34,197,94,.04)" : "rgba(255,255,255,.015)");
+          const hoverBg = customAccent ? `${customAccent}22` : (active ? "rgba(88,0,229,.14)" : isLive ? "rgba(34,197,94,.08)" : "rgba(255,255,255,.04)");
 
           return (
             <Link key={rm.id} href={`/room/${encodeURIComponent(rm.id)}`}
@@ -390,6 +571,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 border: `1px solid ${borderColor}`,
                 background: bg,
                 transition: "all 0.15s ease", position: "relative", overflow: "hidden",
+                flexShrink: 0,
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement;
@@ -406,6 +588,22 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 el.style.boxShadow = "none";
               }}
             >
+              {/* Owner-set banner — fills the card, scrim keeps text legible */}
+              {customBanner && (
+                <div aria-hidden style={{
+                  position: "absolute", inset: 0, backgroundImage: `url("${customBanner}")`,
+                  backgroundSize: "cover", backgroundPosition: "center",
+                  opacity: 0.55, pointerEvents: "none",
+                }} />
+              )}
+              {customBanner && (
+                <div aria-hidden style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(90deg, rgba(10,12,20,.85) 0%, rgba(10,12,20,.55) 50%, rgba(10,12,20,.25) 100%)",
+                  pointerEvents: "none",
+                }} />
+              )}
+
               {/* Active accent bar */}
               {active && <div style={{ position: "absolute", left: 0, top: 3, bottom: 3, width: 2.5, borderRadius: 2, background: "#5800E5", boxShadow: "0 0 6px rgba(88,0,229,.4)" }} />}
 
@@ -416,14 +614,15 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 borderRadius: 1,
               }} />
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, position: "relative", zIndex: 1 }}>
                 {/* Mini icon */}
                 <div style={{
-                  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                  background: isLive ? "rgba(34,197,94,.10)" : active ? "rgba(88,0,229,.10)" : "rgba(255,255,255,.03)",
-                  border: `1px solid ${isLive ? "rgba(34,197,94,.18)" : active ? "rgba(88,0,229,.18)" : "rgba(255,255,255,.05)"}`,
+                  width: 38, height: 38, borderRadius: 9, flexShrink: 0,
+                  background: customIcon ? "rgba(0,0,0,.25)" : (isLive ? "rgba(34,197,94,.10)" : active ? "rgba(88,0,229,.10)" : "rgba(255,255,255,.03)"),
+                  border: `1px solid ${customAccent ? `${customAccent}55` : isLive ? "rgba(34,197,94,.18)" : active ? "rgba(88,0,229,.18)" : "rgba(255,255,255,.05)"}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, lineHeight: 1,
+                  fontSize: 17, lineHeight: 1,
+                  overflow: "hidden",
                 }}>
                   {icon}
                 </div>
@@ -588,8 +787,108 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   );
 }
 
+// ── FRIENDS empty-state discovery: people active in this lobby.
+// Static "Friendless" placeholder — sits at the top of the empty FRIENDS
+// state so the section is always visible and visitors learn the row
+// shape (avatar, name, platform tags, location) before they have any
+// real friends. Vibes-driven; the tags + location are theatre.
+function FriendlessRow() {
+  const PlatformDot = ({ color, label }: { color: string; label: string }) => (
+    <span title={label} style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: 14, height: 14, borderRadius: 3,
+      background: `${color}22`, border: `1px solid ${color}55`,
+      fontSize: 8, fontWeight: 800, color, fontFamily: "monospace",
+    }}>{label[0]}</span>
+  );
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "6px 8px", borderRadius: 7,
+      border: "1px dashed rgba(255,255,255,.10)", background: "rgba(255,255,255,.015)",
+    }} title="Demo entry — add your own people to replace me.">
+      <div style={{
+        position: "relative", width: 26, height: 26, borderRadius: 999,
+        background: "rgba(124,58,237,.20)", border: "1px solid rgba(124,58,237,.35)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 12, fontWeight: 800, color: "rgba(216,180,254,.95)",
+        flexShrink: 0,
+      }}>
+        F
+        <span style={{
+          position: "absolute", bottom: -1, right: -1,
+          width: 8, height: 8, borderRadius: 999,
+          background: "rgba(255,255,255,.18)", border: "2px solid rgba(10,10,15,1)",
+        }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
+          <span style={{ fontStyle: "italic" }}>Friendless</span>
+          <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.10)", color: "rgba(243,244,246,.55)", letterSpacing: "0.4px", textTransform: "uppercase" }}>demo</span>
+        </div>
+        <div style={{ fontSize: 9, opacity: 0.45, fontStyle: "italic", marginTop: 1 }}>
+          lying low in the void
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+        <PlatformDot color="#1b2838" label="Steam" />
+        <PlatformDot color="#9146FF" label="Twitch" />
+        <PlatformDot color="#107C10" label="Xbox" />
+      </div>
+    </div>
+  );
+}
+
+function FriendsEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
+  const ctx: any = useWeered();
+  const meId = String(ctx?.me?.id || "");
+  const { openSheet } = useOverlay();
+  const all = useLobbyPresence(lobbyId);
+  const others = all.filter(u => String(u?.id || "") !== meId);
+  return (
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>
+        Friends · 0 online
+      </div>
+      <div style={{
+        borderRadius: 10, border: "1px solid rgba(255,255,255,.06)",
+        background: "rgba(255,255,255,.02)", padding: 10,
+        display: "flex", flexDirection: "column", gap: 6,
+      }}>
+        <FriendlessRow />
+        {others.length > 0 && (
+          <>
+            <div style={{ fontSize: 9, color: "rgba(243,244,246,.35)", letterSpacing: ".5px", textTransform: "uppercase", textAlign: "center", padding: "4px 0 2px" }}>
+              ↓ replace with real ones ↓
+            </div>
+            {others.slice(0, 5).map(u => (
+              <button key={u.id} type="button" onClick={() => openSheet("profile", { userId: String(u.id) })} style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "5px 6px", borderRadius: 7,
+                border: "1px solid transparent", background: "transparent",
+                cursor: "pointer", textAlign: "left",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <PresenceAvatar user={u} size={26} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {u.name}
+                  </div>
+                  {u.roomName && <div style={{ fontSize: 10, opacity: 0.45, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.roomName}</div>}
+                </div>
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── FriendsPanel ──────────────────────────────────────────────────────────────
-function FriendsPanel() {
+function FriendsPanel({ lobbyId }: { lobbyId: string }) {
   const { openSheet } = useOverlay();
   const [friends, setFriends] = React.useState<any[]>([]);
   const [open, setOpen]       = React.useState(true);
@@ -603,7 +902,13 @@ function FriendsPanel() {
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
   React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
-  if (!mounted || !friends.length) return null;
+  if (!mounted) return null;
+
+  // Empty-state replacement: surface presence-based suggestions instead of
+  // returning null. The rail stays alive for fresh accounts.
+  if (!friends.length) {
+    return <FriendsEmptyDiscovery lobbyId={lobbyId} />;
+  }
   const online  = friends.filter(f => f.online);
   const offline = friends.filter(f => !f.online);
 
@@ -713,8 +1018,102 @@ function FriendsPanel() {
   );
 }
 
+// ── CREW empty-state discovery: top crews active in this lobby.
+function CrewEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
+  const router = useRouter();
+  const lobbyCrews = useLobbyCrews(lobbyId, true);
+  const top = lobbyCrews
+    .slice()
+    .sort((a, b) => (Number(b?.recruiting) - Number(a?.recruiting)) || ((b?.memberCount || 0) - (a?.memberCount || 0)))
+    .slice(0, 3);
+  return (
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>
+        Crew · 1 online
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {/* Lone Wolf — static placeholder so the CREW section is always
+            visible and visitors learn what a crew row looks like before
+            they have one. The button is theatre; clicking it just hints
+            at the real action below. */}
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 10px", borderRadius: 9,
+            border: "1px dashed rgba(255,255,255,.10)", background: "rgba(255,255,255,.015)",
+          }}
+          title="Demo entry — join a crew below or start your own."
+        >
+          <div style={{
+            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+            background: "linear-gradient(135deg, rgba(124,58,237,.25), rgba(245,158,11,.20))",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 800, color: "rgba(243,244,246,.85)",
+          }}>🐺</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.85)", display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontStyle: "italic" }}>Lone Wolf</span>
+              <span style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace" }}>[SOLO]</span>
+              <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.10)", color: "rgba(243,244,246,.55)", letterSpacing: "0.4px", textTransform: "uppercase", marginLeft: 3 }}>demo</span>
+            </div>
+            <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1, fontStyle: "italic" }}>
+              1 member · roaming
+            </div>
+          </div>
+        </div>
+
+        {top.length > 0 && (
+          <div style={{ fontSize: 9, color: "rgba(243,244,246,.35)", letterSpacing: ".5px", textTransform: "uppercase", textAlign: "center", padding: "4px 0 2px" }}>
+            ↓ or join one of these ↓
+          </div>
+        )}
+
+        {top.map(c => {
+          const accent = c.accentColor || "#5800E5";
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => router.push(`/crew/${encodeURIComponent(c.id)}`)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 10px", borderRadius: 9,
+                border: `1px solid ${accent}33`, background: `${accent}0a`,
+                cursor: "pointer", textAlign: "left",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${accent}18`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${accent}0a`; }}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: c.logoUrl ? "rgba(255,255,255,.06)" : `${accent}33`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 800, color: "#fff",
+                overflow: "hidden",
+              }}>
+                {c.logoUrl ? <img src={c.logoUrl} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (c.tag || c.name || "?").slice(0, 2).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {c.name}{c.tag && <span style={{ marginLeft: 5, fontSize: 9, opacity: 0.5, fontFamily: "monospace" }}>[{c.tag}]</span>}
+                </div>
+                <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1 }}>
+                  {c.memberCount || 0} member{(c.memberCount || 0) === 1 ? "" : "s"}
+                  {c.recruiting && <span style={{ marginLeft: 6, color: "rgb(110,231,183)" }}>· recruiting</span>}
+                </div>
+              </div>
+              <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: `1px solid ${accent}55`, background: `${accent}18`, color: "rgba(243,244,246,.85)", flexShrink: 0 }}>view</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── CrewPanel ─────────────────────────────────────────────────────────────────
-function CrewPanel() {
+function CrewPanel({ lobbyId }: { lobbyId: string }) {
   const { openSheet } = useOverlay();
   const [crews, setCrews] = React.useState<any[]>([]);
   const [open, setOpen]   = React.useState(true);
@@ -725,7 +1124,8 @@ function CrewPanel() {
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
   React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
-  if (!mounted || !crews.length) return null;
+  if (!mounted) return null;
+  if (!crews.length) return <CrewEmptyDiscovery lobbyId={lobbyId} />;
 
   const allMembers = crews.flatMap((c: any) =>
     (c.members || []).map((m: any) => ({ ...m, crewName: c.name, crewTag: c.tag }))
@@ -785,6 +1185,98 @@ function CrewPanel() {
   );
 }
 
+// ── Discover Lobbies — fallback rail filler for fresh accounts.
+// Only renders when the user has no friends AND no crew (i.e. a brand-
+// new signup). Established users see nothing — their rail keeps its
+// existing density. Lone fresh user in an empty lobby goes from a barren
+// rail to "here are the verified lobbies people actually hang out in."
+function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
+  const router = useRouter();
+  const [eligible, setEligible] = React.useState(false);
+  const [lobbies, setLobbies] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    let alive = true;
+    Promise.all([
+      apiFetch("/friends").catch(() => ({} as any)),
+      apiFetch("/crews/mine").catch(() => ({} as any)),
+    ]).then(([f, c]) => {
+      if (!alive) return;
+      const friends = Array.isArray(f?.friends) ? f.friends : [];
+      const crews = Array.isArray(c?.crews) ? c.crews : [];
+      if (!friends.length && !crews.length) setEligible(true);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  React.useEffect(() => {
+    if (!eligible) return;
+    let alive = true;
+    apiFetch("/lobbies").then(j => {
+      if (!alive) return;
+      if (!Array.isArray(j?.lobbies)) return;
+      const sorted = j.lobbies
+        .filter((l: any) => l.id !== currentLobbyId)
+        .filter((l: any) => l.verified || l.pinned)
+        .sort((a: any, b: any) => (b.onlineCount || 0) - (a.onlineCount || 0) || (b._count?.members || 0) - (a._count?.members || 0))
+        .slice(0, 4);
+      setLobbies(sorted);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [eligible, currentLobbyId]);
+
+  if (!eligible || !lobbies.length) return null;
+  return (
+    <div className="weered-rr-section" style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>
+        Discover · hot lobbies
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {lobbies.map(l => {
+          const accent = l.accentColor || "#5800E5";
+          const initial = String(l.name || l.id || "?").slice(0, 1).toUpperCase();
+          return (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => router.push(`/lobby/${encodeURIComponent(l.id)}`)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 10px", borderRadius: 9,
+                border: `1px solid ${accent}33`, background: `${accent}0a`,
+                cursor: "pointer", textAlign: "left",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${accent}18`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${accent}0a`; }}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: l.logoUrl ? "rgba(255,255,255,.06)" : `${accent}33`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 800, color: "#fff",
+                overflow: "hidden",
+              }}>
+                {l.logoUrl ? <img src={l.logoUrl} alt={l.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initial}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5 }}>
+                  {l.name || l.id}
+                  {l.verified && <span style={{ fontSize: 9, color: "rgb(110,231,183)" }}>✓</span>}
+                </div>
+                <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1 }}>
+                  {(l.onlineCount || 0) > 0 ? `${l.onlineCount} online` : `${l._count?.members || 0} members`}
+                </div>
+              </div>
+              <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: `1px solid ${accent}55`, background: `${accent}18`, color: "rgba(243,244,246,.85)", flexShrink: 0 }}>visit</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── RightRail ─────────────────────────────────────────────────────────────────
 export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const pathname       = usePathname() || "";
@@ -834,9 +1326,15 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
         {/* tools pill removed — collapse button is in ShellGate */}
       </div>
       <LobbyModPanel globalRole={globalRole || ""} lobbyId={resolvedLobbyId} />
+      {/* WhosHerePanel self-gates to new users only (no friends, no crew).
+          Established users see lobby presence in the left rail, so this
+          would be redundant for them; for fresh accounts it's filler so
+          the top of the rail isn't a blank shelf. */}
+      <WhosHerePanel lobbyId={resolvedLobbyId} />
       <RoomsPanel currentRoomId={currentRoomId} lobbyId={resolvedLobbyId} />
-      <FriendsPanel />
-      <CrewPanel />
+      <FriendsPanel lobbyId={resolvedLobbyId} />
+      <CrewPanel lobbyId={resolvedLobbyId} />
+      <DiscoverLobbiesPanel currentLobbyId={resolvedLobbyId} />
     </div>
   );
 }
