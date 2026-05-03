@@ -2128,3 +2128,81 @@ model WorldNote {
   @@index([campaignId])
   @@index([campaignId, parentId])
 }
+
+// ─── Character Sheets (D&D 5e) ───────────────────────────────────────────
+// Per-player character data — ability scores, vitals, spells, inventory,
+// notes. Modifiers and proficiency bonus are derived server-side on read,
+// not stored. campaignId is a soft FK (string only) so this model can be
+// created independently of the campaign-ledger work; the relation will be
+// wired up at integration time.
+
+model Character {
+  id          String  @id @default(cuid())
+  name        String
+  className   String  @default("")
+  level       Int     @default(1)
+  race        String  @default("")
+  alignment   String  @default("")
+  ownerUserId String
+  campaignId  String?
+  // Optional room scoping. The DM (room owner) sees every character whose
+  // roomId matches their room; players see only their own.
+  roomId      String?
+
+  // Ability scores (raw)
+  str Int @default(10)
+  dex Int @default(10)
+  con Int @default(10)
+  int Int @default(10)
+  wis Int @default(10)
+  cha Int @default(10)
+
+  // Vitals — HP max and AC are user-entered, not auto-computed.
+  hpCurrent Int    @default(0)
+  hpMax     Int    @default(0)
+  hpTemp    Int    @default(0)
+  ac        Int    @default(10)
+  speed     Int    @default(30)
+  hitDice   String @default("")
+
+  // Save proficiencies — array of "STR"|"DEX"|"CON"|"INT"|"WIS"|"CHA".
+  saveProfs String[] @default([])
+  // Skill proficiencies — JSON: [{ skill: "perception", expertise: false }, ...]
+  skillProfs Json @default("[]")
+
+  // Spell slots — JSON: { "1": { current, max }, "2": {...}, ... }.
+  spellSlots Json @default("{}")
+  // Spell list — JSON: [{ name, level }]. No full spell data here; that
+  // lives in the Compendium.
+  spells Json @default("[]")
+
+  // Inventory — JSON: [{ name, qty, equipped, attuned, notes }].
+  inventory Json @default("[]")
+
+  // Coin
+  cp Int @default(0)
+  sp Int @default(0)
+  ep Int @default(0)
+  gp Int @default(0)
+  pp Int @default(0)
+
+  // Features & traits — JSON: [{ title, body, source }] where source is
+  // "race"|"class"|"feat"|"background"|"other".
+  features Json @default("[]")
+
+  // Click-to-roll attacks — JSON: [{ name, expression, damage, notes }].
+  attacks Json @default("[]")
+
+  // Notes — three buckets, all on the model so the DM doesn't need a
+  // separate join to read DM-private content.
+  notesDM     String @default("")
+  notesPlayer String @default("")
+  notesParty  String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerUserId])
+  @@index([roomId])
+  @@index([campaignId])
+}
