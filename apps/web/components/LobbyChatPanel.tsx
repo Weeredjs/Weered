@@ -1362,6 +1362,113 @@ export default function LobbyChatPanel(
           <EmptyState title="Crickets." hint="Be the one who drops the first line." />
         ) : (
           msgs.map((m: any, i: number) => {
+            // ── Trade-event row (FakeOut paper trade broadcast as inline
+            // system chip). Renders as a compact glow row instead of a
+            // standard message bubble.
+            if (m?.kind === "trade") {
+              const tMeta = m?.meta || {};
+              const side = String(tMeta.side || "").toUpperCase();
+              const isLong = side === "BUY";
+              const traderName = String(m?.user?.name || "trader");
+              const sym = String(tMeta.symbol || "").replace(/USDT$/, "");
+              const qty = Number(tMeta.quantity || 0);
+              const px = Number(tMeta.price || 0);
+              const notional = qty * px;
+              return (
+                <div
+                  key={`trade-${m.id}-${i}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 12px",
+                    margin: "4px 0",
+                    fontSize: 12,
+                    fontFamily: "monospace",
+                    borderLeft: `2px solid ${isLong ? "rgba(34,197,94,.6)" : "rgba(239,68,68,.6)"}`,
+                    background: isLong ? "rgba(34,197,94,.04)" : "rgba(239,68,68,.04)",
+                    borderRadius: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1px", opacity: 0.4 }}>FAKEOUT</span>
+                  <span style={{ fontWeight: 700, color: "rgba(243,244,246,.85)" }}>{traderName}</span>
+                  <span style={{
+                    padding: "1px 6px",
+                    borderRadius: 3,
+                    fontSize: 9,
+                    fontWeight: 800,
+                    letterSpacing: "0.5px",
+                    background: isLong ? "rgba(34,197,94,.18)" : "rgba(239,68,68,.18)",
+                    color: isLong ? "#22c55e" : "#ef4444",
+                  }}>
+                    {isLong ? "LONG" : "SHORT"}
+                  </span>
+                  <span style={{ color: "rgba(243,244,246,.55)" }}>{sym}</span>
+                  <span style={{ color: "rgba(243,244,246,.4)" }}>·</span>
+                  <span style={{ color: "rgba(243,244,246,.6)" }}>{qty.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                  <span style={{ color: "rgba(243,244,246,.4)" }}>@</span>
+                  <span style={{ color: "rgba(243,244,246,.7)" }}>${px >= 1 ? px.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : px.toFixed(6)}</span>
+                  <span style={{ marginLeft: "auto", color: "rgba(243,244,246,.35)", fontSize: 11 }}>
+                    ${notional.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              );
+            }
+            // ── Dice-roll row (D&D Dice Tower public broadcast as inline
+            // chip). Renders as a compact glow row keyed off Nat 20 / Nat 1
+            // so crits flash green and crit-fails flash red. Modifiers, kept
+            // dice, and dropped (advantage/disadvantage) all visible inline.
+            if (m?.kind === "dice") {
+              const dMeta = m?.meta || {};
+              const isNat20 = !!dMeta.isNat20;
+              const isNat1 = !!dMeta.isNat1;
+              const accent = isNat20 ? "rgba(34,197,94,.85)" : isNat1 ? "rgba(239,68,68,.85)" : "rgba(196,165,90,.85)";
+              const bgTint = isNat20 ? "rgba(34,197,94,.06)" : isNat1 ? "rgba(239,68,68,.06)" : "rgba(196,165,90,.05)";
+              const chipBg = isNat20 ? "rgba(34,197,94,.18)" : isNat1 ? "rgba(239,68,68,.18)" : "rgba(196,165,90,.18)";
+              const chipFg = isNat20 ? "#22c55e" : isNat1 ? "#ef4444" : "#C4A55A";
+              const rollerName = String(m?.user?.name || "roller");
+              const expr = String(dMeta.expression || "");
+              const total = Number(dMeta.total || 0);
+              const rolls: number[] = Array.isArray(dMeta.rolls) ? dMeta.rolls : [];
+              const dropped: number[] = Array.isArray(dMeta.dropped) ? dMeta.dropped : [];
+              const modifier = Number(dMeta.modifier || 0);
+              const adv = !!dMeta.advantage;
+              const dis = !!dMeta.disadvantage;
+              const tag = isNat20 ? "NAT 20" : isNat1 ? "NAT 1" : adv ? "ADV" : dis ? "DIS" : (expr.toUpperCase() || `D${dMeta.sides || ""}`);
+              return (
+                <div
+                  key={`dice-${m.id}-${i}`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 12px", margin: "4px 0",
+                    fontSize: 12, fontFamily: "monospace",
+                    borderLeft: `2px solid ${accent}`,
+                    background: bgTint,
+                    borderRadius: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1px", opacity: 0.45 }}>DICE TOWER</span>
+                  <span style={{ fontWeight: 700, color: "rgba(243,244,246,.85)" }}>{rollerName}</span>
+                  <span style={{
+                    padding: "1px 6px", borderRadius: 3,
+                    fontSize: 9, fontWeight: 800, letterSpacing: "0.5px",
+                    background: chipBg, color: chipFg,
+                  }}>{tag}</span>
+                  <span style={{ color: "rgba(243,244,246,.55)" }}>{expr}</span>
+                  <span style={{ color: "rgba(243,244,246,.4)" }}>·</span>
+                  <span style={{ color: "rgba(243,244,246,.6)" }}>
+                    [{rolls.join(",")}]
+                    {dropped.length > 0 && (
+                      <span style={{ textDecoration: "line-through", opacity: 0.4, marginLeft: 4 }}>{dropped.join(",")}</span>
+                    )}
+                    {modifier !== 0 && <span> {modifier > 0 ? `+${modifier}` : modifier}</span>}
+                  </span>
+                  <span style={{ marginLeft: "auto", fontWeight: 800, fontSize: 14, color: chipFg }}>
+                    {total}
+                  </span>
+                </div>
+              );
+            }
             const uname = String(m?.user?.name || m?.user?.id || m?.name || m?.username || m?.author || "?");
             const mId = String(m?.id || "");
             const meId = String(ctx?.me?.id || "");

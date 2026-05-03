@@ -5582,61 +5582,1054 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   }
 }
 
-/* Modules tab — eye-catcher aura to pull users off the default Rooms tab
-   into the module integration. Only animates when the tab is INACTIVE. */
-@keyframes weeredModulesAura {
-  0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(250, 204, 21, .22),
-      0 0 14px -2px rgba(250, 204, 21, .28),
-      inset 0 0 12px -4px rgba(250, 204, 21, .18);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(250, 204, 21, .38),
-      0 0 22px -2px rgba(250, 204, 21, .55),
-      inset 0 0 14px -3px rgba(250, 204, 21, .30);
-  }
+/* Lobby tab bar — text + underline indicator. Inline accent color overrides
+   the default underline tint when an active tab passes its lobby accent. */
+.weered-tab-btn {
+  padding: 6px 12px 5px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(148,163,184,.7);
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color .15s ease, border-color .15s ease;
 }
+.weered-tab-btn:hover {
+  color: rgba(243,244,246,.88);
+}
+.weered-tab-btn.is-active {
+  color: rgba(243,244,246,.96);
+  border-bottom-color: rgba(167,139,250,.7);
+}
+
+/* Modules tab — same shape as TabBtn, gold accent for the underline + chip. */
 .weered-modules-tab {
   position: relative;
-  background: linear-gradient(135deg, rgba(250,204,21,.08) 0%, rgba(249,115,22,.06) 55%, rgba(168,85,247,.08) 100%) !important;
-  animation: weeredModulesAura 2.6s ease-in-out infinite;
-  color: rgba(253, 224, 71, .95) !important;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px 5px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(148,163,184,.75);
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color .15s ease, border-color .15s ease;
 }
 .weered-modules-tab:hover {
-  background: linear-gradient(135deg, rgba(250,204,21,.18) 0%, rgba(249,115,22,.12) 55%, rgba(168,85,247,.16) 100%) !important;
+  color: rgba(253, 224, 71, .85);
 }
 .weered-modules-tab.is-active {
-  animation: none;
-  background: linear-gradient(135deg, rgba(250,204,21,.28) 0%, rgba(249,115,22,.20) 55%, rgba(168,85,247,.24) 100%) !important;
-  box-shadow:
-    0 0 0 1px rgba(250, 204, 21, .45),
-    0 0 18px -3px rgba(250, 204, 21, .45);
-  color: #fde68a !important;
+  color: rgba(253, 224, 71, .98);
+  border-bottom-color: rgba(250, 204, 21, .7);
 }
 .weered-modules-sparkle {
   display: inline-flex;
   vertical-align: middle;
   margin-right: 5px;
-  filter: drop-shadow(0 0 4px rgba(250, 204, 21, .6));
+  opacity: .8;
+  filter: drop-shadow(0 0 2px rgba(250, 204, 21, .35));
 }
 .weered-modules-chip {
   display: inline-flex;
   align-items: center;
   margin-left: 6px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 999px;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .08em;
-  background: rgba(250, 204, 21, .14);
-  border: 1px solid rgba(250, 204, 21, .35);
-  color: #fde68a;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: rgba(250, 204, 21, .08);
+  border: 1px solid rgba(250, 204, 21, .22);
+  color: rgba(253, 224, 71, .85);
   vertical-align: middle;
 }
+
+/* ── D&D Lobby Theming — warm tavern by firelight ─────────────────────────
+   Scoped to .weered-dnd-modules so it doesn't bleed into other lobbies.
+   Palette taken from the dnd-banner: hearth amber, candle yellow, deep
+   oak shadow, parchment, iron-lantern gold. Pirata One for display
+   headings, Cormorant Garamond for body where the texture warrants.
+*/
+.weered-dnd-modules {
+  --dnd-fire-1:        #D4602A;
+  --dnd-fire-2:        #E8A04A;
+  --dnd-fire-3:        #F5D58A;
+  --dnd-wood-1:        #3A1C0E;
+  --dnd-wood-2:        #5D2F18;
+  --dnd-wood-3:        #7F4422;
+  --dnd-parchment-1:   #C9A878;
+  --dnd-parchment-2:   #A88556;
+  --dnd-parchment-ink: #2A1810;
+  --dnd-night-1:       #16100A;
+  --dnd-night-2:       #2A1810;
+  --dnd-accent:        #C4A55A;
+
+  /* Firelight glow at top + secondary candle warmth at bottom */
+  background:
+    radial-gradient(ellipse 120% 55% at 50% -8%, rgba(212, 96, 42, 0.16), transparent 65%),
+    radial-gradient(ellipse 70% 35% at 18% 105%, rgba(232, 160, 74, 0.08), transparent 65%),
+    linear-gradient(180deg, #19100A 0%, #100905 100%);
+}
+
+/* Tabs — parchment-pill with firelight active state. */
+.weered-dnd-modules .weered-dnd-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid rgba(196, 165, 90, 0.20);
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(22, 16, 10, 0.75));
+  color: rgba(201, 168, 120, 0.65);
+  font-family: var(--font-pirata), 'Pirata One', 'IM Fell English', serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(196,165,90,0.04);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.6);
+}
+.weered-dnd-modules .weered-dnd-tab:hover {
+  border-color: rgba(232, 160, 74, 0.45);
+  color: rgba(245, 213, 138, 0.95);
+  background: linear-gradient(180deg, rgba(127, 68, 34, 0.5), rgba(58, 28, 14, 0.7));
+}
+.weered-dnd-modules .weered-dnd-tab.is-active {
+  border-color: rgba(232, 160, 74, 0.7);
+  background: linear-gradient(180deg, rgba(212, 96, 42, 0.32), rgba(127, 68, 34, 0.55));
+  color: #F5D58A;
+  box-shadow:
+    0 0 16px rgba(232, 160, 74, 0.32),
+    inset 0 1px 0 rgba(245, 213, 138, 0.18);
+  text-shadow: 0 0 8px rgba(232, 160, 74, 0.6), 0 1px 1px rgba(0,0,0,0.6);
+}
+.weered-dnd-modules .weered-dnd-tab--small {
+  padding: 5px 11px;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* Section headings inside D&D — Pirata One. */
+.weered-dnd-modules .dnd-heading {
+  font-family: var(--font-pirata), 'Pirata One', serif;
+  letter-spacing: 0.6px;
+  color: rgba(245, 213, 138, 0.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+/* Body serif — descriptive copy. */
+.weered-dnd-modules .dnd-serif {
+  font-family: var(--font-cormorant), 'Cormorant Garamond', 'EB Garamond', serif;
+}
+
+/* Wooden-table card. */
+.weered-dnd-modules .dnd-card {
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.65), rgba(22, 16, 10, 0.8));
+  border: 1px solid rgba(196, 165, 90, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(196, 165, 90, 0.06);
+}
+
+/* Tavern Board corkboard backdrop + scroll cards. Scrolls have a faint
+   tilt and twin "pin" dots at the top corners. */
+.weered-dnd-modules .dnd-corkboard {
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(127, 68, 34, 0.45);
+  background:
+    repeating-linear-gradient(45deg, rgba(127, 68, 34, 0.06) 0 7px, transparent 7px 14px),
+    linear-gradient(180deg, rgba(58, 28, 14, 0.45), rgba(22, 16, 10, 0.65));
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.5);
+}
+.weered-dnd-modules .dnd-scroll {
+  position: relative;
+  margin: 14px 8px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #D6B689 0%, #B59465 100%);
+  color: var(--dnd-parchment-ink);
+  border-radius: 4px;
+  border: 1px solid rgba(107, 79, 45, 0.6);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.55),
+    inset 0 0 24px rgba(107, 79, 45, 0.30);
+  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+}
+.weered-dnd-modules .dnd-scroll:nth-child(odd)  { transform: rotate(-0.4deg); }
+.weered-dnd-modules .dnd-scroll:nth-child(even) { transform: rotate( 0.5deg); }
+.weered-dnd-modules .dnd-scroll::before,
+.weered-dnd-modules .dnd-scroll::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  width: 9px; height: 9px;
+  background: radial-gradient(circle, #8B4A1F 0%, #3A1C0E 70%);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+.weered-dnd-modules .dnd-scroll::before { left: 16%; }
+.weered-dnd-modules .dnd-scroll::after  { right: 16%; }
+
+/* ── D&D Lectern — carved wooden bar that frames the four tools (Compendium,
+   Tavern Board, Dice Tower, Streams) as deeply-sunken alcoves with brass
+   corner pieces. Active alcove gets candlelight from above. Session Zero
+   sits as a small italic "quill" bookmark on the right edge.
+*/
+.weered-dnd-modules .dnd-lectern {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 24px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(196,165,90,0.30);
+  background:
+    /* Faint vertical plank streaks */
+    repeating-linear-gradient(90deg, rgba(196,165,90,0.05) 0 1px, transparent 1px 22px),
+    /* Wood grain */
+    linear-gradient(180deg, rgba(127,68,34,0.55), rgba(58,28,14,0.85));
+  box-shadow:
+    inset 0 1px 0 rgba(196,165,90,0.18),
+    inset 0 -2px 0 rgba(0,0,0,0.55),
+    0 5px 16px rgba(0,0,0,0.45);
+  flex-wrap: wrap;
+}
+/* Brass corner-pieces — left and right vertical strips */
+.weered-dnd-modules .dnd-lectern::before,
+.weered-dnd-modules .dnd-lectern::after {
+  content: "";
+  position: absolute;
+  top: 6px; bottom: 6px;
+  width: 8px;
+  background:
+    linear-gradient(180deg, #E8C672 0%, #8B6F3D 50%, #C4A55A 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5), inset 1px 0 0 rgba(255,224,140,0.4);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.weered-dnd-modules .dnd-lectern::before { left: 6px; }
+.weered-dnd-modules .dnd-lectern::after  { right: 6px; }
+
+.weered-dnd-modules .dnd-lectern-tool {
+  flex: 1 1 130px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0,0,0,0.4);
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(0,0,0,0.55), transparent 70%),
+    linear-gradient(180deg, rgba(58,28,14,0.85), rgba(28,18,10,0.95));
+  color: rgba(201,168,120,0.55);
+  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-size: 15px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow: inset 0 1px 0 rgba(196,165,90,0.04), inset 0 -1px 0 rgba(0,0,0,0.6);
+}
+.weered-dnd-modules .dnd-lectern-tool:hover {
+  color: rgba(245,213,138,0.88);
+  border-color: rgba(196,165,90,0.30);
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(232,160,74,0.20), transparent 70%),
+    linear-gradient(180deg, rgba(127,68,34,0.55), rgba(58,28,14,0.85));
+}
+.weered-dnd-modules .dnd-lectern-tool.is-active {
+  color: #F5D58A;
+  border-color: rgba(232,160,74,0.65);
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(245,213,138,0.32), rgba(212,96,42,0.20) 50%, transparent 80%),
+    linear-gradient(180deg, rgba(127,68,34,0.65), rgba(58,28,14,0.85));
+  box-shadow:
+    inset 0 2px 0 rgba(245,213,138,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 18px rgba(232,160,74,0.30);
+  text-shadow: 0 0 8px rgba(232,160,74,0.6), 0 1px 1px rgba(0,0,0,0.6);
+}
+.weered-dnd-modules .dnd-lectern-icon {
+  font-size: 19px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+}
+.weered-dnd-modules .dnd-lectern-tool.is-active .dnd-lectern-icon {
+  filter: drop-shadow(0 0 6px rgba(232,160,74,0.55));
+}
+
+/* Quill bookmark — Session Zero. Sits as a small italic accent on the right. */
+.weered-dnd-modules .dnd-lectern-quill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(196,165,90,0.20);
+  background: linear-gradient(180deg, rgba(58,28,14,0.65), rgba(28,18,10,0.85));
+  color: rgba(201,168,120,0.7);
+  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+  font-size: 13px;
+  font-style: italic;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 0 0 auto;
+}
+.weered-dnd-modules .dnd-lectern-quill:hover {
+  color: #F5D58A;
+  border-color: rgba(232,160,74,0.5);
+  box-shadow: 0 0 10px rgba(232,160,74,0.20);
+}
+
+/* ── D&D Codex — chapter ribbons hanging from a leather tome-spine. Each
+   ribbon is the color of its school/class. Active ribbon extends down
+   with a tasselled point. */
+.weered-dnd-modules .dnd-codex {
+  position: relative;
+  margin-bottom: 16px;
+  padding-top: 8px;
+}
+.weered-dnd-modules .dnd-codex::before {
+  /* The leather spine */
+  content: "";
+  position: absolute;
+  top: 0; left: 8px; right: 8px;
+  height: 5px;
+  background:
+    linear-gradient(180deg, #5D2F18 0%, #3A1C0E 100%);
+  border-radius: 0 0 3px 3px;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(196,165,90,0.10);
+}
+.weered-dnd-modules .dnd-codex-ribbons {
+  display: flex;
+  gap: 4px;
+  padding: 5px 14px 0;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.weered-dnd-modules .dnd-codex-ribbon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px 14px;
+  background: linear-gradient(180deg,
+    rgba(var(--ribbon-rgb, 90, 60, 30), 0.45) 0%,
+    rgba(var(--ribbon-rgb, 90, 60, 30), 0.85) 100%);
+  color: rgba(255, 245, 220, 0.62);
+  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  border: none;
+  border-bottom: 1px solid rgba(0,0,0,0.4);
+  transition: all 0.18s ease;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.85);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  /* Tasseled bottom edge */
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
+}
+.weered-dnd-modules .dnd-codex-ribbon:hover {
+  color: rgba(255,245,220,0.95);
+  filter: brightness(1.25);
+  transform: translateY(2px);
+}
+.weered-dnd-modules .dnd-codex-ribbon.is-active {
+  color: #fff;
+  padding-bottom: 22px;
+  filter: brightness(1.15);
+  transform: translateY(4px);
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.6),
+    0 0 14px rgba(232,160,74,0.30);
+  z-index: 2;
+}
+
+/* ── D&D Dice Tower — stone brazier centerpiece + carved-stone tiles ────
+   The brazier-mouth result panel uses inset stone shadows and a pulsing
+   coal glow at the base. Result number renders in Pirata One with an
+   amber halo (or green / red on crits).
+*/
+@keyframes dndCoalPulse {
+  0%, 100% { opacity: 0.65; transform: scaleY(1); }
+  50%      { opacity: 1.00; transform: scaleY(1.05); }
+}
+@keyframes dndDieFloat {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50%      { transform: rotate(-4deg) translateY(-3px); }
+}
+.weered-dnd-modules .dnd-brazier {
+  position: relative;
+  padding: 32px 24px 38px;
+  border-radius: 14px;
+  border: 1px solid rgba(196,165,90,0.30);
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(212,96,42,0.32), transparent 70%),
+    linear-gradient(180deg, rgba(74,59,46,0.45) 0%, rgba(42,24,16,0.85) 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(196,165,90,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    inset 8px 0 18px -8px rgba(0,0,0,0.55),
+    inset -8px 0 18px -8px rgba(0,0,0,0.55),
+    0 6px 22px rgba(0,0,0,0.55);
+  overflow: hidden;
+  text-align: center;
+}
+/* Coals at the base — pulses */
+.weered-dnd-modules .dnd-brazier::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 8%; right: 8%;
+  height: 22px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 100% at 30% 50%, rgba(245,213,138,0.55), transparent 70%),
+    radial-gradient(ellipse 50% 100% at 70% 50%, rgba(212,96,42,0.55), transparent 70%);
+  filter: blur(3px);
+  animation: dndCoalPulse 3.4s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+.weered-dnd-modules .dnd-brazier-result {
+  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-size: 78px;
+  font-weight: 400;
+  line-height: 1;
+  color: #F5D58A;
+  text-shadow:
+    0 0 28px rgba(232,160,74,0.55),
+    0 0 10px rgba(212,96,42,0.40),
+    0 2px 4px rgba(0,0,0,0.7);
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+}
+.weered-dnd-modules .dnd-brazier-result.is-nat20 {
+  color: #C8E886;
+  text-shadow:
+    0 0 32px rgba(184,230,107,0.65),
+    0 0 14px rgba(122,209,88,0.45),
+    0 2px 4px rgba(0,0,0,0.7);
+}
+.weered-dnd-modules .dnd-brazier-result.is-nat1 {
+  color: #FF8A7A;
+  text-shadow:
+    0 0 26px rgba(239,68,68,0.55),
+    0 0 10px rgba(239,68,68,0.40),
+    0 2px 4px rgba(0,0,0,0.7);
+}
+.weered-dnd-modules .dnd-brazier-tag {
+  font-family: var(--font-pirata), serif;
+  font-size: 13px;
+  letter-spacing: 2.5px;
+  margin-top: 6px;
+  position: relative; z-index: 1;
+}
+.weered-dnd-modules .dnd-brazier-tag.is-nat20 { color: #C8E886; text-shadow: 0 0 10px rgba(184,230,107,0.65); }
+.weered-dnd-modules .dnd-brazier-tag.is-nat1  { color: #FF8A7A; text-shadow: 0 0 10px rgba(239,68,68,0.6); }
+.weered-dnd-modules .dnd-brazier-expr {
+  font-family: var(--font-cormorant), serif;
+  font-size: 14px;
+  font-style: italic;
+  color: rgba(245,213,138,0.62);
+  margin-top: 12px;
+  position: relative; z-index: 1;
+}
+.weered-dnd-modules .dnd-brazier-rolls {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(201,168,120,0.5);
+  margin-top: 4px;
+  position: relative; z-index: 1;
+}
+.weered-dnd-modules .dnd-brazier-d20 {
+  display: inline-block;
+  animation: dndDieFloat 4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(212,96,42,0.30));
+}
+.weered-dnd-modules .dnd-brazier-prompt {
+  font-family: var(--font-cormorant), serif;
+  font-size: 15px;
+  font-style: italic;
+  color: rgba(201,168,120,0.55);
+  margin-top: 14px;
+  position: relative; z-index: 1;
+}
+
+/* Carved-stone dice tiles — quick-roll buttons. */
+.weered-dnd-modules .dnd-stone-tile {
+  flex: 1 1 64px;
+  min-width: 58px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(196,165,90,0.30);
+  background:
+    linear-gradient(180deg, rgba(127,68,34,0.45) 0%, rgba(58,28,14,0.65) 55%, rgba(42,24,16,0.85) 100%);
+  color: #F5D58A;
+  font-family: var(--font-pirata), serif;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(245,213,138,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 2px 4px rgba(0,0,0,0.45);
+  transition: all 0.15s ease;
+}
+.weered-dnd-modules .dnd-stone-tile:hover {
+  border-color: rgba(232,160,74,0.65);
+  background:
+    linear-gradient(180deg, rgba(212,96,42,0.45) 0%, rgba(127,68,34,0.6) 50%, rgba(58,28,14,0.85) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(245,213,138,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 14px rgba(232,160,74,0.35),
+    0 2px 4px rgba(0,0,0,0.45);
+}
+.weered-dnd-modules .dnd-stone-tile:active { transform: translateY(1px); }
+.weered-dnd-modules .dnd-stone-tile:disabled { opacity: 0.5; cursor: not-allowed; }
+.weered-dnd-modules .dnd-stone-tile--adv {
+  color: #C8E886;
+  border-color: rgba(122,209,88,0.30);
+  background: linear-gradient(180deg, rgba(58,103,46,0.40) 0%, rgba(42,24,16,0.85) 100%);
+}
+.weered-dnd-modules .dnd-stone-tile--adv:hover {
+  border-color: rgba(122,209,88,0.6);
+  box-shadow: inset 0 1px 0 rgba(184,230,107,0.20), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 14px rgba(122,209,88,0.30), 0 2px 4px rgba(0,0,0,0.45);
+}
+.weered-dnd-modules .dnd-stone-tile--dis {
+  color: #FF8A7A;
+  border-color: rgba(239,68,68,0.30);
+  background: linear-gradient(180deg, rgba(155,40,30,0.40) 0%, rgba(42,24,16,0.85) 100%);
+}
+.weered-dnd-modules .dnd-stone-tile--dis:hover {
+  border-color: rgba(239,68,68,0.6);
+  box-shadow: inset 0 1px 0 rgba(255,138,122,0.20), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 14px rgba(239,68,68,0.30), 0 2px 4px rgba(0,0,0,0.45);
+}
+
+/* Section label — small Pirata heading. */
+.weered-dnd-modules .dnd-section-label {
+  font-family: var(--font-pirata), serif;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: rgba(232,160,74,0.75);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* Parchment-style input + roll button. */
+.weered-dnd-modules .dnd-parchment-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(196,165,90,0.25);
+  background: rgba(28,18,10,0.55);
+  color: #F5D58A;
+  font-family: var(--font-cormorant), serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.weered-dnd-modules .dnd-parchment-input:focus {
+  border-color: rgba(232,160,74,0.6);
+  box-shadow: 0 0 0 1px rgba(232,160,74,0.20);
+}
+.weered-dnd-modules .dnd-parchment-input::placeholder {
+  color: rgba(201,168,120,0.42);
+  font-style: italic;
+}
+
+/* Roll history — wooden plank entries. */
+.weered-dnd-modules .dnd-history-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border-left: 3px solid rgba(196,165,90,0.45);
+  background: linear-gradient(90deg, rgba(58,28,14,0.45), rgba(22,16,10,0.55));
+}
+.weered-dnd-modules .dnd-history-row.is-nat20 { border-left-color: rgba(122,209,88,0.75); }
+.weered-dnd-modules .dnd-history-row.is-nat1  { border-left-color: rgba(239,68,68,0.75); }
+.weered-dnd-modules .dnd-history-total {
+  font-family: var(--font-pirata), serif;
+  font-size: 18px; min-width: 40px; text-align: center;
+  color: #F5D58A;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+.weered-dnd-modules .dnd-history-row.is-nat20 .dnd-history-total { color: #C8E886; }
+.weered-dnd-modules .dnd-history-row.is-nat1  .dnd-history-total { color: #FF8A7A; }
+.weered-dnd-modules .dnd-history-expr {
+  font-family: var(--font-cormorant), serif;
+  font-size: 13px;
+  color: rgba(245,213,138,0.78);
+  font-style: italic;
+}
+
+/* ── D&D Rooms — warm-tavern theming carried into the room directory.
+   Scoped to html[data-weered-lobby="dnd"] so other lobbies are untouched.
+   Pirata One for room names, parchment-amber hover glow on cards, the
+   "Create Room" button styled as a wooden tile, and the section header
+   reads as a tavern-board label. */
+
+/* Section header — bigger Pirata heading, brass-tack divider */
+html[data-weered-lobby="dnd"] .weered-room-directory-header {
+  font-family: var(--font-pirata), 'Pirata One', serif !important;
+}
+
+/* Card frame — warm-leather hover state, default border in parchment-amber */
+html[data-weered-lobby="dnd"] .weered-room-card {
+  border-color: rgba(196, 165, 90, 0.20) !important;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(212, 96, 42, 0.06), transparent 60%),
+    linear-gradient(180deg, rgba(58, 28, 14, 0.20), rgba(22, 16, 10, 0.30)) !important;
+  transition: all 0.22s ease !important;
+}
+html[data-weered-lobby="dnd"] .weered-room-card:hover {
+  border-color: rgba(232, 160, 74, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(232, 160, 74, 0.25),
+    0 0 22px rgba(232, 160, 74, 0.20),
+    0 6px 18px rgba(0, 0, 0, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+/* Pinned/house room cards get a slight extra warmth */
+html[data-weered-lobby="dnd"] .weered-room-card[data-pinned="true"] {
+  border-color: rgba(232, 160, 74, 0.30) !important;
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(245, 213, 138, 0.07), transparent 60%),
+    linear-gradient(180deg, rgba(74, 41, 20, 0.30), rgba(28, 18, 10, 0.40)) !important;
+}
+
+/* Room name — Pirata One. Override the inline 800-weight for the medieval
+   display face. Bumped to 19px so the difference reads at a glance. */
+html[data-weered-lobby="dnd"] .weered-room-card .weered-room-name,
+html[data-weered-lobby="dnd"] .weered-room-card-name {
+  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-weight: 400 !important;
+  font-size: 19px !important;
+  letter-spacing: 0.5px !important;
+  color: #F5D58A !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+html[data-weered-lobby="dnd"] .weered-room-card .weered-room-subtitle {
+  font-family: var(--font-cormorant), 'Cormorant Garamond', serif !important;
+  font-style: italic !important;
+  color: rgba(201, 168, 120, 0.70) !important;
+  font-size: 13px !important;
+}
+
+/* Section header bar — replace the generic accent stripe with a Pirata
+   "ROOMS" label + brass divider line. The bar is rendered inline in JSX
+   so we override via attribute targeting on the existing structure. */
+html[data-weered-lobby="dnd"] .weered-rooms-section-label {
+  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  letter-spacing: 1.2px !important;
+  color: #F5D58A !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(232, 160, 74, 0.25);
+  text-transform: none !important;
+}
+
+html[data-weered-lobby="dnd"] .weered-rooms-section-count {
+  font-family: var(--font-pirata), serif !important;
+  background:
+    radial-gradient(circle at 30% 30%, #E8C672 0%, #C4A55A 45%, #6B4F2D 100%) !important;
+  border: 1px solid rgba(58, 28, 14, 0.5) !important;
+  color: #2A1810 !important;
+  font-weight: 700 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 224, 140, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-weered-lobby="dnd"] .weered-rooms-section-divider {
+  background: linear-gradient(90deg, rgba(196, 165, 90, 0.30), rgba(196, 165, 90, 0.06)) !important;
+  height: 1px !important;
+}
+
+/* Create Room button — stone tile */
+html[data-weered-lobby="dnd"] .weered-rooms-create-btn {
+  border: 1px solid rgba(196, 165, 90, 0.35) !important;
+  background:
+    linear-gradient(180deg, rgba(127, 68, 34, 0.45) 0%, rgba(58, 28, 14, 0.65) 55%, rgba(42, 24, 16, 0.85) 100%) !important;
+  color: #F5D58A !important;
+  font-family: var(--font-pirata), serif !important;
+  letter-spacing: 0.4px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(245, 213, 138, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.45) !important;
+}
+html[data-weered-lobby="dnd"] .weered-rooms-create-btn:hover {
+  border-color: rgba(232, 160, 74, 0.65) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(245, 213, 138, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(232, 160, 74, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Create form — parchment input + stone Go button */
+html[data-weered-lobby="dnd"] .weered-rooms-create-form {
+  border: 1px solid rgba(196, 165, 90, 0.25) !important;
+  background:
+    linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(28, 18, 10, 0.70)) !important;
+}
+html[data-weered-lobby="dnd"] .weered-rooms-create-form input {
+  border: 1px solid rgba(196, 165, 90, 0.25) !important;
+  background: rgba(28, 18, 10, 0.55) !important;
+  color: #F5D58A !important;
+  font-family: var(--font-cormorant), serif !important;
+  font-size: 14px !important;
+}
+html[data-weered-lobby="dnd"] .weered-rooms-create-form input::placeholder {
+  color: rgba(201, 168, 120, 0.42) !important;
+  font-style: italic;
+}
+html[data-weered-lobby="dnd"] .weered-rooms-create-form button {
+  border: 1px solid rgba(196, 165, 90, 0.35) !important;
+  background:
+    linear-gradient(180deg, rgba(127, 68, 34, 0.45) 0%, rgba(58, 28, 14, 0.65) 55%, rgba(42, 24, 16, 0.85) 100%) !important;
+  color: #F5D58A !important;
+  font-family: var(--font-pirata), serif !important;
+}
+
+/* Empty state — when no rooms */
+html[data-weered-lobby="dnd"] .weered-rooms-empty-title {
+  font-family: var(--font-pirata), serif !important;
+  color: #F5D58A !important;
+}
+html[data-weered-lobby="dnd"] .weered-rooms-empty-hint {
+  font-family: var(--font-cormorant), serif !important;
+  font-style: italic !important;
+  color: rgba(201, 168, 120, 0.70) !important;
+}
+
+/* ── D&D Body — full-page tavern atmosphere. Warm hearth glow from top,
+   amber pool at the bottom corners, deep oak-shadow base. Plus a faint
+   dragon silhouette in the bottom-right and a candle-glow in the
+   bottom-left for ambient detail. Mirrors the Windrose body treatment.
+*/
+@keyframes dnd-candle-flicker {
+  0%, 100% { opacity: 0.13; transform: translateY(0) scale(1); }
+  35%      { opacity: 0.18; transform: translateY(-1px) scale(1.02); }
+  65%      { opacity: 0.10; transform: translateY(0.5px) scale(0.98); }
+}
+@keyframes dnd-dragon-breathe {
+  0%, 100% { opacity: 0.05; transform: translateY(0); }
+  50%      { opacity: 0.08; transform: translateY(-3px); }
+}
+
+html[data-weered-lobby="dnd"] body {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(232, 160, 74, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 12% 100%, rgba(212, 96, 42, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 88% 100%, rgba(122, 64, 28, 0.05) 0%, transparent 55%),
+    linear-gradient(180deg, #1a1209 0%, #100a06 100%) !important;
+  color: rgba(243, 232, 210, 0.92);
+}
+
+/* Dragon silhouette — bottom-right ambient watermark */
+html[data-weered-lobby="dnd"] body::before {
+  content: "" !important;
+  position: fixed;
+  bottom: -4%;
+  right: -3%;
+  width: 540px;
+  height: 540px;
+  background: url("/brand/dnd-icons/monster-dragon.svg") center/contain no-repeat !important;
+  opacity: 0.05 !important;
+  pointer-events: none;
+  z-index: 0;
+  filter: drop-shadow(0 0 18px rgba(212, 96, 42, 0.10)) sepia(1) hue-rotate(330deg) saturate(1.4);
+  animation: dnd-dragon-breathe 12s ease-in-out infinite !important;
+}
+
+/* Candle glow — bottom-left ambient pool */
+html[data-weered-lobby="dnd"] body::after {
+  content: "" !important;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 380px;
+  height: 480px;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 70%, rgba(245, 213, 138, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 25% 60%, rgba(212, 96, 42, 0.08) 0%, transparent 55%);
+  opacity: 0.13 !important;
+  pointer-events: none;
+  z-index: 0;
+  animation: dnd-candle-flicker 4.2s ease-in-out infinite !important;
+}
+
+/* Reduced-motion: stop the breathing dragon and flickering candle */
 @media (prefers-reduced-motion: reduce) {
-  .weered-modules-tab { animation: none; }
+  html[data-weered-lobby="dnd"] body::before,
+  html[data-weered-lobby="dnd"] body::after {
+    animation: none !important;
+  }
+}
+
+/* The shell sits ABOVE the ambient watermark layer */
+html[data-weered-lobby="dnd"] .weered-left,
+html[data-weered-lobby="dnd"] .weered-right,
+html[data-weered-lobby="dnd"] .weered-center {
+  position: relative;
+  z-index: 2;
+}
+html[data-weered-lobby="dnd"] iframe,
+html[data-weered-lobby="dnd"] video {
+  position: relative;
+  z-index: 3;
+}
+
+/* ── D&D Rail containers — warm dark oak gradient on the side rails so they
+   stop reading as cold-grey while the center is warm-tavern. Mirrors the
+   Windrose treatment with parchment-amber palette instead of navy. */
+html[data-weered-lobby="dnd"] .weered-left,
+html[data-weered-lobby="dnd"] .weered-right {
+  background:
+    radial-gradient(ellipse 100% 30% at 50% 0%, rgba(212, 96, 42, 0.06), transparent 70%),
+    linear-gradient(180deg, rgba(40, 24, 16, 0.85) 0%, rgba(20, 12, 8, 0.92) 100%) !important;
+  border-color: rgba(196, 165, 90, 0.22) !important;
+}
+
+/* Section cards inside the rails — slightly lighter oak with parchment-gold
+   trim and small brass rivets in the top corners. Same shape as Windrose's
+   wax-sealed cards but warmer. */
+html[data-weered-lobby="dnd"] .weered-rr-section,
+html[data-weered-lobby="dnd"] .weered-left-section,
+html[data-weered-lobby="dnd"] .weered-presence,
+html[data-weered-lobby="dnd"] .weered-usercorner {
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.45) 0%, rgba(28, 16, 10, 0.55) 100%) !important;
+  border: 1px solid rgba(196, 165, 90, 0.30) !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(196, 165, 90, 0.08),
+    inset 0 1px 0 rgba(245, 213, 138, 0.10),
+    0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  position: relative;
+}
+
+/* Brass rivets — top-left and top-right of each section card */
+html[data-weered-lobby="dnd"] .weered-rr-section::before,
+html[data-weered-lobby="dnd"] .weered-rr-section::after,
+html[data-weered-lobby="dnd"] .weered-left-section::before,
+html[data-weered-lobby="dnd"] .weered-left-section::after,
+html[data-weered-lobby="dnd"] .weered-presence::before,
+html[data-weered-lobby="dnd"] .weered-presence::after,
+html[data-weered-lobby="dnd"] .weered-usercorner::before,
+html[data-weered-lobby="dnd"] .weered-usercorner::after {
+  content: "";
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #f2d4a1 0%, #c9a066 60%, #5a3f1c 100%);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-weered-lobby="dnd"] .weered-rr-section::before,
+html[data-weered-lobby="dnd"] .weered-left-section::before,
+html[data-weered-lobby="dnd"] .weered-presence::before,
+html[data-weered-lobby="dnd"] .weered-usercorner::before { top: 5px; left: 5px; }
+
+html[data-weered-lobby="dnd"] .weered-rr-section::after,
+html[data-weered-lobby="dnd"] .weered-left-section::after,
+html[data-weered-lobby="dnd"] .weered-presence::after,
+html[data-weered-lobby="dnd"] .weered-usercorner::after { top: 5px; right: 5px; }
+
+/* ── D&D Rails — left + right rail theming when in the D&D lobby. Pirata
+   One section headers, parchment-amber hover on rows, warm wooden tiles on
+   action buttons. Scoped to html[data-weered-lobby="dnd"]. */
+
+/* Section headers — Left rail: .weered-left-title / .weered-presence-title */
+html[data-weered-lobby="dnd"] .weered-left-title,
+html[data-weered-lobby="dnd"] .weered-presence-title,
+html[data-weered-lobby="dnd"] .weered-rr-section-title {
+  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-size: 13px !important;
+  letter-spacing: 1.2px !important;
+  color: rgba(232, 160, 74, 0.85) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  text-transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Section header diagonal-accent stripe (the leading "/" mark) — recolor */
+html[data-weered-lobby="dnd"] .weered-left-section,
+html[data-weered-lobby="dnd"] .weered-rr-section {
+  /* Leave layout — only retint where rules below override */
+}
+
+/* Presence row hover + active in D&D — warm */
+html[data-weered-lobby="dnd"] .weered-presence-row:hover {
+  background: linear-gradient(180deg, rgba(127, 68, 34, 0.18), rgba(58, 28, 14, 0.12)) !important;
+}
+
+/* Right rail: room cards in the right rail (mini list) */
+html[data-weered-lobby="dnd"] .weered-rr-room-card {
+  border-color: rgba(196, 165, 90, 0.18) !important;
+  transition: all 0.18s ease !important;
+}
+html[data-weered-lobby="dnd"] .weered-rr-room-card:hover {
+  border-color: rgba(232, 160, 74, 0.45) !important;
+  background: linear-gradient(180deg, rgba(127, 68, 34, 0.20), rgba(58, 28, 14, 0.30)) !important;
+  box-shadow: 0 0 14px rgba(232, 160, 74, 0.18) !important;
+}
+html[data-weered-lobby="dnd"] .weered-rr-room-card-active {
+  border-color: rgba(232, 160, 74, 0.55) !important;
+  background: linear-gradient(180deg, rgba(212, 96, 42, 0.18), rgba(58, 28, 14, 0.45)) !important;
+  box-shadow: 0 0 16px rgba(232, 160, 74, 0.25) !important;
+}
+
+/* Right rail: primary buttons (LOCK CHAT / CLEAR CHAT / + ROOM / Join) */
+html[data-weered-lobby="dnd"] .weered-rr-primary,
+html[data-weered-lobby="dnd"] .weered-rr-join {
+  border: 1px solid rgba(196, 165, 90, 0.35) !important;
+  background:
+    linear-gradient(180deg, rgba(127, 68, 34, 0.50) 0%, rgba(58, 28, 14, 0.65) 55%, rgba(42, 24, 16, 0.85) 100%) !important;
+  color: #F5D58A !important;
+  font-family: var(--font-pirata), serif !important;
+  letter-spacing: 0.4px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(245, 213, 138, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.15s ease !important;
+}
+html[data-weered-lobby="dnd"] .weered-rr-primary:hover,
+html[data-weered-lobby="dnd"] .weered-rr-join:hover {
+  border-color: rgba(232, 160, 74, 0.65) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(245, 213, 138, 0.20),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(232, 160, 74, 0.30),
+    0 2px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Right rail: search input — parchment style */
+html[data-weered-lobby="dnd"] .weered-rr-search {
+  border: 1px solid rgba(196, 165, 90, 0.25) !important;
+  background: rgba(28, 18, 10, 0.55) !important;
+  color: #F5D58A !important;
+  font-family: var(--font-cormorant), serif !important;
+  font-size: 13px !important;
+}
+html[data-weered-lobby="dnd"] .weered-rr-search::placeholder {
+  color: rgba(201, 168, 120, 0.42) !important;
+  font-style: italic;
+}
+
+/* Right rail: module buttons (ON/OFF inside Lobby Controls) */
+html[data-weered-lobby="dnd"] .weered-rr-module-btn {
+  border: 1px solid rgba(196, 165, 90, 0.20) !important;
+  color: rgba(201, 168, 120, 0.7) !important;
+  font-family: var(--font-pirata), serif !important;
+  letter-spacing: 0.3px !important;
+}
+html[data-weered-lobby="dnd"] .weered-rr-module-btn-active {
+  border-color: rgba(232, 160, 74, 0.55) !important;
+  background: linear-gradient(180deg, rgba(212, 96, 42, 0.25), rgba(127, 68, 34, 0.45)) !important;
+  color: #F5D58A !important;
+  text-shadow: 0 0 6px rgba(232, 160, 74, 0.45) !important;
+}
+
+/* Right rail: friend rows */
+html[data-weered-lobby="dnd"] .weered-rr-friend-row,
+html[data-weered-lobby="dnd"] .weered-rr-crew-row {
+  transition: background 0.15s ease;
+}
+html[data-weered-lobby="dnd"] .weered-rr-friend-row:hover,
+html[data-weered-lobby="dnd"] .weered-rr-crew-row:hover {
+  background: linear-gradient(90deg, rgba(127, 68, 34, 0.18), rgba(58, 28, 14, 0.10)) !important;
+}
+
+/* Status chips (LOCK CHAT pill, OPEN, etc.) — neutral but warmer */
+html[data-weered-lobby="dnd"] .weered-rr-status-chip {
+  font-family: var(--font-pirata), serif !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Mod panel containers (LOBBY CONTROLS box wrapping LOCK CHAT etc.) */
+html[data-weered-lobby="dnd"] .weered-rr-mod-panel {
+  border-color: rgba(196, 165, 90, 0.18) !important;
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.30), rgba(28, 18, 10, 0.40)) !important;
+}
+
+/* Create room panel inside the right rail */
+html[data-weered-lobby="dnd"] .weered-rr-create-panel {
+  border-color: rgba(196, 165, 90, 0.30) !important;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(212, 96, 42, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(28, 18, 10, 0.70)) !important;
+}
+html[data-weered-lobby="dnd"] .weered-rr-create-title {
+  font-family: var(--font-pirata), serif !important;
+  color: rgba(232, 160, 74, 0.85) !important;
+  letter-spacing: 1px !important;
+  text-transform: none !important;
+}
+
+/* ── D&D Room Control Panel — RightRailRoom (inside-room admin panel).
+   Section labels (MODERATION / VOICE / MODULES / APPEARANCE) get Pirata
+   One amber, the action buttons turn into wooden tiles. */
+html[data-weered-lobby="dnd"] .weered-rrr-title {
+  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-size: 16px !important;
+  letter-spacing: 0.6px !important;
+  color: #F5D58A !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+html[data-weered-lobby="dnd"] .weered-rrr-section-label {
+  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  letter-spacing: 1.2px !important;
+  color: rgba(232, 160, 74, 0.90) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  text-transform: none !important;
+}
+
+/* All buttons inside the right-rail-room get a soft wooden treatment.
+   Color-coded buttons (red ban, green unlock) keep their semantic color. */
+html[data-weered-lobby="dnd"] .weered-rrr button {
+  font-family: var(--font-pirata), serif !important;
+  letter-spacing: 0.4px !important;
+}
+
+/* ── Session Zero modal — parchment palette on top of the base modal. */
+.weered-session-zero-modal {
+  --sz-fire: #E8A04A;
+  --sz-fire-glow: #D4602A;
+  --sz-parchment: #C9A878;
+  --sz-ink: #2A1810;
+}
+.weered-session-zero-modal .sz-heading {
+  font-family: var(--font-pirata), 'Pirata One', serif;
+  letter-spacing: 0.6px;
+}
+.weered-session-zero-modal .sz-serif {
+  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
 }
 
 /* Logo menu — W mark in the rail-stack and Control Panel header doubles

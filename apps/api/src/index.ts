@@ -42,6 +42,7 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
+import diceRoutes from "./routes/dice";
 import supportRoutes from "./routes/support";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -180,6 +181,14 @@ type RoomState = {
   isEvent: boolean;
   passwordHash?: string;
   launch?: LaunchState;
+  // Voice gating — schema-backed mode + ephemeral queue/speaker sets.
+  // OPEN = anyone publishes. QUEUED = raise hand → mod approves → speaker
+  // set entry → token grants canPublish on next join. LISTEN_ONLY = only
+  // mods/owner ever publish.
+  voiceMode?: "OPEN" | "QUEUED" | "LISTEN_ONLY";
+  voiceQueue?: Set<string>;
+  voiceSpeakers?: Set<string>;
+  disabledModules?: string[];
   };
 
 const rooms = new Map<string, RoomState>();
@@ -829,7 +838,7 @@ const SEED_LOBBIES = [
   { id: "windrose", name: "Windrose", description: "Age of Piracy survival adventure by Kraken Express. Build, sail, survive. Live Steam player count, dev dispatches, Crew Finder, Captain's Log. The unofficial flagship hub.", keywords: ["windrose","kraken","kraken express","pocketpair","pirate","pirates","age of piracy","survival","souls-like","crosswind","naval","sailing","ship","black flag","co-op","pve"], moduleType: ModuleType.WINDROSE, moduleConfig: { twitchCategory: "Windrose", steamAppId: "3041230", publisher: "Pocketpair", studio: "Kraken Express" }, accentColor: "#b8935a", logoUrl: "/brand/lobbies/windrose-logo-official.png", bannerUrl: "/brand/lobbies/windrose-banner-v2.svg", websiteUrl: "https://playwindrose.com/" },
 ];
 
-const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: string }[] = [
+const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: string; defaultModule?: string }[] = [
   { id: "dnd-tavern",    name: "The Tavern",      description: "Pull up a chair. General voice & chat for adventurers, DMs, and spectators alike.",           lobbyId: "dnd" },
   { id: "dnd-table",     name: "Campaign Table",   description: "Open play table — roll initiative, share maps, run encounters. Bring your character sheet.", lobbyId: "dnd" },
   { id: "dnd-workshop",  name: "DM's Workshop",    description: "Behind the screen. Prep sessions, world-building tips, and DM war stories.",                 lobbyId: "dnd" },
@@ -850,6 +859,15 @@ const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: stri
   { id: "destiny2-gambit",     name: "Gambit Hall",       description: "Gambit is still here. Bank motes, invade, have opinions.",                              lobbyId: "destiny2" },
   { id: "destiny2-gjallarhorn",name: "Gjallarhorn Wing",   description: "Lore, theorycrafting, patch speculation. Any and all non-fireteam discourse.",          lobbyId: "destiny2" },
   { id: "destiny2-clip-vault", name: "Clip Vault",        description: "Best plays, worst deaths, most cursed loadouts. Post the shot.",                         lobbyId: "destiny2" },
+
+  // FakeOut house rooms — pinned, undeletable. Always-on entry points so
+  // a first-timer landing on /lobby/fakeout never sees an empty rooms
+  // list. The Floor is the headline trading chat; The Pit is for hot
+  // takes and rapid-fire reactions; Newcomers is a low-bar onboarding
+  // room that opens chat-first (no module on first join).
+  { id: "fakeout-floor",      name: "The Floor",     description: "Main trading chat. Live charts, live trades, live witnesses. Where everyone hangs.", lobbyId: "fakeout", defaultModule: "fakeout" },
+  { id: "fakeout-pit",        name: "The Pit",       description: "Hot takes, rapid-fire reactions, daily watchlists. Bring volume.",                    lobbyId: "fakeout", defaultModule: "fakeout" },
+  { id: "fakeout-newcomers",  name: "Newcomers",     description: "First time? Start here. Ask anything. Read The Brief. Place your first paper trade with company.", lobbyId: "fakeout" },
 ];
 
 async function seedLobbies() {
@@ -875,8 +893,11 @@ async function seedLobbies() {
     try {
       await prisma.room.upsert({
         where: { id: r.id },
-        update: { name: r.name, description: r.description, lobbyId: r.lobbyId, pinned: true },
-        create: { id: r.id, name: r.name, description: r.description, lobbyId: r.lobbyId, locked: false, pinned: true },
+        // defaultModule is part of the seed contract — re-applying on
+        // every restart keeps it in sync if the seed evolves. Branding
+        // (icon/banner/accent) stays admin-editable separately.
+        update: { name: r.name, description: r.description, lobbyId: r.lobbyId, pinned: true, ...(r.defaultModule !== undefined ? { defaultModule: r.defaultModule } : {}) },
+        create: { id: r.id, name: r.name, description: r.description, lobbyId: r.lobbyId, locked: false, pinned: true, ...(r.defaultModule !== undefined ? { defaultModule: r.defaultModule } : {}) },
       });
     } catch (e) { console.warn("seedRooms:", r.id, e); }
   }
@@ -927,6 +948,10 @@ function makeEmptyRoom(roomId: string): RoomState {
     users: new Map(), sockets: new Set(), msgs: [],
     ownerId: undefined, mods: new Set(), banned: new Set(), muted: new Set(),
     locked: false, knocks: [], pending: new Map(), audit: [], activeModule: null, ytState: null, lastActiveAt: Date.now(), pinned: false, isEvent: false,
+    voiceMode: "OPEN",
+    voiceQueue: new Set<string>(),
+    voiceSpeakers: new Set<string>(),
+    disabledModules: [],
   };
 }
 
@@ -981,6 +1006,9 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.ownerId = dbRoom.ownerId || undefined;
     r.lobbyId = (dbRoom as any).lobbyId || undefined;
     r.passwordHash = (dbRoom as any).passwordHash || undefined;
+    (r as any).disabledModules = Array.isArray((dbRoom as any).disabledModules) ? (dbRoom as any).disabledModules : [];
+    const vm = String((dbRoom as any).voiceMode || "OPEN").toUpperCase();
+    r.voiceMode = (vm === "QUEUED" || vm === "LISTEN_ONLY") ? (vm as any) : "OPEN";
     for (const m of dbRoom.members) { if (m.role === "MOD") r.mods.add(m.userId); }
     for (const b of dbRoom.bans) r.banned.add(b.userId);
     r.msgs = dbRoom.messages.map((m) => ({
@@ -1199,6 +1227,10 @@ function buildStatePayload(room: RoomState) {
     ownerId: room.ownerId || "", mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
     activeModule: room.activeModule || null,
+    disabledModules: Array.isArray((room as any).disabledModules) ? (room as any).disabledModules : [],
+    voiceMode: room.voiceMode || "OPEN",
+    voiceQueue: Array.from(room.voiceQueue || []),
+    voiceSpeakers: Array.from(room.voiceSpeakers || []),
     launch: room.launch ? serializeLaunch(room) : null,
     pinned: Array.from(((room as any).pinned as Set<string> | undefined) || []),
   };
@@ -2675,19 +2707,45 @@ async function main() {
     return reply.send({ token, user: { id: updated.id, name: updated.name } });
   });
 
-  // Voice token (LiveKit)
+  // Voice token (LiveKit). Publish permission is gated by the room's
+  // voiceMode + speaker set:
+  //   OPEN        → anyone may publish
+  //   QUEUED      → mods + owner + approved speakers may publish
+  //   LISTEN_ONLY → mods + owner only
   app.post("/voice/token", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) return reply.code(500).send({ ok: false, error: "livekit_not_configured" });
     const body: any = (req as any).body || {};
-    const roomId = String(body.roomId || body.room || "").trim().slice(0, 64);
-    if (!roomId) return reply.code(400).send({ ok: false, error: "missing_roomId" });
+    const roomIdRaw = String(body.roomId || body.room || "").trim().slice(0, 64);
+    if (!roomIdRaw) return reply.code(400).send({ ok: false, error: "missing_roomId" });
+
+    // Resolve the room state — strip a leading "room:" prefix if present
+    // (clients connect to LiveKit by raw room id but our state uses the
+    // canonicalized id) and check voice gating.
+    const cleaned = roomIdRaw.startsWith("room:") ? roomIdRaw.slice(5) : roomIdRaw;
+    const lookup = normalizeRoomId(cleaned);
+    let canPublish = true;
+    try {
+      const room = lookup ? rooms.get(lookup) || (await ensureRoomLoaded(lookup).catch(() => null)) : null;
+      if (room) {
+        const isOwnerOrMod = isModOrOwner(room, u.id, (u as any).globalRole);
+        const mode = room.voiceMode || "OPEN";
+        if (mode === "OPEN") {
+          canPublish = true;
+        } else if (mode === "LISTEN_ONLY") {
+          canPublish = isOwnerOrMod;
+        } else { // QUEUED
+          canPublish = isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
+        }
+      }
+    } catch {}
+
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, { identity: u.id, name: u.name });
-    at.addGrant({ roomJoin: true, room: roomId, canPublish: true, canSubscribe: true, canPublishData: true });
+    at.addGrant({ roomJoin: true, room: roomIdRaw, canPublish, canSubscribe: true, canPublishData: true });
     const token = await at.toJwt();
     awardNotoriety(u.id, "VOICE_JOINED").catch(() => {});
-    return reply.send({ ok: true, url: LIVEKIT_URL, token });
+    return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
   });
 
   // Rooms
@@ -3951,7 +4009,11 @@ async function main() {
             }),
             prisma.room.findMany({
               orderBy: { updatedAt: "desc" },
-              select: { id: true, name: true, locked: true, lobbyId: true, _count: { select: { members: true } } },
+              select: {
+                id: true, name: true, locked: true, lobbyId: true,
+                iconUrl: true, bannerUrl: true, accentColor: true, pinned: true, isEvent: true,
+                _count: { select: { members: true } },
+              },
               take: 100,
             }),
           ]);
@@ -3963,10 +4025,12 @@ async function main() {
           }));
           const roomOut = roomList
             .filter(r => !r.id.includes("%") && !lobbyIds.has(r.id))
-            .map(r => ({
+            .map((r: any) => ({
               id: r.id, roomId: r.id, name: r.name || r.id,
               onlineCount: rooms.get(r.id)?.users.size ?? 0,
-              locked: Boolean(r.locked), pinned: false, lobbyId: r.lobbyId ?? null,
+              locked: Boolean(r.locked), pinned: Boolean(r.pinned), isEvent: Boolean(r.isEvent),
+              iconUrl: r.iconUrl ?? null, bannerUrl: r.bannerUrl ?? null, accentColor: r.accentColor ?? null,
+              lobbyId: r.lobbyId ?? null,
             }));
           send(ws, { type: "rooms", rooms: [...lobbyOut, ...roomOut] });
           return;
@@ -4203,6 +4267,14 @@ async function main() {
             broadcast(room, { type: "module:state", roomId, activeModule: null });
             return;
           }
+          // Reject if owner has disabled this module for the room.
+          // Owner + mods + global staff bypass — they need to be able to
+          // test the room and toggle modules even when disabled.
+          const disabled: string[] = Array.isArray((room as any).disabledModules) ? (room as any).disabledModules : [];
+          if (disabled.includes(mode) && !isModOrOwner(room, ws.user.id, ws.user?.globalRole)) {
+            try { send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" }); } catch {}
+            return;
+          }
           // Clear YouTube state when switching away from YouTube
           if (mode !== "youtube") room.ytState = null;
           const moduleState: ModuleState = {
@@ -4226,6 +4298,112 @@ async function main() {
           room.activeModule = null;
           room.ytState = null;
           broadcast(room, { type: "module:state", roomId, activeModule: null });
+          return;
+        }
+
+        // ── Voice queue / hand-raise WS protocol ───────────────────────
+        // voice:mode    → owner sets OPEN | QUEUED | LISTEN_ONLY (persisted)
+        // voice:raise   → user adds self to queue (QUEUED mode only)
+        // voice:lower   → user removes self from queue
+        // voice:approve → mod adds a queued user to speakers (auto-removes from queue)
+        // voice:revoke  → mod removes user from speakers
+        // After every change we broadcast voice:state. Granted/revoked users
+        // also receive a voice:permission ping so their client can refresh
+        // its LiveKit token + reconnect to pick up canPublish.
+        function broadcastVoiceState(room: RoomState) {
+          broadcast(room, {
+            type: "voice:state",
+            roomId: room.roomId,
+            mode: room.voiceMode || "OPEN",
+            queue: Array.from(room.voiceQueue || []),
+            speakers: Array.from(room.voiceSpeakers || []),
+          });
+        }
+        function pushVoicePermission(room: RoomState, userId: string) {
+          for (const sock of room.sockets) {
+            if ((sock as any).user?.id === userId) {
+              try { send(sock as Sock, { type: "voice:permission", roomId: room.roomId, userId }); } catch {}
+            }
+          }
+        }
+
+        if (msg.type === "voice:mode") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
+          const next = String(msg.mode || "").toUpperCase();
+          if (!["OPEN", "QUEUED", "LISTEN_ONLY"].includes(next)) return;
+          room.voiceMode = next as any;
+          // Switching to LISTEN_ONLY clears queue + speakers (no-one speaks
+          // except mods/owner). Switching to OPEN also clears them — the
+          // gating no longer applies.
+          if (next === "LISTEN_ONLY" || next === "OPEN") {
+            const dropped = new Set([...(room.voiceSpeakers || []), ...(room.voiceQueue || [])]);
+            room.voiceQueue = new Set();
+            room.voiceSpeakers = new Set();
+            for (const uid of dropped) pushVoicePermission(room, uid);
+          }
+          // Persist mode to DB.
+          (prisma as any).room.update({ where: { id: roomId }, data: { voiceMode: next } }).catch(() => {});
+          broadcastVoiceState(room);
+          return;
+        }
+
+        if (msg.type === "voice:raise") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!room.users.has(ws.user.id)) return;
+          if ((room.voiceMode || "OPEN") !== "QUEUED") return;
+          if (!room.voiceQueue) room.voiceQueue = new Set();
+          if (room.voiceSpeakers?.has(ws.user.id)) return; // already a speaker
+          room.voiceQueue.add(ws.user.id);
+          broadcastVoiceState(room);
+          return;
+        }
+
+        if (msg.type === "voice:lower") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!room.voiceQueue?.has(ws.user.id)) return;
+          room.voiceQueue.delete(ws.user.id);
+          broadcastVoiceState(room);
+          return;
+        }
+
+        if (msg.type === "voice:approve") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
+          const target = String(msg.userId || "").trim();
+          if (!target) return;
+          if (!room.voiceSpeakers) room.voiceSpeakers = new Set();
+          room.voiceQueue?.delete(target);
+          room.voiceSpeakers.add(target);
+          broadcastVoiceState(room);
+          pushVoicePermission(room, target);
+          return;
+        }
+
+        if (msg.type === "voice:revoke") {
+          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
+          if (!roomId) return;
+          const room = rooms.get(roomId);
+          if (!room) return;
+          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
+          const target = String(msg.userId || "").trim();
+          if (!target) return;
+          const removed = room.voiceSpeakers?.delete(target) || false;
+          room.voiceQueue?.delete(target);
+          if (removed) pushVoicePermission(room, target);
+          broadcastVoiceState(room);
           return;
         }
                 // ── room:close — owner/mod force-closes the room ─────────────────
@@ -6146,8 +6324,42 @@ async function main() {
       }
     }
   }
+
+  // ── Operator commentary on FakeOut trades ────────────────────────────────
+  // The Operator (Weered's AI) heckles big trades in the lobby chat. We
+  // throttle per-lobby (30s min between comments) to cap cost + spam, and
+  // only invoke AI when a context arrives (caller decides what's worth
+  // commenting on). Output is broadcast as operator:commentary; the client
+  // synthesizes a chat row keyed to the active lobby room.
+  const _operatorLastByLobby = new Map<string, number>();
+  async function operatorCommentateOnTrade(lobbyId: string, context: string) {
+    const now = Date.now();
+    const last = _operatorLastByLobby.get(lobbyId) || 0;
+    if (now - last < 30_000) return;
+    _operatorLastByLobby.set(lobbyId, now);
+    try {
+      const ai = await getAI();
+      if (!ai) return;
+      const response = await ai.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 80,
+        system: `You are "The Operator" — Weered's AI host with a GTA street-smart attitude. You're commenting LIVE on a paper trade in a FakeOut trading lobby. ONE sentence, max 16 words. Witty, never mean, occasional gallows humor. No emojis. No quotes. No hashtags. Speak like a beat reporter at the casino floor. If they made money, give them a nod with attitude. If they lost or averaged down on a loser, ribbing is fair. If the trade is huge, react to size. Never break character.`,
+        messages: [{ role: "user", content: context }],
+      });
+      const reply = (response?.content?.[0]?.text || "").trim();
+      if (!reply) return;
+      broadcastToLobby(lobbyId, { type: "operator:commentary", body: reply, ts: Date.now() });
+    } catch (e) {
+      console.error("[operator-trade]", e);
+    }
+  }
+
   await app.register(tradingRoutes, {
-    authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser,
+    authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser, operatorCommentateOnTrade,
+  } as any);
+
+  await app.register(diceRoutes, {
+    authFromHeader, broadcastToLobby,
   } as any);
 
   await app.register(supportRoutes, {

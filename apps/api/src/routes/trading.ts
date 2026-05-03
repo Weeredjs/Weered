@@ -17,15 +17,37 @@ type Opts = {
   livePrices: Map<string, { price: number; time: number }>;
   broadcastToLobby: (lobbyId: string, event: any) => void;
   notifyUser: (userId: string, event: any) => void;
+  operatorCommentateOnTrade?: (lobbyId: string, context: string) => Promise<void>;
 };
 
 export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser } = opts;
+  const { authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser, operatorCommentateOnTrade } = opts;
   const BINANCE_REST = "https://api.binance.com";
 
   function getLivePrice(symbol: string): number | null {
     const p = livePrices.get(symbol.toLowerCase());
     return p ? p.price : null;
+  }
+
+  // ── Paper Account modes ─────────────────────────────────────────────────
+  // CASUAL: $100K start, low Paper conversion, no Notoriety. For-fun.
+  // RANKED: $1K start, 10× Paper conversion, counts toward Notoriety XP.
+  // Mode comes from the query (?mode=RANKED|CASUAL) and defaults to CASUAL
+  // for backward-compat with existing accounts (which all have mode=CASUAL
+  // post-migration).
+  type PaperMode = "CASUAL" | "RANKED";
+  function parseMode(req: any): PaperMode {
+    const m = String(req?.query?.mode || (req?.body as any)?.mode || "CASUAL").toUpperCase();
+    return m === "RANKED" ? "RANKED" : "CASUAL";
+  }
+  function startBalanceFor(mode: PaperMode): number {
+    return mode === "RANKED" ? 1000 : 100000;
+  }
+  // Paper-per-$100-of-profit multiplier. Ranked is 10× to make $1K
+  // accounts produce comparable rewards to $100K accounts at the same
+  // % return — but the leaderboard separates them.
+  function paperRateMultiplierFor(mode: PaperMode): number {
+    return mode === "RANKED" ? 10 : 1;
   }
 
 // ── REST: Historical candles (proxy Binance) ──────────────────────────────
@@ -57,34 +79,47 @@ app.get("/trading/candles", async (req, reply) => {
 });
 
 // ── REST: Available symbols ───────────────────────────────────────────────
-const TRADING_SYMBOLS = [
-  { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿" },
-  { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ" },
-  { symbol: "SOLUSDT", name: "Solana", icon: "◎" },
-  { symbol: "BNBUSDT", name: "BNB", icon: "⬡" },
-  { symbol: "XRPUSDT", name: "XRP", icon: "✕" },
-  { symbol: "DOGEUSDT", name: "Dogecoin", icon: "Ð" },
-  { symbol: "ADAUSDT", name: "Cardano", icon: "₳" },
-  { symbol: "AVAXUSDT", name: "Avalanche", icon: "🔺" },
-  { symbol: "MATICUSDT", name: "Polygon", icon: "⬡" },
-  { symbol: "LINKUSDT", name: "Chainlink", icon: "⬡" },
-  { symbol: "DOTUSDT", name: "Polkadot", icon: "●" },
-  { symbol: "LTCUSDT", name: "Litecoin", icon: "Ł" },
-  { symbol: "NEARUSDT", name: "NEAR", icon: "Ⓝ" },
-  { symbol: "APTUSDT", name: "Aptos", icon: "◈" },
-  { symbol: "ARBUSDT", name: "Arbitrum", icon: "⬡" },
-  { symbol: "OPUSDT", name: "Optimism", icon: "⭕" },
-  { symbol: "SUIUSDT", name: "Sui", icon: "💧" },
-  { symbol: "PEPEUSDT", name: "Pepe", icon: "🐸" },
-  { symbol: "SHIBUSDT", name: "Shiba Inu", icon: "🐕" },
-  { symbol: "TRUMPUSDT", name: "Trump", icon: "🇺🇸" },
+// Crypto pairs are wired through Binance WS. FX + metals are flagged
+// `comingSoon` so the picker can show them as direction-of-travel without
+// letting users open paper orders against feeds we haven't bridged yet.
+const TRADING_SYMBOLS: { symbol: string; name: string; icon: string; assetClass?: "crypto" | "fx" | "metal"; comingSoon?: boolean }[] = [
+  { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿", assetClass: "crypto" },
+  { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ", assetClass: "crypto" },
+  { symbol: "SOLUSDT", name: "Solana", icon: "◎", assetClass: "crypto" },
+  { symbol: "BNBUSDT", name: "BNB", icon: "⬡", assetClass: "crypto" },
+  { symbol: "XRPUSDT", name: "XRP", icon: "✕", assetClass: "crypto" },
+  { symbol: "DOGEUSDT", name: "Dogecoin", icon: "Ð", assetClass: "crypto" },
+  { symbol: "ADAUSDT", name: "Cardano", icon: "₳", assetClass: "crypto" },
+  { symbol: "AVAXUSDT", name: "Avalanche", icon: "🔺", assetClass: "crypto" },
+  { symbol: "MATICUSDT", name: "Polygon", icon: "⬡", assetClass: "crypto" },
+  { symbol: "LINKUSDT", name: "Chainlink", icon: "⬡", assetClass: "crypto" },
+  { symbol: "DOTUSDT", name: "Polkadot", icon: "●", assetClass: "crypto" },
+  { symbol: "LTCUSDT", name: "Litecoin", icon: "Ł", assetClass: "crypto" },
+  { symbol: "NEARUSDT", name: "NEAR", icon: "Ⓝ", assetClass: "crypto" },
+  { symbol: "APTUSDT", name: "Aptos", icon: "◈", assetClass: "crypto" },
+  { symbol: "ARBUSDT", name: "Arbitrum", icon: "⬡", assetClass: "crypto" },
+  { symbol: "OPUSDT", name: "Optimism", icon: "⭕", assetClass: "crypto" },
+  { symbol: "SUIUSDT", name: "Sui", icon: "💧", assetClass: "crypto" },
+  { symbol: "PEPEUSDT", name: "Pepe", icon: "🐸", assetClass: "crypto" },
+  { symbol: "SHIBUSDT", name: "Shiba Inu", icon: "🐕", assetClass: "crypto" },
+  { symbol: "TRUMPUSDT", name: "Trump", icon: "🇺🇸", assetClass: "crypto" },
+
+  // FX majors — feed wiring in progress (twelvedata mid-rate poll).
+  { symbol: "EURUSD", name: "EUR/USD", icon: "€", assetClass: "fx", comingSoon: true },
+  { symbol: "GBPUSD", name: "GBP/USD", icon: "£", assetClass: "fx", comingSoon: true },
+  { symbol: "USDJPY", name: "USD/JPY", icon: "¥", assetClass: "fx", comingSoon: true },
+  { symbol: "USDCAD", name: "USD/CAD", icon: "C$", assetClass: "fx", comingSoon: true },
+  { symbol: "AUDUSD", name: "AUD/USD", icon: "A$", assetClass: "fx", comingSoon: true },
+  { symbol: "EURJPY", name: "EUR/JPY", icon: "€¥", assetClass: "fx", comingSoon: true },
+  { symbol: "EURGBP", name: "EUR/GBP", icon: "€£", assetClass: "fx", comingSoon: true },
+  { symbol: "XAUUSD", name: "Gold", icon: "Au", assetClass: "metal", comingSoon: true },
 ];
 
 app.get("/trading/symbols", async (_req, reply) => {
   // Attach live prices
   const out = TRADING_SYMBOLS.map(s => ({
     ...s,
-    price: livePrices.get(s.symbol.toLowerCase())?.price || null,
+    price: s.comingSoon ? null : (livePrices.get(s.symbol.toLowerCase())?.price || null),
   }));
   return reply.send({ ok: true, symbols: out });
 });
@@ -96,20 +131,22 @@ function getLivePrice(symbol: string): number | null {
   return p ? p.price : null;
 }
 
-// GET /trading/account/:lobbyId — get or create paper account
+// GET /trading/account/:lobbyId?mode=RANKED|CASUAL — get or create paper account
 app.get("/trading/account/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const lobbyId = String((req as any).params?.lobbyId || "");
+  const mode = parseMode(req);
+  const startBal = startBalanceFor(mode);
 
   let account = await (prisma as any).paperAccount.findFirst({
-    where: { userId: u.id, lobbyId, competitionId: null },
+    where: { userId: u.id, lobbyId, competitionId: null, mode },
     include: { positions: { where: { status: "OPEN" } }, orders: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 20 } },
   });
 
   if (!account) {
     account = await (prisma as any).paperAccount.create({
-      data: { userId: u.id, lobbyId, cashBalance: 100000, startBalance: 100000, realizedPnl: 0 },
+      data: { userId: u.id, lobbyId, mode, cashBalance: startBal, startBalance: startBal, realizedPnl: 0 },
       include: { positions: { where: { status: "OPEN" } }, orders: { where: { status: "PENDING" } } },
     });
   }
@@ -136,6 +173,7 @@ app.get("/trading/account/:lobbyId", async (req, reply) => {
     ok: true,
     account: {
       id: account.id,
+      mode: account.mode,
       cashBalance: account.cashBalance,
       startBalance: account.startBalance,
       equity,
@@ -162,6 +200,13 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
   const orderType = String(body.orderType || "MARKET").toUpperCase();
   const quantity = parseFloat(body.quantity);
   const limitPrice = body.price ? parseFloat(body.price) : null;
+  // Optional SL/TP at inception. Validated against the live mark below
+  // once we know it. Both are absolute price levels; the position worker
+  // (5s loop) auto-closes when the live price crosses either.
+  const rawStopLoss = body.stopLoss !== undefined && body.stopLoss !== null && body.stopLoss !== "" ? parseFloat(body.stopLoss) : null;
+  const rawTakeProfit = body.takeProfit !== undefined && body.takeProfit !== null && body.takeProfit !== "" ? parseFloat(body.takeProfit) : null;
+  const stopLoss = (rawStopLoss !== null && Number.isFinite(rawStopLoss) && rawStopLoss > 0) ? rawStopLoss : null;
+  const takeProfit = (rawTakeProfit !== null && Number.isFinite(rawTakeProfit) && rawTakeProfit > 0) ? rawTakeProfit : null;
 
   if (!symbol || !["BUY", "SELL"].includes(side)) {
     return reply.code(400).send({ ok: false, error: "invalid_params" });
@@ -170,14 +215,17 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     return reply.code(400).send({ ok: false, error: "invalid_quantity" });
   }
 
-  // Get or create account
+  // Get or create account (mode-scoped)
+  const mode = parseMode(req);
+  const startBal = startBalanceFor(mode);
+  const paperMul = paperRateMultiplierFor(mode);
   let account = await (prisma as any).paperAccount.findFirst({
-    where: { userId: u.id, lobbyId, competitionId: null },
+    where: { userId: u.id, lobbyId, competitionId: null, mode },
     include: { positions: { where: { status: "OPEN", symbol } } },
   });
   if (!account) {
     account = await (prisma as any).paperAccount.create({
-      data: { userId: u.id, lobbyId, cashBalance: 100000, startBalance: 100000, realizedPnl: 0 },
+      data: { userId: u.id, lobbyId, mode, cashBalance: startBal, startBalance: startBal, realizedPnl: 0 },
       include: { positions: { where: { status: "OPEN", symbol } } },
     });
   }
@@ -197,6 +245,18 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
   const currentPrice = getLivePrice(symbol);
   if (!currentPrice) {
     return reply.code(400).send({ ok: false, error: "no_price_data", message: "No live price available for " + symbol });
+  }
+
+  // Validate SL/TP against the entry side. Long: SL below entry, TP above.
+  // Short: SL above entry, TP below. Reject backwards levels at the door
+  // so the worker doesn't have to defend against them later.
+  if (stopLoss !== null) {
+    if (side === "BUY"  && stopLoss >= currentPrice) return reply.code(400).send({ ok: false, error: "sl_must_be_below_entry", message: `For a long, stop loss must be below ${currentPrice}.` });
+    if (side === "SELL" && stopLoss <= currentPrice) return reply.code(400).send({ ok: false, error: "sl_must_be_above_entry", message: `For a short, stop loss must be above ${currentPrice}.` });
+  }
+  if (takeProfit !== null) {
+    if (side === "BUY"  && takeProfit <= currentPrice) return reply.code(400).send({ ok: false, error: "tp_must_be_above_entry", message: `For a long, take profit must be above ${currentPrice}.` });
+    if (side === "SELL" && takeProfit >= currentPrice) return reply.code(400).send({ ok: false, error: "tp_must_be_below_entry", message: `For a short, take profit must be below ${currentPrice}.` });
   }
 
   const cost = currentPrice * quantity;
@@ -231,16 +291,16 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           data: { cashBalance: { increment: shortPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
         });
         if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100));
+          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
           awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut short profit: $${pnl.toFixed(2)} on ${symbol}`, shortPos.id).catch(() => {});
-          awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+          if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
         }
         // If buying more than closing, open new long with remainder
         const remaining = quantity - shortPos.quantity;
         if (remaining > 0) {
           const remainCost = currentPrice * remaining;
           await (prisma as any).paperPosition.create({
-            data: { accountId: account.id, symbol, side: "BUY", quantity: remaining, entryPrice: currentPrice, entryValue: remainCost },
+            data: { accountId: account.id, symbol, side: "BUY", quantity: remaining, entryPrice: currentPrice, entryValue: remainCost, stopLoss, takeProfit },
           });
           await (prisma as any).paperAccount.update({
             where: { id: account.id },
@@ -250,7 +310,7 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
       } else {
         // New long position
         await (prisma as any).paperPosition.create({
-          data: { accountId: account.id, symbol, side: "BUY", quantity, entryPrice: currentPrice, entryValue: cost },
+          data: { accountId: account.id, symbol, side: "BUY", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
         });
         await (prisma as any).paperAccount.update({
           where: { id: account.id },
@@ -282,16 +342,16 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           data: { cashBalance: { increment: longPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
         });
         if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100));
+          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
           awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut long profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
-          awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+          if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
         }
         // If selling more than closing, open short with remainder
         const remaining = quantity - longPos.quantity;
         if (remaining > 0) {
           const remainValue = currentPrice * remaining;
           await (prisma as any).paperPosition.create({
-            data: { accountId: account.id, symbol, side: "SELL", quantity: remaining, entryPrice: currentPrice, entryValue: remainValue },
+            data: { accountId: account.id, symbol, side: "SELL", quantity: remaining, entryPrice: currentPrice, entryValue: remainValue, stopLoss, takeProfit },
           });
           await (prisma as any).paperAccount.update({
             where: { id: account.id },
@@ -311,9 +371,9 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           data: { cashBalance: { increment: (longPos.entryPrice * quantity) + pnl }, realizedPnl: { increment: pnl } },
         });
         if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100));
+          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
           awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut partial profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
-          awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+          if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
         }
       }
     } else {
@@ -328,7 +388,7 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
         });
       } else {
         await (prisma as any).paperPosition.create({
-          data: { accountId: account.id, symbol, side: "SELL", quantity, entryPrice: currentPrice, entryValue: cost },
+          data: { accountId: account.id, symbol, side: "SELL", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
         });
       }
       await (prisma as any).paperAccount.update({
@@ -343,17 +403,46 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     data: { accountId: account.id, symbol, side, orderType: "MARKET", quantity, filledPrice: currentPrice, filledAt: new Date(), status: "FILLED" },
   });
 
-  // Award Notoriety for trading
-  awardNotoriety(u.id, "FIRST_FAKEOUT_TRADE").catch(() => {});
-  awardNotoriety(u.id, "FAKEOUT_TRADE").catch(() => {});
+  // Award Notoriety for trading — ranked only. Casual mode is for fun.
+  if (mode === "RANKED") {
+    awardNotoriety(u.id, "FIRST_FAKEOUT_TRADE").catch(() => {});
+    awardNotoriety(u.id, "FAKEOUT_TRADE").catch(() => {});
+  }
 
   // Broadcast trade to lobby room (everyone sees trades)
   const tradeEvent = { type: "trading:trade", userId: u.id, userName: u.name, symbol, side, quantity, price: currentPrice, time: Date.now() };
-  for (const sock of wss.clients) {
-    const s = sock as Sock;
-    if (s.roomId === `lobby:${lobbyId}` || s.roomId === lobbyId) {
-      try { send(s, tradeEvent); } catch {}
-    }
+  broadcastToLobby(lobbyId, tradeEvent);
+
+  // Operator commentary on noteworthy trades. Look up any position this
+  // user just closed to surface realized PnL — falls back to entry size for
+  // big new positions. Throttling lives inside operatorCommentateOnTrade.
+  if (operatorCommentateOnTrade) {
+    (async () => {
+      try {
+        const recentClose = await (prisma as any).paperPosition.findFirst({
+          where: {
+            accountId: account.id,
+            status: "CLOSED",
+            closedAt: { gte: new Date(Date.now() - 5000) },
+          },
+          orderBy: { closedAt: "desc" },
+        });
+        const closedPnl: number | null = recentClose?.realizedPnl ?? null;
+        const sym = symbol.replace(/USDT$/, "");
+        const sideLabel = side === "BUY" ? "long" : "short";
+        let ctx = "";
+        if (closedPnl !== null && Math.abs(closedPnl) >= 500) {
+          if (closedPnl > 0) {
+            ctx = `${u.name} just closed a ${sym} trade for a +$${closedPnl.toFixed(0)} profit.`;
+          } else {
+            ctx = `${u.name} just closed a ${sym} trade taking a -$${Math.abs(closedPnl).toFixed(0)} loss.`;
+          }
+        } else if (cost >= 20000) {
+          ctx = `${u.name} just opened a $${cost.toFixed(0)} ${sideLabel} on ${sym} at $${currentPrice.toFixed(2)}.`;
+        }
+        if (ctx) await operatorCommentateOnTrade(lobbyId, ctx);
+      } catch {}
+    })();
   }
 
   return reply.send({ ok: true, filled: { symbol, side, quantity, price: currentPrice } });
@@ -381,29 +470,93 @@ app.post("/trading/close/:lobbyId/:positionId", async (req, reply) => {
 
   await (prisma as any).paperPosition.update({
     where: { id: positionId },
-    data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date() },
+    data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date(), closeReason: "MANUAL" },
   });
   await (prisma as any).paperAccount.update({
     where: { id: pos.accountId },
     data: { cashBalance: { increment: pos.entryValue + pnl }, realizedPnl: { increment: pnl } },
   });
 
-  // Award Paper for profitable trades (1 Paper per $100 profit, min 1 if profitable)
+  // Award Paper for profitable trades. Ranked mode pays 10× and grants
+  // Notoriety; casual is for-fun and pays the base rate without XP.
+  const accountMode: PaperMode = (pos.account?.mode === "RANKED" ? "RANKED" : "CASUAL");
+  const paperMul = paperRateMultiplierFor(accountMode);
   if (pnl > 0) {
-    const paperEarned = Math.max(1, Math.floor(pnl / 100));
+    const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
     awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut profit: $${pnl.toFixed(2)} on ${pos.symbol}`, positionId).catch(() => {});
-    awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+    if (accountMode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+  }
+
+  // Operator commentary on closed positions with meaningful PnL.
+  if (operatorCommentateOnTrade && Math.abs(pnl) >= 500) {
+    const lobbyId = String((req as any).params?.lobbyId || pos.account.lobbyId || "");
+    if (lobbyId) {
+      const sym = pos.symbol.replace(/USDT$/, "");
+      const ctx = pnl > 0
+        ? `${u.name} just closed a ${sym} trade for a +$${pnl.toFixed(0)} profit.`
+        : `${u.name} just closed a ${sym} trade taking a -$${Math.abs(pnl).toFixed(0)} loss.`;
+      operatorCommentateOnTrade(lobbyId, ctx).catch(() => {});
+    }
   }
 
   return reply.send({ ok: true, pnl, exitPrice: currentPrice });
 });
 
-// GET /trading/leaderboard/:lobbyId — ranked by total P&L
+// PATCH /trading/position/:positionId/exits — alter stopLoss / takeProfit
+// on an OPEN position. Sending null for a field clears that exit.
+app.patch("/trading/position/:positionId/exits", async (req, reply) => {
+  const u = authFromHeader((req as any).headers?.authorization);
+  if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+  const positionId = String((req as any).params?.positionId || "");
+  const body: any = (req as any).body || {};
+
+  const pos = await (prisma as any).paperPosition.findUnique({
+    where: { id: positionId },
+    include: { account: true },
+  });
+  if (!pos || pos.account.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
+  if (pos.status !== "OPEN") return reply.code(400).send({ ok: false, error: "already_closed" });
+
+  // null clears, undefined leaves untouched, number sets.
+  const data: any = {};
+  if (Object.prototype.hasOwnProperty.call(body, "stopLoss")) {
+    if (body.stopLoss === null || body.stopLoss === "") {
+      data.stopLoss = null;
+    } else {
+      const sl = parseFloat(body.stopLoss);
+      if (!Number.isFinite(sl) || sl <= 0) return reply.code(400).send({ ok: false, error: "invalid_stopLoss" });
+      if (pos.side === "BUY"  && sl >= pos.entryPrice) return reply.code(400).send({ ok: false, error: "sl_must_be_below_entry", message: `For a long, stop loss must be below ${pos.entryPrice}.` });
+      if (pos.side === "SELL" && sl <= pos.entryPrice) return reply.code(400).send({ ok: false, error: "sl_must_be_above_entry", message: `For a short, stop loss must be above ${pos.entryPrice}.` });
+      data.stopLoss = sl;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "takeProfit")) {
+    if (body.takeProfit === null || body.takeProfit === "") {
+      data.takeProfit = null;
+    } else {
+      const tp = parseFloat(body.takeProfit);
+      if (!Number.isFinite(tp) || tp <= 0) return reply.code(400).send({ ok: false, error: "invalid_takeProfit" });
+      if (pos.side === "BUY"  && tp <= pos.entryPrice) return reply.code(400).send({ ok: false, error: "tp_must_be_above_entry", message: `For a long, take profit must be above ${pos.entryPrice}.` });
+      if (pos.side === "SELL" && tp >= pos.entryPrice) return reply.code(400).send({ ok: false, error: "tp_must_be_below_entry", message: `For a short, take profit must be below ${pos.entryPrice}.` });
+      data.takeProfit = tp;
+    }
+  }
+  if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_changes" });
+
+  const updated = await (prisma as any).paperPosition.update({
+    where: { id: positionId },
+    data,
+  });
+  return reply.send({ ok: true, position: { id: updated.id, stopLoss: updated.stopLoss, takeProfit: updated.takeProfit } });
+});
+
+// GET /trading/leaderboard/:lobbyId?mode=RANKED|CASUAL — ranked by total P&L
 app.get("/trading/leaderboard/:lobbyId", async (req, reply) => {
   const lobbyId = String((req as any).params?.lobbyId || "");
+  const mode = parseMode(req);
 
   const accounts = await (prisma as any).paperAccount.findMany({
-    where: { lobbyId, competitionId: null },
+    where: { lobbyId, competitionId: null, mode },
     include: { positions: { where: { status: "OPEN" } } },
   });
 
@@ -447,14 +600,15 @@ app.get("/trading/leaderboard/:lobbyId", async (req, reply) => {
   return reply.send({ ok: true, leaderboard });
 });
 
-// GET /trading/history/:lobbyId — order history
+// GET /trading/history/:lobbyId?mode=RANKED|CASUAL — order history
 app.get("/trading/history/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const lobbyId = String((req as any).params?.lobbyId || "");
+  const mode = parseMode(req);
 
   const account = await (prisma as any).paperAccount.findFirst({
-    where: { userId: u.id, lobbyId, competitionId: null },
+    where: { userId: u.id, lobbyId, competitionId: null, mode },
   });
   if (!account) return reply.send({ ok: true, orders: [], closedPositions: [] });
 
@@ -477,23 +631,125 @@ app.get("/trading/history/:lobbyId", async (req, reply) => {
   });
 });
 
-// POST /trading/reset/:lobbyId — reset account (start fresh)
+// GET /trading/lobby-feed/:lobbyId?mode=RANKED|CASUAL — chronological
+// stream of recent trade events across every account in the lobby. Powers
+// the lobby's Feed tab so a visitor can watch the action without picking
+// a room. Returns last 60 events: filled market orders + closed positions
+// (closes carry realized PnL). The frontend stitches WS trading:trade
+// events on top for live additions.
+app.get("/trading/lobby-feed/:lobbyId", async (req, reply) => {
+  const lobbyId = String((req as any).params?.lobbyId || "");
+  const mode = parseMode(req);
+
+  const since = new Date(Date.now() - 6 * 60 * 60 * 1000); // last 6 hours
+
+  // Pull recent FILLED orders and CLOSED positions in parallel.
+  const [orders, closedPositions] = await Promise.all([
+    (prisma as any).paperOrder.findMany({
+      where: {
+        status: "FILLED",
+        filledAt: { gte: since },
+        account: { lobbyId, competitionId: null, mode },
+      },
+      include: { account: { select: { userId: true, mode: true } } },
+      orderBy: { filledAt: "desc" },
+      take: 60,
+    }),
+    (prisma as any).paperPosition.findMany({
+      where: {
+        status: "CLOSED",
+        closedAt: { gte: since },
+        account: { lobbyId, competitionId: null, mode },
+      },
+      include: { account: { select: { userId: true, mode: true } } },
+      orderBy: { closedAt: "desc" },
+      take: 60,
+    }),
+  ]);
+
+  // One user lookup for everyone referenced.
+  const userIds = Array.from(new Set([
+    ...orders.map((o: any) => o.account.userId),
+    ...closedPositions.map((p: any) => p.account.userId),
+  ]));
+  const users = userIds.length
+    ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, avatarColor: true, avatar: true } })
+    : [];
+  const userMap = new Map(users.map(u => [u.id, u]));
+
+  // Merge into a single chronological feed.
+  type FeedItem = {
+    type: "open" | "close";
+    ts: number;
+    userId: string;
+    userName: string;
+    avatar?: string | null;
+    avatarColor?: string | null;
+    symbol: string;
+    side: string;
+    quantity: number;
+    price: number;
+    pnl?: number;
+    mode: string;
+  };
+  const items: FeedItem[] = [];
+  for (const o of orders) {
+    const u = userMap.get(o.account.userId);
+    items.push({
+      type: "open",
+      ts: o.filledAt ? new Date(o.filledAt).getTime() : Date.now(),
+      userId: o.account.userId,
+      userName: u?.name || "trader",
+      avatar: u?.avatar || null,
+      avatarColor: u?.avatarColor || null,
+      symbol: o.symbol,
+      side: o.side,
+      quantity: o.quantity,
+      price: o.filledPrice || 0,
+      mode: o.account.mode,
+    });
+  }
+  for (const p of closedPositions) {
+    const u = userMap.get(p.account.userId);
+    items.push({
+      type: "close",
+      ts: p.closedAt ? new Date(p.closedAt).getTime() : Date.now(),
+      userId: p.account.userId,
+      userName: u?.name || "trader",
+      avatar: u?.avatar || null,
+      avatarColor: u?.avatarColor || null,
+      symbol: p.symbol,
+      side: p.side,
+      quantity: p.quantity,
+      price: p.exitPrice || 0,
+      pnl: p.realizedPnl ?? undefined,
+      mode: p.account.mode,
+    });
+  }
+  items.sort((a, b) => b.ts - a.ts);
+  return reply.send({ ok: true, items: items.slice(0, 80) });
+});
+
+// POST /trading/reset/:lobbyId — reset account (start fresh) for the
+// requested mode. ?mode=RANKED|CASUAL, defaults to CASUAL.
 app.post("/trading/reset/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const lobbyId = String((req as any).params?.lobbyId || "");
+  const mode = parseMode(req);
+  const startBal = startBalanceFor(mode);
 
   const account = await (prisma as any).paperAccount.findFirst({
-    where: { userId: u.id, lobbyId, competitionId: null },
+    where: { userId: u.id, lobbyId, competitionId: null, mode },
   });
   if (!account) return reply.send({ ok: true });
 
-  // Delete all positions and orders, reset balance
+  // Delete all positions and orders, reset balance to mode start.
   await (prisma as any).paperPosition.deleteMany({ where: { accountId: account.id } });
   await (prisma as any).paperOrder.deleteMany({ where: { accountId: account.id } });
   await (prisma as any).paperAccount.update({
     where: { id: account.id },
-    data: { cashBalance: 100000, startBalance: 100000, realizedPnl: 0 },
+    data: { cashBalance: startBal, startBalance: startBal, realizedPnl: 0 },
   });
 
   return reply.send({ ok: true });
@@ -698,5 +954,95 @@ setInterval(async () => {
       }
     }
   } catch (e) { console.error("[trading] limit fill check error:", e); }
+}, 5000); // check every 5 seconds
+
+// ── SL/TP auto-close worker ───────────────────────────────────────────────
+// Walks every open position with an SL or TP set, compares the live mark
+// against the trigger, and auto-closes when it crosses. Mirrors the
+// manual-close logic so the resulting trade stream is identical to a
+// user-driven close — same broadcast, same Paper award, same Notoriety,
+// same Operator commentary.
+setInterval(async () => {
+  try {
+    const positions = await (prisma as any).paperPosition.findMany({
+      where: {
+        status: "OPEN",
+        OR: [{ stopLoss: { not: null } }, { takeProfit: { not: null } }],
+      },
+      include: { account: true },
+    });
+    for (const pos of positions) {
+      const cp = getLivePrice(pos.symbol);
+      if (!cp) continue;
+
+      let trigger: "STOP_LOSS" | "TAKE_PROFIT" | null = null;
+      if (pos.side === "BUY") {
+        if (pos.stopLoss   !== null && cp <= pos.stopLoss)   trigger = "STOP_LOSS";
+        else if (pos.takeProfit !== null && cp >= pos.takeProfit) trigger = "TAKE_PROFIT";
+      } else {
+        if (pos.stopLoss   !== null && cp >= pos.stopLoss)   trigger = "STOP_LOSS";
+        else if (pos.takeProfit !== null && cp <= pos.takeProfit) trigger = "TAKE_PROFIT";
+      }
+      if (!trigger) continue;
+
+      // Fill at the trigger level (not the current mark) so the user sees
+      // exactly what they asked for. In a real exchange this is "stop with
+      // limit"; we simulate it cleanly because we control the engine.
+      const exitPrice = trigger === "STOP_LOSS" ? pos.stopLoss : pos.takeProfit;
+      const pnl = pos.side === "BUY"
+        ? (exitPrice - pos.entryPrice) * pos.quantity
+        : (pos.entryPrice - exitPrice) * pos.quantity;
+
+      try {
+        await (prisma as any).paperPosition.update({
+          where: { id: pos.id },
+          data: { status: "CLOSED", exitPrice, realizedPnl: pnl, closedAt: new Date(), closeReason: trigger },
+        });
+        await (prisma as any).paperAccount.update({
+          where: { id: pos.accountId },
+          data: { cashBalance: { increment: pos.entryValue + pnl }, realizedPnl: { increment: pnl } },
+        });
+      } catch (e) {
+        console.error("[trading] sl/tp close error:", e);
+        continue;
+      }
+
+      // Paper + Notoriety on profitable exits, mirroring manual close.
+      const accountMode: PaperMode = (pos.account?.mode === "RANKED" ? "RANKED" : "CASUAL");
+      const paperMul = paperRateMultiplierFor(accountMode);
+      if (pnl > 0) {
+        const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
+        awardPaper(pos.account.userId, "EARN_FAKEOUT", paperEarned, `FakeOut ${trigger === "TAKE_PROFIT" ? "TP" : "SL"} hit: $${pnl.toFixed(2)} on ${pos.symbol}`, pos.id).catch(() => {});
+        if (accountMode === "RANKED") awardNotoriety(pos.account.userId, "FAKEOUT_PROFIT").catch(() => {});
+      }
+
+      // Notify the user + broadcast a close-style trade event so chat
+      // chips and the lobby feed pick it up.
+      notifyUser(pos.account.userId, { type: "trading:position_closed", positionId: pos.id, reason: trigger, pnl, exitPrice });
+      const lookupUser = await prisma.user.findUnique({ where: { id: pos.account.userId }, select: { name: true } });
+      const userName = lookupUser?.name || "trader";
+      broadcastToLobby(pos.account.lobbyId, {
+        type: "trading:trade",
+        userId: pos.account.userId,
+        userName,
+        symbol: pos.symbol,
+        side: pos.side === "BUY" ? "SELL" : "BUY", // close direction
+        quantity: pos.quantity,
+        price: exitPrice,
+        time: Date.now(),
+        closeReason: trigger,
+        pnl,
+      });
+
+      // Operator commentary on auto-closes with meaningful PnL.
+      if (operatorCommentateOnTrade && Math.abs(pnl) >= 500) {
+        const sym = pos.symbol.replace(/USDT$/, "");
+        const ctx = trigger === "TAKE_PROFIT"
+          ? `${userName} just hit take-profit on ${sym} for +$${pnl.toFixed(0)}.`
+          : `${userName} just got stopped out on ${sym} for -$${Math.abs(pnl).toFixed(0)}.`;
+        operatorCommentateOnTrade(pos.account.lobbyId, ctx).catch(() => {});
+      }
+    }
+  } catch (e) { console.error("[trading] sl/tp worker error:", e); }
 }, 5000); // check every 5 seconds
 }

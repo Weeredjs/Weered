@@ -84,12 +84,24 @@ function go(roomId: string) {
           const name = String(r?.name || id || "Room");
           const locked = Boolean(r?.locked);
           const n = getRoomCount(r);
+          const iconUrl  = r?.iconUrl ? String(r.iconUrl) : null;
+          const bannerUrl= r?.bannerUrl ? String(r.bannerUrl) : null;
+          const accent   = r?.accentColor ? String(r.accentColor) : null;
+          const pinned   = Boolean(r?.pinned);
+          const isEvent  = Boolean(r?.isEvent);
+
+          const cardBorder = accent ? `${accent}55` : "var(--weered-border)";
+          const cardBg     = accent ? `${accent}10` : "transparent";
+          const iconBg     = accent ? `${accent}25` : "rgba(255,255,255,.05)";
+          const iconBorder = accent ? `${accent}55` : "rgba(255,255,255,.10)";
 
           return (
             <div
               key={id || name}
               style={{
-                minWidth: 0, border: "1px solid var(--weered-border)",
+                position: "relative", overflow: "hidden",
+                minWidth: 0, border: `1px solid ${cardBorder}`,
+                background: cardBg,
                 borderRadius: 12,
                 padding: 10,
                 display: "flex",
@@ -97,31 +109,66 @@ function go(roomId: string) {
                 alignItems: "center",
                 gap: 10,
                 cursor: "pointer",
+                minHeight: 64,
               }}
               onClick={() => go(id)}
             >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {name}
-                  </div>
-                  {locked ? (
-                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--weered-border)", opacity: 0.85 }}>
-                      Locked
-                    </span>
-                  ) : null}
-                  {typeof n === "number" ? (
-                    <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--weered-border)", opacity: 0.85 }}>
-                      {n} online
-                    </span>
-                  ) : null}
+              {bannerUrl && (
+                <div aria-hidden style={{
+                  position: "absolute", inset: 0,
+                  backgroundImage: `url("${bannerUrl}")`,
+                  backgroundSize: "cover", backgroundPosition: "center",
+                  opacity: 0.65, pointerEvents: "none",
+                }} />
+              )}
+              {bannerUrl && (
+                <div aria-hidden style={{
+                  position: "absolute", inset: 0,
+                  background: `linear-gradient(90deg, rgba(10,12,20,.80) 0%, rgba(10,12,20,.45) 50%, rgba(10,12,20,.15) 100%)`,
+                  pointerEvents: "none",
+                }} />
+              )}
+              <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0, flex: 1, position: "relative", zIndex: 1 }}>
+                <div style={{
+                  width: 64, height: 64, flexShrink: 0,
+                  borderRadius: 10, border: `1px solid ${iconBorder}`,
+                  background: iconUrl ? "rgba(0,0,0,.25)" : iconBg,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  overflow: "hidden", color: accent || "rgba(243,244,246,.65)",
+                  fontSize: 24,
+                }}>
+                  {iconUrl
+                    ? <img src={iconUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : (isEvent ? "🔥" : pinned ? "📌" : "◆")}
                 </div>
-</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {name}
+                    </div>
+                    {locked ? (
+                      <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--weered-border)", opacity: 0.85 }}>
+                        Locked
+                      </span>
+                    ) : null}
+                    {typeof n === "number" ? (
+                      <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999, border: "1px solid var(--weered-border)", opacity: 0.85 }}>
+                        {n} online
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
 
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative", zIndex: 1 }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); doJoin(r); }}
-                  style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--weered-border)" }}
+                  style={{
+                    padding: "8px 10px", borderRadius: 10,
+                    border: `1px solid ${accent ? `${accent}66` : "var(--weered-border)"}`,
+                    background: accent ? `${accent}18` : "transparent",
+                    color: accent || undefined,
+                  }}
                 >
                   {locked ? "Knock" : "Join"}
                 </button>

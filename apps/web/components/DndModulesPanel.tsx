@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import EmptyState from "./EmptyState";
+import SessionZero, { useSessionZero } from "./SessionZero";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const OPEN5E = "https://api.open5e.com/v1";
@@ -158,6 +159,18 @@ const COMP_TABS = [
   { id: "conditions" as const, label: "Conditions", icon: "⚡" },
 ];
 type CompTabId = typeof COMP_TABS[number]["id"];
+
+// Codex ribbon colors per chapter — used as the silk ribbon hanging from
+// the tome-spine. Wizard blue, druid green, sorcerer red, monk teal,
+// paladin gold. Set via --ribbon-rgb CSS var as "r, g, b" so the CSS
+// gradient can use it with alpha.
+const RIBBON_RGB: Record<CompTabId, string> = {
+  spells:     "42, 80, 161",   // arcane blue
+  monsters:   "122, 133, 59",  // druid green
+  classes:    "153, 46, 46",   // sorcerer red
+  magicitems: "81, 165, 197",  // monk teal
+  conditions: "181, 158, 84",  // paladin gold
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SPELL BROWSER
@@ -819,15 +832,65 @@ const QUICK_DICE = [
   { label: "d100", expr: "d100" }, { label: "2d6", expr: "2d6" }, { label: "4d6", expr: "4d6" },
 ];
 
-function DiceTower() {
+function DiceTower({ lobbyId }: { lobbyId: string }) {
   const [history, setHistory] = useState<DiceResult[]>([]);
   const [customExpr, setCustomExpr] = useState("");
   const [lastRoll, setLastRoll] = useState<DiceResult | null>(null);
   const [showFlash, setShowFlash] = useState(false);
+  // Witnessed-rolls toggle. Default ON so the headline feature lands on
+  // first interaction. Persisted per-lobby so a DM who toggles off (e.g.
+  // for stat blocks) doesn't re-toggle every visit.
+  const [isPublic, setIsPublic] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const saved = localStorage.getItem(`weered:dnd:dice-public:${lobbyId}`);
+      return saved === null ? true : saved === "1";
+    } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(`weered:dnd:dice-public:${lobbyId}`, isPublic ? "1" : "0"); } catch {}
+  }, [isPublic, lobbyId]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function doRoll(expr: string) {
+  async function doRoll(expr: string) {
+    setError(null);
+    if (isPublic) {
+      // Server-authoritative roll. Response includes the computed result so
+      // the local display updates instantly; the same event also broadcasts
+      // back over WS and lands as a chip in lobby chat.
+      if (busy) return;
+      setBusy(true);
+      try {
+        const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/dice/roll`, {
+          method: "POST",
+          body: JSON.stringify({ expression: expr }),
+        });
+        if (!j.ok) {
+          setError(j.message || "Couldn't roll. Check the expression.");
+          return;
+        }
+        const roll: DiceResult = {
+          rolls: j.rolls || [], kept: j.kept || [], dropped: j.dropped || [],
+          modifier: Number(j.modifier || 0), total: Number(j.total || 0), sides: Number(j.sides || 0),
+          advantage: !!j.advantage, disadvantage: !!j.disadvantage,
+          isNat20: !!j.isNat20, isNat1: !!j.isNat1,
+          id: `srv:${j.time}:${Math.random().toString(36).slice(2,6)}`,
+          expr: expr.toLowerCase(), roller: "You", ts: Number(j.time || Date.now()),
+        };
+        setLastRoll(roll);
+        setHistory(prev => [roll, ...prev].slice(0, 50));
+        setShowFlash(true);
+        setTimeout(() => setShowFlash(false), 600);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    // Private roll — purely local, no broadcast.
     const parsed = parseDice(expr);
-    if (!parsed) return;
+    if (!parsed) { setError("Bad expression. Try 1d20, 2d8+5, d20adv."); return; }
     const result = rollDice(parsed);
     const roll: DiceResult = {
       ...result,
@@ -848,30 +911,75 @@ function DiceTower() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Big result display */}
-      <div style={{
-        textAlign: "center", padding: "28px 20px", borderRadius: 14,
-        border: `1px solid ${ACCENT}33`,
-        background: lastRoll?.isNat20 ? "rgba(34,197,94,.08)" : lastRoll?.isNat1 ? "rgba(239,68,68,.08)" : `${ACCENT}06`,
-        transition: "all .3s",
-        boxShadow: showFlash ? `0 0 40px ${lastRoll?.isNat20 ? "rgba(34,197,94,.3)" : lastRoll?.isNat1 ? "rgba(239,68,68,.3)" : `${ACCENT}20`}` : "none",
+      {/* Public/private toggle. Public broadcasts every roll to lobby chat
+          as a witnessed chip. Private is a personal dice tray — useful for
+          DMs rolling stat blocks behind the screen. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", background: "rgba(0,0,0,.20)" }}>
+        <button
+          type="button"
+          onClick={() => setIsPublic(true)}
+          style={{
+            padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer",
+            border: `1px solid ${isPublic ? "#22C55E66" : "rgba(255,255,255,.10)"}`,
+            background: isPublic ? "rgba(34,197,94,.10)" : "rgba(255,255,255,.02)",
+            color: isPublic ? "#22C55E" : "rgba(148,163,184,.65)",
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontFamily: "inherit",
+          }}
+          title="Rolls broadcast to lobby chat as a witnessed chip"
+        >
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: isPublic ? "#22C55E" : "rgba(148,163,184,.4)", boxShadow: isPublic ? "0 0 6px #22C55E" : "none" }} />
+          Witnessed (lobby chat)
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsPublic(false)}
+          style={{
+            padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer",
+            border: `1px solid ${!isPublic ? `${ACCENT}55` : "rgba(255,255,255,.10)"}`,
+            background: !isPublic ? `${ACCENT}10` : "rgba(255,255,255,.02)",
+            color: !isPublic ? ACCENT : "rgba(148,163,184,.65)",
+            fontFamily: "inherit",
+          }}
+          title="Rolls stay local — useful for DM stat blocks behind the screen"
+        >
+          Private (just you)
+        </button>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "rgba(148,163,184,.45)", letterSpacing: ".3px" }}>
+          {isPublic ? "the room sees every roll" : "behind the DM screen"}
+        </span>
+      </div>
+
+      {error && (
+        <div style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(239,68,68,.25)", background: "rgba(239,68,68,.06)", color: "#EF5350", fontSize: 11 }}>
+          {error}
+        </div>
+      )}
+
+      {/* Brazier — stone-mouth result panel with pulsing coal glow */}
+      <div className="dnd-brazier" style={{
+        boxShadow: showFlash
+          ? (lastRoll?.isNat20 ? "0 0 56px rgba(122,209,88,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+            : lastRoll?.isNat1 ? "0 0 50px rgba(239,68,68,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+            : "0 0 48px rgba(232,160,74,0.40), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)")
+          : undefined,
       }}>
         {lastRoll ? (
           <>
-            <div style={{ fontSize: 48, fontWeight: 900, color: lastRoll.isNat20 ? "#22C55E" : lastRoll.isNat1 ? "#EF5350" : "rgba(243,244,246,.95)", lineHeight: 1, marginBottom: 8, transition: "color .3s" }}>
+            <div className={`dnd-brazier-result${lastRoll.isNat20 ? " is-nat20" : lastRoll.isNat1 ? " is-nat1" : ""}`}>
               {lastRoll.total}
             </div>
-            {lastRoll.isNat20 && <div style={{ fontSize: 14, fontWeight: 800, color: "#22C55E", marginBottom: 6, letterSpacing: 2 }}>NATURAL 20!</div>}
-            {lastRoll.isNat1 && <div style={{ fontSize: 14, fontWeight: 800, color: "#EF5350", marginBottom: 6, letterSpacing: 2 }}>CRITICAL FAIL</div>}
-            <div style={{ fontSize: 12, color: "rgba(148,163,184,.6)" }}>
+            {lastRoll.isNat20 && <div className="dnd-brazier-tag is-nat20">NATURAL 20</div>}
+            {lastRoll.isNat1 && <div className="dnd-brazier-tag is-nat1">CRITICAL FAIL</div>}
+            <div className="dnd-brazier-expr">
               {lastRoll.expr}
               {(lastRoll.advantage || lastRoll.disadvantage) && (
-                <span style={{ color: lastRoll.advantage ? "#22C55E" : "#EF5350", fontWeight: 600 }}>
+                <span style={{ color: lastRoll.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 600 }}>
                   {" "}({lastRoll.advantage ? "ADV" : "DIS"})
                 </span>
               )}
             </div>
-            <div style={{ fontSize: 11, color: "rgba(148,163,184,.45)", marginTop: 4 }}>
+            <div className="dnd-brazier-rolls">
               [{lastRoll.rolls.join(", ")}]
               {lastRoll.dropped && lastRoll.dropped.length > 0 && (
                 <span style={{ textDecoration: "line-through", opacity: 0.4 }}> dropped: {lastRoll.dropped.join(", ")}</span>
@@ -881,82 +989,138 @@ function DiceTower() {
           </>
         ) : (
           <>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>🎲</div>
-            <div style={{ fontSize: 14, color: "rgba(148,163,184,.4)" }}>Roll the dice</div>
+            <div className="dnd-brazier-d20">
+              <D20Icon />
+            </div>
+            <div className="dnd-brazier-prompt">Pick a die. Cast it into the tower.</div>
           </>
         )}
       </div>
 
-      {/* Quick dice buttons */}
+      {/* Quick dice tiles — carved-stone */}
       <div>
-        <div style={S.label}>Quick Roll</div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div className="dnd-section-label">Quick Roll</div>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {QUICK_DICE.map(d => (
-            <button key={d.label} onClick={() => doRoll(d.expr)} style={{
-              ...S.btnPri, padding: "8px 14px", fontSize: 13, fontWeight: 800, flex: "1 1 60px",
-              minWidth: 50, textAlign: "center",
-            }}>{d.label}</button>
+            <button key={d.label} onClick={() => doRoll(d.expr)} className="dnd-stone-tile" disabled={busy}>
+              {d.label}
+            </button>
           ))}
         </div>
       </div>
 
       {/* Advantage / Disadvantage */}
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => advRoll(true)} style={{
-          ...S.btn, flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700,
-          borderColor: "rgba(34,197,94,.25)", background: "rgba(34,197,94,.08)", color: "#22C55E",
-        }}>d20 Advantage</button>
-        <button onClick={() => advRoll(false)} style={{
-          ...S.btn, flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700,
-          borderColor: "rgba(239,68,68,.25)", background: "rgba(239,68,68,.08)", color: "#EF5350",
-        }}>d20 Disadvantage</button>
+        <button onClick={() => advRoll(true)} className="dnd-stone-tile dnd-stone-tile--adv" disabled={busy} style={{ flex: 1 }}>
+          d20 Advantage
+        </button>
+        <button onClick={() => advRoll(false)} className="dnd-stone-tile dnd-stone-tile--dis" disabled={busy} style={{ flex: 1 }}>
+          d20 Disadvantage
+        </button>
       </div>
 
-      {/* Custom roll */}
+      {/* Custom roll — parchment input */}
       <div>
-        <div style={S.label}>Custom Roll</div>
+        <div className="dnd-section-label">Custom Roll</div>
         <div style={{ display: "flex", gap: 8 }}>
           <input
-            style={{ ...S.input, flex: 1 }}
-            placeholder="e.g. 2d8+5, d20adv, 4d6..."
+            className="dnd-parchment-input"
+            placeholder="2d8+5, d20adv, 4d6, d100..."
             value={customExpr}
             onChange={e => setCustomExpr(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
           />
-          <button style={S.btnPri} onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}>Roll</button>
+          <button
+            className="dnd-stone-tile"
+            style={{ flex: "0 0 auto", minWidth: 80 }}
+            onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
+            disabled={busy}
+          >Cast</button>
         </div>
       </div>
 
-      {/* Roll history */}
+      {/* Roll history — wooden ledger */}
       {history.length > 0 && (
         <div>
-          <div style={{ ...S.label, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="dnd-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Roll History</span>
-            <button style={{ ...S.btn, fontSize: 9, padding: "2px 6px" }} onClick={() => setHistory([])}>Clear</button>
+            <button
+              style={{
+                background: "transparent", border: "1px solid rgba(196,165,90,0.25)",
+                color: "rgba(201,168,120,0.6)", fontSize: 10, padding: "2px 8px",
+                borderRadius: 4, cursor: "pointer", fontFamily: "inherit", letterSpacing: ".5px",
+              }}
+              onClick={() => setHistory([])}
+            >Clear</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflow: "auto" }}>
             {history.map(r => (
-              <div key={r.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px" }}>
-                <span style={{
-                  fontSize: 16, fontWeight: 800, minWidth: 40, textAlign: "center",
-                  color: r.isNat20 ? "#22C55E" : r.isNat1 ? "#EF5350" : "rgba(243,244,246,.9)",
-                }}>{r.total}</span>
+              <div key={r.id} className={`dnd-history-row${r.isNat20 ? " is-nat20" : r.isNat1 ? " is-nat1" : ""}`}>
+                <span className="dnd-history-total">{r.total}</span>
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 11, color: "rgba(243,244,246,.7)" }}>{r.expr}</span>
+                  <span className="dnd-history-expr">{r.expr}</span>
                   {(r.advantage || r.disadvantage) && (
-                    <span style={{ fontSize: 9, marginLeft: 4, color: r.advantage ? "#22C55E" : "#EF5350", fontWeight: 600 }}>
+                    <span style={{ fontSize: 10, marginLeft: 6, color: r.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 700, letterSpacing: ".5px" }}>
                       {r.advantage ? "ADV" : "DIS"}
                     </span>
                   )}
-                  <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginLeft: 6 }}>[{r.rolls.join(",")}]{r.modifier ? (r.modifier > 0 ? `+${r.modifier}` : r.modifier) : ""}</span>
+                  <span style={{ fontSize: 10, color: "rgba(201,168,120,0.45)", marginLeft: 8, fontFamily: "monospace" }}>
+                    [{r.rolls.join(",")}]{r.modifier ? (r.modifier > 0 ? `+${r.modifier}` : r.modifier) : ""}
+                  </span>
                 </div>
-                <span style={{ fontSize: 9, color: "rgba(148,163,184,.3)" }}>{new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                <span style={{ fontSize: 9, color: "rgba(201,168,120,0.35)", fontFamily: "monospace" }}>
+                  {new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// SVG d20 — empty-state die in the brazier. Stylized 2D, isometric face.
+function D20Icon() {
+  return (
+    <svg width="96" height="96" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <defs>
+        <linearGradient id="dndDieFill" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7F4422" />
+          <stop offset="55%" stopColor="#5D2F18" />
+          <stop offset="100%" stopColor="#3A1C0E" />
+        </linearGradient>
+        <linearGradient id="dndDieFace" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(0,0,0,0.10)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.40)" />
+        </linearGradient>
+        <linearGradient id="dndDieEdge" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F5D58A" />
+          <stop offset="100%" stopColor="#C4A55A" />
+        </linearGradient>
+      </defs>
+      <polygon
+        points="50,5 90,28 90,72 50,95 10,72 10,28"
+        fill="url(#dndDieFill)"
+        stroke="url(#dndDieEdge)"
+        strokeWidth="1.5"
+      />
+      <polygon
+        points="50,18 78,67 22,67"
+        fill="url(#dndDieFace)"
+        stroke="rgba(245,213,138,0.40)"
+        strokeWidth="1"
+      />
+      <text
+        x="50" y="56"
+        textAnchor="middle"
+        fontSize="22"
+        fontWeight="700"
+        fill="#F5D58A"
+        fontFamily="var(--font-pirata), 'Pirata One', serif"
+        style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.6))" }}
+      >20</text>
+    </svg>
   );
 }
 
@@ -1105,47 +1269,52 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
       )}
 
       {posts.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 30 }}>
+        <div className="dnd-corkboard" style={{ textAlign: "center", padding: 30 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🍺</div>
-          <div style={{ fontSize: 13, color: "var(--weered-muted, rgba(148,163,184,.55))" }}>Tavern board's empty. Post the first quest.</div>
+          <div className="dnd-serif" style={{ fontSize: 14, color: "rgba(201,168,120,.7)", fontStyle: "italic" }}>The board hangs empty. Pin the first quest.</div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="dnd-corkboard" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {posts.map(p => {
             const meta = p.metadata || {};
             const isLFDM = (p.tags || []).includes("Looking for DM");
             return (
-              <div key={p.id} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 6, borderLeft: `3px solid ${isLFDM ? "#EF5350" : ACCENT}` }}>
+              <div key={p.id} className="dnd-scroll" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(243,244,246,.92)" }}>{p.activity || "Seeking Adventurers"}</div>
-                    <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
-                      {p.userName} · {p.players?.length || 1}/{p.maxPlayers} adventurers
+                    <div className="dnd-heading" style={{ fontSize: 17, color: "var(--dnd-parchment-ink)", lineHeight: 1.15 }}>
+                      {p.activity || "Seeking Adventurers"}
+                    </div>
+                    <div className="dnd-serif" style={{ fontSize: 12, color: "rgba(58,28,14,.7)", marginTop: 2, fontStyle: "italic" }}>
+                      posted by <strong>{p.userName}</strong> · {p.players?.length || 1}/{p.maxPlayers} adventurers
                     </div>
                   </div>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-                    background: p.status === "OPEN" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
-                    color: p.status === "OPEN" ? "#22C55E" : "#EF4444",
+                    fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 3, letterSpacing: ".5px",
+                    border: `1px solid ${p.status === "OPEN" ? "rgba(58,103,46,.55)" : "rgba(155,40,30,.55)"}`,
+                    background: p.status === "OPEN" ? "rgba(122,133,59,.22)" : "rgba(231,98,62,.20)",
+                    color: p.status === "OPEN" ? "#3A6B22" : "#9B281E",
                   }}>{p.status}</span>
                 </div>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {(p.tags || []).map((t: string) => {
                     const isSystem = DND_SYSTEMS.includes(t);
                     const isRole = DND_ROLES.includes(t);
+                    const tagBg = isRole ? (isLFDM ? "rgba(155,40,30,.18)" : "rgba(127,68,34,.20)") : isSystem ? "rgba(74,46,116,.20)" : "rgba(58,28,14,.10)";
+                    const tagFg = isRole ? (isLFDM ? "#9B281E" : "#5D2F18") : isSystem ? "#4A2E74" : "rgba(58,28,14,.65)";
+                    const tagBd = isRole ? (isLFDM ? "rgba(155,40,30,.4)" : "rgba(127,68,34,.4)") : isSystem ? "rgba(74,46,116,.4)" : "rgba(58,28,14,.25)";
                     return (
                       <span key={t} style={{
-                        fontSize: 9, padding: "2px 6px", borderRadius: 4, fontWeight: 700,
-                        background: isRole ? (isLFDM ? "rgba(239,68,68,.12)" : `${ACCENT}15`) : isSystem ? "rgba(100,102,241,.12)" : "rgba(255,255,255,.04)",
-                        color: isRole ? (isLFDM ? "#EF5350" : ACCENT) : isSystem ? "#818CF8" : "rgba(148,163,184,.5)",
+                        fontSize: 9, padding: "2px 6px", borderRadius: 3, fontWeight: 700, letterSpacing: ".3px",
+                        border: `1px solid ${tagBd}`, background: tagBg, color: tagFg,
                       }}>{t}</span>
                     );
                   })}
-                  {p.gameMode && !DND_ROLES.includes(p.gameMode) && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.gameMode}</span>}
-                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.55)", fontWeight: 600 }}>{p.rankTier}</span>}
-                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.55)", fontWeight: 600 }}>{p.region}</span>}
+                  {p.gameMode && !DND_ROLES.includes(p.gameMode) && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 3, border: "1px solid rgba(184,140,30,.5)", background: "rgba(184,140,30,.18)", color: "#7A5A12", fontWeight: 700 }}>{p.gameMode}</span>}
+                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 3, border: "1px solid rgba(58,28,14,.25)", background: "rgba(58,28,14,.08)", color: "rgba(58,28,14,.6)", fontWeight: 600 }}>{p.rankTier}</span>}
+                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 3, border: "1px solid rgba(58,28,14,.25)", background: "rgba(58,28,14,.08)", color: "rgba(58,28,14,.6)", fontWeight: 600 }}>{p.region}</span>}
                 </div>
-                {p.description && <div style={{ fontSize: 12, color: "rgba(148,163,184,.55)", lineHeight: 1.45 }}>{p.description}</div>}
+                {p.description && <div className="dnd-serif" style={{ fontSize: 13, color: "rgba(58,28,14,.78)", lineHeight: 1.5, fontStyle: "italic" }}>{p.description}</div>}
               </div>
             );
           })}
@@ -1243,38 +1412,54 @@ export default function DndModulesPanel({
   useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [compTab, setCompTab] = useState<CompTabId>("spells");
 
+  // Session Zero — first-time onboarding modal. Auto-opens once per user;
+  // the chip below the tabs reopens it on demand.
+  const sessionZero = useSessionZero();
+
   return (
-    <div style={{ padding: "14px 16px", overflow: "auto", ...style }}>
-      {/* Main tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" }}>
+    <div className="weered-dnd-modules" style={{ padding: "14px 16px", overflow: "auto", position: "relative", ...style }}>
+      <SessionZero open={sessionZero.open} onClose={sessionZero.hide} />
+
+      {/* Lectern — carved wooden bar with four tool alcoves + Session Zero quill */}
+      <div className="dnd-lectern">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            ...S.btn, fontSize: 12, padding: "7px 14px", display: "flex", alignItems: "center", gap: 5,
-            borderColor: tab === t.id ? `${accent}55` : undefined,
-            background: tab === t.id ? `${accent}18` : undefined,
-            color: tab === t.id ? accent : undefined,
-            fontWeight: tab === t.id ? 700 : 500,
-          }}>
-            <span>{t.icon}</span> {t.label}
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`dnd-lectern-tool${tab === t.id ? " is-active" : ""}`}
+          >
+            <span className="dnd-lectern-icon">{t.icon}</span>
+            <span>{t.label}</span>
           </button>
         ))}
+        <button
+          type="button"
+          onClick={sessionZero.show}
+          title="Reopen Session Zero — the D&D lobby walkthrough"
+          className="dnd-lectern-quill"
+        >
+          <span style={{ fontStyle: "normal" }}>🪶</span>
+          Session Zero
+        </button>
       </div>
 
       {/* Compendium */}
       {tab === "compendium" && (
         <>
-          <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
-            {COMP_TABS.map(ct => (
-              <button key={ct.id} onClick={() => setCompTab(ct.id)} style={{
-                ...S.btn, fontSize: 11, padding: "5px 10px",
-                borderColor: compTab === ct.id ? `${accent}44` : undefined,
-                background: compTab === ct.id ? `${accent}12` : undefined,
-                color: compTab === ct.id ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
-                fontWeight: compTab === ct.id ? 700 : 500,
-              }}>
-                <span style={{ marginRight: 4 }}>{ct.icon}</span>{ct.label}
-              </button>
-            ))}
+          {/* Codex — chapter ribbons hanging from the tome-spine */}
+          <div className="dnd-codex">
+            <div className="dnd-codex-ribbons">
+              {COMP_TABS.map(ct => (
+                <button
+                  key={ct.id}
+                  onClick={() => setCompTab(ct.id)}
+                  className={`dnd-codex-ribbon${compTab === ct.id ? " is-active" : ""}`}
+                  style={{ ['--ribbon-rgb' as any]: RIBBON_RGB[ct.id] }}
+                >
+                  <span style={{ marginRight: 2 }}>{ct.icon}</span>{ct.label}
+                </button>
+              ))}
+            </div>
           </div>
           {compTab === "spells" && <SpellBrowser />}
           {compTab === "monsters" && <MonsterBrowser />}
@@ -1285,7 +1470,7 @@ export default function DndModulesPanel({
       )}
 
       {tab === "lfg" && <TavernBoard lobbyId={lobbyId} />}
-      {tab === "dice" && <DiceTower />}
+      {tab === "dice" && <DiceTower lobbyId={lobbyId} />}
       {tab === "streams" && <TwitchStreams lobbyId={lobbyId} />}
     </div>
   );

@@ -34,7 +34,12 @@ app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
   const list = await prisma.room.findMany({
     where: { lobbyId },
     orderBy: [{ isEvent: "desc" }, { pinned: "desc" }, { updatedAt: "desc" }],
-    select: { id: true, name: true, description: true, locked: true, pinned: true, isEvent: true, ownerId: true, _count: { select: { members: true } } },
+    select: {
+      id: true, name: true, description: true,
+      locked: true, pinned: true, isEvent: true, ownerId: true,
+      iconUrl: true, bannerUrl: true, accentColor: true,
+      _count: { select: { members: true } },
+    },
   });
   const out = list.map(r => {
     const wsRoom = rooms.get(r.id);
@@ -50,6 +55,9 @@ app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
       onlineCount: wsRoom?.users?.size ?? 0, onlineUsers,
       locked: Boolean(r.locked), pinned: Boolean((r as any).pinned),
       isEvent: Boolean((r as any).isEvent),
+      iconUrl: (r as any).iconUrl || null,
+      bannerUrl: (r as any).bannerUrl || null,
+      accentColor: (r as any).accentColor || null,
       lobbyId, ownerId: r.ownerId,
       hasPassword: !!(wsRoom?.passwordHash || (r as any).passwordHash),
       _count: r._count,
@@ -170,7 +178,12 @@ app.get("/lobbies/:id", async (req, reply) => {
       joinMode: true, ownerId: true,
       enabledModules: true,
       rooms: {
-        select: { id: true, name: true, description: true, locked: true, ownerId: true, isEvent: true, pinned: true, _count: { select: { members: true } },},
+        select: {
+          id: true, name: true, description: true,
+          locked: true, ownerId: true, isEvent: true, pinned: true,
+          iconUrl: true, bannerUrl: true, accentColor: true,
+          _count: { select: { members: true } },
+        },
         orderBy: [{ isEvent: "desc" }, { name: "asc" }],
       },
       _count: { select: { rooms: true, members: true } },
@@ -905,8 +918,12 @@ app.delete("/lobbies/:id/admin/rooms/:roomId", async (req, reply) => {
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
   if (!hasLobbyPerm(myLevel, "manage_rooms", ctx.overrideRole)) return reply.code(403).send({ ok: false, error: "no_permission" });
   const roomId = String((req as any).params?.roomId || "");
-  const room = await (prisma as any).room.findUnique({ where: { id: roomId }, select: { lobbyId: true, name: true } });
+  const room = await (prisma as any).room.findUnique({ where: { id: roomId }, select: { lobbyId: true, name: true, pinned: true } });
   if (!room || room.lobbyId !== ctx.lobby.id) return reply.code(404).send({ ok: false, error: "room_not_found_in_lobby" });
+  // Pinned rooms are lobby-architecture (seeded house rooms), not
+  // ephemeral user rooms. Refuse delete unless caller is global staff —
+  // a regular lobby admin must unpin via /pin first as an explicit demote.
+  if (room.pinned && !ctx.overrideRole) return reply.code(409).send({ ok: false, error: "cannot_delete_pinned", message: "Pinned house rooms can't be deleted. Unpin first if you really need to." });
   // Kick live users
   const liveRoom = rooms.get(roomId);
   if (liveRoom) {

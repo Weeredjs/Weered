@@ -16,7 +16,7 @@ const SETTINGS_KEY = "weered:settings:v0";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role       = "owner" | "mod" | "member" | "none";
 type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
-type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number };
+type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system"; meta?: any };
 type Knock      = { userId: string; name: string; ts: number };
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";
 
@@ -26,7 +26,7 @@ type AuditItem = {
   targetId?: string; targetName?: string; note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string };
+type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string; disabledModules?: string[] };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
@@ -61,6 +61,7 @@ type Ctx = {
   moduleByRoom: Record<string, ModuleState>;
   ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
   launchByRoom: Record<string, LaunchSnapshot | null>;
+  voiceByRoom: Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>;
   typingByRoom: Record<string, { userId: string; name: string; ts: number }[]>;
   pinnedByRoom: Record<string, string[]>;
   meta: RoomMeta | null; admin: AdminState | null;
@@ -75,6 +76,11 @@ type Ctx = {
   sendChat: (body: string, opts?: { replyToId?: string }) => void;
   renameRoom: (name: string) => void;
   setModuleState: (mode: string | null, opts?: { url?: string; channel?: string }) => void;
+  setVoiceMode: (mode: "OPEN" | "QUEUED" | "LISTEN_ONLY") => void;
+  raiseHand: () => void;
+  lowerHand: () => void;
+  approveSpeaker: (userId: string) => void;
+  revokeSpeaker: (userId: string) => void;
   lockRoom: () => void; unlockRoom: () => void;
   joinWithPassword: (roomId: string, password: string) => void;
   passwordRoomId: string; passwordError: string;
@@ -195,6 +201,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
+  const [voiceByRoom,   setVoiceByRoom  ] = useState<Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>>({});
   const [typingByRoom,  setTypingByRoom ] = useState<Record<string, { userId: string; name: string; ts: number }[]>>({});
   const [pinnedByRoom,  setPinnedByRoom ] = useState<Record<string, string[]>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
@@ -447,12 +454,24 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             iconUrl: msg.iconUrl || undefined,
             bannerUrl: msg.bannerUrl || undefined,
             accentColor: msg.accentColor || undefined,
+            disabledModules: Array.isArray(msg.disabledModules) ? msg.disabledModules.map(String) : [],
           },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
         // Extract active module state sent on join
         if (msg.activeModule) {
           setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule }));
+        }
+        // Voice state on join
+        if (msg.voiceMode || Array.isArray(msg.voiceQueue) || Array.isArray(msg.voiceSpeakers)) {
+          setVoiceByRoom(prev => ({
+            ...prev,
+            [rid]: {
+              mode: (msg.voiceMode === "QUEUED" || msg.voiceMode === "LISTEN_ONLY") ? msg.voiceMode : "OPEN",
+              queue: Array.isArray(msg.voiceQueue) ? msg.voiceQueue.map(String) : [],
+              speakers: Array.isArray(msg.voiceSpeakers) ? msg.voiceSpeakers.map(String) : [],
+            },
+          }));
         }
         // Extract launch state if the room has one
         if (msg.launch !== undefined) {
@@ -557,9 +576,23 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             audit:   Array.isArray(msg.audit)   ? msg.audit                   : [],
           },
         }));
+        // Merge into existing meta — earlier this overwrote with a
+        // fresh object that lacked description / iconUrl / bannerUrl /
+        // accentColor / disabledModules, wiping owner-saved values
+        // every time a room:adminState event landed (which fires right
+        // after presence:state for owners/mods). Keep the previous
+        // fields and only update the bits adminState actually carries.
         setMetaByRoom(prev => ({
           ...prev,
-          [rid]: { name: String(msg.name || rid), locked: Boolean(msg.locked), chatDisabled: Boolean(msg.chatDisabled ?? false), thumbnail: msg.thumbnail || undefined, ownerId: String(msg.ownerId || ""), mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [] },
+          [rid]: {
+            ...(prev[rid] || {}),
+            name: String(msg.name || rid),
+            locked: Boolean(msg.locked),
+            chatDisabled: Boolean(msg.chatDisabled ?? false),
+            thumbnail: msg.thumbnail || undefined,
+            ownerId: String(msg.ownerId || ""),
+            mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
+          },
         }));
         return;
       }
@@ -589,6 +622,83 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), m].slice(-200) }));
         // Dispatch DOM event so closed chat drawers can track unread
         try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } })); } catch {}
+        return;
+      }
+
+      // ── Operator AI commentary on FakeOut trades. Synthesizes an
+      // operator-styled chat message in the active lobby room. Routing
+      // mirrors trading:trade — server already filtered by room.
+      if (msg.type === "operator:commentary") {
+        const rid = activeRoomIdRef.current || "";
+        if (!rid) return;
+        const ts = Number(msg.ts || Date.now());
+        const opMsg: ChatMsg = {
+          id: `op:${ts}:${Math.random().toString(36).slice(2, 8)}`,
+          user: { id: "operator", name: "The Operator", avatarColor: "#D4A017" } as any,
+          body: String(msg.body || ""),
+          ts,
+        };
+        if (!opMsg.body) return;
+        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), opMsg].slice(-200) }));
+        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: opMsg } })); } catch {}
+        return;
+      }
+
+      // ── Trade events from FakeOut paper-trading: synthesize a system
+      // ChatMsg so witnesses-by-default show up directly in the lobby chat.
+      // The server already filters broadcast to sockets in this lobby room,
+      // so we route into whichever room key is currently active.
+      if (msg.type === "trading:trade") {
+        const rid = activeRoomIdRef.current || "";
+        if (!rid) return;
+        const ts = Number(msg.time || Date.now());
+        const synthetic: ChatMsg = {
+          id: `trade:${String(msg.userId || "?")}:${ts}`,
+          user: { id: String(msg.userId || ""), name: String(msg.userName || "trader") },
+          body: "",
+          ts,
+          kind: "trade",
+          meta: {
+            symbol: String(msg.symbol || ""),
+            side: String(msg.side || "").toUpperCase(),
+            quantity: Number(msg.quantity || 0),
+            price: Number(msg.price || 0),
+          },
+        };
+        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
+        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        return;
+      }
+
+      // ── Dice rolls from the D&D Dice Tower public-broadcast: synthesize
+      // a system ChatMsg with kind="dice" so witnessed rolls show in the
+      // active lobby room. Mirrors the trading:trade pattern exactly.
+      if (msg.type === "dice:roll") {
+        const rid = activeRoomIdRef.current || "";
+        if (!rid) return;
+        const ts = Number(msg.time || Date.now());
+        const synthetic: ChatMsg = {
+          id: `dice:${String(msg.userId || "?")}:${ts}`,
+          user: { id: String(msg.userId || ""), name: String(msg.userName || "roller") },
+          body: "",
+          ts,
+          kind: "dice",
+          meta: {
+            expression: String(msg.expression || ""),
+            total: Number(msg.total || 0),
+            rolls: Array.isArray(msg.rolls) ? msg.rolls : [],
+            kept: Array.isArray(msg.kept) ? msg.kept : [],
+            dropped: Array.isArray(msg.dropped) ? msg.dropped : [],
+            modifier: Number(msg.modifier || 0),
+            sides: Number(msg.sides || 0),
+            advantage: !!msg.advantage,
+            disadvantage: !!msg.disadvantage,
+            isNat20: !!msg.isNat20,
+            isNat1: !!msg.isNat1,
+          },
+        };
+        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
+        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
         return;
       }
 
@@ -742,6 +852,59 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule ?? null }));
         // Dispatch DOM event so RoomCanvas can react immediately
         try { window.dispatchEvent(new CustomEvent("weered:module:state", { detail: { roomId: rid, activeModule: msg.activeModule ?? null } })); } catch {}
+        return;
+      }
+
+      // ── Owner toggled the room's disabled-modules list. Push the new
+      // list into RoomMeta so the picker UI updates without a refresh.
+      if (msg.type === "room:settings") {
+        const rid = String(msg.roomId || "");
+        if (!rid) return;
+        if (Array.isArray(msg.disabledModules)) {
+          const list = msg.disabledModules.map(String);
+          setMetaByRoom(prev => ({
+            ...prev,
+            [rid]: { ...(prev[rid] || { name: rid, locked: false, chatDisabled: false, ownerId: "", mods: [] }), disabledModules: list },
+          }));
+        }
+        return;
+      }
+
+      // ── A module:set was rejected (typically because the owner has
+      // disabled that module for the room). Toast the user.
+      if (msg.type === "module:rejected") {
+        const reason = String(msg.reason || "");
+        const mode = String(msg.mode || "");
+        if (reason === "module_disabled") {
+          weeredToast.error(`The "${mode}" module is disabled in this room.`);
+        }
+        return;
+      }
+
+      // ── Voice queue / hand-raise state. Mirror server state into
+      // voiceByRoom for UI to consume.
+      if (msg.type === "voice:state") {
+        const rid = String(msg.roomId || "");
+        if (!rid) return;
+        setVoiceByRoom(prev => ({
+          ...prev,
+          [rid]: {
+            mode: (msg.mode === "QUEUED" || msg.mode === "LISTEN_ONLY") ? msg.mode : "OPEN",
+            queue: Array.isArray(msg.queue) ? msg.queue.map(String) : [],
+            speakers: Array.isArray(msg.speakers) ? msg.speakers.map(String) : [],
+          },
+        }));
+        try { window.dispatchEvent(new CustomEvent("weered:voice:state", { detail: { roomId: rid, mode: msg.mode, queue: msg.queue, speakers: msg.speakers } })); } catch {}
+        return;
+      }
+
+      // ── A user's voice publish permission flipped. Their LiveKit
+      // token must be re-issued to take effect — VoiceContext listens
+      // to this DOM event and triggers a token refresh + reconnect.
+      if (msg.type === "voice:permission") {
+        const rid = String(msg.roomId || "");
+        const userId = String(msg.userId || "");
+        try { window.dispatchEvent(new CustomEvent("weered:voice:permission", { detail: { roomId: rid, userId } })); } catch {}
         return;
       }
 
@@ -998,6 +1161,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       ws.send(JSON.stringify({ type: "module:clear", roomId: rid }));
       setModuleByRoom(prev => ({ ...prev, [rid]: null }));
     } else {
+      // Client-side enforcement of disabledModules — server still rejects
+      // independently, but bailing here avoids a roundtrip and gives the
+      // user instant feedback.
+      const meta = metaByRoom[rid];
+      const disabled = Array.isArray(meta?.disabledModules) ? meta!.disabledModules! : [];
+      if (disabled.includes(mode)) {
+        weeredToast.error(`The "${mode}" module is disabled in this room.`);
+        return;
+      }
       ws.send(JSON.stringify({ type: "module:set", roomId: rid, mode, url: opts?.url, channel: opts?.channel }));
       // Optimistic local update
       setModuleByRoom(prev => ({ ...prev, [rid]: { mode, url: opts?.url, channel: opts?.channel, setBy: me?.id, setAt: Date.now() } }));
@@ -1024,10 +1196,6 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
   const admit      = (userId: string) => sendAdmin("room:admit",   { userId });
   const deny       = (userId: string) => sendAdmin("room:deny",    { userId });
 
-  // Stable WS sender — every render used to allocate a fresh closure here,
-  // which broke referential equality for any consumer that put `sendRaw` in
-  // a useEffect dep array (re-running effects on every WS message). useRef
-  // keeps the WS handle live without forcing a re-render or a new closure.
   const sendRaw = React.useCallback((msg: object) => {
     try {
       const ws = (wsRef as any)?.current;
@@ -1035,19 +1203,22 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     } catch {}
   }, []);
 
-  // Memoize the context value so React only notifies consumers when something
-  // they could care about actually changes. Without this, every WS message
-  // (typing pings, presence ticks, etc.) reallocates the value object and
-  // every useWeered() consumer rerenders even if nothing they read changed.
+  const setVoiceMode      = (mode: "OPEN" | "QUEUED" | "LISTEN_ONLY") => sendAdmin("voice:mode",    { mode });
+  const raiseHand         = ()                                        => sendAdmin("voice:raise");
+  const lowerHand         = ()                                        => sendAdmin("voice:lower");
+  const approveSpeaker    = (userId: string)                          => sendAdmin("voice:approve", { userId });
+  const revokeSpeaker     = (userId: string)                          => sendAdmin("voice:revoke",  { userId });
+
   const value: Ctx = React.useMemo(() => ({
     apiBase: API, wsUrl: WS_URL,
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
     users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom,
+    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
     typingByRoom, pinnedByRoom,
     moduleState, setModuleState,
+    setVoiceMode, raiseHand, lowerHand, approveSpeaker, revokeSpeaker,
     rooms, join, leave, knock,
     devLogin, logout,
     sendChat, renameRoom,
@@ -1078,6 +1249,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     joinWithPassword, setPasswordRoomId, devLogin, logout,
     promote, demote, kick, ban, unban, mute, unmute, admit, deny,
     setActiveRoomId, setModuleState,
+    setVoiceMode, raiseHand, lowerHand, approveSpeaker, revokeSpeaker,
   ]);
 
   return (
