@@ -8,7 +8,22 @@ import { getActivity } from "../lib/publicActivity";
 type Opts = {
   rooms: Map<string, { users: Set<string>; sockets: Set<any>; [k: string]: any }>;
   applyWindroseReel?: (lobby: any) => any;
+  authFromHeader?: (h?: string) => { id: string; name: string } | null;
 };
+
+const LOBBY_NAME_TTL_MS = 60_000;
+let _lobbyNameCache: { ts: number; map: Map<string, string> } | null = null;
+async function getLobbyNameMap(): Promise<Map<string, string>> {
+  const now = Date.now();
+  if (_lobbyNameCache && now - _lobbyNameCache.ts < LOBBY_NAME_TTL_MS) {
+    return _lobbyNameCache.map;
+  }
+  const rows = await (prisma as any).lobby.findMany({ select: { id: true, name: true } });
+  const map = new Map<string, string>();
+  for (const r of rows) map.set(String(r.id), String(r.name || r.id));
+  _lobbyNameCache = { ts: now, map };
+  return map;
+}
 
 // Curated featured order — top of the wall on the landing page. Anything
 // outside this list still ships if pinned, but ordered after.
@@ -19,7 +34,7 @@ const FEATURED_ORDER = [
 ];
 
 export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
-  const { rooms, applyWindroseReel } = opts;
+  const { rooms, applyWindroseReel, authFromHeader } = opts;
 
   app.get("/public/lobbies/featured", async (_req, reply) => {
     const lobbies = await (prisma as any).lobby.findMany({
@@ -64,6 +79,29 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/public/activity", async (_req, reply) => {
     const events = getActivity(30);
     reply.header("Cache-Control", "public, max-age=5, s-maxage=5");
+    return reply.send({ ok: true, events });
+  });
+
+  // /activity/recent — same ring buffer, authenticated, non-anonymized.
+  // Returns real handles + lobby names so the logged-in home ticker can
+  // link lobby names and surface user identity.
+  app.get("/activity/recent", async (req, reply) => {
+    const u = authFromHeader ? authFromHeader((req as any).headers?.authorization) : null;
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const raw = getActivity(30);
+    const lobbyNames = await getLobbyNameMap();
+    const events = raw.map(e => ({
+      id: e.id,
+      ts: e.ts,
+      kind: e.kind,
+      lobbyId: e.lobbyId || null,
+      lobbyName: e.lobbyId ? (lobbyNames.get(e.lobbyId) || e.lobbyId) : null,
+      userId: e.userId || null,
+      userName: e.userName || null,
+      text: e.textReal || e.text,
+      accent: e.accent || null,
+    }));
+    reply.header("Cache-Control", "private, max-age=5");
     return reply.send({ ok: true, events });
   });
 }

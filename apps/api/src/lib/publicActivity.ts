@@ -8,8 +8,11 @@ export type PublicActivity = {
   kind: string;       // e.g. "dice", "trade", "room", "tavern", "poker", "pin"
   lobbyId?: string;
   roomId?: string;
-  text: string;       // single-line description, already anonymized
-  accent?: string;    // hex tint hint for the chip
+  text: string;       // anonymized one-liner for the public ticker
+  textReal?: string;  // non-anonymized one-liner for authenticated surfaces
+  userId?: string;
+  userName?: string;
+  accent?: string;
 };
 
 const BUFFER: PublicActivity[] = [];
