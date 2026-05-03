@@ -3,6 +3,11 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import LandingActivityTicker from "../components/LandingActivityTicker";
+import LandingLobbyCard, { type FeaturedLobby } from "../components/LandingLobbyCard";
+import LandingLobbyPreviewModal from "../components/LandingLobbyPreviewModal";
+
+const LP_API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
   const router = useRouter();
@@ -449,6 +454,364 @@ function Landing({ nextPath }: { nextPath: string }) {
           .lp-foot-cta { margin: 50px 20px 30px; padding: 36px 22px; }
           .lp-hero-cta { flex-direction: column; }
         }
+
+        /* ── Activity ticker ───────────────────────────────────── */
+        .lp-ticker {
+          position: relative;
+          z-index: 2;
+          max-width: 1120px;
+          margin: 0 auto;
+          padding: 10px 20px 0;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
+        }
+        .lp-ticker-label {
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #e6bd6e;
+          background: rgba(217,169,66,.07);
+          border: 1px solid rgba(217,169,66,.25);
+          border-radius: 3px;
+        }
+        .lp-ticker-pulse {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 0 0 rgba(34,197,94,.55);
+          animation: lp-ticker-pulse 1.6s infinite;
+        }
+        @keyframes lp-ticker-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+          70%  { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+          100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+        .lp-ticker-track {
+          flex: 1;
+          overflow: hidden;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+          -webkit-mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+        }
+        .lp-ticker-marquee {
+          display: inline-flex;
+          align-items: center;
+          gap: 0;
+          white-space: nowrap;
+          animation: lp-ticker-scroll 60s linear infinite;
+        }
+        .lp-ticker:hover .lp-ticker-marquee { animation-play-state: paused; }
+        @keyframes lp-ticker-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .lp-ticker-item {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 8px;
+          font-size: 13px;
+          color: rgba(240,232,214,.78);
+        }
+        .lp-ticker-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          background: #d9a942;
+          align-self: center;
+        }
+        .lp-ticker-text { color: rgba(240,232,214,.88); }
+        .lp-ticker-ts   { color: rgba(198,188,168,.45); font-size: 11px; }
+        .lp-ticker-sep  { color: rgba(198,188,168,.25); padding: 0 14px; }
+        .lp-ticker-empty {
+          font-size: 12px;
+          color: rgba(198,188,168,.55);
+          font-style: italic;
+          letter-spacing: 0.04em;
+        }
+
+        /* ── Lobby wall ─────────────────────────────────────────── */
+        .lp-wall {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 16px;
+          perspective: 1200px;
+        }
+        .lp-wall-card {
+          position: relative;
+          appearance: none;
+          background: #161616;
+          border: 0;
+          padding: 0;
+          height: 220px;
+          border-radius: 6px;
+          overflow: hidden;
+          cursor: pointer;
+          color: inherit;
+          text-align: left;
+          font: inherit;
+          will-change: transform;
+          transition: transform 220ms cubic-bezier(.2,.7,.2,1), box-shadow 220ms;
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--lp-card-accent, #D9A942) 22%, rgba(0,0,0,.4)),
+            0 12px 28px rgba(0,0,0,.45);
+        }
+        .lp-wall-card:hover {
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--lp-card-accent, #D9A942) 60%, rgba(0,0,0,.4)),
+            0 0 36px color-mix(in srgb, var(--lp-card-accent, #D9A942) 28%, transparent),
+            0 20px 36px rgba(0,0,0,.55);
+        }
+        .lp-wall-card-bg {
+          position: absolute; inset: 0;
+          background-size: cover;
+          background-position: center;
+          opacity: 0.55;
+          transform: scale(1.05);
+          transition: transform 600ms cubic-bezier(.2,.7,.2,1), opacity 220ms;
+        }
+        .lp-wall-card:hover .lp-wall-card-bg {
+          transform: scale(1.12);
+          opacity: 0.7;
+        }
+        .lp-wall-card-scrim {
+          position: absolute; inset: 0;
+          background: linear-gradient(180deg, rgba(20,20,22,0.05) 0%, rgba(20,20,22,0.55) 50%, rgba(14,14,16,0.92) 100%);
+        }
+        .lp-wall-card-glare {
+          position: absolute; inset: 0;
+          pointer-events: none;
+          background: radial-gradient(circle at var(--lp-card-px, 50%) var(--lp-card-py, 50%), color-mix(in srgb, var(--lp-card-accent, #D9A942) 22%, transparent) 0%, transparent 45%);
+          opacity: 0;
+          transition: opacity 220ms;
+        }
+        .lp-wall-card:hover .lp-wall-card-glare { opacity: 1; }
+        .lp-wall-card-body {
+          position: relative;
+          z-index: 1;
+          height: 100%;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .lp-wall-card-top {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .lp-wall-card-logo {
+          width: 36px; height: 36px;
+          border-radius: 6px;
+          object-fit: cover;
+          background: rgba(0,0,0,.4);
+          border: 1px solid rgba(255,255,255,.08);
+        }
+        .lp-wall-card-logo--placeholder {
+          display: grid; place-items: center;
+          font-family: var(--font-pirata), serif;
+          font-size: 16px;
+          color: var(--lp-card-accent, #D9A942);
+        }
+        .lp-wall-card-titles { min-width: 0; flex: 1; }
+        .lp-wall-card-name {
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
+          font-weight: 800;
+          font-size: 17px;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: rgba(240,232,214,.98);
+          line-height: 1.1;
+        }
+        .lp-wall-card-tag {
+          font-size: 11px;
+          color: rgba(198,188,168,.55);
+          font-family: ui-monospace, monospace;
+          margin-top: 2px;
+        }
+        .lp-wall-card-desc {
+          font-size: 13px;
+          color: rgba(240,232,214,.78);
+          line-height: 1.45;
+          font-family: var(--font-cormorant), serif;
+        }
+        .lp-wall-card-foot {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 11px;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        .lp-wall-card-live {
+          display: inline-flex; align-items: center; gap: 6px;
+          color: rgba(198,188,168,.7);
+        }
+        .lp-wall-card-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: rgba(198,188,168,.35);
+        }
+        .lp-wall-card-dot.is-on {
+          background: #22c55e;
+          box-shadow: 0 0 6px rgba(34,197,94,.7);
+        }
+        .lp-wall-card-cta {
+          color: var(--lp-card-accent, #D9A942);
+          font-weight: 700;
+        }
+
+        /* ── Preview modal ────────────────────────────────────── */
+        .lp-modal-back {
+          position: fixed; inset: 0; z-index: 1000;
+          background: rgba(8,8,10,.78);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          display: grid; place-items: center;
+          padding: 32px 16px;
+          animation: lp-modal-in 140ms ease-out both;
+        }
+        @keyframes lp-modal-in { from { opacity: 0; } to { opacity: 1; } }
+        .lp-modal-card {
+          position: relative;
+          width: 100%;
+          max-width: 560px;
+          max-height: calc(100vh - 64px);
+          overflow: auto;
+          background: #18181a;
+          border: 1px solid color-mix(in srgb, var(--lp-modal-accent, #D9A942) 35%, rgba(0,0,0,.4));
+          border-radius: 8px;
+          box-shadow: 0 30px 80px rgba(0,0,0,.6),
+                      0 0 0 1px color-mix(in srgb, var(--lp-modal-accent, #D9A942) 20%, transparent);
+          color: rgba(240,232,214,.92);
+          font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
+        }
+        .lp-modal-close {
+          position: absolute; top: 8px; right: 10px; z-index: 4;
+          background: rgba(0,0,0,.4); color: #d9a942;
+          border: 1px solid rgba(217,169,66,.3);
+          border-radius: 4px;
+          width: 28px; height: 28px;
+          font-size: 18px; line-height: 1;
+          cursor: pointer;
+        }
+        .lp-modal-banner {
+          height: 140px;
+          background: linear-gradient(135deg, #2a2218 0%, #1a1a1c 100%);
+          background-size: cover; background-position: center;
+          position: relative;
+        }
+        .lp-modal-banner-scrim {
+          position: absolute; inset: 0;
+          background: linear-gradient(180deg, transparent 30%, #18181a 100%);
+        }
+        .lp-modal-head {
+          display: flex; gap: 12px; align-items: center;
+          padding: 16px 20px 8px;
+          margin-top: -28px;
+          position: relative;
+          z-index: 2;
+        }
+        .lp-modal-logo {
+          width: 56px; height: 56px;
+          border-radius: 8px;
+          object-fit: cover;
+          background: #0e0e10;
+          border: 2px solid color-mix(in srgb, var(--lp-modal-accent, #D9A942) 50%, #0e0e10);
+        }
+        .lp-modal-name {
+          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          font-size: 22px;
+          color: rgba(240,232,214,.98);
+        }
+        .lp-modal-id {
+          font-family: ui-monospace, monospace;
+          font-size: 11px;
+          color: rgba(198,188,168,.55);
+        }
+        .lp-modal-counts { margin-left: auto; }
+        .lp-modal-live {
+          display: inline-flex; align-items: center; gap: 6px;
+          font-size: 11px;
+          letter-spacing: .06em;
+          text-transform: uppercase;
+          color: rgba(198,188,168,.7);
+        }
+        .lp-modal-desc {
+          padding: 4px 20px 12px;
+          font-size: 14px;
+          color: rgba(240,232,214,.85);
+          line-height: 1.55;
+          font-family: var(--font-cormorant), serif;
+        }
+        .lp-modal-kw {
+          display: flex; gap: 6px; flex-wrap: wrap;
+          padding: 0 20px 8px;
+        }
+        .lp-modal-kw-pill {
+          font-size: 10px;
+          padding: 2px 8px;
+          border-radius: 99px;
+          background: rgba(217,169,66,.08);
+          border: 1px solid rgba(217,169,66,.22);
+          color: rgba(230,189,110,.85);
+          letter-spacing: .04em;
+          text-transform: lowercase;
+        }
+        .lp-modal-section-label {
+          padding: 12px 20px 6px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(198,188,168,.55);
+        }
+        .lp-modal-feed {
+          padding: 0 20px 12px;
+          display: flex; flex-direction: column; gap: 6px;
+        }
+        .lp-modal-feed-row {
+          display: flex; align-items: baseline; gap: 8px;
+          font-size: 13px;
+          color: rgba(240,232,214,.82);
+          padding: 4px 0;
+          border-bottom: 1px solid rgba(217,169,66,.05);
+        }
+        .lp-modal-feed-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          align-self: center;
+          flex: 0 0 auto;
+        }
+        .lp-modal-feed-text { flex: 1; }
+        .lp-modal-feed-ts   { color: rgba(198,188,168,.45); font-size: 11px; }
+        .lp-modal-empty {
+          font-style: italic;
+          color: rgba(198,188,168,.5);
+          font-size: 13px;
+          padding: 8px 0;
+        }
+        .lp-modal-cta-row {
+          display: flex; gap: 10px;
+          padding: 12px 20px 18px;
+          border-top: 1px solid rgba(217,169,66,.1);
+          flex-wrap: wrap;
+        }
+        .lp-modal-cta { flex: 1; text-align: center; }
+
+        @media (max-width: 640px) {
+          .lp-ticker { padding: 8px 16px 0; }
+          .lp-ticker-label { font-size: 9px; padding: 3px 8px; }
+          .lp-wall { grid-template-columns: 1fr; }
+          .lp-wall-card { height: 200px; }
+        }
       `}</style>
 
       <div className="lp-root">
@@ -458,7 +821,7 @@ function Landing({ nextPath }: { nextPath: string }) {
             weered
           </div>
           <div className="lp-nav-links">
-            <a href="#inside">What's inside</a>
+            <a href="#inside">The lobbies</a>
             <a href="#different">Why it's different</a>
             <Link href={getIn} className="lp-getin">get_in()</Link>
           </div>
@@ -474,57 +837,18 @@ function Landing({ nextPath }: { nextPath: string }) {
           </p>
           <div className="lp-hero-cta">
             <Link href={getIn} className="lp-btn-primary">get_in()</Link>
-            <a href="#inside" className="lp-btn-secondary">See what's inside →</a>
+            <a href="#inside" className="lp-btn-secondary">See the wall →</a>
           </div>
         </section>
 
+        <LandingActivityTicker />
+
         <section id="inside" className="lp-section">
-          <h2 className="lp-section-title">What's inside.</h2>
+          <h2 className="lp-section-title">The lobbies are open.</h2>
           <p className="lp-section-sub">
-            Weered isn't a bot ecosystem. Everything below is first-class — written to work together.
+            Every tile is a real lobby with real members. Click one to peek inside — read-only — then get_in() to actually sit at the table.
           </p>
-          <div className="lp-grid">
-            <div className="lp-card">
-              <span className="lp-card-icon">🎮</span>
-              <h3 className="lp-card-title">Game integrations, baked in</h3>
-              <p className="lp-card-body">Destiny loadouts. League ranks. PoE prices. Fortnite shop. Not bot commands — real apps with authenticated user context.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">🗣</span>
-              <h3 className="lp-card-title">Voice, video, shared screens</h3>
-              <p className="lp-card-body">Low-latency voice and video in every room. Shared YouTube, Twitch, and browser. Watch together without leaving chat.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">💵</span>
-              <h3 className="lp-card-title">Paper economy</h3>
-              <p className="lp-card-body">A closed-loop currency called Paper. Earn it by showing up, spend it in the store, stake it on tournaments. Your notoriety is tracked.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">📈</span>
-              <h3 className="lp-card-title">FakeOut — paper trading</h3>
-              <p className="lp-card-body">$100K of fake money, real Binance price feeds, TradingView charts, lobby leaderboards. First-of-its-kind inside a community platform.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">📰</span>
-              <h3 className="lp-card-title">Live content feed</h3>
-              <p className="lp-card-body">Hot stories from Reddit, YouTube, sports APIs, game publishers. Click any story to enter a room with everyone else reading it.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">🤖</span>
-              <h3 className="lp-card-title">The Operator</h3>
-              <p className="lp-card-body">A resident AI character, not another bot. @operator in any chat. Knows Weered, knows the games, has attitude.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">🎲</span>
-              <h3 className="lp-card-title">D&D, Poker, Study rooms</h3>
-              <p className="lp-card-body">NPC voice generators. Full Texas Hold'em with Paper stakes. Pomodoro study rooms with ambient scenes. Pick your vibe.</p>
-            </div>
-            <div className="lp-card">
-              <span className="lp-card-icon">📍</span>
-              <h3 className="lp-card-title">Locator</h3>
-              <p className="lp-card-body">Opt-in GPS. Find LFG groups nearby. Regional leaderboards. A heatmap of what's happening in your city.</p>
-            </div>
-          </div>
+          <LobbyWall loginHref={getIn} />
         </section>
 
         <section id="different" className="lp-section">
@@ -580,6 +904,50 @@ function Landing({ nextPath }: { nextPath: string }) {
           <span>© weered.ca</span>
         </footer>
       </div>
+    </>
+  );
+}
+
+
+function LobbyWall({ loginHref }: { loginHref: string }) {
+  const [lobbies, setLobbies] = useState<FeaturedLobby[] | null>(null);
+  const [error, setError] = useState(false);
+  const [open, setOpen] = useState<FeaturedLobby | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(`${LP_API}/public/lobbies/featured`, { cache: "no-store" });
+        const j = await r.json();
+        if (!alive) return;
+        if (Array.isArray(j?.lobbies)) setLobbies(j.lobbies);
+        else setError(true);
+      } catch { if (alive) setError(true); }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  if (lobbies === null && !error) {
+    return <div style={{ padding: 24, color: "rgba(198,188,168,.55)", fontSize: 13 }}>Lighting the lanterns…</div>;
+  }
+  if (error || (lobbies && !lobbies.length)) {
+    return <div style={{ padding: 24, color: "rgba(198,188,168,.55)", fontSize: 13 }}>The wall will fill in shortly.</div>;
+  }
+  return (
+    <>
+      <div className="lp-wall">
+        {lobbies!.map(l => (
+          <LandingLobbyCard key={l.id} lobby={l} onOpen={setOpen} />
+        ))}
+      </div>
+      {open && (
+        <LandingLobbyPreviewModal
+          lobby={open}
+          loginHref={loginHref}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </>
   );
 }
