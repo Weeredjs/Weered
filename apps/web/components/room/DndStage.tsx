@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useWeered } from "../WeeredProvider";
 import DndNpcPanel from "./DndNpcPanel";
 import CampaignLedger from "../CampaignLedger";
+import CharacterSheet from "../CharacterSheet";
 
 // ── Style ────────────────────────────────────────────────────────────────────
 
@@ -602,6 +603,7 @@ function QuickReference() {
 const STAGE_TABS = [
   { id: "initiative" as const, label: "Initiative", icon: "⚔" },
   { id: "dice" as const,       label: "Dice", icon: "🎲" },
+  { id: "sheets" as const,     label: "Sheets", icon: "📜" },
   { id: "npcs" as const,       label: "NPCs", icon: "🧙" },
   { id: "campaign" as const,   label: "Campaign", icon: "📜" },
   { id: "reference" as const,  label: "Reference", icon: "📖" },
@@ -610,6 +612,7 @@ type StageTab = typeof STAGE_TABS[number]["id"];
 
 export default function DndStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
   const [tab, setTab] = useState<StageTab>("initiative");
+  const { currentLobbyId } = useWeered() as any;
 
   return (
     <div className="weered-dnd-modules" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
@@ -632,6 +635,7 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
         {tab === "dice" && <RoomDiceRoller roomId={roomId} />}
         {tab === "npcs" && <DndNpcPanel roomId={roomId} />}
         {tab === "campaign" && <CampaignLedger roomId={roomId} />}
+        {tab === "sheets" && <CharacterSheet roomId={roomId} lobbyId={currentLobbyId || roomId} />}
         {tab === "reference" && <QuickReference />}
       </div>
     </div>
