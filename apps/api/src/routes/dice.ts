@@ -89,6 +89,19 @@ export default async function diceRoutes(app: FastifyInstance, opts: Opts) {
     const parsed = parseDice(expr);
     if (!parsed) return reply.code(400).send({ ok: false, error: "invalid_expression", message: "Try 1d20, d6+3, 2d8, 4d6, d20adv, etc." });
 
+    // Optional integration metadata. "intent" tags the roll origin so the
+    // chat dice chip can render the correct follow-up affordance:
+    //   attack  → "Roll Damage" (uses damageExpression)
+    //   damage  → "Apply to Target" (uses damage total)
+    //   save | skill | check | (default) → no follow-up
+    const intent = (() => {
+      const v = String(body.intent || "").toLowerCase();
+      return ["attack", "damage", "save", "skill", "check"].includes(v) ? v : "";
+    })();
+    const attackName = String(body.attackName || "").slice(0, 60) || undefined;
+    const damageExpression = String(body.damageExpression || "").slice(0, 32) || undefined;
+    const characterId = String(body.characterId || "").slice(0, 30) || undefined;
+
     const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
 
@@ -118,6 +131,10 @@ export default async function diceRoutes(app: FastifyInstance, opts: Opts) {
       disadvantage: !!result.disadvantage,
       isNat20: !!result.isNat20,
       isNat1: !!result.isNat1,
+      intent: intent || undefined,
+      attackName,
+      damageExpression,
+      characterId,
       time: Date.now(),
     };
     broadcastToLobby(lobbyId, event);

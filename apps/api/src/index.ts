@@ -42,7 +42,10 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
+import campaignsRoutes from "./routes/campaigns";
+import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
+import mapsRoutes from "./routes/maps";
 import supportRoutes from "./routes/support";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -4978,8 +4981,23 @@ async function main() {
           return;
         }
 
-        // ── D&D Module — broadcast initiative + dice to room ───────────────────
-        if (msg.type === "dnd:initiative" || msg.type === "dnd:roll") {
+        // ── D&D Module — broadcast initiative + dice + cross-system events to room ───
+        if (
+          msg.type === "dnd:initiative" ||
+          msg.type === "dnd:roll" ||
+          msg.type === "dnd:combatant:damage" ||
+          msg.type === "dnd:combatant:select"
+        ) {
+          if (!room.users.has(ws.user.id)) return;
+          for (const s of room.sockets) {
+            if (s === ws) continue;
+            send(s, { ...msg, roomId, _from: ws.user.id });
+          }
+          return;
+        }
+
+        // Tactical Map: token-move + fog edits broadcast to room
+        if (msg.type === "map:token-move" || msg.type === "map:fog-reveal" || msg.type === "map:fog-clear") {
           if (!room.users.has(ws.user.id)) return;
           for (const s of room.sockets) {
             if (s === ws) continue;
@@ -6317,6 +6335,14 @@ async function main() {
       }
     }
   }
+  function broadcastToRoom(roomId: string, event: any) {
+    for (const sock of wss.clients) {
+      const s = sock as Sock;
+      if (s.roomId === roomId) {
+        try { send(s, event); } catch {}
+      }
+    }
+  }
   function notifyUser(userId: string, event: any) {
     for (const sock of wss.clients) {
       if ((sock as any).user?.id === userId) {
@@ -6358,8 +6384,20 @@ async function main() {
     authFromHeader, awardPaper, awardNotoriety, livePrices, broadcastToLobby, notifyUser, operatorCommentateOnTrade,
   } as any);
 
+  await app.register(campaignsRoutes, {
+    authFromHeader, broadcastToLobby,
+  } as any);
+
+  await app.register(characterRoutes, {
+    authFromHeader, getGlobalRole, canAccessStaff,
+  } as any);
+
   await app.register(diceRoutes, {
     authFromHeader, broadcastToLobby,
+  } as any);
+
+  await app.register(mapsRoutes, {
+    authFromHeader, broadcastToRoom,
   } as any);
 
   await app.register(supportRoutes, {

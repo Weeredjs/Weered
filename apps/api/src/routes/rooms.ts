@@ -334,6 +334,29 @@ app.post("/rooms/:roomId/npcs", async (req, reply) => {
   if (config.greeting) {
     await prisma.npcMessage.create({ data: { npcId: npc.id, role: "assistant", content: config.greeting } });
   }
+
+  // Cross-system glue: if this room has a Campaign Ledger, auto-create an
+  // NpcEncounter row so the DM gets a "we've met this character" entry
+  // without having to double-enter them in the ledger UI. Idempotent on name.
+  try {
+    const campaign = await prisma.campaign.findFirst({ where: { roomId } });
+    if (campaign) {
+      const existing = await prisma.npcEncounter.findFirst({
+        where: { campaignId: campaign.id, name },
+      });
+      if (!existing) {
+        await prisma.npcEncounter.create({
+          data: {
+            campaignId: campaign.id,
+            name,
+            status: "ALLIED" as any,
+            notes: typeof config?.persona === "string" ? String(config.persona).slice(0, 2000) : "",
+          },
+        });
+      }
+    }
+  } catch (e) { console.error("[npc auto-encounter]", e); }
+
   return reply.send({ ok: true, npc });
 });
 
