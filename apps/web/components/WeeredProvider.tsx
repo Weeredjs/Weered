@@ -396,6 +396,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dnd:initiative" || msg.type === "dnd:roll") {
         try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
       }
+      // Forward Tactical Map events (token-move, fog, token-add/update/remove, map:created/updated/deleted) to DOM
+      if (msg.type?.startsWith("map:")) {
+        try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
+      }
       // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
       if (msg.type?.startsWith("youtube:")) {
         const rid = String(msg.roomId || "");

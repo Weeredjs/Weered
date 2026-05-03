@@ -2128,3 +2128,69 @@ model WorldNote {
   @@index([campaignId])
   @@index([campaignId, parentId])
 }
+
+// ── Tactical Map (D&D Battle Map) ─────────────────────────────────────────
+enum MapTokenKind {
+  PC
+  NPC
+  MONSTER
+}
+
+model TacticalMap {
+  id           String   @id @default(cuid())
+  roomId       String
+  name         String   @default("Untitled Map")
+  imageUrl     String
+  widthPx      Int
+  heightPx     Int
+  gridSize     Int      @default(50)
+  gridColor    String   @default("#000000")
+  gridOpacity  Float    @default(0.35)
+  gridEnabled  Boolean  @default(true)
+  fogEnabled   Boolean  @default(true)
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tokens     MapToken[]
+  fogReveals MapFogReveal[]
+
+  @@index([roomId])
+}
+
+model MapToken {
+  id          String       @id @default(cuid())
+  mapId       String
+  name        String       @default("Token")
+  color       String       @default("#C4A55A")
+  imageUrl    String?
+  sizeCells   Int          @default(1)
+  x           Float        @default(0)
+  y           Float        @default(0)
+  z           Int          @default(0)
+  hp          Int          @default(0)
+  hpMax       Int          @default(0)
+  hpVisible   Boolean      @default(true)
+  ownerId     String?
+  hidden      Boolean      @default(false)
+  kind        MapTokenKind @default(PC)
+  combatantId String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  map TacticalMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  @@index([mapId])
+}
+
+model MapFogReveal {
+  id    String @id @default(cuid())
+  mapId String
+  x     Int
+  y     Int
+
+  map TacticalMap @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  @@unique([mapId, x, y])
+  @@index([mapId])
+}
