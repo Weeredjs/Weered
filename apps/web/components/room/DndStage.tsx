@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "../WeeredProvider";
 import DndNpcPanel from "./DndNpcPanel";
+import CampaignLedger from "../CampaignLedger";
+import CharacterSheet from "../CharacterSheet";
+import TacticalMap from "../TacticalMap";
 
 // ── Style ────────────────────────────────────────────────────────────────────
 
@@ -96,7 +99,7 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     sendRaw?.({ type: "dnd:initiative", roomId, combatants: updated, currentTurn: turn, round: rnd });
   }
 
-  // Listen for WS updates from other users
+  // Listen for WS updates from other users + cross-tab events
   useEffect(() => {
     function handler(ev: any) {
       const d = ev?.detail;
@@ -105,9 +108,48 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
       if (typeof d.currentTurn === "number") setCurrentTurn(d.currentTurn);
       if (typeof d.round === "number") setRound(d.round);
     }
+    // Damage applied from chat target picker — patch one combatant's HP and rebroadcast
+    function damageHandler(ev: any) {
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.combatantId) return;
+      const dmg = Math.max(0, Math.trunc(Number(d.amount) || 0));
+      if (!dmg) return;
+      setCombatants(prev => {
+        const updated = prev.map(c => c.id === d.combatantId
+          ? { ...c, hpCurrent: Math.max(0, Math.min(c.hpMax, c.hpCurrent - dmg)) }
+          : c);
+        sendRaw?.({ type: "dnd:initiative", roomId, combatants: updated, currentTurn, round });
+        return updated;
+      });
+    }
+    // Token clicked on map → highlight matching combatant in tracker
+    function selectHandler(ev: any) {
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.combatantId) return;
+      setCombatants(prev => {
+        const idx = [...prev].sort((a, b) => b.initiative - a.initiative).findIndex(c => c.id === d.combatantId);
+        if (idx >= 0) setCurrentTurn(idx);
+        return prev;
+      });
+    }
     window.addEventListener("weered:dnd:initiative", handler);
-    return () => window.removeEventListener("weered:dnd:initiative", handler);
-  }, [roomId]);
+    window.addEventListener("weered:dnd:combatant:damage", damageHandler);
+    window.addEventListener("weered:dnd:combatant:select", selectHandler);
+    return () => {
+      window.removeEventListener("weered:dnd:initiative", handler);
+      window.removeEventListener("weered:dnd:combatant:damage", damageHandler);
+      window.removeEventListener("weered:dnd:combatant:select", selectHandler);
+    };
+  }, [roomId, sendRaw, currentTurn, round]);
+
+  // Publish combatants on window so the chat target picker can read them
+  // even when the InitiativeTracker isn't the active tab.
+  useEffect(() => {
+    try {
+      (window as any).__weeredInitiative = (window as any).__weeredInitiative || {};
+      (window as any).__weeredInitiative[roomId] = { combatants, currentTurn, round };
+    } catch {}
+  }, [roomId, combatants, currentTurn, round]);
 
   function addCombatant() {
     if (!addName.trim()) return;
@@ -599,15 +641,19 @@ function QuickReference() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const STAGE_TABS = [
+  { id: "sheets" as const,     label: "Sheets",     icon: "📜" },
+  { id: "map" as const,        label: "Battle Map", icon: "🗺" },
   { id: "initiative" as const, label: "Initiative", icon: "⚔" },
-  { id: "dice" as const,       label: "Dice", icon: "🎲" },
-  { id: "npcs" as const,       label: "NPCs", icon: "🧙" },
-  { id: "reference" as const,  label: "Reference", icon: "📖" },
+  { id: "dice" as const,       label: "Dice",       icon: "🎲" },
+  { id: "npcs" as const,       label: "NPCs",       icon: "🧙" },
+  { id: "campaign" as const,   label: "Campaign",   icon: "📚" },
+  { id: "reference" as const,  label: "Reference",  icon: "📖" },
 ];
 type StageTab = typeof STAGE_TABS[number]["id"];
 
 export default function DndStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
-  const [tab, setTab] = useState<StageTab>("initiative");
+  const [tab, setTab] = useState<StageTab>("sheets");
+  const { currentLobbyId } = useWeered() as any;
 
   return (
     <div className="weered-dnd-modules" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
@@ -625,10 +671,13 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: "auto", padding: tab === "npcs" ? 0 : 12 }}>
+      <div style={{ flex: 1, overflow: tab === "map" ? "hidden" : "auto", padding: tab === "npcs" || tab === "map" ? 0 : 12 }}>
         {tab === "initiative" && <InitiativeTracker roomId={roomId} />}
+        {tab === "map" && <TacticalMap roomId={roomId} />}
         {tab === "dice" && <RoomDiceRoller roomId={roomId} />}
         {tab === "npcs" && <DndNpcPanel roomId={roomId} />}
+        {tab === "campaign" && <CampaignLedger roomId={roomId} />}
+        {tab === "sheets" && <CharacterSheet roomId={roomId} lobbyId={currentLobbyId || roomId} />}
         {tab === "reference" && <QuickReference />}
       </div>
     </div>

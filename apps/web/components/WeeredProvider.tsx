@@ -393,7 +393,16 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         try { window.dispatchEvent(new CustomEvent("weered:poker:state", { detail: msg })); } catch {}
       }
       // Forward D&D events (initiative tracker + dice rolls) to DOM
-      if (msg.type === "dnd:initiative" || msg.type === "dnd:roll") {
+      if (
+        msg.type === "dnd:initiative" ||
+        msg.type === "dnd:roll" ||
+        msg.type === "dnd:combatant:damage" ||
+        msg.type === "dnd:combatant:select"
+      ) {
+        try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
+      }
+      // Forward Tactical Map events (token-move, fog, token-add/update/remove, map:created/updated/deleted) to DOM
+      if (msg.type?.startsWith("map:")) {
         try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
       }
       // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
