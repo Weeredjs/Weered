@@ -1023,6 +1023,9 @@ setInterval(async () => {
       notifyUser(pos.account.userId, { type: "trading:position_closed", positionId: pos.id, reason: trigger, pnl, exitPrice });
       const lookupUser = await prisma.user.findUnique({ where: { id: pos.account.userId }, select: { name: true } });
       const userName = lookupUser?.name || "trader";
+      // `notional` is required for the public-activity capture filter's
+      // ≥$1k threshold to evaluate. Same fix as the user-driven trade
+      // broadcast above; auto-closes were silently dropped before.
       broadcastToLobby(pos.account.lobbyId, {
         type: "trading:trade",
         userId: pos.account.userId,
@@ -1031,6 +1034,7 @@ setInterval(async () => {
         side: pos.side === "BUY" ? "SELL" : "BUY", // close direction
         quantity: pos.quantity,
         price: exitPrice,
+        notional: pos.quantity * exitPrice,
         time: Date.now(),
         closeReason: trigger,
         pnl,
