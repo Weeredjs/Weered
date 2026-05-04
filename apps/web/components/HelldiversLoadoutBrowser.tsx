@@ -105,6 +105,13 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{
+          fontFamily: "ui-monospace, monospace",
+          fontSize: 9, fontWeight: 800, letterSpacing: "1.4px",
+          color: "rgba(255,215,0,.5)",
+          textTransform: "uppercase",
+          paddingRight: 4,
+        }}>// FRONT</span>
         <FilterChip label="All Fronts" active={!faction} onClick={() => setFaction("")} color={lobbyAccent} />
         {Object.entries(FACTION_META).filter(([id]) => id !== "ANY").map(([id, m]) => (
           <FilterChip key={id} label={m.label} active={faction === id} onClick={() => setFaction(faction === id ? "" : id)} color={m.color} />

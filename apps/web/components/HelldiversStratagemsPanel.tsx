@@ -310,16 +310,17 @@ export default function HelldiversStratagemsPanel({
               onClick={() => setSelected(isOpen ? null : s)}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                {/* Big arrow code */}
+                {/* Big arrow code — iconic to HD2, render LOUD. */}
                 <div style={{
                   flex: "0 0 auto",
-                  fontSize: 24,
+                  fontSize: 30,
                   fontWeight: 900,
-                  letterSpacing: 3,
+                  letterSpacing: 4,
                   color: catColor,
                   fontFamily: "ui-monospace, 'JetBrains Mono', 'Cascadia Mono', monospace",
-                  textShadow: `0 0 8px ${catColor}40`,
-                  minWidth: 140,
+                  textShadow: `0 0 12px ${catColor}55, 0 0 2px ${catColor}80`,
+                  minWidth: 170,
+                  lineHeight: 1,
                 }}>
                   {formatCode(s.code)}
                 </div>

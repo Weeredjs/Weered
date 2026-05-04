@@ -143,6 +143,10 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
           rendered above the full grid. Quick-glance for "where the war actually is". */}
       {!loading && visible.length > 4 && (() => {
         const top = [...visible].sort((a, b) => (b.planet.players || 0) - (a.planet.players || 0)).slice(0, 4);
+        // Hide the featured row when no front has meaningful activity — promoting
+        // 0-player tiles into hero cards is worse than not showing the row at all.
+        const hasRealActivity = top.some(c => (c.planet.players || 0) > 100);
+        if (!hasRealActivity) return null;
         return (
           <div style={{ marginBottom: 12 }}>
             <div style={{ ...stencil, fontSize: 10, color: "rgba(255,215,0,.7)", letterSpacing: "1.2px", marginBottom: 6 }}>
