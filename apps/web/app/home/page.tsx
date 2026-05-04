@@ -45,6 +45,14 @@ function isPrivateRoom(r: any): boolean {
 function isPinned(r: any): boolean {
   return Boolean(r?.pinned);
 }
+// True only for top-level Lobby records (no parent lobbyId). Pinned house
+// rooms (The Tavern, Vanguard Intel, etc.) inherit `pinned: true` from
+// being seeded house rooms, but they have a `lobbyId` pointing at their
+// parent lobby — they are NOT lobbies themselves and shouldn't show up in
+// the lobby grid.
+function isLobby(r: any): boolean {
+  return !r?.lobbyId;
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -715,7 +723,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
             background: `${accent}12`, border: `1px solid ${accent}20`,
             color: accent, textTransform: "uppercase", letterSpacing: ".5px",
           }}>
-            {room?.pinned ? "lobby" : "room"}
+            {!room?.lobbyId ? "lobby" : "room"}
           </span>
           {cnt > 0 && (
             <span style={{ fontSize: 9, fontFamily: "monospace", color: heatColor(cnt), opacity: 0.7 }}>
@@ -996,7 +1004,7 @@ export default function HomePage() {
   }, [allRooms, search]);
 
   const lobbies = useMemo(() => {
-    const sorted = filtered.filter(r => isPinned(r)).sort((a, b) => onlineCount(b) - onlineCount(a));
+    const sorted = filtered.filter(r => isPinned(r) && isLobby(r)).sort((a, b) => onlineCount(b) - onlineCount(a));
     // Pin destiny2 to top of grid
     const d2idx = sorted.findIndex(r => roomId(r) === "destiny2" || roomName(r) === "destiny2");
     if (d2idx > 0) { const [d2] = sorted.splice(d2idx, 1); sorted.unshift(d2); }
