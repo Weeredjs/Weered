@@ -8,10 +8,11 @@ type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
   canAccessStaff: (role: string | null) => boolean;
+  broadcastToLobby?: (lobbyId: string, event: any) => void;
 };
 
 export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
+  const { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby } = opts;
 
   app.get("/lfg/:lobbyId", async (req, reply) => {
     const lobbyId = String((req as any).params?.lobbyId || "");
@@ -55,6 +56,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
         status: "OPEN",
       },
     });
+    try {
+      broadcastToLobby?.(lobbyId, { type: "tavern:posted", lobbyId, postId: post.id, userId: u.id, userName: u.name, activity: post.activity });
+    } catch {}
     return reply.send({ ok: true, post });
   });
 

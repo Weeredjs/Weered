@@ -409,8 +409,10 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     awardNotoriety(u.id, "FAKEOUT_TRADE").catch(() => {});
   }
 
-  // Broadcast trade to lobby room (everyone sees trades)
-  const tradeEvent = { type: "trading:trade", userId: u.id, userName: u.name, symbol, side, quantity, price: currentPrice, time: Date.now() };
+  // Broadcast trade to lobby room (everyone sees trades). `notional` is
+  // included so the public-activity capture filter (≥$1k threshold) can
+  // see the trade size without recomputing.
+  const tradeEvent = { type: "trading:trade", userId: u.id, userName: u.name, symbol, side, quantity, price: currentPrice, notional: currentPrice * quantity, time: Date.now() };
   broadcastToLobby(lobbyId, tradeEvent);
 
   // Operator commentary on noteworthy trades. Look up any position this
