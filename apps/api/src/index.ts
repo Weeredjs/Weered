@@ -1705,6 +1705,8 @@ async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string
           activity: `Playing ${p.gameextrainfo}`,
           detail: p.gameserverip || undefined,
           url: p.profileurl || undefined,
+          appId: p.gameid ? String(p.gameid) : undefined,
+          gameName: String(p.gameextrainfo),
           updatedAt: new Date().toISOString(),
         };
       } else if (p.personastate && p.personastate !== 0) {
@@ -6244,7 +6246,7 @@ async function main() {
   await app.register((await import("./routes/helldivers")).default, { authFromHeader } as any);
   await app.register(helldiversStratagemsRoutes);
   await app.register(helldiversLoadoutsRoutes, { authFromHeader } as any);
-  await app.register(steamRoutes, { authFromHeader } as any);
+  await app.register(steamRoutes, { authFromHeader, createNotification } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════

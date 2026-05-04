@@ -19,6 +19,8 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
   press: { bg:"rgb(26,26,28)", panel:"rgba(32,32,34,.95)", panel2:"rgba(22,22,24,.96)", bd:"rgba(217,169,66,.16)", bd2:"rgba(217,169,66,.30)", text:"rgba(240,232,214,.96)", muted:"rgba(198,188,168,.65)", accentBg:"rgba(217,169,66,.14)", accentRing:"rgba(217,169,66,.32)", accentText:"rgba(230,190,110,.95)", label:"Press", swatch:"#d9a942" },
 };
 
+import SteamAchievementsPanel from "../../SteamAchievementsPanel";
+
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
   const t = WEERED_THEMES[name] || WEERED_THEMES.press;
@@ -847,6 +849,19 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           <StatCard icon="📅" label="Member" value={joinDate} />
         </div>
       </div>
+
+      {/* ── Steam achievements ──────────────────────────── */}
+      {/* One panel per known Steam-backed lobby. Each panel hides itself
+          when there's no data (no Steam linked, private profile, no
+          achievements unlocked, etc.) so this section is invisible by
+          default for users without a public Steam profile. */}
+      {profile?.id && (
+        <div style={{ marginTop: 14 }}>
+          <SteamAchievementsPanel appId="553850" userId={profile.id} gameDisplayName="Helldivers 2" accentColor="#FFD700" />
+          <SteamAchievementsPanel appId="3041230" userId={profile.id} gameDisplayName="Windrose" accentColor="#b8935a" />
+          <SteamAchievementsPanel appId="1085660" userId={profile.id} gameDisplayName="Destiny 2" accentColor="#f58220" />
+        </div>
+      )}
 
       {/* ── Theme selector (own profile) ────────────────── */}
       {isMe && (

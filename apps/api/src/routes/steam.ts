@@ -3,6 +3,11 @@ import { PrismaClient } from "@prisma/client";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
+  createNotification?: (opts: {
+    userId: string; type: string; title: string;
+    body?: string; actionUrl?: string;
+    actorId?: string; actorName?: string; meta?: any;
+  }) => Promise<any>;
 };
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
@@ -33,7 +38,10 @@ function isValidAppId(s: string): boolean {
 }
 
 export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader } = opts;
+  const { authFromHeader, createNotification } = opts;
+  const inviteWindow = new Map<string, number[]>();
+  const INVITE_LIMIT = 3;
+  const INVITE_WINDOW_MS = 60_000;
 
   // GET /steam/players/:appId — public; live concurrent player count.
   // Cached 60s in-process. Public Steam endpoint requires no API key.
@@ -124,14 +132,17 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
     if (!STEAM_API_KEY) return reply.send({ ok: true, linked: false, achievements: [] });
 
+    // ?userId=X lets viewers see another user's achievements (if their
+    // Steam profile is public). Defaults to authenticated user.
+    const targetUserId = String(((req as any).query?.userId || u.id));
     const dbUser = await prisma.user.findUnique({
-      where: { id: u.id },
+      where: { id: targetUserId },
       select: { steamId: true } as any,
     });
     const steamId = (dbUser as any)?.steamId || "";
     if (!steamId) return reply.send({ ok: true, linked: false, achievements: [] });
 
-    const key = `${u.id}:${appId}`;
+    const key = `${targetUserId}:${appId}`;
     const cached = achievementsCache.get(key);
     const now = Date.now();
     if (cached && now - cached.ts < ACHIEVEMENTS_TTL_MS) {
@@ -202,5 +213,116 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       }
       return reply.send({ ok: true, linked: true, gameName: null, total: 0, unlocked: 0, achievements: [], error: "steam_unavailable" });
     }
+  });
+
+  // GET /steam/playing/:appId — lists users with a Steam Rich Presence
+  // entry matching the given appId. Surfaces lobby-scoped "in service"
+  // panels: who's playing Helldivers 2 right now per the Steam poller.
+  // Public — no auth required, but only returns publicly-visible profile
+  // fields (id, name, avatar). 30s cache.
+  type PlayingRow = { items: any[]; ts: number };
+  const playingCache = new Map<string, PlayingRow>();
+  const PLAYING_TTL_MS = 30_000;
+
+  app.get("/steam/playing/:appId", async (req, reply) => {
+    const appId = String((req as any).params?.appId || "");
+    if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
+    const cached = playingCache.get(appId);
+    const now = Date.now();
+    if (cached && now - cached.ts < PLAYING_TTL_MS) {
+      return reply.send({ ok: true, items: cached.items, cached: true });
+    }
+    try {
+      // Find users whose livePresence.appId matches. Filter in JS since
+      // Prisma JSON path queries are awkward with shared interfaces.
+      const candidates = await prisma.user.findMany({
+        where: { steamId: { not: null } } as any,
+        select: { id: true, name: true, avatar: true, avatarColor: true, livePresence: true } as any,
+      });
+      const items = candidates
+        .filter((u: any) => {
+          const lp = u.livePresence;
+          if (!lp || typeof lp !== "object") return false;
+          return String(lp.appId || "") === appId;
+        })
+        .map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          avatar: u.avatar,
+          avatarColor: u.avatarColor,
+          gameName: u.livePresence?.gameName || u.livePresence?.activity?.replace(/^Playing /, "") || null,
+          detail: u.livePresence?.detail || null,
+          since: u.livePresence?.updatedAt || null,
+        }));
+      playingCache.set(appId, { items, ts: now });
+      return reply.send({ ok: true, items });
+    } catch (e) {
+      if (cached) return reply.send({ ok: true, items: cached.items, stale: true });
+      return reply.code(500).send({ ok: false, error: "playing_lookup_failed" });
+    }
+  });
+
+  // POST /steam/squad-invite — invites a user currently playing the lobby's
+  // Steam game to squad up. Creates a LOBBY_EVENT notification with the
+  // inviter's name and a deep link to the lobby. Rate-limited per inviter
+  // (3 invites per minute) so this can't be used for spam.
+  app.post("/steam/squad-invite", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!createNotification) return reply.code(500).send({ ok: false, error: "notifications_unavailable" });
+
+    const body: any = (req as any).body || {};
+    const targetUserId = String(body.targetUserId || "").trim();
+    const lobbyId = String(body.lobbyId || "").trim();
+    const appId = String(body.appId || "").trim();
+    const note = String(body.message || "").slice(0, 120);
+    if (!targetUserId || !lobbyId) return reply.code(400).send({ ok: false, error: "missing_fields" });
+    if (targetUserId === u.id) return reply.code(400).send({ ok: false, error: "self_invite" });
+    if (appId && !isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
+
+    // Rate-limit per inviter
+    const now = Date.now();
+    const window = (inviteWindow.get(u.id) || []).filter(t => now - t < INVITE_WINDOW_MS);
+    if (window.length >= INVITE_LIMIT) {
+      const oldest = window[0];
+      return reply.code(429).send({
+        ok: false, error: "rate_limited",
+        retryAfterMs: INVITE_WINDOW_MS - (now - oldest),
+      });
+    }
+    window.push(now);
+    inviteWindow.set(u.id, window);
+
+    // Resolve target user + lobby for the notification text.
+    const [target, lobby] = await Promise.all([
+      prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, livePresence: true } as any }),
+      (prisma as any).lobby.findUnique({ where: { id: lobbyId }, select: { id: true, name: true, moduleConfig: true } }),
+    ]);
+    if (!target) return reply.code(404).send({ ok: false, error: "target_not_found" });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+
+    // Optional sanity check: the target should be playing the right game.
+    // Soft-fail (still send) if not, but include a flag in the response so
+    // the frontend can show a "they're not in-game right now" warning.
+    const lp: any = (target as any).livePresence;
+    const targetAppId = lp?.appId ? String(lp.appId) : "";
+    const expectedAppId = appId || (lobby.moduleConfig as any)?.steamAppId || "";
+    const inGame = !!expectedAppId && targetAppId === expectedAppId;
+
+    const lobbyName = lobby.name || lobbyId;
+    const inviterName = u.name || "A Helldiver";
+
+    await createNotification({
+      userId: targetUserId,
+      type: "LOBBY_EVENT",
+      title: `${inviterName} wants to squad up in ${lobbyName}`,
+      body: note || `Drop into the Weered ${lobbyName} lobby to coordinate.`,
+      actionUrl: `/lobby/${encodeURIComponent(lobbyId)}`,
+      actorId: u.id,
+      actorName: u.name,
+      meta: { kind: "squad_invite", lobbyId, appId: expectedAppId, inGame },
+    });
+
+    return reply.send({ ok: true, sent: true, inGame });
   });
 }

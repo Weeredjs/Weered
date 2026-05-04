@@ -8,6 +8,7 @@
 
 import React, { useState } from "react";
 import HelldiversMajorOrderPanel from "./HelldiversMajorOrderPanel";
+import LobbyPlayingNowPanel from "./LobbyPlayingNowPanel";
 import HelldiversWarMapPanel from "./HelldiversWarMapPanel";
 import HelldiversDispatchesPanel from "./HelldiversDispatchesPanel";
 import HelldiversSquadFinder from "./HelldiversSquadFinder";
@@ -69,6 +70,10 @@ export default function HelldiversModulesPanel({
       <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, minHeight: 0 }}>
         {/* Sticky Major Order — always visible across tabs */}
         <HelldiversMajorOrderPanel />
+
+        {/* Helldivers playing right now per Steam Rich Presence. Hides
+            when nobody's in service. */}
+        <LobbyPlayingNowPanel appId="553850" lobbyId="helldivers2" accentColor={accent} gameLabel="Helldivers 2" />
 
         {/* Tab strip */}
         <div
