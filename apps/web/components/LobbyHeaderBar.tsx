@@ -1,5 +1,6 @@
 "use client";
 import InviteModal from "./InviteModal";
+import HelldiversPlayerCountPill from "./HelldiversPlayerCountPill";
 
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -295,6 +296,9 @@ export default function LobbyHeaderBar({
                 }}>
                   VERIFIED
                 </span>
+              )}
+              {lobbyId === "helldivers2" && (
+                <HelldiversPlayerCountPill accentColor={accent || undefined} />
               )}
             </div>
             </>
