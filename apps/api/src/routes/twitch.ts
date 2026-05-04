@@ -277,6 +277,16 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     const lobbyMap = new Map(lobbies.map((l: any) => [l.id, l]));
     const userMap  = new Map((users as any[]).map((u: any) => [u.id, u]));
 
+    // Some active "rooms" are actually lobby presence channels (the WS
+    // roomId equals a Lobby.id). Surface that as roomIsLobby so the home
+    // ticker can route the click to /lobby/<id> instead of /room/<id>.
+    const allActiveIds = [...new Set(active.map(r => r.id))];
+    const lobbyIdSet = new Set(
+      allActiveIds.length
+        ? (await (prisma as any).lobby.findMany({ where: { id: { in: allActiveIds } }, select: { id: true } })).map((l: any) => l.id)
+        : []
+    );
+
     const out = active
       .sort((a, b) => b.userIds.length - a.userIds.length)
       .slice(0, 12)
@@ -298,6 +308,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
           lobbyName: lobby?.name || null,
           lobbyLogoUrl: lobby?.logoUrl || null,
           lobbyAccentColor: lobby?.accentColor || null,
+          roomIsLobby: lobbyIdSet.has(r.id),
           onlineCount: r.userIds.length,
           activity: activityLabel(r.activeModule),
           avatars,

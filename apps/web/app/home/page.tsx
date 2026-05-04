@@ -250,7 +250,7 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
   return (
     <button
       type="button"
-      onClick={() => onJoin(room.id, false)}
+      onClick={() => onJoin(room.id, !!room.roomIsLobby)}
       style={{
         display: "grid", gridTemplateColumns: "auto 1fr auto", gridTemplateRows: "auto auto",
         gap: "2px 10px", alignItems: "center",
