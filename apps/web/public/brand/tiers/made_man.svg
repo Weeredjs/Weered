@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 150" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f1a14"/>
+      <stop offset="100%" stop-color="#0c0907"/>
+    </linearGradient>
+    <pattern id="pinstripe" patternUnits="userSpaceOnUse" width="12" height="20">
+      <line x1="0" y1="0" x2="0" y2="20" stroke="#fde68a" stroke-width="0.6" opacity="0.18"/>
+    </pattern>
+    <radialGradient id="centerwarmth" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#fde68a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="150" fill="url(#bg)"/>
+  <rect width="600" height="150" fill="url(#pinstripe)"/>
+  <rect width="600" height="150" fill="url(#centerwarmth)"/>
+  <!-- Fedora silhouette, far right, very low opacity -->
+  <g fill="#fde68a" opacity="0.10" transform="translate(490, 40)">
+    <ellipse cx="50" cy="65" rx="60" ry="8"/>
+    <path d="M 12 60 Q 12 25 50 25 Q 88 25 88 60 L 88 65 L 12 65 Z"/>
+    <rect x="22" y="55" width="56" height="4" fill="#1f1a14"/>
+  </g>
+</svg>

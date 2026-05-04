@@ -357,9 +357,17 @@ export default function UserCorner() {
       <div style={{
         position: "relative",
         height: 96,
-        background: bannerUrl
-          ? `url(${bannerUrl}) center / cover no-repeat`
-          : `linear-gradient(135deg, ${cardAccent}55 0%, ${cardAccent}15 60%, rgba(0,0,0,.45) 100%)`,
+        background: (() => {
+          if (bannerUrl) return `url(${bannerUrl}) center / cover no-repeat`;
+          const tier = String(me?.tier || "").toLowerCase();
+          const tierBanner =
+            tier === "kingpin"  ? "/brand/tiers/kingpin.svg" :
+            tier === "made_man" || tier === "mademan" ? "/brand/tiers/made_man.svg" :
+            tier === "felon"    ? "/brand/tiers/felon.svg" :
+            tier === "indicted" ? "/brand/tiers/indicted.svg" :
+            "/brand/tiers/innocent.svg";
+          return `url(${tierBanner}) center / cover no-repeat, linear-gradient(135deg, ${cardAccent}55 0%, ${cardAccent}15 60%, rgba(0,0,0,.45) 100%)`;
+        })(),
         zIndex: 1,
       }}>
         {/* Bottom shade gradient — guarantees text legibility no matter
@@ -370,32 +378,43 @@ export default function UserCorner() {
           pointerEvents: "none",
         }} />
 
-        {/* TIER WATERMARK — bottom-left of banner, blocky uppercase, low
-            opacity. Like the rank stencil on a military jacket. */}
-        {(() => {
-          const tier = String(me?.tier || "").toUpperCase();
-          if (!tier || tier === "INNOCENT") return null;
-          const tierColor =
-            tier === "KINGPIN"  ? "#fde68a" :
-            tier === "FELON"    ? "#fdba74" :
-            tier === "INDICTED" ? "rgba(216,180,254,.95)" :
-            "rgba(243,244,246,.85)";
-          return (
-            <div style={{
-              position: "absolute", left: 12, bottom: 14,
-              display: "inline-flex", alignItems: "center", gap: 5,
-              fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-              fontSize: 10, fontWeight: 900, letterSpacing: "2px",
-              color: tierColor,
-              textShadow: "0 1px 2px rgba(0,0,0,.55)",
-              pointerEvents: "none",
-              opacity: 0.92,
-            }}>
-              <TierIcon tier={tier as any} size={11} />
-              {tier}
-            </div>
-          );
-        })()}
+        {/* TOP-LEFT HEADER ROW — ID hash + tier stencil, single line.
+            Reads like the file-folder reference cover line. Merged so the
+            bottom edge is reserved for the embedded notoriety bar. */}
+        <div style={{
+          position: "absolute", top: 8, left: 12,
+          display: "flex", alignItems: "center", gap: 8,
+          fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+          fontSize: 9, fontWeight: 800, letterSpacing: "1.4px",
+          textShadow: "0 1px 2px rgba(0,0,0,.6)",
+          pointerEvents: "none",
+        }}>
+          {idHash && (
+            <span style={{ color: "rgba(255,255,255,.55)" }}>ID · {idHash}</span>
+          )}
+          {(() => {
+            const tier = String(me?.tier || "").toUpperCase();
+            if (!tier || tier === "INNOCENT") return null;
+            const tierColor =
+              tier === "KINGPIN"  ? "#fde68a" :
+              tier === "FELON"    ? "#fdba74" :
+              tier === "INDICTED" ? "rgba(216,180,254,.95)" :
+              "rgba(243,244,246,.85)";
+            return (
+              <>
+                {idHash && <span aria-hidden style={{ opacity: 0.4, color: "#fff" }}>·</span>}
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  color: tierColor,
+                  fontWeight: 900, letterSpacing: "1.8px",
+                }}>
+                  <TierIcon tier={tier as any} size={10} />
+                  {tier}
+                </span>
+              </>
+            );
+          })()}
+        </div>
 
         {/* CREW PATCH — top-right of banner. Reads as a sewn-on insignia.
             Sits left of the lobby logo so they don't collide. */}
@@ -426,21 +445,6 @@ export default function UserCorner() {
             </a>
           );
         })()}
-
-        {/* ID HASH — small mono label, top-left of banner. Reads like a
-            file-folder reference number stamped on the cover. */}
-        {idHash && (
-          <div style={{
-            position: "absolute", top: 10, left: 12,
-            fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-            fontSize: 9, fontWeight: 700, letterSpacing: "1.4px",
-            color: "rgba(255,255,255,.55)",
-            textShadow: "0 1px 2px rgba(0,0,0,.55)",
-            pointerEvents: "none",
-          }}>
-            ID · {idHash}
-          </div>
-        )}
 
         {/* NOTORIETY BAR — embedded in the bottom edge of the banner like
             a fuel gauge. Component handles its own data; we just wrap it
