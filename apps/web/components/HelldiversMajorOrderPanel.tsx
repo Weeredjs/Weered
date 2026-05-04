@@ -35,10 +35,13 @@ function formatCountdown(ms: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 }
 
+type LastOutcome = { title: string; outcome: "WON" | "LOST" | "ENDED"; ts: number } | null;
+
 export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSSProperties }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
+  const [lastOutcome, setLastOutcome] = useState<LastOutcome>(null);
 
   useEffect(() => {
     let alive = true;
@@ -62,6 +65,38 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
     return () => clearInterval(t);
   }, []);
 
+  // When there is no active MO, surface the most recent outcome from the
+  // dispatches feed so the empty state still tells the story.
+  useEffect(() => {
+    if (loading) return;
+    if (orders && orders.length > 0) { setLastOutcome(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/helldivers/dispatches?limit=30`);
+        const j = await r.json();
+        if (!alive || !j?.ok) return;
+        const items: any[] = j.dispatches || j.events || [];
+        for (const d of items) {
+          const msg = String(d.message || d.text || d.body || "").toUpperCase();
+          if (!msg.includes("MAJOR ORDER")) continue;
+          const outcome: "WON" | "LOST" | "ENDED" =
+            msg.includes("WON") || msg.includes("VICTORY") || msg.includes("SUCCESS") ? "WON" :
+            msg.includes("LOST") || msg.includes("FAIL") || msg.includes("DEFEAT") ? "LOST" :
+            "ENDED";
+          // First sentence as title (cap 80 chars)
+          const raw = String(d.message || d.text || d.body || "").replace(/\s+/g, " ").trim();
+          const title = raw.split(/[.!?]/)[0].slice(0, 80);
+          const ts = Number(d.published || d.publishedAt || d.ts || 0) || Date.now();
+          setLastOutcome({ title, outcome, ts });
+          return;
+        }
+        setLastOutcome(null);
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, [orders, loading]);
+
   if (loading) {
     return (
       <div style={panelBase(style)}>
@@ -73,15 +108,48 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
   }
 
   if (!orders || orders.length === 0) {
+    const ago = lastOutcome ? Math.max(0, Date.now() - lastOutcome.ts) : 0;
+    const agoLabel = (() => {
+      if (!lastOutcome) return "";
+      const h = Math.floor(ago / 3600_000);
+      if (h < 1) return "just now";
+      if (h < 24) return h + "h ago";
+      const d = Math.floor(h / 24);
+      return d + "d ago";
+    })();
+    const outcomeColor = lastOutcome?.outcome === "WON"
+      ? "#22c55e"
+      : lastOutcome?.outcome === "LOST"
+        ? "#ef4444"
+        : "rgba(255,215,0,.7)";
     return (
       <div style={panelBase(style)}>
         <div style={{ padding: 14, textAlign: "center" }}>
-          <div style={{ ...stencil, fontSize: 12, color: "rgba(255,215,0,.55)", marginBottom: 4 }}>
+          <div style={{ ...stencil, fontSize: 12, color: "rgba(255,215,0,.55)", marginBottom: 6 }}>
             ▌Ministry of Defense
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: lastOutcome ? 8 : 0 }}>
             No active Major Order. Stand by for orders, Helldiver.
           </div>
+          {lastOutcome && (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "4px 10px",
+              borderRadius: 4,
+              background: "rgba(0,0,0,.35)",
+              border: `1px solid ${outcomeColor}3a`,
+            }}>
+              <span style={{
+                fontFamily: "ui-monospace, monospace",
+                fontSize: 9, fontWeight: 900, letterSpacing: "1.2px",
+                color: outcomeColor,
+              }}>LAST · {lastOutcome.outcome}</span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,.7)", maxWidth: 360, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {lastOutcome.title}
+              </span>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>{agoLabel}</span>
+            </div>
+          )}
         </div>
       </div>
     );

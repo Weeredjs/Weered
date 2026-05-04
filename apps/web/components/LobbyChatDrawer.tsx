@@ -52,7 +52,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
   })();
 
   // Keep ref in sync
-  useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { openRef.current = open; try { window.dispatchEvent(new CustomEvent("weered:chat:drawer", { detail: { open } })); } catch {} }, [open]);
 
   useEffect(() => { setMounted(true); }, []);
 

@@ -37,6 +37,20 @@ export default function HelldiversModulesPanel({
 }) {
   const accent = accentColor || ACCENT;
   const [tab, setTab] = useState<TabId>("war");
+  const [chatOpen, setChatOpen] = useState(false);
+
+  // Drop the Dispatches sidebar when the chat drawer slides in — they
+  // share the right edge and the drawer's z-index wins, leaving dispatches
+  // half-covered. Better to swap them cleanly: chat takes the right rail,
+  // tab content reflows to full width, MO banner stays sticky on top.
+  React.useEffect(() => {
+    function onDrawer(e: Event) {
+      const detail = (e as CustomEvent)?.detail;
+      setChatOpen(!!detail?.open);
+    }
+    window.addEventListener("weered:chat:drawer", onDrawer);
+    return () => window.removeEventListener("weered:chat:drawer", onDrawer);
+  }, []);
 
   return (
     <div
@@ -44,9 +58,10 @@ export default function HelldiversModulesPanel({
         flex: 1,
         minHeight: 0,
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 360px)",
+        gridTemplateColumns: chatOpen ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(280px, 360px)",
         gap: 10,
         padding: 10,
+        transition: "grid-template-columns .2s",
         ...style,
       }}
     >
@@ -108,10 +123,14 @@ export default function HelldiversModulesPanel({
         </div>
       </div>
 
-      {/* RIGHT: Dispatches sidebar — always visible */}
-      <div style={{ minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
-        <HelldiversDispatchesPanel style={{ flex: 1, minHeight: 0, maxHeight: "none" }} limit={20} />
-      </div>
+      {/* RIGHT: Dispatches sidebar — visible when chat drawer is closed.
+          When chat is open, drop the column entirely so the chat panel
+          (which slides over the right edge) doesn't half-cover dispatches. */}
+      {!chatOpen && (
+        <div style={{ minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <HelldiversDispatchesPanel style={{ flex: 1, minHeight: 0, maxHeight: "none" }} limit={20} />
+        </div>
+      )}
     </div>
   );
 }
