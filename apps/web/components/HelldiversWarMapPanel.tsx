@@ -139,6 +139,28 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         </div>
       </div>
 
+      {/* Featured Fronts — top campaigns by player deployment, prominent cards
+          rendered above the full grid. Quick-glance for "where the war actually is". */}
+      {!loading && visible.length > 4 && (() => {
+        const top = [...visible].sort((a, b) => (b.planet.players || 0) - (a.planet.players || 0)).slice(0, 4);
+        return (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ ...stencil, fontSize: 10, color: "rgba(255,215,0,.7)", letterSpacing: "1.2px", marginBottom: 6 }}>
+              ▸ FEATURED FRONTS
+            </div>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 8,
+            }}>
+              {top.map(c => (
+                <PlanetTile key={`featured-${c.id}`} campaign={c} onClick={() => setSelected(c.planet.index)} featured />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Sector grid */}
       {loading ? (
         <div style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.4)", fontSize: 12 }}>
@@ -149,16 +171,31 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
           No active campaigns on this front.
         </div>
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-          gap: 8,
-        }}>
-          {visible.map(c => (
-            <PlanetTile key={c.id} campaign={c} onClick={() => setSelected(c.planet.index)} />
-          ))}
-        </div>
+        <>
+          {visible.length > 4 && (
+            <div style={{ ...stencil, fontSize: 10, color: "rgba(255,215,0,.7)", letterSpacing: "1.2px", marginBottom: 6 }}>
+              ▸ ALL FRONTS
+            </div>
+          )}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+            gap: 8,
+          }}>
+            {visible.map(c => (
+              <PlanetTile key={c.id} campaign={c} onClick={() => setSelected(c.planet.index)} />
+            ))}
+          </div>
+        </>
       )}
+
+      {/* Defense pulse keyframes */}
+      <style>{`
+        @keyframes hd2-defense-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0); }
+          50%      { box-shadow: 0 0 0 4px rgba(185,28,28,.32); }
+        }
+      `}</style>
 
       {/* Detail modal */}
       {selected != null && (
@@ -196,7 +233,7 @@ function Chip({ active, color, onClick, children }: { active: boolean; color: st
   );
 }
 
-function PlanetTile({ campaign, onClick }: { campaign: Campaign; onClick: () => void }) {
+function PlanetTile({ campaign, onClick, featured = false }: { campaign: Campaign; onClick: () => void; featured?: boolean }) {
   const { planet, isDefense, event } = campaign;
   const color = factionColor(planet.currentOwner);
   const pct = isDefense && event ? (event.defensePct ?? 0) : (planet.liberationPct ?? 0);
@@ -207,15 +244,16 @@ function PlanetTile({ campaign, onClick }: { campaign: Campaign; onClick: () => 
       style={{
         position: "relative",
         textAlign: "left",
-        padding: 10,
+        padding: featured ? 14 : 10,
         borderRadius: 6,
-        border: `1px solid ${color}55`,
-        background: `linear-gradient(135deg, ${color}22, ${color}08)`,
+        border: `1px solid ${color}${isDefense ? "99" : "55"}`,
+        background: `linear-gradient(135deg, ${color}${featured ? "33" : "22"}, ${color}08)`,
         cursor: "pointer",
         color: "rgba(255,255,255,.95)",
         fontFamily: "inherit",
         overflow: "hidden",
-        minHeight: 92,
+        minHeight: featured ? 110 : 92,
+        animation: isDefense ? "hd2-defense-pulse 2s ease-in-out infinite" : "none",
       }}
     >
       {isDefense && (
