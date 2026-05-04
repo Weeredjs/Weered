@@ -466,6 +466,7 @@ export default function LobbyIdPage() {
         accentColor={accent}
         logoUrl={lobbyInfo?.logoUrl}
         verified={isVerified || lobbyInfo?.verified}
+        steamAppId={(lobbyInfo as any)?.moduleConfig?.steamAppId || null}
       />
 
       <div className="weered-lobby-body" style={{
