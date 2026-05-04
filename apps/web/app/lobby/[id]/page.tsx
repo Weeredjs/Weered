@@ -25,6 +25,7 @@ import PubgModulesPanel from "../../../components/PubgModulesPanel";
 import DndModulesPanel from "../../../components/DndModulesPanel";
 import PoeModulesPanel from "../../../components/PoeModulesPanel";
 import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
+import HelldiversLoadoutBrowser from "../../../components/HelldiversLoadoutBrowser"; // SLICE-C
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import TradingFeed from "../../../components/TradingFeed";
@@ -387,7 +388,7 @@ export default function LobbyIdPage() {
           // hasModules check below). Without this, the data fetch race
           // would override view → rooms a few hundred ms after a Watch
           // Here / Join Room dispatch set it to modules.
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE") {
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE" || j.lobby.moduleType === "HELLDIVERS2") {
             setView("modules");
           } else {
             setView("rooms");
@@ -418,7 +419,7 @@ export default function LobbyIdPage() {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE";
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE" || lobbyInfo?.moduleType === "HELLDIVERS2";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const showAdmin  = isStaff || isOwner || (membership && membership.roleLevel >= 3);
@@ -637,6 +638,9 @@ export default function LobbyIdPage() {
                   <DndModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "POE" ? (
                   <PoeModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+                ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
+                  /* SLICE-C: Helldivers Loadout Sharer panel */
+                  <HelldiversLoadoutBrowser lobbyAccent={accent} />
                 ) : lobbyInfo?.moduleType === "WINDROSE" ? (
                   <WindroseModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : (

@@ -471,6 +471,7 @@ model User {
   communityServers CommunityServer[]
   banAppeals       BanAppeal[]       @relation("BanAppealUser")
   bugReports       BugReport[]       @relation("BugReportSubmitter")
+  helldiversLoadouts HelldiversLoadout[]
 }
 
 // —— Ban Court ——————————————————————————————————————————————————————————————
@@ -2275,4 +2276,50 @@ model MapFogReveal {
 
   @@unique([mapId, x, y])
   @@index([mapId])
+}
+
+// ── Helldivers 2 — Loadout Sharer (Slice C) ─────────────────────────────
+// Community library of HD2 loadouts. Each loadout = primary + secondary +
+// throwable + armor + helmet (opt) + 4 stratagems, named, faction-tagged,
+// shareable via slug, voted on by the community.
+
+model HelldiversLoadout {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  authorId    String
+  primary     String
+  secondary   String
+  throwable   String
+  armor       String
+  helmet      String?
+  stratagem1  String
+  stratagem2  String
+  stratagem3  String
+  stratagem4  String
+  faction     String   // TERMINIDS | AUTOMATONS | ILLUMINATE | ANY
+  difficulty  String?
+  role        String?
+  upvotes     Int      @default(0)
+  downvotes   Int      @default(0)
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author      User     @relation(fields: [authorId], references: [id])
+  votes       HelldiversLoadoutVote[]
+
+  @@index([faction])
+  @@index([upvotes])
+}
+
+model HelldiversLoadoutVote {
+  id         String   @id @default(cuid())
+  loadoutId  String
+  userId     String
+  value      Int      // +1 or -1
+  createdAt  DateTime @default(now())
+  loadout    HelldiversLoadout @relation(fields: [loadoutId], references: [id], onDelete: Cascade)
+
+  @@unique([loadoutId, userId])
 }
