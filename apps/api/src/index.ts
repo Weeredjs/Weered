@@ -528,6 +528,20 @@ function buildPokerStateForUser(table: PokerTable, userId?: string): any {
   };
 }
 
+function broadcastToPokerTable(tableId: string, event: any) {
+  const table = pokerTables.get(tableId);
+  if (!table) return;
+  for (const sock of wss.clients) {
+    const su = (sock as any).user as AuthedUser | undefined;
+    if (!su) continue;
+    const isSeated = table.seats.some(s => s && s.userId === su.id);
+    const isSpectator = table.spectators.has(su.id);
+    if (isSeated || isSpectator) {
+      try { send(sock as any, event); } catch {}
+    }
+  }
+}
+
 function broadcastPokerState(tableId: string) {
   const table = pokerTables.get(tableId);
   if (!table) return;
@@ -630,6 +644,15 @@ function advancePokerGame(table: PokerTable) {
     broadcastPokerState(table.tableId);
     // Surface to public activity feed (≥200 Paper threshold inside capture)
     broadcastToLobby("poker", { type: "poker:pot-won", userId: winner.userId, userName: winner.name, amount: wonAmount });
+    // Winner celebration chip in poker table chat
+    broadcastToPokerTable(table.tableId, {
+      type: "poker:winner-chip",
+      tableId: table.tableId,
+      winners: [{ userId: winner.userId, userName: winner.name, amount: wonAmount, hand: null }],
+      pot: wonAmount,
+      reason: "fold",
+      time: Date.now(),
+    });
     scheduleAutoStart(table);
     return;
   }
@@ -705,10 +728,25 @@ async function resolveShowdown(table: PokerTable) {
     broadcastToLobby("poker", { type: "poker:pot-won", userId: seat.userId, userName: seat.name, amount: payout });
   }
 
-  table.lastShowdownResult = { winners, pot: table.pot };
+  const totalPot = table.pot;
+  table.lastShowdownResult = { winners, pot: totalPot };
   table.pot = 0;
   table.handInProgress = false;
   broadcastPokerState(table.tableId);
+  // Winner celebration chip — single chip per showdown listing all winners
+  broadcastToPokerTable(table.tableId, {
+    type: "poker:winner-chip",
+    tableId: table.tableId,
+    winners: winners.map(w => ({
+      userId: (table.seats[w.seatIndex] as any)?.userId,
+      userName: w.name,
+      amount: w.chips,
+      hand: w.hand,
+    })),
+    pot: totalPot,
+    reason: "showdown",
+    time: Date.now(),
+  });
   scheduleAutoStart(table);
 }
 
@@ -5309,6 +5347,18 @@ async function main() {
 
           // Stamp the action so the table announces it
           table.lastAction = { userId: seat.userId, action, amount: actionAmount };
+
+          // Broadcast a chat chip so the action lands in poker table chat
+          // (e.g. "donkey CALLED $20"). Mirrors dice/trade chip pattern.
+          broadcastToPokerTable(table.tableId, {
+            type: "poker:action-chip",
+            tableId: table.tableId,
+            userId: seat.userId,
+            userName: seat.name,
+            action,
+            amount: actionAmount,
+            time: Date.now(),
+          });
 
           // Advance game logic (broadcasts state to all clients)
           advancePokerGame(table);
