@@ -236,6 +236,10 @@ type PokerTable = {
   minBuyin: number;
   maxBuyin: number;
   lastShowdownResult: any | null;
+  // Last per-player action (call/raise/fold/check/allin). The PokerTable
+  // frontend component reads this off the broadcast state and toasts it
+  // ("donkey raised $20"). Cleared at the start of each new hand.
+  lastAction: { userId: string; action: string; amount?: number } | null;
   handInProgress: boolean;
   autoStartTimer: ReturnType<typeof setTimeout> | null;
 };
@@ -434,6 +438,7 @@ function getOrCreatePokerTable(tableId: string): PokerTable {
       minBuyin: 200,
       maxBuyin: 2000,
       lastShowdownResult: null,
+      lastAction: null,
       handInProgress: false,
       autoStartTimer: null,
     };
@@ -519,6 +524,7 @@ function buildPokerStateForUser(table: PokerTable, userId?: string): any {
     minBuyin: table.minBuyin,
     maxBuyin: table.maxBuyin,
     lastShowdownResult: table.lastShowdownResult,
+    lastAction: table.lastAction,
   };
 }
 
@@ -5164,6 +5170,12 @@ async function main() {
 
           console.log(`[poker] ${ws.user.name} left table ${tableId}`);
 
+          // Send the leaving user the final state directly. Without this
+          // they wouldn't receive the post-leave broadcast (they're no longer
+          // seated and not a spectator), so their UI would still think they
+          // are seated and the Leave button would appear unresponsive.
+          send(ws, { type: "poker:state", ...buildPokerStateForUser(table, ws.user.id), youLeft: true });
+
           // If the game was waiting on them, advance
           if (wasTheirTurn && table.handInProgress) {
             advancePokerGame(table);
@@ -5235,6 +5247,12 @@ async function main() {
 
           const toCall = table.currentBet - seat.bet;
 
+          // Track for the toast/announcement on the client. The frontend's
+          // PokerTable component reads table.lastAction and surfaces a toast
+          // ("donkey raised $20"). Set this BEFORE advancePokerGame so the
+          // broadcast carries it.
+          let actionAmount: number | undefined;
+
           if (action === "fold") {
             seat.folded = true;
           } else if (action === "check") {
@@ -5251,6 +5269,7 @@ async function main() {
               seat.chips -= callAmount;
               seat.bet += callAmount;
               if (seat.chips === 0) seat.allIn = true;
+              actionAmount = callAmount;
             }
           } else if (action === "raise") {
             if (amount <= 0) { send(ws, { type: "poker:error", error: "Raise amount required" }); return; }
@@ -5273,6 +5292,7 @@ async function main() {
             seat.bet = totalBet;
             table.currentBet = totalBet;
             if (seat.chips === 0) seat.allIn = true;
+            actionAmount = totalBet;
           } else if (action === "allin") {
             const allInAmount = seat.chips;
             seat.bet += allInAmount;
@@ -5281,10 +5301,14 @@ async function main() {
             if (seat.bet > table.currentBet) {
               table.currentBet = seat.bet;
             }
+            actionAmount = allInAmount;
           } else {
             send(ws, { type: "poker:error", error: `Unknown action: ${action}` });
             return;
           }
+
+          // Stamp the action so the table announces it
+          table.lastAction = { userId: seat.userId, action, amount: actionAmount };
 
           // Advance game logic (broadcasts state to all clients)
           advancePokerGame(table);
