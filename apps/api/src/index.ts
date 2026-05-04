@@ -20,6 +20,7 @@ import leagueRoutes from "./routes/league";
 import bungieRoutes from "./routes/bungie";
 import windroseRoutes from "./routes/windrose";
 import helldiversStratagemsRoutes from "./routes/helldivers-stratagems";
+import helldiversLoadoutsRoutes from "./routes/helldivers-loadouts";
 import badgesRoutes from "./routes/badges";
 import tournamentsRoutes from "./routes/tournaments";
 import lfgRoutes from "./routes/lfg";
@@ -6236,6 +6237,7 @@ async function main() {
   await app.register(windroseRoutes, { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI, broadcastToLobby } as any);
   await app.register((await import("./routes/helldivers")).default, { authFromHeader } as any);
   await app.register(helldiversStratagemsRoutes);
+  await app.register(helldiversLoadoutsRoutes, { authFromHeader } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════

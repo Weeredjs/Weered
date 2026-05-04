@@ -29,6 +29,7 @@ import HelldiversWarMapPanel from "../../../components/HelldiversWarMapPanel";
 import HelldiversMajorOrderPanel from "../../../components/HelldiversMajorOrderPanel";
 import HelldiversDispatchesPanel from "../../../components/HelldiversDispatchesPanel";
 import HelldiversSliceBPanel from "../../../components/HelldiversSliceBPanel";
+import HelldiversLoadoutBrowser from "../../../components/HelldiversLoadoutBrowser";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import TradingFeed from "../../../components/TradingFeed";
@@ -651,6 +652,7 @@ export default function LobbyIdPage() {
                       <HelldiversDispatchesPanel style={{ maxHeight: 600 }} />
                     </div>
                     <HelldiversSliceBPanel lobbyId={lobbyId} accentColor={accent} currentUserId={me?.id} />
+                    <HelldiversLoadoutBrowser lobbyAccent={accent} />
                   </div>
                 ) : (
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
