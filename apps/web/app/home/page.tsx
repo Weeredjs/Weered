@@ -1114,16 +1114,19 @@ export default function HomePage() {
     // ancestors. weered-center is position: relative — this fills it.
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* TOP BAR */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
-        <div style={{ flex: 1 }}>
+      {/* TOP BAR — wraps to two rows on narrow viewports; secondary
+          buttons hide via .home-topbar-secondary under 600px so the
+          search row stays usable at iPhone width. */}
+      <div className="home-topbar" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, flexWrap: "wrap" }}>
+        <div className="home-topbar-greet" style={{ flex: "1 1 200px", minWidth: 0 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
-          <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px" }}>
+          <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
         <Link
           href="/desktop"
+          className="home-topbar-secondary"
           style={{
             background: "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))",
             border: "1px solid rgba(245,183,0,0.25)", borderRadius: 8, padding: "7px 12px",
@@ -1139,6 +1142,7 @@ export default function HomePage() {
         </Link>
         <button
           onClick={() => setShowShowcase(true)}
+          className="home-topbar-secondary"
           style={{
             background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
             border: "1px solid rgba(124,58,237,0.25)", borderRadius: 8, padding: "7px 14px",
@@ -1150,7 +1154,7 @@ export default function HomePage() {
         >
           What can you do here?
         </button>
-        <div style={{ position: "relative" }}>
+        <div className="home-topbar-search" style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,.25)", fontSize: 14, pointerEvents: "none" }}>&#8981;</span>
           <input data-weered-search value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby... ( / )"
             style={{

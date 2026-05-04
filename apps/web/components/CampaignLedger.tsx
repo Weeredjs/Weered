@@ -293,7 +293,7 @@ function LedgerSection({
               </button>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 180px", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
             <input
               className="dnd-parchment-input"
               type="number"
@@ -946,7 +946,7 @@ function PartySection({ roomId }: { roomId: string }) {
           const pct = c.hpMax > 0 ? Math.max(0, Math.min(100, (c.hpCurrent / c.hpMax) * 100)) : 0;
           const hpColor = pct > 50 ? "#22C55E" : pct > 25 ? "#F59E0B" : "#EF4444";
           return (
-            <li key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 80px", gap: 10, alignItems: "center", padding: "6px 4px", borderBottom: "1px solid rgba(196,165,90,.10)" }}>
+            <li key={c.id} style={{ display: "grid", gridTemplateColumns: "minmax(110px, 1fr) 80px 70px 64px", gap: 8, alignItems: "center", padding: "6px 4px", borderBottom: "1px solid rgba(196,165,90,.10)" }}>
               <div>
                 <div className="dnd-heading" style={{ fontSize: 15, color: ACCENT }}>{c.name}</div>
                 <div className="dnd-serif" style={{ fontSize: 11, opacity: .6 }}>
