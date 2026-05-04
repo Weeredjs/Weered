@@ -6482,6 +6482,41 @@ async function main() {
       });
       return;
     }
+    if (t === "campaign:ledger") {
+      // Campaign Ledger entries: GOLD / ITEM / XP awards from the DM. The
+      // entire chronicle persistence story is one of the big differentiators
+      // vs Discord+spreadsheet workflows, so surfacing these adds variety
+      // to the activity ticker beyond dice + trades.
+      const entry = event?.entry || {};
+      const entryType = String(entry.type || "").toUpperCase();
+      const delta = Number(entry.delta || 0);
+      const desc = String(entry.description || "").trim().slice(0, 48);
+      if (!shouldEmit(`campaign:${lobbyHint}:${entryType}`, 12_000)) return;
+      const who = anonymousFor(lobbyHint || "dnd");
+      const realWho = userName || "someone";
+      let fmt: (w: string) => string;
+      if (entryType === "GOLD" && delta > 0) {
+        const amt = Math.abs(delta).toLocaleString();
+        fmt = (_w) => desc ? `the party found ${amt} gp — ${desc}` : `the party found ${amt} gp`;
+      } else if (entryType === "GOLD" && delta < 0) {
+        const amt = Math.abs(delta).toLocaleString();
+        fmt = (_w) => desc ? `the party spent ${amt} gp — ${desc}` : `the party spent ${amt} gp`;
+      } else if (entryType === "XP") {
+        const amt = Math.abs(delta).toLocaleString();
+        fmt = (w) => `${w} earned ${amt} XP`;
+      } else if (entryType === "ITEM") {
+        fmt = (w) => `${w} found ${desc || "an item"}`;
+      } else {
+        fmt = (_w) => desc ? `the chronicle gained an entry — ${desc}` : `the party logged a chronicle entry`;
+      }
+      pushActivity({
+        kind: "campaign", lobbyId: lobbyHint || "dnd",
+        text: fmt(who), textReal: fmt(realWho),
+        userId, userName: realWho,
+        accent: "#C4A55A",
+      });
+      return;
+    }
   }
   function notifyUser(userId: string, event: any) {
     for (const sock of wss.clients) {
