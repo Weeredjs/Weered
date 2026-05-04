@@ -30,6 +30,7 @@ import HelldiversMajorOrderPanel from "../../../components/HelldiversMajorOrderP
 import HelldiversDispatchesPanel from "../../../components/HelldiversDispatchesPanel";
 import HelldiversSliceBPanel from "../../../components/HelldiversSliceBPanel";
 import HelldiversLoadoutBrowser from "../../../components/HelldiversLoadoutBrowser";
+import HelldiversModulesPanel from "../../../components/HelldiversModulesPanel";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import TradingFeed from "../../../components/TradingFeed";
@@ -645,15 +646,7 @@ export default function LobbyIdPage() {
                 ) : lobbyInfo?.moduleType === "WINDROSE" ? (
                   <WindroseModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
-                  <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", gap: 10, padding: 10 }}>
-                    <HelldiversMajorOrderPanel />
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(280px,1fr)", gap: 10, alignItems: "start" }}>
-                      <HelldiversWarMapPanel />
-                      <HelldiversDispatchesPanel style={{ maxHeight: 600 }} />
-                    </div>
-                    <HelldiversSliceBPanel lobbyId={lobbyId} accentColor={accent} currentUserId={me?.id} />
-                    <HelldiversLoadoutBrowser lobbyAccent={accent} />
-                  </div>
+                  <HelldiversModulesPanel lobbyId={lobbyId} accentColor={accent} currentUserId={me?.id} />
                 ) : (
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 )
