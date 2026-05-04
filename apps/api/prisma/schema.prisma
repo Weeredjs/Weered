@@ -58,6 +58,7 @@ enum ModuleType {
   POE
   WINDROSE
   REDDIT
+  HELLDIVERS2
 }
 
 model NewsArticle {
