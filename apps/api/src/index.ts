@@ -6233,6 +6233,7 @@ async function main() {
   // ══════════════════════════════════════════════════════════════════════════════
 
   await app.register(windroseRoutes, { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI, broadcastToLobby } as any);
+  await app.register((await import("./routes/helldivers")).default, { authFromHeader } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════
