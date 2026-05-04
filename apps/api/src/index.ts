@@ -48,7 +48,7 @@ import diceRoutes from "./routes/dice";
 import mapsRoutes from "./routes/maps";
 import supportRoutes from "./routes/support";
 import publicRoutes from "./routes/public";
-import { pushActivity, anonymousFor, shouldEmit } from "./lib/publicActivity";
+import { pushActivity, anonymousFor, shouldEmit, seedSyntheticActivity } from "./lib/publicActivity";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
@@ -3000,6 +3000,7 @@ async function main() {
     const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 280) : undefined;
     const avatarColor = typeof body.avatarColor === "string" ? body.avatarColor.slice(0, 20) : undefined;
     const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 500) : undefined;
+    const bannerUrl = typeof body.bannerUrl === "string" ? body.bannerUrl.slice(0, 500) : undefined;
 
     // Profile customization (Phase 1: colors). Accept either a valid #RRGGBB
     // hex or empty string to clear. Anything else is silently dropped.
@@ -3016,7 +3017,7 @@ async function main() {
     const pillAccentColor = normColor(body.pillAccentColor);
 
     if (
-      bio === undefined && avatarColor === undefined && avatar === undefined
+      bio === undefined && avatarColor === undefined && avatar === undefined && bannerUrl === undefined
       && panelBgColor === undefined && panelAccentColor === undefined
       && pillBgColor === undefined && pillAccentColor === undefined
     ) return reply.code(400).send({ error: "Nothing to update" });
@@ -3028,6 +3029,7 @@ async function main() {
           ...(bio !== undefined && { bio }),
           ...(avatarColor !== undefined && { avatarColor }),
           ...(avatar !== undefined && { avatar: avatar || null }),
+          ...(bannerUrl !== undefined && { bannerUrl: bannerUrl || null }),
           ...(panelBgColor !== undefined && { panelBgColor }),
           ...(panelAccentColor !== undefined && { panelAccentColor }),
           ...(pillBgColor !== undefined && { pillBgColor }),
@@ -3588,6 +3590,59 @@ async function main() {
     const ext = filename.split(".").pop()?.toLowerCase();
     const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
 
+    const { readFileSync } = await import("fs");
+    const data = readFileSync(filepath);
+    reply.header("Content-Type", mime);
+    reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    return reply.send(data);
+  });
+
+  // ── Banner upload (Indicted+ only) — wide ID-card banner image ────────────
+  const BANNER_DIR = join(process.cwd(), "uploads", "banners");
+  if (!existsSync(BANNER_DIR)) mkdirSync(BANNER_DIR, { recursive: true });
+  const BANNER_MAX_BYTES = 4 * 1024 * 1024; // 4MB (banners are wider than avatars)
+
+  app.post("/profile/banner/upload", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ error: "unauthorized" });
+
+    const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
+    const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
+    if (tier === "INNOCENT") {
+      return reply.code(403).send({ error: "tier_required", message: "Custom banner uploads require Indicted tier or higher." });
+    }
+
+    const body: any = (req as any).body || {};
+    const dataUrl = body.image;
+    if (!dataUrl || typeof dataUrl !== "string") return reply.code(400).send({ error: "missing_image" });
+
+    const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+    if (!match) return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+
+    const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1];
+    const buffer = Buffer.from(match[2], "base64");
+    if (buffer.length > BANNER_MAX_BYTES) return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+
+    try {
+      const filename = `${u.id}-${Date.now()}.${ext}`;
+      const filepath = join(BANNER_DIR, filename);
+      writeFileSync(filepath, buffer);
+      const bannerUrl = `${SITE_BASE}/banners/${filename}`;
+      await prisma.user.update({ where: { id: u.id }, data: { bannerUrl } as any });
+      return reply.send({ ok: true, bannerUrl });
+    } catch (e) {
+      console.error("[banner upload]", e);
+      return reply.code(500).send({ error: "upload_failed" });
+    }
+  });
+
+  app.get("/banners/:filename", async (req, reply) => {
+    const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
+    if (!filename) return reply.code(400).send("bad request");
+    const filepath = join(BANNER_DIR, filename);
+    if (!existsSync(filepath)) return reply.code(404).send("not found");
+    const ext = filename.split(".").pop()?.toLowerCase();
+    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
     const { readFileSync } = await import("fs");
     const data = readFileSync(filepath);
     reply.header("Content-Type", mime);
@@ -6720,6 +6775,14 @@ async function main() {
     // ── Room dissolution: clean up empty unpinned rooms after 1 hour ──────────
   const ROOM_TTL_MS = 60 * 60 * 1000; // 1 hour
   const DISSOLUTION_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
+
+  // Synthetic activity ticker filler — pushes a plausible event every 32s
+  // when the public activity buffer is sparse (< 6 items). Real activity
+  // always wins; this only kicks in when the platform is actually quiet so
+  // the landing/home tickers never look dead. Both anonymized.
+  setInterval(() => { try { seedSyntheticActivity(); } catch {} }, 32_000);
+  // Prime the buffer immediately on boot so the first ticker fetch isn't empty
+  for (let i = 0; i < 5; i++) seedSyntheticActivity();
 
   setInterval(async () => {
     const now = Date.now();

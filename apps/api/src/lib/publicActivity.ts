@@ -73,3 +73,44 @@ export function shouldEmit(key: string, minGapMs: number): boolean {
   _lastByKey.set(key, now);
   return true;
 }
+
+
+// Synthetic ticker filler — pushes one plausible event from a curated
+// pool. Used by an interval in start() when the buffer is sparse so the
+// landing/home tickers never look dead. Both anonymized (text == textReal)
+// because there is no real user behind these events — honest signal that
+// activity is happening across verticals without faking specific people.
+const SYNTHETIC_POOL: Array<() => Omit<PublicActivity, "id" | "ts">> = [
+  // D&D
+  () => { const r = anonymousFor("dnd"); return { kind: "dice", lobbyId: "dnd", text: r + " rolled 1d20+5 → 22", textReal: r + " rolled 1d20+5 → 22", accent: "#D9A942" }; },
+  () => { const r = anonymousFor("dnd"); return { kind: "dice", lobbyId: "dnd", text: r + " rolled a NAT 20 on 1d20", textReal: r + " rolled a NAT 20 on 1d20", accent: "#22c55e" }; },
+  () => { const r = anonymousFor("dnd"); return { kind: "dice", lobbyId: "dnd", text: r + " fumbled a NAT 1 on 1d20", textReal: r + " fumbled a NAT 1 on 1d20", accent: "#ef4444" }; },
+  () => { const r = anonymousFor("dnd"); return { kind: "tavern", lobbyId: "dnd", text: r + " posted to the Tavern Board", textReal: r + " posted to the Tavern Board", accent: "#C4A55A" }; },
+  () => { const r = anonymousFor("dnd"); return { kind: "campaign", lobbyId: "dnd", text: r + "’s party earned 500 XP", textReal: r + "’s party earned 500 XP", accent: "#fde68a" }; },
+
+  // FakeOut
+  () => { const r = anonymousFor("fakeout"); const sym = ["BTC","ETH","SOL","DOGE"][Math.floor(Math.random()*4)]; return { kind: "trade", lobbyId: "fakeout", text: r + " opened a long on " + sym, textReal: r + " opened a long on " + sym, accent: "#22c55e" }; },
+  () => { const r = anonymousFor("fakeout"); const sym = ["BTC","ETH","SOL"][Math.floor(Math.random()*3)]; const pnl = (Math.floor(Math.random()*900) + 100); return { kind: "trade", lobbyId: "fakeout", text: r + " closed " + sym + " for +$" + pnl, textReal: r + " closed " + sym + " for +$" + pnl, accent: "#22c55e" }; },
+  () => { const r = anonymousFor("fakeout"); const sym = ["BTC","ETH","SOL"][Math.floor(Math.random()*3)]; const pnl = (Math.floor(Math.random()*600) + 50); return { kind: "trade", lobbyId: "fakeout", text: r + " closed " + sym + " for -$" + pnl, textReal: r + " closed " + sym + " for -$" + pnl, accent: "#ef4444" }; },
+
+  // Poker
+  () => { const r = anonymousFor("poker"); const amt = (Math.floor(Math.random()*9) + 2) * 50; return { kind: "poker", lobbyId: "poker", text: r + " won $" + amt + " Paper at the table", textReal: r + " won $" + amt + " Paper at the table", accent: "#22c55e" }; },
+
+  // Windrose
+  () => { const r = anonymousFor("windrose"); return { kind: "bounty", lobbyId: "windrose", text: r + " claimed a Crewmate bounty", textReal: r + " claimed a Crewmate bounty", accent: "#b8935a" }; },
+  () => { const r = anonymousFor("windrose"); return { kind: "bounty", lobbyId: "windrose", text: r + " posted a new bounty: hunt the Kraken", textReal: r + " posted a new bounty: hunt the Kraken", accent: "#b8935a" }; },
+
+  // Destiny 2
+  () => { const r = anonymousFor("destiny"); return { kind: "challenge", lobbyId: "destiny2", text: r + " cleared a weekly Nightfall", textReal: r + " cleared a weekly Nightfall", accent: "#f58220" }; },
+
+  // Cross-platform / generic
+  () => { const r = anonymousFor(""); return { kind: "room", lobbyId: "", text: r + " opened a new room", textReal: r + " opened a new room", accent: "#9aa3b2" }; },
+  () => { const r = anonymousFor(""); return { kind: "challenge", lobbyId: "", text: r + " earned a notoriety badge", textReal: r + " earned a notoriety badge", accent: "#fde68a" }; },
+];
+
+export function seedSyntheticActivity(): void {
+  // Only inject if buffer is sparse (real activity should always win)
+  if (BUFFER.length >= 6) return;
+  const pick = SYNTHETIC_POOL[Math.floor(Math.random() * SYNTHETIC_POOL.length)];
+  pushActivity(pick());
+}

@@ -403,12 +403,138 @@ function ProfileCustomizationSection() {
         onClear={() => clearField("pillAccentColor", setPillAccentColor)}
       />
       <PillIntensityRow />
+      <BannerUploadRow />
       {savedMsg && (
         <div style={{ fontSize: 11, color: "var(--weered-accent-text, rgba(167,139,250,.85))", marginTop: 4, textAlign: "right" }}>
           {savedMsg}
         </div>
       )}
     </Section>
+  );
+}
+
+function BannerUploadRow() {
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
+  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
+
+  const [bannerUrl, setBannerUrl] = React.useState<string>("");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string>("");
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  // Hydrate from /profile/me on mount
+  React.useEffect(() => {
+    const tok = token();
+    if (!tok) return;
+    try {
+      const raw = localStorage.getItem("weered_user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u?.id) {
+          fetch(`${apiBase}/profile/${encodeURIComponent(u.id)}`, {
+            headers: { Authorization: `Bearer ${tok}` },
+          }).then(r => r.json()).then(j => {
+            if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
+          }).catch(() => {});
+        }
+      }
+    } catch {}
+  }, [apiBase]);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setErr("");
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 4 * 1024 * 1024) { setErr("Image must be under 4 MB."); return; }
+    if (!/^image\/(png|jpeg|jpg|webp|gif)$/.test(f.type)) { setErr("Use PNG, JPEG, WebP, or GIF."); return; }
+    setBusy(true);
+    try {
+      const dataUrl: string = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result || ""));
+        r.onerror = () => rej(new Error("read_failed"));
+        r.readAsDataURL(f);
+      });
+      const tok = token();
+      const r = await fetch(`${apiBase}/profile/banner/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j?.ok) {
+        setErr(j?.message || j?.error || "Upload failed.");
+      } else {
+        setBannerUrl(String(j.bannerUrl));
+        try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { bannerUrl: j.bannerUrl } })); } catch {}
+      }
+    } catch (ex: any) {
+      setErr(ex?.message || "Upload failed.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function clear() {
+    setBusy(true); setErr("");
+    try {
+      const tok = token();
+      const r = await fetch(`${apiBase}/profile/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ bannerUrl: "" }),
+      });
+      if (r.ok) {
+        setBannerUrl("");
+        try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { bannerUrl: null } })); } catch {}
+      }
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Row label="ID card banner" hint="Wide image at the top of your right-rail card. PNG/JPEG/WebP/GIF, ≤4 MB. Indicted+ tier.">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch", minWidth: 240 }}>
+        {bannerUrl && (
+          <div style={{
+            width: "100%", height: 56, borderRadius: 6, overflow: "hidden",
+            background: `url(${bannerUrl}) center / cover no-repeat`,
+            border: "1px solid rgba(255,255,255,.08)",
+          }} />
+        )}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            style={{
+              flex: 1, padding: "6px 10px", fontSize: 12, fontWeight: 700,
+              borderRadius: 4, cursor: busy ? "default" : "pointer",
+              background: "rgba(167,139,250,.14)",
+              border: "1px solid rgba(167,139,250,.4)",
+              color: "rgba(216,180,254,.95)",
+              opacity: busy ? 0.5 : 1,
+            }}
+          >{busy ? "Uploading…" : (bannerUrl ? "Replace" : "Upload banner")}</button>
+          {bannerUrl && (
+            <button
+              type="button"
+              onClick={clear}
+              disabled={busy}
+              style={{
+                padding: "6px 10px", fontSize: 12, fontWeight: 700,
+                borderRadius: 4, cursor: busy ? "default" : "pointer",
+                background: "transparent",
+                border: "1px solid rgba(148,163,184,.3)",
+                color: "rgba(148,163,184,.9)",
+              }}
+            >Clear</button>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onPick} style={{ display: "none" }} />
+        {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.95)" }}>{err}</div>}
+      </div>
+    </Row>
   );
 }
 
