@@ -208,6 +208,7 @@ export default function UserCorner() {
   // into something that actually feels like an ID badge.
   const [primaryCrew, setPrimaryCrew] = useState<{ id: string; name: string; tag: string; logoUrl: string | null; accentColor: string | null } | null>(null);
   const [notorietyRank, setNotorietyRank] = useState<string>("");
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!me?.id) { setPrimaryCrew(null); setNotorietyRank(""); return; }
     let cancelled = false;
@@ -226,6 +227,7 @@ export default function UserCorner() {
         });
       } else { setPrimaryCrew(null); }
       if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
+      if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl)); else setBannerUrl(null);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [me?.id, API_BASE]);
@@ -347,231 +349,203 @@ export default function UserCorner() {
       ) : null}
 
       {/* ─────────────────────────────────────────────────────────────────
-          HEADER TICKER — single mono line carrying the technical metadata:
-          ID · [TAG] · RANK. The crew tag links to the crew page; the rank
-          is the user's current Notoriety title. Reads like the top of a
-          mafia file folder.
+          BANNER ZONE — image (user.bannerUrl) or tier-themed gradient.
+          Carries crew patch (top-right), tier watermark (bottom-left), and
+          embedded notoriety bar (bottom edge). Avatar overlaps the bottom
+          edge so the banner and the identity field below read as one card.
           ───────────────────────────────────────────────────────────── */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "10px 14px 9px",
-        paddingRight: lobbyLogo ? 42 : 14,
-        // Match the home greeting label (e.g. "GOOD AFTERNOON") — same
-        // condensed display font as the rest of the press theme, slightly
-        // larger and chunkier than monospace.
-        fontFamily: "inherit",
-        fontSize: 11, fontWeight: 900, letterSpacing: "1.4px",
-        textTransform: "uppercase",
-        color: `${cardAccent}cc`,
-        position: "relative", zIndex: 1,
-        minWidth: 0,
+        position: "relative",
+        height: 96,
+        background: bannerUrl
+          ? `url(${bannerUrl}) center / cover no-repeat`
+          : `linear-gradient(135deg, ${cardAccent}55 0%, ${cardAccent}15 60%, rgba(0,0,0,.45) 100%)`,
+        zIndex: 1,
       }}>
-        <span style={{ flexShrink: 0 }}>ID · {idHash || "————"}</span>
+        {/* Bottom shade gradient — guarantees text legibility no matter
+            what banner image the user picks. */}
+        <div aria-hidden style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* TIER WATERMARK — bottom-left of banner, blocky uppercase, low
+            opacity. Like the rank stencil on a military jacket. */}
+        {(() => {
+          const tier = String(me?.tier || "").toUpperCase();
+          if (!tier || tier === "INNOCENT") return null;
+          const tierColor =
+            tier === "KINGPIN"  ? "#fde68a" :
+            tier === "FELON"    ? "#fdba74" :
+            tier === "INDICTED" ? "rgba(216,180,254,.95)" :
+            "rgba(243,244,246,.85)";
+          return (
+            <div style={{
+              position: "absolute", left: 12, bottom: 14,
+              display: "inline-flex", alignItems: "center", gap: 5,
+              fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+              fontSize: 10, fontWeight: 900, letterSpacing: "2px",
+              color: tierColor,
+              textShadow: "0 1px 2px rgba(0,0,0,.55)",
+              pointerEvents: "none",
+              opacity: 0.92,
+            }}>
+              <TierIcon tier={tier as any} size={11} />
+              {tier}
+            </div>
+          );
+        })()}
+
+        {/* CREW PATCH — top-right of banner. Reads as a sewn-on insignia.
+            Sits left of the lobby logo so they don't collide. */}
         {primaryCrew?.tag && (() => {
           const ca = primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : cardAccent;
           return (
-            <>
-              <span aria-hidden style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
-              <a
-                href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
-                title={primaryCrew.name || ""}
-                style={{ color: ca, textDecoration: "none", flexShrink: 0 }}
-              >
-                [{primaryCrew.tag}]
-              </a>
-            </>
+            <a
+              href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
+              title={primaryCrew.name || ""}
+              style={{
+                position: "absolute", top: 8,
+                right: lobbyLogo ? 40 : 10,
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "3px 8px",
+                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                fontSize: 10, fontWeight: 900, letterSpacing: "1.2px",
+                color: ca,
+                background: "rgba(10,10,18,.55)",
+                border: `1px solid ${ca}80`,
+                borderRadius: 4,
+                textDecoration: "none",
+                boxShadow: "0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08)",
+                backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)",
+              }}
+            >
+              [{primaryCrew.tag}]
+            </a>
           );
         })()}
-        {notorietyRank && (
-          <>
-            <span aria-hidden style={{ opacity: 0.4, flexShrink: 0 }}>·</span>
-            <span style={{
-              color: "rgba(240,232,214,.78)",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              minWidth: 0,
-            }}>
-              {notorietyRank}
-            </span>
-          </>
-        )}
-      </div>
 
-      {/* Perforation divider — dashed line, GTA file-folder feel */}
-      <div aria-hidden style={{
-        height: 0, borderTop: `1px dashed ${cardAccent}28`,
-        margin: "0 12px", position: "relative", zIndex: 1,
-      }} />
+        {/* ID HASH — small mono label, top-left of banner. Reads like a
+            file-folder reference number stamped on the cover. */}
+        {idHash && (
+          <div style={{
+            position: "absolute", top: 10, left: 12,
+            fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+            fontSize: 9, fontWeight: 700, letterSpacing: "1.4px",
+            color: "rgba(255,255,255,.55)",
+            textShadow: "0 1px 2px rgba(0,0,0,.55)",
+            pointerEvents: "none",
+          }}>
+            ID · {idHash}
+          </div>
+        )}
+
+        {/* NOTORIETY BAR — embedded in the bottom edge of the banner like
+            a fuel gauge. Component handles its own data; we just wrap it
+            in a thin strip so it sits flush against the banner edge. */}
+        <div style={{
+          position: "absolute", left: 0, right: 0, bottom: 0,
+          padding: "0 12px 6px",
+          paddingLeft: 78, // leave room for overlapping avatar
+        }}>
+          <NotorietyBar compact />
+        </div>
+      </div>
 
       {/* ─────────────────────────────────────────────────────────────────
-          IDENTITY ZONE — bigger framed avatar + name in display type +
-          role/tier as inline mono labels (no chip backgrounds) + crew
-          name as a quiet italic line. Click anywhere opens profile.
+          IDENTITY FIELD — clean surface below the banner. Avatar overlaps
+          the banner edge by half its height, anchoring banner ↔ field.
           ───────────────────────────────────────────────────────────── */}
-      <button
-        type="button"
-        onClick={() => openSheet("profile", { userId: profileUserId })}
-        style={{
-          display: "flex", alignItems: "center", gap: 12,
-          width: "100%", padding: "12px 14px 10px",
-          background: "none", border: "none", cursor: "pointer",
-          color: "inherit", textAlign: "left",
-          position: "relative", zIndex: 1,
-        }}
-      >
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: "50%",
-            background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
-            boxShadow: `
-              0 0 0 2px ${cardAccent}66,
-              0 0 0 3px rgba(0,0,0,.35),
-              0 0 18px ${cardAccent}40,
-              inset 0 2px 0 rgba(255,255,255,.18)
-            `,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 21, fontWeight: 950, color: "#fff",
-            overflow: "hidden",
-          }}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              initial
-            )}
-          </div>
-          <span
-            aria-hidden
-            style={{
-              position: "absolute", bottom: 0, right: 0,
-              width: 12, height: 12, borderRadius: "50%",
-              background: isAway ? "#facc15" : "#22c55e",
-              boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.8)",
-              border: "2px solid rgba(10,10,18,.85)",
-            }}
-          />
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Name in display type — big, condensed, uppercase. Auto-fits
-              long names by stepping the font size down until it fits the
-              available width; falls back to ellipsis past the smallest
-              size as a hard safety net. */}
-          <FittedName name={name} />
-
-          {/* Inline role + tier as colored mono labels — no chip bg */}
-          {(() => {
-            const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
-            const tier = String(me?.tier || "").toUpperCase();
-            const showTier = tier && tier !== "INNOCENT";
-            if (!bestRole && !showTier) return null;
-
-            const roleColor =
-              bestRole === "GOD"     ? "#fde68a" :
-              bestRole === "ADMIN"   ? "#fca5a5" :
-              bestRole === "STAFF"   ? "#93c5fd" :
-              bestRole === "SUPPORT" ? "#6ee7b7" :
-              bestRole === "MOD"     ? "rgba(216,180,254,.95)" :
-              "rgba(243,244,246,.85)";
-
-            const tierColor =
-              tier === "KINGPIN"  ? "#fde68a" :
-              tier === "FELON"    ? "#fdba74" :
-              tier === "INDICTED" ? "rgba(216,180,254,.95)" :
-              "rgba(243,244,246,.85)";
-
-            return (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 7,
-                marginTop: 5,
-                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                fontSize: 9, fontWeight: 900, letterSpacing: "1.5px",
-                textTransform: "uppercase",
-                minWidth: 0, flexWrap: "wrap" as const,
-              }}>
-                {bestRole && (
-                  <span style={{ color: roleColor, flexShrink: 0 }}>
-                    {roleDisplay(bestRole, lobbyTheme)}
-                  </span>
-                )}
-                {bestRole && showTier && (
-                  <span aria-hidden style={{ opacity: 0.35, flexShrink: 0 }}>·</span>
-                )}
-                {showTier && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: tierColor, flexShrink: 0 }}>
-                    <TierIcon tier={tier as any} size={11} />
-                    {tier}
-                  </span>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Crew name — quiet italic line */}
-          {primaryCrew?.name && (
-            <div style={{
-              fontSize: 11, fontStyle: "italic",
-              color: "rgba(240,232,214,.62)",
-              marginTop: 5,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>
-              {primaryCrew.name}
-            </div>
-          )}
-        </div>
-      </button>
-
-      {/* Status button — small bordered toggle, clearly clickable, sits
-          flush left under identity. Green = online, yellow = lying low. */}
-      <div style={{ padding: "0 14px 10px", position: "relative", zIndex: 1 }}>
+      <div style={{ position: "relative", padding: "0 14px 10px", zIndex: 1 }}>
         <button
           type="button"
-          onClick={() => { if (typeof setAway === "function") setAway(!isAway); }}
-          title={isAway ? "You're lying low. Click to come back online." : "Click to lie low (manual AFK)."}
+          onClick={() => openSheet("profile", { userId: profileUserId })}
           style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "5px 11px",
-            borderRadius: 4,
-            background: isAway
-              ? "rgba(250,204,21,.08)"
-              : "rgba(34,197,94,.06)",
-            border: `1px solid ${isAway ? "rgba(250,204,21,.34)" : "rgba(34,197,94,.30)"}`,
-            color: isAway ? "rgba(253,224,71,.95)" : "rgba(187,247,208,.95)",
-            fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-            fontSize: 9, fontWeight: 800,
-            letterSpacing: "1.5px", textTransform: "uppercase",
-            cursor: "pointer",
-            transition: "background .15s, border-color .15s",
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(0,0,0,.25)`,
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = isAway ? "rgba(250,204,21,.16)" : "rgba(34,197,94,.13)";
-            el.style.borderColor = isAway ? "rgba(250,204,21,.55)" : "rgba(34,197,94,.50)";
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = isAway ? "rgba(250,204,21,.08)" : "rgba(34,197,94,.06)";
-            el.style.borderColor = isAway ? "rgba(250,204,21,.34)" : "rgba(34,197,94,.30)";
+            display: "flex", alignItems: "flex-end", gap: 12,
+            width: "100%", padding: 0,
+            background: "none", border: "none", cursor: "pointer",
+            color: "inherit", textAlign: "left",
           }}
         >
-          <span style={{
-            width: 7, height: 7, borderRadius: "50%",
-            background: isAway ? "#facc15" : "#22c55e",
-            boxShadow: isAway ? "0 0 6px rgba(250,204,21,.7)" : "0 0 6px rgba(34,197,94,.7)",
-            flexShrink: 0,
-          }} />
-          {isAway ? "Lying low" : "Online"}
+          {/* Avatar — overlaps the banner. marginTop pulls it up by half
+              its height so it straddles the banner ↔ field boundary. */}
+          <div style={{ position: "relative", flexShrink: 0, marginTop: -28 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: "50%",
+              background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
+              boxShadow: `
+                0 0 0 3px rgba(10,10,18,.95),
+                0 0 0 4px ${cardAccent}80,
+                0 0 14px ${cardAccent}50,
+                inset 0 2px 0 rgba(255,255,255,.18)
+              `,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 22, fontWeight: 950, color: "#fff",
+              overflow: "hidden",
+            }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                initial
+              )}
+            </div>
+            {/* Status dot — bottom-right of avatar. Click toggles AFK. */}
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); if (typeof setAway === "function") setAway(!isAway); }}
+              title={isAway ? "Lying low — click to come back online." : "Online — click to lie low."}
+              aria-label={isAway ? "Set status to online" : "Set status to lying low"}
+              style={{
+                position: "absolute", bottom: 0, right: 0,
+                width: 14, height: 14, borderRadius: "50%",
+                background: isAway ? "#facc15" : "#22c55e",
+                boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.8)",
+                border: "2.5px solid rgba(10,10,18,.95)",
+                padding: 0, cursor: "pointer",
+              }}
+            />
+          </div>
+
+          {/* Name + role/tier inline + crew name */}
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 6 }}>
+            <FittedName name={name} />
+            {(() => {
+              const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
+              if (!bestRole) return null;
+              const roleColor =
+                bestRole === "GOD"     ? "#fde68a" :
+                bestRole === "ADMIN"   ? "#fca5a5" :
+                bestRole === "STAFF"   ? "#93c5fd" :
+                bestRole === "SUPPORT" ? "#6ee7b7" :
+                bestRole === "MOD"     ? "rgba(216,180,254,.95)" :
+                "rgba(243,244,246,.85)";
+              return (
+                <div style={{
+                  marginTop: 4,
+                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                  fontSize: 9, fontWeight: 900, letterSpacing: "1.5px",
+                  textTransform: "uppercase",
+                  color: roleColor,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {roleDisplay(bestRole, lobbyTheme)}
+                </div>
+              );
+            })()}
+            {primaryCrew?.name && (
+              <div style={{
+                fontSize: 11, fontStyle: "italic",
+                color: "rgba(240,232,214,.62)",
+                marginTop: 3,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {primaryCrew.name}
+              </div>
+            )}
+          </div>
         </button>
-      </div>
-
-      {/* Perforation divider above footer */}
-      <div aria-hidden style={{
-        height: 0, borderTop: `1px dashed ${cardAccent}28`,
-        margin: "0 12px", position: "relative", zIndex: 1,
-      }} />
-
-      {/* Notoriety XP bar — full-width inside the footer zone */}
-      <div style={{ padding: "8px 12px 4px", position: "relative", zIndex: 1 }}>
-        <NotorietyBar compact />
       </div>
 
       {/* Action strip — Burner only; settings/logout live in the W logo menu */}
