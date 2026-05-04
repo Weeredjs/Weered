@@ -1,6 +1,7 @@
 "use client";
 import InviteModal from "./InviteModal";
 import HelldiversPlayerCountPill from "./HelldiversPlayerCountPill";
+import SteamLobbyHeader from "./SteamLobbyHeader";
 
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -52,6 +53,7 @@ export default function LobbyHeaderBar({
   accentColor,
   logoUrl,
   verified,
+  steamAppId,
 }: {
   title?: string;
   subtitle?: string;
@@ -59,6 +61,7 @@ export default function LobbyHeaderBar({
   accentColor?: string;
   logoUrl?: string;
   verified?: boolean;
+  steamAppId?: string | null;
 }) {
   const router = useRouter();
   const w = useWeered() as any;
@@ -297,9 +300,9 @@ export default function LobbyHeaderBar({
                   VERIFIED
                 </span>
               )}
-              {lobbyId === "helldivers2" && (
-                <HelldiversPlayerCountPill accentColor={accent || undefined} />
-              )}
+              {steamAppId ? (
+                <SteamLobbyHeader appId={String(steamAppId)} accentColor={accent || undefined} />
+              ) : null}
             </div>
             </>
           );
