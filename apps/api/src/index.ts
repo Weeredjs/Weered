@@ -24,6 +24,8 @@ import helldiversLoadoutsRoutes from "./routes/helldivers-loadouts";
 import badgesRoutes from "./routes/badges";
 import tournamentsRoutes from "./routes/tournaments";
 import lfgRoutes from "./routes/lfg";
+import helldiversMoRoutes from "./routes/helldivers-mo";
+import { runHelldiversWorker } from "./helldiversWorker";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import newsRoutes from "./routes/news";
@@ -3749,6 +3751,9 @@ async function main() {
   // Run worker on startup then every 20 minutes
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
+  // Helldivers 2 worker (Slice D): pinned campaign rooms + Operator commentary + MO challenges
+  setInterval(() => { void runHelldiversWorker({ getAI, broadcastToLobby }); }, 10 * 60 * 1000);
+  setTimeout(() => { void runHelldiversWorker({ getAI, broadcastToLobby }); }, 30_000);
 
   // ── Forum — extracted to routes/forum.ts ──────────────────────────────────
   await app.register(forumRoutes, { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole, resolveMentions, createNotification } as any);
@@ -6279,6 +6284,7 @@ async function main() {
   // ══════════════════════════════════════════════════════════════════════════════
 
   await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby } as any);
+  await app.register(helldiversMoRoutes, { authFromHeader, awardPaper } as any);
 
 
   // ── Paper Economy ──────────────────────────────────────────────────────────

@@ -1363,6 +1363,11 @@ model ChallengeDefinition {
   crewRepReward     Int         @default(0)
   badgeId           String?
 
+  // Slice D: optional source-tag — used by helldiversWorker to mark MO challenges
+  // and dedupe on the MO id. Null for normal manually-authored challenges.
+  kind          String?
+  externalRef   String?
+
   status        ChallengeStatus @default(DRAFT)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -1374,6 +1379,7 @@ model ChallengeDefinition {
   @@index([scope, status])
   @@index([lobbyId, status])
   @@index([category, status])
+  @@index([kind, externalRef])
 }
 
 // ── Challenge instance — time-bound run of a definition ─────────────────────
