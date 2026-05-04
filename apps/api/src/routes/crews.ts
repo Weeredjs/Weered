@@ -70,11 +70,30 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         : [];
       const avatarMap = new Map(userAvatars.map((u: any) => [u.id, u]));
 
-      const memberPresence = (m.crew.members || []).map((cm: any) => {
+      // First pass: resolve each member's WS room (if online).
+      type Pres = { userId: string; name: any; role: any; online: boolean; roomId: string | null; roomName: string | null };
+      const pres: Pres[] = (m.crew.members || []).map((cm: any) => {
         let roomId: string | null = null; let roomName: string | null = null;
         for (const [rid, rs] of rooms) { if (rs.users.has(cm.userId)) { roomId = rid; roomName = rs.name || rid; break; } }
-        const ua: any = avatarMap.get(cm.userId);
-        return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName, avatar: ua?.avatar || null, avatarColor: ua?.avatarColor || null };
+        return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName };
+      });
+
+      // Batch-resolve which of those room IDs are actually lobbies. Mirrors
+      // the /friends route — without this, the right-rail "join" link routes
+      // to /room/<id> even when the member is in a top-level lobby.
+      const activeRoomIds = [...new Set(pres.map(p => p.roomId).filter(Boolean))] as string[];
+      const lobbySet = activeRoomIds.length
+        ? new Set((await prisma.lobby.findMany({ where: { id: { in: activeRoomIds } }, select: { id: true } })).map(l => l.id))
+        : new Set<string>();
+
+      const memberPresence = pres.map(p => {
+        const ua: any = avatarMap.get(p.userId);
+        return {
+          ...p,
+          roomIsLobby: p.roomId ? lobbySet.has(p.roomId) : false,
+          avatar: ua?.avatar || null,
+          avatarColor: ua?.avatarColor || null,
+        };
       });
       return { ...m.crew, myRole: m.role, members: memberPresence };
     }));
