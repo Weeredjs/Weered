@@ -6813,3 +6813,61 @@ html .weered-usercorner[data-custom-bg="1"] {
     inset 0 -1px 0 rgba(0,0,0,0.25),
     0 4px 12px rgba(0,0,0,0.25) !important;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Mobile responsive pass — surgical fixes for surfaces shipped without
+   a mobile audit. Keep these last so they win the cascade.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* /home top bar — wraps to two rows, secondary buttons collapse below
+   600px, search input becomes a full-width row. */
+@media (max-width: 600px) {
+  .home-topbar { gap: 8px !important; padding: 14px 14px 10px !important; }
+  .home-topbar-greet { flex-basis: 100% !important; min-width: 0 !important; }
+  .home-topbar-greet > div:nth-child(2) { font-size: 18px !important; }
+  .home-topbar-secondary { display: none !important; }
+  .home-topbar-search { flex: 1 1 100% !important; }
+  .home-topbar-search input { width: 100% !important; }
+}
+
+/* The activity ticker on /home — the marquee already scrolls and the
+   track has overflow:hidden, but tighten the outer padding + label
+   spacing on narrow widths so the chip + label don't take half the row. */
+@media (max-width: 600px) {
+  .home-ticker { padding: 8px 12px !important; gap: 10px !important; }
+  .home-ticker-label { font-size: 8px !important; padding: 3px 7px !important; letter-spacing: 0.14em !important; }
+  .home-ticker-item { font-size: 12px !important; }
+  .home-ticker-sep { padding: 0 10px !important; }
+}
+
+/* Landing lobby-preview modal close button — bump tap target from 28px
+   to 40px on touch viewports. Stays subtle visually. */
+@media (max-width: 600px) {
+  .lp-modal-close {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 22px !important;
+  }
+  .lp-modal-card { max-height: calc(100vh - 32px) !important; }
+  .lp-modal-back { padding: 16px 12px !important; }
+  .lp-modal-head { padding: 14px 16px 6px !important; gap: 10px !important; flex-wrap: wrap !important; }
+  .lp-modal-counts { margin-left: 0 !important; }
+  .lp-modal-desc { padding: 4px 16px 10px !important; }
+  .lp-modal-feed { padding: 0 16px 12px !important; }
+  .lp-modal-cta-row { padding: 10px 16px 16px !important; }
+}
+
+/* DnD lectern — at 375px, four 130px tools wrap to two rows of two,
+   which is fine but the padding 8px 24px wastes space. Tighten it
+   so the alcoves get more width. */
+@media (max-width: 600px) {
+  .weered-dnd-modules .dnd-lectern { padding: 6px 12px !important; gap: 6px !important; }
+  .weered-dnd-modules .dnd-lectern-tool { flex: 1 1 110px !important; padding: 10px 8px !important; font-size: 13px !important; }
+  .weered-dnd-modules .dnd-lectern-quill { padding: 6px 10px !important; font-size: 12px !important; }
+}
+
+/* DnD stage tabs — already wrap; just bump tap-target spacing on touch. */
+@media (max-width: 600px) {
+  .weered-dnd-modules .weered-dnd-tab { padding: 8px 12px !important; font-size: 13px !important; }
+  .weered-dnd-modules .weered-dnd-tab--small { padding: 6px 10px !important; font-size: 11px !important; }
+}

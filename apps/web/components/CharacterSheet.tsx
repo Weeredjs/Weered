@@ -435,7 +435,7 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
       </div>
 
       {/* Saves & Skills, side by side on wider, stacked otherwise */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) minmax(220px, 2fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
         <div>
           <div className="dnd-section-label">Saving Throws</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
