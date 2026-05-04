@@ -312,6 +312,7 @@ export function startChallengeWorker(
   awardNotoriety: (userId: string, action: string) => Promise<any>,
   notify?: ChallengeNotify,
   awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<any>,
+  broadcastToLobby?: (lobbyId: string, event: any) => void,
 ) {
   console.log("[challenges] Worker started — polling every 30s");
 
@@ -505,6 +506,17 @@ export function startChallengeWorker(
                   notorietyReward: def.notorietyReward,
                   paperReward: (def as any).paperReward || 0,
                   badgeId: def.badgeId,
+                });
+              }
+              // Broadcast lobby-wide so the public activity feed surfaces
+              // challenge completions. Only fires when the def is scoped to
+              // a lobby (LOBBY scope, with lobbyId set).
+              if (broadcastToLobby && (def as any).lobbyId) {
+                broadcastToLobby((def as any).lobbyId, {
+                  type: "challenge:completed",
+                  userId,
+                  challengeTitle: def.title,
+                  lobbyId: (def as any).lobbyId,
                 });
               }
             } else if (newActivities.length > 0 && notify) {
