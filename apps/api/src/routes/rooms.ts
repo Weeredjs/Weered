@@ -19,12 +19,14 @@ type Opts = {
   buildStatePayload: (room: any) => any;
   send: (sock: any, payload: any) => void;
   shortRoomId: (n: number) => string;
+  broadcastToLobby?: (lobbyId: string, event: any) => void;
 };
 
 export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader, verifyToken, getGlobalRole, canAccessStaff,
     rooms, ensureRoomLoaded, normalizeRoomId, buildStatePayload, send, shortRoomId,
+    broadcastToLobby,
   } = opts;
 
 // GET /rooms — all rooms (lobbies + active user rooms) for Home page
@@ -183,6 +185,9 @@ app.post("/rooms", async (req, reply) => {
   if (ownerId) r.ownerId = ownerId;
   if (passwordHash) r.passwordHash = passwordHash;
   rooms.set(id, r);
+  try {
+    broadcastToLobby?.(lobbyId, { type: "room:created", lobbyId, room: { id, name, isEvent, defaultModule } });
+  } catch {}
   return reply.send({ ok: true, id, roomId: id, room: { id, roomId: id, name, locked: false, lobbyId, hasPassword: !!passwordHash, isEvent, defaultModule, disabledModules } });
 });
 

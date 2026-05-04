@@ -2782,6 +2782,7 @@ async function main() {
   await app.register(roomsRoutes, {
     authFromHeader, verifyToken, getGlobalRole, canAccessStaff,
     rooms, ensureRoomLoaded, normalizeRoomId, buildStatePayload, send, shortRoomId,
+    broadcastToLobby,
   } as any);
 
   // ── Staff — extracted to routes/staff.ts ──────────────────────────────────
@@ -6134,7 +6135,7 @@ async function main() {
   // ── LFG / FIRETEAM BOARD — extracted to routes/lfg.ts ──────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
-  await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff } as any);
+  await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby } as any);
 
 
   // ── Paper Economy ──────────────────────────────────────────────────────────

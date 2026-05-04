@@ -224,6 +224,124 @@ function VisualStreams() {
   );
 }
 
+function VisualSheet() {
+  const Stat = ({ label, mod, value }: { label: string; mod: string; value: number }) => (
+    <div style={{
+      flex: 1, padding: "5px 4px", borderRadius: 6,
+      border: `1px solid ${ACCENT}33`, background: `${ACCENT}06`,
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+    }}>
+      <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.6px", color: "rgba(201,168,120,0.7)" }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 900, color: ACCENT, lineHeight: 1, fontFamily: "monospace" }}>{value}</div>
+      <div style={{ fontSize: 9, color: "rgba(243,232,210,0.55)", fontFamily: "monospace" }}>{mod}</div>
+    </div>
+  );
+  return (
+    <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,.25)", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,232,210,0.92)", fontFamily: "var(--font-pirata), serif", letterSpacing: "0.4px" }}>Vex Halloran</div>
+          <div style={{ fontSize: 9, color: "rgba(201,168,120,0.65)", fontStyle: "italic" }}>Half-Elf Warlock · Level 5</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ fontSize: 7, color: "rgba(243,232,210,0.4)", letterSpacing: "0.4px" }}>HP</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#22C55E", fontFamily: "monospace" }}>34/38</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ fontSize: 7, color: "rgba(243,232,210,0.4)", letterSpacing: "0.4px" }}>AC</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: ACCENT, fontFamily: "monospace" }}>15</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        <Stat label="STR" value={10} mod="+0" />
+        <Stat label="DEX" value={14} mod="+2" />
+        <Stat label="CON" value={13} mod="+1" />
+        <Stat label="INT" value={11} mod="+0" />
+        <Stat label="WIS" value={12} mod="+1" />
+        <Stat label="CHA" value={17} mod="+3" />
+      </div>
+      <div style={{
+        padding: "5px 9px", borderRadius: 4,
+        border: `1px solid ${FIRE}55`, background: `${FIRE}10`,
+        display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+        fontFamily: "monospace", fontSize: 10,
+      }}>
+        <span style={{ fontSize: 9, fontWeight: 800, color: FIRE, letterSpacing: "0.4px" }}>⚔ EBLAST</span>
+        <span style={{ color: "rgba(243,232,210,0.7)" }}>1d10+3 force</span>
+        <span style={{ marginLeft: "auto", color: ACCENT, fontWeight: 700, fontSize: 9 }}>click → roll</span>
+      </div>
+    </div>
+  );
+}
+
+function VisualMap() {
+  return (
+    <div style={{ padding: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,.25)" }}>
+      <svg width="100%" height="160" viewBox="0 0 320 160" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="szmap-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(196,165,90,0.18)" strokeWidth="0.5" />
+          </pattern>
+          <radialGradient id="szmap-glow" cx="50%" cy="50%">
+            <stop offset="0%" stopColor="rgba(232,160,74,0.7)" />
+            <stop offset="60%" stopColor="rgba(232,160,74,0.2)" />
+            <stop offset="100%" stopColor="rgba(232,160,74,0)" />
+          </radialGradient>
+        </defs>
+        {/* Floor */}
+        <rect x="0" y="0" width="320" height="160" fill="rgba(58,28,14,0.4)" />
+        <rect x="0" y="0" width="320" height="160" fill="url(#szmap-grid)" />
+        {/* Fog (right side, partially revealed) */}
+        <rect x="220" y="0" width="100" height="160" fill="rgba(0,0,0,0.65)" />
+        <text x="270" y="86" textAnchor="middle" fontSize="9" fill="rgba(201,168,120,0.55)" fontFamily="monospace" letterSpacing="0.5">FOG</text>
+        {/* Active token glow */}
+        <circle cx="100" cy="80" r="22" fill="url(#szmap-glow)" />
+        {/* Player tokens */}
+        <circle cx="100" cy="80" r="11" fill="#3B82F6" stroke="#F5D58A" strokeWidth="2" />
+        <text x="100" y="84" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" fontWeight="700">V</text>
+        <circle cx="140" cy="60" r="11" fill="#22C55E" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+        <text x="140" y="64" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" fontWeight="700">K</text>
+        <circle cx="60" cy="100" r="11" fill="#A855F7" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+        <text x="60" y="104" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" fontWeight="700">M</text>
+        {/* Monster tokens */}
+        <circle cx="180" cy="80" r="13" fill="#9B281E" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+        <text x="180" y="85" textAnchor="middle" fontSize="10" fill="#fff" fontFamily="monospace" fontWeight="800">B</text>
+        {/* Distance line */}
+        <line x1="100" y1="80" x2="180" y2="80" stroke={ACCENT} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+        <text x="140" y="76" textAnchor="middle" fontSize="9" fill={ACCENT} fontFamily="monospace" fontWeight="700">20ft</text>
+        {/* Active turn label */}
+        <text x="100" y="40" textAnchor="middle" fontSize="8" fill={ACCENT} fontFamily="monospace" fontWeight="800" letterSpacing="0.5">▼ VEX'S TURN</text>
+      </svg>
+    </div>
+  );
+}
+
+function VisualChronicle() {
+  const Entry = ({ tag, body, color }: { tag: string; body: string; color: string }) => (
+    <div style={{ display: "flex", gap: 6, alignItems: "flex-start", paddingLeft: 8, borderLeft: `2px solid ${color}55` }}>
+      <span style={{ fontSize: 8, fontWeight: 800, color, letterSpacing: "0.5px", flexShrink: 0, marginTop: 1 }}>{tag}</span>
+      <span style={{ fontSize: 10, color: "rgba(243,232,210,0.78)", fontStyle: "italic", lineHeight: 1.4 }}>{body}</span>
+    </div>
+  );
+  return (
+    <div style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,.25)", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", paddingBottom: 6, borderBottom: `1px solid ${ACCENT}22` }}>
+        <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, letterSpacing: "1px", fontFamily: "var(--font-pirata), serif" }}>📖 VAULT OF SHADOWS</span>
+        <span style={{ fontSize: 9, color: "rgba(201,168,120,0.55)", fontStyle: "italic" }}>session 12 · 4 adventurers</span>
+        <span style={{ marginLeft: "auto", fontSize: 9, fontWeight: 700, color: ACCENT, fontFamily: "monospace" }}>1,247 gp</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <Entry tag="LOOT" body="Masterwork blade · awarded to Kira" color={ACCENT} />
+        <Entry tag="XP" body="+800 to all party (defeated the Bone Lord)" color={FOREST} />
+        <Entry tag="NPC" body="The Tavern Keeper · met session 1, alive" color={FIRE} />
+        <Entry tag="PLOT" body="Open: who is funding the cult?" color={ARCANE} />
+      </div>
+    </div>
+  );
+}
+
 function VisualRoadmap() {
   const Item = ({ done, text }: { done: boolean; text: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -274,32 +392,18 @@ const PANELS: PanelDef[] = [
     visual: <VisualWordmark />,
   },
   {
-    label: "the rooms",
-    title: "Four house rooms. As many of your own as you want.",
+    label: "the social layer",
+    title: "Four house rooms. The Tavern Board pins the rest.",
     body: (
       <>
-        The <strong style={{ color: ACCENT }}>Tavern</strong>, the <strong style={{ color: ACCENT }}>Campaign Table</strong>, the <strong style={{ color: ACCENT }}>DM&apos;s Workshop</strong>, the <strong style={{ color: ACCENT }}>Character Forge</strong>. Pinned, permanent, always-on. Voice and chat in each.
+        The <strong style={{ color: ACCENT }}>Tavern</strong>, the <strong style={{ color: ACCENT }}>Campaign Table</strong>, the <strong style={{ color: ACCENT }}>DM&apos;s Workshop</strong>, the <strong style={{ color: ACCENT }}>Character Forge</strong> — pinned, permanent, voice and chat in each. Spin up your own room for your campaign on top, up to 25.
         <br /><br />
-        But you&apos;re not capped at four. <strong style={{ color: ACCENT }}>Spin up your own room</strong> for your campaign — &quot;Wednesday Night — Vault of Shadows,&quot; whatever — and run sessions in it. Lives inside this lobby alongside the house rooms.
-        <br /><br />
-        <span style={{ opacity: 0.55, fontSize: 12 }}>Up to 25 of your own at a time. Look for &quot;+ Create room&quot; in the room directory.</span>
-      </>
-    ),
-    visual: <VisualRooms />,
-  },
-  {
-    label: "the board",
-    title: "Find a party. Or post one.",
-    body: (
-      <>
-        The Tavern Board is where DMs post quests and players sign on. Looking for two more for Friday night? Need a paladin? Hosting a one-shot?
-        <br /><br />
-        Pin it. The board sees the post, the lobby sees the post, the right party finds itself.
+        The <strong style={{ color: ACCENT }}>Tavern Board</strong> is where DMs post quests and players sign on. Need a paladin? Hosting a one-shot? Pin it. The right party finds itself.
         <br /><br />
         <span style={{ opacity: 0.55, fontSize: 12 }}>No lurking required.</span>
       </>
     ),
-    visual: <VisualBoard />,
+    visual: <VisualRooms />,
   },
   {
     label: "the compendium",
@@ -328,70 +432,46 @@ const PANELS: PanelDef[] = [
     visual: <VisualDice />,
   },
   {
-    label: "the npcs",
-    title: "The Tavern Keeper has stories.",
-    body: (
-      <>
-        AI NPCs live in the lobby. The Tavern Keeper knows the gossip, the rumors, who&apos;s been causing trouble. Ask. He answers in character.
-        <br /><br />
-        More NPCs join the cast as players seed them. Yours can too.
-      </>
-    ),
-    visual: <VisualNpc />,
-  },
-  {
-    label: "streams",
-    title: "Watch a session while you wait.",
-    body: (
-      <>
-        Twitch&apos;s D&amp;D category, pinned in-lobby. Find a live game, lurk, learn the rhythm of a good DM.
-        <br /><br />
-        Useful between sessions. Useful between groups.
-      </>
-    ),
-    visual: <VisualStreams />,
-  },
-  {
-    label: "the sheet",
+    label: "your character",
     title: "Your character. Live, on the table.",
     body: (
       <>
-        Open <strong style={{ color: ACCENT }}>Sheets</strong> in the D&amp;D module — your full 5e sheet lives here. Stats, saves, skills, spell slots, inventory, attacks. Click a stat: it rolls. Click an attack: it rolls in chat with a <strong style={{ color: "#f87171" }}>Damage</strong> follow-up button waiting if it hit.
+        Open <strong style={{ color: ACCENT }}>Sheets</strong> in the D&amp;D module — your full 5e sheet lives here. Stats, saves, skills, spell slots, inventory, attacks. Click an attack: it rolls in chat with a <strong style={{ color: "#f87171" }}>Damage</strong> follow-up button waiting if it hit.
         <br /><br />
-        The DM sees the whole party at a glance. Players see their own.
+        The character lives on <strong style={{ color: ACCENT }}>your account</strong>, not the campaign. Bring the same Vex to your Tuesday game and your Friday one-shot. The DM sees the whole party at a glance. Players see their own.
         <br /><br />
         <span style={{ opacity: 0.55, fontSize: 12 }}>Sheets persist across sessions. No one rebuilds Tuesday.</span>
       </>
     ),
-    visual: <VisualWordmark />,
+    visual: <VisualSheet />,
   },
   {
     label: "the battle map",
     title: "Tokens on a grid. Fog where you want it.",
     body: (
       <>
-        Open <strong style={{ color: ACCENT }}>Battle Map</strong>. The DM uploads an image, drops tokens, paints fog. Players drag their tokens. Distance measures itself.
+        The DM uploads an image, drops tokens, paints fog. Players drag their own. Distance measures itself.
         <br /><br />
-        When initiative ticks forward, the matching token glows. Click a token to snap the initiative tracker to that combatant. Apply damage from chat — it lands on the token <em>and</em> the tracker, in one click.
+        When initiative ticks forward, the matching token glows. Click a token to snap the initiative tracker to that combatant. Apply damage from chat — it lands on the token <em>and</em> the tracker in one click.
         <br /><br />
         <span style={{ opacity: 0.55, fontSize: 12 }}>Roll20-grade table state, no extra tab.</span>
       </>
     ),
-    visual: <VisualWordmark />,
+    visual: <VisualMap />,
   },
   {
     label: "the chronicle",
-    title: "The Campaign Ledger remembers everything.",
+    title: "The campaign remembers everything.",
     body: (
       <>
-        Open <strong style={{ color: ACCENT }}>Campaign</strong>. Party gold, loot, XP, session log, NPC encounters, plot threads, world wiki — all in one persistent chronicle per party.
+        Party gold, loot, XP, session log, plot threads, world wiki — all one persistent <strong style={{ color: ACCENT }}>Chronicle</strong> per party.
         <br /><br />
-        Award XP and the whole party gets it in one click. Find an item on a sheet and tap <strong style={{ color: ACCENT }}>→ Ledger</strong>. Spin up an AI NPC and they show up in the encounter index automatically.
+        Award XP, every character gets it in one click. The <strong style={{ color: ACCENT }}>Tavern Keeper</strong> and other AI NPCs auto-log to the encounter index when the party meets them. The DM never re-types what already happened.
         <br /><br />
-        <span style={{ opacity: 0.55, fontSize: 12 }}>The DM never re-types what already happened.</span>
+        <span style={{ opacity: 0.55, fontSize: 12 }}>This is the part Discord can't do, Roll20 won't do, and DDB caps at five campaigns.</span>
       </>
     ),
-    visual: <VisualWordmark />,
+    visual: <VisualChronicle />,
   },
   {
     label: "shape what's next",
