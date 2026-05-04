@@ -612,15 +612,18 @@ function advancePokerGame(table: PokerTable) {
   if (activePlayers.length === 1) {
     collectBetsIntoPot(table);
     const winner = activePlayers[0];
-    winner.chips += table.pot;
+    const wonAmount = table.pot;
+    winner.chips += wonAmount;
     table.lastShowdownResult = {
-      winners: [{ seatIndex: winner.seatIndex, name: winner.name, chips: table.pot, hand: null }],
-      pot: table.pot,
+      winners: [{ seatIndex: winner.seatIndex, name: winner.name, chips: wonAmount, hand: null }],
+      pot: wonAmount,
     };
     table.pot = 0;
     table.phase = "showdown";
     table.handInProgress = false;
     broadcastPokerState(table.tableId);
+    // Surface to public activity feed (≥200 Paper threshold inside capture)
+    broadcastToLobby("poker", { type: "poker:pot-won", userId: winner.userId, userName: winner.name, amount: wonAmount });
     scheduleAutoStart(table);
     return;
   }
@@ -691,6 +694,9 @@ async function resolveShowdown(table: PokerTable) {
       hand: handEval.name,
       bestCards: handEval.best,
     });
+    // Surface biggest single payout to public activity ticker. Throttle inside
+    // the capture filter dedupes within an 8s window so split-pot doesn't flood.
+    broadcastToLobby("poker", { type: "poker:pot-won", userId: seat.userId, userName: seat.name, amount: payout });
   }
 
   table.lastShowdownResult = { winners, pot: table.pot };
@@ -6094,7 +6100,7 @@ async function main() {
   // ── WINDROSE — extracted to routes/windrose.ts ─────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
-  await app.register(windroseRoutes, { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI } as any);
+  await app.register(windroseRoutes, { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI, broadcastToLobby } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -6682,7 +6688,7 @@ async function main() {
           send(sock as any, event);
         }
       }
-    }, awardPaper);
+    }, awardPaper, broadcastToLobby);
   }
 
   // ── Nexus Mods poller ──────────────────────────────────────────────────────

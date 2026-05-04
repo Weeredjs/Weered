@@ -14,10 +14,11 @@ type Opts = {
   awardPaper: (userId: string, kind: string, amount: number, note: string, ref?: string) => Promise<{ balance: number } | null>;
   isAIAvailable: () => boolean;
   getAI: () => Promise<any | null>;
+  broadcastToLobby?: (lobbyId: string, event: any) => void;
 };
 
 export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI } = opts;
+  const { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI, broadcastToLobby } = opts;
   const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
 
 const WINDROSE_APPID = "3041230";
@@ -709,6 +710,7 @@ app.post("/windrose/bounties", async (req, reply) => {
       })();
     }
 
+    try { broadcastToLobby?.("windrose", { type: "windrose:bounty:posted", userId: u.id, lobbyId: "windrose", bountyId: created.id, amount: created.amount }); } catch {}
     return reply.send({ ok: true, bounty: created, balance: debit.balance });
   } catch (e) {
     // Escrow was debited but DB write failed — refund so we don't eat user's Paper
@@ -746,6 +748,7 @@ app.post("/windrose/bounties/:id/claim", async (req, reply) => {
       },
     });
     wrCache.delete("wr:activity");
+    try { broadcastToLobby?.("windrose", { type: "windrose:bounty:claimed", userId: u.id, userName: claimantName, lobbyId: "windrose", bountyId: b.id, amount: b.amount }); } catch {}
     // Ping the poster — someone's claimed your bounty
     sendPush(b.posterId, {
       title: "Claim on your bounty",
