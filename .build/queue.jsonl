@@ -1,0 +1,7 @@
+{"instance":"A","feature":"campaign-ledger","status":"done","branch":"feat/dnd-campaign-ledger","ts":"2026-05-03T12:47:16Z"}
+{"instance":"B","feature":"character-sheets","status":"done","branch":"feat/dnd-character-sheets","ts":"2026-05-03T12:51:20Z"}
+{"instance":"C","feature":"tactical-map","status":"done","branch":"feat/dnd-tactical-map","ts":"2026-05-03T12:51:42Z"}
+{"instance":"E","feature":"integration-glue","status":"done","branch":"feat/dnd-integration-glue","ts":"2026-05-03T14:11:23Z"}
+{"instance":"E","feature":"living-landing","status":"done","branch":"feat/landing-living-walls","ts":"2026-05-03T19:52:25Z"}
+{"instance":"E","feature":"home-activity-ticker","status":"done","branch":"feat/home-activity-ticker","ts":"2026-05-03T23:18:47Z"}
+{"instance":"E","feature":"mobile-responsive-pass","status":"done","branch":"fix/mobile-responsive-pass","ts":"2026-05-04T12:21:20Z"}

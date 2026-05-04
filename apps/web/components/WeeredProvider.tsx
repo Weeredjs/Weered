@@ -16,7 +16,7 @@ const SETTINGS_KEY = "weered:settings:v0";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role       = "owner" | "mod" | "member" | "none";
 type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
-type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system"; meta?: any };
+type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system" | "poker" | "poker-winner"; meta?: any };
 type Knock      = { userId: string; name: string; ts: number };
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";
 
@@ -711,7 +711,57 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (msg.type === "chat:edited") {
+      // ── Poker action chip — synthesize a system ChatMsg with kind="poker"
+      // so each action (call/raise/fold/check/bet/all-in) lands in the active
+      // table room as a compact chip. Mirrors dice/trade pattern exactly.
+      if (msg.type === "poker:action-chip") {
+        const rid = activeRoomIdRef.current || "";
+        if (!rid) return;
+        const ts = Number(msg.time || Date.now());
+        const synthetic: ChatMsg = {
+          id: "poker:" + String(msg.userId || "?") + ":" + String(ts),
+          user: { id: String(msg.userId || ""), name: String(msg.userName || "player") },
+          body: "",
+          ts,
+          kind: "poker",
+          meta: {
+            action: String(msg.action || ""),
+            amount: Number(msg.amount || 0),
+            tableId: String(msg.tableId || ""),
+          },
+        };
+        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
+        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        return;
+      }
+
+      // ── Poker winner chip — fired once per resolved hand, lists winners
+      // and pot. kind="poker-winner" gets a celebratory render in chat.
+      if (msg.type === "poker:winner-chip") {
+        const rid = activeRoomIdRef.current || "";
+        if (!rid) return;
+        const ts = Number(msg.time || Date.now());
+        const winnersArr = Array.isArray(msg.winners) ? msg.winners : [];
+        const first = winnersArr[0] || {};
+        const synthetic: ChatMsg = {
+          id: "pokerwin:" + String(first.userId || "pot") + ":" + String(ts),
+          user: { id: String(first.userId || ""), name: String(first.userName || "winner") },
+          body: "",
+          ts,
+          kind: "poker-winner",
+          meta: {
+            winners: winnersArr,
+            pot: Number(msg.pot || 0),
+            reason: String(msg.reason || "showdown"),
+            tableId: String(msg.tableId || ""),
+          },
+        };
+        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
+        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        return;
+      }
+
+            if (msg.type === "chat:edited") {
         const rid = String(msg.roomId || "");
         const msgId = String(msg.msgId || "");
         const newBody = String(msg.body || "");

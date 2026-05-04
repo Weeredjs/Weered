@@ -1451,7 +1451,93 @@ export default function LobbyChatPanel(
           <EmptyState title="Crickets." hint="Be the one who drops the first line." />
         ) : (
           msgs.map((m: any, i: number) => {
-            // ── Trade-event row (FakeOut paper trade broadcast as inline
+            // ── Poker action chip (call/raise/fold/check/bet/all-in) inline.
+            if (m?.kind === "poker") {
+              const pMeta = m?.meta || {};
+              const action = String(pMeta.action || "").toLowerCase();
+              const amount = Number(pMeta.amount || 0);
+              const isAggressive = action === "raise" || action === "bet" || action === "all-in";
+              const isFold = action === "fold";
+              const accent = isAggressive ? "rgba(239,68,68,.85)" : isFold ? "rgba(148,163,184,.6)" : "rgba(196,165,90,.85)";
+              const bgTint = isAggressive ? "rgba(239,68,68,.06)" : isFold ? "rgba(148,163,184,.04)" : "rgba(196,165,90,.05)";
+              const chipBg = isAggressive ? "rgba(239,68,68,.18)" : isFold ? "rgba(148,163,184,.16)" : "rgba(196,165,90,.18)";
+              const chipFg = isAggressive ? "#ef4444" : isFold ? "#94a3b8" : "#C4A55A";
+              const playerName = String(m?.user?.name || "player");
+              const verb = action.toUpperCase().replace("-", " ");
+              return (
+                <div
+                  key={`poker-${m.id}-${i}`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 12px", margin: "4px 0",
+                    fontSize: 12, fontFamily: "monospace",
+                    borderLeft: `2px solid ${accent}`,
+                    background: bgTint,
+                    borderRadius: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1px", opacity: 0.45 }}>POKER</span>
+                  <span style={{ fontWeight: 700, color: "rgba(243,244,246,.85)" }}>{playerName}</span>
+                  <span style={{
+                    padding: "1px 6px", borderRadius: 3,
+                    fontSize: 9, fontWeight: 800, letterSpacing: "0.5px",
+                    background: chipBg, color: chipFg,
+                  }}>{verb}</span>
+                  {amount > 0 && (
+                    <span style={{ marginLeft: "auto", fontWeight: 800, fontSize: 13, color: chipFg }}>
+                      ${amount.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              );
+            }
+            // ── Poker winner celebration chip — fires on hand resolution.
+            if (m?.kind === "poker-winner") {
+              const wMeta = m?.meta || {};
+              const winners: any[] = Array.isArray(wMeta.winners) ? wMeta.winners : [];
+              const pot = Number(wMeta.pot || 0);
+              const reason = String(wMeta.reason || "showdown");
+              const isFold = reason === "fold";
+              const accent = "rgba(34,197,94,.9)";
+              const bgTint = "linear-gradient(90deg, rgba(34,197,94,.10) 0%, rgba(196,165,90,.06) 100%)";
+              return (
+                <div
+                  key={`pokerwin-${m.id}-${i}`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                    padding: "8px 12px", margin: "6px 0",
+                    fontSize: 12, fontFamily: "monospace",
+                    borderLeft: `3px solid ${accent}`,
+                    background: bgTint,
+                    borderRadius: 4,
+                    boxShadow: "0 0 12px rgba(34,197,94,.15)",
+                  }}
+                >
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1px", color: "#22c55e" }}>★ POT WON</span>
+                  {winners.map((w: any, wi: number) => (
+                    <span key={wi} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{String(w.userName || "winner")}</span>
+                      <span style={{ fontWeight: 800, color: "#22c55e" }}>+${Number(w.amount || 0).toLocaleString()}</span>
+                      {w.hand && !isFold && (
+                        <span style={{
+                          padding: "1px 6px", borderRadius: 3,
+                          fontSize: 9, fontWeight: 700, letterSpacing: "0.5px",
+                          background: "rgba(196,165,90,.18)", color: "#C4A55A",
+                        }}>{String(w.hand)}</span>
+                      )}
+                      {wi < winners.length - 1 && <span style={{ color: "rgba(243,244,246,.3)" }}>·</span>}
+                    </span>
+                  ))}
+                  {isFold && (
+                    <span style={{ fontSize: 10, opacity: 0.6, fontStyle: "italic" }}>(others folded)</span>
+                  )}
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(243,244,246,.5)" }}>
+                    pot ${pot.toLocaleString()}
+                  </span>
+                </div>
+              );
+            }
+                        // ── Trade-event row (FakeOut paper trade broadcast as inline
             // system chip). Renders as a compact glow row instead of a
             // standard message bubble.
             if (m?.kind === "trade") {
