@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 150" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2b1d40"/>
+      <stop offset="60%" stop-color="#1a1126"/>
+      <stop offset="100%" stop-color="#0a0612"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.15" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="150" fill="url(#bg)"/>
+  <rect width="600" height="150" fill="url(#glow)"/>
+  <!-- Chain links fading left → right -->
+  <g stroke="#a78bfa" stroke-width="2.5" fill="none" opacity="0.32">
+    <ellipse cx="50"  cy="75" rx="14" ry="8" transform="rotate(35 50 75)"/>
+    <ellipse cx="78"  cy="75" rx="14" ry="8" transform="rotate(-35 78 75)"/>
+    <ellipse cx="106" cy="75" rx="14" ry="8" transform="rotate(35 106 75)" opacity="0.75"/>
+    <ellipse cx="134" cy="75" rx="14" ry="8" transform="rotate(-35 134 75)" opacity="0.5"/>
+    <ellipse cx="162" cy="75" rx="14" ry="8" transform="rotate(35 162 75)" opacity="0.3"/>
+    <ellipse cx="190" cy="75" rx="14" ry="8" transform="rotate(-35 190 75)" opacity="0.18"/>
+  </g>
+  <!-- Subtle scratch lines, top-right -->
+  <g stroke="#d8b4fe" stroke-width="0.5" opacity="0.18">
+    <line x1="420" y1="20" x2="580" y2="34"/>
+    <line x1="440" y1="38" x2="585" y2="48"/>
+    <line x1="460" y1="60" x2="575" y2="68"/>
+  </g>
+</svg>
