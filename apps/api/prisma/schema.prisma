@@ -394,6 +394,7 @@ model User {
   googleId    String?    @unique
   avatar      String?
   avatarColor String?
+  bannerUrl   String?    // wide banner image for the right-rail ID card
 
   // ── Profile customization (Phase 1: colors only) ──────────────────────
   // panelBgColor + panelAccentColor drive the user's own ID badge in the
