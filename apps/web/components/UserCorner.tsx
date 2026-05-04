@@ -356,7 +356,7 @@ export default function UserCorner() {
           ───────────────────────────────────────────────────────────── */}
       <div style={{
         position: "relative",
-        height: 96,
+        height: 64,
         background: (() => {
           if (bannerUrl) return `url(${bannerUrl}) center / cover no-repeat`;
           const tier = String(me?.tier || "").toLowerCase();
@@ -459,23 +459,23 @@ export default function UserCorner() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────
-          IDENTITY FIELD — clean surface below the banner. Avatar overlaps
-          the banner edge by half its height, anchoring banner ↔ field.
+          IDENTITY FIELD — clean surface below the banner. Avatar is
+          absolutely positioned so the overlap is layout-stable across
+          async data loads (banner img, NotorietyBar mount, FittedName resize).
           ───────────────────────────────────────────────────────────── */}
-      <div style={{ position: "relative", padding: "0 14px 10px", zIndex: 1 }}>
+      <div style={{ position: "relative", padding: "12px 14px 10px 78px", zIndex: 1, minHeight: 56 }}>
+        {/* Avatar — absolute, overlaps the banner ↔ field boundary by 28px.
+            Sits in the 78px left padding gutter of the parent. */}
         <button
           type="button"
           onClick={() => openSheet("profile", { userId: profileUserId })}
+          aria-label="Open profile"
           style={{
-            display: "flex", alignItems: "flex-end", gap: 12,
-            width: "100%", padding: 0,
-            background: "none", border: "none", cursor: "pointer",
-            color: "inherit", textAlign: "left",
+            position: "absolute", left: 14, top: -28,
+            padding: 0, background: "none", border: "none", cursor: "pointer",
           }}
         >
-          {/* Avatar — overlaps the banner. marginTop pulls it up by half
-              its height so it straddles the banner ↔ field boundary. */}
-          <div style={{ position: "relative", flexShrink: 0, marginTop: -28 }}>
+          <div style={{ position: "relative" }}>
             <div style={{
               width: 56, height: 56, borderRadius: "50%",
               background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
@@ -496,59 +496,74 @@ export default function UserCorner() {
               )}
             </div>
             {/* Status dot — bottom-right of avatar. Click toggles AFK. */}
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={e => { e.stopPropagation(); if (typeof setAway === "function") setAway(!isAway); }}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (typeof setAway === "function") setAway(!isAway); } }}
               title={isAway ? "Lying low — click to come back online." : "Online — click to lie low."}
               aria-label={isAway ? "Set status to online" : "Set status to lying low"}
               style={{
+                display: "block",
                 position: "absolute", bottom: 0, right: 0,
                 width: 14, height: 14, borderRadius: "50%",
                 background: isAway ? "#facc15" : "#22c55e",
                 boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.8)",
                 border: "2.5px solid rgba(10,10,18,.95)",
-                padding: 0, cursor: "pointer",
+                cursor: "pointer",
               }}
             />
           </div>
+        </button>
 
-          {/* Name + role/tier inline + crew name */}
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 6 }}>
-            <FittedName name={name} />
-            {(() => {
-              const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
-              if (!bestRole) return null;
-              const roleColor =
-                bestRole === "GOD"     ? "#fde68a" :
-                bestRole === "ADMIN"   ? "#fca5a5" :
-                bestRole === "STAFF"   ? "#93c5fd" :
-                bestRole === "SUPPORT" ? "#6ee7b7" :
-                bestRole === "MOD"     ? "rgba(216,180,254,.95)" :
-                "rgba(243,244,246,.85)";
-              return (
-                <div style={{
-                  marginTop: 4,
-                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                  fontSize: 9, fontWeight: 900, letterSpacing: "1.5px",
-                  textTransform: "uppercase",
-                  color: roleColor,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {roleDisplay(bestRole, lobbyTheme)}
-                </div>
-              );
-            })()}
-            {primaryCrew?.name && (
+        {/* Name + role/tier inline + crew name. Separate button so the text
+            column has its own click target (also opens profile) and flows
+            naturally inside the field's left padding gutter (78px) clear of
+            the absolutely-positioned avatar. */}
+        <button
+          type="button"
+          onClick={() => openSheet("profile", { userId: profileUserId })}
+          style={{
+            display: "block", width: "100%", padding: 0,
+            background: "none", border: "none", cursor: "pointer",
+            color: "inherit", textAlign: "left",
+            minWidth: 0,
+          }}
+        >
+          <FittedName name={name} />
+          {(() => {
+            const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
+            if (!bestRole) return null;
+            const roleColor =
+              bestRole === "GOD"     ? "#fde68a" :
+              bestRole === "ADMIN"   ? "#fca5a5" :
+              bestRole === "STAFF"   ? "#93c5fd" :
+              bestRole === "SUPPORT" ? "#6ee7b7" :
+              bestRole === "MOD"     ? "rgba(216,180,254,.95)" :
+              "rgba(243,244,246,.85)";
+            return (
               <div style={{
-                fontSize: 11, fontStyle: "italic",
-                color: "rgba(240,232,214,.62)",
-                marginTop: 3,
+                marginTop: 4,
+                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                fontSize: 9, fontWeight: 900, letterSpacing: "1.5px",
+                textTransform: "uppercase",
+                color: roleColor,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>
-                {primaryCrew.name}
+                {roleDisplay(bestRole, lobbyTheme)}
               </div>
-            )}
-          </div>
+            );
+          })()}
+          {primaryCrew?.name && (
+            <div style={{
+              fontSize: 11, fontStyle: "italic",
+              color: "rgba(240,232,214,.62)",
+              marginTop: 3,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {primaryCrew.name}
+            </div>
+          )}
         </button>
       </div>
 
