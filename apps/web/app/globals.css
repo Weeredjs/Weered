@@ -3311,7 +3311,7 @@ button:hover, [role="button"]:hover {
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
-.weered-right { width: 340px; flex: 0 0 340px; position: relative; }
+.weered-right { width: 320px; flex: 0 0 320px; position: relative; }
 .weered-center {
   flex: 1 1 auto;
   min-width: 0;
