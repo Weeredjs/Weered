@@ -7011,16 +7011,15 @@ html[data-weered-lobby="helldivers2"] .weered-left-section,
 html[data-weered-lobby="helldivers2"] .weered-presence,
 html[data-weered-lobby="helldivers2"] .weered-usercorner {
   background:
-    linear-gradient(180deg, rgba(40,32,16,0.85) 0%, rgba(18,14,8,0.95) 100%) !important;
-  border: 1px solid rgba(255,215,0,0.55) !important;
+    linear-gradient(180deg, rgba(28,24,14,0.55) 0%, rgba(14,12,8,0.78) 100%) !important;
+  border: 1px solid rgba(255,215,0,0.30) !important;
   border-radius: 3px !important;
   box-shadow:
-    inset 0 0 0 1px rgba(255,215,0,0.12),
-    inset 0 2px 0 rgba(255,236,136,0.14),
-    0 4px 14px rgba(0,0,0,0.55),
-    0 0 0 1px rgba(255,215,0,0.1) !important;
+    inset 0 0 0 1px rgba(255,215,0,0.06),
+    inset 0 1px 0 rgba(255,236,136,0.10),
+    0 3px 10px rgba(0,0,0,0.45) !important;
   position: relative;
-  margin: 4px !important;
+  margin: 3px !important;
 }
 
 /* Square corner studs — like LED status indicators on a control console.
@@ -7035,10 +7034,10 @@ html[data-weered-lobby="helldivers2"] .weered-usercorner::before,
 html[data-weered-lobby="helldivers2"] .weered-usercorner::after {
   content: "";
   position: absolute;
-  width: 8px; height: 8px;
+  width: 6px; height: 6px;
   background: #FFD700;
-  opacity: 1;
-  box-shadow: 0 0 10px rgba(255,215,0,0.95), 0 0 2px rgba(255,255,255,0.5);
+  opacity: 0.9;
+  box-shadow: 0 0 7px rgba(255,215,0,0.7);
   pointer-events: none;
   z-index: 3;
 }
@@ -7047,13 +7046,13 @@ html[data-weered-lobby="helldivers2"] .weered-rr-section::before,
 html[data-weered-lobby="helldivers2"] .weered-left-section::before,
 html[data-weered-lobby="helldivers2"] .weered-presence::before,
 html[data-weered-lobby="helldivers2"] .weered-usercorner::before {
-  top: -4px; left: -4px;
+  top: -3px; left: -3px;
 }
 html[data-weered-lobby="helldivers2"] .weered-rr-section::after,
 html[data-weered-lobby="helldivers2"] .weered-left-section::after,
 html[data-weered-lobby="helldivers2"] .weered-presence::after,
 html[data-weered-lobby="helldivers2"] .weered-usercorner::after {
-  bottom: -4px; right: -4px;
+  bottom: -3px; right: -3px;
 }
 
 /* Section titles — gold mil-stencil look without the heavy stencil font */
@@ -7130,12 +7129,3 @@ html[data-weered-lobby="helldivers2"] .weered-usercorner {
   border-color: rgba(255,215,0,0.30) !important;
 }
 
-
-/* HD2 diagnostic — gold top accent stripe on every section. Confirms
-   selectors are matching the actual DOM. Once visible, we can decide
-   whether to keep the stripe permanently or trim it. */
-html[data-weered-lobby="helldivers2"] .weered-rr-section,
-html[data-weered-lobby="helldivers2"] .weered-left-section,
-html[data-weered-lobby="helldivers2"] .weered-presence {
-  border-top: 3px solid #FFD700 !important;
-}
