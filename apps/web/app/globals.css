@@ -6984,3 +6984,146 @@ html[data-weered-lobby="helldivers2"] ::selection {
   background: rgba(255, 215, 0, 0.32);
   color: #fff;
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ▌ HELLDIVERS 2 — RAIL THEMING
+   Left rail (lobbies / nav) + right rail (Friends / Crew / Presence) +
+   user corner all carry the Super Earth military aesthetic. Gold-rim
+   panels, square corner studs (LED indicators), gold-stripe active state.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Rails: keep their column shape but warm them into the HD2 palette. */
+html[data-weered-lobby="helldivers2"] .weered-left,
+html[data-weered-lobby="helldivers2"] .weered-right,
+html[data-weered-lobby="helldivers2"] .weered-center {
+  position: relative;
+  z-index: 2;
+}
+html[data-weered-lobby="helldivers2"] .weered-left,
+html[data-weered-lobby="helldivers2"] .weered-right {
+  background: linear-gradient(180deg, rgba(20,18,12,0.78) 0%, rgba(10,10,6,0.92) 100%) !important;
+  border-color: rgba(255,215,0,0.18) !important;
+}
+
+/* Section panels — stamped metal plates with gold rim */
+html[data-weered-lobby="helldivers2"] .weered-rr-section,
+html[data-weered-lobby="helldivers2"] .weered-left-section,
+html[data-weered-lobby="helldivers2"] .weered-presence,
+html[data-weered-lobby="helldivers2"] .weered-usercorner {
+  background:
+    linear-gradient(180deg, rgba(28,24,14,0.78) 0%, rgba(14,12,8,0.92) 100%) !important;
+  border: 1px solid rgba(255,215,0,0.26) !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,215,0,0.06),
+    inset 0 1px 0 rgba(255,236,136,0.08),
+    0 4px 14px rgba(0,0,0,0.55) !important;
+  position: relative;
+}
+
+/* Square corner studs — like LED status indicators on a control console.
+   Gold filled squares at all four corners. */
+html[data-weered-lobby="helldivers2"] .weered-rr-section::before,
+html[data-weered-lobby="helldivers2"] .weered-rr-section::after,
+html[data-weered-lobby="helldivers2"] .weered-left-section::before,
+html[data-weered-lobby="helldivers2"] .weered-left-section::after,
+html[data-weered-lobby="helldivers2"] .weered-presence::before,
+html[data-weered-lobby="helldivers2"] .weered-presence::after,
+html[data-weered-lobby="helldivers2"] .weered-usercorner::before,
+html[data-weered-lobby="helldivers2"] .weered-usercorner::after {
+  content: "";
+  position: absolute;
+  width: 5px; height: 5px;
+  background: #FFD700;
+  opacity: 0.75;
+  box-shadow: 0 0 5px rgba(255,215,0,0.55);
+  pointer-events: none;
+  z-index: 2;
+}
+/* Top-left + bottom-right via ::before/::after */
+html[data-weered-lobby="helldivers2"] .weered-rr-section::before,
+html[data-weered-lobby="helldivers2"] .weered-left-section::before,
+html[data-weered-lobby="helldivers2"] .weered-presence::before,
+html[data-weered-lobby="helldivers2"] .weered-usercorner::before {
+  top: -2px; left: -2px;
+}
+html[data-weered-lobby="helldivers2"] .weered-rr-section::after,
+html[data-weered-lobby="helldivers2"] .weered-left-section::after,
+html[data-weered-lobby="helldivers2"] .weered-presence::after,
+html[data-weered-lobby="helldivers2"] .weered-usercorner::after {
+  bottom: -2px; right: -2px;
+}
+
+/* Section titles — gold mil-stencil look without the heavy stencil font */
+html[data-weered-lobby="helldivers2"] .weered-left-title,
+html[data-weered-lobby="helldivers2"] .weered-rr-title {
+  color: rgba(255,215,0,0.85) !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  font-weight: 800 !important;
+  position: relative;
+}
+/* Thin gold underline on titles, mimics divider tape on military panels */
+html[data-weered-lobby="helldivers2"] .weered-left-title::after,
+html[data-weered-lobby="helldivers2"] .weered-rr-title::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,215,0,0.4) 0%, rgba(255,215,0,0.05) 70%, transparent 100%);
+  margin-top: 4px;
+}
+
+/* Left rail nav links */
+html[data-weered-lobby="helldivers2"] .weered-left-link {
+  border-radius: 3px !important;
+  border-color: rgba(255,255,255,0.04) !important;
+}
+html[data-weered-lobby="helldivers2"] .weered-left-link:hover {
+  background: rgba(255,215,0,0.06) !important;
+  border-color: rgba(255,215,0,0.22) !important;
+  color: rgba(255,236,136,0.95) !important;
+}
+html[data-weered-lobby="helldivers2"] .weered-left-link-active {
+  background: rgba(255,215,0,0.10) !important;
+  border-color: rgba(255,215,0,0.4) !important;
+  color: #FFEC88 !important;
+  box-shadow:
+    inset 3px 0 0 #FFD700,
+    inset 0 0 0 1px rgba(255,215,0,0.18),
+    0 0 12px rgba(255,215,0,0.10) !important;
+}
+
+/* Right rail: presence row hover + join button accent */
+html[data-weered-lobby="helldivers2"] .weered-rr-friend-row:hover,
+html[data-weered-lobby="helldivers2"] .weered-rr-crew-row:hover {
+  background: rgba(255,215,0,0.05) !important;
+  border-color: rgba(255,215,0,0.18) !important;
+}
+html[data-weered-lobby="helldivers2"] .weered-rr-join {
+  background: rgba(255,215,0,0.12) !important;
+  border-color: rgba(255,215,0,0.4) !important;
+  color: rgba(255,236,136,0.95) !important;
+}
+html[data-weered-lobby="helldivers2"] .weered-rr-join:hover {
+  background: rgba(255,215,0,0.22) !important;
+  border-color: rgba(255,215,0,0.65) !important;
+  color: #FFD700 !important;
+}
+
+/* Burner button — gold theme override (HD2 calls it "Comms" via JS swap) */
+html[data-weered-lobby="helldivers2"] .weered-uc-action {
+  background: linear-gradient(135deg, rgba(255,215,0,0.16), rgba(255,184,0,0.10)) !important;
+  border-color: rgba(255,215,0,0.42) !important;
+  color: rgba(255,236,136,0.95) !important;
+  border-radius: 4px !important;
+}
+html[data-weered-lobby="helldivers2"] .weered-uc-action:hover {
+  background: linear-gradient(135deg, rgba(255,215,0,0.28), rgba(255,184,0,0.18)) !important;
+  border-color: rgba(255,215,0,0.65) !important;
+}
+
+/* User corner accent ring (avatar) → gold when in HD2 */
+html[data-weered-lobby="helldivers2"] .weered-usercorner [data-custom-accent="1"],
+html[data-weered-lobby="helldivers2"] .weered-usercorner {
+  border-color: rgba(255,215,0,0.30) !important;
+}
