@@ -412,7 +412,7 @@ export default function LobbyIdPage() {
   // that scoped CSS (see globals.css) can hook into for full chrome reskin.
   useEffect(() => {
     if (!lobbyId) return;
-    const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd"]);
+    const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd", "helldivers2"]);
     if (THEMEABLE.has(lobbyId)) {
       document.documentElement.setAttribute("data-weered-lobby", lobbyId);
       return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
