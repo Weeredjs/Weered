@@ -202,7 +202,7 @@ export default function HelldiversSquadFinder({
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div>
-          <div style={{ fontFamily: '"Stencil Std","Black Ops One","Impact",sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: "1.5px", color: accent, textTransform: "uppercase", textShadow: `0 0 12px ${accent}40` }}>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 1.2, color: accent, textTransform: "uppercase" }}>
             Squad Finder
           </div>
           <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2, letterSpacing: ".5px" }}>

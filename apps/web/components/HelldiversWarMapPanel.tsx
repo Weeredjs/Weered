@@ -120,8 +120,8 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
         <div>
-          <div style={{ ...stencil, fontSize: 14, color: "#FFD700", fontWeight: 800 }}>
-            ▌Galactic War Map
+          <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: 1.2, color: "#FFD700", textTransform: "uppercase" }}>
+            ▌ Galactic War Map
           </div>
           <div style={{ fontSize: 10, color: "rgba(255,215,0,.55)", letterSpacing: ".5px", marginTop: 2 }}>
             Active Campaigns · {visible.length} {visible.length === 1 ? "front" : "fronts"}

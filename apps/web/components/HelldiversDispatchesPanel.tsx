@@ -81,9 +81,7 @@ export default function HelldiversDispatchesPanel({ style, limit = 20 }: { style
       ...style,
     }}>
       <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: "1px solid rgba(255,215,0,.18)" }}>
-        <div style={{ ...stencil, fontSize: 13, color: "#FFD700", fontWeight: 800 }}>
-          ▌Ministry of Truth
-        </div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.2, color: "rgba(255,215,0,.85)", textTransform: "uppercase" }}>▌ Ministry of Truth</div>
         <div style={{ fontSize: 9, color: "rgba(255,215,0,.5)", letterSpacing: ".7px", textTransform: "uppercase", marginTop: 2 }}>
           Authorized Dispatches · Updated Continuously
         </div>
