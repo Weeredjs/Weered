@@ -87,12 +87,10 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
     <div style={{ padding: 14, background: "#0a0a0a", color: "#fff", minHeight: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Header bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{
-          fontFamily: '"Stencil Std","Black Ops One","Impact",sans-serif', fontSize: 18, letterSpacing: "1.5px",
-          color: lobbyAccent, fontWeight: 800, textTransform: "uppercase",
-          textShadow: `0 0 12px ${lobbyAccent}40`,
-        }}>
-          Loadout Archive
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 1.2, color: lobbyAccent, textTransform: "uppercase" }}>
+            Loadout Archive
+          </div>
           <div style={{
             fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: 9,
             letterSpacing: "1.4px", color: lobbyAccent, opacity: 0.55,

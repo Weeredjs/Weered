@@ -129,8 +129,8 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
     return (
       <div style={panelBase(style)}>
         <div style={{ padding: 14, textAlign: "center" }}>
-          <div style={{ ...stencil, fontSize: 12, color: "rgba(255,215,0,.55)", marginBottom: 6 }}>
-            ▌Ministry of Defense
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.2, color: "rgba(255,215,0,.7)", marginBottom: 6, textTransform: "uppercase" }}>
+            ▌ Ministry of Defense
           </div>
           <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: lastOutcome ? 8 : 0 }}>
             No active Major Order. Stand by for orders, Helldiver.
@@ -170,10 +170,10 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
               <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ ...stencil, fontSize: 10, color: "rgba(255,215,0,.6)", marginBottom: 2 }}>
-                  ▌Major Order — Priority Directive
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: "rgba(255,215,0,.6)", marginBottom: 2, textTransform: "uppercase" }}>
+                  ▌ Major Order · Priority Directive
                 </div>
-                <div style={{ ...stencil, fontSize: 16, color: "#FFD700", fontWeight: 800 }}>
+                <div style={{ fontSize: 16, color: "#FFD700", fontWeight: 800, letterSpacing: 0.5 }}>
                   {o.title}
                 </div>
               </div>
@@ -183,10 +183,10 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
                     Time Remaining
                   </div>
                   <div style={{
-                    ...stencil,
                     fontSize: 18,
-                    color: remaining < 86400_000 ? "#b91c1c" : "#FFD700",
                     fontWeight: 800,
+                    letterSpacing: 0.5,
+                    color: remaining < 86400_000 ? "#b91c1c" : "#FFD700",
                     fontVariantNumeric: "tabular-nums",
                   }}>
                     {formatCountdown(remaining)}
@@ -234,7 +234,7 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
                   color: "#FFD700", fontSize: 13, fontWeight: 800,
                 }}>★</span>
                 <span style={{ fontSize: 11, color: "rgba(255,215,0,.7)", letterSpacing: ".5px", textTransform: "uppercase" }}>Reward:</span>
-                <span style={{ ...stencil, color: "#FFD700", fontWeight: 700 }}>
+                <span style={{ color: "#FFD700", fontWeight: 700, letterSpacing: 0.5 }}>
                   {o.reward.amount || o.reward.value || ""} {rewardLabel(o.reward.type)}
                 </span>
               </div>
