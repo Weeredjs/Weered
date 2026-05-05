@@ -88,10 +88,16 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
       {/* Header bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div style={{
-          fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: 11, letterSpacing: 2,
-          color: lobbyAccent, fontWeight: 800,
+          fontFamily: '"Stencil Std","Black Ops One","Impact",sans-serif', fontSize: 18, letterSpacing: "1.5px",
+          color: lobbyAccent, fontWeight: 800, textTransform: "uppercase",
+          textShadow: `0 0 12px ${lobbyAccent}40`,
         }}>
-          SUPER EARTH // FIELD MANUAL // LOADOUT ARCHIVE
+          Loadout Archive
+          <div style={{
+            fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: 9,
+            letterSpacing: "1.4px", color: lobbyAccent, opacity: 0.55,
+            marginTop: 2, fontWeight: 700,
+          }}>SUPER EARTH // FIELD MANUAL</div>
         </div>
         <button
           onClick={() => (onCreate ? onCreate() : setShowBuilder(true))}
