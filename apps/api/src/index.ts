@@ -6595,6 +6595,20 @@ async function main() {
       });
       return;
     }
+    if (t === "windrose:build:posted") {
+      if (!shouldEmit(`windrose-build:${userId || "any"}`, 5_000)) return;
+      const who = anonymousFor("windrose");
+      const realWho = userName || "a captain";
+      const buildTitle = String(event?.title || "a build").slice(0, 40);
+      const fmt = (w: string) => `${w} filed a Logbook entry: "${buildTitle}"`;
+      pushActivity({
+        kind: "build", lobbyId: "windrose",
+        text: fmt(who), textReal: fmt(realWho),
+        userId, userName: realWho,
+        accent: "#e8c48a",
+      });
+      return;
+    }
     if (t === "poker:pot-won" || t === "poker:hand-won") {
       const amount = Math.abs(Number(event?.amount || event?.pot || 0));
       if (amount < 200) return;

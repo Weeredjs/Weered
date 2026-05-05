@@ -64,6 +64,18 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
     return () => { alive = false; };
   }, []);
 
+  // Open a build deep-link from query string (?build=slug). Used by the
+  // server-rendered share page at /windrose/build/[slug] which redirects
+  // here with this query param after attaching OpenGraph metadata.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const u = new URL(window.location.href);
+      const target = u.searchParams.get("build");
+      if (target) setOpenSlug(target);
+    } catch {}
+  }, []);
+
   // List (re-fetch on filter/search change with debounce)
   const fetchList = React.useCallback(async (resetOffset: boolean) => {
     const useOffset = resetOffset ? 0 : offset;
