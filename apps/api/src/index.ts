@@ -897,6 +897,7 @@ const SEED_LOBBIES = [
   { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, AI NPCs, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
   { id: "poe", name: "Path of Exile", description: "Wraeclast awaits. Live economy dashboard powered by poe.ninja, currency trends, item prices, div cards, gem values, and party finder.", keywords: ["poe","path of exile","exile","wraeclast","arpg","grinding gear","ggg","currency","divine","chaos","mirror","mapping","builds"], moduleType: ModuleType.POE, moduleConfig: { twitchCategory: "Path of Exile" }, accentColor: "#AF6025", logoUrl: null, bannerUrl: null, websiteUrl: "https://www.pathofexile.com" },
   { id: "windrose", name: "Windrose", description: "Age of Piracy survival adventure by Kraken Express. Build, sail, survive. Live Steam player count, dev dispatches, Crew Finder, Captain's Log. The unofficial flagship hub.", keywords: ["windrose","kraken","kraken express","pocketpair","pirate","pirates","age of piracy","survival","souls-like","crosswind","naval","sailing","ship","black flag","co-op","pve"], moduleType: ModuleType.WINDROSE, moduleConfig: { twitchCategory: "Windrose", steamAppId: "3041230", publisher: "Pocketpair", studio: "Kraken Express" }, accentColor: "#b8935a", logoUrl: "/brand/lobbies/windrose-logo-official.png", bannerUrl: "/brand/lobbies/windrose-banner-v2.svg", websiteUrl: "https://playwindrose.com/" },
+  { id: "hq", name: "Headquarters", description: "Weered HQ. Reception, Builders Bench, Newcomers, Changelog. Where the platform itself lives.", keywords: ["hq","headquarters","weered","meta"], moduleType: ModuleType.HEADQUARTERS, moduleConfig: {}, accentColor: "#5800E5" },
   { id: "helldivers2", name: "Helldivers 2", description: "Spread Managed Democracy across the galaxy. Live war map, Major Orders, defense campaigns, dispatches, squad finder, loadout sharer. The unofficial Super Earth war room.", keywords: ["helldivers","helldivers2","hd2","democracy","arrowhead","super earth","terminids","automatons","illuminate","stratagem","galactic war","managed democracy"], moduleType: ModuleType.HELLDIVERS2, moduleConfig: { twitchCategory: "Helldivers 2", subreddit: "r/Helldivers", steamAppId: "553850" }, accentColor: "#FFD700", logoUrl: "/brand/lobbies/helldivers2-logo.png", bannerUrl: "/brand/lobbies/helldivers2-banner.png", websiteUrl: "https://www.helldivers.com" },
 ];
 
@@ -930,6 +931,55 @@ const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: stri
   { id: "fakeout-floor",      name: "The Floor",     description: "Main trading chat. Live charts, live trades, live witnesses. Where everyone hangs.", lobbyId: "fakeout", defaultModule: "fakeout" },
   { id: "fakeout-pit",        name: "The Pit",       description: "Hot takes, rapid-fire reactions, daily watchlists. Bring volume.",                    lobbyId: "fakeout", defaultModule: "fakeout" },
   { id: "fakeout-newcomers",  name: "Newcomers",     description: "First time? Start here. Ask anything. Read The Brief. Place your first paper trade with company.", lobbyId: "fakeout" },
+
+  // ── League of Legends ──
+  { id: "league-rift",         name: "Summoner's Rift",        description: "General League chat. Champion talk, patch hot takes, the eternal Yasuo discourse.",                  lobbyId: "league-of-legends" },
+  { id: "league-lfg-ranked",   name: "LFG · Ranked",           description: "Find a duo for Solo/Duo. Roles played, current rank, server in your post.",                          lobbyId: "league-of-legends" },
+  { id: "league-lfg-flex",     name: "LFG · Flex / Clash",     description: "Five-stacks for Flex queue and Clash weekends. Bring friends or steal some.",                        lobbyId: "league-of-legends" },
+  { id: "league-aram",         name: "ARAM Den",               description: "For when you can't be bothered with macro. Reroll talk, snowball strats, just bonk.",                lobbyId: "league-of-legends" },
+  { id: "league-lab",          name: "Champion Lab",           description: "Theorycraft, off-meta builds, runes that shouldn't work but do. Bring receipts.",                    lobbyId: "league-of-legends" },
+
+  // ── Counter-Strike 2 ──
+  { id: "cs2-lobby",           name: "The Lobby",              description: "General CS2 chat. Patch reactions, meta talk, complaints about the M4. Welcome.",                    lobbyId: "counter-strike-2" },
+  { id: "cs2-lfg-premier",     name: "LFG · Premier",          description: "Premier queue partners. Post your CS rating + map preferences.",                                     lobbyId: "counter-strike-2" },
+  { id: "cs2-lfg-faceit",      name: "LFG · FACEIT",           description: "FACEIT lobbies. Level + region in post. No ELO snobbery.",                                           lobbyId: "counter-strike-2" },
+  { id: "cs2-aim",             name: "Aim Training Grounds",   description: "Routines, aim_botz, Kovaak's, Aim Lab. Share your warmup and your gains.",                           lobbyId: "counter-strike-2" },
+  { id: "cs2-demo",            name: "Demo Theater",           description: "Clip review. Drop your demos, get crispy callouts back. Tactical or just funny.",                    lobbyId: "counter-strike-2" },
+
+  // ── Dota 2 ──
+  { id: "dota-ancient",        name: "The Ancient",            description: "General Dota chat. Patches, Pudge complaints, eternal Aghanim's discourse.",                          lobbyId: "dota-2" },
+  { id: "dota-lfg-ranked",     name: "LFG · Ranked",           description: "Stack up. Post your MMR, role queue, region.",                                                       lobbyId: "dota-2" },
+  { id: "dota-lfg-turbo",      name: "LFG · Turbo",            description: "Quick games, low commitment. Just queue and click heads.",                                            lobbyId: "dota-2" },
+  { id: "dota-lab",            name: "Hero Lab",               description: "Off-meta builds, position 5 carry, the eternal Tinker question. Theorycraft welcome.",                lobbyId: "dota-2" },
+  { id: "dota-fountain",       name: "Fountain Hooks",         description: "Best plays, worst feeders, salt mine. Drop your clips.",                                              lobbyId: "dota-2" },
+
+  // ── PUBG ──
+  { id: "pubg-zone",           name: "Drop Zone",              description: "General PUBG chat. Map rotations, the eternal Pochinki nostalgia, server complaints.",                lobbyId: "pubg" },
+  { id: "pubg-lfg-squad",      name: "LFG · Squads",           description: "Find your fourth. Server, map preference, voice required in post.",                                   lobbyId: "pubg" },
+  { id: "pubg-lfg-duo",        name: "LFG · Duos",             description: "Two-stacks. Less bickering, more headshots.",                                                         lobbyId: "pubg" },
+  { id: "pubg-loot",           name: "Loot Pool",              description: "Hot drop strategies, vehicle meta, gear talk. From M4 to Mosin.",                                     lobbyId: "pubg" },
+  { id: "pubg-vault",          name: "Clip Vault",             description: "Best plays, worst luck, last circle stories. Post the shot.",                                         lobbyId: "pubg" },
+
+  // ── MLB ──
+  { id: "mlb-dugout",          name: "The Dugout",             description: "General baseball chat. Standings, trade rumors, the eternal Yankees discourse.",                      lobbyId: "mlb" },
+  { id: "mlb-gameday",         name: "Game Day Threads",       description: "Live threads for whatever's on right now. Pitch by pitch, inning by inning.",                          lobbyId: "mlb" },
+  { id: "mlb-stats",           name: "Sabermetrics",           description: "WAR, FIP, xwOBA. Numbers people. Bring a CSV.",                                                       lobbyId: "mlb" },
+  { id: "mlb-trade",           name: "Trade Talk",             description: "Rumors, deadlines, hot stove takes. Speculation welcome, math appreciated.",                          lobbyId: "mlb" },
+  { id: "mlb-prospects",       name: "Prospect Watch",         description: "Minor leagues, draft talk, future stars. Who's coming up next.",                                       lobbyId: "mlb" },
+
+  // ── Fortnite ──
+  { id: "fortnite-island",     name: "The Island",             description: "General Fortnite chat. Skin drops, map updates, the eternal sweat-vs-casual debate.",                  lobbyId: "fortnite" },
+  { id: "fortnite-lfg-squads", name: "LFG · Squads",           description: "Build squads. Drop region + style (BR / ZB / Reload).",                                              lobbyId: "fortnite" },
+  { id: "fortnite-lfg-zb",     name: "LFG · Zero Build",       description: "For the no-build lifers. Pure aim, pure cover, pure pain.",                                          lobbyId: "fortnite" },
+  { id: "fortnite-comp",       name: "Comp Corner",            description: "FNCS, cash cups, scrim discussion. Loadout debates, zone reads.",                                     lobbyId: "fortnite" },
+  { id: "fortnite-creative",   name: "Creative Lobby",         description: "Map codes, parkour, deathruns, mini-games. Post your favorites.",                                     lobbyId: "fortnite" },
+
+  // ── Headquarters (HQ) ──
+  { id: "hq-reception",        name: "Reception",              description: "Welcome to Weered HQ. Platform questions, intros, hi.",                                              lobbyId: "hq" },
+  { id: "hq-feedback",         name: "Builder's Bench",        description: "Feature requests, bug reports, why-doesn't-it-do-X. The dev team reads this.",                       lobbyId: "hq" },
+  { id: "hq-newcomers",        name: "Newcomers",              description: "First time on Weered? Start here. Ask anything, no judgment.",                                       lobbyId: "hq" },
+  { id: "hq-changelog",        name: "Changelog",              description: "What just shipped, what's brewing. Read-only-ish announcements.",                                    lobbyId: "hq" },
+  { id: "hq-offtopic",         name: "Off Topic",              description: "Whatever isn't about Weered itself. Lowkey vibes, weekend chat.",                                    lobbyId: "hq" },
 ];
 
 async function seedLobbies() {
