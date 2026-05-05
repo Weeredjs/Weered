@@ -84,8 +84,12 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
             msg.includes("WON") || msg.includes("VICTORY") || msg.includes("SUCCESS") ? "WON" :
             msg.includes("LOST") || msg.includes("FAIL") || msg.includes("DEFEAT") ? "LOST" :
             "ENDED";
-          // First sentence as title (cap 80 chars)
-          const raw = String(d.message || d.text || d.body || "").replace(/\s+/g, " ").trim();
+          // First sentence as title (cap 80 chars). Strip Steam-style
+          // <i=N>...</i> emphasis tags so they don't render as literal text.
+          const raw = String(d.message || d.text || d.body || "")
+            .replace(/<\/?i(?:=\d+)?>/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
           const title = raw.split(/[.!?]/)[0].slice(0, 80);
           const ts = Number(d.published || d.publishedAt || d.ts || 0) || Date.now();
           setLastOutcome({ title, outcome, ts });
