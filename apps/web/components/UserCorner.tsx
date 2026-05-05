@@ -61,8 +61,14 @@ const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
   GOD: "ADMIRAL", ADMIN: "FIRST MATE", STAFF: "BOATSWAIN", SUPPORT: "LOOKOUT",
   MOD: "QUARTERMASTER", OWNER: "CAPTAIN", MEMBER: "CREWMATE",
 };
+// Helldivers 2 — Super Earth military hierarchy.
+const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
+  GOD: "SUPREME COMMANDER", ADMIN: "GENERAL", STAFF: "COMMANDER", SUPPORT: "OFFICER",
+  MOD: "DRILL SERGEANT", OWNER: "DIVE LEAD", MEMBER: "HELLDIVER",
+};
 function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
   if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole]) return ROLE_DISPLAY_WINDROSE[dbRole];
+  if (lobbyTheme === "helldivers2" && ROLE_DISPLAY_HELLDIVERS[dbRole]) return ROLE_DISPLAY_HELLDIVERS[dbRole];
   return ROLE_DISPLAY[dbRole] || dbRole;
 }
 
@@ -86,7 +92,7 @@ export default function UserCorner() {
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-weered-lobby"] });
     return () => obs.disconnect();
   }, []);
-  const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : lobbyTheme === "destiny2" ? "Transmat" : "Burner";
+  const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : lobbyTheme === "destiny2" ? "Transmat" : lobbyTheme === "helldivers2" ? "Comms" : "Burner";
 
   // ── Lobby branding: fetch logoUrl for current lobby ─────────────────────────
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
