@@ -99,8 +99,13 @@ const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
   GOD: "Admiral", ADMIN: "First Mate", STAFF: "Boatswain", SUPPORT: "Lookout",
   MOD: "Quartermaster", OWNER: "Captain",
 };
+const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
+  GOD: "Supreme Commander", ADMIN: "General", STAFF: "Commander", SUPPORT: "Officer",
+  MOD: "Drill Sergeant", OWNER: "Dive Lead",
+};
 function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
   if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole]) return ROLE_DISPLAY_WINDROSE[dbRole];
+  if (lobbyTheme === "helldivers2" && ROLE_DISPLAY_HELLDIVERS[dbRole]) return ROLE_DISPLAY_HELLDIVERS[dbRole];
   return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase();
 }
 

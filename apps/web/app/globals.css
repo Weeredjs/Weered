@@ -6871,3 +6871,116 @@ html .weered-usercorner[data-custom-bg="1"] {
   .weered-dnd-modules .weered-dnd-tab { padding: 8px 12px !important; font-size: 13px !important; }
   .weered-dnd-modules .weered-dnd-tab--small { padding: 6px 10px !important; font-size: 11px !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ▌ HELLDIVERS 2 LOBBY THEME
+   Scope: html[data-weered-lobby="helldivers2"]
+   Super Earth military aesthetic — gold accent, charcoal/olive bg, subtle
+   scan-line grain, fixed eagle silhouette watermark, square panel chrome.
+   ──────────────────────────────────────────────────────────────────────── */
+
+html[data-weered-lobby="helldivers2"] {
+  --weered-bg:              #0d0d0a;
+  --weered-panel:           rgba(20, 18, 12, 0.92);
+  --weered-panel2:          rgba(14, 12, 8, 0.95);
+  --weered-border:          rgba(255, 215, 0, 0.18);
+  --weered-border2:         rgba(255, 215, 0, 0.45);
+  --weered-text:            #f4e9c8;
+  --weered-muted:           rgba(255, 215, 0, 0.55);
+  --weered-accent-1:        #FFD700;
+  --weered-accent-2:        #FFB800;
+  --weered-accent-bg:       rgba(255, 215, 0, 0.14);
+  --weered-accent-ring:     rgba(255, 215, 0, 0.55);
+  --weered-accent-grad:     linear-gradient(135deg, #FFD700 0%, #FFB800 100%);
+  --weered-scrollbar-track: rgba(10, 10, 6, 0.6);
+  --weered-scrollbar-thumb: rgba(255, 215, 0, 0.30);
+  --weered-scrollbar-thumb-hover: rgba(255, 215, 0, 0.55);
+
+  --hd2-gold:      #FFD700;
+  --hd2-gold-hi:   #FFEC88;
+  --hd2-gold-dim:  rgba(255, 215, 0, 0.55);
+  --hd2-charcoal:  #0d0d0a;
+  --hd2-olive:     #1a1810;
+  --hd2-blood:     #b91c1c;
+}
+
+/* Body background — scorched-earth charcoal with two faint warmth pools
+   (top-center and bottom-left) plus a fine scan-line grain so the surface
+   reads as "military display" rather than flat dark. */
+html[data-weered-lobby="helldivers2"] body {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 215, 0, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 10% 110%, rgba(185, 28, 28, 0.04) 0%, transparent 55%),
+    repeating-linear-gradient(180deg, transparent 0 3px, rgba(255, 215, 0, 0.012) 3px 4px),
+    linear-gradient(180deg, #0d0d0a 0%, #060604 100%) !important;
+  color: var(--weered-text) !important;
+}
+
+/* Super Earth eagle silhouette watermark — fixed bottom-right, very faint.
+   Pure CSS via SVG data URI so no asset upload required. */
+html[data-weered-lobby="helldivers2"] body::before {
+  content: "";
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 220px;
+  height: 220px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='%23FFD700'><circle cx='60' cy='60' r='58' fill='none' stroke='%23FFD700' stroke-width='1.2'/><path d='M60 22 L52 40 L36 36 L46 50 L30 54 L48 60 L34 70 L52 68 L48 84 L60 74 L72 84 L68 68 L86 70 L72 60 L90 54 L74 50 L84 36 L68 40 Z'/><circle cx='60' cy='60' r='4' fill='%230d0d0a'/></svg>") center / contain no-repeat;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.2));
+}
+
+/* Toast accent — gold glow */
+html[data-weered-lobby="helldivers2"] .weered-toast,
+html[data-weered-lobby="helldivers2"] [data-weered-toast] {
+  border-color: rgba(255, 215, 0, 0.45) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 215, 0, 0.3),
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    0 0 24px rgba(255, 215, 0, 0.18) !important;
+}
+
+/* Focus rings — gold instead of purple */
+html[data-weered-lobby="helldivers2"] *:focus-visible {
+  outline: 2px solid var(--hd2-gold) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.18) !important;
+}
+
+/* Scrollbars — gold track-thumb */
+html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-track { background: var(--weered-scrollbar-track); }
+html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-thumb {
+  background: var(--weered-scrollbar-thumb);
+  border-radius: 0 !important;
+  border: 1px solid rgba(255, 215, 0, 0.18);
+}
+html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-thumb:hover { background: var(--weered-scrollbar-thumb-hover); }
+
+/* Panel chrome — square corners, mil-spec borders. The platform default
+   uses 12-16px border-radius; in HD2 it goes to 4px so panels read as
+   stamped metal plates rather than glassy cards. */
+html[data-weered-lobby="helldivers2"] .weered-panel,
+html[data-weered-lobby="helldivers2"] .weered-panel2,
+html[data-weered-lobby="helldivers2"] .weered-lobby-body,
+html[data-weered-lobby="helldivers2"] .weered-rr-section {
+  border-radius: 4px !important;
+  border-color: rgba(255, 215, 0, 0.16) !important;
+}
+
+/* Buttons — gold-leaning hover/active when in HD2 scope */
+html[data-weered-lobby="helldivers2"] button:not([class*="weered-burner-hot"]):hover {
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+/* Notification dot accent for HD2 — gold instead of orange */
+html[data-weered-lobby="helldivers2"] .weered-burner-hot::after {
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.45) !important;
+}
+
+/* Selection color — gold tint */
+html[data-weered-lobby="helldivers2"] ::selection {
+  background: rgba(255, 215, 0, 0.32);
+  color: #fff;
+}
