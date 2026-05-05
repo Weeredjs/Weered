@@ -65,6 +65,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "study",   icon: "📚", label: "Focus",    live: true  },
   { id: "dnd",     icon: "🐉", label: "D&D",      live: true  },
   { id: "windrose",icon: "⚓", label: "Windrose", live: true  },
+  { id: "helldivers",icon: "💀", label: "Helldivers", live: true  },
 ];
 
 // Module type → which special modules are available in rooms of that lobby
@@ -83,6 +84,7 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   STUDY:       ["voice", "study", "video", "screen"],
   DND:         ["voice", "dnd", "youtube", "browser", "video", "screen"],
   WINDROSE:    ["voice", "windrose", "youtube", "twitch", "video", "screen"],
+  HELLDIVERS2: ["voice", "helldivers", "youtube", "twitch", "video", "screen"],
 };
 
 // Default modules for lobbies without a specific mapping
