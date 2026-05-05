@@ -3238,6 +3238,15 @@ html, body {
      still override via more specific selectors. */
   font-family: var(--font-rajdhani), 'Rajdhani', 'Bank Gothic', 'Arial Narrow', ui-sans-serif, sans-serif;
 }
+/* Bare pages (terms / privacy / guidelines) don't use the shell's
+   internal scroll containers, so the platform-wide html/body height: 100%
+   above would clip their content. Override on bare-page bodies so they
+   scroll normally on desktop. The :has() probe targets the .legal-root
+   marker that all three legal pages share. */
+html:has(.legal-root), body:has(.legal-root) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
 
 a {
   color: rgba(226, 232, 240, 0.96);
