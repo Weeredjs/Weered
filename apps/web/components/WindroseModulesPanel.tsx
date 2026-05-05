@@ -212,8 +212,11 @@ function SkullIcon({ size = 14, color = PAL.brass }: { size?: number; color?: st
 
 // ═══ Tabs ═══════════════════════════════════════════════════════════════════════
 
+import WindroseBuildBrowser from "./WindroseBuildBrowser";
+
 const TABS = [
   { id: "flagship" as const, label: "Flagship" },
+  { id: "logbook"  as const, label: "Logbook" },
   { id: "log"      as const, label: "Captain's Log" },
   { id: "crew"     as const, label: "Crew Finder" },
   { id: "bounties" as const, label: "Bounties" },
@@ -227,7 +230,7 @@ type TabId = typeof TABS[number]["id"];
 // Slim tab set used inside rooms — Bounties / Ports of Call / Mods.
 // The lobby-wide tabs (Flagship, Log, Crew Finder, Streams, About) don't
 // belong inside a single room's stage.
-const SLIM_TAB_IDS: TabId[] = ["bounties", "ports", "mods"];
+const SLIM_TAB_IDS: TabId[] = ["logbook", "bounties", "ports", "mods"];
 
 // ═══ Live Player Counter ═══════════════════════════════════════════════════════
 
@@ -3377,6 +3380,7 @@ export default function WindroseModulesPanel({
         {/* Body */}
         <div style={S.body}>
           {tab === "flagship" && <FlagshipTab />}
+          {tab === "logbook"  && <WindroseBuildBrowser />}
           {tab === "log"      && <LogTab />}
           {tab === "crew"     && <CrewTab lobbyId={lobbyId} />}
           {tab === "bounties" && <BountiesTab />}

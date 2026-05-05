@@ -22,6 +22,7 @@ import windroseRoutes from "./routes/windrose";
 import helldiversStratagemsRoutes from "./routes/helldivers-stratagems";
 import helldiversLoadoutsRoutes from "./routes/helldivers-loadouts";
 import steamRoutes from "./routes/steam";
+import windroseBuildsRoutes from "./routes/windrose-builds";
 import badgesRoutes from "./routes/badges";
 import tournamentsRoutes from "./routes/tournaments";
 import lfgRoutes from "./routes/lfg";
@@ -6247,6 +6248,7 @@ async function main() {
   await app.register(helldiversStratagemsRoutes);
   await app.register(helldiversLoadoutsRoutes, { authFromHeader } as any);
   await app.register(steamRoutes, { authFromHeader, createNotification } as any);
+  await app.register(windroseBuildsRoutes, { authFromHeader, awardNotoriety, broadcastToLobby, canAccessStaff, getGlobalRole } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════

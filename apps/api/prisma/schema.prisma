@@ -472,6 +472,11 @@ model User {
   banAppeals       BanAppeal[]       @relation("BanAppealUser")
   bugReports       BugReport[]       @relation("BugReportSubmitter")
   helldiversLoadouts HelldiversLoadout[]
+  windroseBuilds     WindroseBuild[]
+  windroseBuildVotes WindroseBuildVote[]
+  windroseBuildComments WindroseBuildComment[]
+  windroseBuildSaves WindroseBuildSave[]
+  windroseBuildReports WindroseBuildReport[]
 }
 
 // —— Ban Court ——————————————————————————————————————————————————————————————
@@ -2328,4 +2333,118 @@ model HelldiversLoadoutVote {
   loadout    HelldiversLoadout @relation(fields: [loadoutId], references: [id], onDelete: Cascade)
 
   @@unique([loadoutId, userId])
+}
+
+
+// ── WINDROSE BUILD SHOWCASE ──────────────────────────────────────────────
+// Community-uploaded build screenshots with metadata, voting, comments,
+// saves, and reports. The centerpiece social surface for the Windrose
+// vertical. Image storage: WebP-converted ≤1MB primary + ≤80KB thumbnail
+// per file, served from /builds/* with immutable cache.
+
+model WindroseBuild {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  description  String?  @db.Text
+
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id])
+
+  // Media — JSON array of { url, thumbUrl, width, height, dominantColor, order }
+  // Capped at 3 images per build server-side. dominantColor is a #RRGGBB hex
+  // used as a placeholder background while the image lazy-loads.
+  images       Json     @default("[]")
+  // Primary thumbnail, denormalized for grid card render performance.
+  thumbnailUrl String?
+  primaryColor String?  // dominant color of the primary image, #RRGGBB
+
+  // Categorization
+  biome        String?  // PLAINS | COAST | CLIFFS | SWAMP | CAVE | MOUNTAIN | ISLAND
+  buildType    String?  // SHIP | DOCK | FORTRESS | TAVERN | HIDEOUT | OUTPOST | BRIDGE | MISC
+  difficulty   String?  // BEGINNER | INTERMEDIATE | ADVANCED | MASTERWORK
+  shipClass    String?  // SLOOP | BRIG | GALLEON | FRIGATE — only when buildType=SHIP
+  tags         String[] @default([])
+
+  // Optional metadata users can fill in
+  partsCount     Int?
+  inGameLocation String?
+
+  // Social
+  upvotes      Int      @default(0)
+  downvotes    Int      @default(0)
+  views        Int      @default(0)
+  saveCount    Int      @default(0)
+
+  // Curation
+  featured     Boolean  @default(false)
+  featuredAt   DateTime?
+  // PENDING | APPROVED | REMOVED. First post auto-APPROVED unless prior reports.
+  moderationStatus String @default("APPROVED")
+
+  // Author opt-ins
+  watermarked  Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  votes        WindroseBuildVote[]
+  comments     WindroseBuildComment[]
+  saves        WindroseBuildSave[]
+  reports      WindroseBuildReport[]
+
+  @@index([biome])
+  @@index([buildType])
+  @@index([upvotes])
+  @@index([featured, featuredAt])
+  @@index([authorId])
+  @@index([moderationStatus])
+}
+
+model WindroseBuildVote {
+  id        String   @id @default(cuid())
+  buildId   String
+  userId    String
+  value     Int      // +1 or -1
+  createdAt DateTime @default(now())
+  build     WindroseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id])
+  @@unique([buildId, userId])
+  @@index([userId])
+}
+
+model WindroseBuildComment {
+  id        String   @id @default(cuid())
+  buildId   String
+  userId    String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  build     WindroseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id])
+  @@index([buildId, createdAt])
+}
+
+model WindroseBuildSave {
+  id        String   @id @default(cuid())
+  buildId   String
+  userId    String
+  createdAt DateTime @default(now())
+  build     WindroseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id])
+  @@unique([buildId, userId])
+  @@index([userId])
+}
+
+model WindroseBuildReport {
+  id        String   @id @default(cuid())
+  buildId   String
+  userId    String
+  reason    String   // SPAM | NSFW | THEFT | OFFENSIVE | OTHER
+  note      String?
+  status    String   @default("OPEN")  // OPEN | REVIEWED | DISMISSED
+  createdAt DateTime @default(now())
+  build     WindroseBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id])
+  @@index([status])
 }
