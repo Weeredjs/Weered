@@ -218,7 +218,7 @@ import WindroseBuildBrowser from "./WindroseBuildBrowser";
 const TABS = [
   { id: "flagship" as const, label: "Flagship" },
   { id: "logbook"  as const, label: "Logbook" },
-  { id: "log"      as const, label: "Captain's Log" },
+  { id: "log"      as const, label: "Sea Tales" },
   { id: "crew"     as const, label: "Crew Finder" },
   { id: "bounties" as const, label: "Bounties" },
   { id: "ports"    as const, label: "Ports of Call" },
