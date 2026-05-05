@@ -14,7 +14,7 @@ import { useVoice } from "../VoiceContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | null;
 
 interface Props {
   roomId: string;
@@ -60,6 +60,7 @@ import Dota2ModulesPanel from "../Dota2ModulesPanel";
 import StudyModulesPanel from "../StudyModulesPanel";
 import WindroseModulesPanel from "../WindroseModulesPanel";
 import DndStage from "./DndStage";
+import HelldiversModulesPanel from "../HelldiversModulesPanel";
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
@@ -1039,6 +1040,7 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   if (mode === "dota2") return <Dota2ModulesPanel lobbyId={ctx?.currentLobbyId || "dota-2"} gameName="Dota 2" accentColor="#C23C2A" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "study") return <StudyModulesPanel lobbyId={ctx?.currentLobbyId || "study"} accentColor="#6366F1" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "windrose") return <WindroseModulesPanel slim lobbyId={ctx?.currentLobbyId || "windrose"} gameName="Windrose" accentColor="#c9a066" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "helldivers") return <HelldiversModulesPanel lobbyId={ctx?.currentLobbyId || "helldivers2"} accentColor="#FFD700" currentUserId={ctx?.me?.id} hideSquad style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "dnd") return <DndStage roomId={roomId} onClose={onClose} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;

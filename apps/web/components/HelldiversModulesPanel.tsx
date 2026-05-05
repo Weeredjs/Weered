@@ -30,13 +30,16 @@ export default function HelldiversModulesPanel({
   accentColor,
   currentUserId,
   style,
+  hideSquad = false,
 }: {
   lobbyId: string;
   accentColor?: string;
   currentUserId?: string;
   style?: React.CSSProperties;
+  hideSquad?: boolean;
 }) {
   const accent = accentColor || ACCENT;
+  const visibleTabs = hideSquad ? TABS.filter(t => t.id !== "squad") : TABS;
   const [tab, setTab] = useState<TabId>("war");
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -88,7 +91,7 @@ export default function HelldiversModulesPanel({
             border: `1px solid ${accent}1f`,
           }}
         >
-          {TABS.map(t => {
+          {visibleTabs.map(t => {
             const active = t.id === tab;
             return (
               <button
