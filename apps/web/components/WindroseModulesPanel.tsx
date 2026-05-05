@@ -61,6 +61,7 @@ const S = {
   },
   tabBar: {
     display: "flex", gap: 2, padding: "0 18px", alignItems: "flex-end",
+    flexWrap: "wrap" as const,
     background: `linear-gradient(180deg, ${PAL.stormDeep} 0%, ${PAL.abyss} 100%)`,
     borderBottom: `1px solid ${PAL.brass}25`,
   },
@@ -3304,20 +3305,25 @@ export default function WindroseModulesPanel({
           to { transform: rotate(360deg); }
         }
         .windrose-tab {
-          padding: 10px 20px;
+          padding: 9px 14px;
           border: 1px solid ${PAL.brass}30;
           border-bottom: none;
           background: ${PAL.stormDeep};
           color: ${PAL.parchDim};
           font-family: ${WR_FONT_SERIF};
           font-size: 12px;
-          letter-spacing: 2px;
+          letter-spacing: 1.4px;
           text-transform: uppercase;
           cursor: pointer;
           transition: all .15s;
           margin-right: 2px;
+          margin-top: 2px;
           position: relative;
           top: 1px;
+          white-space: nowrap;
+        }
+        @media (max-width: 1500px) {
+          .windrose-tab { padding: 8px 11px; letter-spacing: 1px; font-size: 11px; }
         }
         .windrose-tab:hover:not(.active) { color: ${PAL.brass}; border-color: ${PAL.brass}55; background: ${PAL.stormMid}; }
         .windrose-tab.active {

@@ -89,6 +89,7 @@ export default function HelldiversModulesPanel({
             borderRadius: 6,
             background: "rgba(0,0,0,.35)",
             border: `1px solid ${accent}1f`,
+            flexWrap: "wrap",
           }}
         >
           {visibleTabs.map(t => {
