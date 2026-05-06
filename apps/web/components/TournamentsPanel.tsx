@@ -4,6 +4,7 @@ import React from "react";
 import TournamentBracket from "./TournamentBracket";
 import TournamentMatchModal from "./TournamentMatchModal";
 import TournamentRoundRobin from "./TournamentRoundRobin";
+import TournamentArchive from "./TournamentArchive";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#f58220";
@@ -112,6 +113,7 @@ export default function TournamentsPanel({
               {past.map(t => <TournamentRow key={t.id} t={t} onOpen={() => setOpenId(t.id)} muted />)}
             </Section>
           )}
+          <TournamentArchive lobbyId={lobbyId} />
         </>
       )}
 
