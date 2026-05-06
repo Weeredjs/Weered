@@ -6265,7 +6265,7 @@ async function main() {
 
   // ── BADGES + TOURNAMENTS — extracted to routes/badges.ts + routes/tournaments.ts
   await app.register(badgesRoutes, { authFromHeader } as any);
-  await app.register(tournamentsRoutes, { authFromHeader, awardNotoriety, createNotification } as any);
+  await app.register(tournamentsRoutes, { authFromHeader, awardNotoriety, awardPaper, createNotification } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════

@@ -7,6 +7,7 @@ import { prisma } from "../lib/prisma";
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
+  awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;
   createNotification?: (opts: {
     userId: string; type: string; title: string;
     body?: string; actionUrl?: string;
@@ -15,7 +16,7 @@ type Opts = {
 };
 
 export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, awardNotoriety, createNotification } = opts;
+  const { authFromHeader, awardNotoriety, awardPaper, createNotification } = opts;
 
   app.get("/tournaments", async (req, reply) => {
     const { lobbyId, status } = req.query as any;
@@ -89,8 +90,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       return reply.code(400).send({ ok: false, error: "tournament_full" });
     }
 
-    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "BUNGIE" } });
-    if (!acct) return reply.code(400).send({ ok: false, error: "bungie_not_linked" });
+    // Conditional Bungie gate: only Destiny 2 tournaments require linked
+    // Bungie account. Other lobbies (Helldivers, Windrose, etc.) skip.
+    if (tournament.lobbyId === "destiny2") {
+      const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "BUNGIE" } });
+      if (!acct) return reply.code(400).send({ ok: false, error: "bungie_not_linked", message: "Link your Bungie account in Settings before registering." });
+    }
 
     const userName = (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name || "Unknown";
 
@@ -147,33 +152,185 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments/:id/complete", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
-      return reply.code(403).send({ ok: false, error: "forbidden" });
-    }
+    if (!isStaff(u.globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const id = String((req as any).params?.id || "");
-    const entries = await prisma.tournamentEntry.findMany({
-      where: { tournamentId: id },
-      orderBy: { score: "desc" },
-    });
+
+    const tournament = await (prisma as any).tournament.findUnique({ where: { id } });
+    if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (tournament.status === "COMPLETED" || tournament.status === "CANCELED") {
+      return reply.code(400).send({ ok: false, error: "already_finalized" });
+    }
+
+    // Final ranking. For BRACKET / BRACKET_DOUBLE, use the standings
+    // endpoint logic (W/L/diff). For LEADERBOARD, use score (existing).
+    let entries: any[];
+    if (tournament.format === "LEADERBOARD") {
+      entries = await prisma.tournamentEntry.findMany({
+        where: { tournamentId: id },
+        orderBy: { score: "desc" },
+      });
+    } else {
+      const allEntries = await prisma.tournamentEntry.findMany({ where: { tournamentId: id } });
+      const matches = await (prisma as any).tournamentMatch.findMany({
+        where: { tournamentId: id, status: "CONFIRMED" },
+      });
+      const stats: Record<string, { wins: number; losses: number; diff: number }> = {};
+      for (const e of allEntries) stats[e.id] = { wins: 0, losses: 0, diff: 0 };
+      for (const m of matches) {
+        if (!m.winnerEntryId) continue;
+        const loserId = m.winnerEntryId === m.entryAId ? m.entryBId : m.entryAId;
+        if (stats[m.winnerEntryId]) stats[m.winnerEntryId].wins++;
+        if (loserId && stats[loserId]) stats[loserId].losses++;
+        if (m.scoreA != null && m.scoreB != null) {
+          if (stats[m.entryAId!]) stats[m.entryAId!].diff += (m.scoreA - m.scoreB);
+          if (stats[m.entryBId!]) stats[m.entryBId!].diff += (m.scoreB - m.scoreA);
+        }
+      }
+      entries = allEntries
+        .map((e: any) => ({ ...e, _wins: stats[e.id].wins, _losses: stats[e.id].losses, _diff: stats[e.id].diff }))
+        .sort((a: any, b: any) => {
+          if (b._wins !== a._wins) return b._wins - a._wins;
+          if (b._diff !== a._diff) return b._diff - a._diff;
+          return a._losses - b._losses;
+        });
+    }
+
+    // Assign rank
     for (let i = 0; i < entries.length; i++) {
       await prisma.tournamentEntry.update({
         where: { id: entries[i].id },
         data: { rank: i + 1 },
       });
     }
-    const tournament = await prisma.tournament.update({
+
+    // Tier payouts. Reward keys read from tournament.rewards JSON if set,
+    // otherwise sensible defaults scaled to entry count.
+    const tier = (rank: number, total: number) => {
+      if (rank === 1) return "CHAMPION";
+      if (rank <= 3) return "PODIUM";
+      if (rank <= 8 && total >= 8) return "TOP8";
+      if (rank <= 16 && total >= 16) return "TOP16";
+      return null;
+    };
+    const defaultPayout = (t: string, total: number) => {
+      // Bigger pots scale, but capped so a 200-person event isn't a fortune.
+      const scale = Math.min(1.0, Math.log2(Math.max(2, total)) / 4); // 2→0.25, 4→0.5, 8→0.75, 16+→1.0
+      switch (t) {
+        case "CHAMPION": return { paper: Math.round(2000 * scale), notoriety: Math.round(500 * scale) };
+        case "PODIUM":   return { paper: Math.round(1000 * scale), notoriety: Math.round(250 * scale) };
+        case "TOP8":     return { paper: Math.round(500 * scale),  notoriety: Math.round(100 * scale) };
+        case "TOP16":    return { paper: Math.round(200 * scale),  notoriety: Math.round(50 * scale) };
+        default:         return { paper: 0, notoriety: 0 };
+      }
+    };
+
+    const total = entries.length;
+    const payouts: any[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const t = tier(i + 1, total);
+      if (!t || !e.userId) continue;
+      const p = defaultPayout(t, total);
+      payouts.push({ userId: e.userId, displayName: e.displayName, rank: i + 1, tier: t, ...p });
+      // Pay out
+      if (awardPaper && p.paper > 0) {
+        await awardPaper(e.userId, "TOURNAMENT_PRIZE", p.paper, `${tournament.title} · ${t}`, id).catch(() => {});
+      }
+      if (p.notoriety > 0) {
+        // Use generic CHALLENGE_COMPLETED action plus a custom event for visibility
+        try {
+          await (prisma as any).notorietyEvent.create({
+            data: { userId: e.userId, action: `TOURNAMENT_${t}`, points: p.notoriety, refId: id },
+          });
+          await (prisma as any).user.update({
+            where: { id: e.userId },
+            data: { notoriety: { increment: p.notoriety } },
+          });
+        } catch {}
+      }
+
+      // Permanent badge for CHAMPION + PODIUM. ChallengeBadge is the
+      // badge TEMPLATE (one row per (tournament, rank)); UserBadge links
+      // a user to the template they earned. Templates are upserted so a
+      // re-run of complete reuses the same badge id.
+      if (t === "CHAMPION" || t === "PODIUM") {
+        try {
+          const rankLabel = i + 1 === 1 ? "Champion" : i + 1 === 2 ? "Runner-Up" : "3rd Place";
+          const badgeName = `${tournament.title} · ${rankLabel}`;
+          // Check for existing badge of this name to avoid duplicates
+          let badge = await (prisma as any).challengeBadge.findFirst({ where: { name: badgeName } });
+          if (!badge) {
+            badge = await (prisma as any).challengeBadge.create({
+              data: {
+                name: badgeName,
+                description: `Top ${i + 1} finish · ${tournament.format}`,
+                rarity: i + 1 === 1 ? 4 : 3,
+              },
+            });
+          }
+          await (prisma as any).userBadge.upsert({
+            where: { userId_badgeId: { userId: e.userId, badgeId: badge.id } },
+            update: {},
+            create: { userId: e.userId, badgeId: badge.id },
+          });
+        } catch (err) {
+          console.warn("[tournament] badge award failed:", err);
+        }
+      }
+
+      // Notification
+      if (createNotification) {
+        await createNotification({
+          userId: e.userId,
+          type: "CHALLENGE_COMPLETED",
+          title: t === "CHAMPION"
+            ? `🏆 You won ${tournament.title}`
+            : t === "PODIUM"
+              ? `Top ${i + 1} in ${tournament.title}`
+              : `Top ${i + 1} in ${tournament.title}`,
+          body: p.paper > 0 || p.notoriety > 0
+            ? `Awarded ${p.paper > 0 ? `${p.paper}P` : ""}${p.paper > 0 && p.notoriety > 0 ? " + " : ""}${p.notoriety > 0 ? `${p.notoriety} Notoriety` : ""}.`
+            : "Honor only — no payout.",
+          actionUrl: tournament.lobbyId ? `/lobby/${encodeURIComponent(tournament.lobbyId)}` : null,
+          meta: { kind: "tournament_complete", tournamentId: id, rank: i + 1, tier: t },
+        }).catch(() => {});
+      }
+    }
+
+    const updated = await prisma.tournament.update({
       where: { id },
       data: { status: "COMPLETED" },
     });
 
-    const top3 = entries.slice(0, 3);
-    for (let i = 0; i < top3.length; i++) {
-      if (top3[i].userId) {
-        awardNotoriety(top3[i].userId!, "CHALLENGE_COMPLETED").catch(() => {});
-      }
-    }
+    return reply.send({ ok: true, tournament: updated, payouts });
+  });
 
-    return reply.send({ ok: true, tournament });
+  // GET /tournaments/archive?lobbyId=destiny2
+  // Hall of Fame: completed tournaments for a lobby with their top finishers.
+  app.get("/tournaments/archive", async (req, reply) => {
+    const q = (req as any).query || {};
+    const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
+    const limit = Math.max(1, Math.min(50, parseInt(q.limit) || 20));
+
+    const where: any = { status: "COMPLETED" };
+    if (lobbyId) where.lobbyId = lobbyId;
+
+    const tournaments = await (prisma as any).tournament.findMany({
+      where, orderBy: { updatedAt: "desc" }, take: limit,
+      select: { id: true, title: true, description: true, format: true, lobbyId: true, startsAt: true, endsAt: true, updatedAt: true, _count: { select: { entries: true } } },
+    });
+
+    // For each, pull top 3 entries
+    const archive = await Promise.all(tournaments.map(async (t: any) => {
+      const top = await prisma.tournamentEntry.findMany({
+        where: { tournamentId: t.id, rank: { lte: 3 } },
+        orderBy: { rank: "asc" },
+        select: { id: true, displayName: true, userId: true, rank: true, score: true },
+      });
+      return { ...t, top };
+    }));
+
+    return reply.send({ ok: true, archive });
   });
 
   // ────────────────────────────────────────────────────────────────────────
