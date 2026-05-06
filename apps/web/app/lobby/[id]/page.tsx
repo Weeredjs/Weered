@@ -31,6 +31,7 @@ import HelldiversDispatchesPanel from "../../../components/HelldiversDispatchesP
 import HelldiversSliceBPanel from "../../../components/HelldiversSliceBPanel";
 import HelldiversLoadoutBrowser from "../../../components/HelldiversLoadoutBrowser";
 import HelldiversModulesPanel from "../../../components/HelldiversModulesPanel";
+import TournamentsPanel from "../../../components/TournamentsPanel";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import TradingFeed from "../../../components/TradingFeed";
@@ -648,6 +649,11 @@ export default function LobbyIdPage() {
                   <WindroseModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
                   <HelldiversModulesPanel lobbyId={lobbyId} accentColor={accent} currentUserId={me?.id} />
+                ) : lobbyInfo?.moduleType === "BUNGIE" ? (
+                  <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+                    <TournamentsPanel lobbyId={lobbyId} currentUserId={me?.id} isStaff={["GOD","ADMIN","STAFF"].includes(globalRole || "")} />
+                    <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+                  </div>
                 ) : (
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 )

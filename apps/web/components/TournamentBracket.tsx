@@ -1,0 +1,218 @@
+"use client";
+
+import React from "react";
+
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+type Match = {
+  id: string;
+  round: number;
+  bracketPosition: number;
+  entryAId: string | null;
+  entryBId: string | null;
+  scoreA: number | null;
+  scoreB: number | null;
+  winnerEntryId: string | null;
+  status: "PENDING" | "READY" | "LIVE" | "REPORTED" | "CONFIRMED" | "DISPUTED" | "CANCELED";
+  scheduledAt: string | null;
+  liveAt: string | null;
+  twitchLogin: string | null;
+  notes: string | null;
+  nextMatchId: string | null;
+  entryA: { id: string; displayName: string; userId: string | null } | null;
+  entryB: { id: string; displayName: string; userId: string | null } | null;
+};
+
+type Tournament = {
+  id: string;
+  title: string;
+  status: string;
+  format: string;
+  lobbyId: string | null;
+};
+
+const ACCENT = "#f58220"; // Destiny solar orange
+
+/**
+ * Bracket visualization. Renders each round as a column, with matches
+ * stacked vertically. Connector lines drawn via SVG overlays. Click a
+ * match to open the detail card with reporting UI + Twitch embed.
+ */
+export default function TournamentBracket({
+  tournament,
+  matches,
+  currentUserId,
+  isStaff,
+  onMatchClick,
+  onRefresh,
+}: {
+  tournament: Tournament;
+  matches: Match[];
+  currentUserId?: string;
+  isStaff?: boolean;
+  onMatchClick: (matchId: string) => void;
+  onRefresh: () => void;
+}) {
+  const rounds = React.useMemo(() => {
+    const byRound = new Map<number, Match[]>();
+    for (const m of matches) {
+      if (!byRound.has(m.round)) byRound.set(m.round, []);
+      byRound.get(m.round)!.push(m);
+    }
+    return Array.from(byRound.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([r, ms]) => ({ round: r, matches: ms.sort((a, b) => a.bracketPosition - b.bracketPosition) }));
+  }, [matches]);
+
+  if (rounds.length === 0) {
+    return (
+      <div style={{ padding: 30, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 13 }}>
+        Bracket not generated yet.
+      </div>
+    );
+  }
+
+  const numRounds = rounds.length;
+  const finalRoundLabel = (r: number) => {
+    if (r === numRounds) return "Final";
+    if (r === numRounds - 1) return "Semifinals";
+    if (r === numRounds - 2) return "Quarterfinals";
+    return `Round ${r}`;
+  };
+
+  return (
+    <div style={{
+      display: "flex", gap: 16, padding: 16,
+      overflowX: "auto",
+      background: "linear-gradient(180deg, rgba(20,14,8,.6) 0%, rgba(8,5,2,.85) 100%)",
+      borderRadius: 6,
+      border: "1px solid rgba(245,130,32,.18)",
+      minHeight: 400,
+    }}>
+      {rounds.map(({ round, matches: roundMatches }, roundIdx) => {
+        // Vertical spacing scales with round depth
+        const slotHeight = 80;
+        const gapMultiplier = Math.pow(2, roundIdx);
+        return (
+          <div key={round} style={{
+            flex: "0 0 auto",
+            width: 220,
+            display: "flex", flexDirection: "column",
+          }}>
+            <div style={{
+              fontSize: 10, fontWeight: 800, letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              color: ACCENT,
+              marginBottom: 12,
+              textAlign: "center",
+            }}>{finalRoundLabel(round)}</div>
+            <div style={{
+              flex: 1,
+              display: "flex", flexDirection: "column",
+              justifyContent: "space-around",
+              gap: slotHeight * (gapMultiplier - 1) / Math.max(1, roundMatches.length),
+            }}>
+              {roundMatches.map(m => (
+                <BracketMatchCell
+                  key={m.id}
+                  match={m}
+                  currentUserId={currentUserId}
+                  onClick={() => onMatchClick(m.id)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BracketMatchCell({ match, currentUserId, onClick }: { match: Match; currentUserId?: string; onClick: () => void }) {
+  const winnerA = match.winnerEntryId === match.entryAId && !!match.winnerEntryId;
+  const winnerB = match.winnerEntryId === match.entryBId && !!match.winnerEntryId;
+  const isLive = match.status === "LIVE";
+  const isPending = match.status === "PENDING";
+  const isDisputed = match.status === "DISPUTED";
+  const isMine = currentUserId && [match.entryA?.userId, match.entryB?.userId].includes(currentUserId);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "block",
+        width: "100%",
+        padding: 0,
+        background: isPending ? "rgba(20,14,8,.6)" : "rgba(28,20,12,.92)",
+        border: `1px solid ${
+          isLive ? "rgba(34,197,94,.7)" :
+          isDisputed ? "rgba(239,68,68,.7)" :
+          isMine ? `${ACCENT}` :
+          "rgba(245,130,32,.28)"
+        }`,
+        borderRadius: 4,
+        cursor: "pointer",
+        color: "inherit", textAlign: "left",
+        fontFamily: "inherit",
+        boxShadow: isLive ? "0 0 12px rgba(34,197,94,.3)" : isMine ? `0 0 8px ${ACCENT}33` : "none",
+        transition: "all .12s",
+        animation: isLive ? "tournament-live-pulse 2s ease-in-out infinite" : "none",
+      }}
+    >
+      <PlayerSlot entry={match.entryA} score={match.scoreA} winner={winnerA} />
+      <div style={{ height: 1, background: "rgba(245,130,32,.18)" }} />
+      <PlayerSlot entry={match.entryB} score={match.scoreB} winner={winnerB} />
+      {(isLive || isDisputed || match.status === "REPORTED") && (
+        <div style={{
+          padding: "3px 8px",
+          fontSize: 8, fontWeight: 800, letterSpacing: "1.2px",
+          textTransform: "uppercase",
+          textAlign: "center",
+          background: isLive ? "rgba(34,197,94,.18)" : isDisputed ? "rgba(239,68,68,.18)" : "rgba(245,130,32,.18)",
+          color: isLive ? "#4ade80" : isDisputed ? "#f87171" : ACCENT,
+          borderTop: `1px solid ${isLive ? "rgba(34,197,94,.3)" : isDisputed ? "rgba(239,68,68,.3)" : "rgba(245,130,32,.3)"}`,
+        }}>
+          {isLive ? "● LIVE" : isDisputed ? "⚠ DISPUTED" : "● REPORTED"}
+        </div>
+      )}
+      <style>{`
+        @keyframes tournament-live-pulse {
+          0%, 100% { box-shadow: 0 0 12px rgba(34,197,94,.3); }
+          50%      { box-shadow: 0 0 20px rgba(34,197,94,.55); }
+        }
+      `}</style>
+    </button>
+  );
+}
+
+function PlayerSlot({ entry, score, winner }: { entry: Match["entryA"]; score: number | null; winner: boolean }) {
+  const name = entry?.displayName || (entry ? "—" : <em style={{ opacity: 0.4 }}>TBD</em>);
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "7px 10px",
+      background: winner ? `${ACCENT}1f` : "transparent",
+      color: winner ? "#fff" : entry ? "rgba(255,255,255,.85)" : "rgba(255,255,255,.45)",
+      fontWeight: winner ? 700 : 500,
+      fontSize: 12,
+    }}>
+      <span style={{
+        flex: 1, minWidth: 0,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        display: "flex", alignItems: "center", gap: 6,
+      }}>
+        {winner && <span style={{ color: ACCENT, fontSize: 9 }}>✓</span>}
+        {name}
+      </span>
+      {score != null && (
+        <span style={{
+          fontFamily: "ui-monospace, monospace",
+          fontWeight: 800, fontSize: 13,
+          color: winner ? ACCENT : "rgba(255,255,255,.55)",
+          marginLeft: 8,
+        }}>{score}</span>
+      )}
+    </div>
+  );
+}

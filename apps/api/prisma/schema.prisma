@@ -1333,6 +1333,16 @@ enum TournamentEntryType {
   CREW
 }
 
+enum MatchStatus {
+  PENDING       // waiting for previous round to finish
+  READY         // both entries known, can start
+  LIVE          // match started (someone marked it live)
+  REPORTED      // result reported, awaiting confirmation
+  CONFIRMED     // result final, winner advanced
+  DISPUTED      // conflicting reports, admin needed
+  CANCELED      // admin canceled
+}
+
 // ── Challenge definition — reusable template ────────────────────────────────
 
 model ChallengeDefinition {
@@ -1497,6 +1507,7 @@ model Tournament {
   updatedAt       DateTime         @updatedAt
 
   entries         TournamentEntry[]
+  matches         TournamentMatch[]
 
   @@index([status, startsAt])
   @@index([lobbyId, status])
@@ -1523,6 +1534,51 @@ model TournamentEntry {
   @@unique([tournamentId, userId])
   @@unique([tournamentId, crewId])
   @@index([tournamentId, score])
+}
+
+// ── Tournament BRACKET match — single-elim node ─────────────────────────────
+// Each match belongs to a round + bracket position. Winners advance via
+// nextMatchId — a tree where leaves are first-round matches and the root
+// is the final. Reporting is two-step: a player (or admin) reports the
+// result, the opponent (or admin) confirms. Confirm auto-advances the
+// winner into nextMatch's empty slot. Disputed reports require admin.
+
+model TournamentMatch {
+  id              String     @id @default(cuid())
+  tournamentId    String
+  round           Int        // 1 = first round
+  bracketPosition Int        // ordinal within the round (0-indexed)
+
+  entryAId        String?    // TournamentEntry.id, may be null for byes
+  entryBId        String?
+
+  scoreA          Int?
+  scoreB          Int?
+  winnerEntryId   String?
+
+  status          MatchStatus @default(PENDING)
+
+  reportedById    String?
+  reportedAt      DateTime?
+  confirmedAt     DateTime?
+
+  scheduledAt     DateTime?
+  liveAt          DateTime?
+  twitchLogin     String?    // optional caster handle to embed when LIVE
+  notes           String?
+
+  nextMatchId     String?
+  nextMatch       TournamentMatch?  @relation("Advance", fields: [nextMatchId], references: [id])
+  prevMatches     TournamentMatch[] @relation("Advance")
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  tournament      Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, round, bracketPosition])
+  @@index([tournamentId, status])
+  @@index([nextMatchId])
 }
 
 // ── Badges ──────────────────────────────────────────────────────────────────
