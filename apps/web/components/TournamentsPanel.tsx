@@ -3,6 +3,7 @@
 import React from "react";
 import TournamentBracket from "./TournamentBracket";
 import TournamentMatchModal from "./TournamentMatchModal";
+import TournamentRoundRobin from "./TournamentRoundRobin";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#f58220";
@@ -11,7 +12,7 @@ type Tournament = {
   id: string;
   title: string;
   description: string;
-  format: "LEADERBOARD" | "BRACKET" | "ROUND_ROBIN";
+  format: "LEADERBOARD" | "BRACKET" | "BRACKET_DOUBLE" | "ROUND_ROBIN";
   status: "REGISTRATION" | "ACTIVE" | "COMPLETED" | "CANCELED";
   lobbyId: string | null;
   startsAt: string;
@@ -138,7 +139,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function TournamentRow({ t, onOpen, muted }: { t: Tournament; onOpen: () => void; muted?: boolean }) {
   const startDate = new Date(t.startsAt);
-  const formatLabel = t.format === "BRACKET" ? "Bracket" : t.format === "ROUND_ROBIN" ? "Round Robin" : "Leaderboard";
+  const formatLabel = t.format === "BRACKET" ? "Bracket" : t.format === "BRACKET_DOUBLE" ? "Double Elim" : t.format === "ROUND_ROBIN" ? "Round Robin" : "Leaderboard";
   const statusColor = t.status === "ACTIVE" ? "#4ade80" : t.status === "REGISTRATION" ? ACCENT : "rgba(255,255,255,.4)";
   return (
     <button type="button" onClick={onOpen} style={{
@@ -174,6 +175,7 @@ function BracketView({ tournament, currentUserId, isStaff, onClose, onChanged }:
 
   React.useEffect(() => { fetchMatches(); }, [fetchMatches]);
 
+  const [seeding, setSeeding] = React.useState<"random" | "rank">("random");
   async function startBracket() {
     setBusy(true);
     try {
@@ -181,7 +183,7 @@ function BracketView({ tournament, currentUserId, isStaff, onClose, onChanged }:
       const r = await fetch(`${API}/tournaments/${encodeURIComponent(tournament.id)}/bracket/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
-        body: JSON.stringify({ seeding: "random" }),
+        body: JSON.stringify({ seeding }),
       });
       const j = await r.json();
       if (j?.ok) { await fetchMatches(); onChanged(); }
@@ -199,14 +201,20 @@ function BracketView({ tournament, currentUserId, isStaff, onClose, onChanged }:
           <div style={{ fontSize: 16, fontWeight: 800, color: ACCENT }}>{tournament.title}</div>
           <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)" }}>{tournament.description}</div>
         </div>
-        {isStaff && tournament.format === "BRACKET" && matches.length === 0 && (
-          <button onClick={startBracket} disabled={busy} style={{ padding: "8px 14px", background: ACCENT, color: "#1a0e04", border: `1px solid ${ACCENT}`, borderRadius: 3, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: busy ? "default" : "pointer", fontFamily: "inherit", opacity: busy ? 0.5 : 1 }}>
-            {busy ? "Generating…" : "Start Bracket"}
-          </button>
+        {isStaff && (tournament.format === "BRACKET" || tournament.format === "BRACKET_DOUBLE" || tournament.format === "ROUND_ROBIN") && matches.length === 0 && (
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <select value={seeding} onChange={e => setSeeding(e.target.value as any)} style={{ padding: "6px 8px", background: "rgba(10,8,4,.7)", border: `1px solid ${ACCENT}55`, color: "#fff", borderRadius: 3, fontSize: 11, fontFamily: "inherit" }}>
+              <option value="random">Random Seed</option>
+              <option value="rank">By Rank</option>
+            </select>
+            <button onClick={startBracket} disabled={busy} style={{ padding: "8px 14px", background: ACCENT, color: "#1a0e04", border: `1px solid ${ACCENT}`, borderRadius: 3, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: busy ? "default" : "pointer", fontFamily: "inherit", opacity: busy ? 0.5 : 1 }}>
+              {busy ? "Generating…" : tournament.format === "ROUND_ROBIN" ? "Generate Schedule" : "Start Bracket"}
+            </button>
+          </div>
         )}
       </div>
 
-      {tournament.format === "BRACKET" ? (
+      {(tournament.format === "BRACKET" || tournament.format === "BRACKET_DOUBLE") ? (
         matches.length > 0 ? (
           <TournamentBracket
             tournament={tournament as any}
@@ -218,7 +226,20 @@ function BracketView({ tournament, currentUserId, isStaff, onClose, onChanged }:
           />
         ) : (
           <div style={{ padding: 30, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 13, border: "1px dashed rgba(245,130,32,.25)", borderRadius: 6 }}>
-            {isStaff ? "Bracket not yet generated. Hit \"Start Bracket\" when registration is closed." : "Bracket will appear once the admin generates it."}
+            {isStaff ? "Bracket not yet generated. Hit Start Bracket when registration is closed." : "Bracket will appear once the admin generates it."}
+          </div>
+        )
+      ) : tournament.format === "ROUND_ROBIN" ? (
+        matches.length > 0 ? (
+          <TournamentRoundRobin
+            tournamentId={tournament.id}
+            matches={matches}
+            currentUserId={currentUserId}
+            onMatchClick={setOpenMatch}
+          />
+        ) : (
+          <div style={{ padding: 30, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 13, border: "1px dashed rgba(245,130,32,.25)", borderRadius: 6 }}>
+            {isStaff ? "Round-robin not yet generated. Hit Start Bracket when registration is closed." : "Match schedule will appear once the admin generates it."}
           </div>
         )
       ) : (
@@ -260,7 +281,8 @@ function EmptyState({ isStaff, onCreate }: { isStaff?: boolean; onCreate: () => 
 function CreateTournamentModal({ lobbyId, onClose, onCreated }: { lobbyId: string; onClose: () => void; onCreated: (id: string) => void }) {
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [format, setFormat] = React.useState<"BRACKET" | "LEADERBOARD" | "ROUND_ROBIN">("BRACKET");
+  const [format, setFormat] = React.useState<"BRACKET" | "BRACKET_DOUBLE" | "LEADERBOARD" | "ROUND_ROBIN">("BRACKET");
+  const [seeding, setSeeding] = React.useState<"random" | "rank">("random");
   const [maxEntries, setMaxEntries] = React.useState("16");
   const [startsAt, setStartsAt] = React.useState("");
   const [endsAt, setEndsAt] = React.useState("");
@@ -321,7 +343,7 @@ function CreateTournamentModal({ lobbyId, onClose, onCreated }: { lobbyId: strin
         </Field>
         <Field label="Format">
           <div style={{ display: "flex", gap: 6 }}>
-            {(["BRACKET", "LEADERBOARD", "ROUND_ROBIN"] as const).map(f => (
+            {(["BRACKET", "BRACKET_DOUBLE", "ROUND_ROBIN", "LEADERBOARD"] as const).map(f => (
               <button key={f} type="button" onClick={() => setFormat(f)} style={{
                 flex: 1, padding: "8px 10px",
                 background: format === f ? `${ACCENT}28` : "rgba(255,255,255,.04)",
@@ -330,6 +352,20 @@ function CreateTournamentModal({ lobbyId, onClose, onCreated }: { lobbyId: strin
                 borderRadius: 3, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 letterSpacing: 0.5, textTransform: "uppercase",
               }}>{f.replace("_", " ")}</button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Seeding">
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["random", "rank"] as const).map(opt => (
+              <button key={opt} type="button" onClick={() => setSeeding(opt)} style={{
+                flex: 1, padding: "6px 10px",
+                background: seeding === opt ? `${ACCENT}28` : "rgba(255,255,255,.04)",
+                border: `1px solid ${seeding === opt ? ACCENT : "rgba(255,255,255,.1)"}`,
+                color: seeding === opt ? "#fff" : "rgba(255,255,255,.7)",
+                borderRadius: 3, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                fontFamily: "inherit", letterSpacing: 0.4, textTransform: "uppercase",
+              }}>{opt === "random" ? "Random" : "By Rank (Notoriety)"}</button>
             ))}
           </div>
         </Field>

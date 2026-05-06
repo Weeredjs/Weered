@@ -1318,6 +1318,7 @@ enum EnrollmentStatus {
 enum TournamentFormat {
   LEADERBOARD
   BRACKET
+  BRACKET_DOUBLE
   ROUND_ROBIN
 }
 
@@ -1570,6 +1571,15 @@ model TournamentMatch {
   nextMatchId     String?
   nextMatch       TournamentMatch?  @relation("Advance", fields: [nextMatchId], references: [id])
   prevMatches     TournamentMatch[] @relation("Advance")
+
+  // Double-elimination support: bracketSide tags WINNERS / LOSERS / GRAND.
+  // loserMatchId points to the losers-bracket match the LOSER drops into
+  // when this match is in the WINNERS bracket. Null for ROUND_ROBIN +
+  // single-elim BRACKET (where loser is just eliminated).
+  bracketSide     String?           // "WINNERS" | "LOSERS" | "GRAND" — null for single-elim/round-robin
+  loserMatchId    String?
+  loserMatch      TournamentMatch?  @relation("LoserDrop", fields: [loserMatchId], references: [id])
+  loserDrops      TournamentMatch[] @relation("LoserDrop")
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt

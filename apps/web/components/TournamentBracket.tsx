@@ -19,6 +19,7 @@ type Match = {
   twitchLogin: string | null;
   notes: string | null;
   nextMatchId: string | null;
+  bracketSide: "WINNERS" | "LOSERS" | "GRAND" | null;
   entryA: { id: string; displayName: string; userId: string | null } | null;
   entryB: { id: string; displayName: string; userId: string | null } | null;
 };
@@ -53,18 +54,37 @@ export default function TournamentBracket({
   onMatchClick: (matchId: string) => void;
   onRefresh: () => void;
 }) {
-  const rounds = React.useMemo(() => {
-    const byRound = new Map<number, Match[]>();
-    for (const m of matches) {
-      if (!byRound.has(m.round)) byRound.set(m.round, []);
-      byRound.get(m.round)!.push(m);
+  // Group matches by bracketSide first (for double-elim), then by round.
+  // Single-elim has all matches with bracketSide=null and renders as one bracket.
+  const sections = React.useMemo(() => {
+    const isDouble = matches.some(m => m.bracketSide === "WINNERS" || m.bracketSide === "LOSERS");
+    function buildRounds(ms: Match[]) {
+      const byRound = new Map<number, Match[]>();
+      for (const m of ms) {
+        if (!byRound.has(m.round)) byRound.set(m.round, []);
+        byRound.get(m.round)!.push(m);
+      }
+      return Array.from(byRound.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([r, ms2]) => ({ round: r, matches: ms2.sort((a, b) => a.bracketPosition - b.bracketPosition) }));
     }
-    return Array.from(byRound.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([r, ms]) => ({ round: r, matches: ms.sort((a, b) => a.bracketPosition - b.bracketPosition) }));
+    if (!isDouble) {
+      return [{ side: null as "WINNERS" | "LOSERS" | "GRAND" | null, rounds: buildRounds(matches) }];
+    }
+    const grouped: Record<string, Match[]> = { WINNERS: [], LOSERS: [], GRAND: [] };
+    for (const m of matches) {
+      const k = m.bracketSide || "WINNERS";
+      if (!grouped[k]) grouped[k] = [];
+      grouped[k].push(m);
+    }
+    const out: Array<{ side: "WINNERS" | "LOSERS" | "GRAND" | null; rounds: ReturnType<typeof buildRounds> }> = [];
+    if (grouped.WINNERS.length) out.push({ side: "WINNERS", rounds: buildRounds(grouped.WINNERS) });
+    if (grouped.LOSERS.length) out.push({ side: "LOSERS", rounds: buildRounds(grouped.LOSERS) });
+    if (grouped.GRAND.length) out.push({ side: "GRAND", rounds: buildRounds(grouped.GRAND) });
+    return out;
   }, [matches]);
 
-  if (rounds.length === 0) {
+  if (sections.length === 0 || sections.every(s => s.rounds.length === 0)) {
     return (
       <div style={{ padding: 30, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 13 }}>
         Bracket not generated yet.
@@ -72,54 +92,69 @@ export default function TournamentBracket({
     );
   }
 
-  const numRounds = rounds.length;
-  const finalRoundLabel = (r: number) => {
-    if (r === numRounds) return "Final";
-    if (r === numRounds - 1) return "Semifinals";
-    if (r === numRounds - 2) return "Quarterfinals";
-    return `Round ${r}`;
-  };
-
   return (
-    <div style={{
-      display: "flex", gap: 16, padding: 16,
-      overflowX: "auto",
-      background: "linear-gradient(180deg, rgba(20,14,8,.6) 0%, rgba(8,5,2,.85) 100%)",
-      borderRadius: 6,
-      border: "1px solid rgba(245,130,32,.18)",
-      minHeight: 400,
-    }}>
-      {rounds.map(({ round, matches: roundMatches }, roundIdx) => {
-        // Vertical spacing scales with round depth
-        const slotHeight = 80;
-        const gapMultiplier = Math.pow(2, roundIdx);
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {sections.map((section, secIdx) => {
+        const sideLabel = section.side === "WINNERS" ? "Winners Bracket"
+          : section.side === "LOSERS" ? "Losers Bracket"
+          : section.side === "GRAND" ? "Grand Final"
+          : null;
+        const numRounds = section.rounds.length;
+        const finalRoundLabel = (r: number) => {
+          if (section.side === "GRAND") return "Grand Final";
+          if (section.side === "LOSERS") return `LB Round ${r}`;
+          if (r === numRounds) return "Final";
+          if (r === numRounds - 1) return "Semifinals";
+          if (r === numRounds - 2) return "Quarterfinals";
+          return `Round ${r}`;
+        };
+        const sideColor = section.side === "LOSERS" ? "#f87171" : ACCENT;
         return (
-          <div key={round} style={{
-            flex: "0 0 auto",
-            width: 220,
-            display: "flex", flexDirection: "column",
-          }}>
+          <div key={section.side || `single-${secIdx}`}>
+            {sideLabel && (
+              <div style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: "1.5px",
+                textTransform: "uppercase",
+                color: sideColor,
+                marginBottom: 8, paddingLeft: 4,
+              }}>▌ {sideLabel}</div>
+            )}
             <div style={{
-              fontSize: 10, fontWeight: 800, letterSpacing: "1.5px",
-              textTransform: "uppercase",
-              color: ACCENT,
-              marginBottom: 12,
-              textAlign: "center",
-            }}>{finalRoundLabel(round)}</div>
-            <div style={{
-              flex: 1,
-              display: "flex", flexDirection: "column",
-              justifyContent: "space-around",
-              gap: slotHeight * (gapMultiplier - 1) / Math.max(1, roundMatches.length),
+              display: "flex", gap: 16, padding: 16,
+              overflowX: "auto",
+              background: "linear-gradient(180deg, rgba(20,14,8,.6) 0%, rgba(8,5,2,.85) 100%)",
+              borderRadius: 6,
+              border: `1px solid ${section.side === "LOSERS" ? "rgba(248,113,113,.18)" : "rgba(245,130,32,.18)"}`,
+              minHeight: section.side === "GRAND" ? 160 : 400,
             }}>
-              {roundMatches.map(m => (
-                <BracketMatchCell
-                  key={m.id}
-                  match={m}
-                  currentUserId={currentUserId}
-                  onClick={() => onMatchClick(m.id)}
-                />
-              ))}
+              {section.rounds.map(({ round, matches: roundMatches }, roundIdx) => {
+                const slotHeight = 80;
+                const gapMultiplier = Math.pow(2, roundIdx);
+                return (
+                  <div key={round} style={{ flex: "0 0 auto", width: 220, display: "flex", flexDirection: "column" }}>
+                    <div style={{
+                      fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase",
+                      color: sideColor,
+                      marginBottom: 12, textAlign: "center",
+                    }}>{finalRoundLabel(round)}</div>
+                    <div style={{
+                      flex: 1,
+                      display: "flex", flexDirection: "column",
+                      justifyContent: "space-around",
+                      gap: slotHeight * (gapMultiplier - 1) / Math.max(1, roundMatches.length),
+                    }}>
+                      {roundMatches.map(m => (
+                        <BracketMatchCell
+                          key={m.id}
+                          match={m}
+                          currentUserId={currentUserId}
+                          onClick={() => onMatchClick(m.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
