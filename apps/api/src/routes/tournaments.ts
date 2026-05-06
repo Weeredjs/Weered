@@ -8,6 +8,8 @@ type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
   awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;
+  getGlobalRole?: (userId: string) => Promise<string>;
+  canAccessStaff?: (role: string) => boolean;
   createNotification?: (opts: {
     userId: string; type: string; title: string;
     body?: string; actionUrl?: string;
@@ -16,7 +18,19 @@ type Opts = {
 };
 
 export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, awardNotoriety, awardPaper, createNotification } = opts;
+  const { authFromHeader, awardNotoriety, awardPaper, createNotification, getGlobalRole, canAccessStaff } = opts;
+
+  // Helper: check the DB at request time. The JWT only carries { sub, name }
+  // so any check against u.globalRole was always undefined → forbidden.
+  async function isStaffUser(userId: string): Promise<boolean> {
+    if (getGlobalRole && canAccessStaff) {
+      const role = await getGlobalRole(userId);
+      return canAccessStaff(role);
+    }
+    // Fallback: direct DB query if helpers weren't passed
+    const u = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
+    return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
+  }
 
   app.get("/tournaments", async (req, reply) => {
     const { lobbyId, status } = req.query as any;
@@ -49,7 +63,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+    if (!(await isStaffUser(u.id))) {
       return reply.code(403).send({ ok: false, error: "forbidden" });
     }
     const body = req.body as any;
@@ -138,7 +152,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments/:id/activate", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+    if (!(await isStaffUser(u.id))) {
       return reply.code(403).send({ ok: false, error: "forbidden" });
     }
     const id = String((req as any).params?.id || "");
@@ -152,7 +166,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments/:id/complete", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!isStaff(u.globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
     const id = String((req as any).params?.id || "");
 
     const tournament = await (prisma as any).tournament.findUnique({ where: { id } });
@@ -376,7 +390,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments/:id/bracket/start", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!isStaff(u.globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
     const id = String((req as any).params?.id || "");
     const body: any = (req as any).body || {};
 
@@ -796,7 +810,8 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       where: { id: { in: [m.entryAId, m.entryBId].filter(Boolean) } },
       select: { userId: true },
     });
-    const allowed = isStaff(u.globalRole) || participantIds.some((p: any) => p.userId === u.id);
+    const staffOk = await isStaffUser(u.id);
+    const allowed = staffOk || participantIds.some((p: any) => p.userId === u.id);
     if (!allowed) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const winnerEntryId = String(body.winnerEntryId || "");
@@ -817,7 +832,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     });
 
     // Staff reports auto-confirm (no double-step)
-    if (isStaff(u.globalRole)) {
+    if (staffOk) {
       await (prisma as any).tournamentMatch.update({
         where: { id: matchId },
         data: { status: "CONFIRMED", confirmedAt: new Date() },
@@ -825,7 +840,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       await advanceWinner(matchId);
     }
 
-    return reply.send({ ok: true, autoConfirmed: isStaff(u.globalRole) });
+    return reply.send({ ok: true, autoConfirmed: staffOk });
   });
 
   // POST /tournaments/:id/matches/:matchId/confirm
@@ -838,7 +853,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
     if (m.status !== "REPORTED") return reply.code(400).send({ ok: false, error: "not_reported" });
 
-    if (!isStaff(u.globalRole)) {
+    if (!(await isStaffUser(u.id))) {
       // Must be the participant who DIDN'T report
       if (u.id === m.reportedById) return reply.code(403).send({ ok: false, error: "self_confirm", message: "Opponent must confirm." });
       const participantIds = await (prisma as any).tournamentEntry.findMany({
@@ -892,7 +907,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.patch("/tournaments/:id/matches/:matchId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!isStaff(u.globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
     const matchId = String((req as any).params?.matchId || "");
     const body: any = (req as any).body || {};
     const data: any = {};
@@ -909,7 +924,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments/:id/matches/:matchId/admin-set", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!isStaff(u.globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
     const matchId = String((req as any).params?.matchId || "");
     const body: any = (req as any).body || {};
     const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
