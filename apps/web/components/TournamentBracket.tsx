@@ -20,6 +20,7 @@ type Match = {
   notes: string | null;
   nextMatchId: string | null;
   bracketSide: "WINNERS" | "LOSERS" | "GRAND" | null;
+  pgcrInstanceId?: string | null;
   entryA: { id: string; displayName: string; userId: string | null } | null;
   entryB: { id: string; displayName: string; userId: string | null } | null;
 };
@@ -209,6 +210,18 @@ function BracketMatchCell({ match, currentUserId, onClick }: { match: Match; cur
           borderTop: `1px solid ${isLive ? "rgba(34,197,94,.3)" : isDisputed ? "rgba(239,68,68,.3)" : "rgba(245,130,32,.3)"}`,
         }}>
           {isLive ? "● LIVE" : isDisputed ? "⚠ DISPUTED" : "● REPORTED"}
+        </div>
+      )}
+      {match.status === "CONFIRMED" && match.pgcrInstanceId && (
+        <div title="Auto-verified from Bungie PGCR" style={{
+          padding: "3px 8px",
+          fontSize: 8, fontWeight: 800, letterSpacing: "1.2px",
+          textTransform: "uppercase", textAlign: "center",
+          background: "rgba(99,102,241,.16)",
+          color: "#a5b4fc",
+          borderTop: "1px solid rgba(99,102,241,.3)",
+        }}>
+          🛡 Verified by Bungie
         </div>
       )}
       <style>{`

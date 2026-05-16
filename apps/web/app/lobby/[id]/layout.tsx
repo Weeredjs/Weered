@@ -1,4 +1,6 @@
 import { Metadata } from "next";
+import LobbySeoSlab from "./LobbySeoSlab";
+import SyncAuthedAttribute from "./SyncAuthedAttribute";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
@@ -13,8 +15,8 @@ const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: strin
   },
   destiny2: {
     ogImage: `${SITE}/brand/lobbies/destiny2-og-v1.png`,
-    description: "The unofficial Guardian hub. Live Steam player count, raid & dungeon LFG, Crucible talk, Vanguard intel, Gjallarhorn lore. Become Legend. Find your fireteam.",
-    title: "Destiny 2 — unofficial Guardian hub · Weered",
+    description: "The unofficial Guardian hub. Verified-via-Bungie-API tournaments, race brackets for Pantheon 2.0, Trials and Crucible competitions, and Hall-of-Fame champion flair. Hosting community races into Shadow & Order (June 9, 2026). Find your fireteam.",
+    title: "Destiny 2 community hub — Pantheon 2.0 races, verified tournaments · Weered",
   },
 };
 
@@ -61,6 +63,45 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default function LobbyIdLayout({ children }: { children: React.ReactNode }) {
-  return children;
+async function fetchLobbyName(id: string): Promise<string> {
+  try {
+    const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, { next: { revalidate: 600 } });
+    if (res.ok) {
+      const data = await res.json();
+      const lobby = data?.lobby ?? data;
+      return lobby?.name || id;
+    }
+  } catch {}
+  return id;
+}
+
+export default async function LobbyIdLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: { id: string };
+}) {
+  const id = decodeURIComponent(params.id);
+  const name = await fetchLobbyName(id);
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+      { "@type": "ListItem", position: 2, name: "Lobbies", item: `${SITE}/lobby` },
+      { "@type": "ListItem", position: 3, name, item: `${SITE}/lobby/${encodeURIComponent(id)}` },
+    ],
+  };
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <SyncAuthedAttribute />
+      <LobbySeoSlab lobbyId={id} />
+      {children}
+    </>
+  );
 }

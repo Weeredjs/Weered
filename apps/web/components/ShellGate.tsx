@@ -39,7 +39,7 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact", "/mods", "/why-not-discord"];
+const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact", "/mods", "/why-not-discord", "/alternatives", "/tournaments", "/play"];
 
 // ── Icon strip SVGs (sharp, bold, 20×20 on 24-viewBox) ──────────────────────
 const ICO_NAV = (
@@ -298,7 +298,9 @@ export default function ShellGate({
   );
 
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  // Default the right rail to collapsed so new users see the chat sidebar
+  // strip, not the wide panel. They can expand via the Panel button.
+  const [rightCollapsed, setRightCollapsed] = useState(true);
 
   // Rail-stack DMs button reflects DM + group activity. DockShell publishes
   // weered:dock:unread (DM threads). GroupsTab publishes weered:groups:unread.
@@ -324,10 +326,36 @@ export default function ShellGate({
     };
   }, []);
 
+  // Poll /groups for unread counts independent of the GroupsTab being mounted.
+  // Without this, the rail badge only updates when the user actually opens
+  // the Groups dock tab — meaning a fresh group DM goes uncounted in the rail
+  // until the user pokes around. 30s cadence is enough for a presence cue.
+  useEffect(() => {
+    const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+        if (!token) return;
+        const r = await fetch(`${API}/groups`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (cancelled) return;
+        const total = (j?.threads || []).reduce((s: number, t: any) => s + (Number(t?.unread) || 0), 0);
+        setGroupUnread(Math.max(0, total));
+      } catch {}
+    };
+    void tick();
+    const id = setInterval(tick, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
   // Persist right rail collapse state
   useEffect(() => {
     const saved = localStorage.getItem("weered_right_collapsed");
-    if (saved === "1") setRightCollapsed(true);
+    if (saved === "0") setRightCollapsed(false);
+    else if (saved === "1") setRightCollapsed(true);
+    // saved === null → keep default (true) for first-time visitors
   }, []);
   const toggleRight = () => {
     setRightCollapsed(v => {
@@ -387,8 +415,13 @@ export default function ShellGate({
             <RailQuickButton
               kind="dms"
               label="DMs"
-              title={dmUnread > 0 ? `${dmUnread} unread` : "Open Messages"}
-              badge={dmUnread}
+              title={
+                dmUnread > 0
+                  ? `${dmUnreadOnly > 0 ? `${dmUnreadOnly} DM${dmUnreadOnly === 1 ? "" : "s"}` : ""}${dmUnreadOnly > 0 && groupUnread > 0 ? " · " : ""}${groupUnread > 0 ? `${groupUnread} group` : ""} unread`
+                  : "Open Messages"
+              }
+              badge={dmUnreadOnly}
+              groupBadge={groupUnread}
               onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail: { tab: "dms" } })); } catch {} }}
             />
             <button
@@ -442,10 +475,11 @@ export default function ShellGate({
 type QuickKind = "crew" | "friends" | "dms";
 
 function RailQuickButton({
-  kind, label, title, onClick, badge,
-}: { kind: QuickKind; label: string; title: string; onClick: () => void; badge?: number }) {
+  kind, label, title, onClick, badge, groupBadge,
+}: { kind: QuickKind; label: string; title: string; onClick: () => void; badge?: number; groupBadge?: number }) {
   const palette = QUICK_PALETTE[kind];
-  const hot = (badge ?? 0) > 0;
+  const hot = ((badge ?? 0) + (groupBadge ?? 0)) > 0;
+  const hasGroup = (groupBadge ?? 0) > 0;
   return (
     <button
       type="button"
@@ -460,8 +494,24 @@ function RailQuickButton({
         position: "relative",
       }}
     >
-      {hot && (
+      {(badge ?? 0) > 0 && (
         <span className="weered-rail-quick-badge">{badge! > 99 ? "99+" : badge}</span>
+      )}
+      {hasGroup && (
+        <span
+          className="weered-rail-quick-group-dot"
+          title={`${groupBadge} group unread`}
+          style={{
+            position: "absolute",
+            top: 18, right: -3,
+            width: 9, height: 9, borderRadius: 999,
+            background: "#3b82f6",
+            border: "2px solid rgba(10,10,15,.9)",
+            boxShadow: "0 0 8px rgba(59,130,246,.6)",
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+        />
       )}
       <span className="weered-rail-quick-icon">
         {kind === "crew" ? (

@@ -692,11 +692,17 @@ function PresenceSection() {
   const [steamId, setSteamId] = React.useState("");
   const [twitchLogin, setTwitchLogin] = React.useState("");
   const [xboxGamertag, setXboxGamertag] = React.useState("");
-  const [saving, setSaving] = React.useState<"" | "steam" | "twitch" | "xbox">("");
+  const [psnAccountId, setPsnAccountId] = React.useState("");
+  const [lichessUsername, setLichessUsername] = React.useState("");
+  const [chessComUsername, setChessComUsername] = React.useState("");
+  const [saving, setSaving] = React.useState<"" | "steam" | "twitch" | "xbox" | "psn" | "lichess" | "chesscom">("");
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
   const [linkedSteam, setLinkedSteam] = React.useState<string | null>(null);
   const [linkedTwitch, setLinkedTwitch] = React.useState<string | null>(null);
   const [linkedXbox, setLinkedXbox] = React.useState<string | null>(null);
+  const [linkedPsn, setLinkedPsn] = React.useState<string | null>(null);
+  const [linkedLichess, setLinkedLichess] = React.useState<string | null>(null);
+  const [linkedChessCom, setLinkedChessCom] = React.useState<string | null>(null);
   const [livePresence, setLivePresence] = React.useState<any>(null);
   const [presenceCheckedAt, setPresenceCheckedAt] = React.useState<string | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -711,6 +717,9 @@ function PresenceSection() {
         setLinkedSteam(j.steamId ?? null);
         setLinkedTwitch(j.twitchLogin ?? null);
         setLinkedXbox(j.xboxGamertag ?? null);
+        setLinkedPsn(j.psnAccountId ?? null);
+        setLinkedLichess(j.lichessUsername ?? null);
+        setLinkedChessCom(j.chessComUsername ?? null);
         setLivePresence(j.livePresence ?? null);
         setPresenceCheckedAt(j.presenceCheckedAt ?? null);
       }
@@ -769,6 +778,60 @@ function PresenceSection() {
         if (clear) setTwitchLogin("");
         await loadPresence();
         if (!clear) { void refreshNow(); }
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch { setMsg({ ok: false, text: "Network error." }); }
+    setSaving("");
+  }
+
+  async function savePsn(clear?: boolean) {
+    setSaving("psn"); setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/psn-account-id`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ psnAccountId: clear ? "" : psnAccountId.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({ ok: true, text: clear ? "PSN unlinked." : `PSN linked as ${j.psnAccountId}.` });
+        if (clear) setPsnAccountId("");
+        await loadPresence();
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch { setMsg({ ok: false, text: "Network error." }); }
+    setSaving("");
+  }
+
+  async function saveLichess(clear?: boolean) {
+    setSaving("lichess"); setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/lichess`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ username: clear ? "" : lichessUsername.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({ ok: true, text: clear ? "Lichess unlinked." : `Lichess linked as ${j.lichessUsername}. Polling your games now.` });
+        if (clear) setLichessUsername("");
+        await loadPresence();
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch { setMsg({ ok: false, text: "Network error." }); }
+    setSaving("");
+  }
+
+  async function saveChessCom(clear?: boolean) {
+    setSaving("chesscom"); setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/chess-com`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ username: clear ? "" : chessComUsername.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({ ok: true, text: clear ? "Chess.com unlinked." : `Chess.com linked as ${j.chessComUsername}. Polling your games now.` });
+        if (clear) setChessComUsername("");
+        await loadPresence();
       } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
     } catch { setMsg({ ok: false, text: "Network error." }); }
     setSaving("");
@@ -871,6 +934,84 @@ function PresenceSection() {
             {saving === "xbox" ? "Saving…" : "Link"}
           </button>
           <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveXbox(true)} disabled={saving === "xbox"}>Clear</button>
+        </div>
+      </div>
+
+      {/* PSN online ID — identity only, no live integration */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>PSN online ID</span>
+          {linkedPsn && (
+            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(0,112,243,.16)", border: "1px solid rgba(0,112,243,.40)", color: "rgba(147,197,253,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
+          )}
+        </div>
+        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
+          Your PSN online ID — shown as a chip so friends know to find you on PS5. Identity only — Sony has no third-party API for live presence.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input
+            type="text"
+            value={psnAccountId}
+            onChange={e => setPsnAccountId(e.target.value.slice(0, 16))}
+            placeholder={linkedPsn || "YourPsnId"}
+            style={stackedInputStyle}
+          />
+          <button
+            type="button"
+            style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }}
+            onClick={() => savePsn(false)}
+            disabled={saving === "psn" || !/^[A-Za-z][A-Za-z0-9_-]{2,15}$/.test(psnAccountId.trim())}
+          >
+            {saving === "psn" ? "Saving…" : "Link"}
+          </button>
+          <button
+            type="button"
+            style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }}
+            onClick={() => savePsn(true)}
+            disabled={saving === "psn"}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {/* Lichess */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Lichess username</span>
+          {linkedLichess && (
+            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(124,58,237,.16)", border: "1px solid rgba(124,58,237,.40)", color: "rgba(196,181,253,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
+          )}
+        </div>
+        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
+          Your Lichess username. We poll your recent games and credit Weered chess tournaments. Public API, no OAuth, no token. Validated against Lichess on save.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input type="text" value={lichessUsername} onChange={e => setLichessUsername(e.target.value.slice(0, 29))} placeholder={linkedLichess || "yourname"} style={stackedInputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveLichess(false)} disabled={saving === "lichess" || lichessUsername.trim().length < 2}>
+            {saving === "lichess" ? "Saving…" : "Link"}
+          </button>
+          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveLichess(true)} disabled={saving === "lichess"}>Clear</button>
+        </div>
+      </div>
+
+      {/* Chess.com */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Chess.com username</span>
+          {linkedChessCom && (
+            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,.14)", border: "1px solid rgba(34,197,94,.40)", color: "rgba(134,239,172,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
+          )}
+        </div>
+        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
+          Your Chess.com username. Same deal — we poll your recent games for tournament credit. Public API. Validated on save.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input type="text" value={chessComUsername} onChange={e => setChessComUsername(e.target.value.slice(0, 25))} placeholder={linkedChessCom || "yourname"} style={stackedInputStyle} />
+          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveChessCom(false)} disabled={saving === "chesscom" || chessComUsername.trim().length < 3}>
+            {saving === "chesscom" ? "Saving…" : "Link"}
+          </button>
+          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveChessCom(true)} disabled={saving === "chesscom"}>Clear</button>
         </div>
       </div>
 

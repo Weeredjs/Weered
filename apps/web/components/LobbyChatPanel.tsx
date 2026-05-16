@@ -10,6 +10,14 @@ import { weeredConfirm } from "../lib/confirm";
 import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
 import RoleIcon, { TierIcon } from "./RoleIcon";
+import FlairBadge from "./FlairBadge";
+import { useEquippedFlair } from "../lib/useEquippedFlair";
+
+function ChatFlair({ userId, size = "sm" }: { userId: string; size?: "sm" | "md" | "lg" }) {
+  const f = useEquippedFlair(userId);
+  if (!f || f.kind !== "BADGE") return null;
+  return <FlairBadge flair={f as any} size={size} />;
+}
 
 // ── @mention detection — scans backwards from the caret for an unbroken
 // @token. Requires whitespace or input-start before the @. Returns the
@@ -1085,6 +1093,16 @@ export default function LobbyChatPanel(
 
   // ── @mention autocomplete ────────────────────────────────────────────────
   // Filter from the room's presence list when the user has an open @ token.
+  const mentionLookup = useMemo(() => {
+    const out: Record<string, string> = { operator: "The Operator" };
+    const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+    for (const u of roomUsers) {
+      const key = String(u?.usernameKey || "").toLowerCase();
+      if (key && u?.name) out[key] = u.name;
+    }
+    return out;
+  }, [ctx?.usersByRoom, effectiveRoomId]);
+
   const mentionCandidates = useMemo(() => {
     if (!mentionState) return [] as any[];
     const q = mentionState.query.toLowerCase();
@@ -1772,6 +1790,7 @@ export default function LobbyChatPanel(
                           <TierIcon tier={String(uTier).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
                         )}
                         {msgUserId && <CrewFlair userId={msgUserId} size={13} />}
+                        {msgUserId && <ChatFlair userId={msgUserId} size="sm" />}
                         {editedAt > 0 && !deletedAt && (
                           <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))", marginLeft: 2 }}>(edited)</span>
                         )}
@@ -2089,7 +2108,7 @@ export default function LobbyChatPanel(
                   <button
                     key={u.id}
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); acceptMention(u.name); }}
+                    onMouseDown={(e) => { e.preventDefault(); acceptMention(u.usernameKey || u.name); }}
                     onMouseEnter={() => setMentionState(s => s ? { ...s, index: i } : null)}
                     style={{
                       display: "flex", alignItems: "center", gap: 10,
@@ -2191,7 +2210,7 @@ export default function LobbyChatPanel(
                   if (e.key === "Tab" || e.key === "Enter") {
                     e.preventDefault();
                     const sel = mentionCandidates[mentionState.index];
-                    if (sel?.name) acceptMention(sel.name);
+                    if (sel?.name) acceptMention(sel.usernameKey || sel.name);
                     return;
                   }
                   if (e.key === "Escape") { e.preventDefault(); setMentionState(null); return; }
@@ -2398,6 +2417,7 @@ export default function LobbyChatPanel(
                     {role && role !== "USER" && <RoleIcon role={role} size={11} />}
                     {tier && tier !== "INNOCENT" && <TierIcon tier={tier} size={11} />}
                     {u.id && <CrewFlair userId={u.id} size={11} />}
+                    {u.id && <ChatFlair userId={u.id} size="sm" />}
                   </button>
                 );
               })}

@@ -1,6 +1,6 @@
 import "./globals.css";
 import React from "react";
-import { Pirata_One, Cormorant_Garamond, Rajdhani, Barlow_Condensed } from "next/font/google";
+import { Pirata_One, Cormorant_Garamond, Rajdhani, Barlow_Condensed, Saira_Stencil_One } from "next/font/google";
 
 // Preloaded / self-hosted via next/font so lobby theme typography is
 // reliable on first paint (no FOUC). Exposed as CSS variables that
@@ -32,6 +32,14 @@ const barlow = Barlow_Condensed({
   weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin"],
   variable: "--font-barlow",
+  display: "swap",
+  preload: true,
+});
+// Stencil display font for Helldivers 2 lobby propaganda look. Crisp at all sizes.
+const sairaStencil = Saira_Stencil_One({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-saira-stencil",
   display: "swap",
   preload: true,
 });
@@ -95,6 +103,11 @@ export const metadata = {
   alternates: {
     canonical: "https://weered.ca",
   },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    yandex: process.env.YANDEX_VERIFICATION,
+    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+  },
   robots: {
     index: true,
     follow: true,
@@ -137,6 +150,38 @@ const jsonLd = {
   },
 };
 
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Weered",
+  url: "https://weered.ca",
+  logo: "https://weered.ca/brand/logo/weered-logo-512.png",
+  description: "Weered is a real-time community platform for gaming and beyond — lobbies, rooms, presence, and modules.",
+  foundingDate: "2024",
+  sameAs: [
+    "https://twitter.com/weered",
+    "https://www.reddit.com/r/weered",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "support@weered.ca",
+    url: "https://weered.ca/contact",
+  },
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Weered",
+  url: "https://weered.ca",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: "https://weered.ca/lobby?q={search_term_string}",
+    "query-input": "required name=search_term_string",
+  },
+};
+
 const themeBootScript = `
 try {
   var d = document.documentElement;
@@ -150,12 +195,15 @@ try {
   d.setAttribute('data-weered-theme', theme);
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
+  // SEO slab gate: hide the server-rendered lobby slab for authenticated users
+  // before paint (no FOUC). The slab stays in the DOM for crawlers.
+  if (localStorage.getItem('weered_token')) d.setAttribute('data-weered-authed', '1');
 } catch(e) {}
 `;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable}`}>
+    <html lang="en" className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
@@ -163,6 +211,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         <OverlayProvider>
           <WeeredProvider>

@@ -5,9 +5,12 @@ import React, { useEffect, useState } from "react";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 const stencil: React.CSSProperties = {
-  fontFamily: '"Stencil Std","Black Ops One","Impact",sans-serif',
-  letterSpacing: "1.5px",
+  fontFamily: 'var(--font-saira-stencil), "Stencil Std", "Impact", sans-serif',
+  letterSpacing: "1px",
   textTransform: "uppercase",
+  WebkitFontSmoothing: "antialiased",
+  MozOsxFontSmoothing: "grayscale",
+  textRendering: "geometricPrecision",
 };
 
 type Order = {
@@ -39,6 +42,7 @@ type LastOutcome = { title: string; outcome: "WON" | "LOST" | "ENDED"; ts: numbe
 
 export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSSProperties }) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [lastOutcome, setLastOutcome] = useState<LastOutcome>(null);
@@ -161,57 +165,63 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
 
   return (
     <div style={panelBase(style)}>
+      {/* Single shared header instead of per-order repeat */}
+      <div style={{
+        padding: "8px 14px",
+        borderBottom: "1px solid rgba(255,215,0,.18)",
+        background: "rgba(255,215,0,.05)",
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.4, color: "rgba(255,215,0,.85)", textTransform: "uppercase" }}>
+          ▌ Ministry of Truth
+        </span>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,.45)", letterSpacing: 0.4, textTransform: "uppercase" }}>
+          {orders.length} priority {orders.length === 1 ? "directive" : "directives"}
+        </span>
+      </div>
       {orders.map((o, i) => {
         const remaining = o.expiresAt ? o.expiresAt - now : null;
+        const expanded = expandedOrderId === o.id;
         return (
           <div key={o.id} style={{
-            padding: 14,
-            borderTop: i === 0 ? "none" : "1px solid rgba(255,215,0,.12)",
+            borderTop: i === 0 ? "none" : "1px solid rgba(255,215,0,.10)",
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: "rgba(255,215,0,.6)", marginBottom: 2, textTransform: "uppercase" }}>
-                  ▌ Major Order · Priority Directive
-                </div>
-                <div style={{ fontSize: 16, color: "#FFD700", fontWeight: 800, letterSpacing: 0.5 }}>
+            {/* Compact one-line summary — title • countdown • progress bar */}
+            <button
+              type="button"
+              onClick={() => setExpandedOrderId(expanded ? null : o.id)}
+              style={{
+                width: "100%",
+                background: "transparent", border: "none", color: "inherit",
+                padding: "10px 14px",
+                display: "flex", flexDirection: "column", gap: 6,
+                cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,.4)", lineHeight: 1 }}>
+                  {expanded ? "▾" : "▸"}
+                </span>
+                <span style={{ fontSize: 13, color: "#FFD700", fontWeight: 700, letterSpacing: 0.3, flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {o.title}
-                </div>
-              </div>
-              {remaining !== null && (
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 9, color: "rgba(255,255,255,.5)", letterSpacing: ".5px", textTransform: "uppercase" }}>
-                    Time Remaining
-                  </div>
-                  <div style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    letterSpacing: 0.5,
-                    color: remaining < 86400_000 ? "#b91c1c" : "#FFD700",
+                </span>
+                <span style={{ fontSize: 11, color: "rgba(255,215,0,.7)", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{o.progressPct}%</span>
+                {remaining !== null && (
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 700,
                     fontVariantNumeric: "tabular-nums",
+                    color: remaining < 86400_000 ? "#fca5a5" : "rgba(255,255,255,.55)",
+                    minWidth: 56, textAlign: "right",
                   }}>
                     {formatCountdown(remaining)}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {(o.brief || o.description) && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", lineHeight: 1.45, marginBottom: 10, fontStyle: "italic" }}>
-                {o.brief || o.description}
-              </div>
-            )}
-
-            {/* Progress bar */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3, color: "rgba(255,215,0,.7)", letterSpacing: ".5px", textTransform: "uppercase" }}>
-                <span>Objective Progress</span>
-                <span style={{ fontWeight: 800 }}>{o.progressPct}%</span>
+                  </span>
+                )}
               </div>
               <div style={{
-                height: 8,
+                height: 4,
                 borderRadius: 2,
                 background: "rgba(0,0,0,.5)",
-                border: "1px solid rgba(255,215,0,.2)",
                 overflow: "hidden",
               }}>
                 <div style={{
@@ -221,11 +231,17 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
                   transition: "width .5s",
                 }} />
               </div>
-            </div>
+            </button>
 
-            {/* Reward */}
-            {o.reward && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "rgba(255,255,255,.85)" }}>
+            {expanded && (o.brief || o.description) && (
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", lineHeight: 1.45, padding: "0 14px 10px 30px", fontStyle: "italic" }}>
+                {o.brief || o.description}
+              </div>
+            )}
+
+            {/* Reward (only shown when expanded) */}
+            {expanded && o.reward && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "rgba(255,255,255,.85)", padding: "0 14px 12px 30px" }}>
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
                   width: 22, height: 22, borderRadius: "50%",

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useWeered } from "../../../components/WeeredProvider";
 import { weeredToast } from "../../../lib/toast";
+import FlairBadge from "../../../components/FlairBadge";
+import { useEquippedFlair } from "../../../lib/useEquippedFlair";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type GameAccount = {
@@ -159,11 +161,17 @@ export default function ProfilePage() {
   const initial    = profile.name.slice(0, 1).toUpperCase();
   const joinDate   = new Date(profile.joinedAt).toLocaleDateString("en-CA", { year: "numeric", month: "short" });
   const rank       = notorietyRank(profile.notoriety);
+  const equippedFlair = useEquippedFlair(profile.id);
 
   return (
     <div style={pageWrap}>
       <div style={card}>
 
+        {equippedFlair && equippedFlair.kind === "BANNER" && (
+          <div style={{ padding: "10px 10px 0" }}>
+            <FlairBadge flair={equippedFlair as any} size="lg" />
+          </div>
+        )}
         {/* ── Header strip ── */}
         <div style={{
           height: 80,
@@ -232,8 +240,13 @@ export default function ProfilePage() {
         <div style={{ padding: "0 24px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
             <h1 style={{ fontSize: 22, fontWeight: 950, margin: 0, color: "var(--weered-text, #f5f5f4)", letterSpacing: "-0.5px" }}>
-              {profile.name}
+              {equippedFlair && equippedFlair.kind === "NAMEPLATE" ? (
+                <FlairBadge flair={equippedFlair as any}>{profile.name}</FlairBadge>
+              ) : profile.name}
             </h1>
+            {equippedFlair && equippedFlair.kind === "BADGE" && (
+              <FlairBadge flair={equippedFlair as any} size="md" />
+            )}
 
             {/* Tier badge */}
             <span style={{

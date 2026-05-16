@@ -149,23 +149,30 @@ function Landing({ nextPath }: { nextPath: string }) {
         .lp-getin {
           padding: 8px 16px;
           border-radius: 4px;
-          background: rgba(217,169,66,0.14);
-          border: 1px solid rgba(217,169,66,0.50);
-          color: #e6bd6e;
+          background: linear-gradient(180deg, #e6bd6e 0%, #cc9a3a 50%, #8f6515 100%);
+          border: 1px solid rgba(120,85,20,0.6);
+          color: #0a0a0a;
           font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
           font-size: 13px;
           font-weight: 800;
           text-decoration: none;
           letter-spacing: 0.10em;
           text-transform: uppercase;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,248,220,0.08);
+          text-shadow: 0 1px 0 rgba(255,235,180,0.35);
+          box-shadow:
+            inset 0 1px 0 rgba(255,248,220,0.45),
+            inset 0 -1px 0 rgba(0,0,0,0.25),
+            0 2px 6px rgba(0,0,0,0.35);
           transition: all 0.15s;
         }
         .lp-getin:hover {
-          background: rgba(217,169,66,0.22);
-          border-color: rgba(217,169,66,0.72);
-          color: #f3d48a;
-          box-shadow: 0 4px 14px rgba(217,169,66,0.22), inset 0 1px 0 rgba(255,248,220,0.12);
+          background: linear-gradient(180deg, #f3d48a 0%, #d9a942 50%, #9a7019 100%);
+          border-color: rgba(140,100,30,0.75);
+          color: #000;
+          box-shadow:
+            inset 0 1px 0 rgba(255,248,220,0.55),
+            inset 0 -1px 0 rgba(0,0,0,0.25),
+            0 4px 14px rgba(217,169,66,0.32);
           transform: translateY(-1px);
         }
         .lp-hero {
@@ -223,22 +230,24 @@ function Landing({ nextPath }: { nextPath: string }) {
           letter-spacing: 0.12em;
           text-transform: uppercase;
           text-decoration: none;
-          background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
-          color: #1a1a1c;
+          background: linear-gradient(180deg, #e6bd6e 0%, #cc9a3a 50%, #8f6515 100%);
+          color: #0a0a0a;
+          text-shadow: 0 1px 0 rgba(255,235,180,0.40);
           box-shadow:
-            inset 0 1px 0 rgba(255,248,220,0.35),
-            inset 0 -1px 0 rgba(0,0,0,0.25),
-            0 2px 0 rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,248,220,0.40),
+            inset 0 -1px 0 rgba(0,0,0,0.30),
+            0 2px 0 rgba(0,0,0,0.35),
             0 8px 24px rgba(217,169,66,0.25);
           transition: all 0.18s cubic-bezier(0.22,1,0.36,1);
         }
         .lp-btn-primary:hover {
           transform: translateY(-1px);
-          background: linear-gradient(180deg, #f3d48a 0%, #e6bd6e 50%, #b78a28 100%);
+          color: #000;
+          background: linear-gradient(180deg, #f3d48a 0%, #d9a942 50%, #9a7019 100%);
           box-shadow:
-            inset 0 1px 0 rgba(255,248,220,0.45),
-            inset 0 -1px 0 rgba(0,0,0,0.25),
-            0 4px 0 rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,248,220,0.50),
+            inset 0 -1px 0 rgba(0,0,0,0.30),
+            0 4px 0 rgba(0,0,0,0.35),
             0 12px 32px rgba(217,169,66,0.38);
         }
         .lp-btn-secondary {

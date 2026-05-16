@@ -20,6 +20,8 @@ type Match = {
   twitchLogin: string | null;
   notes: string | null;
   reportedById: string | null;
+  pgcrInstanceId?: string | null;
+  autoDetectedAt?: string | null;
   entryA: { id: string; displayName: string; userId: string | null } | null;
   entryB: { id: string; displayName: string; userId: string | null } | null;
 };
@@ -169,6 +171,29 @@ export default function TournamentMatchModal({
           }}>
             ✓ Final · {winnerName} advances
           </div>
+        )}
+        {match.pgcrInstanceId && (
+          <a
+            href={`https://destinytracker.com/destiny-2/pgcr/${match.pgcrInstanceId}`}
+            target="_blank" rel="noopener noreferrer"
+            title="Auto-detected from your Bungie activity history. Click to view the full Post-Game Carnage Report."
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 18px",
+              background: "linear-gradient(90deg, rgba(99,102,241,.18), rgba(99,102,241,.06))",
+              borderBottom: "1px solid rgba(99,102,241,.4)",
+              color: "#a5b4fc",
+              fontSize: 11, fontWeight: 700, letterSpacing: 1,
+              textTransform: "uppercase",
+              textDecoration: "none",
+            }}>
+            <span aria-hidden style={{ fontSize: 14 }}>🛡️</span>
+            <span>Verified by Bungie</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0, fontSize: 11, opacity: 0.85 }}>
+              View PGCR ↗
+            </span>
+          </a>
         )}
 
         {/* Twitch embed */}

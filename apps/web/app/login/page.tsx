@@ -98,6 +98,7 @@ function LoginForm() {
       const tok = String(j?.token || "");
       if (!tok) throw new Error("No token returned.");
       localStorage.setItem("weered_token", tok);
+      try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
       if (j?.pendingVerification) {
         setPendingEmail(e);
@@ -123,6 +124,7 @@ function LoginForm() {
       const j = await r.json().catch(() => ({} as any));
       if (!r.ok) throw new Error(j?.error || `Error ${r.status}`);
       localStorage.setItem("weered_token", j.token);
+      try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
       router.replace(nextPath);
     } catch (e: any) {

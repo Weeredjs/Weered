@@ -85,6 +85,9 @@ function truncate(s: string, n: number) {
 // per event-type to cap cost and avoid lobby spam.
 
 const _operatorWarLast = new Map<string, number>();
+let _operatorLobbyLastFiredAt = 0;
+const OPERATOR_LOBBY_COOLDOWN_MS = 60_000;
+const OPERATOR_PER_TICK_CAP = 3;
 
 export async function operatorCommentateOnWarEvent(
   eventType:
@@ -98,13 +101,19 @@ export async function operatorCommentateOnWarEvent(
   deps: {
     getAI: () => Promise<any | null>;
     broadcastToLobby: (lobbyId: string, event: any) => void;
+    countLobbyActiveUsers?: (lobbyId: string) => number;
   },
 ) {
   const key = `${eventType}:${ctx.planetId ?? ctx.moId ?? "x"}`;
   const now = Date.now();
   const last = _operatorWarLast.get(key) || 0;
   if (now - last < 30_000) return;
+  // Global lobby cooldown — even if many distinct keys, throttle the chat.
+  if (now - _operatorLobbyLastFiredAt < OPERATOR_LOBBY_COOLDOWN_MS) return;
+  // Skip when the HD2 lobby is empty — don't broadcast to no one.
+  if (deps.countLobbyActiveUsers && deps.countLobbyActiveUsers(HD2_LOBBY_ID) === 0) return;
   _operatorWarLast.set(key, now);
+  _operatorLobbyLastFiredAt = now;
 
   try {
     const ai = await deps.getAI();
@@ -141,7 +150,7 @@ export async function operatorCommentateOnWarEvent(
       eventType,
     });
   } catch (e) {
-    console.error("[operator-war]", e);
+    console.error("[operator-war]", { eventType, planetName: ctx.planetName, planetId: ctx.planetId, faction: ctx.faction, moTitle: ctx.title, error: (e as any)?.message || String(e) });
   }
 }
 
@@ -371,19 +380,34 @@ export async function runHelldiversWorker(deps: {
   // Skip transition firing on the very first tick — without prior
   // state, every active campaign would fire an event spuriously.
   if (primed) {
-    // Campaigns that disappeared from the active list = ended
+    // Campaigns that disappeared from the active list = ended.
+    // Bucket transitions by event type so we can either fire individually
+    // (≤3 per type) or emit a single aggregate message (>3).
+    const buckets: Record<string, any[]> = { defense_won: [], defense_lost: [], planet_liberated: [], planet_lost: [] };
     for (const [pid, prev] of lastCampaigns) {
       if (currentCampaigns.has(pid)) continue;
       if (prev.defense) {
-        // Defense ended — won if planet still ours conceptually; without
-        // post-state info we can't be 100% sure, so we treat "defense
-        // disappeared with health > 0.5" as won and the rest as lost.
         const won = prev.health > 0.5;
-        await operatorCommentateOnWarEvent(won ? "defense_won" : "defense_lost", prev, deps);
+        buckets[won ? "defense_won" : "defense_lost"].push(prev);
       } else {
-        // Liberation ended — won if health near 1.0
         const won = prev.health > 0.95;
-        await operatorCommentateOnWarEvent(won ? "planet_liberated" : "planet_lost", prev, deps);
+        buckets[won ? "planet_liberated" : "planet_lost"].push(prev);
+      }
+    }
+    for (const [eventType, list] of Object.entries(buckets)) {
+      if (list.length === 0) continue;
+      if (list.length <= OPERATOR_PER_TICK_CAP) {
+        for (const prev of list) {
+          await operatorCommentateOnWarEvent(eventType as any, prev, deps);
+        }
+      } else {
+        // Too many to narrate individually — emit one aggregate message.
+        await operatorCommentateOnWarEvent(eventType as any, {
+          planetId: "aggregate",
+          planetName: `${list.length} sectors`,
+          faction: list[0]?.faction || "the enemy",
+          aggregateCount: list.length,
+        }, deps);
       }
     }
 

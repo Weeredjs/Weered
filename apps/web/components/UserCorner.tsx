@@ -6,6 +6,8 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
+import FlairBadge from "./FlairBadge";
+import { useEquippedFlair } from "../lib/useEquippedFlair";
 
 // Auto-shrink text to fit. Walks `sizes` largest→smallest until the
 // element's scrollWidth fits within its clientWidth. Re-runs whenever
@@ -78,6 +80,19 @@ const IconDock = () => (
     <path d="M7 9.5h10M7 13h6" opacity=".6" />
   </svg>
 );
+
+
+function UserCornerFlair({ userId }: { userId?: string }) {
+  const f = useEquippedFlair(userId || null);
+  if (!f) return null;
+  if (f.kind !== "BADGE" && f.kind !== "NAMEPLATE") return null;
+  return (
+    <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700, color: f.color || "rgba(243,244,246,.85)" }}>
+      <FlairBadge flair={f as any} size="sm" />
+      <span style={{ textTransform: "uppercase", letterSpacing: "1px" }}>{f.name}</span>
+    </div>
+  );
+}
 
 export default function UserCorner() {
   const { me, role, globalRole, currentLobbyId, isAway, setAway } = useWeered() as any;
@@ -537,6 +552,7 @@ export default function UserCorner() {
           }}
         >
           <FittedName name={name} />
+          <UserCornerFlair userId={profileUserId} />
           {(() => {
             const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
             if (!bestRole) return null;

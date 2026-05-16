@@ -6,6 +6,28 @@ if (process.env.SENTRY_DSN_API) {
     dsn: process.env.SENTRY_DSN_API,
     environment: process.env.NODE_ENV || "production",
     tracesSampleRate: 0.1,
+    // Body-parse failures (malformed client JSON, bad multipart, etc.) are
+    // user-input noise. Fastify returns a clean 400; no server bug to chase.
+    // Plus transient upstream provider 5xx — Anthropic / Bungie occasionally
+    // 500 and our worker try/catch handles them; no need to alert.
+    ignoreErrors: [
+      // Body-parse noise
+      "Bad escaped character in JSON",
+      "Unexpected token",
+      "Unexpected end of JSON input",
+      "Unsupported Media Type",
+      "Body cannot be empty",
+      "FST_ERR_CTP_INVALID_MEDIA_TYPE",
+      "FST_ERR_CTP_EMPTY_JSON_BODY",
+      // Upstream provider transient errors
+      "Internal server error",          // generic upstream 500
+      "api_error",                       // Anthropic error.type
+      "overloaded_error",                // Anthropic overloaded
+      "ECONNRESET",                      // upstream socket closed
+      "ETIMEDOUT",                       // upstream timeout
+      "ENOTFOUND",                       // DNS hiccup
+      "fetch failed",                    // generic undici fetch failure
+    ],
   });
 }
 import Fastify from "fastify";
@@ -25,11 +47,17 @@ import steamRoutes from "./routes/steam";
 import windroseBuildsRoutes from "./routes/windrose-builds";
 import badgesRoutes from "./routes/badges";
 import tournamentsRoutes from "./routes/tournaments";
+import flairContestsRoutes, { startFlairContestTick } from "./routes/flair-contests";
+import flairRoutes from "./routes/flair";
+import { mintFlairItem as mintFlairItemHelper, grantFlairToUser as grantFlairToUserHelper } from "./lib/flair";
 import lfgRoutes from "./routes/lfg";
 import helldiversMoRoutes from "./routes/helldivers-mo";
 import { runHelldiversWorker } from "./helldiversWorker";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
+import chessRoutes from "./routes/chess";
+import { startChessWorker } from "./chessWorker";
+import { startChessChallengeWorker } from "./chessChallengeWorker";
 import newsRoutes from "./routes/news";
 import modsRoutes from "./routes/mods";
 import aiRoutes from "./routes/ai";
@@ -38,6 +66,7 @@ import storeRoutes from "./routes/store";
 import notificationsRoutes from "./routes/notifications";
 import crewsRoutes from "./routes/crews";
 import forumRoutes from "./routes/forum";
+import forumModRoutes, { autoModTick } from "./routes/forum-mod";
 import eventsRoutes from "./routes/events";
 import dmRoutes from "./routes/dm";
 import groupRoutes from "./routes/groups";
@@ -68,6 +97,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { latLngToCell, cellToBoundary, gridDisk, getResolution } from "h3-js";
 import { join } from "path";
 import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
+import { startTournamentAutoDetect } from "./tournamentAutoDetect";
 import { startNexusPoller, fetchAndUpsertMod } from "./nexusPoller";
 import webpush from "web-push";
 import { sendMail, buildVerifyEmail, buildResetEmail } from "./lib/email";
@@ -115,7 +145,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
-type AuthedUser = { id: string; name: string; globalRole?: string; tier?: string; avatarColor?: string; avatar?: string };
+type AuthedUser = { id: string; name: string; usernameKey?: string; globalRole?: string; tier?: string; avatarColor?: string; avatar?: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
@@ -1323,7 +1353,7 @@ function buildStatePayload(room: RoomState) {
   // Inject The Operator as a virtual presence if AI is available
   if (isAIAvailable()) {
     users.push({
-      id: "operator", name: "The Operator",
+      id: "operator", name: "The Operator", usernameKey: "operator",
       role: "SYSTEM", globalRole: "GOD",
       avatarColor: "#D4A017", avatar: "/brand/roles/operator.svg",
     } as any);
@@ -2103,10 +2133,11 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
     const u = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true, pillAccentColor: true } as any,
+      select: { usernameKey: true, globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true, pillAccentColor: true } as any,
     });
     return {
       ...user,
+      usernameKey: (u as any)?.usernameKey ?? undefined,
       globalRole: String(u?.globalRole ?? "USER"),
       tier: String(u?.tier ?? "INNOCENT"),
       avatarColor: u?.avatarColor ?? undefined,
@@ -2132,6 +2163,79 @@ function verifyToken(token?: string): AuthedUser | null {
     if (!id || !name) return null;
     return { id, name };
   } catch { return null; }
+}
+
+// ── Operator system prompt — lobby-aware ────────────────────────────────────
+// Returns the system-prompt string for The Operator chat replies. Default
+// keeps the slim GTA persona; specific lobbies swap in fatter, more
+// knowledgeable variants. Add cases here as more lobbies need depth.
+function buildOperatorSystemPrompt(lobbyId: string): string {
+  const base = 'You are "The Operator" — the AI behind Weered, a lobby-based social gaming platform with a GTA street aesthetic. You are street-smart, slightly sarcastic, helpful but with attitude. Keep responses SHORT (1-3 sentences max). Never break character. Never be mean, just witty. No emojis, no hashtags, no quotes. If someone asks something you do not know, deflect with style — do not make up numbers or live state.';
+
+  if (lobbyId === "destiny2") {
+    return base + `
+
+You are currently embedded in the destiny2 lobby. You speak Destiny fluently — both the game and the meta around it.
+
+DESTINY 2 CANON YOU KNOW:
+• Raids active in rotation: King's Fall, Crota's End, Vault of Glass, Vow of the Disciple, Salvation's Edge, Last Wish, Deep Stone Crypt, Garden of Salvation, Root of Nightmares, The Desert Perpetual.
+• Dungeons: Ghosts of the Deep, Spire of the Watcher, Duality, Grasp of Avarice, Prophecy, Pit of Heresy, Warlord's Ruin, Vesper's Host, Sundered Doctrine.
+• Champions: Barrier (anti-barrier), Overload (disruption), Unstoppable (stagger). Each needs the matching anti-champion mod or weapon perk.
+• Match Game: enemy shields highly resistant to non-matching elemental damage. Brutal solo because you cannot cover every shield type.
+• Surges: outgoing damage boost (BOON) — Solar/Arc/Void/Stasis/Strand. Player picks one of three in Custom Ops.
+• Threats: incoming damage burn (CHALLENGE) — same elements. Increases damage Guardians take from that element.
+• Pantheon: boss-rush mode. Original ran 6 weeks in Final Shape. Pantheon 2.0 returning June 9, 2026 with the Shadow & Order update — this time as a permanent mode.
+• Trials of Osiris: 3v3 Elimination weekends, Saint-XIV hosts, Friday-Tuesday window.
+• Iron Banner: monthly 6v6 Crucible event, Lord Saladin hosts.
+• Day-1 Raid Race: 24-48hr Contest Mode, power-locked. World First clans include Elysium and Math Class affiliates.
+• July 2025 Desert Perpetual scandal: 70% of top-100 contest clears used cheats. Bungie investigated, banned hundreds. Still a sore spot.
+• Custom Ops / Portal: Bungie's customization layer. Tiers: Normal +10, Advanced +100, Expert +200, Master +300, Grandmaster +400, Ultimate +500. Player picks Skulls (mods) for Boons/Challenges; Champions and Rules are activity-locked.
+• Sherpas, Pure Destiny, Trials Tactical — well-known competitive/teaching communities.
+
+WEERED'S D2 LAYER (be specific — this is OUR moat):
+• Bungie OAuth covers PSN/Steam/Xbox/Epic in one link. Players don't need to link platforms separately.
+• PGCR-verified challenges and tournaments. No screenshots. No honor system. Bungie's API is the source of truth.
+• Skull-manifest aware: Custom Ops player-picked modifiers count, not just Bungie-curated activity mods.
+• High-tier marker fallback handles Bungie's inconsistent tier integers across activity types.
+• Activity-hash filtering scopes challenges to specific maps (e.g. "Hand-Picked GM Strikes").
+• The Impossible Tournament is currently live: Boss Rush Marathon (4 raids), Solo Dungeon Marathon (3 solo dungeons), Master Raid Conqueror (3 Master+ raids), Trials Win Streak (5 in a row). Survivors get the Impossible Champion banner.
+• Tournament templates available for users to spin up their own events: Pantheon Cup, Trials Weekend, Iron Banner Cup, Solo Champion, Speed Run Cup.
+• Standalone challenges outside the tournament: Iron Banner Standout (10 wins), Speed Demon (sub-6-min strike), [TEST] Verify Your Link.
+• Anyone can create their own tournament now (one active per user, staff bypass that limit).
+• Champions on Weered challenges show up as banner flair across the platform — chat, profile, member lists.
+
+WHEN ASKED ABOUT LIVE STATE you can't see (current leaderboard standings, who's online, what tournaments are running this exact second), be honest you can't see that yet — but point them to the right tab: Tournaments tab for active events, Challenges tab for personal progress, Hall of Fame for past winners.`;
+  }
+
+  if (lobbyId === "chess") {
+    return base + `
+
+You are currently embedded in the chess lobby. You speak chess fluently — game knowledge, the community, the meta around it.
+
+CHESS KNOWLEDGE YOU OWN:
+• Time controls: bullet (<3min), blitz (3-8min), rapid (8-25min), classical (25min+), correspondence (days/move).
+• Major openings: Sicilian (B20-B99, .Najdorf, Dragon, Sveshnikov, Taimanov), Ruy Lopez (C60-C99, Berlin Defense, Marshall), Italian Game (C50-C59, Giuoco Piano), Queen\'s Gambit (D06-D69, Slav, Semi-Slav, QGA, QGD), King\'s Indian Defense (E60-E99), Caro-Kann (B10-B19), French Defense (C00-C19), London System, Catalan, English.
+• Endgame canon: K+R vs K, K+P vs K (square rule, opposition), Lucena and Philidor positions, K+B+N vs K (legendary).
+• Major tournaments: Candidates, World Championship, Norway Chess, Tata Steel, Sinquefield Cup, FIDE World Cup, Grand Swiss.
+• Active world-class players: Magnus Carlsen, Hikaru Nakamura, Fabiano Caruana, Ian Nepomniachtchi, Ding Liren (former WC), Gukesh Dommaraju (current WC), Praggnanandhaa, Wei Yi, Alireza Firouzja, Wesley So.
+• Streamer ecosystem: Hikaru, GothamChess (Levy Rozman), Botez sisters, Eric Rosen, Anna Cramling, Daniel Naroditsky, Anish Giri.
+• Cheating discourse: post-Hans Niemann 2022, the chess community is HIGHLY sensitive about online cheating. Engine-assist detection is hard. This is the moat for verified-by-API tournaments — Lichess and Chess.com run their own anti-cheat but community-organized tournaments have historically relied on screenshots/honor system. Weered closes that gap.
+• Rating bands (Lichess approx): beginner <1200, casual 1200-1600, intermediate 1600-1900, club 1900-2200, expert 2200+, master 2400+. Chess.com runs about 100-300 points higher in equivalent strength due to different rating system.
+
+WEERED\'S CHESS LAYER (be specific):
+• Link Lichess + Chess.com usernames in Settings. Public API, no OAuth, no token. Validated against the live API on save — typos get rejected.
+• Worker polls recent games every 5 min. Each game lands in your audit log with full metadata: time control, rating, opponent, opening, result, ECO code.
+• Tournament-credit objectives include chess_wins, chess_streak (consecutive Ws), chess_rating_climb (net delta in a perf), chess_opening_wins (filter by ECO code or opening name regex).
+• Current active challenges: [TEST] Lichess Link Check, Bullet Sprint (10 bullet wins), Blitz Five-Streak (5 in a row), Rating Climb — Blitz (+50 net), Sicilian Specialist (5 Sicilian wins, B20-B99), Cross-Platform Player (3 Lichess wins + 3 Chess.com wins).
+• Pinned rooms: Bullet Club (speed chess), Long Game (rapid/classical), Opening Lab (themed weekly).
+• Forum sections: General, Tournaments, Openings, Tactics, Endgames, Analysis, Streamers.
+
+WHEN ASKED ABOUT LIVE STATE you can\'t see (current leaderboard, who\'s playing now, who\'s in a specific game), be honest you can\'t see that yet — point them to the right tab: Tournaments for events, Challenges for personal progress, Players list for lobby presence, or their own audit log for game-by-game truth.`;
+  }
+
+    // Default — slim prompt that mentions all platform features for awareness
+  // without going deep on any single one.
+  return base + ` You know about: lobbies (gaming communities), Paper (virtual currency), notoriety (XP), FakeOut (paper trading), poker (Texas Hold'em with Paper stakes), crews, challenges, and game integrations (Destiny 2, League of Legends, Fortnite, Helldivers 2, Marathon).`;
 }
 
 function authFromHeader(authHeader?: string): AuthedUser | null {
@@ -2216,7 +2320,7 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null, pillBgColor: (ws.user as any).pillBgColor ?? undefined, pillAccentColor: (ws.user as any).pillAccentColor ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, usernameKey: (ws.user as any).usernameKey ?? undefined, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null, pillBgColor: (ws.user as any).pillBgColor ?? undefined, pillAccentColor: (ws.user as any).pillAccentColor ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
@@ -3253,19 +3357,49 @@ async function main() {
     return reply.send({ ok: true, xboxGamertag: resolved.gamertag, xboxXuid: resolved.xuid });
   });
 
+  // POST /profile/me/psn-account-id  { psnAccountId } — set or clear. PSN
+  // has no public OAuth or username lookup, so this is identity-only — we
+  // store the string the user gives us and display it as a chip. Validation
+  // is format-only: 3-16 chars, alpha+digit+hyphen+underscore, leading letter.
+  app.post("/profile/me/psn-account-id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const raw = String(body.psnAccountId || "").trim();
+
+    if (raw === "") {
+      await prisma.user.update({ where: { id: u.id }, data: { psnAccountId: null } });
+      return reply.send({ ok: true, psnAccountId: null });
+    }
+
+    if (!/^[A-Za-z][A-Za-z0-9_-]{2,15}$/.test(raw)) {
+      return reply.code(400).send({
+        ok: false,
+        error: "invalid_psn_id",
+        message: "PSN ID must be 3-16 characters, start with a letter, and contain only letters, numbers, dashes, or underscores.",
+      });
+    }
+
+    await prisma.user.update({ where: { id: u.id }, data: { psnAccountId: raw } });
+    return reply.send({ ok: true, psnAccountId: raw });
+  });
+
   // GET /profile/me/presence — authed user's own link state + most recent detected presence
   app.get("/profile/me/presence", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const row = await prisma.user.findUnique({
       where: { id: u.id },
-      select: { steamId: true, twitchLogin: true, xboxGamertag: true, xboxXuid: true, livePresence: true, presenceCheckedAt: true },
+      select: { steamId: true, twitchLogin: true, xboxGamertag: true, xboxXuid: true, psnAccountId: true, lichessUsername: true, chessComUsername: true, livePresence: true, presenceCheckedAt: true },
     });
     return reply.send({
       ok: true,
       steamId: row?.steamId ?? null,
       twitchLogin: row?.twitchLogin ?? null,
       xboxGamertag: row?.xboxGamertag ?? null,
+      psnAccountId: row?.psnAccountId ?? null,
+      lichessUsername: row?.lichessUsername ?? null,
+      chessComUsername: row?.chessComUsername ?? null,
       livePresence: row?.livePresence ?? null,
       presenceCheckedAt: row?.presenceCheckedAt ?? null,
     });
@@ -3775,6 +3909,7 @@ async function main() {
 
 // ── Invites — extracted to routes/invites.ts ────────────────────────────────
   await app.register(invitesRoutes, { authFromHeader, awardNotoriety, getGlobalRole, canAssignRoles, WEB_URL } as any);
+  await app.register(chessRoutes, { authFromHeader } as any);
 
 
   // ── DM — extracted to routes/dm.ts ────────────────────────────────────────
@@ -3806,11 +3941,14 @@ async function main() {
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
   // Helldivers 2 worker (Slice D): pinned campaign rooms + Operator commentary + MO challenges
-  setInterval(() => { void runHelldiversWorker({ getAI, broadcastToLobby }); }, 10 * 60 * 1000);
-  setTimeout(() => { void runHelldiversWorker({ getAI, broadcastToLobby }); }, 30_000);
+  setInterval(() => { void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers }); }, 10 * 60 * 1000);
+  setTimeout(() => { void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers }); }, 30_000);
 
   // ── Forum — extracted to routes/forum.ts ──────────────────────────────────
   await app.register(forumRoutes, { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole, resolveMentions, createNotification } as any);
+  await app.register(forumModRoutes, { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole } as any);
+  // Forum auto-mod scheduled-unlock tick (every 60s)
+  setInterval(() => { void autoModTick(); }, 60_000);
 
 
   // ── News RSS ingestion worker ─────────────────────────────────────────────
@@ -4754,7 +4892,7 @@ async function main() {
                   const response = await ai.messages.create({
                       model: "claude-haiku-4-5-20251001",
                       max_tokens: 300,
-                      system: `You are "The Operator" — the AI behind Weered, a lobby-based social gaming platform with a GTA street aesthetic. You're street-smart, slightly sarcastic, helpful but with attitude. Keep responses SHORT (1-3 sentences max). You know about: lobbies (gaming communities), Paper (virtual currency), notoriety (XP), FakeOut (paper trading), poker (Texas Hold'em with Paper stakes), crews, challenges, and game integrations (Destiny 2, League of Legends, Fortnite, Marathon). Never break character. Never be mean, just witty. If someone asks something you don't know, deflect with style.`,
+                      system: buildOperatorSystemPrompt(room.lobbyId || ""),
                       messages: [{ role: "user", content: question }],
                     });
                     const reply = response?.content?.[0]?.text || "";
@@ -6187,17 +6325,37 @@ async function main() {
 
   // ── Challenge Admin (staff or lobby owner) ────────────────────────────────
 
-  // POST /challenges/definitions — create a challenge definition
+  // Helper: who can manage this challenge definition (staff or creator or lobby OWNER/MOD).
+  async function canManageChallenge(userId: string, def: { lobbyId: string | null; createdById: string }): Promise<boolean> {
+    const role = await getGlobalRole(userId);
+    if (canAccessStaff(role)) return true;
+    if (def.createdById === userId) return true;
+    if (def.lobbyId) {
+      const lr = await getLobbyRole(userId, def.lobbyId);
+      if (lr === LobbyRole.OWNER || lr === LobbyRole.MOD) return true;
+    }
+    return false;
+  }
+
+  // POST /challenges/definitions — create a challenge definition.
+  // Creators: global staff OR lobby OWNER/MOD when scoping to that lobby.
   app.post("/challenges/definitions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    // Only staff+ can create challenges for now
-    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
-      return reply.code(403).send({ ok: false, error: "forbidden" });
-    }
 
     const body = req.body as any;
-    const def = await prisma.challengeDefinition.create({
+    const role = await getGlobalRole(u.id);
+    const isStaff = canAccessStaff(role);
+    if (!isStaff) {
+      // Non-staff can only create if they're OWNER/MOD of the target lobby.
+      if (!body.lobbyId) return reply.code(403).send({ ok: false, error: "forbidden" });
+      const lr = await getLobbyRole(u.id, body.lobbyId);
+      if (lr !== LobbyRole.OWNER && lr !== LobbyRole.MOD) {
+        return reply.code(403).send({ ok: false, error: "forbidden" });
+      }
+    }
+
+    const def = await (prisma as any).challengeDefinition.create({
       data: {
         title: String(body.title || "").trim(),
         description: String(body.description || "").trim(),
@@ -6212,13 +6370,161 @@ async function main() {
         requireAll: body.requireAll !== false,
         requireCount: body.requireCount || null,
         notorietyReward: parseInt(body.notorietyReward) || 0,
+        paperReward: parseInt(body.paperReward) || 0,
         crewRepReward: parseInt(body.crewRepReward) || 0,
+        badgeId: body.badgeId || null,
         isRecurring: body.isRecurring === true,
         recurSchedule: body.recurSchedule || null,
+        requiredModifiers: Array.isArray(body.requiredModifiers) ? body.requiredModifiers : [],
+        requireDifficultyTier: body.requireDifficultyTier ? parseInt(body.requireDifficultyTier) : null,
+        minPartySize: body.minPartySize ? parseInt(body.minPartySize) : null,
+        maxPartySize: body.maxPartySize ? parseInt(body.maxPartySize) : null,
         status: "DRAFT",
       },
     });
     return reply.send({ ok: true, definition: def });
+  });
+
+  // PATCH /challenges/definitions/:id — edit definition fields. Same gate as create.
+  // Some fields are locked once instances exist (objectives, scope, lobbyId).
+  app.patch("/challenges/definitions/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req as any).params?.id || "");
+    const def = await (prisma as any).challengeDefinition.findUnique({
+      where: { id },
+      select: { id: true, lobbyId: true, createdById: true, _count: { select: { instances: true } } },
+    });
+    if (!def) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (!(await canManageChallenge(u.id, def))) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const body = (req as any).body || {};
+    const data: any = {};
+    if (body.title !== undefined)              data.title = String(body.title || "").trim().slice(0, 200);
+    if (body.description !== undefined)        data.description = String(body.description || "").trim().slice(0, 2000);
+    if (body.iconUrl !== undefined)            data.iconUrl = body.iconUrl ? String(body.iconUrl).slice(0, 500) : null;
+    if (body.category !== undefined)           data.category = String(body.category || "").trim().slice(0, 50);
+    if (body.difficulty !== undefined)         data.difficulty = Math.max(1, Math.min(5, parseInt(body.difficulty) || 1));
+    if (body.requireAll !== undefined)         data.requireAll = !!body.requireAll;
+    if (body.requireCount !== undefined)       data.requireCount = body.requireCount ? parseInt(body.requireCount) : null;
+    if (body.notorietyReward !== undefined)    data.notorietyReward = Math.max(0, parseInt(body.notorietyReward) || 0);
+    if (body.paperReward !== undefined)        data.paperReward = Math.max(0, parseInt(body.paperReward) || 0);
+    if (body.crewRepReward !== undefined)      data.crewRepReward = Math.max(0, parseInt(body.crewRepReward) || 0);
+    if (body.badgeId !== undefined)            data.badgeId = body.badgeId || null;
+    if (body.isRecurring !== undefined)        data.isRecurring = !!body.isRecurring;
+    if (body.recurSchedule !== undefined)      data.recurSchedule = body.recurSchedule || null;
+    if (body.requiredModifiers !== undefined)  data.requiredModifiers = Array.isArray(body.requiredModifiers) ? body.requiredModifiers : [];
+    if (body.requireDifficultyTier !== undefined) data.requireDifficultyTier = body.requireDifficultyTier ? parseInt(body.requireDifficultyTier) : null;
+    if (body.minPartySize !== undefined)       data.minPartySize = body.minPartySize ? parseInt(body.minPartySize) : null;
+    if (body.maxPartySize !== undefined)       data.maxPartySize = body.maxPartySize ? parseInt(body.maxPartySize) : null;
+    if (body.status !== undefined && ["DRAFT", "ACTIVE", "ARCHIVED"].includes(body.status)) data.status = body.status;
+    if (body.objectives !== undefined) {
+      if (def._count.instances > 0) {
+        // Mid-flight: allow per-objective `target` changes only. Other fields
+        // would break enrollment evaluation. Merge by objective id; new
+        // objectives can't be added or removed once instances exist.
+        const existing = await (prisma as any).challengeDefinition.findUnique({ where: { id }, select: { objectives: true } });
+        const existingObjs: any[] = (existing?.objectives as any[]) || [];
+        const incomingById: Record<string, any> = {};
+        for (const o of (body.objectives as any[])) if (o?.id) incomingById[o.id] = o;
+        const merged = existingObjs.map((eo: any) => {
+          const inc = incomingById[eo.id];
+          if (!inc) return eo;
+          const newTarget = Number(inc.target);
+          if (Number.isFinite(newTarget) && newTarget > 0 && newTarget !== eo.target) {
+            return { ...eo, target: newTarget };
+          }
+          return eo;
+        });
+        data.objectives = merged;
+      } else {
+        data.objectives = body.objectives;
+      }
+    }
+    if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_fields" });
+    const updated = await (prisma as any).challengeDefinition.update({ where: { id }, data });
+    return reply.send({ ok: true, definition: updated });
+  });
+
+  // DELETE /challenges/definitions/:id — soft-archive if instances or enrollments exist.
+  // Hard-delete only when nothing is attached.
+  app.delete("/challenges/definitions/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req as any).params?.id || "");
+    const def = await (prisma as any).challengeDefinition.findUnique({
+      where: { id },
+      select: {
+        id: true, lobbyId: true, createdById: true,
+        _count: { select: { instances: true } },
+      },
+    });
+    if (!def) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (!(await canManageChallenge(u.id, def))) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    if (def._count.instances > 0) {
+      // Soft-archive — preserves enrollment history.
+      await (prisma as any).challengeDefinition.update({ where: { id }, data: { status: "ARCHIVED" } });
+      return reply.send({ ok: true, mode: "archived" });
+    }
+    await (prisma as any).challengeDefinition.delete({ where: { id } });
+    return reply.send({ ok: true, mode: "deleted" });
+  });
+
+  // PATCH /challenges/instances/:id — extend endsAt, change status, etc.
+  app.patch("/challenges/instances/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req as any).params?.id || "");
+    const instance = await (prisma as any).challengeInstance.findUnique({
+      where: { id },
+      include: { definition: { select: { id: true, lobbyId: true, createdById: true } } },
+    });
+    if (!instance) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (!(await canManageChallenge(u.id, instance.definition))) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    const body = (req as any).body || {};
+    const data: any = {};
+    if (body.startsAt !== undefined) data.startsAt = new Date(body.startsAt);
+    if (body.endsAt !== undefined)   data.endsAt = body.endsAt ? new Date(body.endsAt) : null;
+    if (body.status !== undefined && ["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"].includes(body.status)) data.status = body.status;
+    if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_fields" });
+    const updated = await (prisma as any).challengeInstance.update({ where: { id }, data });
+    return reply.send({ ok: true, instance: updated });
+  });
+
+  // DELETE /challenges/instances/:id — hard delete only if no enrollments exist;
+  // otherwise archive.
+  app.delete("/challenges/instances/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req as any).params?.id || "");
+    const instance = await (prisma as any).challengeInstance.findUnique({
+      where: { id },
+      include: {
+        definition: { select: { id: true, lobbyId: true, createdById: true } },
+        _count: { select: { enrollments: true } },
+      },
+    });
+    if (!instance) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (!(await canManageChallenge(u.id, instance.definition))) {
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    }
+    if (instance._count.enrollments > 0) {
+      await (prisma as any).challengeInstance.update({ where: { id }, data: { status: "ARCHIVED" } });
+      return reply.send({ ok: true, mode: "archived" });
+    }
+    await (prisma as any).challengeInstance.delete({ where: { id } });
+    return reply.send({ ok: true, mode: "deleted" });
+  });
+
+  // GET /challenges/modifiers/catalog — public modifier list for admin pickers + display chips.
+  app.get("/challenges/modifiers/catalog", async (_req, reply) => {
+    const { DESTINY_MODIFIERS } = await import("./lib/destinyModifiers");
+    return reply.send({ ok: true, modifiers: DESTINY_MODIFIERS });
   });
 
   // POST /challenges/definitions/:id/activate — create an active instance
@@ -6249,23 +6555,38 @@ async function main() {
     return reply.send({ ok: true, instance });
   });
 
-  // GET /challenges/definitions — list all definitions (admin)
+  // GET /challenges/definitions — list all definitions (admin or lobby mod).
+  // Optional ?lobbyId= filter; when provided, returns defs scoped to that
+  // lobby (or GLOBAL). Staff via DB lookup since JWT has no role claim.
   app.get("/challenges/definitions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
-      return reply.code(403).send({ ok: false, error: "forbidden" });
+    const q: any = (req as any).query || {};
+    const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
+    // Read access is open to any authed user — challenge definitions are
+    // discoverable through the Challenges tab anyway, and the tournament-
+    // create picker needs them too. Create/edit/delete remain staff-or-mod
+    // gated via their own handlers.
+    const where: any = {};
+    if (lobbyId) {
+      where.OR = [
+        { lobbyId },
+        { scope: "GLOBAL" },
+      ];
     }
     const defs = await prisma.challengeDefinition.findMany({
+      where,
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: 200,
     });
     return reply.send({ ok: true, definitions: defs });
   });
 
   // ── BADGES + TOURNAMENTS — extracted to routes/badges.ts + routes/tournaments.ts
   await app.register(badgesRoutes, { authFromHeader } as any);
-  await app.register(tournamentsRoutes, { authFromHeader, awardNotoriety, awardPaper, createNotification, getGlobalRole, canAccessStaff } as any);
+  await app.register(tournamentsRoutes, { authFromHeader, awardNotoriety, awardPaper, createNotification, getGlobalRole, canAccessStaff, getLobbyRole, onTournamentMatchLive: (mid: string) => (globalThis as any).__weeredAutoDetect?.onMatchLive(mid) } as any);
+  await app.register(flairContestsRoutes, { authFromHeader, awardNotoriety, getGlobalRole, canAccessStaff, getLobbyRole, broadcastToLobby, createNotification } as any);
+  await app.register(flairRoutes, { authFromHeader, getGlobalRole, canAccessStaff } as any);
 
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -6544,6 +6865,21 @@ async function main() {
     }
     try { capturePublicActivity(event, { lobbyId }); } catch {}
   }
+
+  // Count unique authed users currently connected to a lobby room. Used to
+  // gate AI Operator commentary so we don't burn tokens broadcasting to
+  // empty rooms.
+  function countLobbyActiveUsers(lobbyId: string): number {
+    const uids = new Set<string>();
+    for (const sock of wss.clients) {
+      const s = sock as Sock;
+      if (s.roomId === `lobby:${lobbyId}` || s.roomId === lobbyId) {
+        const uid = (s as any).user?.id;
+        if (uid) uids.add(uid);
+      }
+    }
+    return uids.size;
+  }
   function broadcastToRoom(roomId: string, event: any) {
     for (const sock of wss.clients) {
       const s = sock as Sock;
@@ -6753,9 +7089,11 @@ async function main() {
   // synthesizes a chat row keyed to the active lobby room.
   const _operatorLastByLobby = new Map<string, number>();
   async function operatorCommentateOnTrade(lobbyId: string, context: string) {
+    // Skip when the lobby is empty — don't burn tokens broadcasting to no one.
+    if (countLobbyActiveUsers(lobbyId) === 0) return;
     const now = Date.now();
     const last = _operatorLastByLobby.get(lobbyId) || 0;
-    if (now - last < 30_000) return;
+    if (now - last < 60_000) return;
     _operatorLastByLobby.set(lobbyId, now);
     try {
       const ai = await getAI();
@@ -6907,10 +7245,33 @@ async function main() {
       for (const sock of wss.clients) {
         if ((sock as any).user?.id === userId) {
           send(sock as any, event);
+  startChessWorker(prisma);
+  startChessChallengeWorker(prisma, awardNotoriety, awardPaper, broadcastToLobby);
         }
       }
-    }, awardPaper, broadcastToLobby);
+    }, awardPaper, broadcastToLobby, createNotification);
+
+    // Tournament auto-detect: piggybacks on Bungie API to auto-confirm
+    // Destiny 2 tournament matches from PGCR data.
+    const autoDetect = startTournamentAutoDetect(prisma, {
+      notify: (userId, event) => {
+        for (const sock of wss.clients) {
+          if ((sock as any).user?.id === userId) send(sock as any, event);
+        }
+      },
+      createNotification,
+    });
+    (globalThis as any).__weeredAutoDetect = autoDetect;
   }
+
+  // ── Flair contest auto-tick: flips SUBMISSIONS→VOTING and auto-finalizes ──
+  startFlairContestTick(prisma, {
+    mintFlairItem: mintFlairItemHelper,
+    grantFlairToUser: grantFlairToUserHelper,
+    createNotification,
+    broadcastToLobby,
+    intervalMs: 60_000,
+  });
 
   // ── Nexus Mods poller ──────────────────────────────────────────────────────
   startNexusPoller(prisma);

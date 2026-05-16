@@ -106,6 +106,7 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
                 <select value={maxUses} onChange={e => setMaxUses(Number(e.target.value))}
                   style={{ ...S.input, appearance: "none" as const }}>
                   {[1, 5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} use{n !== 1 ? "s" : ""}</option>)}
+                  <option value={0}>Unlimited</option>
                 </select>
               </div>
               <div>

@@ -59,6 +59,7 @@ enum ModuleType {
   WINDROSE
   REDDIT
   HELLDIVERS2
+  CHESS
 }
 
 model NewsArticle {
@@ -390,6 +391,7 @@ model User {
   usernameKey String     @unique
   name        String     @default("")
   description String     @default("")
+  equippedFlairId String?            // FlairItem currently displayed next to name
   bio         String?
   email       String?    @unique
   googleId    String?    @unique
@@ -428,6 +430,9 @@ model User {
   twitchLogin String?   // Twitch login (lowercase username)
   xboxGamertag String?  // Xbox gamertag (display)
   xboxXuid    String?   // Xbox user id (numeric) resolved from gamertag
+  psnAccountId String?  // PSN online ID (manual, no live integration; identity-only chip)
+  lichessUsername String?  // Lichess.org username — drives chess activity polling
+  chessComUsername String? // Chess.com username — drives chess activity polling
   livePresence Json?    // { source, activity, detail?, url?, updatedAt } or null
   presenceCheckedAt DateTime?
 
@@ -1236,6 +1241,7 @@ model ForumPost {
   title        String
   body         String
   category     ForumCategory @default(DISCUSSION)
+  sectionId    String?
   lobbyId      String?
   authorId     String
   authorName   String        @default("")
@@ -1243,34 +1249,58 @@ model ForumPost {
   locked       Boolean       @default(false)
   score        Int           @default(0)
   commentCount Int           @default(0)
+  tags         Json          @default("[]")
+  removedAt    DateTime?
+  removedById  String?
+  removeReason String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   lobby    Lobby?         @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  section  ForumSection?  @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   comments ForumComment[]
   votes    ForumVote[]    @relation("PostVotes")
+  bookmarks    ForumBookmark[]
+  subscriptions ForumSubscription[]
+  reports      ForumReport[]
 
   @@index([lobbyId, createdAt])
   @@index([lobbyId, score])
   @@index([category, createdAt])
+  @@index([sectionId, createdAt])
+  @@index([sectionId, score])
   @@index([score])
   @@index([pinned, createdAt])
   @@index([authorId])
+  @@index([removedAt])
 }
 
 model ForumComment {
   id         String   @id @default(cuid())
   postId     String
+  parentId   String?
+  depth      Int      @default(0)
+  path       String   @default("")
   authorId   String
   authorName String   @default("")
   body       String
   score      Int      @default(0)
+  removedAt    DateTime?
+  removedById  String?
+  removeReason String?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  post  ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  votes ForumVote[] @relation("CommentVotes")
+  post     ForumPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   ForumComment?  @relation("CommentTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children ForumComment[] @relation("CommentTree")
+  votes    ForumVote[]    @relation("CommentVotes")
+  reports  ForumReport[]
 
   @@index([postId, createdAt])
+  @@index([parentId])
+  @@index([postId, path])
+  @@index([removedAt])
 }
 
 model ForumVote {
@@ -1320,6 +1350,7 @@ enum TournamentFormat {
   BRACKET
   BRACKET_DOUBLE
   ROUND_ROBIN
+  CHALLENGE_RACE
 }
 
 enum TournamentStatus {
@@ -1364,6 +1395,18 @@ model ChallengeDefinition {
   objectives    Json                              // Array of ObjectiveSpec
   requireAll    Boolean         @default(true)
   requireCount  Int?
+
+  // Activity-level modifier requirements. Modifiers are Bungie modifier
+  // hashes (strings). For a completion to count, the activity's
+  // modifierHashes set must include ALL of these. Empty = no modifier req.
+  requiredModifiers     Json    @default("[]")
+  // Difficulty tier minimum (1=Normal, 2=Hero, 3=Legend, 4=Master, 5=GM).
+  // Null = any difficulty counts.
+  requireDifficultyTier Int?
+  // Optional party size constraints (Bungie returns fireteam composition
+  // in PGCR — fireteamIds.length).
+  minPartySize Int?
+  maxPartySize Int?
 
   // Chain support
   chainParentId String?
@@ -1469,6 +1512,9 @@ model BungieActivityLog {
   weaponKills        Json     @default("[]")      // [{ hash, name, kills }]
   subclassHash       String?
   fireteamIds        String[] @default([])
+  // Activity modifiers active during this run, sourced from activity manifest.
+  modifierHashes     Json     @default("[]")      // ["123456", "789012"]
+  difficultyTier     Int?                          // 1-5 if known
 
   createdAt          DateTime @default(now())
 
@@ -1476,6 +1522,52 @@ model BungieActivityLog {
   @@index([userId, period])
   @@index([userId, mode, period])
 }
+
+// ── Chess activity log — Lichess + Chess.com game history ───────────────────
+//
+// Parallel to BungieActivityLog. Worker polls users' linked chess accounts
+// (~5 min cadence) and ingests each finished game once. Challenge worker
+// reads from here for chess-specific objectives (wins, streaks, rating
+// climb, opening-specific clears, time-control limits).
+model ChessActivityLog {
+  id            String   @id @default(cuid())
+  userId        String
+  provider      String   // "LICHESS" | "CHESS_COM"
+  externalGameId String  // provider-prefixed unique game id
+  username      String   // the username this game was played under (for audit)
+
+  // Game metadata
+  playedAt      DateTime
+  timeControl   String   // "bullet" | "blitz" | "rapid" | "classical" | "correspondence"
+  initialSeconds Int?    // base time in seconds
+  incrementSeconds Int?  // increment per move
+  rated         Boolean  @default(true)
+  variant       String   @default("standard") // "standard" | "chess960" | "atomic" | "antichess" | ...
+
+  // Player state
+  color         String   // "WHITE" | "BLACK"
+  rating        Int?     // player's rating going into the game
+  ratingDiff    Int?     // rating delta after (positive = gained)
+  opponent      String?  // opponent username
+  opponentRating Int?
+
+  // Outcome
+  result        String   // "WIN" | "LOSS" | "DRAW"
+  termination   String?  // "normal" | "resignation" | "timeout" | "checkmate" | "stalemate" | "agreement"
+  movesCount    Int?     // ply count
+
+  // Opening (ECO + name when available)
+  ecoCode       String?  // e.g. "B01" for Scandinavian Defense
+  openingName   String?  // e.g. "Sicilian Defense: Najdorf"
+
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, externalGameId])
+  @@index([userId, playedAt])
+  @@index([userId, timeControl, playedAt])
+  @@index([userId, result])
+}
+
 
 // ── Tournament ──────────────────────────────────────────────────────────────
 
@@ -1503,6 +1595,18 @@ model Tournament {
   minEntries      Int              @default(2)
 
   rewards         Json             @default("[]")
+
+  // CHALLENGE_RACE: pool of challenge definition IDs that count toward this race.
+  // Empty array means "any challenge in this lobby counts". Each completion
+  // awards `pointsPerCompletion` to the entry's score.
+  challengePoolIds  Json     @default("[]")
+  pointsPerCompletion Int    @default(100)
+  pointsToWin       Int?              // if set, first entry to reach this wins
+  raceWinCondition  String?            // "THRESHOLD" | "DEADLINE" | "ALL_COMPLETED"
+
+  // Featured-strip override. Null = AUTO (show in strip from 24h before startsAt).
+  // "UPCOMING" forces upcoming-banner from creation. "ACTIVE" forces active-banner.
+  featuredMode    String?
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -1580,6 +1684,14 @@ model TournamentMatch {
   loserMatchId    String?
   loserMatch      TournamentMatch?  @relation("LoserDrop", fields: [loserMatchId], references: [id])
   loserDrops      TournamentMatch[] @relation("LoserDrop")
+
+  // Bungie auto-detect (Destiny 2 only). When both participants appear in
+  // the same BungieActivityLog row during the match window, we auto-confirm
+  // with the real scores from Bungie's PGCR. expectedActivityHash optionally
+  // restricts to a specific mode/playlist (Trials, Comp, etc.).
+  expectedActivityHash String?
+  pgcrInstanceId       String?
+  autoDetectedAt       DateTime?
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -2514,3 +2626,254 @@ model WindroseBuildReport {
   user      User          @relation(fields: [userId], references: [id])
   @@index([status])
 }
+
+// ── Flair: equippable account ornaments earned from tournaments + contests ──
+
+enum FlairKind {
+  BADGE        // small icon shown next to name
+  BANNER       // wide image shown on profile / member card
+  NAMEPLATE    // styled name display (color, glow)
+}
+
+enum FlairSource {
+  MANUAL          // staff-assigned
+  TOURNAMENT      // earned by winning a tournament
+  CONTEST         // earned by winning a flair design contest
+  ACHIEVEMENT     // earned by hitting a milestone
+  PURCHASE        // bought from store
+}
+
+model FlairItem {
+  id           String      @id @default(cuid())
+  slug         String      @unique
+  name         String
+  description  String      @default("")
+  kind         FlairKind
+  imageUrl     String?
+  color        String?              // for NAMEPLATE: hex color
+  rarity       String      @default("COMMON")  // COMMON | RARE | EPIC | LEGENDARY
+  source       FlairSource @default(MANUAL)
+  sourceRefId  String?              // tournament id or contest id that minted this
+  createdById  String?              // for CONTEST flair: the artist
+  meta         Json        @default("{}")
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  ownedBy      UserFlair[]
+
+  @@index([source, sourceRefId])
+}
+
+model UserFlair {
+  id           String     @id @default(cuid())
+  userId       String
+  flairItemId  String
+  flairItem    FlairItem  @relation(fields: [flairItemId], references: [id], onDelete: Cascade)
+  acquiredAt   DateTime   @default(now())
+  acquiredFrom String?              // "tournament:xxx" | "contest:yyy" | "manual"
+
+  @@unique([userId, flairItemId])
+  @@index([userId])
+}
+
+// ── Flair design contests: community submits banner designs, votes pick winner ──
+
+model FlairContest {
+  id                 String   @id @default(cuid())
+  lobbyId            String?
+  title              String
+  description        String   @default("")
+  theme              String   @default("")
+  kind               FlairKind @default(BANNER)
+  status             String   @default("SUBMISSIONS")  // SUBMISSIONS | VOTING | COMPLETED | CANCELED
+  submissionOpensAt  DateTime
+  submissionClosesAt DateTime
+  voteOpensAt        DateTime
+  voteClosesAt       DateTime
+  winnerSubmissionId String?
+  rewardFlairId      String?              // FlairItem created from the winning submission
+  createdById        String
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  submissions        FlairSubmission[]
+
+  @@index([lobbyId, status])
+  @@index([status, voteClosesAt])
+}
+
+model FlairSubmission {
+  id          String   @id @default(cuid())
+  contestId   String
+  contest     FlairContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  userId      String
+  imageUrl    String
+  caption     String   @default("")
+  voteCount   Int      @default(0)         // denormalized for sorting
+  createdAt   DateTime @default(now())
+
+  votes       FlairVote[]
+
+  @@unique([contestId, userId])             // one submission per user per contest
+  @@index([contestId, voteCount])
+}
+
+model FlairVote {
+  id            String   @id @default(cuid())
+  contestId     String
+  submissionId  String
+  submission    FlairSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  voterId       String
+  createdAt     DateTime @default(now())
+
+  @@unique([contestId, voterId])            // one vote per user per contest
+  @@index([submissionId])
+}
+
+// ── Forum Tier 2: per-lobby sections, bookmarks, subscriptions, mod tools ──
+
+model ForumSection {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  slug        String
+  name        String
+  description String   @default("")
+  color       String?
+  icon        String?
+  order       Int      @default(0)
+  postsOnly   Boolean  @default(false)   // true = only mods can post
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts ForumPost[]
+
+  @@unique([lobbyId, slug])
+  @@index([lobbyId, order])
+}
+
+model ForumBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  post ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt])
+  @@index([postId])
+}
+
+model ForumSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  post ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+enum ForumReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  NSFW
+  MISINFORMATION
+  OFF_TOPIC
+  OTHER
+}
+
+enum ForumReportStatus {
+  PENDING
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+model ForumReport {
+  id          String           @id @default(cuid())
+  postId      String?
+  commentId   String?
+  reporterId  String
+  reason      ForumReportReason
+  detail      String           @default("")
+  status      ForumReportStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt  DateTime?
+  actionTaken String?
+  createdAt   DateTime         @default(now())
+
+  post    ForumPost?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment ForumComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([postId])
+  @@index([commentId])
+  @@index([reporterId])
+}
+
+enum ForumModActionKind {
+  POST_REMOVE
+  POST_RESTORE
+  POST_LOCK
+  POST_UNLOCK
+  POST_PIN
+  POST_UNPIN
+  COMMENT_REMOVE
+  COMMENT_RESTORE
+  USER_BAN
+  USER_UNBAN
+  USER_TIMEOUT
+}
+
+model ForumModAction {
+  id          String              @id @default(cuid())
+  lobbyId     String?
+  modId       String
+  kind        ForumModActionKind
+  targetType  String              // "POST" | "COMMENT" | "USER"
+  targetId    String
+  reason      String              @default("")
+  meta        Json                @default("{}")
+  createdAt   DateTime            @default(now())
+
+  @@index([lobbyId, createdAt])
+  @@index([modId, createdAt])
+  @@index([targetType, targetId])
+}
+
+enum ForumAutoModKind {
+  REGEX_FILTER
+  KARMA_MIN
+  ACCOUNT_AGE_MIN
+  LINK_BLOCK
+  WORD_BLOCK
+}
+
+enum ForumAutoModAction {
+  REPORT
+  REMOVE
+  SHADOW_REMOVE
+  REQUIRE_REVIEW
+}
+
+model ForumAutoModRule {
+  id        String              @id @default(cuid())
+  lobbyId   String
+  name      String
+  kind      ForumAutoModKind
+  config    Json                @default("{}")
+  action    ForumAutoModAction
+  enabled   Boolean             @default(true)
+  createdById String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([lobbyId, enabled])
+}
+

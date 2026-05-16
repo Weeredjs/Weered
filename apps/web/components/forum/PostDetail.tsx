@@ -4,10 +4,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./ForumHelpers";
+import Markdown from "./Markdown";
 import { avatarBg } from "../../lib/avatarColor";
 import { useUserHover } from "../UserHoverCard";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { weeredConfirm } from "../../lib/confirm";
+import { weeredForumReport } from "../../lib/forumReport";
 
 type Author = { name: string; avatar?: string; avatarColor?: string; tier?: string; globalRole?: string } | null;
 type Post = {
@@ -113,16 +115,39 @@ export default function PostDetail({ postId }: { postId: string }) {
 
   async function handlePin() {
     if (!post) return;
-    await forumFetch(`/forum/posts/${postId}`, {
-      method: "PATCH", body: JSON.stringify({ pinned: !post.pinned }),
+    await forumFetch(`/forum/posts/${postId}/pin`, {
+      method: "POST", body: JSON.stringify({ pinned: !post.pinned }),
     });
     load();
   }
   async function handleLock() {
     if (!post) return;
-    await forumFetch(`/forum/posts/${postId}`, {
-      method: "PATCH", body: JSON.stringify({ locked: !post.locked }),
-    });
+    const path = post.locked ? `/forum/posts/${postId}/unlock` : `/forum/posts/${postId}/lock`;
+    await forumFetch(path, { method: "POST", body: JSON.stringify({}) });
+    load();
+  }
+  async function handleRemovePost() {
+    const reason = window.prompt("Removal reason (visible in audit log):", "") || "";
+    await forumFetch(`/forum/posts/${postId}/remove`, { method: "POST", body: JSON.stringify({ reason }) });
+    load();
+  }
+  async function handleRestorePost() {
+    await forumFetch(`/forum/posts/${postId}/restore`, { method: "POST" });
+    load();
+  }
+  async function handleReportPost() {
+    await weeredForumReport({ postId });
+  }
+  async function handleReportComment(commentId: string) {
+    await weeredForumReport({ commentId });
+  }
+  async function handleRemoveComment(commentId: string) {
+    const reason = window.prompt("Removal reason:", "") || "";
+    await forumFetch(`/forum/comments/${commentId}/remove`, { method: "POST", body: JSON.stringify({ reason }) });
+    load();
+  }
+  async function handleRestoreComment(commentId: string) {
+    await forumFetch(`/forum/comments/${commentId}/restore`, { method: "POST" });
     load();
   }
   async function handleDeletePost() {
@@ -215,20 +240,32 @@ export default function PostDetail({ postId }: { postId: string }) {
               onHoverLeave={() => hoverClose(160)} />
             <span style={{ fontSize: 10, opacity: 0.35 }}>&middot; {timeAgo(post.createdAt)}</span>
           </div>
-          <div style={{ fontSize: 13.5, lineHeight: 1.75, color: "rgba(229,231,235,.78)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-            {post.body}
-          </div>
+          <Markdown
+            text={post.body}
+            style={{ fontSize: 13.5, lineHeight: 1.75, color: "rgba(229,231,235,.78)", wordBreak: "break-word" }}
+          />
 
           {/* Mod tools */}
-          {(isMod || post.authorId === me?.id) && (
-            <div style={{ display: "flex", gap: 6, marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+          {(isMod || post.authorId === me?.id || me) && (
+            <div style={{ display: "flex", gap: 6, marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,.06)", flexWrap: "wrap" }}>
               {isMod && (
                 <>
                   <button onClick={handlePin} style={modBtn}>{post.pinned ? "Unpin" : "Pin"}</button>
                   <button onClick={handleLock} style={modBtn}>{post.locked ? "Unlock" : "Lock"}</button>
+                  {(post as any).removedAt ? (
+                    <button onClick={handleRestorePost} style={modBtn}>Restore</button>
+                  ) : (
+                    <button onClick={handleRemovePost} style={{ ...modBtn, color: "rgba(239,68,68,.7)", borderColor: "rgba(239,68,68,.2)" }}>Remove</button>
+                  )}
+                  <button onClick={() => router.push(`/forum/mod-queue?postId=${postId}`)} style={modBtn}>View reports</button>
                 </>
               )}
-              <button onClick={handleDeletePost} style={{ ...modBtn, color: "rgba(239,68,68,.7)", borderColor: "rgba(239,68,68,.2)" }}>Delete</button>
+              {(isMod || post.authorId === me?.id) && (
+                <button onClick={handleDeletePost} style={{ ...modBtn, color: "rgba(239,68,68,.7)", borderColor: "rgba(239,68,68,.2)" }}>Delete</button>
+              )}
+              {me && me.id !== post.authorId && (
+                <button onClick={handleReportPost} style={{ ...modBtn, marginLeft: "auto" }}>&#9873; Report</button>
+              )}
             </div>
           )}
         </div>
@@ -314,16 +351,36 @@ export default function PostDetail({ postId }: { postId: string }) {
                   onHoverEnter={e => openHover(c.authorId, c.authorName, e.currentTarget as HTMLElement)}
                   onHoverLeave={() => hoverClose(160)} />
                 <span style={{ fontSize: 10, opacity: 0.3 }}>&middot; {timeAgo(c.createdAt)}</span>
-                {(isMod || c.authorId === me?.id) && (
-                  <button onClick={() => handleDeleteComment(c.id)} style={{
-                    background: "none", border: "none", color: "rgba(239,68,68,.4)",
-                    fontSize: 10, cursor: "pointer", fontFamily: "inherit", marginLeft: "auto",
-                  }}>delete</button>
-                )}
+                <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+                  {me && me.id !== c.authorId && (
+                    <button onClick={() => handleReportComment(c.id)} title="Report" style={{
+                      background: "none", border: "none", color: "rgba(148,163,184,.5)",
+                      fontSize: 11, cursor: "pointer", fontFamily: "inherit", padding: 0,
+                    }}>&#9873;</button>
+                  )}
+                  {isMod && ((c as any).removedAt ? (
+                    <button onClick={() => handleRestoreComment(c.id)} style={{
+                      background: "none", border: "none", color: "rgba(34,197,94,.6)",
+                      fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+                    }}>restore</button>
+                  ) : (
+                    <button onClick={() => handleRemoveComment(c.id)} style={{
+                      background: "none", border: "none", color: "rgba(239,68,68,.6)",
+                      fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+                    }}>remove</button>
+                  ))}
+                  {(isMod || c.authorId === me?.id) && (
+                    <button onClick={() => handleDeleteComment(c.id)} style={{
+                      background: "none", border: "none", color: "rgba(239,68,68,.4)",
+                      fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+                    }}>delete</button>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(229,231,235,.75)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                {c.body}
-              </div>
+              <Markdown
+                text={(c as any).removedAt && isMod ? `[removed] ${c.body}` : c.body}
+                style={{ fontSize: 13, lineHeight: 1.65, color: (c as any).removedAt ? "rgba(239,68,68,.6)" : "rgba(229,231,235,.75)", wordBreak: "break-word", fontStyle: (c as any).removedAt ? "italic" : "normal" }}
+              />
             </div>
           </div>
         ))}

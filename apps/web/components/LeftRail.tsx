@@ -602,6 +602,7 @@ export default function LeftRail() {
               >
                 <PresenceRow
                   name={nm}
+                  userId={u?.id}
                   avatar={u?.avatar}
                   avatarColor={u?.avatarColor}
                   globalRole={u?.globalRole}

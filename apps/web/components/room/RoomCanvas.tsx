@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useWeered } from "../WeeredProvider";
+import BungieLinkPill from "../BungieLinkPill";
 import RoomHeader from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
@@ -66,6 +67,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "dnd",     icon: "🐉", label: "D&D",      live: true  },
   { id: "windrose",icon: "⚓", label: "Windrose", live: true  },
   { id: "helldivers",icon: "💀", label: "Helldivers", live: true  },
+  { id: "chess",   icon: "♟",  label: "Chess",    live: true  },
 ];
 
 // Module type → which special modules are available in rooms of that lobby
@@ -85,6 +87,7 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   DND:         ["voice", "dnd", "youtube", "browser", "video", "screen"],
   WINDROSE:    ["voice", "windrose", "youtube", "twitch", "video", "screen"],
   HELLDIVERS2: ["voice", "helldivers", "youtube", "twitch", "video", "screen"],
+  CHESS:       ["voice", "chess", "youtube", "twitch", "video", "screen"],
 };
 
 // Default modules for lobbies without a specific mapping
@@ -206,6 +209,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [twitchChannel, setTwitchChannel] = useState<string>("");
   const [twitchInput, setTwitchInput]     = useState<string>("");
 
+  // Chess state — value is a lichess embed URL (TV / puzzle / game / study)
+  const [chessSource, setChessSource] = useState<string>("");
+  const [chessInput, setChessInput]   = useState<string>("");
+
   // Chat state — open on desktop, collapsed on mobile
   const [chatOpen, setChatOpen]         = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
   const [chatFullscreen, setChatFullscreen] = useState(() => {
@@ -263,6 +270,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       setBrowserInput(serverModule.url);
       setIframeBlocked(false);
     }
+    if (mode === "chess" && serverModule.source) {
+      setChessSource(serverModule.source);
+      setChessInput(serverModule.source);
+    }
     if (mode === "article" && serverModule.url) {
       setArticleUrl(serverModule.url);
     }
@@ -295,6 +306,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         setBrowserUrl(mod.url);
         setBrowserInput(mod.url);
         setIframeBlocked(false);
+      }
+      if (mode === "chess" && mod.source) {
+        setChessSource(mod.source);
+        setChessInput(mod.source);
       }
     }
     window.addEventListener("weered:module:state", onModuleState);
@@ -465,6 +480,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       // Broadcast the new module — for twitch/browser, content will be set when user enters a channel/URL
       const opts: any = {};
       if (newMode === "twitch" && twitchChannel) opts.channel = twitchChannel;
+      if (newMode === "chess" && chessSource) opts.source = chessSource;
       if (newMode === "browser" && browserUrl) opts.url = browserUrl;
       w?.setModuleState?.(newMode, opts);
     } else {
@@ -473,7 +489,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   };
 
   const stageActive = stageMode !== null;
-  const isFullStageMode = stageActive && !["youtube","browser","twitch","article"].includes(stageMode!);
+  const isFullStageMode = stageActive && !["youtube","browser","twitch","article","chess"].includes(stageMode!);
 
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/room/${encodeURIComponent(roomId)}`
@@ -556,6 +572,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         meId={String(w?.me?.id || "")}
         onRaise={() => w?.raiseHand?.()}
         onLower={() => w?.lowerHand?.()}
+        lobbyModuleType={lobbyContext?.moduleType ?? null}
       />
 
       {/* ── Launch Pad (MPlayer-style game launcher) ── */}
@@ -739,6 +756,101 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 <TwitchIcon size={40} color="rgba(145,70,255,0.25)" />
                 <div style={{ fontSize: 13, opacity: 0.4 }}>Enter a Twitch channel name above to start watching</div>
                 <div style={{ fontSize: 11, opacity: 0.25 }}>You can paste a full twitch.tv URL or just the channel name</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Chess (Lichess embed) stage ── */}
+        {stageActive && stageMode === "chess" && (
+          <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)", flexShrink: 0, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 14, color: "rgba(196,181,253,0.85)" }}>♟</span>
+              <button
+                onClick={() => {
+                  const url = "https://lichess.org/tv/frame?theme=brown&bg=dark";
+                  setChessSource(url); setChessInput(url);
+                  selfSetRef.current = true;
+                  w?.setModuleState?.("chess", { source: url });
+                }}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.25)", background: chessSource.includes("/tv/") ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.06)", color: "rgba(216,180,254,0.9)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+              >Lichess TV</button>
+              <button
+                onClick={() => {
+                  const url = "https://lichess.org/training/frame?theme=brown&bg=dark";
+                  setChessSource(url); setChessInput(url);
+                  selfSetRef.current = true;
+                  w?.setModuleState?.("chess", { source: url });
+                }}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.25)", background: chessSource.includes("/training/") ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.06)", color: "rgba(216,180,254,0.9)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+              >Daily Puzzle</button>
+              <input
+                value={chessInput}
+                onChange={e => setChessInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    const raw = chessInput.trim();
+                    if (!raw) return;
+                    let url = raw;
+                    try {
+                      const u = new URL(raw);
+                      if (u.hostname.endsWith("lichess.org")) {
+                        const path = u.pathname.replace(/\/$/, "");
+                        // /tv → /tv/frame
+                        if (path === "/tv" || path.startsWith("/tv/")) {
+                          url = `https://lichess.org${path.includes("/frame") ? path : path + "/frame"}?theme=brown&bg=dark`;
+                        }
+                        // /training → /training/frame
+                        else if (path === "/training" || path.startsWith("/training/")) {
+                          url = `https://lichess.org${path.includes("/frame") ? path : path + "/frame"}?theme=brown&bg=dark`;
+                        }
+                        // /study/{id}/{chapter} → /embed/study/...
+                        else if (path.startsWith("/study/")) {
+                          url = `https://lichess.org/embed${path}?theme=brown&bg=dark`;
+                        }
+                        // /broadcast/... — embed via /embed prefix
+                        else if (path.startsWith("/broadcast/")) {
+                          url = `https://lichess.org/embed${path}?theme=brown&bg=dark`;
+                        }
+                        // /{gameId} or /{gameId}/{color} — 8-char game id
+                        else {
+                          const m = path.match(/^\/([a-zA-Z0-9]{8})(\/(white|black))?$/);
+                          if (m) {
+                            url = `https://lichess.org/embed/${m[1]}${m[3] ? "/" + m[3] : ""}?theme=brown&bg=dark`;
+                          }
+                        }
+                      }
+                    } catch {
+                      // Bare ID? Allow `xxxxxxxx` (8 chars) as a game id
+                      if (/^[a-zA-Z0-9]{8}$/.test(raw)) {
+                        url = `https://lichess.org/embed/${raw}?theme=brown&bg=dark`;
+                      }
+                    }
+                    setChessSource(url); setChessInput(url);
+                    selfSetRef.current = true;
+                    w?.setModuleState?.("chess", { source: url });
+                  }
+                }}
+                placeholder="Paste a Lichess URL (game / study / broadcast)..."
+                style={{ flex: 1, minWidth: 160, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 6, color: "rgba(203,213,225,0.85)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
+              />
+              {chessSource && (
+                <a href={chessSource.replace("/frame", "").replace("/embed/", "/").split("?")[0]} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.18)", background: "rgba(124,58,237,0.08)", color: "rgba(216,180,254,0.8)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Lichess</a>
+              )}
+              <button onClick={() => { setChessSource(""); setChessInput(""); setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
+            </div>
+            {chessSource ? (
+              <iframe
+                src={chessSource}
+                style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#262421" }}
+                allow="autoplay"
+                title="Lichess"
+              />
+            ) : (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "rgba(0,0,0,0.2)", padding: 20, textAlign: "center" }}>
+                <span style={{ fontSize: 42, opacity: 0.25 }}>♟</span>
+                <div style={{ fontSize: 13, opacity: 0.55, maxWidth: 360 }}>Pick a feed above — Lichess TV (live featured game), Daily Puzzle, or paste any Lichess URL (game, study, broadcast).</div>
+                <div style={{ fontSize: 11, opacity: 0.3 }}>Chess.com doesn&apos;t allow embedding. Lichess only.</div>
               </div>
             )}
           </div>
@@ -1134,6 +1246,7 @@ function RoomMemberToolbar({
   meId,
   onRaise,
   onLower,
+  lobbyModuleType,
 }: {
   soloViewing: boolean;
   setSoloViewing: (v: boolean) => void;
@@ -1143,6 +1256,7 @@ function RoomMemberToolbar({
   meId: string;
   onRaise: () => void;
   onLower: () => void;
+  lobbyModuleType?: string | null;
 }) {
   const mode = voiceState?.mode || "OPEN";
   const queue = voiceState?.queue || [];
@@ -1174,6 +1288,18 @@ function RoomMemberToolbar({
         <span style={{ fontSize: 11 }}>{soloViewing ? "◉" : "○"}</span>
         {soloViewing ? "Solo" : "Synced"}
       </button>
+
+      <button
+        type="button"
+        aria-label="What does Synced mean?"
+        title={"Synced (default): everyone in the room sees the same module when someone switches tabs (YouTube, Twitch, Voice, etc).\n\nSolo: you browse modules independently. Your switches don't broadcast and others' switches don't pull you along. Voice and chat still work as normal."}
+        className="inline-flex items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.02] text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+        style={{ width: 16, height: 16, fontSize: 10, fontWeight: 700, cursor: "help", marginLeft: -2 }}
+      >
+        ?
+      </button>
+
+      {lobbyModuleType === "BUNGIE" && <BungieLinkPill size="xs" />}
 
       {showRaise && (
         <button
