@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import * as fs from "fs";
+import * as path from "path";
 import {
   syncManifest, enrichProfile, enrichMilestones, enrichVendorSales,
   resolveItem, resolveBucket, resolveDamageType,
@@ -192,6 +194,212 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/bungie/manifest/status", async (_req, reply) => {
     return reply.send({ ok: true, loaded: manifestLoaded(), version: manifestVersion() });
+  });
+
+  // GET /bungie/my-activities — the authed user's last N PGCR-derived activity
+  // log rows, with each modifier hash resolved to its display name from the
+  // skull + activity-modifier manifest caches. Used by the run-audit UI: when
+  // a user disputes whether their run was credited correctly, this is the
+  // ground truth — every hash Bungie returned, named.
+  app.get("/bungie/my-activities", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const q: any = (req as any).query || {};
+    const limit = Math.max(1, Math.min(50, Number(q.limit) || 10));
+
+    // Load both manifests for name lookup
+    const skullsPath = path.join(process.cwd(), "manifest-cache", "skulls.json");
+    const modsPath = path.join(process.cwd(), "manifest-cache", "modifiers.json");
+    let skulls: Record<string, any> = {};
+    let mods: Record<string, any> = {};
+    try { if (fs.existsSync(skullsPath)) skulls = JSON.parse(fs.readFileSync(skullsPath, "utf-8")); } catch {}
+    try { if (fs.existsSync(modsPath)) mods = JSON.parse(fs.readFileSync(modsPath, "utf-8")); } catch {}
+
+    const rows = await (prisma as any).bungieActivityLog.findMany({
+      where: { userId: u.id },
+      orderBy: { period: "desc" },
+      take: limit,
+    });
+
+    const activities = rows.map((r: any) => {
+      const hashes = (Array.isArray(r.modifierHashes) ? r.modifierHashes : []).map(String);
+      const named = hashes.map((h: string) => {
+        const skull = skulls[h];
+        const mod = mods[h];
+        const def = skull || mod;
+        return {
+          hash: h,
+          name: def?.name || "(unknown)",
+          description: (def?.description || "").replace(/\s+/g, " ").trim().slice(0, 200),
+          source: skull ? "skull" : (mod ? "activity-modifier" : "unknown"),
+        };
+      });
+      return {
+        period: r.period,
+        instanceId: r.activityInstanceId,
+        activityName: r.activityName,
+        mode: r.mode,
+        modeName: r.modeName,
+        difficultyTier: r.difficultyTier,
+        completed: r.completed,
+        standing: r.standing,
+        kills: r.kills,
+        deaths: r.deaths,
+        duration: r.duration,
+        modifiers: named,
+      };
+    });
+
+    return reply.send({ ok: true, activities });
+  });
+
+  // Activities grouped by base map name. Used by the challenge-creation UI
+  // to let staff require "K1 Logistics" once and have it resolve to ALL the
+  // hashes behind that name (Customize / Matchmade / Master / Ultimate / etc).
+  app.get("/bungie/activities", async (_req, reply) => {
+    try {
+      const cachePath = path.join(process.cwd(), "manifest-cache", "activities.json");
+      if (!fs.existsSync(cachePath)) {
+        return reply.send({ ok: false, error: "manifest_not_synced" });
+      }
+      const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<string, { name: string; icon: string; description: string; lightLevel?: number }>;
+
+      // Strip variant suffixes AND (Heroic)/(Legendary) prefixes so all
+      // "K1 Logistics: <flavor>" / "(Heroic) X" entries collapse to one
+      // group keyed by their base name.
+      function baseName(n: string): string {
+        return String(n || "")
+          // Suffix forms: "Map: Customize", "Map: Master", "Map: Legendary"
+          .replace(/:\s*(Customize|Matchmade|Adept|Hero|Legend|Legendary|Master|Grandmaster|Ultimate|Story|Standard|Normal|Expert)\b.*$/i, "")
+          // Parenthetical suffix forms: "Map (Legendary)"
+          .replace(/\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*$/i, "")
+          // Parenthetical prefix forms: "(Heroic) Map", "(Legendary) Map"
+          .replace(/^\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*/i, "")
+          .trim();
+      }
+
+      // Skip noise: empty names, internal placeholders, missing icon entries
+      // that look like Bungie test/internal records.
+      function isReal(name: string, def: any): boolean {
+        if (!name) return false;
+        if (/^\s*$/.test(name)) return false;
+        // Bungie ships a lot of placeholder rows
+        if (/^(Classified|Z\?\?\?|\?\?\?|Test|Debug)$/i.test(name.trim())) return false;
+        if (name.length < 3) return false;
+        return true;
+      }
+
+      const groups: Record<string, { name: string; hashes: string[]; variants: { hash: string; variant: string }[]; icon: string }> = {};
+      for (const [hash, def] of Object.entries(raw)) {
+        if (!isReal(def.name, def)) continue;
+        const base = baseName(def.name);
+        if (!base) continue;
+        // Variant label = the suffix after the base name (or "Standard" if none)
+        const variant = def.name === base ? "Standard" : def.name.slice(base.length).replace(/^[:\s]+/, "").trim() || "Variant";
+        if (!groups[base]) {
+          groups[base] = {
+            name: base,
+            hashes: [],
+            variants: [],
+            icon: def.icon ? (def.icon.startsWith("http") ? def.icon : "https://www.bungie.net" + def.icon) : "",
+          };
+        }
+        groups[base].hashes.push(hash);
+        groups[base].variants.push({ hash, variant });
+      }
+
+      // Drop groups whose base ended up empty / "???", then sort.
+      const result = Object.values(groups)
+        .filter(g => g.name && !/^[?:\s]+$/.test(g.name) && g.hashes.length >= 1)
+        .sort((a, b) => {
+          // Multi-variant groups (real maps with several difficulties) bubble
+          // up first since those are what challenge authors are typically
+          // scoping to. Within each tier, alphabetical.
+          const va = a.variants.length, vb = b.variants.length;
+          if (va >= 2 && vb < 2) return -1;
+          if (vb >= 2 && va < 2) return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+      return reply.send({
+        ok: true,
+        version: manifestVersion(),
+        total: result.length,
+        groups: result,
+      });
+    } catch (err: any) {
+      return reply.send({ ok: false, error: String(err?.message || err) });
+    }
+  });
+
+  // Categorized modifier list for challenge-creation UIs. Reads the on-disk
+  // manifest cache directly (367 entries) and groups them so the picker can
+  // present "Surges", "Threats", "Champions", "Loadout", etc. as sections.
+  app.get("/bungie/modifiers", async (_req, reply) => {
+    try {
+      const cachePath = path.join(process.cwd(), "manifest-cache", "modifiers.json");
+      if (!fs.existsSync(cachePath)) {
+        return reply.send({ ok: false, error: "manifest_not_synced" });
+      }
+      const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<string, { name: string; icon: string; description: string }>;
+
+      function categorize(name: string): string | null {
+        const n = name.toLowerCase();
+        // Skip noise — internal flags, raid challenges, "a challenge awaits"
+        if (!name || /^a challenge awaits/i.test(name)) return null;
+        if (/raid challenges|boosts gained|^\d+\+ feats/i.test(name)) return null;
+
+        if (/^champion/i.test(name) || /champion foes/i.test(name)) return "champions";
+        if (/surge protector/i.test(name)) return "surges";
+        if (/\bsurge\b/i.test(n)) return "surges";
+        if (/\bthreat\b/i.test(n)) return "threats";
+        if (/\bburn\b/i.test(n)) return "burns";
+        if (/match game|equipment locked|togetherness|epitaph|locked loadout/i.test(name)) return "rules";
+        if (/^overcharged/i.test(name)) return "overcharged";
+        if (/^shielded foes|shielded combatants/i.test(name)) return "shields";
+        return "other";
+      }
+
+      const grouped: Record<string, Array<{ hash: string; name: string; icon: string; description: string }>> = {};
+      for (const [hash, def] of Object.entries(raw)) {
+        const cat = categorize(def.name);
+        if (!cat) continue;
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push({
+          hash,
+          name: def.name,
+          icon: def.icon ? (def.icon.startsWith("http") ? def.icon : "https://www.bungie.net" + def.icon) : "",
+          description: def.description || "",
+        });
+      }
+      // Sort each group alphabetically
+      for (const k of Object.keys(grouped)) {
+        grouped[k].sort((a, b) => a.name.localeCompare(b.name));
+      }
+
+      // Also drop a flat list for search-style UIs
+      const flat = Object.values(grouped).flat().sort((a, b) => a.name.localeCompare(b.name));
+
+      return reply.send({
+        ok: true,
+        version: manifestVersion(),
+        total: flat.length,
+        grouped,
+        flat,
+        categories: [
+          { key: "rules",       label: "Activity Rules" },
+          { key: "surges",      label: "Damage Surges" },
+          { key: "threats",     label: "Incoming Threats" },
+          { key: "champions",   label: "Champions" },
+          { key: "shields",     label: "Shielded Foes" },
+          { key: "overcharged", label: "Overcharged Weapons" },
+          { key: "burns",       label: "Burns (legacy)" },
+          { key: "other",       label: "Other Modifiers" },
+        ],
+      });
+    } catch (err: any) {
+      return reply.send({ ok: false, error: String(err?.message || err) });
+    }
   });
 
   app.get("/bungie/weekly", async (_req, reply) => {

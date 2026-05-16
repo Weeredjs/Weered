@@ -1476,6 +1476,29 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
         <span>Ends: {endsAt.toLocaleDateString()}</span>
       </div>
 
+      {/* Flair reward */}
+      {(() => {
+        const rewards = Array.isArray(t.rewards) ? t.rewards : [];
+        const flair = rewards.find((r: any) => r?.kind === "FLAIR" && r?.rank === 1 && r?.item);
+        if (!flair) return null;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(124,58,237,.08)", border: "1px solid rgba(124,58,237,.22)" }}>
+            {flair.item.imageUrl
+              ? <img src={flair.item.imageUrl} alt={flair.item.name} style={{ width: 20, height: 20, borderRadius: 4, objectFit: "cover" }} />
+              : <span style={{ fontSize: 12 }}>🏷️</span>}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".4px", color: "rgb(216,180,254)" }}>
+              WINNER FLAIR
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
+              {flair.item.name}
+            </div>
+            <div style={{ fontSize: 9, opacity: 0.45, marginLeft: "auto" }}>
+              {flair.item.rarity}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
         <button onClick={onView} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>
@@ -1625,11 +1648,15 @@ export default function LobbyModulesPanel({
   gameName = "Destiny 2",
   accentColor = ACCENT_DESTINY,
   style,
+  currentUserId,
+  isStaff,
 }: {
   lobbyId: string;
   gameName?: string;
   accentColor?: string;
   style?: React.CSSProperties;
+  currentUserId?: string;
+  isStaff?: boolean;
 }) {
   const [tab, setTab] = useState<TabId>("streams");
   useWatchHere(useCallback(() => { setTab("streams"); }, []));

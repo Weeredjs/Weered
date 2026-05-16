@@ -54,9 +54,12 @@ type PlanetDetail = {
 } | null;
 
 const stencil: React.CSSProperties = {
-  fontFamily: '"Stencil Std","Black Ops One","Impact",sans-serif',
-  letterSpacing: "1.5px",
+  fontFamily: 'var(--font-saira-stencil), "Stencil Std", "Impact", sans-serif',
+  letterSpacing: "1px",
   textTransform: "uppercase",
+  WebkitFontSmoothing: "antialiased",
+  MozOsxFontSmoothing: "grayscale",
+  textRendering: "geometricPrecision",
 };
 
 export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProperties }) {
@@ -279,7 +282,14 @@ function PlanetTile({ campaign, onClick, featured = false }: { campaign: Campaig
         </div>
       )}
 
-      <div style={{ ...stencil, fontSize: 13, fontWeight: 800, color, marginBottom: 2 }}>
+      <div style={{
+        ...stencil, fontSize: 14, fontWeight: 700,
+        color: "rgba(255,255,255,.95)",
+        marginBottom: 4,
+        paddingBottom: 3,
+        borderBottom: `2px solid ${color}66`,
+        display: "inline-block",
+      }}>
         {planet.name}
       </div>
       <div style={{ fontSize: 9, color: "rgba(255,255,255,.45)", letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
@@ -337,7 +347,7 @@ function PlanetModal({ planetIndex, detail, loading, onClose }: {
           borderRadius: 8,
           padding: 20,
           color: "rgba(255,255,255,.92)",
-          boxShadow: `0 0 40px ${color}33`,
+          boxShadow: `0 0 12px ${color}22`,
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -345,7 +355,7 @@ function PlanetModal({ planetIndex, detail, loading, onClose }: {
             <div style={{ fontSize: 10, color: "rgba(255,215,0,.6)", letterSpacing: "1px", textTransform: "uppercase", ...stencil }}>
               Planet Index #{planetIndex}
             </div>
-            <div style={{ ...stencil, fontSize: 22, color, fontWeight: 800, marginTop: 2 }}>
+            <div style={{ ...stencil, fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,.95)", marginTop: 2, paddingBottom: 4, borderBottom: `2px solid ${color}77`, display: "inline-block" }}>
               {detail?.name || "…"}
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginTop: 2, letterSpacing: ".5px" }}>

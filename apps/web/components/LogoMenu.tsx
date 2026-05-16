@@ -117,7 +117,7 @@ export function LogoMenu() {
   const doLogout = () => {
     close();
     if (typeof logout === "function") logout();
-    else { try { localStorage.removeItem("weered_token"); window.location.href = "/login"; } catch {} }
+    else { try { localStorage.removeItem("weered_token"); document.documentElement.removeAttribute("data-weered-authed"); window.location.href = "/login"; } catch {} }
   };
 
   return (

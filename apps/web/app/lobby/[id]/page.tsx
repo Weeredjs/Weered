@@ -9,6 +9,7 @@ import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
+import ChessModulesPanel from "../../../components/ChessModulesPanel";
 import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
 import MlbModulesPanel from "../../../components/MlbModulesPanel";
 import PgaModulesPanel from "../../../components/PgaModulesPanel";
@@ -31,13 +32,15 @@ import HelldiversDispatchesPanel from "../../../components/HelldiversDispatchesP
 import HelldiversSliceBPanel from "../../../components/HelldiversSliceBPanel";
 import HelldiversLoadoutBrowser from "../../../components/HelldiversLoadoutBrowser";
 import HelldiversModulesPanel from "../../../components/HelldiversModulesPanel";
-import TournamentsPanel from "../../../components/TournamentsPanel";
+import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
+import FlairContestStrip from "../../../components/FlairContestStrip";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
 import ForumPage from "../../../components/forum/ForumPage";
 import TradingFeed from "../../../components/TradingFeed";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
+import BungieLinkPill from "../../../components/BungieLinkPill";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -394,7 +397,7 @@ export default function LobbyIdPage() {
           // hasModules check below). Without this, the data fetch race
           // would override view → rooms a few hundred ms after a Watch
           // Here / Join Room dispatch set it to modules.
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE" || j.lobby.moduleType === "HELLDIVERS2") {
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE" || j.lobby.moduleType === "HELLDIVERS2" || j.lobby.moduleType === "CHESS") {
             setView("modules");
           } else {
             setView("rooms");
@@ -425,7 +428,7 @@ export default function LobbyIdPage() {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE" || lobbyInfo?.moduleType === "HELLDIVERS2";
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE" || lobbyInfo?.moduleType === "HELLDIVERS2" || lobbyInfo?.moduleType === "CHESS";
   const accent     = lobbyInfo?.accentColor || undefined;
   const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const showAdmin  = isStaff || isOwner || (membership && membership.roleLevel >= 3);
@@ -536,6 +539,11 @@ export default function LobbyIdPage() {
                 )}
               </TabBtn>
               <TabBtn active={view === "events"} accent={accent} onClick={() => setView("events")}>Events</TabBtn>
+              {lobbyInfo?.moduleType === "BUNGIE" && (
+                <div style={{ display: "flex", alignItems: "center", marginLeft: 8 }}>
+                  <BungieLinkPill size="xs" />
+                </div>
+              )}
 
               {/* Join button — opt-in membership for browseable (OPEN) lobbies.
                   Hidden once you're a member (Leave replaces it). Also hidden
@@ -648,11 +656,26 @@ export default function LobbyIdPage() {
                 ) : lobbyInfo?.moduleType === "WINDROSE" ? (
                   <WindroseModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
-                  <HelldiversModulesPanel lobbyId={lobbyId} accentColor={accent} currentUserId={me?.id} />
+                  <HelldiversModulesPanel lobbyId={lobbyId} accentColor={accent} currentUserId={me?.id} style={{ flex: 1, minHeight: 0 }} />
+                ) : lobbyInfo?.moduleType === "CHESS" ? (
+                  <ChessModulesPanel
+                    lobbyId={lobbyId}
+                    currentUserId={me?.id}
+                    isStaff={["GOD","ADMIN","STAFF"].includes(globalRole || "")}
+                    style={{ flex: 1, minHeight: 0 }}
+                  />
                 ) : lobbyInfo?.moduleType === "BUNGIE" ? (
                   <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
-                    <TournamentsPanel lobbyId={lobbyId} currentUserId={me?.id} isStaff={["GOD","ADMIN","STAFF"].includes(globalRole || "")} />
-                    <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+                    <TournamentLiveStrip lobbyId={lobbyId} currentUserId={me?.id} />
+                    <FlairContestStrip lobbyId={lobbyId} />
+                    <LobbyModulesPanel
+                      lobbyId={lobbyId}
+                      gameName={gameName}
+                      accentColor={accent}
+                      currentUserId={me?.id}
+                      isStaff={["GOD","ADMIN","STAFF"].includes(globalRole || "")}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
                   </div>
                 ) : (
                   <LobbyModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />

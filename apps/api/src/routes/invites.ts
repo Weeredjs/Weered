@@ -22,7 +22,11 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req.body as any) || {};
     const type     = String(body.type || "PLATFORM").toUpperCase();
     const targetId = body.targetId ? String(body.targetId) : null;
-    const maxUses  = Math.min(Math.max(Number(body.maxUses) || 1, 1), 100);
+    // 0 = unlimited; finite values clamped to [1, 100].
+    const requested = Number(body.maxUses);
+    const maxUses = (Number.isFinite(requested) && requested === 0)
+      ? 0
+      : Math.min(Math.max(Number(body.maxUses) || 1, 1), 100);
     const note     = body.note ? String(body.note).slice(0, 200) : null;
     const ttlHours = Number(body.ttlHours) || 0;
     const expiresAt = ttlHours > 0 ? new Date(Date.now() + ttlHours * 3600 * 1000) : null;
@@ -50,7 +54,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     const invite = await prisma.invite.findUnique({ where: { token } });
     if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
     if (invite.expiresAt && invite.expiresAt < new Date()) return reply.code(410).send({ ok: false, error: "expired" });
-    if (invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
+    if (invite.maxUses > 0 && invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
     let targetName = "";
     if (invite.targetId) {
       if (invite.type === "ROOM") {
@@ -75,7 +79,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     const invite = await prisma.invite.findUnique({ where: { token } });
     if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
     if (invite.expiresAt && invite.expiresAt < new Date()) return reply.code(410).send({ ok: false, error: "expired" });
-    if (invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
+    if (invite.maxUses > 0 && invite.uses >= invite.maxUses) return reply.code(410).send({ ok: false, error: "exhausted" });
 
     await prisma.invite.update({ where: { token }, data: { uses: { increment: 1 } } });
 

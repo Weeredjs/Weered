@@ -32,11 +32,40 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
   }
 
+
+  // Resolve FLAIR rewards to include StoreItem details so the UI doesn't
+  // need a follow-up call. Stored shape is { kind: "FLAIR", itemId, rank };
+  // we add an inline { item: { id, name, imageUrl, category, rarity } }.
+  async function enrichRewards(rows: any[]): Promise<void> {
+    const ids = new Set<string>();
+    for (const t of rows) {
+      const arr = Array.isArray(t?.rewards) ? t.rewards : [];
+      for (const r of arr) if (r?.kind === "FLAIR" && r?.itemId) ids.add(r.itemId);
+    }
+    if (ids.size === 0) return;
+    const items: any[] = await (prisma as any).storeItem.findMany({
+      where: { id: { in: Array.from(ids) } },
+      select: { id: true, name: true, imageUrl: true, category: true, rarity: true },
+    });
+    const byId = new Map(items.map(i => [i.id, i]));
+    for (const t of rows) {
+      const arr = Array.isArray(t?.rewards) ? t.rewards : [];
+      t.rewards = arr.map((r: any) => {
+        if (r?.kind === "FLAIR" && r?.itemId) {
+          const it = byId.get(r.itemId);
+          if (it) return { ...r, item: it };
+        }
+        return r;
+      });
+    }
+  }
+
   app.get("/tournaments", async (req, reply) => {
     const { lobbyId, status } = req.query as any;
     const where: any = {};
     if (lobbyId) where.lobbyId = lobbyId;
-    if (status) where.status = status;
+    if (status === "all") { /* no filter */ }
+    else if (status) where.status = status;
     else where.status = { in: ["REGISTRATION", "ACTIVE"] };
     const tournaments = await prisma.tournament.findMany({
       where,
@@ -44,6 +73,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       orderBy: { startsAt: "asc" },
       take: 50,
     });
+    await enrichRewards(tournaments as any[]);
     return reply.send({ ok: true, tournaments });
   });
 
@@ -57,6 +87,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       },
     });
     if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
+    await enrichRewards([tournament] as any[]);
     return reply.send({ ok: true, tournament });
   });
 
@@ -159,6 +190,31 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     const tournament = await prisma.tournament.update({
       where: { id },
       data: { status: "ACTIVE" },
+    });
+    return reply.send({ ok: true, tournament });
+  });
+
+  // Set the rewards array on a tournament. Today supports flair items only:
+  // { kind: "FLAIR", itemId, rank }. Validates itemId exists in StoreItem.
+  app.post("/tournaments/:id/rewards", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const id = String((req as any).params?.id || "");
+    const body = req.body as any;
+    const incoming = Array.isArray(body?.rewards) ? body.rewards : [];
+    const sanitized: any[] = [];
+    for (const r of incoming) {
+      if (!r || typeof r !== "object") continue;
+      if (r.kind === "FLAIR" && typeof r.itemId === "string" && r.itemId) {
+        const exists = await (prisma as any).storeItem.findUnique({ where: { id: r.itemId } });
+        if (!exists) continue;
+        sanitized.push({ kind: "FLAIR", itemId: r.itemId, rank: Number(r.rank) || 1 });
+      }
+    }
+    const tournament = await prisma.tournament.update({
+      where: { id },
+      data: { rewards: sanitized as any },
     });
     return reply.send({ ok: true, tournament });
   });
@@ -309,6 +365,31 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           meta: { kind: "tournament_complete", tournamentId: id, rank: i + 1, tier: t },
         }).catch(() => {});
       }
+    }
+
+    // Flair item grants — configured per-tournament. Idempotent via
+    // acquiredFrom marker ("tournament:<id>"), so a re-run of /complete
+    // won't double-mint.
+    const flairRewards = Array.isArray((tournament as any).rewards) ? (tournament as any).rewards as any[] : [];
+    for (const r of flairRewards) {
+      if (!r || r.kind !== "FLAIR" || !r.itemId) continue;
+      const targetRank = Number(r.rank) || 1;
+      const winner = entries[targetRank - 1];
+      if (!winner || !winner.userId) continue;
+      const tag = `tournament:${id}`;
+      const already = await (prisma as any).userItem.findFirst({
+        where: { userId: winner.userId, itemId: r.itemId, acquiredFrom: tag },
+      });
+      if (already) continue;
+      try {
+        await (prisma as any).userItem.create({
+          data: { userId: winner.userId, itemId: r.itemId, acquiredFrom: tag, acquiredPrice: 0 },
+        });
+        await (prisma as any).storeItem.update({
+          where: { id: r.itemId },
+          data: { totalMinted: { increment: 1 } },
+        });
+      } catch {}
     }
 
     const updated = await prisma.tournament.update({

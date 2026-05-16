@@ -38,6 +38,14 @@ export interface ActivityDef {
   icon: string;
   description: string;
   lightLevel: number;
+  // Modifier hashes baked into the activity definition (e.g. Singes, Match
+  // Game, Champions). Stored as strings to match BungieActivityLog.modifierHashes
+  // JSON shape. Empty array if the activity has none.
+  modifierHashes: string[];
+  // Bungie's directActivityModeHash signals difficulty tier indirectly;
+  // many activities also expose tier via display name (Master / Hero / etc).
+  // We record difficulty inferred from name where unambiguous.
+  difficultyTier: number | null;
 }
 
 export interface MilestoneDef {
@@ -582,16 +590,33 @@ function buildItemIndex(raw: Record<string, any>) {
   }
 }
 
+function inferTierFromName(n: string): number | null {
+  const low = (n || "").toLowerCase();
+  if (low.includes("grandmaster")) return 5;
+  if (low.includes("master")) return 4;
+  if (low.includes("legend")) return 3;
+  if (low.includes("hero")) return 2;
+  if (low.includes("normal") || low.includes("adept")) return 1;
+  return null;
+}
+
 function buildActivityIndex(raw: Record<string, any>) {
   activityIndex.clear();
   for (const [hash, def] of Object.entries(raw)) {
     const dp = def?.displayProperties;
     if (!dp?.name) continue;
+    // Bungie shape: def.modifiers = [{ activityModifierHash: <number> }, ...]
+    // (see DestinyActivityDefinition spec). Extract just the hashes as strings.
+    const modifierHashes: string[] = Array.isArray(def.modifiers)
+      ? def.modifiers.map((m: any) => String(m?.activityModifierHash || "")).filter((h: string) => h)
+      : [];
     activityIndex.set(hash, {
       name: dp.name,
       icon: dp.icon || "",
       description: (dp.description || "").slice(0, 200),
       lightLevel: def.activityLightLevel || 0,
+      modifierHashes,
+      difficultyTier: inferTierFromName(dp.name),
     });
   }
 }

@@ -2,6 +2,14 @@
 
 import React from "react";
 import RoleIcon, { TierIcon } from "./RoleIcon";
+import FlairBadge from "./FlairBadge";
+import { useEquippedFlair } from "../lib/useEquippedFlair";
+
+function PresenceFlair({ userId }: { userId?: string }) {
+  const f = useEquippedFlair(userId || null);
+  if (!f || f.kind !== "BADGE") return null;
+  return <FlairBadge flair={f as any} size="sm" />;
+}
 import { avatarBg } from "../lib/avatarColor";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -79,6 +87,8 @@ export interface LivePresence {
 export interface PresenceRowProps {
   // Identity
   name: string;
+  // Optional user id — when present, equipped flair will render next to the name.
+  userId?: string;
   avatar?: string | null;
   avatarColor?: string | null;
 
@@ -114,6 +124,7 @@ export interface PresenceRowProps {
 
 export default function PresenceRow({
   name,
+  userId,
   avatar,
   avatarColor,
   globalRole,
@@ -312,6 +323,7 @@ export default function PresenceRow({
               style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
             />
           )}
+          {userId && <PresenceFlair userId={userId} />}
         </div>
         <div style={{
           fontSize: compact ? 11 : 12,

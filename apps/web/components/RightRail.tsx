@@ -970,6 +970,7 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
       <div key={f.id} className="weered-rr-friend-row" style={{ position: "relative" }}>
         <PresenceRow
           name={f.name}
+          userId={f.id}
           avatar={f.avatar}
           avatarColor={f.avatarColor}
           globalRole={f.globalRole}

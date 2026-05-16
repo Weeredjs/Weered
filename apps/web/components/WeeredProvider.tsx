@@ -450,6 +450,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid  = String(msg.roomId || "");
         const list = Array.isArray(msg.users) ? msg.users : [];
         setUsersByRoom(prev => ({ ...prev, [rid]: list }));
+        // Track our own live game presence for the AFK timer skip.
+        const myId = String(((): any => { try { return (JSON.parse(localStorage.getItem("weered_user") || "{}") || {}).id || ""; } catch { return ""; } })());
+        if (myId) {
+          const meEntry = list.find((u: any) => String(u?.id || "") === myId);
+          myLivePresenceActiveRef.current = !!(meEntry && meEntry.livePresence && meEntry.livePresence.activity);
+        }
         setMetaByRoom(prev => ({
           ...prev,
           [rid]: {
@@ -1079,6 +1085,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const manualAwayRef = useRef(false);
   const lastSentAwayRef = useRef<boolean | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True when we're currently shown as Online on Steam/Xbox/PSN/Twitch.
+  // Used to suppress auto "lying low" — if the user is playing a game, the
+  // idle Weered tab doesn't mean they're away.
+  const myLivePresenceActiveRef = useRef(false);
 
   const sendAwayStatus = React.useCallback((away: boolean, force = false) => {
     if (!force && lastSentAwayRef.current === away) return;
@@ -1090,10 +1100,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const armIdleTimer = React.useCallback(() => {
-    const IDLE_MS = 5 * 60 * 1000;
+    const IDLE_MS = 20 * 60 * 1000;
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       if (manualAwayRef.current) return;
+      // Skip auto-AFK when external presence shows the user is on a game
+      // platform. They might be playing on console with the Weered tab open
+      // in the background.
+      if (myLivePresenceActiveRef.current) {
+        // Re-arm so we re-check after another idle window.
+        armIdleTimer();
+        return;
+      }
       sendAwayStatus(true);
     }, IDLE_MS);
   }, [sendAwayStatus]);
@@ -1135,13 +1153,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       setWsState(WebSocket.CLOSED);
       setToken(j.token);
       setMe(j.user || null);
-      try { localStorage.setItem("weered_token", j.token); } catch {}
+      try { localStorage.setItem("weered_token", j.token); document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
       try { localStorage.setItem("weered_user",  JSON.stringify(j.user || null)); } catch {}
     }
   }
 
   function logout() {
-    try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); } catch {}
+    try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
     try { router.replace("/"); } catch {}
     setToken(""); setMe(null);
     setUsersByRoom({}); setMsgsByRoom({});

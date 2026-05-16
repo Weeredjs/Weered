@@ -7138,3 +7138,329 @@ html[data-weered-lobby="helldivers2"] .weered-usercorner {
   border-color: rgba(255,215,0,0.30) !important;
 }
 
+
+
+/* ── SEO slab for /lobby/[id] ────────────────────────────────────────────── */
+/* Server-rendered fallback content visible to crawlers and unauthenticated
+   landings. Hidden before paint for authenticated users via theme-boot. */
+html[data-weered-authed] .seo-slab { display: none !important; }
+.seo-slab {
+  display: block;
+  width: 100%;
+  padding: 32px 20px 48px;
+  color: rgba(226, 232, 240, 0.92);
+  background: rgba(15, 17, 26, 0.55);
+  font-family: var(--font-barlow), system-ui, sans-serif;
+}
+.seo-slab-inner {
+  max-width: 920px;
+  margin: 0 auto;
+}
+.seo-slab-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.7);
+  font-weight: 600;
+}
+.seo-slab-title {
+  margin: 0 0 12px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: rgba(245, 245, 250, 0.98);
+}
+.seo-slab-desc {
+  margin: 0 0 24px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(203, 213, 225, 0.85);
+  max-width: 720px;
+}
+.seo-slab-section {
+  margin: 24px 0;
+}
+.seo-slab-section h2 {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.75);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.seo-slab-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.seo-slab-section li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(203, 213, 225, 0.85);
+  padding-left: 14px;
+  position: relative;
+}
+.seo-slab-section li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: rgba(124, 58, 237, 0.7);
+}
+.seo-slab-section li strong {
+  color: rgba(245, 245, 250, 0.95);
+  font-weight: 600;
+}
+.seo-slab-section li a {
+  color: rgba(196, 181, 253, 0.92);
+  text-decoration: none;
+}
+.seo-slab-section li a:hover {
+  text-decoration: underline;
+}
+.seo-slab-meta {
+  color: rgba(148, 163, 184, 0.6);
+  font-size: 12px;
+}
+.seo-slab-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.7);
+}
+.seo-slab-footer a {
+  color: rgba(196, 181, 253, 0.9);
+  text-decoration: none;
+}
+.seo-slab-footer a:hover {
+  text-decoration: underline;
+}
+.seo-slab-canonical {
+  margin: 8px 0 0;
+  font-size: 11px;
+  opacity: 0.5;
+}
+/* ── Marketing landing-page styles ─────────────────────────────────────────
+ * Shared CSS for /alternatives/*, /tournaments/*, /play/* SEO pages.
+ * Server-rendered, no client JS dependency. Dark + brand-purple, cinematic
+ * to match the in-app aesthetic. */
+
+.mkt {
+  min-height: 100vh;
+  background: #050810;
+  color: rgba(226, 232, 240, 0.92);
+  font-family: 'Barlow Condensed', system-ui, -apple-system, sans-serif;
+  padding-bottom: 60px;
+}
+.mkt-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 22px;
+}
+.mkt-hero {
+  padding: 72px 0 56px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.mkt-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(124,58,237,0.18) 0%, transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(56,189,248,0.10) 0%, transparent 55%);
+  pointer-events: none;
+}
+.mkt-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.85);
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 22px;
+  position: relative;
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+  font-weight: 600;
+}
+.mkt-h1 {
+  font-size: 56px;
+  line-height: 1.05;
+  font-weight: 700;
+  margin: 0 0 18px;
+  color: rgba(245, 245, 250, 0.98);
+  letter-spacing: -0.02em;
+  position: relative;
+}
+.mkt-h1 span.accent {
+  color: rgba(196, 181, 253, 0.95);
+}
+.mkt-sub {
+  font-size: 19px;
+  line-height: 1.55;
+  color: rgba(203, 213, 225, 0.82);
+  max-width: 720px;
+  margin: 0 auto 32px;
+  position: relative;
+}
+.mkt-cta-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  position: relative;
+}
+.mkt-cta-primary, .mkt-cta-secondary {
+  text-decoration: none;
+  padding: 13px 26px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.mkt-cta-primary {
+  background: linear-gradient(180deg, rgba(124,58,237,1), rgba(91,33,182,1));
+  color: white;
+  border: 1px solid rgba(167,139,250,0.5);
+  box-shadow: 0 6px 24px -8px rgba(124, 58, 237, 0.55);
+}
+.mkt-cta-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 32px -8px rgba(124, 58, 237, 0.7);
+}
+.mkt-cta-secondary {
+  background: rgba(255,255,255,0.04);
+  color: rgba(226, 232, 240, 0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.mkt-cta-secondary:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.mkt-section {
+  padding: 56px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.mkt-section:first-of-type { border-top: 0; }
+.mkt-h2 {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: rgba(245, 245, 250, 0.96);
+  letter-spacing: -0.01em;
+}
+.mkt-h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 22px 0 8px;
+  color: rgba(245, 245, 250, 0.92);
+}
+.mkt-p {
+  font-size: 16px;
+  line-height: 1.65;
+  color: rgba(203, 213, 225, 0.82);
+  margin: 0 0 14px;
+  max-width: 760px;
+}
+.mkt-p strong { color: rgba(245, 245, 250, 0.96); font-weight: 600; }
+.mkt-p a { color: rgba(196, 181, 253, 0.92); text-decoration: underline; text-decoration-color: rgba(196, 181, 253, 0.3); }
+
+.mkt-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+@media (max-width: 700px) {
+  .mkt-grid-3 { grid-template-columns: 1fr; }
+  .mkt-h1 { font-size: 38px; }
+  .mkt-hero { padding: 48px 0 40px; }
+}
+.mkt-card {
+  background: rgba(15, 17, 26, 0.7);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 22px;
+}
+.mkt-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: rgba(245, 245, 250, 0.95);
+  font-weight: 700;
+}
+.mkt-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(203, 213, 225, 0.75);
+}
+
+.mkt-bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0;
+  max-width: 760px;
+}
+.mkt-bullet-list li {
+  position: relative;
+  padding-left: 24px;
+  margin: 10px 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(203, 213, 225, 0.85);
+}
+.mkt-bullet-list li::before {
+  content: "›";
+  position: absolute;
+  left: 4px;
+  color: rgba(124, 58, 237, 0.85);
+  font-weight: 700;
+  font-size: 18px;
+  top: -2px;
+}
+.mkt-bullet-list li strong { color: rgba(245, 245, 250, 0.95); font-weight: 600; }
+
+.mkt-callout {
+  background: rgba(124, 58, 237, 0.08);
+  border-left: 3px solid rgba(124, 58, 237, 0.65);
+  padding: 18px 22px;
+  border-radius: 8px;
+  margin: 24px 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(226, 232, 240, 0.88);
+  max-width: 760px;
+}
+
+.mkt-final-cta {
+  background: linear-gradient(180deg, rgba(15,17,26,0.6), rgba(15,17,26,0.95));
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  margin: 48px 0 0;
+}
+.mkt-final-cta h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: rgba(245, 245, 250, 0.98);
+}
+.mkt-final-cta p {
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(203, 213, 225, 0.78);
+  margin: 0 0 24px;
+  max-width: 540px;
+  margin-left: auto;
+  margin-right: auto;
+}
