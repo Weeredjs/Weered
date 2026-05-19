@@ -8,6 +8,11 @@ export class WeeredSocket {
   private handlers = new Set<Handler>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionallyClosed = false;
+  // Messages sent while the socket is CONNECTING get queued here and flushed
+  // on onopen, AFTER auth:hello. Without this, a Room screen mounting before
+  // the WS finishes opening would silently drop its presence:join + chat:history
+  // sends — leaving accessState stuck at "joining" and the chat list never rendering.
+  private outbox: object[] = [];
 
   connect() {
     this.intentionallyClosed = false;
@@ -45,6 +50,14 @@ export class WeeredSocket {
     ws.onopen = () => {
       const token = getAuthToken();
       if (token) ws.send(JSON.stringify({ type: "auth:hello", token }));
+      // Flush queued messages now that the socket is open. Order: auth:hello
+      // first (above), then anything that was sent during CONNECTING.
+      while (this.outbox.length) {
+        const msg = this.outbox.shift();
+        if (msg) {
+          try { ws.send(JSON.stringify(msg)); } catch {}
+        }
+      }
     };
     ws.onmessage = (ev) => {
       let msg: any;
@@ -69,6 +82,12 @@ export class WeeredSocket {
   send(msg: object) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
+      return;
+    }
+    // Queue and ensure a connection is in flight.
+    this.outbox.push(msg);
+    if (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
+      this.connect();
     }
   }
 

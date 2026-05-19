@@ -44,42 +44,75 @@ async function ensureAndroidChannel(N: NonNullable<typeof Notifications>) {
   }).catch(() => {});
 }
 
+function debug(stage: string, info: any = {}, error: any = null) {
+  // Fire-and-forget breadcrumb so we can trace push registration server-side.
+  // Errors are swallowed because the only thing worse than no push is a sign-in flow that crashes on a debug call.
+  try {
+    api("/push/debug", {
+      method: "POST",
+      body: { stage, info, error: error ? String(error?.message || error) : null },
+    }).catch(() => {});
+  } catch {}
+}
+
 async function obtainToken(N: NonNullable<typeof Notifications>): Promise<string | null> {
+  debug("obtainToken:start", { appOwnership: Constants.appOwnership, executionEnvironment: Constants.executionEnvironment });
   const existing = await N.getPermissionsAsync();
   let granted = existing.status === "granted";
+  debug("obtainToken:permission-initial", { status: existing.status, granted });
   if (!granted) {
     const asked = await N.requestPermissionsAsync();
     granted = asked.status === "granted";
+    debug("obtainToken:permission-requested", { status: asked.status, granted });
   }
-  if (!granted) return null;
+  if (!granted) {
+    debug("obtainToken:not-granted");
+    return null;
+  }
 
   try {
     const projectId =
       (Constants.expoConfig?.extra as any)?.eas?.projectId ||
       (Constants.easConfig as any)?.projectId;
+    debug("obtainToken:projectId", { projectId: projectId || null });
     const token = await N.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined,
     );
+    debug("obtainToken:got-token", { tokenPreview: token?.data ? String(token.data).slice(0, 30) : null });
     return token.data || null;
-  } catch {
+  } catch (e) {
+    debug("obtainToken:exception", {}, e);
     return null;
   }
 }
 
 export async function registerPushToken() {
+  debug("registerPushToken:start");
   const N = loadNotifications();
-  if (!N) return;
+  if (!N) {
+    debug("registerPushToken:no-notifications-module", { isExpoGo: IS_EXPO_GO });
+    return;
+  }
   await ensureAndroidChannel(N);
   const token = await obtainToken(N);
-  if (!token) return;
-  if (registeredToken === token) return;
+  if (!token) {
+    debug("registerPushToken:no-token");
+    return;
+  }
+  if (registeredToken === token) {
+    debug("registerPushToken:already-registered");
+    return;
+  }
   try {
-    await api("/push/expo-register", {
+    const r: any = await api("/push/expo-register", {
       method: "POST",
       body: { token, platform: Platform.OS },
     });
-    registeredToken = token;
-  } catch {}
+    debug("registerPushToken:server-response", { ok: r?.ok ?? null, error: r?.error ?? null });
+    if (r?.ok) registeredToken = token;
+  } catch (e) {
+    debug("registerPushToken:post-exception", {}, e);
+  }
 }
 
 export async function unregisterPushToken() {
