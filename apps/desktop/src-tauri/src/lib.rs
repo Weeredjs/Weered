@@ -94,14 +94,15 @@ pub fn run() {
                     }
                 });
 
-                // Inject unread-state observer on every page load. Watches
-                // document.title for "(N) ..." prefix (set by the web app's
-                // unread indicator) and invokes cmd_set_unread to swap the
-                // tray icon to the red-dot variant.
-                win.on_page_load(|window, payload| {
-                    if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
-                        let _ = window.eval(UNREAD_OBSERVER_JS);
-                    }
+                // Inject unread-state observer once. The script polls for
+                // <title> existence then attaches a MutationObserver that
+                // survives SPA-style route changes inside weered.ca.
+                // Trade-off: a hard refresh (Ctrl+R) loses the observer.
+                // Acceptable for a shell app where users rarely refresh.
+                let win_for_inject = win.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    let _ = win_for_inject.eval(UNREAD_OBSERVER_JS);
                 });
             }
 
