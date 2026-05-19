@@ -38,16 +38,18 @@
     "security": {
       "csp": null,
       "dangerousDisableAssetCspModification": false,
-      "capabilities": ["default"]
+      "capabilities": [
+        "default"
+      ]
     },
-    "withGlobalTauri": false
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,
     "targets": "all",
     "category": "SocialNetworking",
-    "shortDescription": "Weered — lobbies, crews, crime",
-    "longDescription": "Weered is a real-time community platform — game lobbies, crews, voice/video, presence, and chat. Spiritual successor to MPlayer.",
+    "shortDescription": "Weered \u2014 lobbies, crews, crime",
+    "longDescription": "Weered is a real-time community platform \u2014 game lobbies, crews, voice/video, presence, and chat. Spiritual successor to MPlayer.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -57,7 +59,7 @@
     ],
     "publisher": "Weered",
     "homepage": "https://weered.ca",
-    "copyright": "© 2026 Weered",
+    "copyright": "\u00a9 2026 Weered",
     "windows": {
       "wix": {
         "language": "en-US"
@@ -75,14 +77,19 @@
     },
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
       }
     }
   },
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["weered"]
+        "schemes": [
+          "weered"
+        ]
       }
     },
     "updater": {
