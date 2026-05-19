@@ -1,8 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capabilities granted to all windows. Limited to what the shell needs — system tray, notifications, deep links, autostart, hotkeys.",
-  "windows": ["main"],
+  "description": "Capabilities granted to all windows. Limited to what the shell needs \u2014 system tray, notifications, deep links, autostart, hotkeys.",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -32,5 +34,10 @@
     "updater:allow-check",
     "updater:allow-download",
     "updater:allow-install"
-  ]
+  ],
+  "remote": {
+    "urls": [
+      "https://weered.ca/*"
+    ]
+  }
 }

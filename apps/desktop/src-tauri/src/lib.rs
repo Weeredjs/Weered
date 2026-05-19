@@ -13,6 +13,9 @@ use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/tray.png");
+const TRAY_ICON_DOT_BYTES: &[u8] = include_bytes!("../icons/tray-dot.png");
+
+const UNREAD_OBSERVER_JS: &str = r#"(function(){if(window.__weeredTrayObserver)return;window.__weeredTrayObserver=true;var last=null;function send(u){try{var ti=window.__TAURI_INTERNALS__||(window.__TAURI__&&window.__TAURI__.core);if(ti&&ti.invoke)ti.invoke('cmd_set_unread',{unread:u});}catch(_){}}function check(){var u=/^\(\d+\)\s+/.test(document.title);if(u!==last){last=u;send(u);}}function start(){var t=document.querySelector('title');if(!t){setTimeout(start,250);return;}new MutationObserver(check).observe(t,{childList:true,characterData:true,subtree:true});check();}if(document.readyState!=='loading')start();else document.addEventListener('DOMContentLoaded',start);})();"#;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -90,6 +93,16 @@ pub fn run() {
                         api.prevent_close();
                     }
                 });
+
+                // Inject unread-state observer on every page load. Watches
+                // document.title for "(N) ..." prefix (set by the web app's
+                // unread indicator) and invokes cmd_set_unread to swap the
+                // tray icon to the red-dot variant.
+                win.on_page_load(|window, payload| {
+                    if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                        let _ = window.eval(UNREAD_OBSERVER_JS);
+                    }
+                });
             }
 
             Ok(())
@@ -98,6 +111,7 @@ pub fn run() {
             cmd_show_window,
             cmd_quit,
             cmd_get_version,
+            cmd_set_unread,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Weered desktop");
@@ -212,4 +226,17 @@ fn cmd_quit(app: AppHandle) {
 #[tauri::command]
 fn cmd_get_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[tauri::command]
+fn cmd_set_unread(app: AppHandle, unread: bool) {
+    if let Some(tray) = app.tray_by_id("weered-tray") {
+        let bytes: &[u8] = if unread { TRAY_ICON_DOT_BYTES } else { TRAY_ICON_BYTES };
+        if let Ok(icon) = Image::from_bytes(bytes) {
+            let _ = tray.set_icon(Some(icon));
+            // Red-dot variant should NOT be drawn as macOS template (template
+            // mode strips colour). Default monochrome icon keeps template.
+            let _ = tray.set_icon_as_template(!unread);
+        }
+    }
 }
