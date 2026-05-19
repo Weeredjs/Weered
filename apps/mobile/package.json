@@ -31,6 +31,7 @@
     "expo-splash-screen": "latest",
     "expo-status-bar": "latest",
     "expo-system-ui": "latest",
+    "expo-updates": "~55.0.22",
     "expo-web-browser": "latest",
     "nativewind": "latest",
     "react": "19.2.0",
@@ -51,6 +52,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@types/react": "~19.2.0",
+    "babel-preset-expo": "^55.0.21",
     "expo-doctor": "latest",
     "typescript": "~5.9.2"
   }

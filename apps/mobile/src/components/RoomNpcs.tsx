@@ -15,7 +15,21 @@ type NpcListResp = { ok: boolean; npcs: Npc[] };
 type NpcMsg = { id: string; role: "user" | "assistant"; content: string; userName: string; userId?: string | null; createdAt: string };
 type NpcMsgsResp = { ok: boolean; messages: NpcMsg[] };
 
+type RoomMeta = { ok: boolean; room?: { lobbyModuleType?: string | null } };
+
 export function RoomNpcsButton({ roomId }: { roomId: string }) {
+  // Only DND rooms get the NPCs panel. The button used to appear in every room
+  // header regardless of lobby type — moved the gate here so the surface is
+  // game-appropriate. If the room lookup fails or moduleType isn't DND,
+  // render nothing.
+  const meta = useQuery({
+    queryKey: ["room-meta", roomId],
+    queryFn: () => api<RoomMeta>(`/rooms/${roomId}`),
+    enabled: !!roomId,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (meta.data?.room?.lobbyModuleType !== "DND") return null;
+
   const [open, setOpen] = useState(false);
   const [activeNpc, setActiveNpc] = useState<Npc | null>(null);
   const [createOpen, setCreateOpen] = useState(false);

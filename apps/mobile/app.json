@@ -31,19 +31,19 @@
         "WAKE_LOCK",
         "RECORD_AUDIO",
         "CAMERA",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "RECORD_AUDIO",
+        "CAMERA",
         "MODIFY_AUDIO_SETTINGS"
       ],
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            { "scheme": "https", "host": "weered.ca" },
-            { "scheme": "weered" }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
+      "runtimeVersion": {
+        "policy": "appVersion"
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro"
@@ -51,7 +51,8 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-updates"
     ],
     "experiments": {
       "typedRoutes": true
@@ -63,6 +64,14 @@
       "eas": {
         "projectId": "0f724a63-8c65-43e2-b085-fe7d90b6508b"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0f724a63-8c65-43e2-b085-fe7d90b6508b",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

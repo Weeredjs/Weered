@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AppState,
   View,
   Text,
   FlatList,
@@ -168,6 +169,23 @@ export default function Room() {
       wsClient.send({ type: "chat:history", roomId, limit: 50 });
     }
   }, [connected, roomId]);
+
+  // Re-sync chat when the app returns to foreground. Android can silently
+  // drop the WS in background (or keep it open but miss messages); either
+  // way the user expects the room view to be current when they tab back in.
+  // We just re-request chat:history; the wsClient outbox queues sends if
+  // the socket is reconnecting, so this works whether the WS is OPEN or
+  // re-establishing.
+  useEffect(() => {
+    if (!roomId) return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        wsClient.send({ type: "presence:join", roomId });
+        wsClient.send({ type: "chat:history", roomId, limit: 50 });
+      }
+    });
+    return () => sub.remove();
+  }, [roomId]);
 
   useEffect(() => {
     if (messages.length) {

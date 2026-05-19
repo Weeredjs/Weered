@@ -29,13 +29,14 @@ import { BungieLinkButton } from "@/components/BungieLinkButton";
 import { Ionicons } from "@expo/vector-icons";
 import { RoleChip, TierChip } from "@/components/RoleIcon";
 import { FONT, StampHeader } from "@/components/Brand";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AVATAR_COLORS = [
   "#5800E5", "#e85d75", "#f59e0b", "#22c55e",
   "#06b6d4", "#a855f7", "#ef4444", "#eab308",
 ];
 
-export default function Me() {
+function MeInner() {
   const me = useAuth((s) => s.user);
   const signOut = useAuth((s) => s.signOut);
   const qc = useQueryClient();
@@ -465,5 +466,13 @@ function NavTile({
         </Text>
       </Pressable>
     </View>
+  );
+}
+
+export default function Me() {
+  return (
+    <ErrorBoundary label="Me tab">
+      <MeInner />
+    </ErrorBoundary>
   );
 }

@@ -20,3 +20,7 @@ ios/
 
 expo-env.d.ts
 # @end expo-cli
+# Firebase / FCM — never commit
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
