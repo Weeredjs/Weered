@@ -295,6 +295,11 @@ async function getSystemUserId(): Promise<string | null> {
 export async function runHelldiversWorker(deps: {
   getAI: () => Promise<any | null>;
   broadcastToLobby: (lobbyId: string, event: any) => void;
+  // Required. Without this gate the worker fires AI calls on every war
+  // event whether or not anyone is listening — we paid 16 days of Haiku
+  // for an empty room thanks to a /tmp dev harness that omitted it.
+  // Keep this required so a future harness can't repeat that mistake.
+  countLobbyActiveUsers: (lobbyId: string) => number;
 }) {
   const [campaignsRes, moRes] = await Promise.all([
     fetchJson<any[]>(`${HD2_API}/campaigns`),
