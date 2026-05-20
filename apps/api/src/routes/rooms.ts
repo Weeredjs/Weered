@@ -195,6 +195,16 @@ app.get("/rooms/:roomId", async (req, reply) => {
   const roomId = String((req as any).params?.roomId || "");
   const r: any = await prisma.room.findUnique({ where: { id: roomId } });
   if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
+  // Surface the parent lobby's moduleType so mobile can gate game-specific
+  // surfaces (NPCs panel for DND rooms, etc.) without a follow-up fetch.
+  let lobbyModuleType: string | null = null;
+  if (r.lobbyId) {
+    const lob: any = await prisma.lobby.findUnique({
+      where: { id: r.lobbyId },
+      select: { moduleType: true },
+    });
+    lobbyModuleType = lob?.moduleType || null;
+  }
   return reply.send({
     ok: true,
     room: {
@@ -207,6 +217,7 @@ app.get("/rooms/:roomId", async (req, reply) => {
       isEvent: Boolean(r.isEvent),
       ownerId: r.ownerId || null,
       lobbyId: r.lobbyId || null,
+      lobbyModuleType,
       iconUrl: r.iconUrl || null,
       bannerUrl: r.bannerUrl || null,
       accentColor: r.accentColor || null,
@@ -395,11 +406,25 @@ app.get("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
   return reply.send({ ok: true, messages });
 });
 
-// Chat with NPC — sends to Claude, returns AI response
+// Chat with NPC — sends to Claude, returns AI response.
+// Per-user daily cap protects the Anthropic bill from a runaway client or
+// test loop. 100/day is generous for real play (a 4-hour session with
+// chatty NPCs rarely exceeds ~40 messages per player) and tight enough
+// that a stuck retry loop self-throttles before draining credits.
+const NPC_DAILY_CAP_PER_USER = 100;
 const npcCooldowns = new Map<string, number>();
+const npcDailyCounts = new Map<string, { date: string; n: number }>();
 app.post("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+
+  // Daily per-user AI cap (resets at UTC midnight).
+  const today = new Date().toISOString().slice(0, 10);
+  const cur = npcDailyCounts.get(u.id);
+  if (cur && cur.date === today && cur.n >= NPC_DAILY_CAP_PER_USER) {
+    return reply.code(429).send({ ok: false, error: "daily_npc_cap_reached", cap: NPC_DAILY_CAP_PER_USER });
+  }
+  npcDailyCounts.set(u.id, cur && cur.date === today ? { date: today, n: cur.n + 1 } : { date: today, n: 1 });
 
   // Rate limit: 1 msg per 3s per user
   const cdKey = u.id;
