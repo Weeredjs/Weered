@@ -76,10 +76,12 @@ jobs:
       - name: Build + bundle Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          # GitHub-issued token — used by tauri-action to create the Release
-          # and upload installer assets. GitHub provides this automatically;
-          # no manual secret needed.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Cross-repo PAT (NOT the default GITHUB_TOKEN, which is scoped only
+          # to this repo). RELEASES_PUBLISH_TOKE has Contents:write on
+          # Weeredjs/Weered-releases so tauri-action can publish the release +
+          # installer assets there. The auto-updater (/desktop/latest) reads
+          # from that public repo. See memory: github-pat-ci-releases.
+          GITHUB_TOKEN: ${{ secrets.RELEASES_PUBLISH_TOKE }}
           # Tauri updater signing — required for auto-update to work.
           # Generate locally with: pnpm tauri signer generate
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -93,6 +95,10 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
+          # Publish to the PUBLIC releases repo — auto-updater + /desktop/latest
+          # both read from there, not from this private source repo.
+          owner: Weeredjs
+          repo: Weered-releases
           # Use pnpm instead of the action's default npm — our monorepo is pnpm.
           tauriScript: pnpm tauri
           tagName: ${{ github.event.inputs.tag_name || github.ref_name }}
