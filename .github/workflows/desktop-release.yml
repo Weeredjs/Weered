@@ -73,20 +73,19 @@ jobs:
       - name: Install Node deps
         run: pnpm install --frozen-lockfile
 
+      # ── Build only (no release creation) ───────────────────────────
+      # tauri-action@v0 doesn't support cross-repo publish (the owner/repo
+      # inputs don't exist on this version), so we use it for build+sign only
+      # and publish via softprops below.
       - name: Build + bundle Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          # Cross-repo PAT (NOT the default GITHUB_TOKEN, which is scoped only
-          # to this repo). RELEASES_PUBLISH_TOKE has Contents:write on
-          # Weeredjs/Weered-releases so tauri-action can publish the release +
-          # installer assets there. The auto-updater (/desktop/latest) reads
-          # from that public repo. See memory: github-pat-ci-releases.
-          GITHUB_TOKEN: ${{ secrets.RELEASES_PUBLISH_TOKE }}
-          # Tauri updater signing — required for auto-update to work.
-          # Generate locally with: pnpm tauri signer generate
+          # Default token is fine — this step doesn't create a release.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri updater signing — REQUIRED for .sig file generation.
+          # Without these the auto-updater never gets valid signatures.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Apple code signing (optional — leave secrets empty to skip).
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -95,18 +94,46 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
-          # Publish to the PUBLIC releases repo — auto-updater + /desktop/latest
-          # both read from there, not from this private source repo.
-          owner: Weeredjs
-          repo: Weered-releases
-          # Use pnpm instead of the action's default npm — our monorepo is pnpm.
           tauriScript: pnpm tauri
-          tagName: ${{ github.event.inputs.tag_name || github.ref_name }}
-          releaseName: "Weered Desktop ${{ github.event.inputs.tag_name || github.ref_name }}"
-          releaseBody: |
+          # No tagName / releaseName — tauri-action builds but skips release.
+          args: ${{ matrix.args }}
+
+      # ── Publish release to Weeredjs/Weered-releases ─────────────────
+      # softprops/action-gh-release@v2 handles cross-repo publishing
+      # cleanly. RELEASES_PUBLISH_TOKE has Contents:write on the public
+      # releases repo.
+      #
+      # Each matrix job (ubuntu + windows) uploads its own artifacts to
+      # the same release tag. First job creates the release; subsequent
+      # jobs add to it (softprops dedupes by filename).
+      #
+      # Includes .sig sibling files for every installer — these are
+      # what /desktop/latest checks before serving an update offer to
+      # Tauri clients. Without them, auto-updater returns 204 (no update).
+      - name: Publish to Weered-releases (cross-repo)
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: Weeredjs/Weered-releases
+          token: ${{ secrets.RELEASES_PUBLISH_TOKE }}
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          name: "Weered Desktop ${{ github.event.inputs.tag_name || github.ref_name }}"
+          body: |
             Automated build via GitHub Actions.
 
             See https://weered.ca/desktop for installation instructions.
-          releaseDraft: false
+          draft: false
           prerelease: false
-          args: ${{ matrix.args }}
+          # Glob captures BOTH installers AND their .sig siblings.
+          # .sig presence is what makes Tauri auto-update actually fire.
+          files: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi.sig
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+            apps/desktop/src-tauri/target/release/bundle/deb/*.deb.sig
+            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm.sig
+          fail_on_unmatched_files: false
