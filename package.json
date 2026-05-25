@@ -14,5 +14,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "25.2.3",
     "@types/ws": "^8.18.1"
+  },
+  "dependencies": {
+    "@expo/ngrok": "^4.1.3"
   }
 }
