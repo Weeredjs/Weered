@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { isStaffUser } from "../lib/isStaffUser";
 import { grantFlairToUser, getEquippedFlair, mintFlairItem } from "../lib/flair";
 
 type Opts = {
@@ -13,14 +14,7 @@ const RARITY_RANK: Record<string, number> = { LEGENDARY: 4, EPIC: 3, RARE: 2, CO
 export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
 
-  async function isStaff(userId: string): Promise<boolean> {
-    if (getGlobalRole && canAccessStaff) {
-      const role = await getGlobalRole(userId);
-      return canAccessStaff(role);
-    }
-    const u = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
-    return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
-  }
+  const isStaff = (userId: string) => isStaffUser(userId, getGlobalRole, canAccessStaff);
 
   app.get("/flair/inventory", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
