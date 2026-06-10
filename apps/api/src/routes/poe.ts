@@ -139,7 +139,13 @@ async function currencyStatic(): Promise<Record<string, { name: string; icon: st
     const j: any = await r.json().catch(() => null);
     for (const cat of (j?.result || [])) {
       for (const e of (cat.entries || [])) {
-        if (e && e.id && e.text) map[e.id] = { name: e.text, icon: e.image || "" };
+        if (e && e.id && e.text) {
+          // Divination cards carry no image in trade-static; fall back to the card back.
+          const isCard = cat.id === "Cards";
+          let img = e.image ? (String(e.image).startsWith("http") ? String(e.image) : "https://web.poecdn.com" + e.image) : "";
+          if (!img && isCard) img = "https://web.poecdn.com/image/Art/2DItems/Divination/InventoryIcon.png";
+          map[e.id] = { name: e.text, icon: img };
+        }
       }
     }
   } catch {}
@@ -392,7 +398,13 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
       divine: divineChaos ? Math.round((c.chaos / divineChaos) * 1000) / 1000 : null,
       volume: c.volume,
     })).sort((a, b) => b.chaos - a.chaos);
-    const data = { asOf: new Date(asOf * 1000).toISOString(), divineChaos: Math.round(divineChaos * 100) / 100, currencies };
+    const data = {
+      asOf: new Date(asOf * 1000).toISOString(),
+      divineChaos: Math.round(divineChaos * 100) / 100,
+      chaosIcon: (statics["chaos"] && statics["chaos"].icon) || "",
+      divineIcon: (statics["divine"] && statics["divine"].icon) || "",
+      currencies,
+    };
     _cxCache.set(league, { data, exp: Date.now() + 30 * 60_000 });
     return reply.send({ ok: true, league, ...data });
   });

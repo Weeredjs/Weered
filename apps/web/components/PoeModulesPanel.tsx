@@ -107,15 +107,16 @@ const TABS = [
 type TabId = typeof TABS[number]["id"];
 
 function EconomyTab({ league, accent }: { league: string; accent: string }) {
-  const [data, setData] = useState<{ asOf?: string; divineChaos?: number; currencies: any[] }>({ currencies: [] });
+  const [data, setData] = useState<{ asOf?: string; divineChaos?: number; chaosIcon?: string; divineIcon?: string; currencies: any[] }>({ currencies: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"value" | "volume">("value");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const j: any = await apiFetch(`/poe/economy?league=${encodeURIComponent(league)}`);
-      setData({ asOf: j?.asOf, divineChaos: j?.divineChaos, currencies: Array.isArray(j?.currencies) ? j.currencies : [] });
+      setData({ asOf: j?.asOf, divineChaos: j?.divineChaos, chaosIcon: j?.chaosIcon, divineIcon: j?.divineIcon, currencies: Array.isArray(j?.currencies) ? j.currencies : [] });
     } catch (e) {
       console.warn("economy error:", e);
       setData({ currencies: [] });
@@ -125,34 +126,66 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = search
-    ? data.currencies.filter((i: any) => (i.name || i.id || "").toLowerCase().includes(search.toLowerCase()))
-    : data.currencies;
-
   const asOfLabel = (() => {
     if (!data.asOf) return "";
     try {
       const d = new Date(data.asOf);
-      return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) + " " + d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
     } catch { return ""; }
   })();
 
+  const sorted = [...data.currencies].sort((a: any, b: any) =>
+    sort === "volume" ? (b.volume || 0) - (a.volume || 0) : (b.chaos || 0) - (a.chaos || 0)
+  );
+  const filtered = search
+    ? sorted.filter((i: any) => (i.name || i.id || "").toLowerCase().includes(search.toLowerCase()))
+    : sorted;
+  const maxVol = Math.max(1, ...data.currencies.map((c: any) => c.volume || 0));
+
   if (loading) return <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading Wraeclast economy...</div>;
+
+  const Orb = ({ src, size = 13 }: { src?: string; size?: number }) =>
+    src ? <img src={src} alt="" style={{ width: size, height: size, verticalAlign: "-2px", objectFit: "contain", filter: "drop-shadow(0 0 2px rgba(0,0,0,.6))" }} /> : null;
 
   return (
     <div>
-      {/* Official Currency Exchange header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      {/* Exchange banner */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap",
+        padding: "11px 14px", marginBottom: 10, borderRadius: 10,
+        border: `1px solid ${accent}33`,
+        background: `linear-gradient(135deg, ${accent}1f 0%, rgba(0,0,0,.25) 55%)`,
+        boxShadow: `inset 0 0 30px ${accent}10`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           {data.divineChaos ? (
-            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>
-              1 Divine = <span style={{ color: accent, fontFamily: "monospace" }}>{data.divineChaos.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> Chaos
-            </span>
+            <>
+              <Orb src={data.divineIcon} size={26} />
+              <div style={{ lineHeight: 1.15 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(243,244,246,.96)", fontFamily: "monospace", letterSpacing: ".3px" }}>
+                  {data.divineChaos.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span style={{ color: accent }}>c</span>
+                </div>
+                <div style={{ fontSize: 9, color: "rgba(148,163,184,.55)", letterSpacing: ".6px", textTransform: "uppercase" }}>1 Divine Orb</div>
+              </div>
+              <Orb src={data.chaosIcon} size={26} />
+            </>
           ) : <span style={{ fontSize: 12, opacity: 0.5 }}>{data.currencies.length} currencies</span>}
         </div>
-        <span style={{ fontSize: 9, color: "rgba(148,163,184,.45)", letterSpacing: ".5px" }}>
-          OFFICIAL EXCHANGE{asOfLabel ? ` · ${asOfLabel}` : ""}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", borderRadius: 7, overflow: "hidden", border: "1px solid rgba(255,255,255,.10)" }}>
+            {(["value", "volume"] as const).map(k => (
+              <button key={k} onClick={() => setSort(k)} style={{
+                padding: "4px 10px", fontSize: 10, fontWeight: 700, letterSpacing: ".4px", textTransform: "uppercase",
+                cursor: "pointer", border: "none", fontFamily: "inherit",
+                background: sort === k ? `${accent}26` : "transparent",
+                color: sort === k ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.5)",
+              }}>{k}</button>
+            ))}
+          </div>
+          <span style={{ fontSize: 8.5, color: "rgba(148,163,184,.4)", letterSpacing: ".5px", textAlign: "right", lineHeight: 1.3 }}>
+            OFFICIAL<br />EXCHANGE{asOfLabel ? ` · ${asOfLabel}` : ""}
+          </span>
+        </div>
       </div>
 
       <input
@@ -163,21 +196,32 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        {filtered.map((item: any) => (
+        {filtered.map((item: any, idx: number) => {
+          const hot = (item.divine || 0) >= 1; // worth a divine or more
+          return (
           <div key={item.id} style={{
-            ...S.card, display: "flex", alignItems: "center", gap: 8,
-            transition: "border-color .12s",
+            ...S.card, display: "flex", alignItems: "center", gap: 9, position: "relative", overflow: "hidden",
+            padding: "9px 11px",
+            borderColor: hot ? `${accent}33` : "rgba(255,255,255,.06)",
+            transition: "border-color .12s, box-shadow .12s",
           }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = `${accent}66`; e.currentTarget.style.boxShadow = `0 0 0 1px ${accent}22, inset 0 0 22px ${accent}0c`; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = hot ? `${accent}33` : "rgba(255,255,255,.06)"; e.currentTarget.style.boxShadow = "none"; }}
           >
+            {/* rank */}
+            <span style={{ fontSize: 9, fontWeight: 800, color: "rgba(148,163,184,.35)", fontFamily: "monospace", width: 16, textAlign: "right", flexShrink: 0 }}>
+              {sort === "value" && !search ? idx + 1 : ""}
+            </span>
+
+            {/* icon */}
             <div style={{
-              width: 32, height: 32, borderRadius: 2,
-              background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              overflow: "hidden",
+              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+              background: `radial-gradient(circle at 50% 40%, ${accent}1c, ${accent}06)`,
+              border: `1px solid ${accent}22`,
+              display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
             }}>
               {item.icon ? (
-                <img src={item.icon} alt={(item.name || item.id) + " icon"} style={{ width: 26, height: 26, objectFit: "contain" }}
+                <img src={item.icon} alt={(item.name || item.id) + " icon"} style={{ width: 30, height: 30, objectFit: "contain" }}
                   onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               ) : (
@@ -185,33 +229,39 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
               )}
             </div>
 
+            {/* name + volume bar */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.93)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {item.name || item.id}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: accent, fontFamily: "monospace" }}>
-                  {(item.chaos || 0).toLocaleString(undefined, { maximumFractionDigits: item.chaos >= 100 ? 0 : 1 })}
-                </span>
-                <span style={{ fontSize: 9, color: "rgba(148,163,184,.45)" }}>chaos</span>
-                {item.divine != null && item.divine >= 0.01 && (
-                  <span style={{ fontSize: 9, color: "rgba(148,163,184,.55)", fontFamily: "monospace" }}>
-                    {item.divine.toLocaleString(undefined, { maximumFractionDigits: 2 })} div
+              {item.volume ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
+                  <div style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(255,255,255,.06)", overflow: "hidden", maxWidth: 70 }}>
+                    <div style={{ height: "100%", width: `${Math.max(4, Math.round((item.volume / maxVol) * 100))}%`, background: `linear-gradient(90deg, ${accent}66, ${accent})`, borderRadius: 2 }} />
+                  </div>
+                  <span style={{ fontSize: 8.5, color: "rgba(148,163,184,.45)", fontFamily: "monospace" }}>
+                    {Number(item.volume).toLocaleString(undefined, { notation: "compact", maximumFractionDigits: 1 } as any)}
                   </span>
-                )}
-              </div>
+                </div>
+              ) : null}
             </div>
 
-            {item.volume ? (
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,.6)", fontFamily: "monospace" }}>
-                  {Number(item.volume).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </div>
-                <div style={{ fontSize: 8, color: "rgba(148,163,184,.4)", letterSpacing: ".3px" }}>VOL</div>
+            {/* price */}
+            <div style={{ textAlign: "right", flexShrink: 0, lineHeight: 1.25 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: hot ? accent : "rgba(243,244,246,.9)", fontFamily: "monospace", display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                {(item.chaos || 0).toLocaleString(undefined, { maximumFractionDigits: item.chaos >= 100 ? 0 : 1 })}
+                <Orb src={data.chaosIcon} size={13} />
               </div>
-            ) : null}
+              {item.divine != null && item.divine >= 0.01 && (
+                <div style={{ fontSize: 9.5, color: "rgba(148,163,184,.6)", fontFamily: "monospace", display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", marginTop: 2 }}>
+                  {item.divine.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  <Orb src={data.divineIcon} size={11} />
+                </div>
+              )}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
