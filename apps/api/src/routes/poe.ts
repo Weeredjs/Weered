@@ -510,7 +510,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/poe/tree", async (_req, reply) => {
     try {
       const d = await buildPassiveTree();
-      reply.header("Cache-Control", "public, max-age=86400");
+      reply.header("Cache-Control", "public, max-age=3600");
       return reply.send({ ok: true, ...d });
     } catch (e: any) {
       return reply.send({ ok: false, error: String((e && e.message) || e) });
