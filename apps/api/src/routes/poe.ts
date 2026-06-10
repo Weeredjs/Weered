@@ -88,7 +88,7 @@ function takePkce(state: string): { userId: string; verifier: string } | null {
   return { userId: v.userId, verifier: v.verifier };
 }
 
-const POE_SERVICE_SCOPES = "service:leagues service:leagues:ladder";
+const POE_SERVICE_SCOPES = "service:leagues service:leagues:ladder service:cxapi";
 let _appToken: { token: string; exp: number } | null = null;
 async function getAppToken(): Promise<string | null> {
   if (_appToken && _appToken.exp > Date.now()) return _appToken.token;
@@ -125,6 +125,27 @@ async function serviceGet(path: string): Promise<{ status: number; body: any }> 
 
 let _leaguesCache: { data: any[]; exp: number } | null = null;
 const _ladderCache = new Map<string, { data: any; exp: number }>();
+const _cxCache = new Map<string, { data: any; exp: number }>();
+let _cxStatic: { map: Record<string, { name: string; icon: string }>; exp: number } | null = null;
+
+// GGG public trade static data: maps currency codes (chaos/divine/...) -> name + icon.
+async function currencyStatic(): Promise<Record<string, { name: string; icon: string }>> {
+  if (_cxStatic && _cxStatic.exp > Date.now()) return _cxStatic.map;
+  const map: Record<string, { name: string; icon: string }> = {};
+  try {
+    const r = await fetch("https://www.pathofexile.com/api/trade/data/static", {
+      headers: { "User-Agent": userAgent(), Accept: "application/json" },
+    });
+    const j: any = await r.json().catch(() => null);
+    for (const cat of (j?.result || [])) {
+      for (const e of (cat.entries || [])) {
+        if (e && e.id && e.text) map[e.id] = { name: e.text, icon: e.image || "" };
+      }
+    }
+  } catch {}
+  _cxStatic = { map, exp: Date.now() + 24 * 3600_000 };
+  return map;
+}
 const _charCache = new Map<string, { data: any; exp: number }>();
 
 type Opts = {
@@ -327,6 +348,52 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     }));
     const data = { total: (body && body.ladder && body.ladder.total) ?? entries.length, entries };
     _ladderCache.set(league, { data, exp: Date.now() + 5 * 60_000 });
+    return reply.send({ ok: true, league, ...data });
+  });
+
+  // Official Currency Exchange economy (service:cxapi). Pulls the latest
+  // completed hourly digest, normalizes every chaos-paired market to a chaos
+  // price + volume, enriches names/icons. Cached 30 min (data is hourly).
+  app.get("/poe/economy", async (req, reply) => {
+    const league = String(((req as any).query?.league) || "Standard").slice(0, 60);
+    const hit = _cxCache.get(league);
+    if (hit && hit.exp > Date.now()) return reply.send({ ok: true, league, cached: true, ...hit.data });
+
+    const baseHour = Math.floor(Date.now() / 3600000) * 3600;
+    let body: any = null, asOf = 0;
+    for (const h of [baseHour - 3600, baseHour - 7200, baseHour - 10800]) {
+      const res = await serviceGet(`/currency-exchange/${h}`);
+      if (res.status === 200 && res.body && res.body.markets) { body = res.body; asOf = h; break; }
+    }
+    if (!body) return reply.send({ ok: true, league, currencies: [], divineChaos: 0, error: "unavailable" });
+
+    const statics = await currencyStatic();
+    const mid = (lo: any, hi: any, k: string) => ((Number(lo && lo[k]) || 0) + (Number(hi && hi[k]) || 0)) / 2;
+    const byCur: Record<string, { id: string; chaos: number; volume: number }> = {};
+    for (const m of body.markets) {
+      if (m.league !== league) continue;
+      const parts = String(m.market_id || "").split("|");
+      if (parts.length !== 2 || parts.indexOf("chaos") === -1) continue;
+      const other = parts[0] === "chaos" ? parts[1] : parts[0];
+      if (other === "chaos") continue;
+      const rc = mid(m.lowest_ratio, m.highest_ratio, "chaos");
+      const ro = mid(m.lowest_ratio, m.highest_ratio, other);
+      if (!rc || !ro) continue;
+      const chaos = rc / ro;
+      const volume = Number(m.volume_traded && m.volume_traded.chaos) || 0;
+      if (!byCur[other] || volume > byCur[other].volume) byCur[other] = { id: other, chaos, volume };
+    }
+    const divineChaos = byCur["divine"] ? byCur["divine"].chaos : 0;
+    const currencies = Object.values(byCur).map((c) => ({
+      id: c.id,
+      name: (statics[c.id] && statics[c.id].name) || (c.id.charAt(0).toUpperCase() + c.id.slice(1)),
+      icon: (statics[c.id] && statics[c.id].icon) || "",
+      chaos: Math.round(c.chaos * 100) / 100,
+      divine: divineChaos ? Math.round((c.chaos / divineChaos) * 1000) / 1000 : null,
+      volume: c.volume,
+    })).sort((a, b) => b.chaos - a.chaos);
+    const data = { asOf: new Date(asOf * 1000).toISOString(), divineChaos: Math.round(divineChaos * 100) / 100, currencies };
+    _cxCache.set(league, { data, exp: Date.now() + 30 * 60_000 });
     return reply.send({ ok: true, league, ...data });
   });
 
