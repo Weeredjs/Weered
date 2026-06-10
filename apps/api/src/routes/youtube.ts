@@ -1,9 +1,19 @@
 import type { FastifyInstance } from "fastify";
 
 export default async function youtubeRoutes(app: FastifyInstance) {
-  app.get("/youtube/search", async (req, reply) => {
-    const q = String((req.query as any).q || "").trim();
+  // YT Data API default quota is ~100 search calls/day TOTAL. Cache aggressively
+  // and rate-limit per IP so one client can't exhaust the daily quota.
+  const ytCache = new Map<string, { results: any[]; expiresAt: number }>();
+  const YT_TTL = 60 * 60 * 1000;
+
+  app.get("/youtube/search", {
+    config: { rateLimit: { max: 15, timeWindow: "1 minute" } },
+  }, async (req, reply) => {
+    const q = String((req.query as any).q || "").trim().slice(0, 100).toLowerCase();
     if (!q) return reply.send({ results: [] });
+
+    const hit = ytCache.get(q);
+    if (hit && hit.expiresAt > Date.now()) return reply.send({ results: hit.results, cached: true });
 
     const ytKey = process.env.YOUTUBE_API_KEY;
     if (!ytKey) {
@@ -25,6 +35,7 @@ export default async function youtubeRoutes(app: FastifyInstance) {
         thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url,
         publishedAt: item.snippet?.publishedAt,
       }));
+      ytCache.set(q, { results, expiresAt: Date.now() + YT_TTL });
       return reply.send({ results });
     } catch (e: any) {
       console.error("[yt-search]", e);

@@ -364,7 +364,7 @@ export default function ProfilePage() {
               {!profile.gameAccounts?.some(a => a.gameType === "BUNGIE") && (
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${apiBase}/auth/bungie?token=${encodeURIComponent(t)}`; }}
+                  onClick={(e) => { e.preventDefault(); window.location.href = `${apiBase}/auth/bungie`; }}
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
                     padding: "8px 16px", borderRadius: 8,

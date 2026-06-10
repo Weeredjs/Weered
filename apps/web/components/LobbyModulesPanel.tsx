@@ -787,8 +787,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading your Guardian...</div>;
 
   if (!data?.linked) {
-    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-    const linkUrl = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
+    const linkUrl = `${API}/auth/bungie`;
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
         <div style={{ fontSize: 48, opacity: 0.3 }}>🔗</div>
@@ -809,8 +808,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
   if (error || data?.error) {
     const isExpired = data?.error === "token_expired" || data?.error === "no_profile_data" || data?.error === "fetch_failed";
     if (isExpired && data?.linked) {
-      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-      const linkUrl = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
+      const linkUrl = `${API}/auth/bungie`;
       return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
           <div style={{ fontSize: 48, opacity: 0.3 }}>🔄</div>
@@ -846,7 +844,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
           </div>
           <div style={{ fontSize: 9, opacity: 0.4 }}>Platform {data.platform} · {characters.length} chars{data.vaultCount ? ` · ${data.vaultCount} vault` : ""}</div>
         </div>
-        <button onClick={() => { const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(t)}`; }} style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}>Re-link</button>
+        <button onClick={() => { window.location.href = `${API}/auth/bungie`; }} style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}>Re-link</button>
       </div>
 
       {characters.length > 0 && (

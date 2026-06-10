@@ -8,6 +8,7 @@ import {
   isLoaded as manifestLoaded, manifestVersion,
   WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES,
 } from "../manifest";
+import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -609,11 +610,11 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/auth/bungie", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization || (req as any).query?.token);
+    const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "Login first" });
     if (!BUNGIE_CLIENT_ID) return reply.code(500).send({ error: "Bungie OAuth not configured" });
 
-    const state = Buffer.from(JSON.stringify({ userId: u.id })).toString("base64url");
+    const state = signOAuthState(u.id);
     const url = `https://www.bungie.net/en/OAuth/Authorize?client_id=${BUNGIE_CLIENT_ID}&response_type=code&state=${state}`;
     return reply.redirect(url);
   });
@@ -623,11 +624,8 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const state = String((req as any).query?.state || "");
     if (!code) return reply.code(400).send({ error: "Missing code" });
 
-    let userId = "";
-    try {
-      const parsed = JSON.parse(Buffer.from(state, "base64url").toString());
-      userId = parsed.userId;
-    } catch { return reply.code(400).send({ error: "Invalid state" }); }
+    const userId = verifyOAuthState(state);
+    if (!userId) return reply.code(400).send({ error: "Invalid state" });
 
     try {
       const tokenBody: Record<string, string> = {

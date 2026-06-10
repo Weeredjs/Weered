@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { assertSafeUrl } from "../lib/ssrfGuard";
 
 export default async function newsRoutes(app: FastifyInstance) {
   const newsCache = new Map<string, { articles: any[]; cachedAt: number }>();
@@ -42,6 +43,14 @@ export default async function newsRoutes(app: FastifyInstance) {
   app.get("/news/reader", async (req, reply) => {
     const url = String((req as any).query?.url || "").trim();
     if (!url || !url.startsWith("http")) return reply.code(400).send({ ok: false, error: "url required" });
+
+    // SSRF defense: the reader only ever opens articles already in the feed.
+    // Restrict to URLs we ingested from trusted RSS sources, and additionally
+    // block any URL that resolves to a private/metadata address.
+    const known = await prisma.newsArticle.findFirst({ where: { url }, select: { id: true } });
+    if (!known) return reply.code(403).send({ ok: false, error: "url_not_allowed" });
+    try { await assertSafeUrl(url); }
+    catch { return reply.code(403).send({ ok: false, error: "url_not_allowed" }); }
 
     const cached = readerCache.get(url);
     if (cached && Date.now() - cached.cachedAt < READER_CACHE_TTL) {
