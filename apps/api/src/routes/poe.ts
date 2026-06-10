@@ -199,12 +199,13 @@ async function buildPassiveTree(): Promise<any> {
     if (n.isMastery) kind = 3;
     if (n.isJewelSocket) kind = 6;
     if (n.classStartIndex != null) kind = 5;
-    if (n.ascendancyName) kind = 4;
 
     const node: any = {
       h: Number(nid), x: Math.round(x), y: Math.round(y), k: kind,
       n: n.name || "", st: n.stats || [], ic: n.icon || "",
       o: (n.out || []).map((z: string) => Number(z)),
+      gi: n.group, ob: n.orbit, cx: Math.round(g.x), cy: Math.round(g.y),
+      ang: Math.round((a - Math.PI / 2) * 1000) / 1000,
     };
     if (n.ascendancyName) node.asc = n.ascendancyName;
     if (n.classStartIndex != null) node.cls = n.classStartIndex;
@@ -243,6 +244,7 @@ async function buildPassiveTree(): Promise<any> {
     bounds: { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) },
     classes,
     sprites,
+    orbitRadii: radii,
     ver: t.tree || "",
   };
   _treeCache = { data, exp: Date.now() + 7 * 24 * 3600_000 };
