@@ -126,12 +126,12 @@ async function serviceGet(path: string): Promise<{ status: number; body: any }> 
 let _leaguesCache: { data: any[]; exp: number } | null = null;
 const _ladderCache = new Map<string, { data: any; exp: number }>();
 const _cxCache = new Map<string, { data: any; exp: number }>();
-let _cxStatic: { map: Record<string, { name: string; icon: string }>; exp: number } | null = null;
+let _cxStatic: { map: Record<string, { name: string; icon: string; cat: string }>; exp: number } | null = null;
 
 // GGG public trade static data: maps currency codes (chaos/divine/...) -> name + icon.
-async function currencyStatic(): Promise<Record<string, { name: string; icon: string }>> {
+async function currencyStatic(): Promise<Record<string, { name: string; icon: string; cat: string }>> {
   if (_cxStatic && _cxStatic.exp > Date.now()) return _cxStatic.map;
-  const map: Record<string, { name: string; icon: string }> = {};
+  const map: Record<string, { name: string; icon: string; cat: string }> = {};
   try {
     const r = await fetch("https://www.pathofexile.com/api/trade/data/static", {
       headers: { "User-Agent": userAgent(), Accept: "application/json" },
@@ -144,7 +144,7 @@ async function currencyStatic(): Promise<Record<string, { name: string; icon: st
           const isCard = cat.id === "Cards";
           let img = e.image ? (String(e.image).startsWith("http") ? String(e.image) : "https://web.poecdn.com" + e.image) : "";
           if (!img && isCard) img = "https://web.poecdn.com/image/Art/2DItems/Divination/InventoryIcon.png";
-          map[e.id] = { name: e.text, icon: img };
+          map[e.id] = { name: e.text, icon: img, cat: cat.id };
         }
       }
     }
@@ -203,7 +203,7 @@ async function buildPassiveTree(): Promise<any> {
 
     const node: any = {
       h: Number(nid), x: Math.round(x), y: Math.round(y), k: kind,
-      n: n.name || "", st: n.stats || [],
+      n: n.name || "", st: n.stats || [], ic: n.icon || "",
       o: (n.out || []).map((z: string) => Number(z)),
     };
     if (n.ascendancyName) node.asc = n.ascendancyName;
@@ -219,10 +219,30 @@ async function buildPassiveTree(): Promise<any> {
     ascendancies: (c.ascendancies || []).map((a: any) => a.name),
   }));
 
+  // Merge GGG sprite coords (one sheet per state) at a mid-res zoom level.
+  const Z = "0.5";
+  const sp = t.sprites || {};
+  const mergeSprite = (...grps: string[]) => {
+    let url = ""; const coords: any = {};
+    for (const g of grps) {
+      const lv = sp[g] && sp[g][Z];
+      if (lv) { if (lv.filename) url = lv.filename; Object.assign(coords, lv.coords || {}); }
+    }
+    return { url, coords };
+  };
+  const sprites = {
+    zoom: Number(Z),
+    active: mergeSprite("normalActive", "notableActive", "keystoneActive"),
+    inactive: mergeSprite("normalInactive", "notableInactive", "keystoneInactive"),
+    masteryActive: mergeSprite("masteryActiveSelected", "mastery"),
+    masteryInactive: mergeSprite("masteryInactive"),
+  };
+
   const data = {
     nodes,
     bounds: { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) },
     classes,
+    sprites,
     ver: t.tree || "",
   };
   _treeCache = { data, exp: Date.now() + 7 * 24 * 3600_000 };
@@ -473,6 +493,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
       chaos: Math.round(c.chaos * 100) / 100,
       divine: divineChaos ? Math.round((c.chaos / divineChaos) * 1000) / 1000 : null,
       volume: c.volume,
+      cat: (statics[c.id] && statics[c.id].cat) || "",
     })).sort((a, b) => b.chaos - a.chaos);
     const data = {
       asOf: new Date(asOf * 1000).toISOString(),
