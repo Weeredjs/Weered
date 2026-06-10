@@ -152,6 +152,82 @@ async function currencyStatic(): Promise<Record<string, { name: string; icon: st
   _cxStatic = { map, exp: Date.now() + 24 * 3600_000 };
   return map;
 }
+
+// ── Passive Skill Tree (GGG official export) ────────────────────────────────
+// Node placement uses GGG's orbit geometry. Most orbits are evenly spaced; the
+// 16- and 40-skill orbits use fixed angle tables (same as Path of Building).
+const ANGLES_16 = [0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330];
+const ANGLES_40 = [0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 225, 230, 240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350];
+let _treeCache: { data: any; exp: number } | null = null;
+
+async function buildPassiveTree(): Promise<any> {
+  if (_treeCache && _treeCache.exp > Date.now()) return _treeCache.data;
+  const r = await fetch("https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json", {
+    headers: { "User-Agent": userAgent(), Accept: "application/json" },
+  });
+  const t: any = await r.json();
+  const groups = t.groups || {};
+  const spo: number[] = (t.constants && t.constants.skillsPerOrbit) || [1, 6, 16, 16, 40, 72, 72];
+  const radii: number[] = (t.constants && t.constants.orbitRadii) || [0, 82, 162, 335, 493, 662, 846];
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const nodeAngle = (orbit: number, idx: number) => {
+    const n = spo[orbit] || 1;
+    let deg: number;
+    if (n === 16) deg = ANGLES_16[idx] != null ? ANGLES_16[idx] : (360 * idx) / n;
+    else if (n === 40) deg = ANGLES_40[idx] != null ? ANGLES_40[idx] : (360 * idx) / n;
+    else deg = (360 * idx) / n;
+    return rad(deg);
+  };
+
+  const nodes: any[] = [];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const nid of Object.keys(t.nodes)) {
+    if (nid === "root") continue;
+    const n: any = t.nodes[nid];
+    if (n.isProxy) continue;
+    const icon: string = n.icon || "";
+    if (icon.indexOf("Atlas") !== -1) continue; // drop atlas-tree nodes
+    if (n.group == null || n.orbit == null) continue;
+    const g = groups[n.group]; if (!g) continue;
+    const a = nodeAngle(n.orbit, n.orbitIndex || 0);
+    const x = g.x + radii[n.orbit] * Math.sin(a);
+    const y = g.y - radii[n.orbit] * Math.cos(a);
+
+    let kind = 0; // 0 normal
+    if (n.isNotable) kind = 1;
+    if (n.isKeystone) kind = 2;
+    if (n.isMastery) kind = 3;
+    if (n.isJewelSocket) kind = 6;
+    if (n.classStartIndex != null) kind = 5;
+    if (n.ascendancyName) kind = 4;
+
+    const node: any = {
+      h: Number(nid), x: Math.round(x), y: Math.round(y), k: kind,
+      n: n.name || "", st: n.stats || [],
+      o: (n.out || []).map((z: string) => Number(z)),
+    };
+    if (n.ascendancyName) node.asc = n.ascendancyName;
+    if (n.classStartIndex != null) node.cls = n.classStartIndex;
+    nodes.push(node);
+    if (!n.ascendancyName && n.classStartIndex == null) {
+      if (x < minX) minX = x; if (y < minY) minY = y; if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+    }
+  }
+
+  const classes = (t.classes || []).map((c: any, i: number) => ({
+    i, name: c.name, base: c.base_str != null ? undefined : undefined,
+    ascendancies: (c.ascendancies || []).map((a: any) => a.name),
+  }));
+
+  const data = {
+    nodes,
+    bounds: { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) },
+    classes,
+    ver: t.tree || "",
+  };
+  _treeCache = { data, exp: Date.now() + 7 * 24 * 3600_000 };
+  return data;
+}
 const _charCache = new Map<string, { data: any; exp: number }>();
 
 type Opts = {
@@ -407,6 +483,48 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     };
     _cxCache.set(league, { data, exp: Date.now() + 30 * 60_000 });
     return reply.send({ ok: true, league, ...data });
+  });
+
+  // Full passive tree geometry (cached 7d; GGG changes it ~per league).
+  app.get("/poe/tree", async (_req, reply) => {
+    try {
+      const d = await buildPassiveTree();
+      reply.header("Cache-Control", "public, max-age=86400");
+      return reply.send({ ok: true, ...d });
+    } catch (e: any) {
+      return reply.send({ ok: false, error: String((e && e.message) || e) });
+    }
+  });
+
+  // A linked character's allocated passive hashes (for overlaying on the tree).
+  app.get("/poe/tree/character", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const acct = await (prisma as any).userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    if (!acct) return reply.send({ ok: false, error: "not linked" });
+    const accountName = acct.displayName || "";
+    const q: any = (req as any).query || {};
+    const name = String(q.name || "").slice(0, 80);
+    const realm = ["pc", "xbox", "sony"].indexOf(String(q.realm)) !== -1 ? String(q.realm) : "pc";
+    if (!name) return reply.send({ ok: false, error: "character required" });
+    try {
+      const qs = new URLSearchParams({ accountName, character: name, realm }).toString();
+      const r = await fetch(`https://www.pathofexile.com/character-window/get-passive-skills?${qs}`, {
+        headers: { "User-Agent": userAgent(), Accept: "application/json" },
+      });
+      if (!r.ok) return reply.send({ ok: false, error: `poe ${r.status}` });
+      const pdata: any = await r.json().catch(() => null);
+      if (!pdata || pdata.error) return reply.send({ ok: false, error: "unavailable" });
+      return reply.send({
+        ok: true,
+        character: name,
+        hashes: pdata.hashes || [],
+        ascendancy: pdata.ascendancy || null,
+        masteryEffects: pdata.mastery_effects || {},
+      });
+    } catch (e: any) {
+      return reply.send({ ok: false, error: String((e && e.message) || e) });
+    }
   });
 
   app.get("/poe/character", async (req, reply) => {

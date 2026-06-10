@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
+import PassiveTree from "./PassiveTree";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -96,9 +97,7 @@ function trendPercent(sparkline: number[] | null | undefined): string {
 
 const TABS = [
   { id: "economy" as const, label: "Economy",    icon: "\u{1FA99}" },
-  { id: "items" as const,   label: "Items",       icon: "\u{2694}" },
-  { id: "divcards" as const,label: "Div Cards",   icon: "\u{1F0CF}" },
-  { id: "gems" as const,    label: "Gems",        icon: "\u{1F48E}" },
+  { id: "tree" as const,    label: "Skill Tree",  icon: "\u{1F333}" },
   { id: "ladder" as const,  label: "Ladder",      icon: "\u{1F3C6}" },
   { id: "streams" as const, label: "Live Streams", icon: "\u{1F4FA}" },
   { id: "lfg" as const,     label: "Find Team",   icon: "\u{1F465}" },
@@ -1156,7 +1155,7 @@ export default function PoeModulesPanel({
           accent={accent}
         />
 
-        {(tab === "economy" || tab === "items" || tab === "divcards" || tab === "gems" || tab === "ladder") && (
+        {(tab === "economy" || tab === "ladder") && (
           <select
             value={league}
             onChange={e => setLeague(e.target.value)}
@@ -1172,9 +1171,7 @@ export default function PoeModulesPanel({
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "economy"  && <EconomyTab league={league} accent={accent} />}
-        {tab === "items"    && <ItemsTab league={league} accent={accent} />}
-        {tab === "divcards" && <DivCardsTab league={league} accent={accent} />}
-        {tab === "gems"     && <GemsTab league={league} accent={accent} />}
+        {tab === "tree"     && <PassiveTree accent={accent} />}
         {tab === "ladder"   && <LadderTab league={league} accent={accent} />}
         {tab === "streams"  && <TwitchStreams lobbyId={lobbyId} accent={accent} />}
         {tab === "lfg"      && <FindTeam lobbyId={lobbyId} accent={accent} />}
@@ -1183,7 +1180,7 @@ export default function PoeModulesPanel({
 
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
-          Weered is not affiliated with, endorsed by, or sponsored by Grinding Gear Games. Path of Exile is a registered trademark of Grinding Gear Games. Economy data provided by poe.ninja.
+          Weered is not affiliated with, endorsed by, or sponsored by Grinding Gear Games. Path of Exile is a registered trademark of Grinding Gear Games. Economy and passive tree data via Grinding Gear Games' official API.
         </p>
       </div>
     </div>
