@@ -68,3 +68,6 @@ apps/api/manifest-cache/
 apps/api/uploads/
 seo-tools/venv/
 *.prebak
+apps/mod/.gradle/
+apps/mod/build/
+apps/mod/run/
