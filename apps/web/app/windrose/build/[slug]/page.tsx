@@ -1,6 +1,3 @@
-// Server-rendered build detail page with OpenGraph tags so links pasted
-// in Discord/Reddit/etc. preview with the build's primary image, title,
-// and description. Fetches from the API at build-time-of-request.
 
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -56,7 +53,5 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BuildSharePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  // Land users in the lobby with the build modal open. The browser modal
-  // hooks query param ?build=<slug> on mount.
   redirect(`/lobby/windrose?build=${encodeURIComponent(slug)}`);
 }

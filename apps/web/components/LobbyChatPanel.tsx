@@ -19,9 +19,6 @@ function ChatFlair({ userId, size = "sm" }: { userId: string; size?: "sm" | "md"
   return <FlairBadge flair={f as any} size={size} />;
 }
 
-// ── @mention detection — scans backwards from the caret for an unbroken
-// @token. Requires whitespace or input-start before the @. Returns the
-// query (may be empty right after typing @) and the @ offset. ──
 function detectMentionAtCaret(value: string, caret: number): { query: string; start: number } | null {
   let i = caret - 1;
   while (i >= 0) {
@@ -38,7 +35,6 @@ function detectMentionAtCaret(value: string, caret: number): { query: string; st
   return null;
 }
 
-// ── Username styling by rank — role takes priority over tier ──
 function nameStyleFor(role?: string, tier?: string): React.CSSProperties {
   const r = String(role || "").toUpperCase();
   const t = String(tier || "").toUpperCase();
@@ -52,7 +48,6 @@ function nameStyleFor(role?: string, tier?: string): React.CSSProperties {
   return {};
 }
 
-// ── Slash command handler — returns true if the input was a command ──
 function runSlashCommand(
   raw: string,
   opts: {
@@ -75,7 +70,6 @@ function runSlashCommand(
       opts.clear();
       return true;
     case "tip": {
-      // /tip @alice 100 keep up the good work
       const m = args.match(/^@?([a-zA-Z0-9][a-zA-Z0-9_-]{0,31})\s+(\d[\d,]*)(?:\s+(.+))?$/);
       if (!m) { weeredToast.error("Usage: /tip @user <amount> [note]"); return true; }
       const toUsername = m[1];
@@ -120,13 +114,10 @@ function runSlashCommand(
       return true;
     case "mod":
     case "mods": {
-      // `/mod <query>` searches the cached Nexus catalog and drops a chip in chat.
-      // `/mods` alone (no args) posts your crew's top mods as a subtle teaser.
       const query = args;
       void (async () => {
         try {
           if (!query) {
-            // No query → show what this is. Keep copy low-key: we're not pitching.
             weeredToast("/mod <name> — drop a Windrose mod into chat. Try: /mod qol plus");
             return;
           }
@@ -163,9 +154,6 @@ function runSlashCommand(
   }
 }
 
-// ── Crew flair — tiny icon/tag chip rendered beside a user's name to
-// show which crew they rep. Backed by a module-level cache + inflight
-// dedupe so an active chat doesn't fan out a fetch per message. ──
 type CrewFlairData = { tag: string; logoUrl: string | null; accentColor: string | null } | null;
 const crewFlairCache = new Map<string, CrewFlairData>();
 const crewFlairInflight = new Map<string, Promise<void>>();
@@ -221,19 +209,14 @@ function CrewFlair({ userId, size = 13 }: { userId: string; size?: number }) {
   return null;
 }
 
-// ── URL regex — matches http(s) links ──
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
 const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 const TENOR_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-// ── Weered URL embeds — render a themed inline card for internal
-// bounty / hunter / crew links so they preview rich right in chat. ──
 const WEERED_BOUNTY_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/bounty\/([^\s/?#]+)/i;
 const WEERED_HUNTER_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/hunter\/([^\s/?#]+)/i;
 const WEERED_CREW_RE   = /(?:https?:\/\/[^\s/]+)?\/crew\/([^\s/?#]+)/i;
-// Nexus mod links inline-preview for Windrose only — keeps the surface subtle
-// (drop a link, get a card; no advertising of the feature).
 const NEXUS_MOD_RE     = /(?:https?:\/\/)?(?:www\.)?nexusmods\.com\/(windrose)\/mods\/(\d+)/i;
 
 type WeeredEmbedKind = "bounty" | "hunter" | "crew" | "nexus";
@@ -245,7 +228,6 @@ function detectWeeredEmbed(url: string): { kind: WeeredEmbedKind; id: string } |
   return null;
 }
 
-// Tiny in-memory cache so repeat embeds of the same entity don't refetch.
 const embedCache = new Map<string, any>();
 
 function WeeredBountyEmbed({ id, href }: { id: string; href: string }) {
@@ -438,9 +420,6 @@ function NexusModEmbed({ id, href }: { id: string; href: string }) {
   if (!data) return <EmbedSkeleton href={href} label="Windrose · Mod" />;
   const mod = data.mod;
   const crewCount = Number(data.crewCount || 0);
-  // NXM deep-link — Vortex / Vercadi's Mod Manager register this protocol.
-  // No fileId until we fetch versions, so link the generic mod page in NXM
-  // form; the Mod Manager figures out the rest.
   const nxmHref = `nxm://windrose/mods/${encodeURIComponent(id)}`;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block", marginTop: 6 }}>
@@ -561,16 +540,17 @@ function LinkPreviewCard({ url }: { url: string }) {
 }
 
 const MENTION_BODY_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
-const BOLD_RE = /\*\*([^*\n]+?)\*\*/g;     // **bold**
-const ITALIC_RE = /(^|[^*])\*([^*\n]+?)\*(?!\*)/g;  // *italic* (not part of **)
-const CODE_RE = /`([^`\n]+?)`/g;           // `inline code`
+const BOLD_RE = /\*\*([^*\n]+?)\*\*/g;
+const ITALIC_RE = /(^|[^*])\*([^*\n]+?)\*(?!\*)/g;
+const CODE_RE = /`([^`\n]+?)`/g;
+const CARD_RE = /\[\[([^\]\n]{1,80})\]\]/g;
 
 type InlineTok = {
-  kind: "url" | "mention" | "bold" | "italic" | "code";
+  kind: "url" | "mention" | "bold" | "italic" | "code" | "card";
   start: number;
   end: number;
-  value: string;      // for bold/italic/code this is the inner text
-  raw: string;        // the matched raw including markers
+  value: string;
+  raw: string;
 };
 
 function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (handle: string) => void }) {
@@ -579,7 +559,6 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
   const linkUrls: string[] = [];
   const weeredEmbeds: { url: string; kind: WeeredEmbedKind; id: string }[] = [];
 
-  // Process line-by-line for block-level (blockquote) + inline tokens
   const lines = text.split(/\n/);
   const blockNodes: React.ReactNode[] = [];
   let blockKey = 0;
@@ -618,7 +597,6 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
           />
         </a>
       ))}
-      {/* Weered URL embeds — take priority over the generic link preview */}
       {weeredEmbeds.slice(0, 2).map((e, i) => {
         if (e.kind === "bounty") return <WeeredBountyEmbed key={`wb-${i}`} id={e.id} href={e.url} />;
         if (e.kind === "hunter") return <WeeredHunterEmbed key={`wh-${i}`} id={e.id} href={e.url} />;
@@ -626,11 +604,254 @@ function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (ha
         if (e.kind === "nexus")  return <NexusModEmbed     key={`wn-${i}`} id={e.id} href={e.url} />;
         return null;
       })}
-      {/* Generic link preview — one max, and only if no Weered embed claimed it */}
       {weeredEmbeds.length === 0 && linkUrls.slice(0, 1).map((url, i) => (
         <LinkPreviewCard key={`lp-${i}`} url={url} />
       ))}
     </>
+  );
+}
+
+const MTG_DECK_URL_RE = /^https?:\/\/(?:www\.)?(moxfield\.com\/decks\/[\w-]+|archidekt\.com\/decks\/\d+)/i;
+type DeckLite = {
+  source: "moxfield" | "archidekt";
+  id: string;
+  name: string;
+  format: string | null;
+  author: string | null;
+  cardCount: number | null;
+  colors: string[];
+  commanders: string[];
+  url: string;
+  thumbnail: string | null;
+};
+const _mtgDeckCache = new Map<string, DeckLite | null>();
+const _mtgDeckInflight = new Map<string, Promise<DeckLite | null>>();
+async function fetchMoxfieldClient(deckId: string, url: string): Promise<DeckLite | null> {
+  try {
+    const r = await fetch(`https://api.moxfield.com/v2/decks/all/${encodeURIComponent(deckId)}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!r.ok) return null;
+    const j: any = await r.json();
+    const commanders: string[] = [];
+    const commandersBlock = j?.commanders ?? j?.boards?.commanders?.cards ?? {};
+    for (const k of Object.keys(commandersBlock)) {
+      const c = commandersBlock[k];
+      const n = c?.card?.name || c?.name;
+      if (n) commanders.push(n);
+    }
+    const colors: string[] = Array.isArray(j?.colors) ? j.colors : (Array.isArray(j?.colorIdentity) ? j.colorIdentity : []);
+    const cardCount = typeof j?.mainboardCount === "number" ? j.mainboardCount
+      : (typeof j?.boards?.mainboard?.count === "number" ? j.boards.mainboard.count : null);
+    return {
+      source: "moxfield",
+      id: deckId,
+      name: String(j?.name || "Untitled deck"),
+      format: j?.format ?? null,
+      author: j?.createdByUser?.userName ?? j?.createdByUser?.displayName ?? null,
+      cardCount,
+      colors,
+      commanders,
+      url,
+      thumbnail: commanders[0] ? `https://api.scryfall.com/cards/named?format=image&version=art_crop&fuzzy=${encodeURIComponent(commanders[0])}` : null,
+    };
+  } catch {
+    return null;
+  }
+}
+function fetchMtgDeck(url: string): Promise<DeckLite | null> {
+  const key = url.toLowerCase();
+  if (_mtgDeckCache.has(key)) return Promise.resolve(_mtgDeckCache.get(key) ?? null);
+  if (_mtgDeckInflight.has(key)) return _mtgDeckInflight.get(key)!;
+  const moxMatch = url.match(/moxfield\.com\/decks\/([\w-]+)/i);
+  const p: Promise<DeckLite | null> = moxMatch
+    ? fetchMoxfieldClient(moxMatch[1], url)
+    : fetch(`${API}/mtg/deck?url=${encodeURIComponent(url)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(j => (j?.ok && j?.deck ? (j.deck as DeckLite) : null))
+        .catch(() => null);
+  const cached = p.then(deck => { _mtgDeckCache.set(key, deck); _mtgDeckInflight.delete(key); return deck; })
+                  .catch(() => { _mtgDeckInflight.delete(key); _mtgDeckCache.set(key, null); return null; });
+  _mtgDeckInflight.set(key, cached);
+  return cached;
+}
+function MtgDeckChip({ url }: { url: string }) {
+  const [deck, setDeck] = React.useState<DeckLite | null>(_mtgDeckCache.get(url.toLowerCase()) ?? null);
+  React.useEffect(() => {
+    if (deck !== null) return;
+    let cancel = false;
+    fetchMtgDeck(url).then(d => { if (!cancel) setDeck(d); });
+    return () => { cancel = true; };
+  }, [url, deck]);
+  const source = /moxfield/i.test(url) ? "moxfield" : "archidekt";
+  if (!deck) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-block",
+          padding: "2px 8px",
+          borderRadius: 6,
+          background: "rgba(156,124,63,0.12)",
+          color: "rgba(255,235,200,0.85)",
+          border: "1px solid rgba(156,124,63,0.35)",
+          fontSize: "0.92em",
+          textDecoration: "none",
+          fontWeight: 600,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {source} · deck link
+      </a>
+    );
+  }
+  const colorPips = deck.colors.length > 0
+    ? deck.colors.map(c => ({ W: "#fffcd8", U: "#b8d6f5", B: "#34292a", R: "#f29c93", G: "#9bd3a7" }[c] || "#888")).join(",")
+    : "";
+  return (
+    <a
+      href={deck.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 10px",
+        margin: "2px 0",
+        borderRadius: 8,
+        background: "linear-gradient(135deg, rgba(156,124,63,0.18) 0%, rgba(91,74,58,0.32) 100%)",
+        color: "rgba(255,235,200,0.95)",
+        border: "1px solid rgba(156,124,63,0.45)",
+        textDecoration: "none",
+        maxWidth: 380,
+        verticalAlign: "middle",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {deck.thumbnail && (
+        <img
+          src={deck.thumbnail}
+          alt=""
+          style={{ width: 40, height: 30, borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
+        />
+      )}
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "block", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {deck.name}
+        </span>
+        <span style={{ display: "block", fontSize: "0.82em", opacity: 0.8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {deck.commanders[0] ? `${deck.commanders[0]} · ` : ""}
+          {deck.format || deck.source}
+          {deck.author ? ` · ${deck.author}` : ""}
+          {deck.cardCount ? ` · ${deck.cardCount} cards` : ""}
+        </span>
+      </span>
+      {colorPips && (
+        <span style={{ marginLeft: "auto", display: "inline-flex", gap: 2, flexShrink: 0 }}>
+          {deck.colors.map((c, i) => (
+            <span key={i} style={{
+              width: 10, height: 10, borderRadius: "50%",
+              background: ({ W: "#fffcd8", U: "#b8d6f5", B: "#34292a", R: "#f29c93", G: "#9bd3a7" }[c] || "#888"),
+              border: "1px solid rgba(0,0,0,0.3)",
+            }} />
+          ))}
+        </span>
+      )}
+    </a>
+  );
+}
+
+type ScryfallLite = {
+  name: string;
+  set: string;
+  set_name: string;
+  mana_cost: string | null;
+  type_line: string | null;
+  oracle_text: string | null;
+  image: string | null;
+  image_small: string | null;
+  scryfall_uri: string;
+  colors: string[];
+  cmc: number;
+};
+const _mtgCardCache = new Map<string, ScryfallLite | null>();
+const _mtgCardInflight = new Map<string, Promise<ScryfallLite | null>>();
+function fetchMtgCard(name: string): Promise<ScryfallLite | null> {
+  const key = name.trim().toLowerCase();
+  if (_mtgCardCache.has(key)) return Promise.resolve(_mtgCardCache.get(key) ?? null);
+  if (_mtgCardInflight.has(key)) return _mtgCardInflight.get(key)!;
+  const p = fetch(`${API}/scryfall/card?name=${encodeURIComponent(name)}`)
+    .then(r => r.ok ? r.json() : null)
+    .then(j => {
+      const card = j?.ok && j?.card ? (j.card as ScryfallLite) : null;
+      _mtgCardCache.set(key, card);
+      _mtgCardInflight.delete(key);
+      return card;
+    })
+    .catch(() => { _mtgCardInflight.delete(key); _mtgCardCache.set(key, null); return null; });
+  _mtgCardInflight.set(key, p);
+  return p;
+}
+function MtgCardChip({ name }: { name: string }) {
+  const [card, setCard] = React.useState<ScryfallLite | null>(_mtgCardCache.get(name.trim().toLowerCase()) ?? null);
+  const [hover, setHover] = React.useState(false);
+  React.useEffect(() => {
+    if (card !== null) return;
+    let cancel = false;
+    fetchMtgCard(name).then(c => { if (!cancel) setCard(c); });
+    return () => { cancel = true; };
+  }, [name, card]);
+  const display = card?.name || name;
+  const href = card?.scryfall_uri || `https://scryfall.com/search?q=${encodeURIComponent(name)}`;
+  return (
+    <span
+      style={{ position: "relative", display: "inline-block" }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-block",
+          padding: "0 6px",
+          borderRadius: 4,
+          background: "rgba(156,124,63,0.18)",
+          color: "rgba(255,235,200,0.95)",
+          border: "1px solid rgba(156,124,63,0.45)",
+          fontWeight: 600,
+          textDecoration: "none",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >{display}</a>
+      {hover && card?.image && (
+        <span style={{
+          position: "absolute",
+          bottom: "calc(100% + 6px)",
+          left: 0,
+          zIndex: 60,
+          pointerEvents: "none",
+          background: "transparent",
+        }}>
+          <img
+            src={card.image}
+            alt={card.name}
+            style={{
+              width: 220,
+              borderRadius: 12,
+              boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
+              display: "block",
+            }}
+          />
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -643,15 +864,17 @@ function renderInline(
 ): React.ReactNode {
   if (!text) return null;
 
-  // Collect all tokens, then render left-to-right. Tokens that overlap get
-  // filtered — URL wins over mention (the @ may be in a URL); code wins over
-  // bold/italic (ticks are most explicit); bold wins over italic.
   const toks: InlineTok[] = [];
   let m: RegExpExecArray | null;
 
   URL_RE.lastIndex = 0;
   while ((m = URL_RE.exec(text)) !== null) {
     toks.push({ kind: "url", start: m.index, end: m.index + m[0].length, value: m[0], raw: m[0] });
+  }
+  CARD_RE.lastIndex = 0;
+  while ((m = CARD_RE.exec(text)) !== null) {
+    if (toks.some(t => t.kind === "url" && m!.index >= t.start && m!.index < t.end)) continue;
+    toks.push({ kind: "card", start: m.index, end: m.index + m[0].length, value: m[1].trim(), raw: m[0] });
   }
   MENTION_BODY_RE.lastIndex = 0;
   while ((m = MENTION_BODY_RE.exec(text)) !== null) {
@@ -664,7 +887,6 @@ function renderInline(
   }
   BOLD_RE.lastIndex = 0;
   while ((m = BOLD_RE.exec(text)) !== null) {
-    // Skip if inside code
     if (toks.some(t => t.kind === "code" && m!.index >= t.start && m!.index < t.end)) continue;
     toks.push({ kind: "bold", start: m.index, end: m.index + m[0].length, value: m[1], raw: m[0] });
   }
@@ -673,13 +895,11 @@ function renderInline(
     const starStart = m.index + m[1].length;
     const innerStart = starStart + 1;
     const innerEnd = innerStart + m[2].length;
-    // Skip if inside code or bold
     if (toks.some(t => (t.kind === "code" || t.kind === "bold") && starStart >= t.start && starStart < t.end)) continue;
     toks.push({ kind: "italic", start: starStart, end: innerEnd + 1, value: m[2], raw: m[0].slice(m[1].length) });
   }
   toks.sort((a, b) => a.start - b.start);
 
-  // Filter overlapping tokens (keep earlier-start)
   const keep: InlineTok[] = [];
   let prevEnd = -1;
   for (const t of toks) {
@@ -694,11 +914,15 @@ function renderInline(
   for (const t of keep) {
     if (t.start > cursor) parts.push(text.slice(cursor, t.start));
     if (t.kind === "url") {
-      parts.push(
-        <a key={key++} href={t.value} target="_blank" rel="noopener noreferrer" style={{
-          color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2, wordBreak: "break-all",
-        }}>{t.value}</a>
-      );
+      if (MTG_DECK_URL_RE.test(t.value)) {
+        parts.push(<MtgDeckChip key={key++} url={t.value} />);
+      } else {
+        parts.push(
+          <a key={key++} href={t.value} target="_blank" rel="noopener noreferrer" style={{
+            color: "#7c9dff", textDecoration: "underline", textUnderlineOffset: 2, wordBreak: "break-all",
+          }}>{t.value}</a>
+        );
+      }
       if (IMG_EXT.test(t.value) || TENOR_RE.test(t.value)) {
         imageUrls.push(t.value);
       } else {
@@ -736,6 +960,8 @@ function renderInline(
           padding: "0 5px",
         }}>{t.value}</code>
       );
+    } else if (t.kind === "card") {
+      parts.push(<MtgCardChip key={key++} name={t.value} />);
     }
     cursor = t.end;
   }
@@ -743,7 +969,6 @@ function renderInline(
   return parts;
 }
 
-// ── GIF Picker (Tenor) ──
 const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY || "";
 const TENOR_URL = "https://tenor.googleapis.com/v2";
 
@@ -753,7 +978,6 @@ function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onC
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
-  // Load trending on mount
   useEffect(() => {
     setLoading(true);
     fetch(`${TENOR_URL}/featured?key=${TENOR_API_KEY}&limit=20&media_filter=tinygif,gif`)
@@ -822,7 +1046,6 @@ function GifPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onC
   );
 }
 
-// ── Inline SVG icons (Discord-ish monochrome set) ──
 const svgProps = {
   width: 16, height: 16, viewBox: "0 0 24 24",
   fill: "none", stroke: "currentColor", strokeWidth: 2,
@@ -846,7 +1069,6 @@ const Icons = {
   Send:   (p: any = {}) => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/></svg>),
 };
 
-// ── Emoji picker data (compact) ──
 const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   { label: "😀", emojis: ["😀","😂","🤣","😅","😊","😍","🥰","😘","😎","🤩","🥳","😭","😤","🤔","🤫","🤯","🥶","🥵","😈","👻"] },
   { label: "👍", emojis: ["👍","👎","👏","🙌","🤝","✌️","🤞","💪","🫡","🫶","❤️","🔥","💯","⭐","✨","💀","🎉","🎮","🏆","👀"] },
@@ -854,7 +1076,6 @@ const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   { label: "🐸", emojis: ["🐸","🐶","🐱","🦊","🐺","🦁","🐯","🦄","🐉","🦅","🐍","🦈","🐙","🦀","🐝","🦋","🌈","🌊","☀️","🌙"] },
 ];
 
-// ── Discord-style "More" dropdown menu ──
 function MoreMenuItem({
   icon, label, onClick, danger, divider,
 }: { icon?: React.ReactNode; label: string; onClick: () => void; danger?: boolean; divider?: boolean }) {
@@ -930,7 +1151,7 @@ function MoreMenu({
       const key = `weered:unread:${roomId}`;
       localStorage.setItem(key, msgId);
       weeredToast("Marked unread from this message.");
-    } catch { /* ignore */ }
+    } catch { }
     onClose();
   };
   const handleSpeak = () => {
@@ -998,15 +1219,12 @@ export default function LobbyChatPanel(
     style?: React.CSSProperties;
     roomId?: string;
     embedded?: boolean;
-    /** When true, suppresses the input bar — parent is handling send */
     hideInput?: boolean;
   } = {}
 ) {
   const { replaceTop } = useOverlay();
   const ctx: any = useWeered();
 
-  // Map currentLobbyId → module type the hover card expects. Keeps the
-  // "Running N mods" line scoped to Windrose context only.
   const _lobbyMod =
     String(ctx?.currentLobbyId || "").toLowerCase() === "windrose" ? "WINDROSE" :
     undefined;
@@ -1022,7 +1240,6 @@ export default function LobbyChatPanel(
   const joinedRoomId = String(ctx?.joinedRoomId || "");
   const joinStatus = String(ctx?.joinStatus || "idle");
 
-  // Resolve the effective room ID — prefer the explicit prop over activeRoomId
   const effectiveRoomId = (() => {
     let forced = String(props.roomId || "").trim();
     if (forced.startsWith("room:")) forced = forced.slice(5);
@@ -1030,7 +1247,6 @@ export default function LobbyChatPanel(
     return forced || activeRoomId;
   })();
 
-  // Read msgs and meta from the effective room, not just activeRoomId
   const msgsByRoom = ctx?.msgsByRoom || {};
   const metaByRoom = ctx?.metaByRoom || {};
   const adminByRoom = ctx?.adminByRoom || {};
@@ -1062,10 +1278,6 @@ export default function LobbyChatPanel(
   const [mentionState, setMentionState] = useState<{ query: string; start: number; index: number } | null>(null);
   const lastTypingSentRef = useRef<number>(0);
 
-  // ── Unread 'NEW' divider — snapshot the last-read timestamp per room on
-  //    mount / room change. Divider renders above the first message newer
-  //    than the snapshot. Stays stable for the session; localStorage is
-  //    updated on scroll-to-bottom + send so next visit hydrates fresh. ──
   const [readTsSnapshot, setReadTsSnapshot] = useState<number>(() => Date.now());
   useEffect(() => {
     if (!effectiveRoomId) return;
@@ -1086,13 +1298,11 @@ export default function LobbyChatPanel(
   }, [effectiveRoomId]);
   const broadcastTyping = useCallback(() => {
     const now = Date.now();
-    if (now - lastTypingSentRef.current < 2500) return; // throttle to ~2.5s
+    if (now - lastTypingSentRef.current < 2500) return;
     lastTypingSentRef.current = now;
-    try { (ctx as any)?.sendRaw?.({ type: "chat:typing" }); } catch { /* noop */ }
+    try { (ctx as any)?.sendRaw?.({ type: "chat:typing" }); } catch { }
   }, [ctx]);
 
-  // ── @mention autocomplete ────────────────────────────────────────────────
-  // Filter from the room's presence list when the user has an open @ token.
   const mentionLookup = useMemo(() => {
     const out: Record<string, string> = { operator: "The Operator" };
     const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
@@ -1120,7 +1330,6 @@ export default function LobbyChatPanel(
       const after  = text.slice(s.start + 1 + s.query.length);
       const next = `${before}@${username} ${after}`;
       setText(next);
-      // Restore caret position right after the inserted mention + space
       setTimeout(() => {
         const el = inputRef.current;
         if (el) {
@@ -1137,9 +1346,6 @@ export default function LobbyChatPanel(
   const [gifOpen, setGifOpen] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string>("");
 
-  // ── Damage target picker (cross-system glue) ──
-  // Triggered by the chat dice-chip "Apply to Target" button. Lists map
-  // tokens (fetched lazily) and combatants from window.__weeredInitiative.
   const [damagePicker, setDamagePicker] = useState<null | { amount: number; attackName: string; sourceMsgId: string }>(null);
   const [pickerTokens, setPickerTokens] = useState<any[]>([]);
   const [pickerCombatants, setPickerCombatants] = useState<any[]>([]);
@@ -1176,7 +1382,6 @@ export default function LobbyChatPanel(
         headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
         body: JSON.stringify({ hp: newHp }),
       });
-      // If the token is linked to a combatant, also subtract from initiative
       if (t.combatantId) {
         try {
           window.dispatchEvent(new CustomEvent("weered:dnd:combatant:damage", {
@@ -1238,7 +1443,6 @@ export default function LobbyChatPanel(
     setPickerMsgId("");
   }
 
-  // Close picker on outside click
   useEffect(() => {
     if (!pickerMsgId) return;
     function onClick(e: MouseEvent) {
@@ -1250,7 +1454,6 @@ export default function LobbyChatPanel(
     return () => document.removeEventListener("click", onClick);
   }, [pickerMsgId]);
 
-  // Close More dropdown on outside click / Escape
   useEffect(() => {
     if (!moreMenuMsgId) return;
     function onClick(e: MouseEvent) {
@@ -1270,7 +1473,6 @@ export default function LobbyChatPanel(
   const inputRef = useRef<HTMLInputElement | null>(null);
   const emojiRef = useRef<HTMLDivElement | null>(null);
 
-  // Close emoji picker on outside click
   useEffect(() => {
     if (!emojiOpen) return;
     const handler = (e: MouseEvent) => {
@@ -1286,11 +1488,9 @@ export default function LobbyChatPanel(
   }, []);
 
   const joinedStrict = Boolean(effectiveRoomId && joinedRoomId && effectiveRoomId === joinedRoomId && effectiveJoinStatus === "joined");
-  // For lobbies (not embedded): locked = chat locked (staff lobby lock controls).
-  // For rooms (embedded): locked = entry lock, NOT chat lock. Use chatDisabled instead.
   const chatBlocked = props.embedded
-    ? Boolean(meta?.chatDisabled)          // rooms: only chatDisabled kills chat
-    : Boolean(meta?.locked);               // lobbies: locked = chat locked
+    ? Boolean(meta?.chatDisabled)
+    : Boolean(meta?.locked);
   const joinedByMeta = Boolean((meta || admin) && !chatBlocked && !admin?.locked);
   const canType = (joinedStrict || joinedByMeta) && !chatBlocked;
   const msgTrim = String(text || "").trim();
@@ -1299,15 +1499,12 @@ export default function LobbyChatPanel(
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    // rAF ensures DOM has painted the new message before we scroll
     const id = requestAnimationFrame(() => {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
     return () => cancelAnimationFrame(id);
   }, [msgs.length, effectiveRoomId]);
 
-  // When user scrolls within a few pixels of the bottom of the chat list,
-  // mark the room as caught-up so the NEW divider drops on next mount.
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
@@ -1322,7 +1519,6 @@ export default function LobbyChatPanel(
     if (!canType) return;
     const msg = String(text || "").trim();
     if (!msg) return;
-    // Slash-command intercept — /me, /roll, /shrug, /tableflip, /giphy, /tip, etc.
     if (msg.startsWith("/")) {
       const handled = runSlashCommand(msg, {
         me: ctx?.me,
@@ -1330,9 +1526,6 @@ export default function LobbyChatPanel(
         openGif: (_q?: string) => { setGifOpen(true); setEmojiOpen(false); },
         clear: () => { setText(""); setReplyingTo(null); },
         tip: (toUsername: string, amount: number, note: string) => {
-          // HTTP call so Paper flows through the ledger; on success the chat
-          // beacon is sent as a normal message so it renders just like any
-          // other chat entry (with role badge + markdown).
           const token = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
           fetch(`${API}/paper/tip`, {
             method: "POST",
@@ -1374,8 +1567,6 @@ export default function LobbyChatPanel(
         </div>
       )}
 
-      {/* Pinned messages strip — collapsible bar at the top of every chat.
-          Clicks scroll the referenced message into view + flash its row. */}
       {(() => {
         const pinIds: string[] = Array.isArray(ctx?.pinnedByRoom?.[effectiveRoomId]) ? ctx.pinnedByRoom[effectiveRoomId] : [];
         if (pinIds.length === 0) return null;
@@ -1469,7 +1660,6 @@ export default function LobbyChatPanel(
           <EmptyState title="Crickets." hint="Be the one who drops the first line." />
         ) : (
           msgs.map((m: any, i: number) => {
-            // ── Poker action chip (call/raise/fold/check/bet/all-in) inline.
             if (m?.kind === "poker") {
               const pMeta = m?.meta || {};
               const action = String(pMeta.action || "").toLowerCase();
@@ -1509,7 +1699,6 @@ export default function LobbyChatPanel(
                 </div>
               );
             }
-            // ── Poker winner celebration chip — fires on hand resolution.
             if (m?.kind === "poker-winner") {
               const wMeta = m?.meta || {};
               const winners: any[] = Array.isArray(wMeta.winners) ? wMeta.winners : [];
@@ -1555,9 +1744,6 @@ export default function LobbyChatPanel(
                 </div>
               );
             }
-                        // ── Trade-event row (FakeOut paper trade broadcast as inline
-            // system chip). Renders as a compact glow row instead of a
-            // standard message bubble.
             if (m?.kind === "trade") {
               const tMeta = m?.meta || {};
               const side = String(tMeta.side || "").toUpperCase();
@@ -1607,10 +1793,6 @@ export default function LobbyChatPanel(
                 </div>
               );
             }
-            // ── Dice-roll row (D&D Dice Tower public broadcast as inline
-            // chip). Renders as a compact glow row keyed off Nat 20 / Nat 1
-            // so crits flash green and crit-fails flash red. Modifiers, kept
-            // dice, and dropped (advantage/disadvantage) all visible inline.
             if (m?.kind === "dice") {
               const dMeta = m?.meta || {};
               const isNat20 = !!dMeta.isNat20;
@@ -1659,7 +1841,6 @@ export default function LobbyChatPanel(
                   <span style={{ marginLeft: "auto", fontWeight: 800, fontSize: 14, color: chipFg }}>
                     {total}
                   </span>
-                  {/* Cross-system follow-up: attack → "Roll Damage", damage → "Apply to Target" */}
                   {dMeta.intent === "attack" && dMeta.damageExpression && (
                     <button
                       onClick={() => rollFollowupDamage(dMeta)}
@@ -1693,9 +1874,6 @@ export default function LobbyChatPanel(
             const msgTs = Number(m?.ts || 0);
             const prevTs = i > 0 ? Number(msgs[i - 1]?.ts || 0) : 0;
             const myMsg = !!(meId && String(m?.user?.id || m?.userId || "") === meId);
-            // Show the NEW divider above the first message newer than the
-            // snapshot the user mounted with. Skip the divider for own
-            // messages so it never lands awkwardly above a send-receipt.
             const showNewDivider =
               !myMsg &&
               readTsSnapshot > 0 &&
@@ -1767,9 +1945,6 @@ export default function LobbyChatPanel(
                 </div>
                 <div style={{ minWidth: 0, flex: 1, opacity: deletedAt ? 0.55 : 1 }}>
                   {(() => {
-                    // Cross-reference this user's live role/tier from presence so the
-                    // chat message shows their GTA rank as a visual cue — colored name
-                    // + inline role icon + tier chip. Falls back gracefully.
                     const roomUsers = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
                     const umeta = msgUserId ? roomUsers.find((u: any) => u?.id === msgUserId) : undefined;
                     const uRole = umeta?.globalRole || m?.user?.globalRole;
@@ -1782,15 +1957,17 @@ export default function LobbyChatPanel(
                         onMouseEnter={e => { if (msgUserId) openHover(msgUserId, uname, e.currentTarget as HTMLElement); }}
                         onMouseLeave={() => hoverClose(160)}
                       >
-                        <span style={nameStyle}>{uname}</span>
+                        <span className={(umeta as any)?.nameEffect ? "weered-name-" + (umeta as any).nameEffect : undefined} style={nameStyle}>{uname}</span>
                         {uRole && String(uRole).toUpperCase() !== "USER" && (
                           <RoleIcon role={String(uRole).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
                         )}
-                        {uTier && String(uTier).toUpperCase() !== "INNOCENT" && (
-                          <TierIcon tier={String(uTier).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
-                        )}
                         {msgUserId && <CrewFlair userId={msgUserId} size={13} />}
-                        {msgUserId && <ChatFlair userId={msgUserId} size="sm" />}
+                        <span className="chat-author-flair" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          {uTier && String(uTier).toUpperCase() !== "INNOCENT" && (
+                            <TierIcon tier={String(uTier).toUpperCase()} size={13} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }} />
+                          )}
+                          {msgUserId && <ChatFlair userId={msgUserId} size="sm" />}
+                        </span>
                         {editedAt > 0 && !deletedAt && (
                           <span title={new Date(editedAt).toLocaleString()} style={{ fontSize: 10, fontWeight: 500, color: "var(--weered-muted, rgba(148,163,184,.55))", marginLeft: 2 }}>(edited)</span>
                         )}
@@ -1874,7 +2051,6 @@ export default function LobbyChatPanel(
                       onMentionClick={(h) => replaceTop("profile", { userId: h })}
                     />
                   )}
-                  {/* Reaction chips */}
                   {Array.isArray((m as any).reactions) && (m as any).reactions.length > 0 && !deletedAt && (
                     <div data-reaction-ui style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
                       {(m as any).reactions.map((r: any) => {
@@ -2040,7 +2216,6 @@ export default function LobbyChatPanel(
         )}
       </div>
 
-      {/* Typing indicator — who's currently composing in this room */}
       {(() => {
         const typing = (ctx?.typingByRoom?.[effectiveRoomId] || []).filter((e: any) => e.userId !== ctx?.me?.id);
         if (!typing.length) return null;
@@ -2078,10 +2253,8 @@ export default function LobbyChatPanel(
         );
       })()}
 
-      {/* Input — hidden when parent handles it */}
       {!props.hideInput && (
         <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
-          {/* @mention autocomplete — floats above the composer when active */}
           {mentionState && mentionCandidates.length > 0 && (
             <div style={{
               position: "absolute",
@@ -2188,7 +2361,6 @@ export default function LobbyChatPanel(
                 const m = detectMentionAtCaret(el.value, el.selectionStart ?? el.value.length);
                 setMentionState(prev => {
                   if (!m) return null;
-                  // Preserve selected index if query hasn't changed
                   if (prev && prev.query === m.query && prev.start === m.start) return prev;
                   return { ...m, index: 0 };
                 });
@@ -2273,7 +2445,6 @@ export default function LobbyChatPanel(
             </button>
           </div>
 
-          {/* Emoji picker */}
           {emojiOpen && (
             <div ref={emojiRef} style={{
               position: "absolute", bottom: "calc(100% + 6px)", right: 0,
@@ -2281,7 +2452,6 @@ export default function LobbyChatPanel(
               borderRadius: 12, padding: 8, zIndex: 50,
               boxShadow: "0 8px 32px rgba(0,0,0,.5)",
             }}>
-              {/* Category tabs */}
               <div style={{ display: "flex", gap: 2, marginBottom: 6, borderBottom: "1px solid rgba(255,255,255,.08)", paddingBottom: 6 }}>
                 {EMOJI_CATEGORIES.map((cat, ci) => (
                   <button key={ci} onClick={() => setEmojiCat(ci)} style={{
@@ -2292,7 +2462,6 @@ export default function LobbyChatPanel(
                   </button>
                 ))}
               </div>
-              {/* Emoji grid */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 2, maxHeight: 160, overflow: "auto" }}>
                 {EMOJI_CATEGORIES[emojiCat].emojis.map((em, ei) => (
                   <button key={ei} onClick={() => insertEmoji(em)} style={{
@@ -2309,7 +2478,6 @@ export default function LobbyChatPanel(
             </div>
           )}
 
-          {/* GIF picker */}
           {gifOpen && (
             <GifPicker
               onSelect={(url) => { ctx?.sendChat?.(effectiveRoomId, url); }}
@@ -2337,16 +2505,12 @@ export default function LobbyChatPanel(
         </div>
       )}
     </div>
-    {/* Member list rail — invisible by default, unlocked by CSS when the
-        chat is inside a .weered-chat-fullscreen ancestor. Lets the Discord
-        crowd see who's in the room + DM / profile click-through. */}
     <aside className="weered-chat-members" aria-label="Room members">
       {(() => {
         const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
         if (roomUsers.length === 0) {
           return <div style={{ fontSize: 12, color: "var(--weered-muted, rgba(148,163,184,.55))", fontStyle: "italic", padding: "8px 0" }}>No one's in here yet.</div>;
         }
-        // Rank sort: elevated roles first, then tier, then alphabetical.
         const rankOf = (u: any) => {
           const r = String(u?.globalRole || "").toUpperCase();
           const t = String(u?.tier || "").toUpperCase();
@@ -2415,9 +2579,7 @@ export default function LobbyChatPanel(
                       {u?.name}{isMe && <span style={{ color: "var(--weered-muted, rgba(148,163,184,.55))", fontWeight: 500, marginLeft: 4, fontStyle: "italic" }}>(you)</span>}
                     </span>
                     {role && role !== "USER" && <RoleIcon role={role} size={11} />}
-                    {tier && tier !== "INNOCENT" && <TierIcon tier={tier} size={11} />}
                     {u.id && <CrewFlair userId={u.id} size={11} />}
-                    {u.id && <ChatFlair userId={u.id} size="sm" />}
                   </button>
                 );
               })}

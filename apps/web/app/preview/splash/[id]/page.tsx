@@ -4,10 +4,6 @@ import React from "react";
 import { useParams } from "next/navigation";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../../components/LobbySplash";
 
-// Standalone preview route for lobby splashes.
-// Mounts the splash with forceOpen, bypassing localStorage cooldown.
-// Handy for design review and sharing — no login required.
-
 const PRESETS: Record<string, { ogImage: string; ariaLabel: string; palette: any; ctaLabel?: string; liveCount?: any }> = {
   windrose: {
     ogImage: "/brand/lobbies/windrose-og-v3.png",

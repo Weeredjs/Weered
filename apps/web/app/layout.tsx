@@ -2,9 +2,6 @@ import "./globals.css";
 import React from "react";
 import { Pirata_One, Cormorant_Garamond, Rajdhani, Barlow_Condensed, Saira_Stencil_One } from "next/font/google";
 
-// Preloaded / self-hosted via next/font so lobby theme typography is
-// reliable on first paint (no FOUC). Exposed as CSS variables that
-// globals.css consumes for lobby-scoped font stacks.
 const pirataOne = Pirata_One({
   weight: "400",
   subsets: ["latin"],
@@ -27,7 +24,6 @@ const rajdhani = Rajdhani({
   display: "swap",
   preload: true,
 });
-// Default UI font — the Destiny lobby's nav font promoted to global.
 const barlow = Barlow_Condensed({
   weight: ["400", "500", "600", "700", "800"],
   subsets: ["latin"],
@@ -35,7 +31,6 @@ const barlow = Barlow_Condensed({
   display: "swap",
   preload: true,
 });
-// Stencil display font for Helldivers 2 lobby propaganda look. Crisp at all sizes.
 const sairaStencil = Saira_Stencil_One({
   weight: "400",
   subsets: ["latin"],
@@ -50,9 +45,11 @@ import LeftRail from "../components/LeftRail";
 import RightRailSwitch from "../components/RightRailSwitch";
 import DockDrawer from "../components/DockDrawer";
 import ShellGate from "../components/ShellGate";
+import ThemeRestore from "../components/ThemeRestore";
 import LobbyBrowser from "../components/LobbyBrowser";
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 import PushPrompt from "../components/PushPrompt";
+import UnreadIndicator from "../components/UnreadIndicator";
 import InstallPrompt from "../components/InstallPrompt";
 import KeyboardShortcuts from "../components/KeyboardShortcuts";
 import CookieConsent from "../components/CookieConsent";
@@ -198,16 +195,46 @@ try {
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users
   // before paint (no FOUC). The slab stays in the DOM for crawlers.
   if (localStorage.getItem('weered_token')) d.setAttribute('data-weered-authed', '1');
+  // Streamer overlay route — strip chrome + transparent body before paint
+  // so OBS browser-source captures a clean composite over the game capture.
+  if (location.pathname.indexOf('/overlay/') === 0 || location.pathname === '/overlay') {
+    d.setAttribute('data-weered-bare', 'overlay');
+  }
+  // chrome=min default baseline (pre-paint, FOUC-safe). ShellGate / lobby
+  // page reconcile per-route after hydration. Skip /lobby/* (lobby page owns
+  // the dense-vs-min decision after moduleType loads), /overlay, and the
+  // ?chrome=full override. Inert on bare pages (no shell DOM to style).
+  if (location.pathname.indexOf('/lobby/') !== 0
+      && location.pathname.indexOf('/overlay') !== 0
+      && location.search.indexOf('chrome=full') < 0) {
+    d.setAttribute('data-weered-chrome', 'min');
+  }
+  // Lobbies: flagship purple (min) is the default for ALL lobbies, the 4
+  // reskinnable ones (windrose/destiny2/dnd/helldivers2) INCLUDED. The reskin
+  // is opt-in (settings.keepDefaultThemeInLobbies === false) + member-only and
+  // is resolved by the lobby page AFTER hydration. Previously these 4 were left
+  // UNSET here to dodge a min->reskin flash — but that left them painting the
+  // base/gold theme for the entire lobbyInfo API-load window (the lobby page's
+  // chrome effect bails until lobbyInfo loads), which is the base->theme flash
+  // James kept hitting on hard load. So pre-paint min for EVERY lobby. The
+  // common/default case is now flash-free; an opted-in member gets a single
+  // clean min->reskin transition once membership resolves (was two before).
+  else if (location.pathname.indexOf('/lobby/') === 0
+      && location.search.indexOf('chrome=full') < 0) {
+    d.setAttribute('data-weered-chrome', 'min');
+  }
 } catch(e) {}
 `;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('weered_token')){localStorage.removeItem('weered_token');}}catch(e){}if(typeof window==='undefined'||window.__wfp)return;window.__wfp=1;var _f=window.fetch;window.fetch=function(i,o){o=o||{};var u=typeof i==='string'?i:(i&&i.url)||'';if(u.indexOf('api.weered.ca')!==-1){o.credentials='include';try{var h=new Headers(o.headers||{});h.delete('authorization');o.headers=h;}catch(e){}}return _f.call(this,i,o);};})();` }} />
       </head>
       <body>
+        <ThemeRestore />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -233,6 +260,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <OverlayHost />
             <ServiceWorkerRegister />
             <PushPrompt />
+            <UnreadIndicator />
             <InstallPrompt />
             <KeyboardShortcuts />
             <CookieConsent />

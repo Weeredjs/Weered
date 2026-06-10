@@ -1,11 +1,5 @@
 "use client";
 
-// HelldiversSliceBPanel — temporary wrapper that pairs Squad Finder + Stratagems
-// for the Helldivers 2 lobby. Built by Slice B in the parallel HD2 build.
-// The orchestrator may merge this into a unified HelldiversModulesPanel
-// alongside War Map, Major Order, Dispatches, Loadouts (Slices A/C/D).
-// Until then, this exposes the two Slice-B panels as a tabbed view.
-
 import React, { useState, useCallback } from "react";
 import HelldiversStratagemsPanel from "./HelldiversStratagemsPanel";
 import HelldiversSquadFinder from "./HelldiversSquadFinder";
@@ -38,7 +32,6 @@ export default function HelldiversSliceBPanel({
       borderRadius: 8,
       ...style,
     }}>
-      {/* Top tab strip — Super Earth military */}
       <div style={{
         display: "flex",
         gap: 4,

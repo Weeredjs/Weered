@@ -1,9 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// Helldivers 2 — Live War Tracker.
-// Wraps the community API at https://api.helldivers2.dev/api/v1/.
-// In-memory cache (60s TTL) + a background poller that warms the cache
-// every 60s so route hits are cheap.
 type Opts = {
   authFromHeader?: (h?: string) => { id: string } | null;
 };
@@ -42,7 +38,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     }
   }
 
-  // ── Background warmer ──────────────────────────────────────────────────
   async function warmCache() {
     try {
       const [war, assignments, dispatches, campaigns, planets] = await Promise.all([
@@ -62,11 +57,9 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     }
   }
 
-  // Kick off immediately + poll every 60s.
   warmCache().catch(() => {});
   setInterval(() => { warmCache().catch(() => {}); }, 60_000);
 
-  // Helper — get from cache, or fetch+cache if missing.
   async function getOrFetch(key: string, path: string) {
     const hit = cacheGet(key);
     if (hit) return hit;
@@ -75,7 +68,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     return fresh;
   }
 
-  // ── /helldivers/war ────────────────────────────────────────────────────
   app.get("/helldivers/war", async (_req, reply) => {
     const war = await getOrFetch("war", "/war");
     if (!war) return reply.code(502).send({ ok: false, error: "war_unavailable" });
@@ -107,7 +99,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     });
   });
 
-  // ── /helldivers/major-orders ───────────────────────────────────────────
   app.get("/helldivers/major-orders", async (_req, reply) => {
     const data = await getOrFetch("assignments", "/assignments");
     if (!data) return reply.send({ ok: true, orders: [] });
@@ -116,7 +107,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     const orders = list.map((a: any) => {
       const tasks = a.setting?.tasks || [];
       const progress = a.progress || [];
-      // Compute aggregate progress as a simple average where applicable.
       let pct = 0;
       let denom = 0;
       tasks.forEach((t: any, i: number) => {
@@ -141,7 +131,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
         tasks,
         progress,
         progressPct: overallPct,
-        expiresIn: a.expiresIn, // seconds
+        expiresIn: a.expiresIn,
         expiresAt: typeof a.expiresIn === "number" ? Date.now() + a.expiresIn * 1000 : null,
       };
     });
@@ -149,7 +139,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     return reply.send({ ok: true, orders });
   });
 
-  // ── /helldivers/dispatches ─────────────────────────────────────────────
   app.get("/helldivers/dispatches", async (req, reply) => {
     const q = (req as any).query || {};
     const limit = Math.min(50, Math.max(1, Number(q.limit) || 20));
@@ -157,7 +146,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     if (!data) return reply.send({ ok: true, dispatches: [] });
 
     const list = Array.isArray(data) ? data : [];
-    // Newest first by published timestamp.
     const sorted = [...list].sort((a: any, b: any) => {
       const ta = new Date(a.published || 0).getTime();
       const tb = new Date(b.published || 0).getTime();
@@ -174,7 +162,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     return reply.send({ ok: true, dispatches });
   });
 
-  // ── /helldivers/campaigns ──────────────────────────────────────────────
   app.get("/helldivers/campaigns", async (_req, reply) => {
     const data = await getOrFetch("campaigns", "/campaigns");
     if (!data) return reply.send({ ok: true, campaigns: [] });
@@ -185,8 +172,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       const event = planet.event || null;
       const isDefense = !!event;
       const liberation = Number(planet?.statistics?.percentage ?? planet?.health ?? 0);
-      // Liberation % from "health" — typically inverted; the API provides a
-      // direct percentage for display when present.
       let liberationPct = 0;
       if (typeof planet.health === "number" && typeof planet.maxHealth === "number" && planet.maxHealth > 0) {
         liberationPct = Math.round(((planet.maxHealth - planet.health) / planet.maxHealth) * 100);
@@ -231,12 +216,10 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     return reply.send({ ok: true, campaigns });
   });
 
-  // ── /helldivers/planets/:planetId ──────────────────────────────────────
   app.get("/helldivers/planets/:planetId", async (req, reply) => {
     const planetId = String((req as any).params?.planetId || "");
     if (!planetId) return reply.code(400).send({ ok: false, error: "planet_id_required" });
 
-    // Try the dedicated endpoint first; fall back to scanning /planets.
     let planet: any = await hd2Get(`/planets/${encodeURIComponent(planetId)}`);
     if (!planet) {
       const all = (await getOrFetch("planets", "/planets")) || [];

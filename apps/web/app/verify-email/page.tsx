@@ -27,7 +27,7 @@ function VerifyEmailInner() {
           setErrMsg(j?.error || "Verification failed.");
           return;
         }
-        if (j.token) localStorage.setItem("weered_token", j.token);
+        if (j.token) void 0;
         if (j.user)  localStorage.setItem("weered_user", JSON.stringify(j.user));
         setStatus("success");
       })

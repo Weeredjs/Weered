@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import HomeFeed from "./HomeFeed";
 
-// Domains we have structured feed data for
 const FEED_DOMAINS = new Set([
   "ign.com", "espn.com", "techcrunch.com", "bbc.com", "nba.com",
   "nfl.com", "kotaku.com", "theverge.com", "wired.com", "reuters.com",
@@ -11,7 +10,6 @@ const FEED_DOMAINS = new Set([
   "joe.fm", "podcasts.apple.com",
 ]);
 
-// Non-domain lobbies → map to a feed category so HomeFeed filters correctly
 const LOBBY_FEED_CATEGORY: Record<string, string> = {
   "lobby":        "all",
   "r/all":        "all",
@@ -22,15 +20,14 @@ const LOBBY_FEED_CATEGORY: Record<string, string> = {
   "destiny2":     "gaming",
 };
 
-// Domains known to block iframes (X-Frame-Options: DENY)
 const IFRAME_BLOCKED = new Set([
   "google.com", "facebook.com", "twitter.com", "x.com",
   "instagram.com", "linkedin.com", "reddit.com",
 ]);
 
 interface Props {
-  lobbyId: string; // e.g. "espn.com"
-  initialUrl?: string; // article URL to open on load
+  lobbyId: string;
+  initialUrl?: string;
 }
 
 export default function LobbyContent({ lobbyId, initialUrl }: Props) {
@@ -66,15 +63,12 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
     if (e.key === "Enter") navigate(inputVal);
   }
 
-  // If we have structured feed data (domain or lobby), show the feed
   if (showFeed && !initialUrl) {
     return <HomeFeed domain={hasFeed ? lobbyId : undefined} defaultCategory={lobbyCategory} />;
   }
 
-  // Otherwise show embedded browser
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      {/* Browser chrome bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
         padding: "8px 12px",
@@ -82,7 +76,6 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
         borderBottom: "1px solid rgba(255,255,255,0.06)",
         flexShrink: 0,
       }}>
-        {/* Nav buttons */}
         <button
           onClick={() => iframeRef.current?.contentWindow?.history.back()}
           style={navBtnStyle}
@@ -99,7 +92,6 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
           title="Reload"
         >{loading ? "⟳" : "↺"}</button>
 
-        {/* URL bar */}
         <div style={{ flex: 1, position: "relative" }}>
           <div style={{
             position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
@@ -120,14 +112,12 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
           />
         </div>
 
-        {/* Open in new tab */}
         <button
           onClick={() => window.open(iframeUrl, "_blank")}
           style={{ ...navBtnStyle, fontSize: 14 }}
           title="Open in new tab"
         >↗</button>
 
-        {/* Weered badge */}
         <div style={{
           padding: "3px 8px", borderRadius: 6,
           background: "rgba(124,58,237,0.15)",
@@ -139,7 +129,6 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
         </div>
       </div>
 
-      {/* iframe / blocked state */}
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
         {blocked ? (
           <BlockedState domain={lobbyId} url={iframeUrl} onOpenExternal={() => window.open(iframeUrl, "_blank")} />

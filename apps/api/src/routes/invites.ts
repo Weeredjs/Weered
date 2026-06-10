@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /invites/* — invite link lifecycle. Types: PLATFORM (no target),
-// ROOM, LOBBY, CREW (each gates on a targetId). Accept performs the
-// matching membership upsert. /invites/send creates a single-use
-// invite + delivers it via DM in one shot.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
@@ -22,7 +18,6 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req.body as any) || {};
     const type     = String(body.type || "PLATFORM").toUpperCase();
     const targetId = body.targetId ? String(body.targetId) : null;
-    // 0 = unlimited; finite values clamped to [1, 100].
     const requested = Number(body.maxUses);
     const maxUses = (Number.isFinite(requested) && requested === 0)
       ? 0

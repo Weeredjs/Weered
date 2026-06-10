@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// PGA Tour data via ESPN's public API. No auth required. Shapes the
-// ESPN response into a flat leaderboard/field/news/schedule for the
-// Golf vertical.
 export default async function pgaRoutes(app: FastifyInstance) {
   const ESPN_PGA = "https://site.api.espn.com/apis/site/v2/sports/golf/pga";
 

@@ -4,21 +4,6 @@ import React from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-/**
- * Universal Steam-backed lobby header bits — renders inline pills for any
- * lobby whose moduleConfig.steamAppId is set (Helldivers 2, Windrose,
- * Marathon, etc.):
- *
- *   [ ⚡ LAUNCH ]  [ 🟢 41.1k ACTIVE ]  [ 🏆 OWNED · 124h ]
- *
- * - Launch: opens steam://run/:appId. Always renders. The browser shows a
- *   one-time confirmation prompt; subsequent clicks go through silently.
- * - Active: live concurrent player count, polled every 60s. Public Steam
- *   endpoint, no key required.
- * - Owned: only renders when the user has linked their Steam ID (via
- *   profile settings) AND the response says they own this app. Includes
- *   total hours played.
- */
 export default function SteamLobbyHeader({
   appId,
   accentColor,
@@ -31,7 +16,6 @@ export default function SteamLobbyHeader({
   const [errored, setErrored] = React.useState(false);
   const [owned, setOwned] = React.useState<{ owned: boolean; hoursPlayed: number; lastPlayed: number | null } | null>(null);
 
-  // Poll player count every 60s
   React.useEffect(() => {
     if (!appId) return;
     let alive = true;
@@ -53,7 +37,6 @@ export default function SteamLobbyHeader({
     return () => { alive = false; if (timer) clearTimeout(timer); };
   }, [appId]);
 
-  // Fetch ownership once on mount (1h server-side cache makes repeat polling pointless)
   React.useEffect(() => {
     if (!appId) return;
     let alive = true;
@@ -83,7 +66,6 @@ export default function SteamLobbyHeader({
 
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-      {/* Launch button */}
       <a
         href={`steam://run/${appId}`}
         title="Launch via Steam (requires Steam desktop client)"
@@ -109,7 +91,6 @@ export default function SteamLobbyHeader({
         Launch
       </a>
 
-      {/* Live player count pill */}
       {!(errored && count === null) && (
         <span
           title={count !== null ? `${count.toLocaleString()} players online via Steam` : "Loading concurrent player count…"}
@@ -135,7 +116,6 @@ export default function SteamLobbyHeader({
         </span>
       )}
 
-      {/* Ownership badge */}
       {owned?.owned && (
         <span
           title={`You own this game on Steam${owned.hoursPlayed > 0 ? ` — ${owned.hoursPlayed.toLocaleString()} hours played` : ""}${owned.lastPlayed ? ` · last played ${new Date(owned.lastPlayed).toLocaleDateString()}` : ""}`}

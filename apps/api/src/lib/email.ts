@@ -1,9 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { Resend } from "resend";
 
-// Transport priority: Resend (HTTPS API) → SMTP (nodemailer) → log-only.
-// DigitalOcean blocks outbound SMTP on droplets by default, so Resend is
-// the production path. SMTP is kept as a fallback for local dev.
 let _resend: Resend | null = null;
 let _transporter: Transporter | null = null;
 let _warnedMissing = false;

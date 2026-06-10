@@ -52,10 +52,7 @@ function extractParticipants(ctx: any, roomId: string): Person[] {
   return me ? [normUser(me)] : [];
 }
 
-// ── FriendsPanel ──────────────────────────────────────────────────────────────
-
 function FriendsPanel() {
-  // FIX: pull openSheet so friend rows are clickable to profiles
   const { openSheet } = useOverlay();
   const [friends, setFriends] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
@@ -85,7 +82,6 @@ function FriendsPanel() {
       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           Friends · {online.length} Online
-          {/* FIX: section-level unread dot */}
           {friends.some(f => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
             <span style={{ width: 7, height: 7, borderRadius: 999, background: "#f59e0b", boxShadow: "0 0 5px #f59e0b88" }} />
           )}
@@ -95,7 +91,6 @@ function FriendsPanel() {
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {online.map(f => {
-            // FIX: unread indicator
             const hasUnread = (f.unreadCount ?? 0) > 0 || Boolean(f.hasUnread ?? f.hasPendingDm);
             const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
             const userId = String(f.id ?? f.userId ?? f.username ?? "");
@@ -107,7 +102,6 @@ function FriendsPanel() {
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
               >
-                {/* Online dot + unread badge */}
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
                   {hasUnread && (
@@ -157,10 +151,7 @@ function FriendsPanel() {
   );
 }
 
-// ── CrewPanel ─────────────────────────────────────────────────────────────────
-
 function CrewPanel() {
-  // FIX: pull openSheet so crew rows are clickable to profiles
   const { openSheet } = useOverlay();
   const [crews, setCrews] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(true);
@@ -224,8 +215,6 @@ function CrewPanel() {
   );
 }
 
-// ── RightRailRoom ─────────────────────────────────────────────────────────────
-
 export default function RightRailRoom({ roomId }: { roomId: string }) {
   const { replaceTop } = useOverlay();
   const ctx = useWeered() as any;
@@ -257,12 +246,10 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || "unknown"; }
   })();
 
-  // ctx.meta.locked updates in real-time from room:locked / room:unlocked / room:adminState WS events
   const metaLocked = Boolean(ctx?.meta?.locked ?? false);
   const [lockedOverride, setLockedOverride] = useState<boolean | null>(null);
   const locked = lockedOverride ?? metaLocked;
 
-  // Clear optimistic override once WeeredProvider confirms the change (max 8s safety valve)
   useEffect(() => {
     if (lockedOverride === null) return;
     if (metaLocked === lockedOverride) { setLockedOverride(null); return; }
@@ -307,7 +294,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       if (kind === "admit")   ctx?.admit?.(targetId);
       if (kind === "deny")    ctx?.deny?.(targetId);
 
-      // lockRoom/unlockRoom are exposed on ctx — sendAdmin is internal and not in context
       if (kind === "lock") {
         ctx?.lockRoom?.();
         setLockedOverride(true);
@@ -340,8 +326,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
-
-
   const s = {
     section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
     label:      { fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 7 },
@@ -365,9 +349,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   return (
     <div className="weered-rrr" style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
 
-      {/* Header — status pill moved to its own row below the title so
-          it doesn't collide with the absolute-positioned HIDE button at
-          the top-right of the rail (rendered by ShellGate). */}
       <div style={{ marginBottom: 4, paddingRight: 60 }}>
         <div className="weered-rrr-title" style={{ fontWeight: 700, fontSize: 13 }}>Control Panel</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -378,14 +359,12 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* Quick copy */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
         <button style={s.btn} onClick={() => { const base = typeof window !== "undefined" ? window.location.origin : ""; copyText("link", `${base}/room/${encodeURIComponent(roomId)}`); }}>Copy link</button>
         <button style={s.btn} onClick={() => copyText("id", roomId)}>Copy id</button>
         <button style={{ ...s.btn, gridColumn: "span 2", borderColor: "rgba(124,58,237,.30)", color: "rgb(216,180,254)", background: "rgba(124,58,237,.08)" }} onClick={() => setShowInvite(true)}>Invite</button>
       </div>
 
-      {/* ── Mod panel ── */}
       {allowed && (
         <details open style={{ marginTop: 10 }}>
           <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(167,139,250,.45)", background: "rgba(124,58,237,.18)", userSelect: "none" }}>
@@ -402,7 +381,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
 
-            {/* Tabs */}
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               <button style={s.tabBtn(tab === "users")}  onClick={() => setTab("users")}>Users ({people.length})</button>
               <button style={s.tabBtn(tab === "knocks", knocks.length > 0)} onClick={() => setTab("knocks")}>
@@ -412,7 +390,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               <button style={s.tabBtn(tab === "audit")}  onClick={() => setTab("audit")}>Audit</button>
             </div>
 
-            {/* ─── Users tab ─── */}
             {tab === "users" && (<>
               <div style={s.section}>
                 <div style={s.label}>Select user</div>
@@ -506,7 +483,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               </div>
             </>)}
 
-            {/* ─── Knocks tab ─── */}
             {tab === "knocks" && (
               <div style={s.section}>
                 <div style={s.label}>Waiting to enter ({knocks.length})</div>
@@ -531,7 +507,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               </div>
             )}
 
-            {/* ─── Banned tab ─── */}
             {tab === "banned" && (
               <div style={s.section}>
                 <div style={s.label}>Banned ({banned.length})</div>
@@ -549,7 +524,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
               </div>
             )}
 
-            {/* ─── Audit tab ─── */}
             {tab === "audit" && (
               <div style={s.section}>
                 <div style={s.label}>Recent actions</div>
@@ -578,7 +552,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </details>
       )}
 
-      {/* ── Voice settings (mode + queue + speakers) ── */}
       {allowed && (
         <details style={{ marginTop: 8 }}>
           <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
@@ -601,7 +574,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </details>
       )}
 
-      {/* ── Modules (owner: disable individual modules in this room) ── */}
       {allowed && (
         <details style={{ marginTop: 8 }}>
           <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
@@ -621,7 +593,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </details>
       )}
 
-      {/* ── Appearance (owner: icon, banner, accent, description) ── */}
       {allowed && (
         <details style={{ marginTop: 8 }}>
           <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
@@ -642,7 +613,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </details>
       )}
 
-      {/* Debug */}
       {allowed && (
         <details style={{ marginTop: 8 }}>
           <summary style={{ ...s.label, cursor: "pointer", listStyle: "none", padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.06)", opacity: 0.4 }}>
@@ -661,10 +631,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
         </details>
       )}
 
-      {/* ── Friends ── */}
       <FriendsPanel />
 
-      {/* ── Crew ── */}
       <CrewPanel />
 
       {showInvite && (
@@ -679,12 +647,6 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Owner/mod cards migrated from the old Details slide-in panel. They live
-// here now so the right rail is the single admin surface for a room.
-// ─────────────────────────────────────────────────────────────────────────
-
-// ── Room Appearance editor (owner) ──
 function RoomAppearanceEditor({
   roomId,
   initial,
@@ -774,7 +736,6 @@ function RoomAppearanceEditor({
   );
 }
 
-// ── Room Modules editor (owner) — toggle modules to disable ──
 const TOGGLEABLE_MODULES: { id: string; label: string }[] = [
   { id: "voice", label: "Voice" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" },
   { id: "browser", label: "Browser" }, { id: "screen", label: "Screen" }, { id: "video", label: "Video" },
@@ -863,7 +824,6 @@ function RoomModulesEditor({
   );
 }
 
-// ── Voice Queue Controls (mod/owner) — mode picker + queue + speakers ──
 function VoiceQueueControls({
   isOwner,
   isMod,

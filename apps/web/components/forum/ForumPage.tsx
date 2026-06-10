@@ -42,7 +42,6 @@ const SORTS = [
   { id: "top", label: "Top" },
 ];
 
-// Fallback category chips when no lobbyId (global forum) — sections are per-lobby.
 const CATS = [
   { id: "", label: "All" },
   { id: "BUG_REPORT", label: "Bugs" },
@@ -56,8 +55,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
   const router = useRouter();
   const w: any = useWeered();
   const me = w?.me;
-  // Mod gate for section management. Trust server-side gating; client just hides buttons.
-  // We treat global staff role + lobby OWNER/MOD as mods. The provider exposes role hints.
   const myLobbyRole: string | undefined = w?.lobbyRole || w?.myLobbyRole;
   const isStaff = !!me && (me.globalRole === "GOD" || me.globalRole === "ADMIN" || me.globalRole === "MOD");
   const isLobbyMod = myLobbyRole === "OWNER" || myLobbyRole === "MOD";
@@ -77,13 +74,11 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
   const [tagsInput, setTagsInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Search state
   const [searchQ, setSearchQ] = useState("");
   const [searchActive, setSearchActive] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false);
 
-  // Section management modal
   const [sectionModalOpen, setSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -154,7 +149,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
     setSubmitting(false);
   }
 
-  // Section selected metadata for sidebar context
   const activeSection = useMemo(() => sections.find(s => s.id === sectionId) || null, [sections, sectionId]);
 
   function selectSection(id: string) {
@@ -173,7 +167,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
       height: "100%",
       overflow: "hidden",
     }}>
-      {/* Sidebar (sections) — only when embedded in a lobby */}
       {embedded && (
         <SectionSidebar
           sections={sections}
@@ -194,7 +187,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
         scrollbarWidth: "thin" as any,
         scrollbarColor: "rgba(255,255,255,.08) transparent",
       }}>
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: embedded ? 12 : 20, gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
             {embedded && (
@@ -234,7 +226,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
           )}
         </div>
 
-        {/* Search bar */}
         <form
           onSubmit={(e) => { e.preventDefault(); runSearch(searchQ); }}
           style={{ display: "flex", gap: 6, marginBottom: 12 }}
@@ -264,7 +255,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
           }}>Search</button>
         </form>
 
-        {/* Sort tabs (pill style) + category fallback when no lobby */}
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.04)", borderRadius: 999, padding: 3 }}>
             {SORTS.map(s => (
@@ -297,7 +287,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
           )}
         </div>
 
-        {/* Compose modal */}
         {composing && (
           <div style={{
             marginBottom: 16, padding: "16px 18px", borderRadius: 12,
@@ -341,7 +330,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
             />
             <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between", flexWrap: "wrap" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                {/* Section select for lobby; category fallback otherwise */}
                 {embedded && sections.length > 0 ? (
                   <select
                     value={postSection}
@@ -390,7 +378,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
           </div>
         )}
 
-        {/* Search results take over the list when active */}
         {searchActive ? (
           <SearchResultsView
             results={searchResults}
@@ -433,7 +420,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.025)"; }}
                 >
-                  {/* Vote buttons */}
                   <div style={{
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                     flexShrink: 0, width: 36,
@@ -456,7 +442,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                     }}>&#9660;</button>
                   </div>
 
-                  {/* Content */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
                       {post.pinned && <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>&#128204; PINNED</span>}
@@ -523,7 +508,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
         )}
       </div>
 
-      {/* Section management modal */}
       {sectionModalOpen && lobbyId && (
         <SectionManageModal
           lobbyId={lobbyId}
@@ -538,7 +522,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
   );
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────
 function SectionSidebar({
   sections, activeId, onSelect, canManage, onManage, drawerOpen, onCloseDrawer,
 }: {
@@ -589,7 +572,6 @@ function SectionSidebar({
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside className="forum-desktop-sidebar" style={{
         width: 200, flexShrink: 0,
         borderRight: "1px solid rgba(255,255,255,.06)",
@@ -597,7 +579,6 @@ function SectionSidebar({
       }}>
         {inner}
       </aside>
-      {/* Mobile drawer */}
       {drawerOpen && (
         <div
           onClick={onCloseDrawer}
@@ -667,7 +648,6 @@ function SectionRow({
   );
 }
 
-// ── Search results ─────────────────────────────────────────────────────────
 function SearchResultsView({
   results, loading, query, onPostClick, sections,
 }: {
@@ -738,7 +718,6 @@ function SearchResultsView({
   );
 }
 
-// ── Section management modal ───────────────────────────────────────────────
 function SectionManageModal({
   lobbyId, sections, editing, onClose, onSaved, onEdit,
 }: {
@@ -831,7 +810,6 @@ function SectionManageModal({
           }}>&times;</button>
         </div>
 
-        {/* Existing sections */}
         <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
           {sections.map((s, i) => (
             <div key={s.id} style={{
@@ -853,7 +831,6 @@ function SectionManageModal({
           )}
         </div>
 
-        {/* Editor */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, opacity: 0.6, marginBottom: 8 }}>
             {editing ? `EDIT: ${editing.name}` : "NEW SECTION"}

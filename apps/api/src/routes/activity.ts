@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /activity-feed + /unfurl — unified Home page activity stream (DMs +
-// notifications + notoriety events + new friendships from the last 3
-// days, merged + sorted, top 20) and OG-tag URL preview proxy used by
-// chat/forum link unfurls. Both cache lightly in-process.
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
 };
@@ -12,40 +8,31 @@ type Opts = {
 export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── ACTIVITY FEED ──────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
-
 app.get("/activity-feed", async (req, reply) => {
   const u = authFromHeader(req.headers.authorization);
   if (!u) return reply.code(401).send({ ok: false });
 
-  const since = new Date(Date.now() - 3 * 86400000); // last 3 days
+  const since = new Date(Date.now() - 3 * 86400000);
 
-  // Parallel queries
   const [dms, notifs, notorietyEvents, friendships] = await Promise.all([
-    // Recent DMs received (last 3 days)
     (prisma as any).directMessage.findMany({
       where: { toId: u.id, createdAt: { gte: since } },
       select: { id: true, fromId: true, body: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    // Recent notifications (last 3 days)
     (prisma as any).notification.findMany({
       where: { userId: u.id, createdAt: { gte: since } },
       select: { id: true, type: true, title: true, body: true, actorName: true, actionUrl: true, createdAt: true, read: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    // Notoriety events (last 3 days)
     (prisma as any).notorietyEvent.findMany({
       where: { userId: u.id, createdAt: { gte: since } },
       select: { id: true, action: true, points: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    // Recent friend additions
     (prisma as any).friendRequest.findMany({
       where: { OR: [{ fromId: u.id }, { toId: u.id }], status: "ACCEPTED", updatedAt: { gte: since } },
       select: { id: true, fromId: true, toId: true, updatedAt: true },
@@ -53,7 +40,6 @@ app.get("/activity-feed", async (req, reply) => {
     }),
   ]);
 
-  // Resolve DM sender names
   const senderIds = [...new Set(dms.map((d: any) => d.fromId))];
   const senders = senderIds.length > 0 ? await (prisma as any).user.findMany({
     where: { id: { in: senderIds } },
@@ -61,7 +47,6 @@ app.get("/activity-feed", async (req, reply) => {
   }) : [];
   const senderMap = new Map(senders.map((s: any) => [s.id, s.name]));
 
-  // Resolve friend names
   const friendUserIds = [...new Set(friendships.flatMap((f: any) => [f.fromId, f.toId]).filter((id: string) => id !== u.id))];
   const friendUsers = friendUserIds.length > 0 ? await (prisma as any).user.findMany({
     where: { id: { in: friendUserIds } },
@@ -69,7 +54,6 @@ app.get("/activity-feed", async (req, reply) => {
   }) : [];
   const friendMap = new Map(friendUsers.map((f: any) => [f.id, f.name]));
 
-  // Build unified feed
   const feed: any[] = [];
 
   for (const dm of dms) {
@@ -86,15 +70,10 @@ app.get("/activity-feed", async (req, reply) => {
     feed.push({ type: "friend", id: f.id, text: `You and ${friendMap.get(otherId) || "someone"} became friends`, friendName: friendMap.get(otherId), ts: f.updatedAt });
   }
 
-  // Sort by timestamp descending, limit 20
   feed.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 
   return reply.send({ ok: true, feed: feed.slice(0, 20) });
 });
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ── URL UNFURL (Open Graph link previews) ──────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
 
 const unfurlCache = new Map<string, { data: any; expiresAt: number }>();
 
@@ -102,12 +81,9 @@ app.get("/unfurl", async (req, reply) => {
   const url = String((req as any).query?.url || "");
   if (!url || !url.startsWith("http")) return reply.send({ ok: false });
 
-  // Check cache
   const cached = unfurlCache.get(url);
   if (cached && cached.expiresAt > Date.now()) return reply.send(cached.data);
 
-  // YouTube serves bots an empty shell — use the public oEmbed endpoint
-  // which is designed exactly for previews.
   if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
     try {
       const oe = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
@@ -129,15 +105,11 @@ app.get("/unfurl", async (req, reply) => {
         return reply.send(result);
       }
     } catch {}
-    // fall through to generic fetcher if oEmbed fails
   }
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
-    // Twitterbot UA is whitelisted by major sites (YouTube, Reddit, Twitter,
-    // most news/CDN sites) for OG metadata serving. Custom WeeredBot UA was
-    // getting empty/blocked HTML responses.
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
@@ -154,7 +126,7 @@ app.get("/unfurl", async (req, reply) => {
     if (!contentType.includes("text/html")) return reply.send({ ok: false });
 
     const html = await res.text();
-    const first4k = html.slice(0, 16000); // parse a bigger head window — some sites push og: tags down past 8K
+    const first4k = html.slice(0, 16000);
 
     const og = (prop: string) => {
       const m = first4k.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']+)["']`, "i"))
@@ -178,9 +150,8 @@ app.get("/unfurl", async (req, reply) => {
       url: og("url") || url,
     };
 
-    // Don't cache empty results
     if (result.title || result.description) {
-      unfurlCache.set(url, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 }); // 30 min
+      unfurlCache.set(url, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });
     }
 
     return reply.send(result);

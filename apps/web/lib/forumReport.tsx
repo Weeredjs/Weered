@@ -5,9 +5,6 @@ import { createRoot, Root } from "react-dom/client";
 import { apiFetch } from "./api";
 import { weeredToast } from "./toast";
 
-// Forum-specific report dialog. Posts to /forum/reports (vs /reports for
-// general targets). Reasons map to the ForumReportReason enum.
-
 const FORUM_REASONS: { id: string; label: string; hint: string }[] = [
   { id: "SPAM", label: "Spam", hint: "Repeated posts, links, advertising." },
   { id: "HARASSMENT", label: "Harassment", hint: "Targeted abuse, bullying, stalking." },

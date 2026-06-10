@@ -1,0 +1,2384 @@
+/* =====================================================================
+   WEERED MINIMAL CHROME — chrome dialed back for HQ + ?chrome=min lobbies
+   ===================================================================== */
+/* === WEERED MINIMAL CHROME ===
+   Strips visual debt in lobbies that have no game state to surface.
+   Triggered when html carries data-weered-chrome="min" — set by the
+   lobby page for HQ (moduleType=HEADQUARTERS) or when URL has ?chrome=min.
+   See feedback_minimal_chrome_default.md for the principle.
+
+   Strategy: fade ambient borders/dividers + remove ambient backgrounds.
+   Keep buttons + active states as the only place chrome lives.
+*/
+
+/* Left rail nav links — strip ambient border + background, keep active */
+html[data-weered-chrome="min"] .weered-left-link {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left-link:hover {
+  background: rgba(255,255,255,0.025) !important;
+  border-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left-link-active {
+  border-color: rgba(124,58,237,0.20) !important;
+  background: rgba(124,58,237,0.06) !important;
+}
+
+/* Right rail panels — kill ambient border + grain; keep transparent bg */
+html[data-weered-chrome="min"] .weered-panel,
+html[data-weered-chrome="min"] .weered-panel2,
+html[data-weered-chrome="min"] .weered-rr-mod-panel {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-panel::before,
+html[data-weered-chrome="min"] .weered-panel::after,
+html[data-weered-chrome="min"] .weered-panel2::before,
+html[data-weered-chrome="min"] .weered-panel2::after {
+  display: none !important;
+}
+
+/* Top-level rail container backdrops */
+html[data-weered-chrome="min"] .weered-left,
+html[data-weered-chrome="min"] .weered-right {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left::before,
+html[data-weered-chrome="min"] .weered-left::after,
+html[data-weered-chrome="min"] .weered-right::before,
+html[data-weered-chrome="min"] .weered-right::after {
+  display: none !important;
+}
+
+/* Generic ambient hairlines used as borders by inline styles
+   (utility classes from Tailwind get caught here too). */
+html[data-weered-chrome="min"] [style*="border: 1px solid rgba(255"],
+html[data-weered-chrome="min"] [style*="border:1px solid rgba(255"],
+html[data-weered-chrome="min"] [style*="border: 1px solid rgba(148"],
+html[data-weered-chrome="min"] [style*="border:1px solid rgba(148"] {
+  border-color: transparent !important;
+}
+
+/* Section headers: drop heavy uppercase plaques to plain text */
+html[data-weered-chrome="min"] .weered-rr-mod-panel > div[style*="textTransform"] {
+  opacity: 0.5 !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Member-list rows: kill the per-row card background.
+   The inline border-radius stays so hover states still feel snappy. */
+html[data-weered-chrome="min"] [data-weered-member-row],
+html[data-weered-chrome="min"] .weered-member-row {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+/* Tailwind-arbitrary ambient classes seen in LeftRail/RightRail —
+   these escape attribute selectors but match by class. */
+html[data-weered-chrome="min"] .border-white\/\[\.06\],
+html[data-weered-chrome="min"] .border-white\/\[\.08\],
+html[data-weered-chrome="min"] .border-white\/\[\.10\],
+html[data-weered-chrome="min"] .border-white\/10 {
+  border-color: transparent !important;
+}
+html[data-weered-chrome="min"] .bg-white\/\[\.02\],
+html[data-weered-chrome="min"] .bg-white\/\[\.03\],
+html[data-weered-chrome="min"] .bg-white\/\[\.04\],
+html[data-weered-chrome="min"] .bg-black\/10,
+html[data-weered-chrome="min"] .bg-black\/20 {
+  background: transparent !important;
+}
+
+/* Breathing room: give the canvas more air when chrome is gone */
+html[data-weered-chrome="min"] .weered-canvas,
+html[data-weered-chrome="min"] .weered-lobby-canvas {
+  padding-top: 32px !important;
+}
+
+
+/* =====================================================================
+   HQ LEFT-RAIL STRIP-DOWN — full chrome removal, dark-grey backplate
+   ===================================================================== */
+/* === HQ LEFT-RAIL STRIP-DOWN ===
+   When chrome=min (HQ auto + ?chrome=min override), the LEFT rail becomes
+   a flat dark-grey vertical rectangle. Text + icons only. No borders,
+   no pills, no button chrome, no card backgrounds, no border-radius
+   on cards. Hover stays as a subtle background tint. Active stays as a
+   slightly brighter tint. Counts/live-dots survive as plain text/dots,
+   no pill chrome.
+
+   Scoped to .weered-left so other rails (right rail, dock, modals) are
+   untouched. See feedback_minimal_chrome_default.md. */
+
+/* Outer rail = dark grey vertical rectangle. Eat any decorative pseudos. */
+html[data-weered-chrome="min"] .weered-left {
+  background: var(--weered-user-panel-bg, #0E1014) !important;
+  border: none !important;
+  border-right: 1px solid rgba(255,255,255,0.04) !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-left::before,
+html[data-weered-chrome="min"] .weered-left::after,
+html[data-weered-chrome="min"] .weered-left-inner::before,
+html[data-weered-chrome="min"] .weered-left-inner::after {
+  display: none !important;
+}
+
+/* Nuke ALL borders/backgrounds/shadows inside the rail. Then re-enable
+   the few that still earn their keep (hover + active + the rail itself). */
+html[data-weered-chrome="min"] .weered-left *,
+html[data-weered-chrome="min"] .weered-left *::before,
+html[data-weered-chrome="min"] .weered-left *::after {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* …but avatars keep their colour + round shape. The blanket nuke above strips
+   letter-avatar backgrounds (leaving a bare letter); higher specificity + the
+   inline --wa-bg var restores them. */
+html[data-weered-chrome="min"] .weered-left .weered-avatar {
+  background: var(--wa-bg, #c8860b) !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+/* Re-enable hover/active states as background tints only (no border). */
+html[data-weered-chrome="min"] .weered-left .weered-left-link:hover,
+html[data-weered-chrome="min"] .weered-left a:hover,
+html[data-weered-chrome="min"] .weered-left button:hover {
+  background: rgba(255,255,255,0.035) !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-left-link-active {
+  background: rgba(124,58,237,0.10) !important;
+  border-color: transparent !important;
+}
+
+/* Section titles: keep them readable but quiet — caps + dim + spaced. */
+html[data-weered-chrome="min"] .weered-left .weered-left-title {
+  color: rgba(148,163,184,0.55) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+/* Search input: strip border + background, leave it as a quiet text field. */
+html[data-weered-chrome="min"] .weered-left input[type="text"],
+html[data-weered-chrome="min"] .weered-left input[type="search"],
+html[data-weered-chrome="min"] .weered-left input:not([type]) {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Pills/badges (live count, unread count, status chips): strip pill chrome.
+   Keep the number/text visible — same color, just no rounded background. */
+html[data-weered-chrome="min"] .weered-left [class*="rounded-full"],
+html[data-weered-chrome="min"] .weered-left [style*="borderRadius:999"],
+html[data-weered-chrome="min"] .weered-left [style*="borderRadius: 999"],
+html[data-weered-chrome="min"] .weered-left [style*="borderRadius:99"] {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Star/favorite icon buttons: strip background + border. */
+html[data-weered-chrome="min"] .weered-left button[aria-label*="favorit" i],
+html[data-weered-chrome="min"] .weered-left button[title*="favorit" i] {
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+}
+
+/* Live dots stay as dots (semantic), no surrounding pill. */
+/* Section divider gaps: a little extra air now that frames are gone. */
+html[data-weered-chrome="min"] .weered-left .weered-left-section {
+  margin-bottom: 14px !important;
+  padding: 0 !important;
+}
+
+
+
+
+
+
+
+
+/* =====================================================================
+   HQ USERCORNER SPLIT v4 — overhang into the gutter
+   ===================================================================== */
+/* === HQ USERCORNER SPLIT ===
+   Iteration 4 (2026-05-26):
+     - Right margin extended to -40px so the corner overhangs the rail's
+       right edge by 32px (rail's own right padding is 8px, so 40-8 = 32
+       past the actual rail-column edge into the gap before the canvas)
+     - Parent rail + inner wrapper get overflow: visible so the overhang
+       renders instead of being clipped
+     - Inner percentages on ::before (88%) and ::after (4%/16%) unchanged
+       → both auto-scale wider on the new wider container
+*/
+
+/* Parents must allow overflow for the overhang to be visible */
+html[data-weered-chrome="min"] .weered-left,
+html[data-weered-chrome="min"] .weered-left-inner {
+  overflow: visible !important;
+}
+
+html[data-weered-chrome="min"] .weered-usercorner {
+  position: relative !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  /* -14 left: bleed past inner padding. -40 right: bleed 32px past rail
+     edge (inner right pad is 8). -14 top: flush with rail top. 12 bottom
+     space below before COMMUNITIES section. */
+  margin: -14px -12px 12px -14px !important;
+  width: auto !important;
+  overflow: visible !important;
+  isolation: isolate;
+}
+
+/* Purple banner — sloped right, tip pulled IN from the gutter so it points cleanly */
+html[data-weered-chrome="min"] .weered-usercorner::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 8px !important;
+  bottom: auto !important;
+  width: auto !important;
+  height: 30% !important;
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  /* Matched to section banners: right 8px + 92% taper for a consistent point */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%) !important;
+  z-index: 0 !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Dark grey body — extended to nearly match the purple hat's width (fixed px,
+   not %, so it doesn't warp with rail width — same rule as the sloped banners).
+   Hat sits at right:8px; body reaches right:16px = "almost to the hat's end". */
+html[data-weered-chrome="min"] .weered-usercorner::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 30% !important;
+  left: 0 !important;
+  right: 38px !important;   /* meet the banner's sloped bottom corner: right 8px + 30px slope = 38px */
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  background: var(--weered-user-panel-bg, #0E1014) !important;
+  clip-path: none !important;
+  z-index: 0 !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  pointer-events: none !important;
+}
+
+html[data-weered-chrome="min"] .weered-usercorner > * {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-weered-chrome="min"] .weered-usercorner:hover {
+  background: transparent !important;
+  border: none !important;
+}
+
+
+/* =====================================================================
+   HQ RAIL SECTIONS — purple-hat / grey-body rhythm extended down rail
+   ===================================================================== */
+/* === HQ RAIL SECTIONS ===
+   Each .weered-left-section + .weered-presence repeats the corner's
+   visual language: purple sloped banner at top, grey backplate below.
+   Banner height is fixed at 28px so the rhythm is consistent across
+   sections of different content heights. Overhang = 32px same as corner.
+*/
+
+/* Section container: bleed to/past rail edges, same as corner */
+html[data-weered-chrome="min"] .weered-left-section,
+html[data-weered-chrome="min"] .weered-presence {
+  position: relative !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 -12px 12px -14px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  isolation: isolate;
+}
+
+/* Purple title banner — fixed 28px tall, sloped right edge into gutter */
+html[data-weered-chrome="min"] .weered-left-section::before,
+html[data-weered-chrome="min"] .weered-presence::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 8px !important;
+  bottom: auto !important;
+  width: auto !important;
+  height: 28px !important;
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%) !important;
+  z-index: 0 !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Grey backplate — extended to nearly match the purple banner's width (fixed
+   px, not %, so it stays consistent across rail widths). Banner sits at
+   right:8px; backplate reaches right:16px = "almost to the banner's end". */
+html[data-weered-chrome="min"] .weered-left-section::after,
+html[data-weered-chrome="min"] .weered-presence::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 28px !important;
+  left: 0 !important;
+  right: 24px !important;   /* meet the banner's sloped bottom corner: right 8px + 16px slope = 24px */
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  background: var(--weered-user-panel-bg, #0E1014) !important;
+  clip-path: none !important;
+  z-index: 0 !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Content sits above the layers */
+html[data-weered-chrome="min"] .weered-left-section > *,
+html[data-weered-chrome="min"] .weered-presence > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Title bar (the "/ COMMUNITIES" "/ PRESENCE" labels) — sit inside purple */
+html[data-weered-chrome="min"] .weered-left-section > .weered-left-title,
+html[data-weered-chrome="min"] .weered-presence > .weered-presence-head {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 14px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  color: rgba(255,255,255,0.92) !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  background: transparent !important;
+}
+
+/* Presence subtitle ("hq · all rooms · 2") inside the banner — keep small + dim */
+html[data-weered-chrome="min"] .weered-presence-head .weered-presence-sub {
+  color: rgba(255,255,255,0.55) !important;
+  font-weight: 500 !important;
+  font-size: 9px !important;
+  letter-spacing: 0.04em !important;
+  text-transform: none !important;
+}
+
+/* Section CONTENT (nav rows / presence rows / search input) — pad to fit
+   inside the grey backplate's visible area without poking out the right. */
+html[data-weered-chrome="min"] .weered-left-section > *:not(.weered-left-title),
+html[data-weered-chrome="min"] .weered-presence > *:not(.weered-presence-head) {
+  padding-left: 14px !important;
+  padding-right: 10px !important;
+  margin-right: 16px !important;        /* pull the row BOX (and its active-highlight bg) in to the grey backplate's right edge — was bleeding past on the angle side */
+  margin-top: 6px !important;
+}
+
+/* Active nav link — bump the purple tint up a notch so it reads against
+   the dark grey backplate (vs the rail bg in earlier strip) */
+html[data-weered-chrome="min"] .weered-left .weered-left-link-active {
+  background: rgba(91,33,182,0.22) !important;
+  color: rgba(255,255,255,0.98) !important;
+}
+
+/* Presence search input lives inside grey body */
+html[data-weered-chrome="min"] .weered-presence-search {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 !important;
+  padding: 6px 0 6px 12px !important;
+  margin-top: 8px !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+
+/* =====================================================================
+   HQ NAV LINK TYPOGRAPHY — caps + Barlow Condensed
+   ===================================================================== */
+/* Community nav links (Lobby/Home/Forum/Paper/Locator/Ops) take the same
+   font as the lobby name in the central banner (Barlow Condensed) and
+   go uppercase to match the section title bars. */
+html[data-weered-chrome="min"] .weered-left .weered-left-link,
+html[data-weered-chrome="min"] .weered-left .weered-left-link * {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', 'Arial Narrow', ui-sans-serif, sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 600 !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-left-link {
+  font-size: 14px !important;
+}
+
+
+/* =====================================================================
+   HQ RAIL POLISH v2 — scroll restored, locator hidden, larger nav font
+   ===================================================================== */
+/* === HQ RAIL POLISH ===
+   1. Hide locator nav link (href=/map) — relocated later
+   2. Restore vertical scroll on the rail
+   3. Bump nav-link font size for legibility now that everything is caps */
+
+/* (1) Hide locator nav row */
+html[data-weered-chrome="min"] .weered-left a.weered-left-link[href="/map"] {
+  display: none !important;
+}
+
+/* (2) Restore scrolling on the rail. The CSS spec forces overflow-y:auto
+   + overflow-x:visible to compute as auto/auto, so any auto-overflow
+   container clips its horizontal overhang. Trade-off: gutter overhang
+   on banner points is sacrificed for vertical scrolling. */
+html[data-weered-chrome="min"] .weered-left {
+  max-height: 100vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+html[data-weered-chrome="min"] .weered-left-inner {
+  overflow: visible !important;
+}
+
+/* (3) Larger nav-link font (was 14px) */
+html[data-weered-chrome="min"] .weered-left .weered-left-link {
+  font-size: 17px !important;
+}
+
+
+/* =====================================================================
+   HQ FULL LOBBY PASS — extends rail language across the whole lobby
+   ===================================================================== */
+/* === HQ FULL LOBBY PASS ===
+   Apply the rich-purple / dark-grey / Barlow-Condensed-caps language
+   to every stable-class surface in the HQ lobby. DirectoryTab room
+   cards are inline-styled (no classes) and need a separate JSX pass. */
+
+/* ── Shared palette tokens (local) ─────────────────────────────────── */
+html[data-weered-chrome="min"] {
+  --hq-purple: var(--weered-user-panel-accent, #3b0764);
+  --hq-purple-bright: rgba(91, 33, 182, 0.22);
+  --hq-bg-deep: var(--weered-user-panel-bg, #0E1014);
+  --hq-text: rgba(243, 244, 246, 0.92);
+  --hq-text-dim: rgba(255, 255, 255, 0.55);
+  --hq-hairline: rgba(255, 255, 255, 0.06);
+}
+
+/* Uppercase + Barlow on every label-class surface in HQ */
+html[data-weered-chrome="min"] .weered-rr-section-title,
+html[data-weered-chrome="min"] .weered-rr-create-title,
+html[data-weered-chrome="min"] .weered-btn,
+html[data-weered-chrome="min"] .weered-rr-primary,
+html[data-weered-chrome="min"] .weered-rr-primary-solid,
+html[data-weered-chrome="min"] .weered-rr-join,
+html[data-weered-chrome="min"] .weered-lobby-tabs button,
+html[data-weered-chrome="min"] .weered-lobby-header-row button {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
+}
+
+/* ── Top lobby header row (Headquarters / VERIFIED / Rooms-People / Search / Browse-Invite) ── */
+html[data-weered-chrome="min"] .weered-lobby-header-row {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--hq-hairline) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 8px 14px !important;
+}
+html[data-weered-chrome="min"] .weered-lobby-header-row::before,
+html[data-weered-chrome="min"] .weered-lobby-header-row::after {
+  display: none !important;
+}
+
+/* Rooms / People segmented tabs — sharp, flat, no rounded pills */
+html[data-weered-chrome="min"] .weered-lobby-tabs {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+html[data-weered-chrome="min"] .weered-lobby-tabs button {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 8px 14px !important;
+  color: var(--hq-text-dim) !important;
+  font-size: 12px !important;
+  position: relative !important;
+}
+html[data-weered-chrome="min"] .weered-lobby-tabs button:hover {
+  background: rgba(255,255,255,0.03) !important;
+  color: var(--hq-text) !important;
+}
+html[data-weered-chrome="min"] .weered-lobby-tabs button[aria-selected="true"],
+html[data-weered-chrome="min"] .weered-lobby-tabs button.active,
+html[data-weered-chrome="min"] .weered-lobby-tabs button[data-active="true"] {
+  background: var(--hq-purple) !important;
+  color: white !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%) !important;
+  padding-right: 22px !important;
+}
+
+/* ── Buttons (BROWSE / INVITE / Enter / Send) ─────────────────────── */
+html[data-weered-chrome="min"] .weered-btn,
+html[data-weered-chrome="min"] .weered-rr-primary {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 0 !important;
+  padding: 6px 14px !important;
+  color: var(--hq-text) !important;
+  font-size: 11px !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-btn:hover,
+html[data-weered-chrome="min"] .weered-rr-primary:hover {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.20) !important;
+}
+html[data-weered-chrome="min"] .weered-rr-primary-solid,
+html[data-weered-chrome="min"] .weered-rr-join {
+  background: var(--hq-purple) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: white !important;
+  padding: 8px 16px !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%) !important;
+  padding-right: 22px !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-rr-primary-solid:hover,
+html[data-weered-chrome="min"] .weered-rr-join:hover {
+  background: #4c1d95 !important;
+}
+
+/* ── Lobby hero bar (avatar / title / description / live-stream) ──── */
+html[data-weered-chrome="min"] .weered-hero-scrim {
+  background: linear-gradient(180deg, rgba(14,16,20,0.65) 0%, rgba(14,16,20,0.95) 100%) !important;
+  border-radius: 0 !important;
+}
+html[data-weered-chrome="min"] .weered-hero-bg {
+  border-radius: 0 !important;
+}
+html[data-weered-chrome="min"] .weered-hero-content {
+  padding: 18px 22px !important;
+}
+/* Hero live-stream side card */
+html[data-weered-chrome="min"] .weered-hero-stream {
+  background: var(--hq-bg-deep) !important;
+  border: 1px solid var(--hq-hairline) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* VERIFIED + count pills in the hero — flatten to plain accent text */
+html[data-weered-chrome="min"] .weered-hero-content span[style*="borderRadius:999"],
+html[data-weered-chrome="min"] .weered-hero-content span[style*="borderRadius: 999"] {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+}
+/* 5 ROOMS / 0 MEMBERS sub-pills under the hero */
+html[data-weered-chrome="min"] .weered-event-badge {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 4px 10px 4px 0 !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--hq-text-dim) !important;
+}
+
+/* ── Right rail (CREW / FRIENDS / DMS section panels) ────────────── */
+html[data-weered-chrome="min"] .weered-rr-section,
+html[data-weered-chrome="min"] .weered-rr-mod-panel,
+html[data-weered-chrome="min"] .weered-rr-create-panel {
+  background: var(--hq-bg-deep) !important;
+  border: 1px solid var(--hq-hairline) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 10px !important;
+}
+html[data-weered-chrome="min"] .weered-rr-section::before,
+html[data-weered-chrome="min"] .weered-rr-section::after,
+html[data-weered-chrome="min"] .weered-rr-mod-panel::before,
+html[data-weered-chrome="min"] .weered-rr-mod-panel::after {
+  display: none !important;
+}
+/* Section titles get the purple banner treatment */
+html[data-weered-chrome="min"] .weered-rr-section-title {
+  background: var(--hq-purple) !important;
+  color: white !important;
+  font-size: 10px !important;
+  padding: 6px 12px !important;
+  margin: -1px -1px 8px -1px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%) !important;
+}
+/* Friend / crew rows: strip card chrome, hover only */
+html[data-weered-chrome="min"] .weered-rr-friend-row,
+html[data-weered-chrome="min"] .weered-rr-crew-row {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 6px 10px !important;
+}
+html[data-weered-chrome="min"] .weered-rr-friend-row:hover,
+html[data-weered-chrome="min"] .weered-rr-crew-row:hover {
+  background: rgba(255,255,255,0.03) !important;
+}
+/* Right-rail search input */
+html[data-weered-chrome="min"] .weered-rr-search {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--hq-hairline) !important;
+  border-radius: 0 !important;
+  padding: 6px 0 !important;
+}
+
+/* ── Chat panel (HEADQUARTERS · CHAT header + composer) ──────────── */
+html[data-weered-chrome="min"] .weered-chat-layout {
+  background: var(--hq-bg-deep) !important;
+  border: 1px solid var(--hq-hairline) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-chat-layout::before,
+html[data-weered-chrome="min"] .weered-chat-layout::after {
+  display: none !important;
+}
+/* Chat title bar gets a purple banner like the rail sections */
+html[data-weered-chrome="min"] .weered-chat-layout > *:first-child[style*="background"] {
+  background: var(--hq-purple) !important;
+  border-radius: 0 !important;
+  border: none !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%) !important;
+}
+/* Chat member-list strip */
+html[data-weered-chrome="min"] .weered-chat-members {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* ── Hero status-dot bullets stay as semantic dots, no pill ──────── */
+html[data-weered-chrome="min"] .weered-rr-friend-row span[style*="borderRadius:999"],
+html[data-weered-chrome="min"] .weered-rr-crew-row span[style*="borderRadius:999"] {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* ── Reset border-radius globally inside the lobby in chrome=min ─── */
+html[data-weered-chrome="min"] .weered-shell *,
+html[data-weered-chrome="min"] .weered-shell *::before,
+html[data-weered-chrome="min"] .weered-shell *::after {
+  /* Most things sharp. Keep avatars round via more specific override. */
+  border-radius: 0;
+}
+/* Preserve circular elements explicitly */
+html[data-weered-chrome="min"] .weered-avatar,
+html[data-weered-chrome="min"] [class*="avatar"],
+html[data-weered-chrome="min"] img[alt*="avatar" i],
+html[data-weered-chrome="min"] .weered-hero-bg img[alt],
+html[data-weered-chrome="min"] [style*="borderRadius:999"][style*="height:"],
+html[data-weered-chrome="min"] .h-2.w-2.rounded-full,
+html[data-weered-chrome="min"] [class*="rounded-full"][class*="bg-"] {
+  border-radius: 999px !important;
+}
+
+
+
+
+/* =====================================================================
+   HQ RESTRAINED PASS — two focal points: hero title + chat header
+   ===================================================================== */
+/* === HQ RESTRAINED PASS ===
+   Purple language earns impact by being rare. Only the lobby name in
+   the hero and the chat panel header carry the brand mark. Everything
+   else stays neutral. */
+
+/* ── 1. Hero "HEADQUARTERS" title ─────────────────────────────────── */
+html[data-weered-chrome="min"] .weered-hero-name {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  font-size: 44px !important;
+  font-weight: 900 !important;
+  line-height: 0.95 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.98) !important;
+  margin-bottom: 4px !important;
+}
+
+/* ── 2. Chat panel header — purple banner with sloped right ───────── */
+html[data-weered-chrome="min"] .lobby-drawer-header {
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  padding: 10px 14px !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%) !important;
+}
+html[data-weered-chrome="min"] .lobby-drawer-title {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.10em !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  color: rgba(255,255,255,0.95) !important;
+}
+/* Dial In button inside the chat header — sharp + readable on purple */
+html[data-weered-chrome="min"] .lobby-drawer-header .weered-chat-fullscreen-cta {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 0 !important;
+  color: white !important;
+}
+html[data-weered-chrome="min"] .lobby-drawer-header .weered-chat-fullscreen-cta:hover {
+  background: rgba(255,255,255,0.16) !important;
+}
+
+
+/* =====================================================================
+   HQ RAIL TUNE — uniform 5% left padding on grey bodies + PRESENCE align
+   ===================================================================== */
+/* === HQ RAIL TUNE === */
+
+/* User corner grey body — bring left padding to 5% */
+html[data-weered-chrome="min"] .weered-usercorner::after {
+  left: 0 !important;   /* flush-left with the rows (was 5% — inset + warps with width). This is the rule that actually wins the cascade. */
+}
+
+/* All section grey bodies — pull in from rail edge to 5% */
+html[data-weered-chrome="min"] .weered-left-section::after,
+html[data-weered-chrome="min"] .weered-presence::after {
+  left: 0 !important;   /* flush-left with the rows (was 5% — inset + warps with width). This is the rule that actually wins the cascade. */
+}
+
+/* PRESENCE header alignment — match COMMUNITIES/FAVORITES exactly.
+   The flex container needs justify-content + the inner title needs to
+   sit on the same baseline as left-title in the other sections. */
+html[data-weered-chrome="min"] .weered-presence > .weered-presence-head {
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+html[data-weered-chrome="min"] .weered-presence-title {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  color: rgba(255,255,255,0.92) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+/* Subtitle ('hq · all rooms · N') sits at the right edge, quieter */
+html[data-weered-chrome="min"] .weered-presence-head .weered-presence-sub {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  color: rgba(255,255,255,0.55) !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: none !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+
+/* =====================================================================
+   HQ BANNER CONTEXT CLEARANCE — keep right-aligned content in view
+   ===================================================================== */
+/* The clan tag in the user corner and the PRESENCE subtitle are
+   right-aligned inside sloped banners. Pull them in clear of the
+   overhang + angled cut so they aren't clipped. */
+
+/* User corner crew/clan tag (absolute, inline right:10/40) */
+html[data-weered-chrome="min"] .weered-usercorner a[href^="/crew/"] {
+  right: 16px !important;
+}
+
+/* PRESENCE subtitle: keep it left of the slope/overhang */
+html[data-weered-chrome="min"] .weered-presence > .weered-presence-head {
+  padding-right: 16px !important;
+}
+
+
+/* =====================================================================
+   HQ COHESION PASS — canvas adopts the rail's language (disciplined)
+   ===================================================================== */
+/* === HQ COHESION === */
+
+/* ── Cold hero — kill the warm accent wash, dark-grey it ──────────── */
+html[data-weered-chrome="min"] [data-hero-fx] {
+  display: none !important;
+}
+html[data-weered-chrome="min"] .weered-hero-bg {
+  filter: brightness(0.92) saturate(1.02) !important;
+  opacity: 0.9 !important;
+}
+html[data-weered-chrome="min"] .weered-hero-scrim {
+  background: linear-gradient(180deg, rgba(14,16,20,0.28) 0%, rgba(14,16,20,0.66) 100%) !important;
+}
+
+/* ── Top header bar — speak the rail language ─────────────────────── */
+html[data-weered-chrome="min"] .weered-lobby-header-row {
+  background: var(--weered-user-panel-bg, #0E1014) !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+/* ROOMS / PEOPLE segmented container — strip the rounded pill chrome */
+html[data-weered-chrome="min"] .weered-lobby-tabs {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  gap: 2px !important;
+}
+html[data-weered-chrome="min"] .weered-lobby-tab {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 6px 14px !important;
+  color: rgba(255,255,255,0.55) !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  border-bottom: 2px solid transparent !important;
+}
+html[data-weered-chrome="min"] .weered-lobby-tab:hover {
+  color: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.03) !important;
+}
+/* Active tab = purple underline only (NOT a full fill — keeps it quiet).
+   Must beat the inline accent style. */
+html[data-weered-chrome="min"] .weered-lobby-tab-active,
+html[data-weered-chrome="min"] .weered-lobby-tab.weered-lobby-tab-active {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid #5b21b6 !important;
+}
+/* Search input — hairline underline only */
+html[data-weered-chrome="min"] .weered-lobby-header-row .weered-input {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 0 !important;
+}
+
+/* ── Buttons: outlined default, ONE purple primary per context ────── */
+html[data-weered-chrome="min"] .weered-shell .weered-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 0 !important;
+  color: rgba(255,255,255,0.85) !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-shell .weered-btn:hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.22) !important;
+}
+
+/* ── Module + sub tab strips (Rooms/Modules/Feed/Events, Directory…) ─ */
+/* These render as inline-styled buttons with a bottom-border active mark.
+   Force Barlow caps + purple underline for the active one. */
+html[data-weered-chrome="min"] .weered-shell button[style*="borderBottom"] {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
+  border-radius: 0 !important;
+}
+
+/* ── Room cards → dossiers (NO background-image overlays this time) ── */
+html[data-weered-chrome="min"] .weered-hq-room-card {
+  background: var(--weered-user-panel-bg, #0E1014) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  min-height: 120px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+html[data-weered-chrome="min"] .weered-hq-room-card:hover {
+  border-color: rgba(91,33,182,0.5) !important;
+}
+/* Purple name banner with sloped right (the ONE purple element up top) */
+html[data-weered-chrome="min"] .weered-hq-room-head {
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  height: 30px !important;
+  padding: 0 14px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%) !important;
+}
+html[data-weered-chrome="min"] .weered-hq-room-name {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+}
+/* Status as monospace data readout */
+html[data-weered-chrome="min"] .weered-hq-room-status {
+  padding: 12px 14px 0 14px !important;
+}
+html[data-weered-chrome="min"] .weered-hq-room-status > span:last-child {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.60) !important;
+}
+/* Actions row: right-align the button instead of stretching it */
+html[data-weered-chrome="min"] .weered-hq-room-actions {
+  padding: 10px 14px 12px 14px !important;
+  margin-top: auto !important;
+  justify-content: flex-end !important;
+}
+/* Enter button — real angled button, NOT a full-width bar */
+html[data-weered-chrome="min"] .weered-hq-room-enter {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: #ffffff !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.10em !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  padding: 7px 28px 7px 16px !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%) !important;
+}
+html[data-weered-chrome="min"] .weered-hq-room-enter:hover {
+  background: #4c1d95 !important;
+}
+/* Knock button (locked rooms) — outlined, no purple (keeps purple to ONE action) */
+html[data-weered-chrome="min"] .weered-hq-room-actions button:not(.weered-hq-room-enter) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  border-radius: 0 !important;
+  color: rgba(255,255,255,0.75) !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 7px 14px !important;
+}
+
+/* ── Directory "N team members online" strip — accent rule, cold ──── */
+html[data-weered-chrome="min"] .weered-shell [style*="rgba(255,255,255,.02)"][style*="solid"] {
+  background: rgba(91,33,182,0.05) !important;
+  border: none !important;
+  border-left: 2px solid var(--weered-user-panel-accent, #3b0764) !important;
+  border-radius: 0 !important;
+}
+
+/* ── Canvas + module surface: cold grey, no rounded ───────────────── */
+html[data-weered-chrome="min"] .weered-shell {
+  background: var(--weered-user-panel-bg, #0E1014) !important;
+}
+
+/* ── VERIFIED + count pills in hero → plain Barlow caps, no pill ──── */
+html[data-weered-chrome="min"] .weered-event-badge {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 4px 12px 4px 0 !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.55) !important;
+}
+
+
+/* =====================================================================
+   HQ RAIL DECLUTTER — frameless right rail, roomier rows, tighter blocks
+   ===================================================================== */
+/* === HQ RAIL DECLUTTER === */
+
+/* ── 1. Right rail sections: frameless. Banner title stays (set earlier),
+      box frame + background removed so they don't eat space. ─────────── */
+html[data-weered-chrome="min"] .weered-rr-section,
+html[data-weered-chrome="min"] .weered-rr-mod-panel,
+html[data-weered-chrome="min"] .weered-rr-create-panel {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 16px !important;
+}
+html[data-weered-chrome="min"] .weered-rr-section::before,
+html[data-weered-chrome="min"] .weered-rr-section::after {
+  display: none !important;  /* drop the hat/body pseudo on right rail — too busy here */
+}
+/* Right rail section titles: simple purple banner, sloped right, like left */
+html[data-weered-chrome="min"] .weered-rr-section-title {
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  color: #fff !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 6px 12px !important;
+  margin: 0 0 8px 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%) !important;
+  opacity: 1 !important;
+}
+
+/* ── 2. Friend / crew rows: declutter ─────────────────────────────── */
+html[data-weered-chrome="min"] .weered-rr-friend-row,
+html[data-weered-chrome="min"] .weered-rr-crew-row {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 7px 10px !important;
+}
+html[data-weered-chrome="min"] .weered-rr-friend-row:hover,
+html[data-weered-chrome="min"] .weered-rr-crew-row:hover {
+  background: rgba(255,255,255,0.03) !important;
+}
+/* Hide platform mini-icons + tier/role badge clutter inside rail rows so
+   name + status + JOIN get room. (Avatar, name, status, JOIN stay.) */
+html[data-weered-chrome="min"] .weered-rr-friend-row [class*="platform"],
+html[data-weered-chrome="min"] .weered-rr-friend-row [class*="presence-platforms"],
+html[data-weered-chrome="min"] .weered-rr-friend-row [class*="presence-badges"],
+html[data-weered-chrome="min"] .weered-rr-friend-row [class*="tier-badge"],
+html[data-weered-chrome="min"] .weered-rr-friend-row [class*="role-badge"] {
+  display: none !important;
+}
+/* JOIN button — sharp purple, sized to content */
+html[data-weered-chrome="min"] .weered-rr-join {
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 4px 12px 4px 10px !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%) !important;
+  flex-shrink: 0 !important;
+}
+html[data-weered-chrome="min"] .weered-rr-join:hover {
+  background: #4c1d95 !important;
+}
+
+/* ── 3. Left rail: tighten nav rows + hide context hint so grey hugs ── */
+html[data-weered-chrome="min"] .weered-left .weered-left-link {
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-left-hint {
+  display: none !important;
+}
+/* Trim the trailing margin so grey backplate ends near the last item */
+html[data-weered-chrome="min"] .weered-left-section > *:last-child,
+html[data-weered-chrome="min"] .weered-presence > *:last-child {
+  margin-bottom: 8px !important;
+}
+
+/* ── 4. Search inputs (both rails) → hairline underline ───────────── */
+html[data-weered-chrome="min"] .weered-presence-search,
+html[data-weered-chrome="min"] .weered-rr-search {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 0 !important;
+  padding: 6px 0 6px 12px !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  letter-spacing: 0.04em !important;
+  color: rgba(255,255,255,0.80) !important;
+}
+html[data-weered-chrome="min"] .weered-presence-search::placeholder,
+html[data-weered-chrome="min"] .weered-rr-search::placeholder {
+  color: rgba(255,255,255,0.35) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+}
+
+
+/* =====================================================================
+   HQ RIGHT-RAIL BANNERS — purple header bars span full width
+   ===================================================================== */
+/* === HQ RR BANNERS === */
+
+html[data-weered-chrome="min"] .weered-rr-section {
+  position: relative !important;
+}
+
+/* Full-width purple banner on the header row (flex container w/ a title)
+   OR on a direct title (Lobby Controls). */
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child:has(> .weered-rr-section-title),
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child:has(> div > .weered-rr-section-title),
+html[data-weered-chrome="min"] .weered-rr-section > .weered-rr-section-title:first-child {
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%) !important;
+  padding: 6px 12px !important;
+  margin: 0 0 8px 0 !important;
+  min-height: 28px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  align-items: center !important;
+}
+
+/* Title text now sits ON the purple — no own background, white, Barlow caps */
+html[data-weered-chrome="min"] .weered-rr-section-title {
+  background: transparent !important;
+  clip-path: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+}
+
+/* Controls riding on the banner (+ ROOM button, chevron, count dot) stay
+   legible against purple. Keep '+ ROOM' as a subtle outline. */
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child > span,
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child > div > span {
+  color: rgba(255,255,255,0.80) !important;
+}
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child .weered-rr-primary {
+  background: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  border-radius: 0 !important;
+  color: #ffffff !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 700 !important;
+}
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child .weered-rr-primary:hover {
+  background: rgba(255,255,255,0.20) !important;
+}
+
+
+/* =====================================================================
+   HQ RR POLISH — compact + ROOM button, tighter friends panel
+   ===================================================================== */
+/* === HQ RR POLISH === */
+
+/* '+ ROOM' button: short enough to not stretch the banner; angled right */
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child .weered-rr-primary {
+  padding: 1px 16px 1px 9px !important;
+  font-size: 10px !important;
+  line-height: 1.5 !important;
+  height: 20px !important;
+  min-height: 0 !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%) !important;
+}
+
+/* Friends / Crew rows — reclaim padding. Cards get tighter, lose the box
+   frame, and the gap between rows shrinks. */
+html[data-weered-chrome="min"] .weered-rr-friend-row,
+html[data-weered-chrome="min"] .weered-rr-crew-row {
+  padding: 0 !important;
+  margin: 0 0 2px 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-rr-friend-row .weered-presence-row-inner,
+html[data-weered-chrome="min"] .weered-rr-crew-row .weered-presence-row-inner {
+  padding: 4px 8px !important;
+  gap: 8px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-rr-friend-row .weered-presence-row-inner:hover,
+html[data-weered-chrome="min"] .weered-rr-crew-row .weered-presence-row-inner:hover {
+  background: rgba(255,255,255,0.03) !important;
+}
+/* Tighten the list container's own spacing if any */
+html[data-weered-chrome="min"] .weered-rr-friends-list,
+html[data-weered-chrome="min"] .weered-rr-crew-list {
+  gap: 2px !important;
+}
+
+
+/* =====================================================================
+   HQ USER CORNER — OPERATIVE ID CARD
+   ===================================================================== */
+/* === HQ UC OPERATIVE === */
+
+/* Avatar → cut-corner square (stamped-photo look), purple ring.
+   Overrides the circular radius + the global radius:999 avatar reset. */
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] > div > div:first-child {
+  border-radius: 50% !important;
+  clip-path: none !important;
+  box-shadow:
+    0 0 0 2px rgba(14,16,20,1),
+    0 0 0 3px #5b21b6,
+    inset 0 2px 0 rgba(255,255,255,0.12) !important;
+  width: 54px !important;
+  height: 54px !important;
+}
+/* Status dot stays bottom-right but square corner means nudge it in a touch */
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] span[role="button"] {
+  bottom: 2px !important;
+  right: 2px !important;
+}
+
+/* Identity field: tighten vertical padding (shorter corner) */
+html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) {
+  padding-top: 10px !important;
+  padding-bottom: 6px !important;
+  min-height: 0 !important;
+}
+
+/* Name — keep big + Barlow, but tighter line-height */
+html[data-weered-chrome="min"] .weered-usercorner [class*="fitted"],
+html[data-weered-chrome="min"] .weered-usercorner button[style*="text-align: left"] > :first-child {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  line-height: 1.0 !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Role/clan/motto lines: tighten gaps so they read as one credential block */
+html[data-weered-chrome="min"] .weered-usercorner button[style*="text-align: left"] > div:not(:first-child) {
+  margin-top: 2px !important;
+}
+
+/* Action strip (BURNER): tighten top padding, sharp angled button */
+html[data-weered-chrome="min"] .weered-usercorner .weered-uc-action {
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%) !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.10em !important;
+  font-weight: 700 !important;
+  padding: 7px 14px !important;
+}
+
+
+/* =====================================================================
+   HQ USER CORNER — remove the avatar 'depth bar' (notoriety strip)
+   ===================================================================== */
+html[data-weered-chrome="min"] .weered-usercorner .weered-uc-notoriety {
+  display: none !important;
+}
+/* Reclaim the left gutter that was reserved for the notoriety strip */
+html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) {
+  padding-left: 78px !important;  /* avatar gutter still needed */
+}
+
+
+/* =====================================================================
+   HQ USER CORNER #1 — phone-in-banner + height tighten
+   ===================================================================== */
+/* === HQ UC PHONE === */
+
+/* Collapse the bottom action strip and float it into the banner top-right.
+   The strip is the last <div> child of the user corner. */
+html[data-weered-chrome="min"] .weered-usercorner > div:last-of-type {
+  position: absolute !important;
+  top: 8px !important;
+  right: 12px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  z-index: 4 !important;
+}
+
+/* Burner -> icon-only square with the cut corner */
+html[data-weered-chrome="min"] .weered-uc-action {
+  flex: 0 0 auto !important;
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%) !important;
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.20) !important;
+}
+html[data-weered-chrome="min"] .weered-uc-action.weered-burner-hot {
+  background: rgba(245,158,11,0.18) !important;
+  border-color: rgba(245,158,11,0.45) !important;
+}
+/* Hide the "Burner" text label (a plain span); keep the phone SVG + the
+   unread badge (which carries inline position:absolute). */
+html[data-weered-chrome="min"] .weered-uc-action > span:not([style*="absolute"]) {
+  display: none !important;
+}
+
+/* Shift the clan tag left so the phone has the rightmost slot */
+html[data-weered-chrome="min"] .weered-usercorner a[href^="/crew/"] {
+  right: 56px !important;
+}
+
+/* ── Tightening: shorter corner ───────────────────────────────────── */
+/* Smaller avatar */
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] > div > div:first-child {
+  width: 46px !important;
+  height: 46px !important;
+}
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] {
+  top: -22px !important;
+}
+/* Identity field: tighter padding + smaller avatar gutter */
+html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) {
+  padding: 8px 12px 8px 66px !important;
+  min-height: 0 !important;
+}
+/* Tighten the gaps between identity lines */
+html[data-weered-chrome="min"] .weered-usercorner button[style*="text-align: left"] > div,
+html[data-weered-chrome="min"] .weered-usercorner button[style*="text-align: left"] + button {
+  margin-top: 2px !important;
+}
+
+
+/* =====================================================================
+   HQ USER CORNER #1b — phone to the right gutter (not the banner)
+   ===================================================================== */
+/* === HQ UC PHONE2 === */
+
+/* Float the action strip to the right side of the identity area, centered
+   vertically against the name/role stack. Bigger icon now that it has room. */
+html[data-weered-chrome="min"] .weered-usercorner > div:last-of-type {
+  position: absolute !important;
+  top: 58% !important;
+  bottom: auto !important;
+  right: 16px !important;
+  transform: translateY(-50%) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  z-index: 4 !important;
+}
+html[data-weered-chrome="min"] .weered-uc-action {
+  width: 42px !important;
+  height: 42px !important;
+}
+/* Restore the clan tag to its normal banner top-right slot */
+html[data-weered-chrome="min"] .weered-usercorner a[href^="/crew/"] {
+  right: 16px !important;
+}
+/* Keep the name column clear of the phone so long lines don't run under it */
+html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) {
+  padding-right: 64px !important;
+}
+
+
+/* =====================================================================
+   HQ USER CORNER — cleanup (banner tier, avatar rings, phone)
+   ===================================================================== */
+/* === HQ UC CLEANUP === */
+
+/* 1. Remove the redundant tier from the banner ID line (shown below now) */
+html[data-weered-chrome="min"] .weered-uc-banner-tier {
+  display: none !important;
+}
+
+/* 2. Clean avatar — drop the concentric ring shadows + inset highlight that
+   read as 'lines around the avatar'. Single flat fill, no rings. */
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] > div > div:first-child {
+  box-shadow: none !important;
+}
+
+/* 3. Hide the phone square entirely — placement isn't working; messages
+   access handled elsewhere (see right-rail DMS). */
+html[data-weered-chrome="min"] .weered-usercorner > div:last-of-type {
+  display: none !important;
+}
+
+
+/* =====================================================================
+   HQ USER CORNER — clan tag relocated + size up
+   ===================================================================== */
+/* === HQ UC SIZEUP === */
+
+/* Banner clan tag now lives beside the crew name below — hide the banner one */
+html[data-weered-chrome="min"] .weered-usercorner a[href^="/crew/"] {
+  display: none !important;
+}
+
+/* Crew line ([8MTR] The 8 Meter) — sharp tag badge, hover lift */
+html[data-weered-chrome="min"] .weered-uc-crew-line span:first-child {
+  border-radius: 0 !important;
+}
+html[data-weered-chrome="min"] .weered-uc-crew-line:hover span:last-child {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* Size up — avatar bigger */
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] > div > div:first-child {
+  width: 56px !important;
+  height: 56px !important;
+}
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] {
+  top: -26px !important;
+}
+/* Identity field: wider avatar gutter, reclaim right padding (phone gone) */
+html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) {
+  padding: 10px 14px 8px 78px !important;
+}
+
+/* Size up the role/tier text lines (were 9px) */
+html[data-weered-chrome="min"] .weered-usercorner button[style*="text-align: left"] > div:not(:first-child) {
+  font-size: 10.5px !important;
+}
+/* Status line a touch bigger */
+html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) > button:last-of-type span:last-child {
+  font-size: 12px !important;
+}
+
+/* === HQ UC NAME RESTORE === */
+/* Put the username back big — FittedName (first div in the identity button) */
+html[data-weered-chrome="min"] .weered-usercorner button[style*="text-align: left"] > div:first-child {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1.0 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* =====================================================================
+   AVATAR FRAMES — equippable avatar decorations (Paper-purchasable later)
+   ===================================================================== */
+/* === AVATAR FRAMES === */
+.weered-frame-gold {
+  box-shadow: 0 0 0 3px #1a1407, 0 0 0 5px #D4A017, 0 0 16px rgba(212,160,23,.6) !important;
+}
+.weered-frame-flames {
+  box-shadow: 0 0 0 3px #1a0a00, 0 0 0 5px #f97316, 0 0 18px rgba(249,115,22,.7) !important;
+  animation: weered-frame-flicker 1.8s ease-in-out infinite;
+}
+.weered-frame-crystal {
+  box-shadow: 0 0 0 3px #0a1420, 0 0 0 5px #38bdf8, 0 0 0 7px #818cf8, 0 0 16px rgba(56,189,248,.55) !important;
+}
+.weered-frame-neon {
+  box-shadow: 0 0 0 3px #ff00c8, 0 0 0 6px #00ffff, 0 0 18px rgba(255,0,200,.5) !important;
+  animation: weered-frame-pulse 2.2s ease-in-out infinite;
+}
+.weered-frame-circuit {
+  box-shadow: 0 0 0 3px #04140a, 0 0 0 5px #22c55e, 0 0 0 7px #052e16, 0 0 14px rgba(34,197,94,.5) !important;
+}
+@keyframes weered-frame-flicker { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.28); } }
+@keyframes weered-frame-pulse   { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+
+/* =====================================================================
+   NAME EFFECTS — username color/gradient decorations
+   ===================================================================== */
+/* === NAME EFFECTS === */
+.weered-name-gold   { color: #D4A017 !important; text-shadow: 0 0 8px rgba(212,160,23,.4); }
+.weered-name-fire   { background: linear-gradient(90deg,#fbbf24,#f97316,#ef4444) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
+.weered-name-ice    { background: linear-gradient(90deg,#a5f3fc,#38bdf8,#6366f1) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
+.weered-name-toxic  { background: linear-gradient(90deg,#bef264,#22c55e,#15803d) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
+.weered-name-royal  { background: linear-gradient(90deg,#c084fc,#a855f7,#ec4899) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
+.weered-name-rainbow{ background: linear-gradient(90deg,#f87171,#fbbf24,#34d399,#38bdf8,#a78bfa,#f472b6) !important; background-size: 300% 100% !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; /* static rainbow — animation removed for reliability with background-clip:text */ }
+@keyframes weered-name-rainbow-shift { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+
+/* === HQ FINAL TWEAKS === */
+/* Thin the left-rail scrollbar so it stops covering (flattening) the banner angle tips */
+html[data-weered-chrome="min"] .weered-left { scrollbar-width: thin !important; scrollbar-color: rgba(255,255,255,0.14) transparent !important; }
+html[data-weered-chrome="min"] .weered-left::-webkit-scrollbar { width: 6px !important; }
+html[data-weered-chrome="min"] .weered-left::-webkit-scrollbar-track { background: transparent !important; }
+html[data-weered-chrome="min"] .weered-left::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14) !important; border-radius: 3px !important; }
+/* PRESENCE subtitle: pull left off the angle */
+html[data-weered-chrome="min"] .weered-presence > .weered-presence-head { padding-right: 28px !important; }
+/* Right-rail search: nudge a few px right */
+html[data-weered-chrome="min"] .weered-rr-search { padding-left: 8px !important; }
+
+/* =====================================================================
+   HQ USER CORNER FRAMES — pseudo-ring matching the cut-corner clip-path
+   ===================================================================== */
+/* === HQ UC FRAMES === */
+/* The avatar itself is clip-path'd (box-shadow clips). Draw the frame as a
+   ::before pseudo on the avatar's button wrapper, slightly larger, same
+   clip-path, behind the avatar. */
+html[data-weered-chrome="min"][data-uc-frame] .weered-usercorner button[aria-label="Open profile"] > div {
+  position: relative !important;
+}
+html[data-weered-chrome="min"][data-uc-frame] .weered-usercorner button[aria-label="Open profile"] > div::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+html[data-weered-chrome="min"] .weered-usercorner button[aria-label="Open profile"] > div > div:first-child {
+  position: relative !important;
+  z-index: 1 !important;
+}
+/* Per-frame backgrounds */
+html[data-weered-chrome="min"][data-uc-frame="gold"] .weered-usercorner button[aria-label="Open profile"] > div::before {
+  background: linear-gradient(135deg, #fbbf24 0%, #D4A017 50%, #b45309 100%);
+  filter: drop-shadow(0 0 8px rgba(212,160,23,.55));
+}
+html[data-weered-chrome="min"][data-uc-frame="flames"] .weered-usercorner button[aria-label="Open profile"] > div::before {
+  background: linear-gradient(135deg, #fbbf24, #f97316 45%, #ef4444 90%);
+  filter: drop-shadow(0 0 9px rgba(249,115,22,.65));
+  animation: weered-frame-flicker 1.8s ease-in-out infinite;
+}
+html[data-weered-chrome="min"][data-uc-frame="crystal"] .weered-usercorner button[aria-label="Open profile"] > div::before {
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  filter: drop-shadow(0 0 8px rgba(56,189,248,.5));
+}
+html[data-weered-chrome="min"][data-uc-frame="neon"] .weered-usercorner button[aria-label="Open profile"] > div::before {
+  background: linear-gradient(135deg, #ff00c8, #00ffff);
+  filter: drop-shadow(0 0 10px rgba(255,0,200,.55));
+  animation: weered-frame-pulse 2.2s ease-in-out infinite;
+}
+html[data-weered-chrome="min"][data-uc-frame="circuit"] .weered-usercorner button[aria-label="Open profile"] > div::before {
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+  filter: drop-shadow(0 0 8px rgba(34,197,94,.5));
+}
+
+/* === HQ UC NOTO TOOLTIP === */
+html[data-weered-chrome="min"] .weered-uc-noto:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%; left: 0;
+  margin-top: 8px;
+  width: max-content; max-width: 230px;
+  padding: 6px 11px;
+  background: #1a1a1b !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  color: rgba(243,244,246,0.92);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 10.5px; font-weight: 400;
+  letter-spacing: 0; text-transform: none;
+  line-height: 1.45; text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+  pointer-events: none;
+  z-index: 100;
+  border-radius: 8px !important;
+}
+
+/* Lift the user corner above sibling rail sections so the noto tooltip
+   doesn't get painted over by the COMMUNITIES banner below. */
+html[data-weered-chrome="min"] .weered-usercorner {
+  z-index: 5 !important;
+}
+
+/* Let the noto tooltip escape the banner content's stacking context so it
+   paints above the identity field below. Bumping the noto to a high z-index
+   AND giving its containing banner-content div a higher z-index than the
+   identity field — the avatar still paints above the ID line because it's
+   inside its own positioned container deeper in the tree. */
+html[data-weered-chrome="min"] .weered-uc-banner {
+  z-index: 10 !important;
+}
+html[data-weered-chrome="min"] .weered-uc-noto {
+  z-index: 50 !important;
+}
+
+
+/* =====================================================================
+   HQ NAME-EFFECTS — rescue inside the user corner
+   ===================================================================== */
+/* === HQ UC NAME-EFFECT RESCUE === */
+/* The .weered-left * strip-down at the top of chrome=min sets
+   background: transparent !important on every descendant, which kills
+   the gradient backgrounds on .weered-name-* spans inside FittedName.
+   Re-apply them at higher specificity (0,3,0 vs the strip-down's 0,2,0). */
+
+html[data-weered-chrome="min"] .weered-usercorner .weered-name-gold {
+  color: #D4A017 !important;
+  text-shadow: 0 0 8px rgba(212,160,23,.4);
+}
+html[data-weered-chrome="min"] .weered-usercorner .weered-name-fire {
+  background: linear-gradient(90deg,#fbbf24,#f97316,#ef4444) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-usercorner .weered-name-ice {
+  background: linear-gradient(90deg,#a5f3fc,#38bdf8,#6366f1) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-usercorner .weered-name-toxic {
+  background: linear-gradient(90deg,#bef264,#22c55e,#15803d) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-usercorner .weered-name-royal {
+  background: linear-gradient(90deg,#c084fc,#a855f7,#ec4899) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-usercorner .weered-name-rainbow {
+  background: linear-gradient(90deg,#f87171,#fbbf24,#34d399,#38bdf8,#a78bfa,#f472b6) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+
+/* =====================================================================
+   HQ NAME-EFFECTS — rescue inside the entire LEFT RAIL (presence rows)
+   ===================================================================== */
+/* === HQ LEFT NAME-EFFECT RESCUE === */
+/* Same problem as the user-corner rescue, but PresenceRow names show in
+   the PRESENCE / FAVORITES / FRIENDS sections too — also inside .weered-left.
+   Re-apply gradients at (0,3,0) specificity to outrank the strip-down. */
+
+html[data-weered-chrome="min"] .weered-left .weered-name-gold {
+  color: #D4A017 !important;
+  text-shadow: 0 0 8px rgba(212,160,23,.4);
+}
+html[data-weered-chrome="min"] .weered-left .weered-name-fire {
+  background: linear-gradient(90deg,#fbbf24,#f97316,#ef4444) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-name-ice {
+  background: linear-gradient(90deg,#a5f3fc,#38bdf8,#6366f1) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-name-toxic {
+  background: linear-gradient(90deg,#bef264,#22c55e,#15803d) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-name-royal {
+  background: linear-gradient(90deg,#c084fc,#a855f7,#ec4899) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-name-rainbow {
+  background: linear-gradient(90deg,#f87171,#fbbf24,#34d399,#38bdf8,#a78bfa,#f472b6) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+
+/* =====================================================================
+   HQ CHAT HEADER — kill the angle, flat purple fill
+   ===================================================================== */
+/* === HQ CHAT HEADER SQUARE === */
+/* Replaces the sloped right edge (clip-path) from the earlier rule with a
+   clean rectangle. Same purple fill, no diagonal cut. */
+html[data-weered-chrome="min"] .lobby-drawer-header {
+  clip-path: none !important;
+  border-radius: 0 !important;
+  /* Re-assert the fill in case any later rule overrides it. */
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+}
+/* Belt-and-braces: the drawer itself has rounded corners (0 14px 14px 0).
+   That rounds the top-right above the header — kill it under chrome=min so
+   the header reads as a true rectangle inside its container. */
+html[data-weered-chrome="min"] .lobby-chat-drawer {
+  border-radius: 0 !important;
+}
+
+
+/* =====================================================================
+   HQ RIGHT MINI RAIL — unified dossier tiles, purple-edge indicator
+   ===================================================================== */
+/* === HQ RAIL QUICK MIN === */
+/* Override the inline gold/green/purple palettes that ShellGate sets on
+   .weered-rail-quick — under chrome=min everything goes flat #0E1014 with
+   a 2px purple accent strip on the LEFT EDGE that lifts on hover. Icon +
+   Barlow caps label both desaturated until hover. */
+
+html[data-weered-chrome="min"] .weered-rail-quick {
+  width: 46px !important;
+  height: 70px !important;
+  background: #0E1014 !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: rgba(243,244,246,0.72) !important;
+  padding: 8px 0 8px 4px !important;
+  overflow: hidden;
+}
+
+/* Left accent strip — a vertical purple bar tucked against the inside edge.
+   Idle state: dim, hover: bright + lengthens, hot (unread): pulse. */
+html[data-weered-chrome="min"] .weered-rail-quick::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 30%;
+  background: var(--weered-user-panel-accent, #7c3aed);
+  opacity: 0.55;
+  transition: height 0.22s cubic-bezier(0.22,1,0.36,1), opacity 0.22s, width 0.18s;
+}
+
+/* Hover: bar fills the height, accent + icon + label all brighten. */
+html[data-weered-chrome="min"] .weered-rail-quick:hover {
+  background: #14161A !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(243,244,246,0.96) !important;
+  transform: none !important;
+  filter: none !important;
+}
+html[data-weered-chrome="min"] .weered-rail-quick:hover::before {
+  height: 78%;
+  width: 3px;
+  opacity: 1;
+}
+
+/* Hot (unread > 0) — the class ShellGate adds is .is-hot. Pulse the bar
+   so unattended pings draw the eye without flooding the column purple. */
+html[data-weered-chrome="min"] .weered-rail-quick.is-hot::before {
+  height: 78%;
+  opacity: 1;
+  animation: weered-rail-hot-pulse 1.8s ease-in-out infinite;
+}
+@keyframes weered-rail-hot-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(167,139,250,0); }
+  50%      { box-shadow: 0 0 10px rgba(167,139,250,0.6), 0 0 14px rgba(124,58,237,0.4); }
+}
+
+/* Icon: monochrome under chrome=min, tints lavender on hover. */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-icon {
+  filter: none !important;
+  color: rgba(203,213,225,0.75) !important;
+  transition: color 0.18s;
+}
+html[data-weered-chrome="min"] .weered-rail-quick:hover .weered-rail-quick-icon {
+  color: rgba(196,181,253,0.98) !important;
+}
+html[data-weered-chrome="min"] .weered-rail-quick.is-hot .weered-rail-quick-icon {
+  color: rgba(196,181,253,0.96) !important;
+}
+
+/* Label: Barlow caps, slightly more spaced, calmer weight. */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-label {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-shadow: none !important;
+  opacity: 0.85 !important;
+}
+
+/* Badge: keep the warm count chip — it's the only place that earns color
+   in this column (a real unread signal, not decoration). */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-badge {
+  border-radius: 2px !important;
+}
+
+
+/* =====================================================================
+   HQ RIGHT MINI RAIL — tactical chevron shapes
+   ===================================================================== */
+/* === HQ RAIL QUICK CHEVRON === */
+/* Override the flat dossier tile shape with a left-pointing chevron carved
+   into the right edge. They stack flush so the column reads as a vertical
+   arrow strip aimed at the canvas. Also bump the tile body off pure rail
+   black so the column has visible weight. */
+
+html[data-weered-chrome="min"] .weered-rail-quick {
+  background: #14161A !important;
+  border: none !important;
+  /* Chevron: top-left, top-right, middle-recessed, bottom-right, bottom-left.
+     78% on the middle pulls the right edge inward into a V notch. */
+  clip-path: polygon(0 0, 100% 0, 82% 50%, 100% 100%, 0 100%) !important;
+  /* Slight extra right padding so icon/label don't push into the chevron point. */
+  padding: 8px 14px 8px 6px !important;
+  /* Restore a flat purple wash overlay via inset shadow for tactical depth. */
+  box-shadow: inset 2px 0 0 var(--weered-user-panel-accent, #7c3aed),
+              inset 0 1px 0 rgba(255,255,255,0.04),
+              inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+}
+
+/* The original ::before bar is redundant now (the inset shadow IS the bar
+   AND survives clip-path, which a ::before wouldn't). Hide it. */
+html[data-weered-chrome="min"] .weered-rail-quick::before {
+  display: none !important;
+}
+
+/* Hover: tile brightens, chevron deepens slightly, accent bar widens. */
+html[data-weered-chrome="min"] .weered-rail-quick:hover {
+  background: #1B1E25 !important;
+  box-shadow: inset 3px 0 0 #a78bfa,
+              inset 0 1px 0 rgba(255,255,255,0.08),
+              inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+  color: rgba(243,244,246,0.98) !important;
+  transform: translateX(-1px) !important;
+  filter: none !important;
+}
+
+/* Hot (unread > 0): accent bar pulses purple. */
+html[data-weered-chrome="min"] .weered-rail-quick.is-hot {
+  animation: weered-rail-chevron-pulse 1.8s ease-in-out infinite;
+}
+@keyframes weered-rail-chevron-pulse {
+  0%, 100% {
+    box-shadow: inset 2px 0 0 #a78bfa,
+                inset 0 1px 0 rgba(255,255,255,0.04),
+                inset 0 -1px 0 rgba(0,0,0,0.3);
+  }
+  50% {
+    box-shadow: inset 3px 0 0 #c4b5fd,
+                inset -8px 0 24px rgba(167,139,250,0.18),
+                inset 0 1px 0 rgba(255,255,255,0.08),
+                inset 0 -1px 0 rgba(0,0,0,0.3);
+  }
+}
+
+/* Tighten vertical gap so the chevrons stack into a continuous arrow column. */
+html[data-weered-chrome="min"] .weered-rail-stack {
+  gap: 4px !important;
+}
+
+/* Icon + label keep the lavender hover from the previous pass. The clip-path
+   doesn't touch them — they sit inside the visible portion of the tile. */
+
+
+/* =====================================================================
+   HQ RIGHT MINI RAIL — gap above + label nudge right
+   ===================================================================== */
+/* === HQ RAIL QUICK FIXUP === */
+
+/* +15px gap below the logo before the chevron column starts. */
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-logo {
+  margin-bottom: 21px !important;  /* was 6px */
+}
+
+/* Push the label off the purple accent bar — labels were just kissing it. */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-label {
+  padding-left: 3px !important;
+}
+/* Belt-and-braces — also nudge the icon so it stays optically centered with
+   the label. Both inside the visible portion of the chevron. */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-icon {
+  padding-left: 3px !important;
+}
+
+
+/* =====================================================================
+   HQ MINI RAIL — badge centering + label nudge round 2
+   ===================================================================== */
+/* === HQ RAIL QUICK FIXUP 2 === */
+
+/* Badge: was clipping the '19' bottom. Inherited line-height from the
+   button was pushing the glyphs off-center inside the flex box. */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-badge {
+  height: 20px !important;
+  line-height: 1 !important;
+  padding: 0 6px !important;
+  font-size: 11px !important;
+}
+
+/* Label: +4px more left-padding to clear the accent bar (3 -> 7). */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-label {
+  padding-left: 7px !important;
+}
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-icon {
+  padding-left: 7px !important;
+}
+
+
+/* =====================================================================
+   HQ MINI RAIL — badge position nudge
+   ===================================================================== */
+/* === HQ RAIL QUICK BADGE POS === */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-badge {
+  top: -2px !important;   /* was -4px -> +2px down */
+  right: 0 !important;    /* was -4px -> +4px left */
+}
+
+
+/* =====================================================================
+   HQ CHAT — strip inline role/tier/crew/flair icons from author lines
+   ===================================================================== */
+/* === HQ CHAT FLAIR STRIP === */
+/* Names render clean — no platform mini-icons, no crew tag, no badge chip.
+   Themed lobbies keep them (rule is scoped to data-weered-chrome="min"). */
+html[data-weered-chrome="min"] .chat-author-flair {
+  display: none !important;
+}
+
+
+/* =====================================================================
+   HQ RIGHT MINI RAIL — PANEL tab to match the chevron column
+   ===================================================================== */
+/* === HQ RAIL PANEL TAB === */
+/* The expand-panel tab kept the old themed look (gold border, rounded,
+   var(--weered-panel) fill) while the quick-tiles above went flat chevron.
+   Bring it into the same language: flat tile, square, purple left spine,
+   NO point (the three quick-tiles already point at the canvas). Slightly
+   brighter idle accent so it reads as the stack's primary action. */
+
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab {
+  width: 46px !important;
+  min-height: 300px !important;
+  max-height: 560px !important;
+  align-self: center !important;
+  background: #14161A !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: rgba(203,213,225,0.7) !important;
+  /* Purple left spine — brighter than the chevrons' idle 0.55. Plus a quiet
+     inset top/bottom hairline for tactile depth. */
+  box-shadow: inset 3px 0 0 var(--weered-user-panel-accent, #7c3aed),
+              inset 0 1px 0 rgba(255,255,255,0.05),
+              inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s !important;
+}
+
+/* Kill the themed glow animation under chrome=min (it pulsed the gold). */
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab.weered-rail-tab-glow {
+  animation: none !important;
+}
+
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab:hover {
+  background: #1B1E25 !important;
+  color: rgba(243,244,246,0.96) !important;
+  box-shadow: inset 4px 0 0 #a78bfa,
+              inset 0 1px 0 rgba(255,255,255,0.08),
+              inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+}
+
+/* Label — Barlow caps, calm. */
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab .weered-rail-tab-label {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em !important;
+  opacity: 0.85 !important;
+  color: inherit !important;
+}
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab:hover .weered-rail-tab-label {
+  color: rgba(196,181,253,0.98) !important;
+  opacity: 1 !important;
+}
+
+/* Icons (the collapse glyph + the three dots) — lavender tint on hover. */
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab svg {
+  color: rgba(203,213,225,0.65) !important;
+  transition: color 0.18s !important;
+}
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab:hover svg {
+  color: rgba(196,181,253,0.95) !important;
+}
+
+
+/* =====================================================================
+   HQ RR CONTROL-PANEL PASS — toggle, mod panel, room chips, join
+   ===================================================================== */
+/* === HQ RR CONTROL PASS === */
+
+/* Lobby Controls mod panel — flat tactical box, square, hairline. */
+html[data-weered-chrome="min"] .weered-rr-mod-panel {
+  background: #14161A !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 0 !important;
+}
+
+/* Chat OPEN/LOCKED segmented toggle — kill the green/amber. Active state
+   reads white on a subtle purple wash; inactive stays dim. Square track. */
+html[data-weered-chrome="min"] .weered-rr-chatlock {
+  border-radius: 0 !important;
+  background: rgba(0,0,0,0.30) !important;
+}
+html[data-weered-chrome="min"] .weered-rr-chatlock > button {
+  border-radius: 0 !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  letter-spacing: 0.08em !important;
+}
+/* Active (the one whose state is current) carries the inline tint — both
+   green (OPEN) and amber (LOCKED) get neutralized to purple-white. The
+   inactive button keeps its dim transparent look from the inline style. */
+html[data-weered-chrome="min"] .weered-rr-chatlock > button[style*="rgba(16,185,129"],
+html[data-weered-chrome="min"] .weered-rr-chatlock > button[style*="rgba(245,158,11"] {
+  background: var(--weered-user-panel-accent, #3b0764) !important;
+  color: #ffffff !important;
+}
+
+/* Room chips — flat, square, purple LEFT accent for active/live instead of
+   the rounded green/purple tinted pills. Hairline base. */
+html[data-weered-chrome="min"] .weered-rr-room-card {
+  border-radius: 0 !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  background: #14161A !important;
+  box-shadow: none !important;
+}
+html[data-weered-chrome="min"] .weered-rr-room-card:hover {
+  background: #1B1E25 !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+/* Active + live + event states → purple/accent LEFT spine, no full tint. */
+html[data-weered-chrome="min"] .weered-rr-room-card-active {
+  box-shadow: inset 3px 0 0 var(--weered-user-panel-accent, #7c3aed) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+}
+html[data-weered-chrome="min"] .weered-rr-room-card-live {
+  box-shadow: inset 3px 0 0 #34d399 !important;  /* live = the one green that earns it (it's a real "live" signal) */
+}
+html[data-weered-chrome="min"] .weered-rr-room-card-event {
+  box-shadow: inset 3px 0 0 #fbbf24 !important;  /* event = warm spine, signals a scheduled thing */
+}
+/* Kill the inline gradient name-strip inside room cards under min. */
+html[data-weered-chrome="min"] .weered-rr-room-card > div[style*="linear-gradient(90deg"] {
+  background: transparent !important;
+}
+
+/* JOIN chips — square purple-outline Barlow, drop the amber/pill. */
+html[data-weered-chrome="min"] .weered-rr-join {
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 1px solid var(--weered-user-panel-accent, rgba(124,58,237,0.55)) !important;
+  color: rgba(216,202,255,0.95) !important;
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 700 !important;
+}
+html[data-weered-chrome="min"] .weered-rr-join:hover {
+  background: var(--weered-user-panel-accent, rgba(124,58,237,0.18)) !important;
+  color: #ffffff !important;
+}
+
+
+/* =====================================================================
+   HQ BANNER TEXTURE — subtle worn repaint (experiment 2026-05-30)
+   Greyscale film-grain blended over the accent. "Repainted equipment."
+   Dial intensity = the rect opacity (0.35) below. Remove block to revert.
+   ===================================================================== */
+/* === HQ BANNER TEXTURE === */
+html[data-weered-chrome="min"] .weered-left-section::before,
+html[data-weered-chrome="min"] .weered-presence::before,
+html[data-weered-chrome="min"] .weered-usercorner::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E"),
+    linear-gradient(var(--weered-user-panel-accent, #3b0764), var(--weered-user-panel-accent, #3b0764)) !important;
+  background-repeat: repeat, no-repeat !important;
+  background-size: 160px 160px, auto !important;
+  background-blend-mode: overlay, normal !important;
+}
+
+
+/* =====================================================================
+   HQ TEXTURE EXTEND (2026-05-30) — banners on right rail + room heads,
+   and a fainter grain on the left-rail dark backplates.
+   ===================================================================== */
+/* === HQ TEXTURE EXTEND BANNERS === */
+html[data-weered-chrome="min"] .weered-hq-room-head,
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child:has(> .weered-rr-section-title),
+html[data-weered-chrome="min"] .weered-rr-section > div:first-child:has(> div > .weered-rr-section-title),
+html[data-weered-chrome="min"] .weered-rr-section > .weered-rr-section-title:first-child {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='nb'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nb)' opacity='0.6'/%3E%3C/svg%3E"),
+    linear-gradient(var(--weered-user-panel-accent, #3b0764), var(--weered-user-panel-accent, #3b0764)) !important;
+  background-repeat: repeat, no-repeat !important;
+  background-size: 160px 160px, auto !important;
+  background-blend-mode: overlay, normal !important;
+}
+
+/* === HQ TEXTURE SURFACE GRAIN === */
+html[data-weered-chrome="min"] .weered-left-section::after,
+html[data-weered-chrome="min"] .weered-presence::after,
+html[data-weered-chrome="min"] .weered-usercorner::after {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='ns'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23ns)' opacity='0.5'/%3E%3C/svg%3E"),
+    linear-gradient(var(--weered-user-panel-bg, #0E1014), var(--weered-user-panel-bg, #0E1014)) !important;
+  background-repeat: repeat, no-repeat !important;
+  background-size: 150px 150px, auto !important;
+  background-blend-mode: soft-light, normal !important;
+}
+
+
+/* === HQ TEXTURE — chat header === */
+html[data-weered-chrome="min"] .lobby-drawer-header {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='nch'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nch)' opacity='0.6'/%3E%3C/svg%3E"),
+    linear-gradient(var(--weered-user-panel-accent, #3b0764), var(--weered-user-panel-accent, #3b0764)) !important;
+  background-repeat: repeat, no-repeat !important;
+  background-size: 160px 160px, auto !important;
+  background-blend-mode: overlay, normal !important;
+}
+
+
+/* =====================================================================
+   HQ ROOM RAIL TIE-IN (2026-05-30) — match the lobby's squared/flat language.
+   .weered-rrr is inline-styled (rounded 6-12 + 999 pills); square it all.
+   ===================================================================== */
+/* === HQ ROOM RAIL TIE-IN === */
+html[data-weered-chrome="min"] .weered-rrr button,
+html[data-weered-chrome="min"] .weered-rrr input,
+html[data-weered-chrome="min"] .weered-rrr select,
+html[data-weered-chrome="min"] .weered-rrr summary,
+html[data-weered-chrome="min"] .weered-rrr [style*="border-radius:12px"],
+html[data-weered-chrome="min"] .weered-rrr [style*="border-radius: 12px"],
+html[data-weered-chrome="min"] .weered-rrr [style*="border-radius:10px"],
+html[data-weered-chrome="min"] .weered-rrr [style*="border-radius: 10px"],
+html[data-weered-chrome="min"] .weered-rrr [style*="border-radius:999px"],
+html[data-weered-chrome="min"] .weered-rrr [style*="border-radius: 999px"] {
+  border-radius: 0 !important;
+}
+
+/* === HQ RAIL-QUICK label nudge (2026-05-30) === */
+html[data-weered-chrome="min"] .weered-rail-quick .weered-rail-quick-label { margin-top: 4px !important; }
+
+
+/* =====================================================================
+   HQ BURNER TIE-IN (2026-05-30) — DockShell into the flagship language.
+   Gold flows from --weered-accent-* vars; redefine them purple here.
+   ===================================================================== */
+/* === HQ BURNER TIE-IN === */
+html[data-weered-chrome="min"] .weered-dock {
+  --weered-accent-bg: rgba(124,58,237,0.18) !important;
+  --weered-accent-ring: rgba(124,58,237,0.50) !important;
+  --weered-accent-text: rgba(216,180,254,0.96) !important;
+  background: #0E1014 !important;
+}
+/* Cold tab strip */
+html[data-weered-chrome="min"] .weered-dock .weered-dock-tabs {
+  background: rgba(255,255,255,0.03) !important;
+}
+/* Square the chrome — buttons, tabs, inputs, close, info cards.
+   Chat bubbles (radius 16px/4px) + avatars (50%) are NOT matched, stay round. */
+html[data-weered-chrome="min"] .weered-dock button,
+html[data-weered-chrome="min"] .weered-dock input,
+html[data-weered-chrome="min"] .weered-dock textarea,
+html[data-weered-chrome="min"] .weered-dock .weered-dock-tabs,
+html[data-weered-chrome="min"] .weered-dock [style*="border-radius:12px"],
+html[data-weered-chrome="min"] .weered-dock [style*="border-radius: 12px"],
+html[data-weered-chrome="min"] .weered-dock [style*="border-radius:10px"],
+html[data-weered-chrome="min"] .weered-dock [style*="border-radius: 10px"],
+html[data-weered-chrome="min"] .weered-dock [style*="border-radius:8px"],
+html[data-weered-chrome="min"] .weered-dock [style*="border-radius: 8px"] {
+  border-radius: 0 !important;
+}
+
+
+/* === HQ BURNER TIE-IN — tab strip (renders outside .weered-dock) === */
+html[data-weered-chrome="min"] .weered-dock-tabs {
+  --weered-accent-bg: rgba(124,58,237,0.18) !important;
+  --weered-accent-ring: rgba(124,58,237,0.50) !important;
+  --weered-accent-text: rgba(216,180,254,0.96) !important;
+  background: rgba(255,255,255,0.03) !important;
+  border-radius: 0 !important;
+}
+html[data-weered-chrome="min"] .weered-dock-tabs button { border-radius: 0 !important; }
+
+
+/* =====================================================================
+   HQ ACCENT VARS -> PURPLE at chrome=min root (2026-05-30)
+   The base 'press' theme sets --weered-accent-* to GOLD. Under the purple
+   flagship, redefine them once at the root so nothing leaks gold (Burner,
+   focus rings, compose/+ buttons, close, etc.). Rank/tier gold is separate
+   explicit hex and is unaffected.
+   ===================================================================== */
+/* === HQ ACCENT PURPLE ROOT === */
+html[data-weered-chrome="min"] {
+  --weered-accent-bg: rgba(124,58,237,0.18) !important;
+  --weered-accent-ring: rgba(124,58,237,0.50) !important;
+  --weered-accent-text: rgba(216,180,254,0.96) !important;
+  --weered-accent: #7c3aed !important;
+}
+
+
+/* =====================================================================
+   HQ BURNER HEADER (2026-05-30) — flagship banner + residual-gold kill
+   ===================================================================== */
+/* === HQ BURNER HEADER === */
+/* App bar -> purple worn banner bleeding to the dock edges */
+html[data-weered-chrome="min"] .weered-dock-header > div:first-child {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='nbh'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nbh)' opacity='0.6'/%3E%3C/svg%3E"),
+    linear-gradient(var(--weered-user-panel-accent, #3b0764), var(--weered-user-panel-accent, #3b0764)) !important;
+  background-repeat: repeat, no-repeat !important;
+  background-size: 160px 160px, auto !important;
+  background-blend-mode: overlay, normal !important;
+  margin: -10px -14px 10px -14px !important;
+  padding: 13px 14px !important;
+}
+/* BURNER in Barlow Black caps, white on the purple */
+html[data-weered-chrome="min"] .weered-dock-title {
+  font-family: var(--font-barlow), 'Barlow Condensed', 'Oswald', sans-serif !important;
+  text-transform: uppercase !important;
+  font-size: 19px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.07em !important;
+  color: #ffffff !important;
+}
+/* close button: white-on-purple, squared */
+html[data-weered-chrome="min"] .weered-dock-header > div:first-child .weered-dock-close {
+  background: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  color: #ffffff !important;
+  border-radius: 0 !important;
+}
+
+/* --- residual gold kill: active tab + focus rings --- */
+html[data-weered-chrome="min"] .weered-dock-tab-active {
+  background: rgba(124,58,237,0.18) !important;
+  color: rgba(216,180,254,0.98) !important;
+  box-shadow: inset 0 0 0 1px rgba(124,58,237,0.55) !important;
+}
+html[data-weered-chrome="min"] .weered-dock *:focus,
+html[data-weered-chrome="min"] .weered-dock *:focus-visible,
+html[data-weered-chrome="min"] .weered-dock-tabs *:focus,
+html[data-weered-chrome="min"] .weered-dock-tabs *:focus-visible {
+  outline-color: rgba(124,58,237,0.6) !important;
+}
+
+/* === HQ SEARCH INPUT LEFT GAP (2026-05-31) ===
+   The "Search users…" placeholder hugged the left border. The section-content
+   padding rule (.weered-presence > *:not(.weered-presence-head), specificity
+   0,3,0) was overriding the .weered-presence-search padding-left, so editing
+   the search rule did nothing. Fix with text-indent — uncontested in the
+   cascade — plus zeroed padding-left, at higher specificity (0,3,1) and
+   end-of-file so this is authoritative. */
+html[data-weered-chrome="min"] .weered-presence > input.weered-presence-search,
+html[data-weered-chrome="min"] input.weered-rr-search {
+  padding-left: 0 !important;
+  text-indent: 14px !important;
+}
+
+/* === CENTRAL LOBBY AREA — flagship-minimal hero (2026-06-06) ===
+   The hero's flagship-purple look (flat + breathing purple bloom + angular
+   light streak) is rendered by LobbyHeroBar itself when chrome=min, so the
+   colour/glow live in the component. Here we only deepen the banner scrim for
+   legibility and flatten the header tab strip. Reskinned lobbies
+   (data-weered-lobby) never carry chrome=min, so they keep their dense hero. */
+
+/* Deepen the banner scrim so the title stays legible under the calm hero. */
+html[data-weered-chrome="min"] .weered-hero-scrim {
+  background: linear-gradient(180deg, rgba(10,10,18,0.40) 0%, rgba(10,10,18,0.84) 100%) !important;
+}
+
+/* Flatten the header tab strip (Rooms/People toggle) — no boxed border/fill,
+   just a quiet active state. Keeps the purple-once-per-container discipline. */
+html[data-weered-chrome="min"] .weered-lobby-tabs {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+/* ── Higher lobby strip (Rooms / Modules / Feed / Events) ──────────────────
+   Quiet & subordinate to the module sub-tabs below it. Inactive items ghost
+   to ~42% and brighten on hover; the active item is bright with a crisp
+   ANGULAR tick in flagship purple. The showy "eclipse" active-state stays
+   exclusive to the module row below so the two nav levels never compete. */
+html[data-weered-chrome="min"] .weered-tab-btn,
+html[data-weered-chrome="min"] .weered-modules-tab {
+  position: relative;
+  color: rgba(148,163,184,.42) !important;
+  border-bottom: none !important;
+  font-weight: 600;
+  letter-spacing: .02em;
+  transition: color .15s ease;
+}
+html[data-weered-chrome="min"] .weered-tab-btn:hover,
+html[data-weered-chrome="min"] .weered-modules-tab:hover {
+  color: rgba(226,232,240,.82) !important;
+}
+/* Rooms = the lobby's front door. A persistent bright anchor, never ghosted,
+   set apart from the quiet Modules/Feed/Events cluster by a thin divider. */
+html[data-weered-chrome="min"] .weered-tab-btn.is-anchor {
+  color: rgba(243,244,246,.94) !important;
+  font-weight: 700;
+  margin-right: 8px;
+  padding-right: 18px;
+  border-right: 1px solid rgba(255,255,255,.12) !important;
+}
+html[data-weered-chrome="min"] .weered-tab-btn.is-anchor:hover {
+  color: #fff !important;
+}
+html[data-weered-chrome="min"] .weered-tab-btn.is-active,
+html[data-weered-chrome="min"] .weered-modules-tab.is-active {
+  color: rgba(243,244,246,.98) !important;
+  border-bottom: none !important;
+}
+/* crisp angular tick — flat flagship purple, chamfered to echo the module
+   row's lean. A mark, not a glow. */
+html[data-weered-chrome="min"] .weered-tab-btn.is-active::after,
+html[data-weered-chrome="min"] .weered-modules-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: -1px;
+  height: 2px;
+  background: rgba(167,139,250,.95);
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+}
+/* De-gold the Modules tab in the flagship default — purple chrome frames the
+   (gold) EVE content instead of competing with it. Sharpen + cool the chip. */
+html[data-weered-chrome="min"] .weered-modules-tab .weered-modules-sparkle {
+  filter: drop-shadow(0 0 2px rgba(167,139,250,.4));
+  opacity: .55;
+}
+html[data-weered-chrome="min"] .weered-modules-chip {
+  border-radius: 2px;
+  background: rgba(124,58,237,.10);
+  border-color: rgba(167,139,250,.30);
+  color: rgba(196,181,253,.85);
+}

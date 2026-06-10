@@ -4,13 +4,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import CharacterSheetEditor from "./CharacterSheetEditor";
 
-// CharacterSheet — D&D 5e per-player sheet rendered inside DndStage's
-// "My Sheet" / "Sheets" tab. Player view shows the user's own character;
-// DM view (room owner or staff) lists every character in the room with
-// HP visible and editable. Click-to-roll surfaces (attacks, saves,
-// skills) open the RollPrompt and post to /lobbies/:lobbyId/dice/roll
-// so the result shows up as a witnessed chip in lobby chat.
-
 type Character = {
   id: string;
   name: string;
@@ -100,7 +93,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
       if (!j?.ok) throw new Error(j?.error || "load_failed");
       setCharacters(j.characters || []);
       setAsDM(!!j.asDM);
-      // Auto-select for player: their first character. DM: leave unselected.
       if (!j.asDM && j.characters?.length && !selectedId) {
         setSelectedId(j.characters[0].id);
       }
@@ -150,11 +142,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
     const slot = c.spellSlots?.[level] || { current: 0, max: 0 };
     const filled = index < slot.current;
     const op = filled ? "use" : "restore";
-    // For toggle-style behavior: if filled (we're un-using a slot), restore one.
-    // If empty (we're using one), use one.
-    // The button position represents slot[i]; clicking a filled one expends it
-    // (current-1), clicking the next-empty one restores (current+1).
-    // We use "set" with the explicit current to avoid edge cases.
     let nextCurrent = slot.current;
     if (filled) nextCurrent = index;
     else        nextCurrent = Math.min(slot.max, index + 1);
@@ -206,7 +193,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
 
   return (
     <div className="weered-dnd-modules" style={{ height: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Header bar — title + DM toggle for character list */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div className="dnd-section-label" style={{ marginBottom: 0 }}>
           {asDM ? "Party Sheets" : "My Character"}
@@ -220,7 +206,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
         </div>
       </div>
 
-      {/* DM list view */}
       {asDM && (
         <div style={{ flex: selected ? "0 0 auto" : 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
           {characters.length === 0 && (
@@ -239,7 +224,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
         </div>
       )}
 
-      {/* Empty player view */}
       {!asDM && characters.length === 0 && (
         <div style={{ padding: 32, textAlign: "center", opacity: 0.6, fontFamily: "var(--font-cormorant), serif" }}>
           <div style={{ fontSize: 16, marginBottom: 12, fontStyle: "italic" }}>
@@ -251,7 +235,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
         </div>
       )}
 
-      {/* The sheet itself */}
       {selected && (
         <SheetBody
           c={selected}
@@ -306,8 +289,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
   );
 }
 
-// ── DM party-row card ──────────────────────────────────────────────────────
-
 function PartyRow({ c, isSelected, onSelect, onHp }: {
   c: Character;
   isSelected: boolean;
@@ -353,8 +334,6 @@ function PartyRow({ c, isSelected, onSelect, onHp }: {
   );
 }
 
-// ── Sheet body ─────────────────────────────────────────────────────────────
-
 function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onRoll, onLogItem }: {
   c: Character;
   isOwner: boolean;
@@ -371,7 +350,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
 
   return (
     <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 14, paddingRight: 4 }}>
-      {/* Banner */}
       <div className="dnd-card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -388,7 +366,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       </div>
 
-      {/* Top vitals: HP, AC, Speed, Initiative, Proficiency */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
         <VitalCard label="Hit Points">
           <div style={{ fontSize: 22, fontWeight: 800, color: hpColor, fontFamily: "var(--font-pirata), serif", letterSpacing: 1 }}>
@@ -415,7 +392,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         <VitalCard label="Hit Dice"><div style={{ fontFamily: "var(--font-pirata), serif", fontSize: 16, color: "#F5D58A", textAlign: "center" }}>{c.hitDice || "—"}</div></VitalCard>
       </div>
 
-      {/* Ability scores */}
       <div>
         <div className="dnd-section-label">Ability Scores</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
@@ -434,7 +410,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       </div>
 
-      {/* Saves & Skills, side by side on wider, stacked otherwise */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
         <div>
           <div className="dnd-section-label">Saving Throws</div>
@@ -485,7 +460,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       </div>
 
-      {/* Attacks */}
       {c.attacks.length > 0 && (
         <div>
           <div className="dnd-section-label">Attacks</div>
@@ -514,7 +488,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       )}
 
-      {/* Spell slots */}
       {Object.keys(c.spellSlots || {}).length > 0 && (
         <div>
           <div className="dnd-section-label">Spell Slots</div>
@@ -552,7 +525,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       )}
 
-      {/* Spell list */}
       {c.spells.length > 0 && (
         <div>
           <div className="dnd-section-label">Spells</div>
@@ -567,7 +539,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       )}
 
-      {/* Coin */}
       <div>
         <div className="dnd-section-label">Coin</div>
         <div style={{ display: "flex", gap: 6 }}>
@@ -580,7 +551,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       </div>
 
-      {/* Inventory */}
       {c.inventory.length > 0 && (
         <div>
           <div className="dnd-section-label">Inventory</div>
@@ -612,7 +582,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       )}
 
-      {/* Features */}
       {c.features.length > 0 && (
         <div>
           <div className="dnd-section-label">Features &amp; Traits</div>
@@ -630,7 +599,6 @@ function SheetBody({ c, isOwner, isDM, onEdit, onDelete, onHp, onToggleSlot, onR
         </div>
       )}
 
-      {/* Notes */}
       <NotesBlock c={c} isOwner={isOwner} isDM={isDM} />
     </div>
   );
@@ -668,8 +636,6 @@ function NotesBlock({ c, isOwner, isDM }: { c: Character; isOwner: boolean; isDM
     </div>
   );
 }
-
-// ── Roll prompt modal ─────────────────────────────────────────────────────
 
 function RollPrompt({ label, expression, onCast, onCancel }: {
   label: string; expression: string; onCast: () => void; onCancel: () => void;

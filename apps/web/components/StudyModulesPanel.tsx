@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import StudyQuiz from "./StudyQuiz";
 import EmptyState from "./EmptyState";
+import ModuleTabBar from "./ModuleTabBar";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -16,22 +17,18 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const ACCENT = "#6366F1";
 const ACCENT_AMBER = "#F59E0B";
 const ACCENT_GREEN = "#22C55E";
 
 const S = {
-  card: { borderRadius: 12, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "14px 16px" } as React.CSSProperties,
-  btn: { padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "7px 14px", borderRadius: 8, border: `1px solid ${ACCENT}50`, background: `${ACCENT}15`, fontSize: 12, cursor: "pointer", color: ACCENT, fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer", width: "100%", boxSizing: "border-box" as const } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "14px 16px" } as React.CSSProperties,
+  btn: { padding: "7px 14px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: { padding: "7px 14px", borderRadius: 2, border: `1px solid ${ACCENT}50`, background: `${ACCENT}15`, fontSize: 12, cursor: "pointer", color: ACCENT, fontWeight: 600 } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  select: { padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer", width: "100%", boxSizing: "border-box" as const } as React.CSSProperties,
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
-
-// ── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "timer" as const,   label: "Focus Timer", icon: "⏱" },
@@ -42,8 +39,6 @@ const TABS = [
 ];
 type TabId = typeof TABS[number]["id"];
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -53,12 +48,12 @@ function getStudyStats(date: string): { focusMinutes: number; sessions: number }
   try {
     const raw = localStorage.getItem(`weered:study:${date}`);
     if (raw) return JSON.parse(raw);
-  } catch { /* empty */ }
+  } catch { }
   return { focusMinutes: 0, sessions: 0 };
 }
 
 function saveStudyStats(date: string, stats: { focusMinutes: number; sessions: number }) {
-  try { localStorage.setItem(`weered:study:${date}`, JSON.stringify(stats)); } catch { /* empty */ }
+  try { localStorage.setItem(`weered:study:${date}`, JSON.stringify(stats)); } catch { }
 }
 
 function calcStreak(): number {
@@ -90,8 +85,6 @@ function formatMinutes(mins: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-// ── Focus Timer ──────────────────────────────────────────────────────────────
-
 const FOCUS_DURATIONS = [25, 45, 60, 90];
 const BREAK_DURATIONS = [5, 10, 15];
 const SESSIONS_BEFORE_LONG_BREAK = 4;
@@ -107,11 +100,9 @@ function FocusTimer({ accent }: { accent: string }) {
   const [showFlash, setShowFlash] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Stats
   const [todayStats, setTodayStats] = useState(() => getStudyStats(todayKey()));
   const [streak, setStreak] = useState(() => calcStreak());
 
-  // Timer logic
   useEffect(() => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
@@ -120,12 +111,10 @@ function FocusTimer({ accent }: { accent: string }) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
 
-          // Flash celebration
           setShowFlash(true);
           setTimeout(() => setShowFlash(false), 1200);
 
           if (phase === "focus") {
-            // Record completed focus session
             const key = todayKey();
             const stats = getStudyStats(key);
             stats.focusMinutes += focusDuration;
@@ -136,11 +125,9 @@ function FocusTimer({ accent }: { accent: string }) {
             setSessions(newSessions);
             setPhase("break");
 
-            // Long break after 4 sessions
             const isLongBreak = newSessions % SESSIONS_BEFORE_LONG_BREAK === 0;
             const nextBreak = isLongBreak ? LONG_BREAK_MINUTES : breakDuration;
 
-            // Defer stats refresh
             setTimeout(() => { setTodayStats(getStudyStats(key)); setStreak(calcStreak()); }, 50);
 
             return nextBreak * 60;
@@ -155,7 +142,6 @@ function FocusTimer({ accent }: { accent: string }) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running, phase, focusDuration, breakDuration, sessions]);
 
-  // Stop running on phase auto-switch so user can start manually
   useEffect(() => {
     if (showFlash) setRunning(false);
   }, [showFlash]);
@@ -181,7 +167,6 @@ function FocusTimer({ accent }: { accent: string }) {
     if (phase === "break") setTimeLeft(d * 60);
   }
 
-  // SVG progress ring
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
   const totalSeconds = phase === "focus" ? focusDuration * 60 : breakDuration * 60;
@@ -189,13 +174,11 @@ function FocusTimer({ accent }: { accent: string }) {
   const dashOffset = circumference * (1 - progress);
   const ringColor = phase === "focus" ? accent : ACCENT_GREEN;
 
-  // Session dots
   const currentCycle = sessions % SESSIONS_BEFORE_LONG_BREAK;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24, padding: "8px 0" }}>
 
-      {/* Celebration flash overlay */}
       {showFlash && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -207,17 +190,14 @@ function FocusTimer({ accent }: { accent: string }) {
         }} />
       )}
 
-      {/* Timer circle */}
       <div style={{ position: "relative", width: 200, height: 200 }}>
         <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: "rotate(-90deg)" }}>
-          {/* Track */}
           <circle
             cx="100" cy="100" r={radius}
             fill="none"
             stroke="rgba(255,255,255,.06)"
             strokeWidth="6"
           />
-          {/* Progress */}
           <circle
             cx="100" cy="100" r={radius}
             fill="none"
@@ -229,7 +209,6 @@ function FocusTimer({ accent }: { accent: string }) {
             style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.3s ease" }}
           />
         </svg>
-        {/* Center content */}
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -250,12 +229,11 @@ function FocusTimer({ accent }: { accent: string }) {
         </div>
       </div>
 
-      {/* Quiet mode indicator */}
       {phase === "focus" && running && (
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 16px", borderRadius: 8,
-          background: `${accent}10`, border: `1px solid ${accent}25`,
+          padding: "8px 16px", borderRadius: 2,
+          background: `${accent}10`, border: `1px solid ${accent}25`, borderLeft: `2px solid ${accent}`,
           fontSize: 12, color: "rgba(243,244,246,.6)",
         }}>
           <span style={{ fontSize: 14 }}>🔇</span>
@@ -263,14 +241,13 @@ function FocusTimer({ accent }: { accent: string }) {
         </div>
       )}
 
-      {/* Phase duration selectors */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 340 }}>
         <div>
           <div style={{ ...S.label, textAlign: "center" }}>Focus Duration</div>
           <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
             {FOCUS_DURATIONS.map(d => (
               <button key={d} onClick={() => selectFocusDuration(d)} style={{
-                padding: "6px 14px", borderRadius: 20, border: "1px solid",
+                padding: "6px 14px", borderRadius: 2, border: "1px solid",
                 borderColor: focusDuration === d ? `${accent}60` : "rgba(255,255,255,.08)",
                 background: focusDuration === d ? `${accent}18` : "rgba(255,255,255,.03)",
                 color: focusDuration === d ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
@@ -290,7 +267,7 @@ function FocusTimer({ accent }: { accent: string }) {
           <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
             {BREAK_DURATIONS.map(d => (
               <button key={d} onClick={() => selectBreakDuration(d)} style={{
-                padding: "6px 14px", borderRadius: 20, border: "1px solid",
+                padding: "6px 14px", borderRadius: 2, border: "1px solid",
                 borderColor: breakDuration === d ? `${ACCENT_GREEN}60` : "rgba(255,255,255,.08)",
                 background: breakDuration === d ? `${ACCENT_GREEN}18` : "rgba(255,255,255,.03)",
                 color: breakDuration === d ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
@@ -306,11 +283,10 @@ function FocusTimer({ accent }: { accent: string }) {
         </div>
       </div>
 
-      {/* Controls */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {!running ? (
           <button onClick={handleStart} style={{
-            padding: "10px 28px", borderRadius: 10, border: `1px solid ${ACCENT_GREEN}50`,
+            padding: "10px 28px", borderRadius: 2, border: `1px solid ${ACCENT_GREEN}50`,
             background: `${ACCENT_GREEN}15`, color: ACCENT_GREEN,
             fontWeight: 700, fontSize: 14, cursor: "pointer",
             transition: "all .15s ease",
@@ -319,7 +295,7 @@ function FocusTimer({ accent }: { accent: string }) {
           </button>
         ) : (
           <button onClick={handlePause} style={{
-            padding: "10px 28px", borderRadius: 10, border: `1px solid ${ACCENT_AMBER}50`,
+            padding: "10px 28px", borderRadius: 2, border: `1px solid ${ACCENT_AMBER}50`,
             background: `${ACCENT_AMBER}15`, color: ACCENT_AMBER,
             fontWeight: 700, fontSize: 14, cursor: "pointer",
             transition: "all .15s ease",
@@ -328,7 +304,7 @@ function FocusTimer({ accent }: { accent: string }) {
           </button>
         )}
         <button onClick={handleReset} style={{
-          padding: "10px 20px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)",
+          padding: "10px 20px", borderRadius: 2, border: "1px solid rgba(255,255,255,.08)",
           background: "rgba(255,255,255,.04)", color: "rgba(243,244,246,.4)",
           fontWeight: 500, fontSize: 13, cursor: "pointer",
           transition: "all .15s ease",
@@ -337,7 +313,6 @@ function FocusTimer({ accent }: { accent: string }) {
         </button>
       </div>
 
-      {/* Session counter */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <div style={{ fontSize: 12, color: "rgba(243,244,246,.5)" }}>
           Session {currentCycle + 1} of {SESSIONS_BEFORE_LONG_BREAK}
@@ -359,7 +334,6 @@ function FocusTimer({ accent }: { accent: string }) {
         )}
       </div>
 
-      {/* Today's stats */}
       <div style={{
         ...S.card, width: "100%", maxWidth: 340,
         display: "flex", justifyContent: "space-around", textAlign: "center",
@@ -389,8 +363,6 @@ function FocusTimer({ accent }: { accent: string }) {
   );
 }
 
-// ── Study Rooms ──────────────────────────────────────────────────────────────
-
 function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const router = useRouter();
   const [rooms, setRooms] = useState<any[]>([]);
@@ -414,7 +386,6 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
   const onlineCount = Array.isArray(presence) ? presence.length : 0;
 
-  // Count users per room from presence data
   const roomUserCounts: Record<string, number> = {};
   if (Array.isArray(presence)) {
     for (const u of presence) {
@@ -438,10 +409,9 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Online banner */}
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
-        padding: "10px 14px", borderRadius: 10,
+        padding: "10px 14px", borderRadius: 2,
         background: `${accent}08`, border: `1px solid ${accent}20`,
       }}>
         <span style={{
@@ -453,7 +423,6 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
         </span>
       </div>
 
-      {/* Room grid */}
       {rooms.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {rooms.map((room: any) => {
@@ -502,8 +471,6 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     </div>
   );
 }
-
-// ── Find Partners (LFG) ─────────────────────────────────────────────────────
 
 const STUDY_LEVELS = ["High School", "Undergraduate", "Graduate", "Professional", "Self-Study"];
 const SESSION_LENGTHS = ["25min", "45min", "1hr", "2hr", "Open-ended"];
@@ -557,7 +524,6 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 13, color: "rgba(243,244,246,.5)" }}>{posts.length} looking for partners</div>
         <button style={S.btnPri} onClick={() => setShowForm(!showForm)}>
@@ -566,7 +532,6 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
       </div>
       {msg && <div style={{ fontSize: 12, color: "rgba(243,244,246,.6)", padding: "4px 0" }}>{msg}</div>}
 
-      {/* Post form */}
       {showForm && (
         <div style={{ ...S.card, border: `1px solid ${accent}25`, background: `${accent}06` }}>
           <div style={S.label}>Subject / Topic</div>
@@ -595,7 +560,7 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
           <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
             {STUDY_STYLES.map(ss => (
               <button key={ss.value} onClick={() => setStudyStyle(ss.value)} style={{
-                padding: "6px 14px", borderRadius: 20, border: "1px solid",
+                padding: "6px 14px", borderRadius: 2, border: "1px solid",
                 borderColor: studyStyle === ss.value ? `${accent}60` : "rgba(255,255,255,.08)",
                 background: studyStyle === ss.value ? `${accent}15` : "rgba(255,255,255,.03)",
                 color: studyStyle === ss.value ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
@@ -620,7 +585,6 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
         </div>
       )}
 
-      {/* Posts list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {posts.map(p => {
           const slots = `${(p.players || []).length}/${p.maxPlayers || 8}`;
@@ -658,8 +622,6 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
   );
 }
 
-// ── Ambient ──────────────────────────────────────────────────────────────────
-
 const AMBIENT_SCENES = [
   { id: "coffee", emoji: "☕", label: "Coffee Shop", gradient: "linear-gradient(135deg, #3E2723 0%, #5D4037 50%, #4E342E 100%)" },
   { id: "rain", emoji: "🌧", label: "Rainy Day", gradient: "linear-gradient(135deg, #37474F 0%, #546E7A 50%, #455A64 100%)" },
@@ -678,15 +640,14 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
 
   function select(id: string) {
     if (selected === id) {
-      // Deselect
       setSelected(null);
       onSceneChange(null);
-      try { localStorage.removeItem("weered:study:ambient"); } catch { /* empty */ }
+      try { localStorage.removeItem("weered:study:ambient"); } catch { }
     } else {
       setSelected(id);
       const scene = AMBIENT_SCENES.find(s => s.id === id);
       onSceneChange(scene?.gradient || null);
-      try { localStorage.setItem("weered:study:ambient", id); } catch { /* empty */ }
+      try { localStorage.setItem("weered:study:ambient", id); } catch { }
     }
   }
 
@@ -701,7 +662,7 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
           const isActive = selected === scene.id;
           return (
             <button key={scene.id} onClick={() => select(scene.id)} style={{
-              padding: "20px 14px", borderRadius: 12, cursor: "pointer",
+              padding: "20px 14px", borderRadius: 2, cursor: "pointer",
               border: isActive ? `2px solid ${accent}80` : "2px solid rgba(255,255,255,.06)",
               background: scene.gradient,
               display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
@@ -729,7 +690,6 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
         })}
       </div>
 
-      {/* Recommendation */}
       <div style={{
         ...S.card, textAlign: "center",
         fontSize: 12, color: "rgba(243,244,246,.4)", lineHeight: 1.6,
@@ -763,8 +723,6 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
   );
 }
 
-// ── Main Panel ───────────────────────────────────────────────────────────────
-
 interface Props {
   lobbyId: string;
   accentColor?: string;
@@ -780,11 +738,10 @@ export default function StudyModulesPanel({ lobbyId, accentColor = ACCENT, style
         const scene = AMBIENT_SCENES.find(s => s.id === saved);
         return scene?.gradient || null;
       }
-    } catch { /* empty */ }
+    } catch { }
     return null;
   });
 
-  // Subtle ambient overlay (very translucent so it doesn't overwhelm)
   const ambientOverlay: React.CSSProperties = ambientGradient ? {
     position: "relative" as const,
   } : {};
@@ -795,7 +752,6 @@ export default function StudyModulesPanel({ lobbyId, accentColor = ACCENT, style
       ...style,
       ...ambientOverlay,
     }}>
-      {/* Ambient background layer */}
       {ambientGradient && (
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
@@ -807,28 +763,8 @@ export default function StudyModulesPanel({ lobbyId, accentColor = ACCENT, style
         }} />
       )}
 
-      {/* Tabs */}
-      <div style={{
-        display: "flex", gap: 2, padding: "8px 12px 0",
-        borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto",
-        position: "relative", zIndex: 1,
-      }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: "8px 14px", borderRadius: "8px 8px 0 0", border: "none",
-            background: tab === t.id ? `${accentColor}20` : "transparent",
-            color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-            fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-            transition: "background .15s ease, color .15s ease",
-            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
 
-      {/* Content */}
       <div style={{
         flex: 1, minHeight: 0, overflowY: "auto",
         padding: "18px 16px 18px",

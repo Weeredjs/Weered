@@ -124,7 +124,6 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
           </Plaque>
         ) : (
           <>
-            {/* Wanted poster — the headline */}
             <div style={{
               padding: "30px 32px 28px",
               background: `
@@ -138,7 +137,6 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
               position: "relative",
               textAlign: "center",
             }}>
-              {/* Corner rivets */}
               {[{t:10,l:10},{t:10,r:10},{b:10,l:10},{b:10,r:10}].map((p, i) => (
                 <span key={i} style={{
                   position: "absolute",
@@ -207,7 +205,6 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
               )}
             </div>
 
-            {/* Reason */}
             {b.reason && (
               <div style={{
                 padding: "18px 22px",
@@ -224,7 +221,6 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
               </div>
             )}
 
-            {/* Proof — only on CLAIMED / SETTLED */}
             {(b.status === "CLAIMED" || b.status === "SETTLED") && b.proofNote && (
               <div style={{
                 padding: "18px 22px",
@@ -252,7 +248,6 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
               </div>
             )}
 
-            {/* Actors */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
               <div style={{ ...plaqueStyle(), padding: "14px 16px" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75, marginBottom: 6 }}>
@@ -289,7 +284,6 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
               )}
             </div>
 
-            {/* Share + CTA */}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               <button
                 type="button"

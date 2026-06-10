@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-// Faction colour palette — Super Earth military propaganda aesthetic.
 const FACTION_COLORS: Record<string, string> = {
   Humans: "#FFD700",
   "Super Earth": "#FFD700",
@@ -120,7 +119,6 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
       padding: 12,
       ...style,
     }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: 1.2, color: "#FFD700", textTransform: "uppercase" }}>
@@ -131,7 +129,6 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
           </div>
         </div>
 
-        {/* Faction filter chips */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <Chip active={filter === "ALL"} onClick={() => setFilter("ALL")} color="#FFD700">All</Chip>
           {factions.map(f => (
@@ -142,12 +139,8 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         </div>
       </div>
 
-      {/* Featured Fronts — top campaigns by player deployment, prominent cards
-          rendered above the full grid. Quick-glance for "where the war actually is". */}
       {!loading && visible.length > 4 && (() => {
         const top = [...visible].sort((a, b) => (b.planet.players || 0) - (a.planet.players || 0)).slice(0, 4);
-        // Hide the featured row when no front has meaningful activity — promoting
-        // 0-player tiles into hero cards is worse than not showing the row at all.
         const hasRealActivity = top.some(c => (c.planet.players || 0) > 100);
         if (!hasRealActivity) return null;
         return (
@@ -168,7 +161,6 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         );
       })()}
 
-      {/* Sector grid */}
       {loading ? (
         <div style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.4)", fontSize: 12 }}>
           Acquiring tactical data…
@@ -196,7 +188,6 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         </>
       )}
 
-      {/* Defense pulse keyframes */}
       <style>{`
         @keyframes hd2-defense-pulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0); }
@@ -204,7 +195,6 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         }
       `}</style>
 
-      {/* Detail modal */}
       {selected != null && (
         <PlanetModal
           planetIndex={selected}
@@ -296,7 +286,6 @@ function PlanetTile({ campaign, onClick, featured = false }: { campaign: Campaig
         {planet.sector || "—"} Sector
       </div>
 
-      {/* Liberation/defense bar */}
       <div style={{
         height: 5,
         borderRadius: 2,

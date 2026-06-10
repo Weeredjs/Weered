@@ -1,15 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// Helldivers 2 — Loadout Sharer (Slice C)
-//
-// A community library of HD2 loadouts. Users build a loadout (primary +
-// secondary + throwable + armor + helmet + 4 stratagems), name it, share
-// via shortlink, the community votes them up/down. Browseable by faction,
-// difficulty, role, popularity. The differentiator feature for the
-// Helldivers lobby — collectible-trading-card vibe, dossier files,
-// Super Earth military propaganda aesthetic.
-
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
 };
@@ -52,7 +43,6 @@ function normalizeFaction(v: any): string {
 export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
 
-  // ── POST /helldivers/loadouts — create a new loadout ───────────────────
   app.post("/helldivers/loadouts", async (req, reply) => {
     const auth = authFromHeader(String((req.headers as any).authorization || ""));
     if (!auth?.id) return reply.code(401).send({ ok: false, error: "auth_required" });
@@ -83,7 +73,6 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     const difficulty  = clampStr(body.difficulty, 24).trim() || null;
     const role        = clampStr(body.role, 32).trim() || null;
 
-    // Generate slug, retry on collision
     let slug = "";
     for (let attempt = 0; attempt < 6; attempt++) {
       const candidate = `${slugify(name)}-${randSuffix(5)}`;
@@ -110,8 +99,6 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     }
   });
 
-  // ── GET /helldivers/loadouts — list with filters ───────────────────────
-  // ?faction=TERMINIDS&role=anti-tank&sort=top|new|views&limit=30&offset=0&q=search
   app.get("/helldivers/loadouts", async (req, reply) => {
     const q = (req.query || {}) as any;
     const faction    = q.faction ? String(q.faction).toUpperCase() : null;
@@ -155,7 +142,6 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     }
   });
 
-  // ── GET /helldivers/loadouts/:slug — single loadout (increments views) ─
   app.get("/helldivers/loadouts/:slug", async (req, reply) => {
     const slug = String((req.params as any).slug || "");
     if (!slug) return reply.code(400).send({ ok: false, error: "slug_required" });
@@ -166,10 +152,8 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
       });
       if (!loadout) return reply.code(404).send({ ok: false, error: "not_found" });
 
-      // Best-effort view increment; don't fail the request if it errors.
       prisma.helldiversLoadout.update({ where: { slug }, data: { views: { increment: 1 } } }).catch(() => {});
 
-      // Optional: include the caller's vote so the UI can render correctly
       let myVote = 0;
       const auth = authFromHeader(String((req.headers as any).authorization || ""));
       if (auth?.id) {
@@ -186,7 +170,6 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     }
   });
 
-  // ── POST /helldivers/loadouts/:slug/vote — upsert vote ─────────────────
   app.post("/helldivers/loadouts/:slug/vote", async (req, reply) => {
     const auth = authFromHeader(String((req.headers as any).authorization || ""));
     if (!auth?.id) return reply.code(401).send({ ok: false, error: "auth_required" });
@@ -212,7 +195,6 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
         });
       }
 
-      // Recompute aggregate counts from the votes table to keep things honest.
       const [up, down] = await Promise.all([
         prisma.helldiversLoadoutVote.count({ where: { loadoutId: loadout.id, value: 1 } }),
         prisma.helldiversLoadoutVote.count({ where: { loadoutId: loadout.id, value: -1 } }),
@@ -229,7 +211,6 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     }
   });
 
-  // ── DELETE /helldivers/loadouts/:slug — author or staff ────────────────
   app.delete("/helldivers/loadouts/:slug", async (req, reply) => {
     const auth = authFromHeader(String((req.headers as any).authorization || ""));
     if (!auth?.id) return reply.code(401).send({ ok: false, error: "auth_required" });

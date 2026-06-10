@@ -3,9 +3,9 @@
 import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
+import { useOverlay } from "../OverlayProvider";
 import { weeredToast } from "../../../lib/toast";
 
-// ─── Theme ──────────────────────────────────────────────────
 const WEERED_THEME_KEY = "weered_theme_v2";
 type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura" | "broadcast" | "press";
 
@@ -29,7 +29,6 @@ function applyWeeredTheme(name: WeeredThemeName) {
   root.setAttribute("data-weered-theme", name);
 }
 
-// ─── Types ──────────────────────────────────────────────────
 type Profile = {
   id: string;
   name: string;
@@ -41,10 +40,9 @@ type Profile = {
   lastSeen: string;
   roomsHosted: number;
   avatarColor?: string;
-  avatar?: string; // URL — DiceBear, Google, or custom
+  avatar?: string;
 };
 
-// ─── Tier + Role config ─────────────────────────────────────
 const TIERS = {
   INNOCENT: { label: "Innocent", color: "#94a3b8", glow: "rgba(148,163,184,.20)", accent: "#64748b" },
   INDICTED: { label: "Indicted", color: "#a78bfa", glow: "rgba(167,139,250,.25)", accent: "#7c3aed" },
@@ -56,8 +54,6 @@ const ROLE_COLORS: Record<string, string> = {
   GOD: "#facc15", ADMIN: "#f87171", STAFF: "#60a5fa", SUPPORT: "#34d399",
 };
 
-// ─── DiceBear avatar styles ─────────────────────────────────
-// Each style generates a unique avatar from a seed string
 const AVATAR_STYLES = [
   { id: "thumbs",       label: "Thumbs",     url: (s: string) => `https://api.dicebear.com/9.x/thumbs/svg?seed=${s}&backgroundColor=transparent` },
   { id: "bottts",       label: "Bots",       url: (s: string) => `https://api.dicebear.com/9.x/bottts/svg?seed=${s}&backgroundColor=transparent` },
@@ -69,7 +65,6 @@ const AVATAR_STYLES = [
   { id: "fun-emoji",    label: "Emoji",      url: (s: string) => `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${s}&backgroundColor=transparent` },
 ];
 
-// ─── GTA-style icon kit ─────────────────────────────────────
 const GTA_ICONS = [
   { id: "boss",      label: "Boss" },
   { id: "masked",    label: "Masked" },
@@ -90,7 +85,6 @@ const GTA_ICONS = [
   { id: "ghost",     label: "Ghost" },
 ];
 
-// Generate 12 seed variants per style for gallery
 function gallerySeeds(username: string): string[] {
   const seeds: string[] = [];
   for (let i = 0; i < 12; i++) {
@@ -99,7 +93,6 @@ function gallerySeeds(username: string): string[] {
   return seeds;
 }
 
-// ─── Helpers ────────────────────────────────────────────────
 function notorietyRank(n: number): { name: string; next: number; prev: number } {
   const ranks = [
     { name: "Street Rat",   threshold: 0 },
@@ -144,12 +137,21 @@ function formatPlaytime(minutes: number): string {
   return `${d}d ${h % 24}h`;
 }
 
-// ─── NotorietyBar ───────────────────────────────────────────
+function relColor(tier: string): string {
+  switch (tier) {
+    case "Veteran":  return "#fbbf24";
+    case "Trusted":  return "#86efac";
+    case "Reliable": return "#c4b5fd";
+    case "Proven":   return "rgba(203,213,225,0.9)";
+    default:         return "rgba(148,163,184,0.6)";
+  }
+}
+
 function NotorietyBar({ value, color, prev, next }: { value: number; color: string; prev: number; next: number }) {
   const pct = next === prev ? 100 : Math.min(100, ((value - prev) / (next - prev)) * 100);
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ position: "relative", height: 4, background: "rgba(255,255,255,.06)", borderRadius: 99, overflow: "hidden" }}>
+      <div style={{ position: "relative", height: 8, background: "rgba(255,255,255,.06)", borderRadius: 99, overflow: "hidden", boxShadow: "inset 0 1px 2px rgba(0,0,0,.4)" }}>
         <div style={{
           height: "100%", width: `${pct}%`,
           background: `linear-gradient(90deg, ${color}88, ${color})`,
@@ -166,7 +168,6 @@ function NotorietyBar({ value, color, prev, next }: { value: number; color: stri
   );
 }
 
-// ─── AvatarGallery ──────────────────────────────────────────
 function AvatarGallery({ username, currentAvatar, onSelect }: {
   username: string;
   currentAvatar: string | null;
@@ -178,7 +179,6 @@ function AvatarGallery({ username, currentAvatar, onSelect }: {
 
   return (
     <div>
-      {/* Style tabs */}
       <div style={{
         display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10,
         padding: "2px 0",
@@ -202,7 +202,6 @@ function AvatarGallery({ username, currentAvatar, onSelect }: {
         ))}
       </div>
 
-      {/* Avatar grid */}
       <div style={{
         display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6,
       }}>
@@ -237,7 +236,6 @@ function AvatarGallery({ username, currentAvatar, onSelect }: {
   );
 }
 
-// ─── GTA Icon Gallery ────────────────────────────────────────
 function GtaGallery({ currentAvatar, onSelect }: {
   currentAvatar: string | null;
   onSelect: (url: string) => void;
@@ -281,7 +279,6 @@ function GtaGallery({ currentAvatar, onSelect }: {
   );
 }
 
-// ─── ColorPicker ────────────────────────────────────────────
 function ColorPicker({ current, onChange }: { current: string; onChange: (c: string) => void }) {
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -304,7 +301,6 @@ function ColorPicker({ current, onChange }: { current: string; onChange: (c: str
   );
 }
 
-// ─── StatCard ───────────────────────────────────────────────
 function StatCard({ label, value, icon }: { label: string; value: string | number; icon: string }) {
   return (
     <div style={{
@@ -326,10 +322,10 @@ function StatCard({ label, value, icon }: { label: string; value: string | numbe
   );
 }
 
-// ─── Main ProfileSheet ──────────────────────────────────────
 export default function ProfileSheet({ userId }: { userId: string }) {
   const w       = useWeered() as any;
   const me      = w?.me;
+  const { openSheet } = useOverlay();
   const token   = w?.token;
   const apiBase = w?.apiBase || "";
 
@@ -341,6 +337,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [error,       setError      ] = useState("");
   const [editing,     setEditing    ] = useState(false);
   const [bio,         setBio        ] = useState("");
+  const [badges,      setBadges     ] = useState<any[]>([]);
   const [saving,      setSaving     ] = useState(false);
   const [avatarColor, setAvatarColor] = useState("");
   const [savingColor, setSavingColor] = useState(false);
@@ -352,7 +349,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [uploadError, setUploadError] = useState("");
   const [theme,       setTheme      ] = useState<WeeredThemeName>("press");
 
-  // Hydrate theme from localStorage
   useEffect(() => {
     try {
       const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
@@ -371,7 +367,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     applyWeeredTheme(name);
   };
 
-  // Fetch profile
   useEffect(() => {
     if (!resolvedId) return;
     setLoading(true);
@@ -395,7 +390,23 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       .finally(() => setLoading(false));
   }, [resolvedId, token, apiBase]);
 
-  // Save bio
+  useEffect(() => {
+    if (!resolvedId) return;
+    fetch(`${apiBase}/badges/user/${resolvedId}`)
+      .then(r => r.json())
+      .then(d => setBadges(d?.badges || []))
+      .catch(() => {});
+  }, [resolvedId, apiBase]);
+
+  const [reliability, setReliability] = useState<{ completed: number; tier: string } | null>(null);
+  useEffect(() => {
+    if (!resolvedId) return;
+    fetch(`${apiBase}/users/${resolvedId}/reliability`)
+      .then(r => r.json())
+      .then(d => { if (d?.ok && (d.completed ?? 0) > 0) setReliability({ completed: d.completed, tier: d.tier }); })
+      .catch(() => {});
+  }, [resolvedId, apiBase]);
+
   const saveBio = useCallback(async () => {
     if (!token) return;
     setSaving(true);
@@ -409,12 +420,12 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       if (j?.error) { weeredToast.error(j.error); return; }
       setProfile(prev => prev ? { ...prev, bio } : prev);
       setEditing(false);
+      if (isMe) { try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {} }
       weeredToast.success("Bio saved.");
     } catch { weeredToast.error("Failed to save."); }
     finally { setSaving(false); }
   }, [token, apiBase, bio]);
 
-  // Save avatar color
   const saveColor = useCallback(async (color: string) => {
     setAvatarColor(color);
     try { localStorage.setItem("weered:avatarColor", color); } catch {}
@@ -428,11 +439,37 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         body: JSON.stringify({ avatarColor: color }),
       });
       setProfile(prev => prev ? { ...prev, avatarColor: color } : prev);
+      try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
     } catch {}
     finally { setSavingColor(false); }
   }, [token, apiBase]);
 
-  // Save avatar image URL
+  const saveFrame = useCallback(async (key: string) => {
+    setProfile(prev => prev ? ({ ...prev, avatarFrame: key === "none" ? null : key } as any) : prev);
+    if (!token) return;
+    try {
+      await fetch(`${apiBase}/profile/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avatarFrame: key }),
+      });
+      try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
+    } catch {}
+  }, [token, apiBase]);
+
+  const saveNameEffect = useCallback(async (key: string) => {
+    setProfile(prev => prev ? ({ ...prev, nameEffect: key === "none" ? null : key } as any) : prev);
+    if (!token) return;
+    try {
+      await fetch(`${apiBase}/profile/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ nameEffect: key }),
+      });
+      try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
+    } catch {}
+  }, [token, apiBase]);
+
   const saveAvatar = useCallback(async (url: string) => {
     setAvatarUrl(url);
     setSavingAvatar(true);
@@ -443,11 +480,11 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         body: JSON.stringify({ avatar: url }),
       });
       setProfile(prev => prev ? { ...prev, avatar: url } : prev);
+      try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
     } catch {}
     finally { setSavingAvatar(false); }
   }, [token, apiBase]);
 
-  // Remove avatar (go back to letter)
   const removeAvatar = useCallback(async () => {
     setAvatarUrl(null);
     try {
@@ -457,6 +494,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         body: JSON.stringify({ avatar: "" }),
       });
       setProfile(prev => prev ? { ...prev, avatar: undefined } : prev);
+      try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
     } catch {}
   }, [token, apiBase]);
 
@@ -506,7 +544,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     finally { setBlockBusy(false); }
   }
 
-  // ─── Loading state ──────────────────────────────────────────
   if (loading) return (
     <div style={wrap}>
       <div style={{ padding: "28px 0" }}>
@@ -543,42 +580,46 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   return (
     <div style={wrap}>
 
-      {/* ── Tier banner ─────────────────────────────────── */}
       <div style={{
         margin: "-16px -16px 0",
-        height: 64,
-        background: `linear-gradient(135deg, ${tier.color}12 0%, transparent 50%, ${tier.accent}08 100%)`,
-        borderBottom: `1px solid ${tier.color}18`,
+        height: 110,
+        background: `radial-gradient(120% 140% at 18% 0%, ${tier.accent}3a 0%, transparent 55%), radial-gradient(120% 160% at 100% 0%, ${tier.color}26 0%, transparent 60%), linear-gradient(180deg, #16121f 0%, #0b0b0d 100%)`,
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Subtle pattern */}
+        {(profile as any).bannerUrl && (
+          <img src={(profile as any).bannerUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
+        )}
         <div style={{
-          position: "absolute", inset: 0, opacity: 0.03,
+          position: "absolute", inset: 0, opacity: 0.05, color: tier.color,
           backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
+          backgroundSize: "22px 22px",
         }} />
         <div style={{
-          position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)",
-          fontSize: 10, fontWeight: 900, letterSpacing: "2.5px",
-          textTransform: "uppercase", color: tier.color, opacity: 0.35,
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, transparent 42%, rgba(0,0,0,0.18) 62%, rgba(0,0,0,0.5) 100%)",
+        }} />
+        <div style={{
+          position: "absolute", right: 16, top: 14,
+          fontSize: 11, fontWeight: 900, letterSpacing: "3px",
+          textTransform: "uppercase", color: tier.color,
+          textShadow: `0 0 14px ${tier.glow}`, opacity: 0.92,
         }}>
           {tier.label}
         </div>
       </div>
 
-      {/* ── Avatar + name ───────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 14, marginTop: -28, marginBottom: 14 }}>
-        {/* Avatar — image or letter */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginTop: -44, marginBottom: 12 }}>
         <div
           onClick={isMe ? () => setShowGallery(!showGallery) : undefined}
+          className={(profile as any).avatarFrame ? "weered-frame-" + (profile as any).avatarFrame : undefined}
           style={{
-            width: 60, height: 60, borderRadius: "50%", flexShrink: 0,
+            width: 96, height: 96, borderRadius: "50%", flexShrink: 0,
             background: hasAvatar ? `${aColor}22` : aColor,
-            border: `2.5px solid ${tier.color}`,
-            boxShadow: `0 0 16px ${tier.glow}, 0 4px 12px rgba(0,0,0,.3)`,
+            border: `3px solid ${tier.color}`,
+            boxShadow: `0 0 30px ${tier.glow}, 0 0 0 4px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.5)`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: hasAvatar ? 0 : 24, fontWeight: 900, color: "#fff",
+            fontSize: hasAvatar ? 0 : 38, fontWeight: 900, color: "#fff",
             overflow: "hidden",
             cursor: isMe ? "pointer" : "default",
             transition: "transform 0.2s, box-shadow 0.2s",
@@ -608,7 +649,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
         <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-0.3px" }}>{profile.name}</span>
+            <span className={(profile as any).nameEffect ? "weered-name-" + (profile as any).nameEffect : undefined} style={{ fontSize: 25, fontWeight: 900, letterSpacing: "-0.4px" }}>{profile.name}</span>
             <span style={{
               padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900,
               background: `${tier.color}12`, border: `1px solid ${tier.color}30`, color: tier.color,
@@ -620,14 +661,32 @@ export default function ProfileSheet({ userId }: { userId: string }) {
               }}>{profile.globalRole}</span>
             )}
           </div>
-          <div style={{ fontSize: 11, opacity: 0.3, marginTop: 3, fontFamily: "monospace" }}>
-            Since {joinDate}
-            {lastSeen && <span style={{ marginLeft: 10, color: lastSeen === "Active now" ? "#22c55e" : "inherit", opacity: lastSeen === "Active now" ? 1 : 0.7 }}>{lastSeen}</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6 }}>
+            <span style={{ color: "#D4A017", fontSize: 14, lineHeight: 1, textShadow: "0 0 12px rgba(212,160,23,.6)" }}>★</span>
+            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, fontWeight: 900, letterSpacing: "2px", textTransform: "uppercase", color: "#D4A017" }}>{rank.name}</span>
           </div>
         </div>
       </div>
 
-      {/* ── Avatar customization (own profile) ──────────── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2, marginBottom: 16 }}>
+        {((profile as any).statusText || (profile as any).statusEmoji) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            {(profile as any).statusEmoji && <span style={{ fontSize: 15 }}>{(profile as any).statusEmoji}</span>}
+            {(profile as any).statusText && <span style={{ fontStyle: "italic", color: "rgba(243,244,246,.85)" }}>{(profile as any).statusText}</span>}
+          </div>
+        )}
+        {(profile as any).primaryCrew?.name && (
+          <a href={`/crew/${encodeURIComponent((profile as any).primaryCrew.id)}`} style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", width: "fit-content" }}>
+            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 900, letterSpacing: "1px", color: ((profile as any).primaryCrew.accentColor || "#a78bfa"), border: `1px solid ${((profile as any).primaryCrew.accentColor || "#a78bfa")}55`, padding: "1px 7px" }}>[{(profile as any).primaryCrew.tag}]</span>
+            <span style={{ fontSize: 13, fontStyle: "italic", color: "rgba(240,232,214,.78)" }}>{(profile as any).primaryCrew.name}</span>
+          </a>
+        )}
+        <div style={{ fontSize: 11, opacity: 0.4, fontFamily: "monospace" }}>
+          Since {joinDate}
+          {lastSeen && <span style={{ marginLeft: 10, color: lastSeen === "Active now" ? "#22c55e" : "inherit", opacity: lastSeen === "Active now" ? 1 : 0.7 }}>{lastSeen}</span>}
+        </div>
+      </div>
+
       {isMe && showGallery && (
         <div style={section}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -639,7 +698,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
             )}
           </div>
 
-          {/* Tab toggle */}
           <div style={{ display: "flex", gap: 2, marginBottom: 12, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: 2 }}>
             {(["gta", "gallery", "color", ...(profile.tier !== "INNOCENT" ? ["upload"] : [])] as const).map(tab => (
               <button
@@ -659,6 +717,15 @@ export default function ProfileSheet({ userId }: { userId: string }) {
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={() => openSheet("settings", { tab: "appearance" })}
+            style={{ width: "100%", marginBottom: 12, padding: "8px 11px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "rgba(196,181,253,.95)", background: "rgba(124,58,237,.10)", border: "1px solid rgba(124,58,237,.3)", borderRadius: 3 }}
+          >
+            <span>🎨 Themes, panel colors &amp; banner</span>
+            <span style={{ opacity: 0.7 }}>Appearance →</span>
+          </button>
 
           {activeTab === "gta" ? (
             <GtaGallery
@@ -698,7 +765,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                     setUploading(true);
                     setUploadError("");
                     try {
-                      // Resize to 256x256 using canvas
                       const img = new Image();
                       const url = URL.createObjectURL(file);
                       await new Promise<void>((resolve, reject) => {
@@ -710,7 +776,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                       canvas.width = 256;
                       canvas.height = 256;
                       const ctx = canvas.getContext("2d")!;
-                      // Center crop
                       const size = Math.min(img.width, img.height);
                       const sx = (img.width - size) / 2;
                       const sy = (img.height - size) / 2;
@@ -767,7 +832,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* ── Bio ─────────────────────────────────────────── */}
       <div style={section}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={sectionLabel}>Bio</div>
@@ -809,24 +873,23 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         )}
       </div>
 
-      {/* ── Notoriety ───────────────────────────────────── */}
       <div style={section}>
         <div style={sectionLabel}>Notoriety</div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-            background: "linear-gradient(135deg, rgba(88,0,229,0.15), rgba(212,160,23,0.15))",
-            border: "1px solid rgba(212,160,23,0.3)",
+            width: 64, height: 64, borderRadius: 14, flexShrink: 0,
+            background: "linear-gradient(135deg, rgba(88,0,229,0.22), rgba(212,160,23,0.22))",
+            border: "1px solid rgba(212,160,23,0.45)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, fontWeight: 900, color: "#D4A017",
+            fontSize: 28, fontWeight: 900, color: "#D4A017",
             fontFamily: "monospace",
-            boxShadow: "0 0 16px rgba(212,160,23,0.15)",
+            boxShadow: "0 0 26px rgba(212,160,23,0.28), inset 0 0 18px rgba(212,160,23,0.12)",
           }}>
             ★
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "rgba(243,244,246,0.95)", letterSpacing: "-0.3px" }}>{rank.name}</div>
+              <div style={{ fontSize: 21, fontWeight: 900, color: "rgba(243,244,246,0.97)", letterSpacing: "-0.4px" }}>{rank.name}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#D4A017", fontFamily: "monospace" }}>
                 {profile.notoriety.toLocaleString()} XP
               </div>
@@ -841,7 +904,27 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         <NotorietyBar value={profile.notoriety} color="#D4A017" prev={rank.prev} next={rank.next} />
       </div>
 
-      {/* ── Stats row ───────────────────────────────────── */}
+      {reliability && (
+        <div style={section}>
+          <div style={sectionLabel}>Reliability</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              background: `linear-gradient(135deg, ${relColor(reliability.tier)}33, ${relColor(reliability.tier)}11)`,
+              border: `1px solid ${relColor(reliability.tier)}66`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 20, color: relColor(reliability.tier),
+            }}>★</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: relColor(reliability.tier), letterSpacing: "0.3px", textTransform: "uppercase" }}>{reliability.tier}</div>
+              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", fontFamily: "monospace", marginTop: 1 }}>
+                {reliability.completed} session{reliability.completed === 1 ? "" : "s"} completed
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ ...section, background: "transparent", border: "none", padding: 0, marginTop: 10 }}>
         <div style={{ display: "flex", gap: 8 }}>
           <StatCard icon="🏠" label="Rooms Hosted" value={profile.roomsHosted} />
@@ -850,11 +933,69 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* ── Steam achievements ──────────────────────────── */}
-      {/* One panel per known Steam-backed lobby. Each panel hides itself
-          when there's no data (no Steam linked, private profile, no
-          achievements unlocked, etc.) so this section is invisible by
-          default for users without a public Steam profile. */}
+      {badges.length > 0 && (
+        <div style={{ ...section, marginTop: 10 }}>
+          <div style={sectionLabel}>Badges</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
+            {badges.slice(0, 12).map((b: any, i: number) => {
+              const RC = ["#94a3b8","#22c55e","#3b82f6","#a855f7","#f59e0b"];
+              const color = RC[Math.min((b.rarity || 1) - 1, 4)];
+              return (
+                <div key={i} title={`${b.name || "Badge"} — ${b.description || ""}`} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 5, background: `${color}12`, border: `1px solid ${color}30`, fontSize: 10, fontWeight: 700, color }}>
+                  {b.iconUrl ? <img src={b.iconUrl} alt="" style={{ width: 13, height: 13, borderRadius: 2 }} /> : <span>🏅</span>}
+                  {b.name || "Badge"}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {(profile as any).gameAccounts?.length > 0 && (
+        <div style={{ ...section, marginTop: 10 }}>
+          <div style={sectionLabel}>Linked Accounts</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+            {(profile as any).gameAccounts.map((g: any, i: number) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 6, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.07)", fontSize: 10 }}>
+                <span style={{ fontWeight: 800, opacity: 0.55, textTransform: "uppercase", letterSpacing: ".5px" }}>{g.platform || g.gameType}</span>
+                <span style={{ opacity: 0.85 }}>{g.displayName}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isMe && (
+        <div style={{ ...section, marginTop: 10 }}>
+          <div style={sectionLabel}>Avatar Frame</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+            {["none","gold","flames","crystal","neon","circuit"].map(key => (
+              <button key={key} type="button" onClick={() => saveFrame(key)} title={key}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <div className={key === "none" ? undefined : "weered-frame-" + key}
+                  style={{ width: 30, height: 30, borderRadius: "50%", background: aColor, border: key === "none" ? "1px dashed rgba(255,255,255,.3)" : "none", outline: ((profile as any).avatarFrame || "none") === key ? "2px solid #fff" : "none", outlineOffset: 3 }} />
+                <span style={{ fontSize: 8, opacity: 0.5, textTransform: "uppercase", letterSpacing: ".5px" }}>{key}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isMe && (
+        <div style={{ ...section, marginTop: 10 }}>
+          <div style={sectionLabel}>Name Effect</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+            {["none","gold","fire","ice","toxic","royal","rainbow"].map(key => (
+              <button key={key} type="button" onClick={() => saveNameEffect(key)} title={key}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, outline: ((profile as any).nameEffect || "none") === key ? "2px solid rgba(255,255,255,.5)" : "none", borderRadius: 4 }}>
+                <span className={key === "none" ? undefined : "weered-name-" + key} style={{ fontSize: 14, fontWeight: 900, color: key === "none" ? "rgba(255,255,255,.5)" : undefined }}>Name</span>
+                <span style={{ fontSize: 8, opacity: 0.5, textTransform: "uppercase", letterSpacing: ".5px" }}>{key}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {profile?.id && (
         <div style={{ marginTop: 14 }}>
           <SteamAchievementsPanel appId="553850" userId={profile.id} gameDisplayName="Helldivers 2" accentColor="#FFD700" />
@@ -863,48 +1004,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* ── Theme selector (own profile) ────────────────── */}
-      {isMe && (
-        <div style={section}>
-          <div style={sectionLabel}>Theme</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {(Object.keys(WEERED_THEMES) as WeeredThemeName[]).map(name => {
-              const t = WEERED_THEMES[name];
-              const active = theme === name;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => changeTheme(name)}
-                  style={{
-                    flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                    padding: "10px 0", borderRadius: 10,
-                    border: active ? `2px solid ${t.swatch}` : "2px solid rgba(255,255,255,.06)",
-                    background: active ? `${t.swatch}12` : "rgba(255,255,255,.03)",
-                    cursor: "pointer", fontFamily: "inherit",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <div style={{
-                    width: 20, height: 20, borderRadius: "50%",
-                    background: t.swatch,
-                    boxShadow: active ? `0 0 10px ${t.swatch}66` : "none",
-                  }} />
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, letterSpacing: "0.5px",
-                    textTransform: "uppercase",
-                    color: active ? t.swatch : "rgba(255,255,255,.35)",
-                  }}>
-                    {t.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Actions (other users) ───────────────────────── */}
       {!isMe && (
         <div style={{ ...section, marginTop: 10 }}>
           <div style={{ display: "flex", gap: 8 }}>
@@ -918,7 +1017,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* ── Hover overlay for avatar edit hint ──────────── */}
       <style>{`
         .avatar-edit-overlay { opacity: 0 !important; }
         div:hover > .avatar-edit-overlay { opacity: 1 !important; }
@@ -928,7 +1026,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────
 const wrap: React.CSSProperties = {
   padding: 16,
   display: "flex",

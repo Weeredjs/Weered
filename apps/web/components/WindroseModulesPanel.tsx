@@ -17,25 +17,21 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ═══ Windrose Palette ══════════════════════════════════════════════════════════
-
 const PAL = {
-  abyss:     "#0e1826",   // deepest shadow — visible dark blue, not black
-  stormDeep: "#19283e",   // base — deep sea at dusk
-  stormMid:  "#243752",   // mid — more life, lets brass pop
-  stormFoam: "#2e4363",   // highlight — foam on the crest
+  abyss:     "#0e1826",
+  stormDeep: "#19283e",
+  stormMid:  "#243752",
+  stormFoam: "#2e4363",
   brass:     "#c9a066",
   brassHi:   "#e8c48a",
   brassLow:  "#8a6b3e",
   verdigris: "#4a8a9d",
-  parchment: "#e4d4b0",   // warmer parchment
+  parchment: "#e4d4b0",
   parchDim:  "#a89775",
   sea:       "#3a7488",
-  blood:     "#a33d3d",   // warmer, candle-lit pirate red
+  blood:     "#a33d3d",
   ink:       "#0a1220",
 };
-
-// ═══ Styles ════════════════════════════════════════════════════════════════════
 
 const WR_FONT_DISPLAY = `"Pirata One", "Cinzel Decorative", "Luminari", "Georgia", serif`;
 const WR_FONT_SERIF   = `"Cormorant Garamond", "EB Garamond", "Crimson Pro", "Palatino Linotype", Georgia, serif`;
@@ -136,8 +132,6 @@ const S = {
   },
 };
 
-// ═══ SVG Ornaments ═════════════════════════════════════════════════════════════
-
 function SailMark({ size = 56, color = PAL.brassHi, glow = true }: { size?: number; color?: string; glow?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 120 120" fill="none" style={{ filter: glow ? `drop-shadow(0 0 10px ${color}55)` : "none", color }}>
@@ -150,22 +144,17 @@ function SailMark({ size = 56, color = PAL.brassHi, glow = true }: { size?: numb
 function CompassRose({ size = 72, color = PAL.brass, glow = true }: { size?: number; color?: string; glow?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: glow ? `drop-shadow(0 0 8px ${color}55)` : "none" }}>
-      {/* outer ring */}
       <circle cx="50" cy="50" r="48" fill="none" stroke={color} strokeWidth="0.6" opacity="0.5" />
       <circle cx="50" cy="50" r="44" fill="none" stroke={color} strokeWidth="0.4" opacity="0.3" />
-      {/* cardinal rays (long) */}
       <path d="M50 4 L53 47 L50 50 L47 47 Z" fill={color} opacity="0.95" />
       <path d="M50 96 L53 53 L50 50 L47 53 Z" fill={color} opacity="0.55" />
       <path d="M96 50 L53 53 L50 50 L53 47 Z" fill={color} opacity="0.75" />
       <path d="M4 50 L47 53 L50 50 L47 47 Z" fill={color} opacity="0.75" />
-      {/* intercardinal (short) */}
       <path d="M82 18 L53 47 L50 50 L52 45 Z" fill={color} opacity="0.4" />
       <path d="M18 18 L47 47 L50 50 L48 45 Z" fill={color} opacity="0.4" />
       <path d="M82 82 L53 53 L50 50 L52 55 Z" fill={color} opacity="0.4" />
       <path d="M18 82 L47 53 L50 50 L48 55 Z" fill={color} opacity="0.4" />
-      {/* center */}
       <circle cx="50" cy="50" r="3.5" fill={PAL.abyss} stroke={color} strokeWidth="0.8" />
-      {/* cardinal labels */}
       <text x="50" y="12" fill={color} fontSize="8" fontFamily={WR_FONT_DISPLAY} textAnchor="middle" opacity="0.9">N</text>
       <text x="50" y="94" fill={color} fontSize="6" fontFamily={WR_FONT_DISPLAY} textAnchor="middle" opacity="0.6">S</text>
       <text x="92" y="53" fill={color} fontSize="6" fontFamily={WR_FONT_DISPLAY} textAnchor="middle" opacity="0.7">E</text>
@@ -211,8 +200,6 @@ function SkullIcon({ size = 14, color = PAL.brass }: { size?: number; color?: st
   );
 }
 
-// ═══ Tabs ═══════════════════════════════════════════════════════════════════════
-
 import WindroseBuildBrowser from "./WindroseBuildBrowser";
 
 const TABS = [
@@ -228,12 +215,7 @@ const TABS = [
 ];
 type TabId = typeof TABS[number]["id"];
 
-// Slim tab set used inside rooms — Bounties / Ports of Call / Mods.
-// The lobby-wide tabs (Flagship, Log, Crew Finder, Streams, About) don't
-// belong inside a single room's stage.
 const SLIM_TAB_IDS: TabId[] = ["logbook", "bounties", "ports", "mods"];
-
-// ═══ Live Player Counter ═══════════════════════════════════════════════════════
 
 function LivePlayers() {
   const [count, setCount] = useState<number | null>(null);
@@ -271,7 +253,6 @@ function LivePlayers() {
       position: "relative",
       boxShadow: `inset 0 0 40px ${PAL.ink}80, 0 0 0 1px ${PAL.brassLow}, 0 12px 40px ${PAL.ink}`,
     }}>
-      {/* corner rivets */}
       <span style={{ position: "absolute", top: 6, left: 6 }}><Rivet /></span>
       <span style={{ position: "absolute", top: 6, right: 6 }}><Rivet /></span>
       <span style={{ position: "absolute", bottom: 6, left: 6 }}><Rivet /></span>
@@ -296,8 +277,6 @@ function LivePlayers() {
     </div>
   );
 }
-
-// ═══ Launch Milestones ═════════════════════════════════════════════════════════
 
 function LaunchStats() {
   const [data, setData] = useState<any | null>(null);
@@ -333,12 +312,9 @@ function LaunchStats() {
   );
 }
 
-// ═══ Tab: Flagship ═════════════════════════════════════════════════════════════
-
 function FlagshipTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Hero row */}
       <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
         <LivePlayers />
         <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "22px 24px" }}>
@@ -362,7 +338,6 @@ function FlagshipTab() {
 
       <BrassDivider />
 
-      {/* Launch milestones */}
       <div>
         <div style={{ ...S.label, marginBottom: 10, textAlign: "center" }}>Launch Week · 2026-04-14</div>
         <LaunchStats />
@@ -370,12 +345,10 @@ function FlagshipTab() {
 
       <BrassDivider />
 
-      {/* Live activity — chaos-bar stitch of bounties, crews, servers, flags */}
       <ActivityTicker />
 
       <BrassDivider />
 
-      {/* Three-column: Inspiration / Systems / Platform */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
         <FeatureBlock icon="⚓" title="Soulslite Combat" body="Challenging bosses. Weighty swings. Parries that matter. Not a Souls clone — a Souls-lite. Takes inspiration from Black Flag." />
         <FeatureBlock icon="🌊" title="Naval & Exploration" body="Procedural open world. Build a galleon, captain a crew of eight, discover isles, and weather real-time storms." />
@@ -384,8 +357,6 @@ function FlagshipTab() {
     </div>
   );
 }
-
-// ═══ Activity Ticker ═══════════════════════════════════════════════════════
 
 type ActivityEvent = {
   id: string;
@@ -529,8 +500,6 @@ function FeatureBlock({ icon, title, body }: { icon: string; title: string; body
   );
 }
 
-// ═══ Tab: Captain's Log (news) ═════════════════════════════════════════════════
-
 function LogTab() {
   const [items, setItems] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -544,8 +513,6 @@ function LogTab() {
       else setItems([]);
       setLoading(false);
     });
-    // The Operator's weekly recap — independent fetch so it shows even
-    // when Steam news is slow or empty.
     setRecapLoading(true);
     apiFetch("/windrose/captains-log").then(j => {
       if (j?.ok && j.summary) setRecap({ summary: j.summary, period: j.period, generatedAt: j.generatedAt, stats: j.stats });
@@ -560,14 +527,12 @@ function LogTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* The Operator's weekly recap — sits above Steam news */}
       <OperatorRecap recap={recap} loading={recapLoading} />
 
       {loading ? (
         <LoadingState label="Loading dispatches..." />
       ) : !items || items.length === 0 ? null : (items.map((n, i) => (
         <article key={n.id || i} style={{ ...S.card, padding: "18px 22px" }}>
-          {/* wax seal corner */}
           <span style={{
             position: "absolute", top: -6, left: 18,
             width: 14, height: 14, borderRadius: "50%",
@@ -651,7 +616,6 @@ function OperatorRecap({ recap, loading }: {
       borderColor: "rgba(212,160,23,0.45)",
       position: "relative",
     }}>
-      {/* Operator identity row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
         <div style={{
           width: 44, height: 44, borderRadius: "50%",
@@ -678,7 +642,6 @@ function OperatorRecap({ recap, loading }: {
         </div>
       </div>
 
-      {/* Recap body */}
       <div style={{
         fontSize: 14,
         color: PAL.parchment,
@@ -692,7 +655,6 @@ function OperatorRecap({ recap, loading }: {
         {recap.summary}
       </div>
 
-      {/* Stat strip */}
       {recap.stats && (
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${PAL.brass}20` }}>
           <RecapStat label="Bounties posted" value={recap.stats.bountiesPosted} />
@@ -721,8 +683,6 @@ function stripBB(s: string): string {
   return s.replace(/\[[^\]]+\]/g, "").replace(/\s+/g, " ").trim();
 }
 
-// ═══ Tab: Crew Finder (LFG) ════════════════════════════════════════════════════
-
 type LfgPost = {
   id: string;
   userId: string;
@@ -740,7 +700,6 @@ const WR_MODES   = ["Any", "PvE Solo", "Co-op 2", "Co-op 4", "Co-op 8", "Boss Ru
 const WR_REGIONS = ["Any", "NA", "EU", "OCE", "ASIA", "SA", "MENA"];
 const WR_TAGS    = ["chill", "mic-required", "no-mic", "first-time", "veteran", "streaming", "18+"];
 
-// Published crews (crew profiles surfacing in a lobby's directory)
 type PublishedCrew = {
   id: string;
   name: string;
@@ -793,7 +752,6 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
   const [tags, setTags] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
-  // Published crews
   const [crews, setCrews] = useState<PublishedCrew[]>([]);
   const [myCrews, setMyCrews] = useState<MyCrew[]>([]);
   const [editingCrew, setEditingCrew] = useState<MyCrew | null>(null);
@@ -835,7 +793,6 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Compose */}
       <div style={{ ...S.card, padding: 18 }}>
         <div style={{ ...S.label, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
           <SkullIcon size={14} />
@@ -885,7 +842,6 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
         </div>
       </div>
 
-      {/* Established crews — persistent profiles published into this lobby */}
       <div style={{ ...S.card, padding: "18px 22px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 200 }}>
@@ -936,7 +892,6 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
         </div>
       )}
 
-      {/* Divider between crews and LFG */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "6px 0" }}>
         <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${PAL.brass}40, transparent)` }} />
         <div style={{ ...S.label, fontSize: 9, whiteSpace: "nowrap" }}>Flags Flying Right Now</div>
@@ -956,7 +911,6 @@ function CrewTab({ lobbyId }: { lobbyId: string }) {
         <CrewLeaderboardModal lobbyId={lobbyId} onClose={() => setShowCrewLeaders(false)} />
       )}
 
-      {/* List */}
       {loading ? (
         <LoadingState label="Scanning the horizon..." />
       ) : posts.length === 0 ? (
@@ -1016,8 +970,6 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
 
   function askToJoin() {
     if (!crew.ownerId) return;
-    // Dock opens a DM thread with the leader. DockShell listens for this
-    // event and pops the DM tab with the right peer selected.
     try {
       window.dispatchEvent(new CustomEvent("weered:dock:open", {
         detail: {
@@ -1025,7 +977,7 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
           peer: { id: crew.ownerId, name: crew.ownerName || crew.name },
         },
       }));
-    } catch { /* ignore */ }
+    } catch { }
   }
   return (
     <div style={{
@@ -1036,7 +988,6 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
       position: "relative",
       borderColor: `${accent}45`,
     }}>
-      {/* Banner or gradient header */}
       <div style={{
         height: 76,
         background: crew.bannerUrl
@@ -1058,7 +1009,6 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
         )}
       </div>
 
-      {/* Logo + identity */}
       <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: -30 }}>
           <div style={{
@@ -1132,9 +1082,6 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
           </div>
         )}
 
-        {/* Bounty-board footer — surfaces when the crew's members have
-            settled anything on the board. Cross-feature proof the crew
-            actually does work. */}
         {((crew.bountyKills || 0) > 0 || (crew.bountyEarned || 0) > 0) && (
           <div style={{
             display: "flex", alignItems: "center", gap: 12,
@@ -1159,7 +1106,6 @@ function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMember: bo
           </div>
         )}
 
-        {/* View / share chip */}
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
           <a
             href={`/crew/${encodeURIComponent(crew.id)}`}
@@ -1193,7 +1139,6 @@ function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,5,10,.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ ...S.card, width: "min(860px, 100%)", padding: 0, maxHeight: "90vh", overflowY: "auto", borderColor: `${PAL.brass}55` }}>
-        {/* Header */}
         <div style={{
           padding: "20px 26px 18px",
           background: `radial-gradient(ellipse 80% 60% at 20% 0%, ${PAL.brass}18 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`,
@@ -1205,7 +1150,6 @@ function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: 
           </div>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "18px 26px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
           {loading ? (
             <LoadingState label="Tallying the roster..." />
@@ -1213,7 +1157,6 @@ function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: 
             <div style={{ fontSize: 13, color: PAL.parchDim, fontStyle: "italic", padding: 16, textAlign: "center" }}>{err}</div>
           ) : !d ? null : (
             <>
-              {/* Stat strip */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
                 <StatTile label="Crews listed" value={d.stats.crewCount.toLocaleString()} />
                 <StatTile label="Total members" value={d.stats.totalMembers.toLocaleString()} highlight />
@@ -1221,7 +1164,6 @@ function CrewLeaderboardModal({ lobbyId, onClose }: { lobbyId: string; onClose: 
                 <StatTile label="Bounties delivered" value={d.stats.totalKills.toLocaleString()} highlight />
               </div>
 
-              {/* Three boards */}
               {d.largest.length === 0 && d.mostDecorated.length === 0 && d.recruiting.length === 0 ? (
                 <EmptyState icon="⚑" title="No crews on the board yet" hint="Publish a crew to take your spot." />
               ) : (
@@ -1467,10 +1409,6 @@ function CrewProfileEditor({ crew, lobbyId, onClose, onSaved }: {
   );
 }
 
-// ═══ Hunter / Poster tier titles ═══════════════════════════════════════════
-// Pure derivation from kill count / post count. Used on the dossier header,
-// next to names in bounty cards, and wherever a hunter's record is shown.
-
 type TierInfo = { label: string; color: string; glow: string; min: number };
 
 const HUNTER_TIERS: TierInfo[] = [
@@ -1525,8 +1463,6 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// ═══ Tab: Ports of Call (community servers directory) ═══════════════════════════
-
 type CommunityServer = {
   id: string;
   name: string;
@@ -1546,7 +1482,7 @@ type CommunityServer = {
 };
 
 type PublicServer = {
-  addr: string;           // "ip:port"
+  addr: string;
   steamId: string;
   name: string;
   players: number;
@@ -1554,28 +1490,24 @@ type PublicServer = {
   map: string;
   gameType: string;
   version: string;
-  os: string;             // "w"|"l"|"m"
+  os: string;
   secure: boolean;
   passworded: boolean;
 };
 
-/** Unified row shape the Ports list renders */
 type PortRow = {
   key: string;
   source: "registered" | "public" | "both";
-  // Display
   name: string;
-  addr: string;           // host for public, host for registered
+  addr: string;
   description?: string | null;
   region?: string | null;
   framework?: string | null;
   tags?: string[];
-  // Live
   players: number;
   maxPlayers: number;
   passworded?: boolean;
   secure?: boolean;
-  // Registered-only bits
   owner?: CommunityServer["owner"];
   dashboardUrl?: string | null;
   status?: string;
@@ -1583,8 +1515,6 @@ type PortRow = {
 
 const WR_REGIONS_LIST = ["NA-East", "NA-West", "EU", "OCE", "ASIA", "SA", "MENA"];
 const WR_FRAMEWORKS = ["WindrosePlus", "Vanilla", "Other"];
-
-// ═══ Tab: Bounty Board ═════════════════════════════════════════════════════
 
 type Bounty = {
   id: string;
@@ -1642,7 +1572,6 @@ function BountiesTab() {
   const [filter, setFilter] = useState<BountyFilter>("OPEN");
   const [balance, setBalance] = useState<number | null>(null);
 
-  // Compose form
   const [target, setTarget] = useState("");
   const [server, setServer] = useState("");
   const [amount, setAmount] = useState<number>(1000);
@@ -1650,29 +1579,22 @@ function BountiesTab() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Claim modal
   const [claiming, setClaiming] = useState<Bounty | null>(null);
 
-  // Leaderboard data
   const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
 
-  // Own hunter dossier — inline in the hero strip for the logged-in user
   const [myDossier, setMyDossier] = useState<HunterDossier | null>(null);
 
-  // Dossier modal — click any name in a bounty card
   const [dossierUserId, setDossierUserId] = useState<string | null>(null);
 
-  // Rap sheet filter — click a target handle to scope to their history
   const [targetFilter, setTargetFilter] = useState<string>("");
 
-  // Who am I
   const [myId, setMyId] = useState<string>("");
   useEffect(() => {
     apiFetch("/auth/me").then(j => { if (j?.user?.id) setMyId(j.user.id); }).catch(() => {});
     apiFetch("/paper/wallet").then(j => { if (typeof j?.balance === "number") setBalance(j.balance); }).catch(() => {});
   }, []);
 
-  // Load own dossier whenever myId lands or a bounty mutation happens
   const loadDossier = useCallback(() => {
     if (!myId) return;
     apiFetch(`/windrose/hunter/${encodeURIComponent(myId)}`).then(j => {
@@ -1690,7 +1612,7 @@ function BountiesTab() {
       } else {
         const params = new URLSearchParams();
         if (targetFilter) {
-          params.set("target", targetFilter); // rap-sheet view ignores status + mine filters
+          params.set("target", targetFilter);
         } else {
           if (filter === "MINE")    params.set("mine", "1");
           if (filter === "OPEN")    params.set("status", "OPEN");
@@ -1749,7 +1671,6 @@ function BountiesTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Hero strip */}
       <div style={{ ...S.card, padding: "18px 22px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 240 }}>
@@ -1762,7 +1683,6 @@ function BountiesTab() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 22, flexShrink: 0, alignItems: "flex-start" }}>
-            {/* Hunter dossier — only shows once the user has any bounty history */}
             {myDossier && (myDossier.hunter.kills > 0 || myDossier.poster.postedCount > 0) && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, paddingRight: 22, borderRight: `1px solid ${PAL.brass}25` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1816,7 +1736,6 @@ function BountiesTab() {
         </div>
       </div>
 
-      {/* Compose */}
       <div style={{ ...S.card, padding: 18 }}>
         <div style={{ ...S.label, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
           <SkullIcon size={14} />
@@ -1874,7 +1793,6 @@ function BountiesTab() {
         </div>
       </div>
 
-      {/* Rap-sheet banner — scopes list to every bounty on one target */}
       {targetFilter && (
         <div style={{
           ...S.card,
@@ -1896,7 +1814,6 @@ function BountiesTab() {
         </div>
       )}
 
-      {/* Filter strip — hidden when a target filter is active */}
       {!targetFilter && <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {([
           { id: "OPEN", label: "Open" },
@@ -1923,7 +1840,6 @@ function BountiesTab() {
         ))}
       </div>}
 
-      {/* List — or leaderboards */}
       {loading ? (
         <LoadingState label={filter === "LEADERBOARD" ? "Tallying the tales..." : "Combing the wanted posters..."} />
       ) : filter === "LEADERBOARD" ? (
@@ -1979,7 +1895,6 @@ function BountyLeaderboard({ data, onPickTarget }: { data: LeaderboardData | nul
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Stats strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
         <StatTile label="Open bounties"   value={stats.openCount.toLocaleString()}      sub="on the board" />
         <StatTile label="Paper in flight" value={stats.openTotal.toLocaleString()}      sub="held in escrow" highlight />
@@ -2162,7 +2077,6 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
 
   return (
     <div style={{ ...S.card, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Header: target + amount */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...S.label, fontSize: 9, marginBottom: 2 }}>
@@ -2194,14 +2108,12 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
         </div>
       </div>
 
-      {/* Reason */}
       {b.reason && (
         <div style={{ fontSize: 12, color: PAL.parchment, lineHeight: 1.5, fontStyle: "italic", opacity: 0.85, borderLeft: `2px solid ${PAL.brass}55`, paddingLeft: 10 }}>
           {b.reason.length > 160 ? `${b.reason.slice(0, 160)}…` : b.reason}
         </div>
       )}
 
-      {/* Claim proof if CLAIMED/SETTLED */}
       {(b.status === "CLAIMED" || b.status === "SETTLED") && b.proofNote && (
         <div style={{ padding: "8px 10px", background: `${PAL.brass}10`, border: `1px solid ${PAL.brass}25`, borderRadius: 2, fontSize: 11, color: PAL.parchment }}>
           <div style={{ ...S.label, fontSize: 8, marginBottom: 3 }}>
@@ -2227,7 +2139,6 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
         </div>
       )}
 
-      {/* Meta strip */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontFamily: WR_FONT_MONO, color: statusColor, letterSpacing: "1px" }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, boxShadow: `0 0 6px ${statusColor}` }} />
@@ -2255,7 +2166,6 @@ function BountyCard({ b, meId, onClaim, onSettle, onReject, onCancel, onOpenHunt
         </a>
       </div>
 
-      {/* Actions */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
         {b.status === "OPEN" && !mine && meId && (
           <button type="button" style={{ ...S.btnPrimary, fontSize: 11, padding: "7px 14px" }} onClick={onClaim}>
@@ -2318,7 +2228,6 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(5,5,10,.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ ...S.card, width: "min(620px, 100%)", padding: 0, maxHeight: "90vh", overflowY: "auto", borderColor: `${PAL.brass}55` }}>
-        {/* Header */}
         <div style={{
           padding: "20px 26px 18px",
           background: `radial-gradient(ellipse 80% 60% at 20% 0%, ${PAL.brass}18 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`,
@@ -2358,10 +2267,8 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
           ) : null}
         </div>
 
-        {/* Body */}
         {d && (
           <div style={{ padding: "18px 26px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Hunter side */}
             <section>
               <div style={{ ...S.label, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ color: "#5db765" }}>⚔</span> As Hunter
@@ -2408,7 +2315,6 @@ function HunterDossierModal({ userId, onClose }: { userId: string; onClose: () =
               )}
             </section>
 
-            {/* Poster side */}
             <section>
               <div style={{ ...S.label, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ color: PAL.blood }}>☠</span> As Poster
@@ -2593,14 +2499,11 @@ function PortsOfCallTab() {
     return () => clearInterval(t);
   }, [reload]);
 
-  // Merge the two lists by host/addr. A manually-registered server enhances
-  // the Steam-discovered one with description, tags, owner, dashboard, etc.
   const rows: PortRow[] = useMemo(() => {
     const reg = registered || [];
     const pub = publicServers || [];
     const byAddr = new Map<string, PortRow>();
 
-    // Seed with auto-discovered public servers
     for (const p of pub) {
       byAddr.set(p.addr.toLowerCase(), {
         key: `pub:${p.addr}`,
@@ -2613,7 +2516,6 @@ function PortsOfCallTab() {
         secure: p.secure,
       });
     }
-    // Overlay registered entries (merge when host matches; append when it doesn't)
     for (const r of reg) {
       const host = String(r.host || "").toLowerCase();
       const existing = host ? byAddr.get(host) : undefined;
@@ -2623,7 +2525,6 @@ function PortsOfCallTab() {
         byAddr.set(host, {
           ...existing,
           source: "both",
-          // Prefer the name the owner curated
           name: r.name || existing.name,
           description: r.description ?? existing.description,
           region: r.region ?? existing.region,
@@ -2652,7 +2553,6 @@ function PortsOfCallTab() {
       }
     }
     return Array.from(byAddr.values()).sort((a, b) => {
-      // Registered/enhanced rows float up, then by players desc, then name
       const aPin = a.source === "both" || a.source === "registered" ? 1 : 0;
       const bPin = b.source === "both" || b.source === "registered" ? 1 : 0;
       if (aPin !== bPin) return bPin - aPin;
@@ -2755,13 +2655,11 @@ function PortCard({ row }: { row: PortRow }) {
   const pct = max > 0 ? Math.min(100, (online / max) * 100) : 0;
   const full = max > 0 && online >= max;
 
-  // Source-driven pill
   const srcPill =
     row.source === "both"       ? { label: "LISTED · LIVE", color: PAL.brassHi } :
     row.source === "registered" ? { label: "LISTED",         color: PAL.brass   } :
                                    { label: "PUBLIC",         color: "#5db765"   };
 
-  // Heat colour — green if room to spare, amber if packed, red if full
   const heat = full ? "#a54848" : pct > 75 ? PAL.brassHi : pct > 30 ? PAL.brass : "#5db765";
 
   return (
@@ -2792,7 +2690,6 @@ function PortCard({ row }: { row: PortRow }) {
         </div>
       )}
 
-      {/* Slots bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1, height: 4, background: `${PAL.brass}18`, borderRadius: 1, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${heat}, ${PAL.brassHi})`, transition: "width 400ms ease" }} />
@@ -2802,7 +2699,6 @@ function PortCard({ row }: { row: PortRow }) {
         </span>
       </div>
 
-      {/* Meta strip */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         {row.region && (
           <span style={{ ...S.label, fontSize: 9 }}>
@@ -2827,7 +2723,6 @@ function PortCard({ row }: { row: PortRow }) {
         )}
       </div>
 
-      {/* Action row */}
       <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
         <a
           href={`steam://connect/${row.addr}`}
@@ -2960,8 +2855,6 @@ function Labeled({ label, children, span = 1 }: { label: string; children: React
   );
 }
 
-// ═══ Tab: Twitch Streams ═══════════════════════════════════════════════════════
-
 function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3057,10 +2950,6 @@ function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: string }
   );
 }
 
-// ═══ Tab: About ════════════════════════════════════════════════════════════════
-
-// ═══ Tab: Mods (Nexus) ═══════════════════════════════════════════════════════
-
 interface ModRow {
   id: string;
   name: string;
@@ -3095,7 +2984,6 @@ function ModsTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Controls */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <input
           value={search}
@@ -3204,7 +3092,6 @@ function AboutTab() {
         </p>
       </div>
 
-      {/* Why Weered — the ecosystem-gap positioning */}
       <div style={{
         ...S.card,
         padding: "22px 26px",
@@ -3251,8 +3138,6 @@ function AboutTab() {
   );
 }
 
-// ═══ Main Panel ════════════════════════════════════════════════════════════════
-
 export default function WindroseModulesPanel({
   lobbyId,
   gameName,
@@ -3264,9 +3149,6 @@ export default function WindroseModulesPanel({
   gameName: string;
   accentColor?: string;
   style?: React.CSSProperties;
-  // When true, only Bounties / Ports of Call / Mods are shown — used
-  // when this panel is dropped into a single room's stage instead of
-  // the lobby-wide modules view.
   slim?: boolean;
 }) {
   const visibleTabs = useMemo(
@@ -3274,13 +3156,7 @@ export default function WindroseModulesPanel({
     [slim],
   );
   const [tab, setTab] = useState<TabId>(() => {
-    // Slim (room) mode opens on bounties.
     if (slim) return "bounties";
-    // If we landed here from a "Watch Here" / home Join Room click that
-    // already stashed a pending stream, open directly on Streams instead
-    // of the flagship tab. The watchhere event itself fires *before* this
-    // panel mounts (the lobby has to switch view → modules first), so the
-    // event listener wouldn't catch it — the window stash is the bridge.
     try {
       if (typeof window !== "undefined") {
         const v = (window as any).__weeredPendingStream as { channel?: string; ts?: number } | undefined;
@@ -3293,7 +3169,6 @@ export default function WindroseModulesPanel({
 
   return (
     <>
-      {/* Google Fonts — pirate era */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
         @keyframes windrose-wave {
@@ -3339,8 +3214,6 @@ export default function WindroseModulesPanel({
       `}</style>
 
       <div style={{ ...S.shell, ...(style || {}), flex: "initial", minHeight: "auto", overflow: "visible" }}>
-        {/* Plaque header — full hero on lobby panel; suppressed in slim
-            (room) mode where the room stage already owns the chrome. */}
         {!slim && (
         <div style={S.plaque}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
@@ -3370,7 +3243,6 @@ export default function WindroseModulesPanel({
         </div>
         )}
 
-        {/* Tabs */}
         <div style={S.tabBar}>
           {visibleTabs.map(t => (
             <button
@@ -3383,7 +3255,6 @@ export default function WindroseModulesPanel({
           ))}
         </div>
 
-        {/* Body */}
         <div style={S.body}>
           {tab === "flagship" && <FlagshipTab />}
           {tab === "logbook"  && <WindroseBuildBrowser />}

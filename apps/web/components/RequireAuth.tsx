@@ -3,18 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const TOKEN_KEY = "weered_token";
+const TOKEN_KEY = "weered_user";
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [ok, setOk] = useState<boolean | null>(null);
+  const [ok, setOk] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") return null;
+    try { return !!(localStorage.getItem(TOKEN_KEY) || ""); } catch { return null; }
+  });
 
   useEffect(() => {
     try {
       const tok = localStorage.getItem(TOKEN_KEY) || "";
       if (!tok) {
-        // preserve where they tried to go (optional €“ nice for later)
         const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
         router.replace("/" + next);
         setOk(false);

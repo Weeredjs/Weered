@@ -23,10 +23,6 @@ type ArchiveEntry = {
   }>;
 };
 
-/**
- * Hall of Fame — past tournaments for a lobby with their top-3 finishers.
- * Renders inline below the active tournaments list. Empty state hides itself.
- */
 export default function TournamentArchive({ lobbyId }: { lobbyId: string }) {
   const [archive, setArchive] = React.useState<ArchiveEntry[]>([]);
   const [loaded, setLoaded] = React.useState(false);

@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
   try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 interface FeedItem {
   type: "dm" | "notification" | "notoriety" | "friend";
   id: string;
@@ -27,7 +25,6 @@ interface FeedItem {
   read?: boolean;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
@@ -40,7 +37,6 @@ function timeAgo(iso: string): string {
   return `${d}d ago`;
 }
 
-// ─── Type icon config ────────────────────────────────────────────────────────
 const TYPE_CFG: Record<string, { icon: React.ReactNode; bg: string; color: string }> = {
   dm: {
     icon: (
@@ -83,13 +79,11 @@ const TYPE_CFG: Record<string, { icon: React.ReactNode; bg: string; color: strin
   },
 };
 
-// ─── Component ───────────────────────────────────────────────────────────────
-export default function ActivityFeed() {
+export default function ActivityFeed({ initialCount = 10 }: { initialCount?: number } = {}) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  // Fetch on mount
   useEffect(() => {
     const tok = getToken();
     if (!tok) { setLoaded(true); return; }
@@ -110,7 +104,6 @@ export default function ActivityFeed() {
     return () => { cancelled = true; };
   }, []);
 
-  // Listen for real-time notifications to prepend
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -144,16 +137,13 @@ export default function ActivityFeed() {
   }, []);
 
   if (!loaded) return null;
-  // Hide the whole section when there's nothing to show — otherwise the
-  // empty state leaves a dead band between the lobby grid and the footer.
   if (feed.length === 0) return null;
 
-  const visible = expanded ? feed : feed.slice(0, 10);
-  const hasMore = feed.length > 10 && !expanded;
+  const visible = expanded ? feed : feed.slice(0, initialCount);
+  const hasMore = feed.length > initialCount && !expanded;
 
   return (
     <div style={{ padding: "0 0 4px" }}>
-      {/* Section header */}
       <div style={{
         display: "flex", alignItems: "center", gap: 7,
         padding: "0 4px 10px",
@@ -169,7 +159,6 @@ export default function ActivityFeed() {
         </span>
       </div>
 
-      {/* Feed list */}
       {feed.length === 0 ? (
         <div style={{ padding: "28px 16px", textAlign: "center" }}>
           <div style={{ color: "rgba(243,244,246,.55)", fontSize: 12, fontWeight: 700 }}>Nothing moved recently.</div>
@@ -202,7 +191,6 @@ export default function ActivityFeed() {
                   (e.currentTarget as HTMLElement).style.background = isUnread ? "rgba(88,0,229,.04)" : "transparent";
                 }}
               >
-                {/* Type icon */}
                 <div style={{
                   width: 28, height: 28, minWidth: 28, borderRadius: 8,
                   background: cfg.bg,
@@ -213,7 +201,6 @@ export default function ActivityFeed() {
                   {cfg.icon}
                 </div>
 
-                {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: 12, fontWeight: 700,
@@ -233,7 +220,6 @@ export default function ActivityFeed() {
                   )}
                 </div>
 
-                {/* Time */}
                 <div style={{
                   fontSize: 10, color: "rgba(243,244,246,.25)",
                   fontFamily: "monospace",
@@ -248,7 +234,6 @@ export default function ActivityFeed() {
             );
           })}
 
-          {/* Show more */}
           {hasMore && (
             <button
               onClick={() => setExpanded(true)}
@@ -272,7 +257,6 @@ export default function ActivityFeed() {
   );
 }
 
-// ─── Text formatting ─────────────────────────────────────────────────────────
 function formatMainText(item: FeedItem): React.ReactNode {
   switch (item.type) {
     case "dm":

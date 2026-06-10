@@ -7,21 +7,36 @@ import { useWeered } from "../../../components/WeeredProvider";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 const PAL = {
-  abyss:     "#0e1826",
-  stormDeep: "#19283e",
-  stormMid:  "#243752",
-  stormFoam: "#2e4363",
-  brass:     "#c9a066",
-  brassHi:   "#e8c48a",
-  brassLow:  "#8a6b3e",
-  parchment: "#e4d4b0",
-  parchDim:  "#a89775",
-  sea:       "#3a7488",
-  ink:       "#0a1220",
+  abyss:     "#0a0a0c",
+  stormDeep: "#0E1014",
+  stormMid:  "#14161A",
+  stormFoam: "#1B1E25",
+  brass:     "#7c3aed",
+  brassHi:   "#e9eaf0",
+  brassLow:  "#4c1d95",
+  parchment: "rgba(243,244,246,0.96)",
+  parchDim:  "rgba(148,163,184,0.72)",
+  sea:       "#3b0764",
+  ink:       "#000000",
 };
-const WR_DISPLAY = `"Pirata One", "Cinzel Decorative", "Luminari", "Georgia", serif`;
-const WR_SERIF   = `"Cormorant Garamond", "EB Garamond", "Crimson Pro", "Palatino Linotype", Georgia, serif`;
-const WR_MONO    = `"DM Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace`;
+const WR_DISPLAY = `var(--font-barlow), "Barlow Condensed", "Oswald", ui-sans-serif, sans-serif`;
+const WR_SERIF   = `var(--font-rajdhani), "Rajdhani", ui-sans-serif, system-ui, sans-serif`;
+const WR_MONO    = `"IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace`;
+
+const NOISE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E")`;
+
+function bannerChip(run = 12): React.CSSProperties {
+  return {
+    display: "inline-block",
+    background: "#3b0764",
+    color: "#fff",
+    fontFamily: WR_DISPLAY, fontWeight: 800, fontSize: 11,
+    letterSpacing: "2px", textTransform: "uppercase",
+    padding: `5px ${14 + run}px 5px 14px`,
+    clipPath: `polygon(0 0, 100% 0, calc(100% - ${run}px) 100%, 0 100%)`,
+    lineHeight: 1.1,
+  };
+}
 
 type CrewMember = { userId: string; name: string; role: "LEADER" | "OFFICER" | "MEMBER"; joinedAt: string };
 type Crew = {
@@ -49,12 +64,10 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   const [loading, setLoading] = useState(!initial);
   const [err, setErr] = useState<string | null>(!initial ? "Crew not found." : null);
   const [copied, setCopied] = useState(false);
-  // Crew loadout — fetched lazily; hidden if empty (no "look what we have!")
   const [crewMods, setCrewMods] = useState<any[]>([]);
   const [loadoutOpen, setLoadoutOpen] = useState(false);
   const [showAddMod, setShowAddMod] = useState(false);
 
-  // Is the viewer a crew officer+ ? Enables add/remove affordances.
   const ctx: any = useWeered();
   const meId: string = String(ctx?.me?.id || "");
   const myMembership = useMemo(
@@ -62,6 +75,13 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
     [c?.members, meId],
   );
   const canManageLoadout = !!myMembership && (myMembership.role === "LEADER" || myMembership.role === "OFFICER");
+  const isOfficer = canManageLoadout;
+  const isLeaderRole = !!myMembership && (myMembership.role === "LEADER" || (c?.ownerId && meId === c.ownerId));
+
+  const [joinState, setJoinState] = useState<"idle" | "sending" | "pending" | "error">("idle");
+  const [pendingReqs, setPendingReqs] = useState<{ id: string; userId: string; userName: string; note: string; createdAt: string }[]>([]);
+  const [reqBusy, setReqBusy] = useState<string>("");
+  const tok = () => (typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "");
 
   async function refreshLoadout() {
     try {
@@ -104,6 +124,8 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
     return () => { cancelled = true; };
   }, [crewId]);
 
+  useEffect(() => { if (isOfficer) refreshRequests(); /* eslint-disable-next-line */ }, [isOfficer, crewId]);
+
   function copyLink() {
     try {
       navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
@@ -111,14 +133,59 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
     } catch {}
   }
 
-  function askToJoin() {
-    if (!c?.ownerId) return;
-    const leader = c.members.find(m => m.userId === c.ownerId);
+  async function askToJoin() {
+    const token = tok();
+    if (!token) {
+      try { window.location.href = `/login?next=${encodeURIComponent(`/crew/${crewId}`)}`; } catch {}
+      return;
+    }
+    setJoinState("sending");
     try {
-      window.dispatchEvent(new CustomEvent("weered:dock:open", {
-        detail: { mode: "dm", peer: { id: c.ownerId, name: leader?.name || c.name } },
-      }));
+      const r = await fetch(`${API}/crews/${encodeURIComponent(crewId)}/requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ note: "" }),
+      });
+      if (r.ok) { setJoinState("pending"); return; }
+      const j = await r.json().catch(() => ({}));
+      if (j?.error === "Already a member") { setJoinState("idle"); return; }
+      setJoinState("error");
+    } catch { setJoinState("error"); }
+  }
+
+  async function refreshRequests() {
+    if (!isOfficer) return;
+    try {
+      const r = await fetch(`${API}/crews/${encodeURIComponent(crewId)}/requests`, { headers: { Authorization: `Bearer ${tok()}` } });
+      const j = await r.json();
+      if (Array.isArray(j?.requests)) setPendingReqs(j.requests);
     } catch {}
+  }
+
+  async function decideRequest(userId: string, decision: "approve" | "decline") {
+    setReqBusy(userId);
+    try {
+      await fetch(`${API}/crews/${encodeURIComponent(crewId)}/requests/${encodeURIComponent(userId)}/${decision}`, {
+        method: "POST", headers: { Authorization: `Bearer ${tok()}` },
+      });
+      setPendingReqs(cur => cur.filter(p => p.userId !== userId));
+      if (decision === "approve") {
+        fetch(`${API}/crews/${encodeURIComponent(crewId)}`).then(r => r.json()).then(j => { if (j?.ok && j.crew) setC(j.crew); }).catch(() => {});
+      }
+    } finally { setReqBusy(""); }
+  }
+
+  async function setMemberRole(userId: string, role: "OFFICER" | "MEMBER") {
+    setReqBusy(userId);
+    try {
+      const r = await fetch(`${API}/crews/${encodeURIComponent(crewId)}/members/${encodeURIComponent(userId)}/role`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok()}` },
+        body: JSON.stringify({ role }),
+      });
+      if (r.ok) {
+        fetch(`${API}/crews/${encodeURIComponent(crewId)}`).then(rr => rr.json()).then(j => { if (j?.ok && j.crew) setC(j.crew); }).catch(() => {});
+      }
+    } finally { setReqBusy(""); }
   }
 
   const accent = c?.accentColor && /^#[0-9a-f]{6}$/i.test(c.accentColor) ? c.accentColor : PAL.brass;
@@ -127,16 +194,15 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   return (
     <div style={{
       minHeight: "100vh",
-      padding: "40px 20px 60px",
+      padding: "24px 28px 60px",
       background: `
-        radial-gradient(ellipse 120% 80% at 50% -10%, ${PAL.stormFoam}70 0%, transparent 55%),
-        radial-gradient(ellipse 80% 60% at 20% 110%, ${PAL.sea}25 0%, transparent 60%),
+        radial-gradient(ellipse 100% 55% at 50% -10%, rgba(124,58,237,0.13) 0%, transparent 55%),
         linear-gradient(180deg, ${PAL.stormDeep} 0%, ${PAL.abyss} 100%)
       `,
       color: PAL.parchment,
       fontFamily: WR_SERIF,
     }}>
-      <div style={{ maxWidth: 780, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <Link href="/home" style={{
           display: "inline-flex", alignItems: "center", gap: 6,
           color: PAL.parchDim, textDecoration: "none", fontFamily: WR_MONO,
@@ -147,7 +213,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
         </Link>
 
         {loading ? (
-          <div style={{ ...plaqueStyle(), padding: 28, fontSize: 14, color: PAL.parchDim, fontStyle: "italic" }}>Reading the crew charter…</div>
+          <div style={{ ...plaqueStyle(), padding: 28, fontSize: 14, color: PAL.parchDim, fontStyle: "italic" }}>Loading crew…</div>
         ) : err || !c ? (
           <div style={{ ...plaqueStyle(), padding: 28 }}>
             <h1 style={{ fontFamily: WR_DISPLAY, fontSize: 32, color: PAL.brassHi, margin: 0 }}>Crew not found</h1>
@@ -157,53 +223,57 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
           </div>
         ) : (
           <>
-            {/* Banner header */}
             <div style={{
               position: "relative",
               padding: 0,
-              border: `2px solid ${accent}55`,
+              border: `1px solid rgba(255,255,255,0.07)`,
               marginBottom: 20,
               overflow: "hidden",
-              boxShadow: `0 12px 40px ${PAL.ink}`,
+              boxShadow: `0 16px 48px rgba(0,0,0,0.55)`,
             }}>
               <div style={{
                 height: 120,
                 background: c.bannerUrl
-                  ? `linear-gradient(180deg, rgba(14,24,38,0.4), rgba(14,24,38,0.85)), url(${c.bannerUrl}) center/cover no-repeat`
-                  : `radial-gradient(ellipse 90% 60% at 30% 0%, ${accent}45 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid}, ${PAL.stormDeep})`,
+                  ? `linear-gradient(180deg, rgba(14,16,20,0.35), rgba(14,16,20,0.9)), url(${c.bannerUrl}) center/cover no-repeat`
+                  : `${NOISE}, radial-gradient(ellipse 95% 75% at 28% 0%, ${accent}66 0%, transparent 66%), linear-gradient(150deg, ${PAL.sea} 0%, ${PAL.brassLow} 60%, ${PAL.abyss} 100%)`,
+                backgroundBlendMode: c.bannerUrl ? "normal" : "overlay, normal, normal",
+                backgroundSize: c.bannerUrl ? "cover" : "160px 160px, cover, cover",
               }} />
-              <div style={{ padding: "18px 26px 22px", display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap", background: `linear-gradient(180deg, ${PAL.stormMid}f0 0%, ${PAL.stormDeep} 100%)` }}>
+              <div style={{ padding: "18px 26px 22px", display: "flex", gap: 18, alignItems: "flex-start", flexWrap: "wrap", background: PAL.stormMid }}>
                 <div style={{
                   width: 80, height: 80, flexShrink: 0,
                   marginTop: -60,
                   background: c.logoUrl
                     ? `url(${c.logoUrl}) center/cover, ${PAL.stormDeep}`
-                    : `linear-gradient(135deg, ${accent}, ${PAL.brassLow})`,
-                  border: `3px solid ${accent}`,
+                    : `${NOISE}, linear-gradient(135deg, ${accent}, ${PAL.brassLow})`,
+                  backgroundBlendMode: c.logoUrl ? "normal" : "overlay, normal",
+                  backgroundSize: c.logoUrl ? "cover" : "160px 160px, cover",
+                  border: `2px solid ${accent}`,
+                  outline: `3px solid ${PAL.stormMid}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: WR_DISPLAY, fontSize: 36, color: PAL.abyss, fontWeight: 700,
-                  boxShadow: `0 4px 14px ${PAL.ink}`,
+                  fontFamily: WR_DISPLAY, fontSize: 36, color: "#fff", fontWeight: 800,
+                  boxShadow: `0 6px 18px rgba(0,0,0,0.6)`, letterSpacing: "0.5px",
                 }}>
                   {!c.logoUrl && (c.tag || c.name || "?").slice(0, 2).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0, marginTop: -6 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-                    <h1 style={{ fontFamily: WR_DISPLAY, fontSize: 38, color: PAL.brassHi, margin: 0, letterSpacing: "0.5px", lineHeight: 1.1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <h1 style={{ fontFamily: WR_DISPLAY, fontSize: 40, fontWeight: 800, color: PAL.brassHi, margin: 0, letterSpacing: "1px", lineHeight: 1.0, textTransform: "uppercase" }}>
                       {c.name}
                     </h1>
                     {c.tag && (
-                      <span style={{ fontSize: 14, fontFamily: WR_MONO, color: accent, letterSpacing: "1.5px", padding: "3px 10px", border: `1px solid ${accent}50`, background: `${accent}15` }}>
+                      <span style={{ fontSize: 12, fontFamily: WR_MONO, color: "#c4b5fd", letterSpacing: "1.5px", padding: "3px 10px", border: `1px solid rgba(124,58,237,0.5)`, background: `rgba(124,58,237,0.12)` }}>
                         [{c.tag}]
                       </span>
                     )}
                   </div>
-                  <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap", fontSize: 11, fontFamily: WR_MONO, color: PAL.parchDim, letterSpacing: "1px" }}>
+                  <div style={{ display: "flex", gap: 14, marginTop: 9, flexWrap: "wrap", fontSize: 11, fontFamily: WR_MONO, color: PAL.parchDim, letterSpacing: "1px" }}>
                     <span><span style={{ color: PAL.parchment, fontWeight: 700 }}>{c.memberCount}</span> member{c.memberCount === 1 ? "" : "s"}</span>
-                    {c.homePort && <><span>·</span><span>home port <span style={{ color: PAL.parchment }}>{c.homePort}</span></span></>}
+                    {c.homePort && <><span style={{ opacity: 0.4 }}>·</span><span>home <span style={{ color: PAL.parchment }}>{c.homePort}</span></span></>}
                     {c.recruiting ? (
-                      <><span>·</span><span style={{ color: "#5db765" }}>Recruiting</span></>
+                      <><span style={{ opacity: 0.4 }}>·</span><span style={{ color: "#5db765" }}>Recruiting</span></>
                     ) : (
-                      <><span>·</span><span>Closed ranks</span></>
+                      <><span style={{ opacity: 0.4 }}>·</span><span>Not recruiting</span></>
                     )}
                   </div>
                 </div>
@@ -212,42 +282,51 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                     type="button"
                     onClick={copyLink}
                     style={{
-                      padding: "8px 14px",
-                      border: `1px solid ${PAL.brass}`,
-                      background: copied ? `${PAL.brass}30` : `linear-gradient(180deg, ${PAL.stormMid}, ${PAL.abyss})`,
-                      color: PAL.brassHi, cursor: "pointer",
-                      fontFamily: WR_SERIF, fontSize: 11, fontWeight: 700,
+                      padding: "8px 16px",
+                      border: `1px solid rgba(255,255,255,0.14)`,
+                      background: copied ? `rgba(124,58,237,0.18)` : "transparent",
+                      color: copied ? "#c4b5fd" : "rgba(243,244,246,0.9)", cursor: "pointer",
+                      fontFamily: WR_DISPLAY, fontSize: 12, fontWeight: 700,
                       letterSpacing: "2px", textTransform: "uppercase",
-                      boxShadow: `0 0 0 1px ${PAL.brassLow}`,
                     }}
                   >
                     {copied ? "Copied ✓" : "Copy Link"}
                   </button>
-                  {c.recruiting && (
-                    <button
-                      type="button"
-                      onClick={askToJoin}
-                      style={{
-                        padding: "8px 18px",
-                        border: `1px solid rgba(93,183,101,0.55)`,
-                        background: `linear-gradient(180deg, rgba(93,183,101,0.28), rgba(93,183,101,0.14))`,
-                        color: "#8edc93", cursor: "pointer",
-                        fontFamily: WR_SERIF, fontSize: 11, fontWeight: 700,
-                        letterSpacing: "2px", textTransform: "uppercase",
-                      }}
-                    >
-                      Ask to Join →
-                    </button>
+                  {c.recruiting && !myMembership && (
+                    joinState === "pending" ? (
+                      <span style={{
+                        padding: "8px 18px", fontFamily: WR_DISPLAY, fontSize: 12, fontWeight: 800,
+                        letterSpacing: "2px", textTransform: "uppercase", color: "#86efac",
+                        border: "1px solid rgba(34,197,94,0.4)", background: "rgba(34,197,94,0.1)",
+                      }}>Request sent ✓</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={askToJoin}
+                        disabled={joinState === "sending"}
+                        style={{
+                          padding: "8px 26px 8px 18px",
+                          border: "none",
+                          background: joinState === "error" ? "#9f1239" : "#5b21b6",
+                          color: "#fff", cursor: joinState === "sending" ? "default" : "pointer",
+                          fontFamily: WR_DISPLAY, fontSize: 12, fontWeight: 800,
+                          letterSpacing: "2px", textTransform: "uppercase",
+                          clipPath: "polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
+                          opacity: joinState === "sending" ? 0.6 : 1,
+                        }}
+                      >
+                        {joinState === "sending" ? "Sending…" : joinState === "error" ? "Try again" : "Ask to Join →"}
+                      </button>
+                    )
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Description */}
             {c.description && (
               <div style={{ ...plaqueStyle(), padding: "18px 22px", marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75, marginBottom: 8 }}>
-                  Charter
+                <div style={{ ...bannerChip(), marginBottom: 14 }}>
+                  About
                 </div>
                 <div style={{ fontSize: 15, color: PAL.parchment, lineHeight: 1.6, fontStyle: "italic", whiteSpace: "pre-wrap" }}>
                   {c.description}
@@ -255,7 +334,6 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
               </div>
             )}
 
-            {/* Recruiting note */}
             {c.recruiting && c.recruitingNote && (
               <div style={{
                 padding: "14px 18px",
@@ -263,7 +341,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                 background: "rgba(93,183,101,0.06)",
                 marginBottom: 14,
               }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#5db765", marginBottom: 8 }}>
+                <div style={{ fontFamily: WR_DISPLAY, fontSize: 11, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#5db765", marginBottom: 8 }}>
                   Looking for
                 </div>
                 <div style={{ fontSize: 14, color: PAL.parchment, lineHeight: 1.55, fontStyle: "italic" }}>
@@ -272,16 +350,13 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
               </div>
             )}
 
-            {/* Loadout — collapsed by default. Hidden to non-managers if
-                empty. Managers see it always so they can add mods.
-                No callout styling, no badge, just a header row that expands. */}
             {(crewMods.length > 0 || canManageLoadout) && (
               <div style={{ ...plaqueStyle(), padding: "14px 22px", marginBottom: 14 }}>
                 <div
                   onClick={() => setLoadoutOpen(o => !o)}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75 }}>
+                  <div style={bannerChip()}>
                     Loadout ({crewMods.length})
                   </div>
                   <div style={{ flex: 1 }} />
@@ -315,7 +390,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                                 }}
                               >
                                 <div style={{
-                                  width: 32, height: 32, borderRadius: 2, flexShrink: 0,
+                                  width: 32, height: 32, borderRadius: 0, flexShrink: 0,
                                   background: m.thumbnailUrl ? `url(${m.thumbnailUrl}) center/cover` : `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
                                   border: `1px solid ${PAL.brass}40`,
                                 }} />
@@ -337,7 +412,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                                     width: 18, height: 18, padding: 0,
                                     border: `1px solid ${PAL.brass}40`, background: `${PAL.ink}cc`,
                                     color: PAL.parchDim, fontSize: 11, lineHeight: 1, cursor: "pointer",
-                                    borderRadius: 2,
+                                    borderRadius: 0,
                                   }}
                                   title="Remove from kit"
                                 >×</button>
@@ -352,11 +427,11 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                         <button
                           onClick={() => setShowAddMod(true)}
                           style={{
-                            padding: "6px 14px", fontSize: 10, fontWeight: 800,
+                            padding: "6px 14px", fontSize: 11, fontWeight: 800,
                             letterSpacing: "2px", textTransform: "uppercase",
-                            color: PAL.parchment, background: `linear-gradient(180deg, ${PAL.brassHi}33, ${PAL.brass}22)`,
-                            border: `1px solid ${PAL.brass}55`, cursor: "pointer",
-                            fontFamily: WR_MONO,
+                            color: "#c4b5fd", background: "rgba(124,58,237,0.12)",
+                            border: `1px solid rgba(124,58,237,0.5)`, cursor: "pointer",
+                            fontFamily: WR_DISPLAY,
                           }}
                         >
                           + Add mod
@@ -375,44 +450,98 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
               />
             )}
 
-            {/* Roster */}
+            {isOfficer && pendingReqs.length > 0 && (
+              <div style={{ ...plaqueStyle(), padding: "18px 22px", marginBottom: 14 }}>
+                <div style={{ ...bannerChip(), marginBottom: 14 }}>
+                  Join requests ({pendingReqs.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {pendingReqs.map(req => (
+                    <div key={req.id} style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+                      background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
+                    }}>
+                      <div style={{
+                        width: 28, height: 28, background: `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontFamily: WR_DISPLAY, fontSize: 14, color: "#fff", fontWeight: 800, flexShrink: 0,
+                      }}>{(req.userName || "?").slice(0, 1).toUpperCase()}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: PAL.parchment, fontFamily: WR_DISPLAY, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.userName || "Someone"}</div>
+                        {req.note && <div style={{ fontSize: 10, color: PAL.parchDim, fontFamily: WR_MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.note}</div>}
+                      </div>
+                      <button type="button" disabled={reqBusy === req.userId} onClick={() => decideRequest(req.userId, "approve")} style={{
+                        padding: "5px 12px", fontFamily: WR_DISPLAY, fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
+                        border: "none", background: "#5b21b6", color: "#fff", cursor: "pointer", opacity: reqBusy === req.userId ? 0.5 : 1,
+                        clipPath: "polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%)",
+                      }}>Approve</button>
+                      <button type="button" disabled={reqBusy === req.userId} onClick={() => decideRequest(req.userId, "decline")} style={{
+                        padding: "5px 12px", fontFamily: WR_DISPLAY, fontSize: 11, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase",
+                        border: "1px solid rgba(255,255,255,0.14)", background: "transparent", color: "rgba(148,163,184,0.9)", cursor: "pointer", opacity: reqBusy === req.userId ? 0.5 : 1,
+                      }}>Decline</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ ...plaqueStyle(), padding: "18px 22px" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75, marginBottom: 12 }}>
+              <div style={{ ...bannerChip(), marginBottom: 14 }}>
                 Roster
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
                 {sortedMembers.map(m => {
-                  const roleColor = m.role === "LEADER" ? PAL.brassHi : m.role === "OFFICER" ? accent : PAL.parchDim;
+                  const roleColor = m.role === "LEADER" ? "#e9eaf0" : m.role === "OFFICER" ? "#c4b5fd" : PAL.parchDim;
+                  const isLeader = m.role === "LEADER";
+                  const canManageThis = isLeaderRole && m.userId !== meId && m.userId !== c.ownerId && m.role !== "LEADER";
                   return (
-                    <Link
+                    <div
                       key={m.userId}
-                      href={`/windrose/hunter/${encodeURIComponent(m.userId)}`}
                       style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        padding: "8px 10px",
-                        background: `${PAL.ink}40`,
-                        border: `1px solid ${roleColor}30`,
-                        textDecoration: "none",
+                        display: "flex", flexDirection: "column",
+                        background: "rgba(255,255,255,0.02)",
+                        border: `1px solid ${isLeader ? "rgba(124,58,237,0.4)" : "rgba(255,255,255,0.06)"}`,
                       }}
                     >
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 2,
-                        background: `linear-gradient(135deg, ${roleColor}, ${PAL.brassLow})`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontFamily: WR_DISPLAY, fontSize: 14, color: PAL.abyss, fontWeight: 700,
-                        flexShrink: 0,
-                      }}>
-                        {(m.name || "?").slice(0, 1).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: PAL.parchment, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: WR_DISPLAY, letterSpacing: "0.2px" }}>
-                          {m.name}
+                      <Link
+                        href={`/windrose/hunter/${encodeURIComponent(m.userId)}`}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", textDecoration: "none" }}
+                      >
+                        <div style={{
+                          width: 28, height: 28,
+                          background: `linear-gradient(135deg, ${PAL.brass}, ${PAL.brassLow})`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontFamily: WR_DISPLAY, fontSize: 14, color: "#fff", fontWeight: 800,
+                          flexShrink: 0,
+                        }}>
+                          {(m.name || "?").slice(0, 1).toUpperCase()}
                         </div>
-                        <div style={{ fontSize: 9, color: roleColor, fontFamily: WR_MONO, letterSpacing: "1px", textTransform: "uppercase" }}>
-                          {m.role.toLowerCase()}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: PAL.parchment, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: WR_DISPLAY, letterSpacing: "0.3px" }}>
+                            {m.name}
+                          </div>
+                          <div style={{ fontSize: 9, color: roleColor, fontFamily: WR_MONO, letterSpacing: "1px", textTransform: "uppercase" }}>
+                            {m.role.toLowerCase()}
+                          </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                      {canManageThis && (
+                        <button
+                          type="button"
+                          disabled={reqBusy === m.userId}
+                          onClick={() => setMemberRole(m.userId, m.role === "OFFICER" ? "MEMBER" : "OFFICER")}
+                          style={{
+                            margin: "0 8px 8px", padding: "4px 8px",
+                            fontFamily: WR_MONO, fontSize: 9, letterSpacing: "1px", textTransform: "uppercase",
+                            border: "1px solid rgba(124,58,237,0.4)", background: "transparent",
+                            color: "#c4b5fd", cursor: reqBusy === m.userId ? "default" : "pointer",
+                            opacity: reqBusy === m.userId ? 0.5 : 1,
+                          }}
+                        >
+                          {m.role === "OFFICER" ? "Demote to member" : "Promote to officer"}
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -430,12 +559,11 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
 
 function plaqueStyle(): React.CSSProperties {
   return {
-    border: `1px solid ${PAL.brass}35`,
-    background: `linear-gradient(180deg, ${PAL.stormMid}c0 0%, ${PAL.stormDeep}e0 100%)`,
+    border: `1px solid rgba(255,255,255,0.06)`,
+    background: PAL.stormMid,
   };
 }
 
-// ── Add-mod dialog — minimal search + pick flow ────────────────────────────
 function AddModDialog({
   crewId, onClose, onAdded,
 }: { crewId: string; onClose: () => void; onAdded: () => void }) {
@@ -478,7 +606,7 @@ function AddModDialog({
       onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(10,18,32,0.72)", backdropFilter: "blur(4px)",
+        background: "rgba(8,8,10,0.78)", backdropFilter: "blur(4px)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: 20,
       }}
@@ -491,7 +619,7 @@ function AddModDialog({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: PAL.brass, opacity: 0.75 }}>
+          <div style={bannerChip()}>
             Add to loadout
           </div>
           <div style={{ flex: 1 }} />
@@ -514,7 +642,7 @@ function AddModDialog({
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
           {loading && results.length === 0 && (
             <div style={{ fontSize: 12, color: PAL.parchDim, fontStyle: "italic", padding: 12, textAlign: "center" }}>
-              Searching the Nexus catalog…
+              Searching mods…
             </div>
           )}
           {!loading && results.length === 0 && (

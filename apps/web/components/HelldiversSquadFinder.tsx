@@ -2,16 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-// HelldiversSquadFinder — Helldivers-flavored Tavern Board / LFG.
-// Reuses the existing /lfg/:lobbyId backend (don't reinvent it). HD2-specific
-// role/difficulty/faction chips are encoded as bracketed prefix tags inside
-// the LFG `activity` field, e.g. "[Spear Specialist] [Helldive] [Bots] LF3 Operation Storm".
-// When browsing, we parse those bracket tags back into colored chips on each card.
-
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#FFD700";
-
-// ── Chip catalogs ────────────────────────────────────────────────────────────
 
 const ROLES = [
   "Spear Specialist",
@@ -31,8 +23,7 @@ const DIFFICULTIES = [
 
 const FACTIONS = ["Terminids", "Automatons", "Illuminate", "Any"];
 
-// Color the chips by category for parsed-tag rendering.
-const ROLE_COLOR = "#FFD700";       // gold
+const ROLE_COLOR = "#FFD700";
 const DIFFICULTY_COLORS: Record<string, string> = {
   Trivial:           "#4ADE80",
   Easy:              "#86EFAC",
@@ -46,13 +37,12 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   "Super Helldive":  "#000000",
 };
 const FACTION_COLORS: Record<string, string> = {
-  Terminids:  "#F97316", // bug orange
-  Automatons: "#EF4444", // bot red
-  Illuminate: "#A855F7", // squid purple
+  Terminids:  "#F97316",
+  Automatons: "#EF4444",
+  Illuminate: "#A855F7",
   Any:        "#94A3B8",
 };
 
-// Faction short tag ↔ canonical name (for compact bracket prefixes).
 const FACTION_SHORT: Record<string, string> = { Terminids: "Bugs", Automatons: "Bots", Illuminate: "Squids", Any: "Any" };
 const FACTION_FROM_SHORT: Record<string, string> = { Bugs: "Terminids", Bots: "Automatons", Squids: "Illuminate", Any: "Any" };
 
@@ -62,8 +52,6 @@ const ALL_TAG_TOKENS = new Set<string>([
   ...FACTIONS,
   ...Object.values(FACTION_SHORT),
 ]);
-
-// ── Style ────────────────────────────────────────────────────────────────────
 
 const S = {
   card: { borderRadius: 8, border: `1px solid ${ACCENT}22`, background: "rgba(255,215,0,.04)", padding: "12px 14px" } as React.CSSProperties,
@@ -75,8 +63,6 @@ const S = {
   label: { fontSize: 10, fontWeight: 700, opacity: 0.6, letterSpacing: "1.2px", textTransform: "uppercase" as const, marginBottom: 6, color: ACCENT } as React.CSSProperties,
 };
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
 function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
@@ -85,7 +71,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// Parse "[Spear Specialist] [Helldive] [Bots] LF3 Operation Storm" → { tags, rest }.
 function parseTags(activity: string): { tags: string[]; rest: string } {
   const tags: string[] = [];
   let rest = activity || "";
@@ -115,10 +100,6 @@ function tagColor(tag: string): string {
   return "rgba(255,255,255,.4)";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
-
 type Post = {
   id: string;
   userId: string;
@@ -144,7 +125,6 @@ export default function HelldiversSquadFinder({
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState("");
 
-  // form state
   const [role, setRole] = useState<string>("");
   const [difficulty, setDifficulty] = useState<string>("");
   const [faction, setFaction] = useState<string>("");
@@ -199,7 +179,6 @@ export default function HelldiversSquadFinder({
 
   return (
     <div style={{ padding: "14px 16px", color: "rgba(243,244,246,.92)" }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 1.2, color: accent, textTransform: "uppercase" }}>
@@ -218,7 +197,6 @@ export default function HelldiversSquadFinder({
 
       {showForm && (
         <div style={{ ...S.card, marginBottom: 14, border: `1px solid ${accent}45`, background: `${accent}08` }}>
-          {/* Roles */}
           <div style={S.label}>Role</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {ROLES.map(r => (
@@ -226,7 +204,6 @@ export default function HelldiversSquadFinder({
             ))}
           </div>
 
-          {/* Difficulty */}
           <div style={S.label}>Difficulty</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {DIFFICULTIES.map(d => {
@@ -244,7 +221,6 @@ export default function HelldiversSquadFinder({
             })}
           </div>
 
-          {/* Faction */}
           <div style={S.label}>Faction</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {FACTIONS.map(f => {
@@ -262,7 +238,6 @@ export default function HelldiversSquadFinder({
             })}
           </div>
 
-          {/* Operation name + desc */}
           <div style={S.label}>Operation Name (optional)</div>
           <input style={{ ...S.input, marginBottom: 8 }} value={opName} onChange={e => setOpName(e.target.value)} placeholder="LF3 Operation Storm" />
 
@@ -292,7 +267,6 @@ export default function HelldiversSquadFinder({
         </div>
       )}
 
-      {/* Posts */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {posts.map(p => {
           const { tags, rest } = parseTags(p.activity || "");
@@ -307,7 +281,6 @@ export default function HelldiversSquadFinder({
               border: isFull ? "1px solid rgba(245,158,11,.30)" : `1px solid ${accent}22`,
               opacity: isFull ? 0.78 : 1,
             }}>
-              {/* Tag chips row */}
               {tags.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
                   {tags.map((t, i) => {

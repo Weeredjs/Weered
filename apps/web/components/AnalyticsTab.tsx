@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-/* ── API helpers ─────────────────────────────────────────────── */
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
   try {
@@ -12,7 +11,6 @@ function getToken() {
   }
 }
 
-/* ── Types ───────────────────────────────────────────────────── */
 interface ActiveRoom {
   roomId: string;
   name: string;
@@ -55,7 +53,6 @@ interface AnalyticsPayload {
   topUsers: TopUser[];
 }
 
-/* ── Palette ─────────────────────────────────────────────────── */
 const C = {
   purple: "#5800E5",
   purpleDim: "rgba(88,0,229,.15)",
@@ -69,7 +66,6 @@ const C = {
   mono: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
 };
 
-/* ── Tiny helpers ────────────────────────────────────────────── */
 function pct(num: number, den: number) {
   if (!den) return "0%";
   return `${Math.round((num / den) * 100)}%`;
@@ -88,7 +84,6 @@ function elapsed(ts: number) {
   return `${Math.floor(s / 60)}m ${s % 60}s ago`;
 }
 
-/* ── Pulse keyframes (injected once) ─────────────────────────── */
 const PULSE_ID = "__weered_analytics_pulse";
 function ensurePulseKeyframes() {
   if (typeof document === "undefined") return;
@@ -108,7 +103,6 @@ function ensurePulseKeyframes() {
   document.head.appendChild(style);
 }
 
-/* ── Reusable style objects ──────────────────────────────────── */
 const cardBase: React.CSSProperties = {
   background: C.purpleDim,
   border: `1px solid ${C.border}`,
@@ -146,7 +140,6 @@ const sectionTitle: React.CSSProperties = {
   margin: "24px 0 10px",
 };
 
-/* ── Skeleton ────────────────────────────────────────────────── */
 function Skeleton({ w = "100%", h = 24 }: { w?: string | number; h?: number }) {
   return (
     <div
@@ -175,7 +168,6 @@ function SkeletonCards({ count = 4 }: { count?: number }) {
   );
 }
 
-/* ── Green dot ───────────────────────────────────────────────── */
 function GreenDot({ pulse = false, size = 8 }: { pulse?: boolean; size?: number }) {
   return (
     <span
@@ -193,13 +185,12 @@ function GreenDot({ pulse = false, size = 8 }: { pulse?: boolean; size?: number 
   );
 }
 
-/* ── Component ───────────────────────────────────────────────── */
 export default function AnalyticsTab() {
   const [data, setData] = useState<AnalyticsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(0);
-  const [tick, setTick] = useState(0); // forces re-render for elapsed display
+  const [tick, setTick] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -226,7 +217,6 @@ export default function AnalyticsTab() {
     }
   }, []);
 
-  // Initial fetch + 30s interval
   useEffect(() => {
     fetchData();
     timerRef.current = setInterval(() => fetchData(true), 30_000);
@@ -235,7 +225,6 @@ export default function AnalyticsTab() {
     };
   }, [fetchData]);
 
-  // Tick every 5s for "last updated" display
   useEffect(() => {
     tickRef.current = setInterval(() => setTick((t) => t + 1), 5_000);
     return () => {
@@ -243,7 +232,6 @@ export default function AnalyticsTab() {
     };
   }, []);
 
-  /* ── Loading skeleton ──────────────────────────────────────── */
   if (loading && !data) {
     return (
       <div style={{ padding: 24 }}>
@@ -264,7 +252,6 @@ export default function AnalyticsTab() {
     );
   }
 
-  /* ── Error state ───────────────────────────────────────────── */
   if (error && !data) {
     return (
       <div
@@ -301,10 +288,8 @@ export default function AnalyticsTab() {
 
   const { live, users, messages, engagement, lobbies, retention, topUsers } = data;
 
-  /* ── Render ────────────────────────────────────────────────── */
   return (
     <div style={{ padding: "20px 24px 40px", maxWidth: 960, margin: "0 auto" }}>
-      {/* ── Header ─────────────────────────────────────────────── */}
       <div
         style={{
           display: "flex",
@@ -368,7 +353,6 @@ export default function AnalyticsTab() {
         </button>
       </div>
 
-      {/* ── 1. Live Status Strip ─────────────────────────────── */}
       <div
         style={{
           display: "grid",
@@ -376,7 +360,6 @@ export default function AnalyticsTab() {
           gap: 12,
         }}
       >
-        {/* Online Now */}
         <div
           style={{
             ...cardBase,
@@ -391,26 +374,22 @@ export default function AnalyticsTab() {
           <div style={{ ...bigNum, color: C.green }}>{fmtNum(live.onlineNow)}</div>
         </div>
 
-        {/* Users Total */}
         <div style={cardBase}>
           <div style={labelStyle}>Users Total</div>
           <div style={bigNum}>{fmtNum(users.total)}</div>
         </div>
 
-        {/* Signups Today */}
         <div style={cardBase}>
           <div style={labelStyle}>Signups Today</div>
           <div style={bigNum}>{fmtNum(users.today)}</div>
         </div>
 
-        {/* Push Subscribers */}
         <div style={cardBase}>
           <div style={labelStyle}>Push Subscribers</div>
           <div style={{ ...bigNum, color: C.purple }}>{fmtNum(engagement.pushSubscribers)}</div>
         </div>
       </div>
 
-      {/* ── 2. Active Rooms ──────────────────────────────────── */}
       {live.activeRooms && live.activeRooms.length > 0 && (
         <>
           <div style={sectionTitle}>Active Rooms</div>
@@ -442,7 +421,6 @@ export default function AnalyticsTab() {
         </>
       )}
 
-      {/* ── 3. Messages Grid ─────────────────────────────────── */}
       <div style={sectionTitle}>Messages</div>
       <div
         style={{
@@ -464,7 +442,6 @@ export default function AnalyticsTab() {
         ))}
       </div>
 
-      {/* ── 4. Lobby Leaderboard ─────────────────────────────── */}
       <div style={sectionTitle}>Lobby Leaderboard</div>
       <div
         style={{
@@ -547,7 +524,6 @@ export default function AnalyticsTab() {
         </table>
       </div>
 
-      {/* ── 5. Engagement Row ────────────────────────────────── */}
       <div style={sectionTitle}>Engagement</div>
       <div
         style={{
@@ -568,7 +544,6 @@ export default function AnalyticsTab() {
         ))}
       </div>
 
-      {/* ── 6. Retention Card ────────────────────────────────── */}
       <div style={sectionTitle}>Retention (30 day)</div>
       <div style={{ ...cardBase, gap: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -599,7 +574,6 @@ export default function AnalyticsTab() {
                 {pct(retention.returnedAfter1d, retention.signupsLast30d)}
               </span>
             </div>
-            {/* Mini progress bar */}
             <div style={{ marginTop: 5, height: 4, borderRadius: 2, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
               <div
                 style={{
@@ -650,7 +624,6 @@ export default function AnalyticsTab() {
         </div>
       </div>
 
-      {/* ── 7. Top Users ─────────────────────────────────────── */}
       <div style={sectionTitle}>Top Users</div>
       <div
         style={{

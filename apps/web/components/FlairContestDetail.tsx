@@ -372,7 +372,6 @@ function SubmitModal({
     try {
       const body: any = { caption: caption.slice(0, 280) };
       if (dataUrl) body.image = dataUrl;
-      // If editing without re-uploading, the API requires an image; send the existing one back as a no-op? Easier: require an image change.
       if (!dataUrl && existing) {
         setErr("Choose a new image to update.");
         setBusy(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
 import CrewChatPanel from "./CrewChatPanel";
@@ -14,6 +14,12 @@ type DmReaction = { emoji: string; count: number; users: string[] };
 type DmReplyTo = { id: string; userName: string; body: string };
 type DmMsg = { id: string; fromId: string; toId: string; body: string; createdAt: string; readAt?: string | null; editedAt?: string | null; deletedAt?: string | null; reactions?: DmReaction[]; replyToId?: string | null; replyToUserId?: string | null; replyToUserName?: string | null; replyToBody?: string | null };
 type DmThread = { peerId: string; peerName: string; peerAvatar?: string | null; peerAvatarColor?: string | null; peerOnline?: boolean; msgs: DmMsg[]; unread: number };
+type GroupMemberLite = { id: string; name: string; avatar?: string | null };
+type GroupThreadLite = {
+  id: string; name: string | null; createdById: string; role: "OWNER" | "MEMBER";
+  unread: number; lastMessageAt: string; members: GroupMemberLite[];
+  lastMessage: { id: string; senderId: string; body: string; createdAt: string; deleted?: boolean } | null;
+};
 
 const IMG_RE = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 const TENOR_DM_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
@@ -159,25 +165,68 @@ function StatusDot({ online }: { online: boolean }) {
   return <span style={{ width:8, height:8, borderRadius:999, background: online ? "#22c55e" : "rgba(255,255,255,.2)", display:"inline-block", flexShrink:0 }} />;
 }
 
-function UnreadBadge({ count }: { count: number }) {
-  if (!count) return null;
-  return <span style={{ minWidth:18, height:18, borderRadius:999, background:"#ef4444", color:"#fff", fontSize:10, fontWeight:800, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 5px" }}>{count > 99 ? "99+" : count}</span>;
+function GroupAvatarStack({ members }: { members: { id: string; name: string; avatar?: string | null }[] }) {
+  const shown = members.slice(0, 3);
+  const extra = members.length - shown.length;
+  return (
+    <div style={{ position:"relative", width:42, height:42, flexShrink:0 }}>
+      {shown.map((m, i) => (
+        <div key={m.id} style={{
+          position:"absolute", left:i*10, top:i*6,
+          width:26, height:26, borderRadius:"50%", overflow:"hidden",
+          border:"2px solid var(--weered-panel2, #15121d)",
+          background: m.avatar ? `url(${m.avatar}) center/cover` : avatarBg(m.name||"?"),
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:11, fontWeight:800, color:"#fff",
+          zIndex: shown.length - i,
+        }}>
+          {!m.avatar && (m.name||"?").charAt(0).toUpperCase()}
+        </div>
+      ))}
+      {extra > 0 && (
+        <div style={{
+          position:"absolute", left:shown.length*10, top:shown.length*6,
+          width:26, height:26, borderRadius:"50%",
+          border:"2px solid var(--weered-panel2, #15121d)",
+          background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:9, fontWeight:800, zIndex:0,
+        }}>+{extra}</div>
+      )}
+    </div>
+  );
 }
 
-function SegmentedControl({ tabs, active, onChange }: { tabs: {id:string;label:string;badge?:number}[]; active:string; onChange:(id:string)=>void }) {
+function UnreadBadge({ count, floating, tone }: { count: number; floating?: boolean; tone?: "red" | "blue" }) {
+  if (!count) return null;
+  const bg = tone === "blue" ? "#3b82f6" : "#ef4444";
+  if (floating) {
+    return <span style={{
+      position:"absolute", top:-6, right:-6, minWidth:16, height:16, borderRadius:999,
+      background:bg, color:"#fff", fontSize:9, fontWeight:800,
+      display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 4px",
+      boxShadow:"0 0 0 3px var(--weered-panel, #0f0f15)",
+      pointerEvents:"none", zIndex:2,
+    }}>{count > 99 ? "99+" : count}</span>;
+  }
+  return <span style={{ minWidth:18, height:18, borderRadius:999, background:bg, color:"#fff", fontSize:10, fontWeight:800, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 5px" }}>{count > 99 ? "99+" : count}</span>;
+}
+
+function SegmentedControl({ tabs, active, onChange }: { tabs: {id:string;label:string;badge?:number;tone?:"red"|"blue"}[]; active:string; onChange:(id:string)=>void }) {
   return (
     <div className="weered-dock-tabs" style={{ display:"flex", background:"rgba(255,255,255,.06)", borderRadius:10, padding:3, gap:2 }}>
       {tabs.map(t => (
         <button key={t.id} className={`weered-dock-tab${active===t.id?" weered-dock-tab-active":""}`} onClick={() => onChange(t.id)} style={{
-          flex:1, padding:"5px 8px", borderRadius:8, border:"none",
-          background: active===t.id ? "rgba(255,255,255,.12)" : "transparent",
-          color: active===t.id ? "var(--weered-text)" : "var(--weered-muted)",
+          position:"relative", flex:1, minWidth:0, padding:"6px 8px", borderRadius:8, border:"none",
+          background: active===t.id ? "var(--weered-accent-bg, rgba(124,157,255,.18))" : "transparent",
+          color: active===t.id ? "var(--weered-accent-text, var(--weered-text))" : "var(--weered-muted)",
+          boxShadow: active===t.id ? "inset 0 0 0 1px var(--weered-accent-ring, rgba(124,157,255,.35))" : "none",
           fontSize:12, fontWeight: active===t.id ? 700 : 500,
-          cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+          cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
           transition:"all .15s",
         }}>
           {t.label}
-          {!!t.badge && <UnreadBadge count={t.badge} />}
+          {!!t.badge && <UnreadBadge count={t.badge} floating tone={t.tone || "red"} />}
         </button>
       ))}
     </div>
@@ -189,16 +238,12 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const { me, wsReady, wsState, activeRoomId, joinedRoomId, users, msgs, meta, admin, role, joinStatus, sendChat, logout, renameRoom, lockRoom, unlockRoom, knock, admit } = ctx || {};
 
   const [open, setOpen] = useState(true);
-  const [tab, setTab] = useState<"room"|"dms"|"groups"|"friends"|"crew">("dms");
+  const [tab, setTab] = useState<"room"|"dms"|"friends"|"crew">("dms");
   const [text, setText] = useState("");
   const [dockMode, setDockMode] = useState<"rail"|"floating">(props.forceMode || "floating");
   const [theme, setTheme] = useState<WeeredThemeName>("press");
   const [themeHydrated, setThemeHydrated] = useState(false);
 
-  // Hydrate theme from localStorage after mount (avoids SSR mismatch).
-  // Until this runs, we must NOT persist the default — otherwise the
-  // hardcoded initial state pollutes weered_theme_v2 on first visit
-  // and overrides the boot script's actual default.
   useEffect(() => {
     try {
       const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
@@ -240,7 +285,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const roomRole = normRole(pickFirstString(role,joinStatus?.role));
   const apiBase = pickFirstString(ctx?.apiBase,(ctx as any)?.api,"")||"";
 
-  // ── DM state ──
   const [dmThreads, setDmThreads] = useState<DmThread[]>([]);
   const [dmActivePeerId, setDmActivePeerId] = useState("");
   const [dmPeer, setDmPeer] = useState("");
@@ -252,6 +296,59 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const [dmPickerMsgId, setDmPickerMsgId] = useState("");
   const [dmReplyingTo, setDmReplyingTo] = useState<{ id: string; userName: string; body: string } | null>(null);
   const DM_QUICK_REACTIONS = ["👍","❤️","😂","🔥","🎉","😢","😮","🙌"];
+
+  const [groupThreads, setGroupThreads] = useState<GroupThreadLite[]>([]);
+  const [dmActiveGroupId, setDmActiveGroupId] = useState("");
+  const [groupCompose, setGroupCompose] = useState(false);
+
+  const reloadGroups = useCallback(() => {
+    if (!apiBase || !tokenMaybe) return;
+    fetch(`${apiBase}/groups`, { headers: { Authorization: `Bearer ${tokenMaybe}` } })
+      .then(r => r.json())
+      .then(j => { if (j?.ok && Array.isArray(j.threads)) setGroupThreads(j.threads); })
+      .catch(() => {});
+  }, [apiBase, tokenMaybe]);
+
+  useEffect(() => { reloadGroups(); }, [reloadGroups]);
+  useEffect(() => {
+    const onMsg = (e: Event) => {
+      const m = (e as CustomEvent).detail?.message;
+      if (!m?.threadId) { reloadGroups(); return; }
+      setGroupThreads(cur => cur.map(t => {
+        if (t.id !== m.threadId) return t;
+        const mine = m.senderId === String(me?.id || "");
+        const isOpen = dmActiveGroupId === t.id;
+        return {
+          ...t,
+          lastMessage: { id: m.id, senderId: m.senderId, body: m.body, createdAt: m.createdAt },
+          lastMessageAt: m.createdAt,
+          unread: (isOpen || mine) ? t.unread : (t.unread || 0) + 1,
+        };
+      }).sort((a, b) => (b.lastMessageAt > a.lastMessageAt ? 1 : -1)));
+    };
+    const onStruct = () => reloadGroups();
+    window.addEventListener("weered:group:message", onMsg);
+    window.addEventListener("weered:group:created", onStruct);
+    window.addEventListener("weered:group:renamed", onStruct);
+    window.addEventListener("weered:group:members:added", onStruct);
+    window.addEventListener("weered:group:members:removed", onStruct);
+    return () => {
+      window.removeEventListener("weered:group:message", onMsg);
+      window.removeEventListener("weered:group:created", onStruct);
+      window.removeEventListener("weered:group:renamed", onStruct);
+      window.removeEventListener("weered:group:members:added", onStruct);
+      window.removeEventListener("weered:group:members:removed", onStruct);
+    };
+  }, [reloadGroups, me, dmActiveGroupId]);
+
+  useEffect(() => {
+    if (!dmActiveGroupId) return;
+    setGroupThreads(cur => cur.map(t => t.id === dmActiveGroupId ? { ...t, unread: 0 } : t));
+  }, [dmActiveGroupId]);
+
+  useEffect(() => {
+    if (dmActivePeerId) { setDmActiveGroupId(""); setGroupCompose(false); }
+  }, [dmActivePeerId]);
 
   useEffect(() => {
     if (!dmPickerMsgId) return;
@@ -267,7 +364,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   const dmInputRef = useRef<HTMLInputElement|null>(null);
   const roomInputRef = useRef<HTMLInputElement|null>(null);
 
-  // Load all conversations on mount so incoming DMs are visible
   useEffect(()=>{
     if (!tokenMaybe||!apiBase) return;
     fetch(`${apiBase}/dm/conversations`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
@@ -275,13 +371,11 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
       setDmThreads(cur=>{
         const byId=new Map(cur.map((t:DmThread)=>[t.peerId,t]));
         const merged:DmThread[]=[];
-        // Update existing threads with avatar/online from server, keep msgs.
         for (const t of cur) {
           const c=j.conversations.find((x:any)=>(x.id||x.peerId)===t.peerId);
           if (c) merged.push({...t, peerName:c.name||c.usernameKey||t.peerName, peerAvatar:c.avatar??t.peerAvatar??null, peerAvatarColor:c.avatarColor??t.peerAvatarColor??null, peerOnline:!!c.online, unread:c.unread??t.unread});
           else merged.push(t);
         }
-        // Add any new conversations we didn't have locally yet.
         for (const c of j.conversations) {
           const id=c.id||c.peerId;
           if (byId.has(id)) continue;
@@ -297,7 +391,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
     function pollUnread() {
       fetch(`${apiBase}/dm/unread`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(j=>{
         if (!j?.counts) return;
-        // Also discover new conversations we don't have yet
         const newPeerIds = Object.keys(j.counts).filter(pid=>!dmThreads.find(t=>t.peerId===pid));
         if (newPeerIds.length) {
           fetch(`${apiBase}/dm/conversations`,{headers:{Authorization:`Bearer ${tokenMaybe}`}}).then(r=>r.json()).then(conv=>{
@@ -391,9 +484,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
     const h=(ev:any)=>{
       const d=ev?.detail;
       if (!d) return;
-      // Plain tab-switch form: { tab: "crew" | "friends" | "dms" | "room" }
-      // Used by the rail-side quick-launch stack so clicking Crew/Friends/
-      // DMs from the collapsed rail lands you on the right Burner tab.
       if (typeof d.tab === "string") {
         const t = String(d.tab).toLowerCase();
         if (t === "room" || t === "dms" || t === "friends" || t === "crew") {
@@ -420,10 +510,9 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   },[]);
 
   const dmActive = useMemo(()=>dmThreads.find(t=>t.peerId===dmActivePeerId)||null,[dmThreads,dmActivePeerId]);
-  const totalUnread = useMemo(()=>dmThreads.reduce((s,t)=>s+t.unread,0),[dmThreads]);
+  const groupUnread = useMemo(()=>groupThreads.reduce((s,t)=>s+(t.unread||0),0),[groupThreads]);
+  const totalUnread = useMemo(()=>dmThreads.reduce((s,t)=>s+t.unread,0)+groupUnread,[dmThreads,groupUnread]);
 
-  // Broadcast unread count to UserCorner badge whenever it changes.
-  // UserCorner listens for this event AND polls localStorage as a fallback.
   useEffect(()=>{
     try { localStorage.setItem("weered:dock:unread", String(totalUnread)); } catch {}
     try { window.dispatchEvent(new CustomEvent("weered:dock:unread",{detail:{count:totalUnread}})); } catch {}
@@ -499,9 +588,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   return (
     <div className="weered-dock" style={{...panel, display:"flex", flexDirection:"column"}}>
 
-      {/* ── Header ── */}
       <div className="weered-dock-header" style={{ padding:"10px 14px 0", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
-        {/* App bar */}
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
           <img src="/brand/logo/weered-logo-32.png" alt="Weered" style={{ width:22, height:22, borderRadius:5 }} />
           <span className="weered-dock-title" style={{ fontWeight:800, fontSize:15, letterSpacing:".02em", color:"var(--weered-text)" }}>Burner</span>
@@ -513,13 +600,10 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
           >×</button>
         </div>
 
-        {/* Tabs */}
         <SegmentedControl
           tabs={[
-            {id:"dms",label:"Messages",badge:totalUnread},
-            {id:"groups",label:"Groups"},
+            {id:"dms",label:"Messages",badge:totalUnread,tone:"red"},
             {id:"friends",label:"Friends"},
-            {id:"room",label:"Room"},
             {id:"crew",label:"Crew"},
           ]}
           active={tab}
@@ -527,10 +611,8 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
         />
       </div>
 
-      {/* ── Body ── */}
       <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column" }}>
 
-        {/* ── ROOM TAB ── */}
         {tab==="room" ? (
           <div style={{ display:"flex", flexDirection:"column", flex:1, height:"100%" }}>
             {needJoin && (
@@ -540,7 +622,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               </div>
             )}
 
-            {/* Messages */}
             <div style={{ flex:1, overflowY:"auto", padding:"12px 14px", display:"flex", flexDirection:"column", gap:6 }}>
               {msgArr.length ? msgArr.slice(-80).map((m:any,i:number)=>{
                 const who=pickFirstString(m?.user?.name,m?.name,m?.from,"?");
@@ -560,14 +641,12 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               )}
             </div>
 
-            {/* Input */}
             <div style={{ padding:"10px 12px", borderTop:"1px solid var(--weered-bd)", display:"flex", gap:8, flexShrink:0 }}>
               <input ref={roomInputRef} value={text} onChange={e=>setText((e.target as any).value||"")} placeholder="Message..." style={inputStyle}
                 onKeyDown={e=>{if((e as any).key==="Enter"){sendRoomChat(text);setText("");}}} />
               <button style={sendBtn} onClick={()=>{sendRoomChat(text);setText("");}}>↑</button>
             </div>
 
-            {/* Presence */}
             {userArr.length>0 && (
               <div style={{ borderTop:"1px solid var(--weered-bd)", padding:"10px 14px", maxHeight:160, overflowY:"auto", flexShrink:0 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:"var(--weered-muted)", marginBottom:8, textTransform:"uppercase" as const, letterSpacing:.5 }}>In this room · {userArr.length}</div>
@@ -588,7 +667,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               </div>
             )}
 
-            {/* Mod tools */}
             {(admin||roomRole==="OWNER"||roomRole==="MOD") && (
               <div style={{ borderTop:"1px solid var(--weered-bd)", padding:"10px 14px", flexShrink:0 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:"var(--weered-muted)", marginBottom:8, textTransform:"uppercase" as const, letterSpacing:.5 }}>Moderation</div>
@@ -602,12 +680,19 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
           </div>
 
         ) : tab==="dms" ? (
-          // ── MESSAGES TAB ──
           <div style={{ display:"flex", flexDirection:"column", flex:1, height:"100%", position:"relative" }}>
 
-            {dmActive ? (
+            {(dmActiveGroupId || groupCompose) ? (
+              <GroupsTab
+                apiBase={apiBase}
+                token={tokenMaybe || ""}
+                meId={String(me?.id || "")}
+                initialThreadId={dmActiveGroupId || undefined}
+                initialCreate={groupCompose && !dmActiveGroupId}
+                onExitToInbox={()=>{ setDmActiveGroupId(""); setGroupCompose(false); reloadGroups(); }}
+              />
+            ) : dmActive ? (
               <>
-                {/* Conversation header */}
                 <div className="weered-dock-conv-header" style={{ padding:"8px 12px", borderBottom:"1px solid var(--weered-bd)", display:"flex", alignItems:"center", gap:10, flexShrink:0, background:"rgba(255,255,255,.02)" }}>
                   <button onClick={()=>setDmActivePeerId("")} style={{ background:"none",border:"none",color:"var(--weered-muted)",cursor:"pointer",fontSize:20,padding:"0 4px",lineHeight:1,display:"flex",alignItems:"center" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -623,7 +708,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                   </div>
                 </div>
 
-                {/* Messages with date separators */}
                 <div style={{ flex:1, overflowY:"auto", padding:"10px 14px", display:"flex", flexDirection:"column", gap:3 }}>
                   {dmLoading ? (
                     <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -633,16 +717,13 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                     const isMe=m.fromId===String(me?.id||"");
                     const prevMsg=i>0?arr[i-1]:null;
                     const sameSender=prevMsg&&prevMsg.fromId===m.fromId;
-                    // Date separator
                     const msgDate=fmtDateSep(m.createdAt);
                     const prevDate=prevMsg?fmtDateSep(prevMsg.createdAt):"";
                     const showDateSep=msgDate!==prevDate;
-                    // Show time only on last in a group or every 5 min gap
                     const nextMsg=i<arr.length-1?arr[i+1]:null;
                     const sameNext=nextMsg&&nextMsg.fromId===m.fromId;
                     const timeDiff=nextMsg?new Date(nextMsg.createdAt).getTime()-new Date(m.createdAt).getTime():Infinity;
                     const showTime=!sameNext||timeDiff>300_000;
-                    // Read receipt on last sent message
                     const isLastSent=isMe&&(!nextMsg||nextMsg.fromId!==String(me?.id||""));
                     return (
                       <React.Fragment key={m.id}>
@@ -781,7 +862,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                   <div ref={dmEndRef} />
                 </div>
 
-                {/* Pill input */}
                 <div style={{ padding:"8px 12px 10px", borderTop:"1px solid var(--weered-bd)", flexShrink:0 }}>
                   {dmReplyingTo && (
                     <div style={{
@@ -811,7 +891,6 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               </>
             ) : (
               <>
-                {/* Search / compose bar */}
                 <div style={{ padding:"10px 12px", borderBottom:"1px solid var(--weered-bd)", flexShrink:0 }}>
                   <div style={{ display:"flex", gap:6 }}>
                     <div style={{ flex:1, position:"relative", display:"flex", alignItems:"center" }}>
@@ -820,60 +899,114 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
                         style={{ ...inputStyle, paddingLeft:32, borderRadius:22, fontSize:12 }}
                         onKeyDown={e=>{if((e as any).key==="Enter") void dmCreateThread();}} />
                     </div>
-                    <button className="weered-dock-compose" style={{ width:36, height:36, borderRadius:999, border:"1px solid var(--weered-accent-ring)", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18, fontWeight:700 }} onClick={()=>void dmCreateThread()}>+</button>
+                    <button className="weered-dock-compose" title="New direct message" style={{ width:36, height:36, borderRadius:999, border:"1px solid var(--weered-accent-ring)", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18, fontWeight:700 }} onClick={()=>void dmCreateThread()}>+</button>
+                    <button title="New group" onClick={()=>{ setGroupCompose(true); setDmActiveGroupId(""); setDmActivePeerId(""); }} style={{ width:36, height:36, borderRadius:999, border:"1px solid var(--weered-bd2)", background:"rgba(255,255,255,.05)", color:"var(--weered-text)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+                    </button>
                   </div>
                 </div>
 
-                {/* Conversation list */}
-                {dmThreads.length>0 ? (
-                  <div style={{ flex:1, overflowY:"auto" }}>
-                    {[...dmThreads].sort((a,b)=>{
-                      const aTime=a.msgs.length?new Date(a.msgs[a.msgs.length-1].createdAt).getTime():0;
-                      const bTime=b.msgs.length?new Date(b.msgs[b.msgs.length-1].createdAt).getTime():0;
-                      return bTime-aTime;
-                    }).filter(t=>!dmPeer.trim()||t.peerName.toLowerCase().includes(dmPeer.toLowerCase())).map(t=>{
+                {(() => {
+                  const q = dmPeer.trim().toLowerCase();
+                  const dmItems = dmThreads
+                    .filter(t=>!q||t.peerName.toLowerCase().includes(q))
+                    .map(t=>{
                       const lastMsg=t.msgs.length?t.msgs[t.msgs.length-1]:null;
-                      const isMyLastMsg=lastMsg&&lastMsg.fromId===String(me?.id||"");
-                      const preview=lastMsg?(isMyLastMsg?"You: ":"")+lastMsg.body.slice(0,40)+(lastMsg.body.length>40?"...":""):"Tap to start chatting";
-                      const time=lastMsg?fmtRelative(lastMsg.createdAt):"";
-                      return (
-                        <button key={t.peerId} className="weered-dock-thread" onClick={()=>setDmActivePeerId(t.peerId)} style={{ width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderBottom:"1px solid rgba(255,255,255,.04)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"background .1s" }}
-                          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
-                          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
-                        >
-                          <div style={{ position:"relative", flexShrink:0 }}>
-                            <Avatar name={t.peerName} size={42} src={t.peerAvatar} chosenColor={t.peerAvatarColor || undefined} />
-                            {t.peerOnline && (
-                              <span style={{ position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
-                            )}
-                          </div>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-                              <span style={{ fontWeight:600, fontSize:13, color:"var(--weered-text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.peerName}</span>
-                              {time && <span style={{ fontSize:10, color:"var(--weered-muted)", flexShrink:0 }}>{time}</span>}
+                      return { kind:"dm" as const, id:t.peerId, ts:lastMsg?new Date(lastMsg.createdAt).getTime():0, dm:t, lastMsg };
+                    });
+                  const groupItems = groupThreads
+                    .filter(t=>{
+                      if (!q) return true;
+                      const nm=(t.name||t.members.map(m=>m.name).join(", ")).toLowerCase();
+                      return nm.includes(q);
+                    })
+                    .map(t=>({ kind:"group" as const, id:t.id, ts:t.lastMessageAt?new Date(t.lastMessageAt).getTime():0, group:t }));
+                  const merged=[...dmItems,...groupItems].sort((a,b)=>b.ts-a.ts);
+
+                  if (merged.length===0) {
+                    return (
+                      <EmptyState
+                        icon={<img src="/brand/logo/weered-logo-64.png" alt="" style={{ width:44, height:44, opacity:.35, borderRadius:10 }} />}
+                        title="Nobody on the line."
+                        hint="Search a username up top, or start a group."
+                      />
+                    );
+                  }
+
+                  return (
+                    <div style={{ flex:1, overflowY:"auto" }}>
+                      {merged.map(item=>{
+                        if (item.kind==="dm") {
+                          const t=item.dm; const lastMsg=item.lastMsg;
+                          const isMyLastMsg=lastMsg&&lastMsg.fromId===String(me?.id||"");
+                          const preview=lastMsg?(isMyLastMsg?"You: ":"")+lastMsg.body.slice(0,40)+(lastMsg.body.length>40?"...":""):"Tap to start chatting";
+                          const time=lastMsg?fmtRelative(lastMsg.createdAt):"";
+                          return (
+                            <button key={`dm-${t.peerId}`} className="weered-dock-thread" onClick={()=>setDmActivePeerId(t.peerId)} style={{ width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderBottom:"1px solid rgba(255,255,255,.04)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"background .1s" }}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
+                            >
+                              <div style={{ position:"relative", flexShrink:0 }}>
+                                <Avatar name={t.peerName} size={42} src={t.peerAvatar} chosenColor={t.peerAvatarColor || undefined} />
+                                {t.peerOnline && (
+                                  <span style={{ position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:999,background:"#22c55e",border:"2px solid var(--weered-panel2)" }} />
+                                )}
+                              </div>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                                  <span style={{ fontWeight:600, fontSize:13, color:"var(--weered-text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.peerName}</span>
+                                  {time && <span style={{ fontSize:10, color:"var(--weered-muted)", flexShrink:0 }}>{time}</span>}
+                                </div>
+                                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginTop:2 }}>
+                                  <span style={{ fontSize:12, color:"var(--weered-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{preview}</span>
+                                  {t.unread>0 && <UnreadBadge count={t.unread} />}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        }
+                        const g=item.group;
+                        const others=g.members.filter(m=>m.id!==String(me?.id||""));
+                        const memberCount=g.members.length;
+                        const roster=others.map(m=>(m.name||"").split(/\s+/)[0]).filter(Boolean);
+                        const rosterLine=roster.length?(roster.slice(0,3).join(", ")+(roster.length>3?` +${roster.length-3}`:"")):"Just you";
+                        const title=g.name||(others.length?others.slice(0,3).map(m=>m.name).join(", "):"Group");
+                        const last=g.lastMessage;
+                        const senderFirst=last?(others.find(m=>m.id===last.senderId)?.name||"").split(/\s+/)[0]:"";
+                        const preview=last
+                          ? (last.deleted?"[deleted]":`${last.senderId===String(me?.id||"")?"You: ":senderFirst?`${senderFirst}: `:""}${last.body.slice(0,40)}${last.body.length>40?"...":""}`)
+                          : rosterLine;
+                        const time=g.lastMessageAt?fmtRelative(g.lastMessageAt):"";
+                        return (
+                          <button key={`group-${g.id}`} className="weered-dock-thread" onClick={()=>{ setDmActiveGroupId(g.id); setGroupCompose(false); setDmActivePeerId(""); }} style={{ width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderBottom:"1px solid rgba(255,255,255,.04)",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"background .1s" }}
+                            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.04)";}}
+                            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}
+                          >
+                            <GroupAvatarStack members={others.length?others:g.members} />
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                <span style={{ fontWeight:600, fontSize:13, color:"var(--weered-text)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", minWidth:0 }}>{title}</span>
+                                <span title={`${memberCount} members`} style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:3, padding:"1px 6px", borderRadius:999, background:"var(--weered-accent-bg)", border:"1px solid var(--weered-accent-ring)", color:"var(--weered-accent-text)", fontSize:9, fontWeight:800, lineHeight:1.4 }}>
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+                                  {memberCount}
+                                </span>
+                                <span style={{ flex:1 }} />
+                                {time && <span style={{ fontSize:10, color:"var(--weered-muted)", flexShrink:0 }}>{time}</span>}
+                              </div>
+                              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginTop:2 }}>
+                                <span style={{ fontSize:12, color:"var(--weered-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{preview}</span>
+                                {g.unread>0 && <UnreadBadge count={g.unread} />}
+                              </div>
                             </div>
-                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginTop:2 }}>
-                              <span style={{ fontSize:12, color:"var(--weered-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{preview}</span>
-                              {t.unread>0 && <UnreadBadge count={t.unread} />}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={<img src="/brand/logo/weered-logo-64.png" alt="" style={{ width:44, height:44, opacity:.35, borderRadius:10 }} />}
-                    title="Nobody on the line."
-                    hint="Search a username up top to start a thread."
-                  />
-                )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>
-
-        ) : tab==="groups" ? (
-          <GroupsTab apiBase={apiBase} token={tokenMaybe || ""} meId={String(me?.id || "")} />
 
         ) : tab==="friends" ? (
           <FriendsTab
@@ -896,6 +1029,29 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
             onJoin={roomId=>{try{(ctx as any)?.join?.(roomId);}catch{}}}
           />
         ) : null}
+      </div>
+
+      <div style={{
+        flexShrink:0, padding:"8px 14px", borderTop:"1px solid var(--weered-bd)",
+        display:"flex", alignItems:"center", justifyContent:"space-between", gap:8,
+        fontSize:11, color:"var(--weered-muted)",
+      }}>
+        <a href="/lobby" style={{ color:"inherit", textDecoration:"none", opacity:.75, transition:"opacity .15s" }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=".75";}}
+        >Browse lobbies</a>
+        <span style={{ opacity:.3 }}>·</span>
+        <a href="#" onClick={(e)=>{e.preventDefault(); setTab("friends");}} style={{ color:"inherit", textDecoration:"none", opacity:.75, transition:"opacity .15s" }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=".75";}}
+        >Add friends</a>
+        <span style={{ opacity:.3 }}>·</span>
+        <a href="#" onClick={(e)=>{e.preventDefault(); setTab("crew");}} style={{ color:"inherit", textDecoration:"none", opacity:.75, transition:"opacity .15s" }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=".75";}}
+        >Crews</a>
+        <span style={{ flex:1 }} />
+        <span style={{ fontSize:9, opacity:.4, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase" }}>BURNER</span>
       </div>
     </div>
   );
@@ -998,7 +1154,6 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
   );
 }
 
-// Tier display chip — shows the user's paid tier above the row.
 const FRIEND_TIER_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   KINGPIN:  { label: "KINGPIN",  color: "#fde68a", bg: "rgba(252,211,77,.15)" },
   FELON:    { label: "FELON",    color: "#fdba74", bg: "rgba(249,115,22,.15)" },
@@ -1037,7 +1192,6 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
   const tagRadius = tagShape === "square" ? 0 : tagShape === "pill" ? 999 : 4;
   const validPillBg = f.pillBgColor && /^#[0-9a-f]{6}$/i.test(f.pillBgColor) ? f.pillBgColor : null;
 
-  // Pill bg intensity — viewer-chosen multiplier (0-100, default 60)
   const [pillIntensity, setPillIntensity] = React.useState<number>(60);
   React.useEffect(() => {
     const read = () => {
@@ -1127,7 +1281,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
   const [expandedCrew, setExpandedCrew] = React.useState<string|null>(null);
   const [presenceToast, setPresenceToast] = React.useState<{name:string;online:boolean}|null>(null);
 
-  // Crew presence toast — show when a mate comes online/offline
   React.useEffect(() => {
     const handler = (e: Event) => {
       const d = (e as CustomEvent).detail;
@@ -1229,7 +1382,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
           color:"#D4A017",
         }}>⚔ Establish Crew</button>
       </div>
-      {/* Crew presence toast */}
       {presenceToast&&(
         <div style={{
           padding:"6px 12px",display:"flex",alignItems:"center",gap:6,
@@ -1257,7 +1409,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
 
           return (
             <div key={crew.id} style={{borderBottom:"1px solid var(--weered-bd)"}}>
-              {/* Crew header card */}
               <div
                 onClick={()=>setExpandedCrew(isExpanded?null:crew.id)}
                 style={{
@@ -1267,7 +1418,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                 }}
               >
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  {/* Crew icon */}
                   <div style={{
                     width:38,height:38,borderRadius:10,flexShrink:0,
                     background:"linear-gradient(135deg, rgba(88,0,229,.2), rgba(212,160,23,.15))",
@@ -1301,14 +1451,12 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                     </div>
                   </div>
 
-                  {/* Expand chevron */}
                   <span style={{
                     fontSize:12,color:"var(--weered-muted)",transition:"transform 0.2s",
                     transform:isExpanded?"rotate(180deg)":"rotate(0deg)",
                   }}>▾</span>
                 </div>
 
-                {/* Avatar stack preview (collapsed) */}
                 {!isExpanded&&members.length>0&&(
                   <div style={{display:"flex",marginTop:8,marginLeft:48}}>
                     {members.slice(0,6).map((m:any,i:number)=>{
@@ -1340,17 +1488,14 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                 )}
               </div>
 
-              {/* Expanded member list + actions */}
               {isExpanded&&(
                 <div style={{padding:"0 14px 12px"}}>
-                  {/* Description */}
                   {crew.description&&(
                     <div style={{fontSize:11,color:"var(--weered-muted)",lineHeight:1.5,marginBottom:10,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.04)"}}>
                       {crew.description}
                     </div>
                   )}
 
-                  {/* Member list */}
                   <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:10}}>
                     {members.map((m:any)=>{
                       const badge=roleBadge(m.role);
@@ -1362,7 +1507,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                           background:m.online?"rgba(34,197,94,.04)":"transparent",
                           transition:"background 0.15s",
                         }}>
-                          {/* Avatar with online indicator */}
                           <div style={{position:"relative" as const,flexShrink:0}}>
                             <div style={{
                               width:28,height:28,borderRadius:999,overflow:"hidden",
@@ -1383,7 +1527,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                             }} />
                           </div>
 
-                          {/* Name + role + location */}
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{display:"flex",alignItems:"center",gap:5}}>
                               <span style={{fontSize:12,fontWeight:m.role==="LEADER"?800:600,color:m.role==="LEADER"?"rgba(243,244,246,.95)":"rgba(226,232,240,.8)"}}>
@@ -1407,7 +1550,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                             )}
                           </div>
 
-                          {/* Join button */}
                           {m.online&&m.roomId&&m.userId!==myId&&(
                             <button onClick={()=>onJoin(m.roomId)} style={{
                               padding:"4px 10px",borderRadius:7,fontSize:10,fontWeight:700,cursor:"pointer",
@@ -1420,7 +1562,6 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                     })}
                   </div>
 
-                  {/* Invite input (leaders/officers) */}
                   {canManage && (
                     <div style={{display:"flex",gap:6,marginBottom:6}}>
                       <input
@@ -1438,12 +1579,10 @@ function CrewTab({ apiBase, tokenMaybe, myId, myName, onJoin }: { apiBase:string
                   )}
                   {inviteNote[crew.id]&&<div style={{fontSize:10,marginBottom:4,color:inviteNote[crew.id]==="Invited!"?"rgba(74,222,128,.7)":"rgba(252,165,165,.7)"}}>{inviteNote[crew.id]}</div>}
 
-                  {/* Crew Chat */}
                   <div style={{marginBottom:8,borderRadius:10,border:"1px solid rgba(255,255,255,.06)",overflow:"hidden",height:260}}>
                     <CrewChatPanel crewId={crew.id} crewName={crew.name} myId={myId} myName={myName} />
                   </div>
 
-                  {/* Actions */}
                   <div style={{display:"flex",gap:6}}>
                     {isLeader
                       ?<button onClick={()=>disbandCrew(crew.id)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid rgba(239,68,68,.25)",background:"rgba(239,68,68,.06)",color:"rgba(252,165,165,.7)",fontSize:10,cursor:"pointer",fontWeight:600}}>Disband Crew</button>

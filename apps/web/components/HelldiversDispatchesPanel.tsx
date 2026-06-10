@@ -34,8 +34,6 @@ function timeAgo(iso: string): string {
   return `${d}d ago`;
 }
 
-// Helldivers dispatches contain inline markup like <i=1>text</i> for emphasis.
-// Strip tags but render emphasized chunks in italic gold.
 function renderMessage(msg: string): React.ReactNode[] {
   if (!msg) return [];
   const parts: React.ReactNode[] = [];

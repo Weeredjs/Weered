@@ -3,21 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered, type LaunchSnapshot, type LaunchTarget } from "../WeeredProvider";
 
-/**
- * MPlayer-style room launcher.
- *
- * - Room owner sets a Launch Target (Steam AppID + connect string).
- * - Every member picks Player or Observer.
- * - Players ready up. Owner hits Fire.
- * - Synchronised 3-2-1 countdown, then a big LAUNCH button for Players.
- *   Observers stay in the room (voice / chat / modules keep running).
- *
- * Server-side resets the fired state 60s after fire so the room can queue
- * the next match without anyone having to re-configure.
- */
-// Module types whose rooms use a `steam://connect/IP:PORT` flow for
-// joining servers together — MPlayer-style. Destiny/League/Fortnite
-// launch via their own clients so the pad is meaningless there.
 const STEAM_LAUNCH_MODULE_TYPES = new Set([
   "WINDROSE",
 ]);
@@ -25,7 +10,6 @@ const STEAM_LAUNCH_MODULE_TYPES = new Set([
 export default function LaunchPad({ roomId, moduleType }: { roomId: string; moduleType?: string }) {
   const ctx: any = useWeered();
   const launch: LaunchSnapshot | null = (ctx?.launchByRoom || {})[roomId] ?? null;
-  // Lobby-type gate runs *after* hooks so hook ordering stays consistent.
   const steamLaunchable = !!moduleType && STEAM_LAUNCH_MODULE_TYPES.has(String(moduleType).toUpperCase());
   const users: any[] = Array.isArray(ctx?.usersByRoom?.[roomId]) ? ctx.usersByRoom[roomId] : [];
   const me = ctx?.me;
@@ -38,7 +22,6 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
   const target: LaunchTarget | null = launch?.target ?? null;
   const [showSetup, setShowSetup] = useState(false);
 
-  // Slot & ready lookups
   const slotByUser = useMemo(() => {
     const m = new Map<string, "player" | "observer">();
     for (const s of launch?.slots ?? []) m.set(s.userId, s.slot);
@@ -48,18 +31,15 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
   const readySet = useMemo(() => new Set(launch?.ready ?? []), [launch?.ready]);
   const meReady = readySet.has(meId);
 
-  // Bucket users — real humans, Operator never lands in a launch row
   const roomMembers = users.filter(u => u?.id && u.id !== "operator");
   const players = roomMembers.filter(u => slotByUser.get(u.id) === "player");
   const playerCount = players.length;
   const readyCount = players.filter(u => readySet.has(u.id)).length;
 
-  // WS helpers
   function send(msg: object) {
-    try { ctx?.sendRaw?.(msg); } catch { /* noop */ }
+    try { ctx?.sendRaw?.(msg); } catch { }
   }
 
-  // Countdown
   const firedAt = launch?.firedAt ?? null;
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
@@ -68,19 +48,15 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
     return () => clearInterval(t);
   }, [firedAt]);
 
-  // All hooks above this line. Bail out for lobbies that don't use a
-  // steam://connect-style launch flow (Destiny, League, Fortnite, etc.).
   if (!steamLaunchable) return null;
 
-  // Launch time: host fires, countdown runs 3.5s, then the LAUNCH button appears
   const COUNTDOWN_MS = 3500;
   const countdownLeft = firedAt ? Math.max(0, (firedAt + COUNTDOWN_MS) - now) : 0;
   const countdownSec = firedAt ? Math.max(0, Math.ceil(countdownLeft / 1000)) : 0;
   const countdownDone = !!firedAt && countdownLeft === 0;
 
-  // Owner-only — render a "Set target" bar when nothing configured
   if (!target) {
-    if (!isOwner) return null; // Members see nothing until host sets a target
+    if (!isOwner) return null;
     return (
       <>
         <div style={barStyle}>
@@ -105,7 +81,6 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
     );
   }
 
-  // Fired? Render the big countdown overlay.
   if (firedAt) {
     return (
       <CountdownOverlay
@@ -116,18 +91,16 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
         isOwner={isOwner}
         onLaunch={() => {
           const url = `steam://connect/${target.connect}`;
-          try { window.location.href = url; } catch { /* noop */ }
+          try { window.location.href = url; } catch { }
         }}
         onAbort={() => send({ type: "launch:abort" })}
       />
     );
   }
 
-  // Configured, not yet fired — the pre-launch bar
   return (
     <>
       <div style={barStyle}>
-        {/* Target info */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
           <PadIcon />
           <div style={{ minWidth: 0 }}>
@@ -139,7 +112,6 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
           </div>
         </div>
 
-        {/* Slot toggle for current user */}
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           <SlotButton
             active={mySlot === "player"}
@@ -151,7 +123,6 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
           >Observer</SlotButton>
         </div>
 
-        {/* Ready toggle — only when player */}
         {mySlot === "player" && (
           <button
             type="button"
@@ -167,12 +138,10 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
           </button>
         )}
 
-        {/* Counts */}
         <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, color: "rgba(203,213,225,.7)", whiteSpace: "nowrap" }}>
           {readyCount}/{playerCount} ready
         </div>
 
-        {/* Owner controls */}
         {isOwner && (
           <>
             <button
@@ -209,7 +178,6 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
         )}
       </div>
 
-      {/* Slot roster strip */}
       {roomMembers.length > 0 && (
         <div style={{
           display: "flex", flexWrap: "wrap", gap: 6, padding: "8px 16px 10px",
@@ -253,7 +221,6 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
   );
 }
 
-// ─── Countdown overlay ─────────────────────────────────────────────────────
 function CountdownOverlay({
   target, sec, done, isPlayer, isOwner, onLaunch, onAbort,
 }: {
@@ -274,7 +241,6 @@ function CountdownOverlay({
       display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
       overflow: "hidden",
     }}>
-      {/* Ambient pulse */}
       <div aria-hidden style={{
         position: "absolute", inset: 0, pointerEvents: "none",
         background: "radial-gradient(ellipse at center, rgba(239,68,68,.18) 0%, transparent 70%)",
@@ -346,7 +312,6 @@ function CountdownOverlay({
   );
 }
 
-// ─── Setup dialog (owner only) ─────────────────────────────────────────────
 function SetupDialog({
   initial, onClose, onSubmit,
 }: {
@@ -354,13 +319,12 @@ function SetupDialog({
   onClose: () => void;
   onSubmit: (t: { appid: number; connect: string; display: string; note?: string }) => void;
 }) {
-  const [appid, setAppid] = useState(String(initial?.appid ?? 3041230)); // default: Windrose
+  const [appid, setAppid] = useState(String(initial?.appid ?? 3041230));
   const [connect, setConnect] = useState(initial?.connect ?? "");
   const [display, setDisplay] = useState(initial?.display ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [publicServers, setPublicServers] = useState<any[] | null>(null);
 
-  // Windrose Ports of Call as a quick picker
   useEffect(() => {
     if (Number(appid) !== 3041230) { setPublicServers(null); return; }
     const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -373,7 +337,6 @@ function SetupDialog({
   function submit() {
     const c = connect.trim();
     if (!c) return;
-    // Accept paste of full steam://connect/... URL — extract ip:port[/password]
     let cleaned = c;
     const prefixMatch = c.match(/^steam:\/\/connect\/(.+)$/i);
     if (prefixMatch) cleaned = prefixMatch[1];
@@ -479,7 +442,6 @@ function SetupDialog({
   );
 }
 
-// ─── Primitives ────────────────────────────────────────────────────────────
 function SlotButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -507,7 +469,6 @@ function PadIcon() {
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────────
 const barStyle: React.CSSProperties = {
   flexShrink: 0,
   display: "flex",

@@ -4,14 +4,6 @@ import React from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-/**
- * Live HD2 concurrent-player pill.
- *
- * Polls the Slice D /helldivers/steam-players endpoint every 60s. The
- * endpoint itself caches Steam responses for 60s, so the worst case is a
- * 2-minute lag — fine for an ambient stat. Renders a tiny inline pill,
- * intended to sit next to the lobby title in the helldivers2 header.
- */
 export default function HelldiversPlayerCountPill({
   accentColor,
 }: {

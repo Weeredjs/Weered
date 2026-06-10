@@ -7,7 +7,6 @@ import { weeredToast } from "../../../lib/toast";
 import FlairBadge from "../../../components/FlairBadge";
 import { useEquippedFlair } from "../../../lib/useEquippedFlair";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 type GameAccount = {
   gameType: string;
   displayName: string;
@@ -28,7 +27,6 @@ type Profile = {
   gameAccounts?: GameAccount[];
 };
 
-// ── Tier config ───────────────────────────────────────────────────────────────
 const TIERS = {
   INNOCENT:  { label: "Innocent",  color: "#94a3b8", glow: "rgba(148,163,184,.25)",  rank: 0 },
   INDICTED:  { label: "Indicted",  color: "#a78bfa", glow: "rgba(167,139,250,.30)",  rank: 1 },
@@ -43,7 +41,6 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   SUPPORT: { label: "🔧 Support", color: "#34d399" },
 };
 
-// ── Notoriety rank labels ──────────────────────────────────────────────────────
 function notorietyRank(n: number): string {
   if (n >= 10000) return "Legend";
   if (n >= 5000)  return "Crime Boss";
@@ -54,7 +51,6 @@ function notorietyRank(n: number): string {
   return "Nobody";
 }
 
-// ── Avatar color from name ────────────────────────────────────────────────────
 function nameToColor(name: string): string {
   const colors = ["#7c3aed","#db2777","#ea580c","#16a34a","#0284c7","#9333ea","#e11d48","#d97706"];
   let h = 0;
@@ -62,7 +58,6 @@ function nameToColor(name: string): string {
   return colors[h];
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
 function StatBox({ label, value }: { label: string; value: string | number }) {
   return (
     <div style={{
@@ -84,7 +79,6 @@ function StatBox({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const params  = useParams();
   const router  = useRouter();
@@ -101,7 +95,6 @@ export default function ProfilePage() {
   const [bio,      setBio     ] = useState("");
   const [saving,   setSaving  ] = useState(false);
 
-  // ── Fetch profile ──
   useEffect(() => {
     if (!resolvedId) return;
     setLoading(true);
@@ -119,7 +112,6 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [resolvedId, token, apiBase]);
 
-  // ── Save bio ──
   async function saveBio() {
     if (!token || !me?.id) return;
     setSaving(true);
@@ -141,7 +133,6 @@ export default function ProfilePage() {
     }
   }
 
-  // ── Render states ──
   if (loading) return (
     <div style={pageWrap}>
       <div style={{ opacity: 0.4, fontSize: 14 }}>Loading profile...</div>
@@ -172,7 +163,6 @@ export default function ProfilePage() {
             <FlairBadge flair={equippedFlair as any} size="lg" />
           </div>
         )}
-        {/* ── Header strip ── */}
         <div style={{
           height: 80,
           background: `linear-gradient(135deg, ${tier.color}22 0%, rgba(0,0,0,0) 70%)`,
@@ -180,7 +170,6 @@ export default function ProfilePage() {
           borderRadius: "16px 16px 0 0",
           position: "relative",
         }}>
-          {/* Tier watermark */}
           <div style={{
             position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
             fontSize: 11, fontWeight: 900, letterSpacing: "2px", textTransform: "uppercase",
@@ -190,7 +179,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Avatar row ── */}
         <div style={{ padding: "0 24px", marginTop: -36, marginBottom: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
           <div style={{
             width: 72, height: 72,
@@ -205,7 +193,6 @@ export default function ProfilePage() {
             {initial}
           </div>
 
-          {/* Actions */}
           <div style={{ display: "flex", gap: 8, paddingBottom: 4 }}>
             {isMe && (
               editing ? (
@@ -236,7 +223,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Identity ── */}
         <div style={{ padding: "0 24px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
             <h1 style={{ fontSize: 22, fontWeight: 950, margin: 0, color: "var(--weered-text, #f5f5f4)", letterSpacing: "-0.5px" }}>
@@ -248,7 +234,6 @@ export default function ProfilePage() {
               <FlairBadge flair={equippedFlair as any} size="md" />
             )}
 
-            {/* Tier badge */}
             <span style={{
               padding: "2px 10px", borderRadius: 999,
               background: `${tier.color}18`,
@@ -259,7 +244,6 @@ export default function ProfilePage() {
               {tier.label}
             </span>
 
-            {/* Global role badge */}
             {roleInfo && (
               <span style={{
                 padding: "2px 10px", borderRadius: 999,
@@ -273,12 +257,10 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Joined date */}
           <div style={{ fontSize: 12, opacity: 0.45, marginBottom: 14 }}>
             Member since {joinDate}
           </div>
 
-          {/* Bio */}
           {editing ? (
             <textarea
               value={bio}
@@ -304,10 +286,8 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* ── Divider ── */}
         <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 24px" }} />
 
-        {/* ── Notoriety ── */}
         <div style={{ padding: "20px 24px" }}>
           <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.4, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
             Notoriety
@@ -326,14 +306,11 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Notoriety bar */}
           <NotorietyBar value={profile.notoriety} color={tier.color} />
         </div>
 
-        {/* ── Divider ── */}
         <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 24px" }} />
 
-        {/* ── Stats ── */}
         <div style={{ padding: "20px 24px" }}>
           <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.4, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
             Stats
@@ -345,14 +322,12 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Linked Accounts ── */}
         <div style={{ height: 1, background: "rgba(255,255,255,.07)", margin: "0 24px" }} />
         <div style={{ padding: "20px 24px" }}>
           <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.4, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
             Linked Accounts
           </div>
 
-          {/* Existing linked accounts */}
           {profile.gameAccounts && profile.gameAccounts.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
               {profile.gameAccounts.map((a, i) => (
@@ -384,7 +359,6 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Connect buttons (only show for own profile) */}
           {isMe && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {!profile.gameAccounts?.some(a => a.gameType === "BUNGIE") && (
@@ -413,7 +387,6 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* ── Back button ── */}
         <div style={{ padding: "0 24px 24px" }}>
           <button onClick={() => router.back()} style={{ ...btnStyle, opacity: 0.5 }}>← Back</button>
         </div>
@@ -423,7 +396,6 @@ export default function ProfilePage() {
   );
 }
 
-// ── Notoriety progress bar ────────────────────────────────────────────────────
 function NotorietyBar({ value, color }: { value: number; color: string }) {
   const thresholds = [0, 100, 500, 1000, 2000, 5000, 10000];
   const next = thresholds.find(t => t > value) ?? 10000;
@@ -449,7 +421,6 @@ function NotorietyBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const pageWrap: React.CSSProperties = {
   minHeight: "100vh",
   display: "flex",

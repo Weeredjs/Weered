@@ -1,0 +1,1077 @@
+/* ============================================================
+   ISHIMURA - PRODUCTION GRADE TERMINAL EFFECTS
+   Scanlines, vignette, LED indicators, CRT glow, power states
+   ============================================================ */
+
+/* Keyframes ---------------------------------------------------- */
+@keyframes ishimuraBreathe {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+@keyframes ishimuraFlicker {
+  0%, 100%  { opacity: 1; }
+  8%        { opacity: 0.82; }
+  9%        { opacity: 1; }
+  12%       { opacity: 0.9; }
+  13%       { opacity: 1; }
+  62%       { opacity: 0.88; }
+  63%       { opacity: 1; }
+}
+@keyframes ishimuraScan {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes ishimuraPower {
+  0%, 100% { box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 14px rgba(212,146,10,0.10),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 16px rgba(212,146,10,0.22); }
+  50%      { box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.32),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 18px rgba(212,146,10,0.18),
+    0 0 0 1px rgba(232,170,40,0.75),
+    0 0 24px rgba(212,146,10,0.36); }
+}
+
+/* Global CRT overlay ------------------------------------------ */
+html[data-weered-theme="ishimura"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.18) 0px,
+      rgba(0,0,0,0.18) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+html[data-weered-theme="ishimura"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    radial-gradient(ellipse at center,
+      transparent 40%,
+      rgba(0,0,0,0.35) 85%,
+      rgba(0,0,0,0.6) 100%);
+}
+
+/* Rolling scan line beam — sits BEHIND panels, only visible in negative space.
+   isolation: isolate alone creates the stacking context the scan beam needs;
+   removed the explicit position: relative so it doesn't override the
+   shell's position: fixed (which pins the layout to viewport edges). */
+html[data-weered-theme="ishimura"] .weered-shell {
+  isolation: isolate;
+}
+html[data-weered-theme="ishimura"] .weered-shell::before {
+  content: '';
+  position: fixed;
+  left: 0; right: 0;
+  height: 140px;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(212,146,10,0.05) 45%,
+    rgba(232,170,40,0.14) 50%,
+    rgba(212,146,10,0.05) 55%,
+    transparent 100%);
+  animation: ishimuraScan 10s linear infinite;
+  mix-blend-mode: screen;
+}
+/* Ensure shell direct children stack above the beam */
+html[data-weered-theme="ishimura"] .weered-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Text CRT glow ------------------------------------------------ */
+html[data-weered-theme="ishimura"] .weered-left-title,
+html[data-weered-theme="ishimura"] .weered-presence-title {
+  text-shadow:
+    0 0 4px rgba(212,146,10,0.55),
+    0 0 10px rgba(212,146,10,0.25);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* LED dot in front of section titles */
+html[data-weered-theme="ishimura"] .weered-left-title::before,
+html[data-weered-theme="ishimura"] .weered-presence-title::before {
+  content: '●';
+  display: inline-block;
+  color: rgba(212,146,10,1);
+  margin-right: 8px;
+  font-size: 0.7em;
+  animation: ishimuraBreathe 2.4s ease-in-out infinite;
+  text-shadow: 0 0 6px rgba(212,146,10,0.9), 0 0 10px rgba(212,146,10,0.5);
+  vertical-align: middle;
+}
+
+/* Hover text glow on any link / button */
+html[data-weered-theme="ishimura"] a,
+html[data-weered-theme="ishimura"] button,
+html[data-weered-theme="ishimura"] .weered-left-link {
+  transition: text-shadow 0.18s, color 0.18s, filter 0.18s, transform 0.08s;
+}
+html[data-weered-theme="ishimura"] a:hover,
+html[data-weered-theme="ishimura"] button:hover {
+  text-shadow:
+    0 0 6px rgba(255,210,120,0.7),
+    0 0 14px rgba(212,146,10,0.35);
+}
+
+/* Press-down feedback on any clickable --------------------------- */
+html[data-weered-theme="ishimura"] .weered-left-link:active,
+html[data-weered-theme="ishimura"] .weered-btn:active,
+html[data-weered-theme="ishimura"] .weered-icon-strip-btn:active,
+html[data-weered-theme="ishimura"] .weered-mobile-nav-btn:active,
+html[data-weered-theme="ishimura"] .weered-rail-tab:active {
+  transform: translateY(1px) scale(0.995);
+  filter: brightness(0.92);
+}
+
+/* Active pill breathes power ----------------------------------- */
+html[data-weered-theme="ishimura"] .weered-left-link-active {
+  animation: ishimuraPower 3.2s ease-in-out infinite;
+}
+
+/* Panels — machined metal treatment ---------------------------- */
+html[data-weered-theme="ishimura"] .weered-panel,
+html[data-weered-theme="ishimura"] .weered-panel2,
+html[data-weered-theme="ishimura"] .weered-presence {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(40,28,18,0.72) 0%,
+      rgba(18,14,10,0.82) 50%,
+      rgba(28,20,14,0.78) 100%) !important;
+  border-radius: 6px !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.12),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    inset 0 0 18px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.24),
+    0 2px 6px rgba(0,0,0,0.5) !important;
+}
+
+/* Panel corner rivets via pseudo (top-left + top-right) */
+html[data-weered-theme="ishimura"] .weered-panel::before,
+html[data-weered-theme="ishimura"] .weered-panel2::before,
+html[data-weered-theme="ishimura"] .weered-presence::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 6px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,210,120,0.95) 0%, rgba(212,146,10,0.6) 35%, rgba(40,26,10,0.9) 70%, transparent 80%);
+  box-shadow: 0 0 4px rgba(212,146,10,0.5);
+  pointer-events: none;
+}
+html[data-weered-theme="ishimura"] .weered-panel::after,
+html[data-weered-theme="ishimura"] .weered-panel2::after,
+html[data-weered-theme="ishimura"] .weered-presence::after {
+  content: '';
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,210,120,0.95) 0%, rgba(212,146,10,0.6) 35%, rgba(40,26,10,0.9) 70%, transparent 80%);
+  box-shadow: 0 0 4px rgba(212,146,10,0.5);
+  pointer-events: none;
+}
+
+/* Input fields — terminal input */
+html[data-weered-theme="ishimura"] input,
+html[data-weered-theme="ishimura"] textarea,
+html[data-weered-theme="ishimura"] .weered-input,
+html[data-weered-theme="ishimura"] .weered-presence-search {
+  background: linear-gradient(180deg, rgba(10,7,4,0.85), rgba(20,14,8,0.9)) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,0.8),
+    inset 0 -1px 0 rgba(255,210,120,0.05),
+    0 0 0 1px rgba(212,146,10,0.25) !important;
+  color: rgba(255,220,140,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  letter-spacing: 0.02em;
+}
+html[data-weered-theme="ishimura"] input:focus,
+html[data-weered-theme="ishimura"] textarea:focus,
+html[data-weered-theme="ishimura"] .weered-input:focus {
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,0.8),
+    inset 0 0 12px rgba(212,146,10,0.15),
+    0 0 0 1px rgba(232,170,40,0.65),
+    0 0 14px rgba(212,146,10,0.28) !important;
+  color: rgba(255,230,160,1) !important;
+}
+html[data-weered-theme="ishimura"] input::placeholder,
+html[data-weered-theme="ishimura"] textarea::placeholder {
+  color: rgba(212,146,10,0.45) !important;
+}
+
+/* Buttons — physical switches */
+html[data-weered-theme="ishimura"] .weered-btn {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.95) 0%,
+      rgba(22,16,10,0.95) 50%,
+      rgba(36,26,16,0.95) 100%) !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  color: rgba(255,220,140,0.95) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.22),
+    inset 0 -2px 3px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.32),
+    0 2px 4px rgba(0,0,0,0.5) !important;
+}
+html[data-weered-theme="ishimura"] .weered-btn:hover {
+  filter: brightness(1.18) saturate(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.35),
+    inset 0 -2px 3px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.6),
+    0 0 14px rgba(212,146,10,0.3) !important;
+}
+html[data-weered-theme="ishimura"] .weered-btn:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(212,146,10,0.4) !important;
+}
+
+/* Rows — scanline sweep on hover */
+html[data-weered-theme="ishimura"] .weered-row {
+  position: relative;
+  overflow: hidden;
+  transition: background 0.18s, box-shadow 0.18s;
+}
+html[data-weered-theme="ishimura"] .weered-row:hover {
+  background: linear-gradient(90deg,
+    rgba(212,146,10,0.06) 0%,
+    rgba(212,146,10,0.14) 50%,
+    rgba(212,146,10,0.06) 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(212,146,10,0.18) !important;
+}
+html[data-weered-theme="ishimura"] .weered-row:hover::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255,210,120,0.12),
+    transparent);
+  animation: weeredRowSweep 0.6s ease-out;
+  pointer-events: none;
+}
+@keyframes weeredRowSweep {
+  0%   { left: -40%; }
+  100% { left: 110%; }
+}
+
+/* User corner card — premium framed console */
+html[data-weered-theme="ishimura"] .weered-usercorner {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.85) 0%,
+      rgba(18,14,10,0.92) 50%,
+      rgba(34,24,14,0.85) 100%) !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.20),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    inset 0 0 22px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(212,146,10,0.35),
+    0 0 18px rgba(212,146,10,0.10),
+    0 3px 8px rgba(0,0,0,0.6) !important;
+}
+html[data-weered-theme="ishimura"] .weered-usercorner:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    inset 0 0 22px rgba(212,146,10,0.06),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 24px rgba(212,146,10,0.22),
+    0 3px 10px rgba(0,0,0,0.7) !important;
+}
+/* Top rivets on user card */
+html[data-weered-theme="ishimura"] .weered-usercorner::before,
+html[data-weered-theme="ishimura"] .weered-usercorner::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,220,140,1) 0%, rgba(212,146,10,0.7) 35%, rgba(40,26,10,0.9) 70%, transparent 80%);
+  box-shadow: 0 0 6px rgba(212,146,10,0.7);
+  pointer-events: none;
+}
+html[data-weered-theme="ishimura"] .weered-usercorner::before { left: 8px; }
+html[data-weered-theme="ishimura"] .weered-usercorner::after  { right: 8px; }
+
+/* Chips — status beacons */
+html[data-weered-theme="ishimura"] .weered-chip,
+html[data-weered-theme="ishimura"] .weered-chip-purple,
+html[data-weered-theme="ishimura"] .weered-chip-green,
+html[data-weered-theme="ishimura"] .weered-chip-amber {
+  text-shadow: 0 0 4px rgba(255,210,120,0.4);
+  letter-spacing: 0.08em;
+}
+
+/* Badges — glow on hover */
+html[data-weered-theme="ishimura"] .weered-badge {
+  transition: box-shadow 0.18s, filter 0.18s;
+}
+html[data-weered-theme="ishimura"] .weered-badge:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 10px rgba(212,146,10,0.35) !important;
+}
+
+/* Lobby cards — machined vessel panels */
+html[data-weered-theme="ishimura"] .weered-lobby-grid > * {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(42,30,18,0.82) 0%,
+      rgba(18,13,9,0.90) 60%,
+      rgba(28,20,12,0.85) 100%) !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    inset 0 0 20px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(212,146,10,0.25),
+    0 2px 6px rgba(0,0,0,0.5) !important;
+  transition: box-shadow 0.2s, filter 0.2s;
+}
+html[data-weered-theme="ishimura"] .weered-lobby-grid > *:hover {
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    inset 0 0 24px rgba(212,146,10,0.08),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 16px rgba(212,146,10,0.22) !important;
+}
+
+/* Featured lobby hero — mission briefing console */
+html[data-weered-theme="ishimura"] .weered-hero-content {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.82) 0%,
+      rgba(18,13,9,0.92) 60%,
+      rgba(28,20,12,0.85) 100%) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    inset 0 0 28px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.32),
+    0 0 22px rgba(212,146,10,0.12),
+    0 3px 10px rgba(0,0,0,0.6) !important;
+  border-radius: 8px !important;
+}
+
+/* Icon strip buttons — rocker switches */
+html[data-weered-theme="ishimura"] .weered-icon-strip-btn {
+  background:
+    linear-gradient(180deg,
+      rgba(36,26,16,0.92) 0%,
+      rgba(14,10,6,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.14),
+    inset 0 -1px 2px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(212,146,10,0.25) !important;
+}
+html[data-weered-theme="ishimura"] .weered-icon-strip-btn:hover {
+  filter: brightness(1.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.25),
+    inset 0 -1px 2px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 10px rgba(212,146,10,0.3) !important;
+}
+
+/* Rail tabs — edge-mounted pulse */
+html[data-weered-theme="ishimura"] .weered-rail-tab {
+  animation: ishimuraFlicker 8s steps(30) infinite;
+}
+
+/* ── BURNER DOCK — Comms Terminal Module ─────────────────────── */
+
+/* Dock container — sealed comms module */
+html[data-weered-theme="ishimura"] .weered-dock {
+  position: relative;
+  background:
+    linear-gradient(180deg,
+      rgba(36,26,16,0.96) 0%,
+      rgba(14,10,7,0.98) 40%,
+      rgba(10,7,5,0.98) 60%,
+      rgba(26,18,12,0.96) 100%) !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    inset 0 0 30px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.30),
+    0 0 0 3px rgba(10,7,4,0.9),
+    0 0 0 4px rgba(212,146,10,0.12),
+    0 0 30px rgba(212,146,10,0.08),
+    0 4px 16px rgba(0,0,0,0.7) !important;
+  backdrop-filter: none !important;
+}
+
+/* Corner rivets on dock */
+html[data-weered-theme="ishimura"] .weered-dock::before,
+html[data-weered-theme="ishimura"] .weered-dock::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,220,140,1) 0%, rgba(212,146,10,0.7) 35%, rgba(40,26,10,0.9) 70%, transparent 80%);
+  box-shadow: 0 0 5px rgba(212,146,10,0.6);
+  pointer-events: none;
+  z-index: 10;
+}
+html[data-weered-theme="ishimura"] .weered-dock::before { left: 10px; }
+html[data-weered-theme="ishimura"] .weered-dock::after  { right: 10px; }
+
+/* Header — command bar */
+html[data-weered-theme="ishimura"] .weered-dock-header {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.6) 0%,
+      rgba(22,16,10,0.4) 100%) !important;
+  border-bottom: 1px solid rgba(212,146,10,0.20) !important;
+  border-top: 1px solid rgba(255,210,120,0.06) !important;
+}
+
+/* "Burner" title — CRT text */
+html[data-weered-theme="ishimura"] .weered-dock-title {
+  text-shadow:
+    0 0 6px rgba(212,146,10,0.65),
+    0 0 14px rgba(212,146,10,0.30);
+  color: rgba(255,220,140,0.95) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+}
+
+/* Close button — physical switch */
+html[data-weered-theme="ishimura"] .weered-dock-close {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.9) 0%,
+      rgba(22,16,10,0.95) 100%) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.15),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.25) !important;
+  color: rgba(212,146,10,0.7) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-close:hover {
+  background:
+    linear-gradient(180deg,
+      rgba(60,42,26,0.95) 0%,
+      rgba(30,22,14,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.25),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 8px rgba(212,146,10,0.25) !important;
+  color: rgba(255,210,120,0.95) !important;
+}
+
+/* Segmented tabs — toggle switch bank */
+html[data-weered-theme="ishimura"] .weered-dock-tabs {
+  background:
+    linear-gradient(180deg,
+      rgba(10,7,4,0.9) 0%,
+      rgba(18,13,8,0.85) 100%) !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(212,146,10,0.12) !important;
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(0,0,0,0.4) !important;
+  padding: 2px !important;
+  gap: 1px !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-tab {
+  background: transparent !important;
+  color: rgba(180,140,80,0.5) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase;
+  border-radius: 4px !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-tab:hover {
+  background: rgba(212,146,10,0.08) !important;
+  color: rgba(255,210,120,0.75) !important;
+  text-shadow: 0 0 6px rgba(212,146,10,0.4);
+}
+html[data-weered-theme="ishimura"] .weered-dock-tab-active {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.9) 0%,
+      rgba(28,20,12,0.95) 100%) !important;
+  color: rgba(255,220,140,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.30) !important;
+  text-shadow:
+    0 0 4px rgba(212,146,10,0.55),
+    0 0 10px rgba(212,146,10,0.20);
+}
+
+/* Thread rows — scanline sweep on hover */
+html[data-weered-theme="ishimura"] .weered-dock-thread {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(212,146,10,0.06) !important;
+  transition: background 0.18s, box-shadow 0.18s !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-thread:hover {
+  background: linear-gradient(90deg,
+    rgba(212,146,10,0.04) 0%,
+    rgba(212,146,10,0.10) 50%,
+    rgba(212,146,10,0.04) 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(212,146,10,0.12) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-thread:hover::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255,210,120,0.08),
+    transparent);
+  animation: weeredRowSweep 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* Conversation header — sub-panel bar */
+html[data-weered-theme="ishimura"] .weered-dock-conv-header {
+  background:
+    linear-gradient(180deg,
+      rgba(40,28,18,0.4) 0%,
+      rgba(18,13,8,0.3) 100%) !important;
+  border-bottom: 1px solid rgba(212,146,10,0.18) !important;
+}
+
+/* Message bubbles — terminal readout */
+html[data-weered-theme="ishimura"] .weered-dock-bubble {
+  background:
+    linear-gradient(180deg,
+      rgba(20,15,10,0.9) 0%,
+      rgba(14,10,7,0.95) 100%) !important;
+  border: 1px solid rgba(212,146,10,0.12) !important;
+  border-radius: 6px 6px 6px 2px !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(0,0,0,0.3) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-bubble div {
+  color: rgba(200,185,160,0.90) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  text-shadow: 0 0 2px rgba(200,180,140,0.15);
+  font-size: 12px !important;
+  letter-spacing: 0.01em;
+}
+
+/* Sent bubbles — amber terminal screen */
+html[data-weered-theme="ishimura"] .weered-dock-bubble-me {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,18,0.85) 0%,
+      rgba(30,22,12,0.92) 100%) !important;
+  border: 1px solid rgba(212,146,10,0.25) !important;
+  border-radius: 6px 6px 2px 6px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.10),
+    inset 0 -1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.20),
+    0 0 8px rgba(212,146,10,0.06) !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-bubble-me div {
+  color: rgba(255,220,140,0.92) !important;
+  text-shadow:
+    0 0 4px rgba(212,146,10,0.35),
+    0 0 8px rgba(212,146,10,0.12);
+}
+
+/* Compose + button — rocker switch */
+html[data-weered-theme="ishimura"] .weered-dock-compose {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.95) 0%,
+      rgba(22,16,10,0.95) 100%) !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.20),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.30) !important;
+  color: rgba(255,220,140,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  text-shadow: 0 0 6px rgba(212,146,10,0.5);
+}
+html[data-weered-theme="ishimura"] .weered-dock-compose:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.30),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 12px rgba(212,146,10,0.30) !important;
+  filter: brightness(1.15);
+}
+
+/* Send button — glowing dispatch */
+html[data-weered-theme="ishimura"] .weered-dock-send {
+  background:
+    linear-gradient(180deg,
+      rgba(60,42,18,0.95) 0%,
+      rgba(40,28,12,0.95) 100%) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.25),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.35),
+    0 0 10px rgba(212,146,10,0.15) !important;
+  color: rgba(255,220,140,1) !important;
+  border-radius: 6px !important;
+}
+html[data-weered-theme="ishimura"] .weered-dock-send:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.35),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,170,40,0.65),
+    0 0 18px rgba(212,146,10,0.35) !important;
+  filter: brightness(1.2);
+}
+html[data-weered-theme="ishimura"] .weered-dock-send:active {
+  transform: scale(0.92);
+  filter: brightness(0.9);
+}
+
+/* Date separators — amber scan line */
+html[data-weered-theme="ishimura"] .weered-dock-bubble ~ div > span {
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+}
+
+/* Unread badge — amber warning indicator */
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background:#ef4444"],
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background: #ef4444"] {
+  background: rgba(212,146,10,0.9) !important;
+  color: rgba(10,7,4,1) !important;
+  box-shadow: 0 0 6px rgba(212,146,10,0.5), 0 0 12px rgba(212,146,10,0.2) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  font-weight: 800 !important;
+  animation: ishimuraBreathe 2s ease-in-out infinite;
+}
+
+/* Online dots — amber instead of green */
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background:#22c55e"],
+html[data-weered-theme="ishimura"] .weered-dock span[style*="background: #22c55e"] {
+  background: rgba(212,146,10,0.9) !important;
+  box-shadow: 0 0 4px rgba(212,146,10,0.6), 0 0 8px rgba(212,146,10,0.25) !important;
+}
+
+/* Empty state text glow */
+html[data-weered-theme="ishimura"] .weered-dock img[alt="Weered logo"] {
+  filter: sepia(1) saturate(2.5) hue-rotate(-10deg) brightness(0.6);
+}
+
+/* ── RIGHT RAIL CONTENTS — Control Panel Terminal ─────────────── */
+
+/* Section titles — amber CRT label with LED */
+html[data-weered-theme="ishimura"] .weered-rr-section-title {
+  opacity: 1 !important;
+  color: rgba(212,146,10,0.85) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  letter-spacing: 0.12em !important;
+  text-shadow:
+    0 0 4px rgba(212,146,10,0.55),
+    0 0 10px rgba(212,146,10,0.20);
+}
+html[data-weered-theme="ishimura"] .weered-rr-section-title::before {
+  content: '●';
+  display: inline-block;
+  color: rgba(212,146,10,1);
+  margin-right: 8px;
+  font-size: 0.7em;
+  animation: ishimuraBreathe 2.4s ease-in-out infinite;
+  text-shadow: 0 0 6px rgba(212,146,10,0.9), 0 0 10px rgba(212,146,10,0.5);
+  vertical-align: middle;
+}
+
+/* Lobby ID chip — machined data tag */
+html[data-weered-theme="ishimura"] .weered-rr-id-chip {
+  background:
+    linear-gradient(180deg,
+      rgba(20,14,8,0.9) 0%,
+      rgba(10,7,4,0.95) 100%) !important;
+  border: 0 !important;
+  color: rgba(212,146,10,0.85) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.30),
+    inset 0 -1px 0 rgba(255,210,120,0.06) !important;
+  text-shadow: 0 0 4px rgba(212,146,10,0.45);
+}
+
+/* Primary buttons (+ Room, Create, join) — rocker switch */
+html[data-weered-theme="ishimura"] .weered-rr-primary,
+html[data-weered-theme="ishimura"] .weered-rr-join {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.92) 0%,
+      rgba(22,16,10,0.96) 100%) !important;
+  border: 0 !important;
+  color: rgba(255,220,140,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.20),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.35) !important;
+  text-shadow: 0 0 4px rgba(212,146,10,0.45);
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-primary:hover,
+html[data-weered-theme="ishimura"] .weered-rr-join:hover {
+  filter: brightness(1.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.30),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.60),
+    0 0 12px rgba(212,146,10,0.30) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-primary:active,
+html[data-weered-theme="ishimura"] .weered-rr-join:active {
+  transform: translateY(1px) scale(0.995);
+  filter: brightness(0.92);
+}
+
+/* Primary-solid (main Create button) — more prominent */
+html[data-weered-theme="ishimura"] .weered-rr-primary-solid {
+  background:
+    linear-gradient(180deg,
+      rgba(70,48,18,0.95) 0%,
+      rgba(30,22,12,0.98) 100%) !important;
+  color: rgba(255,230,160,1) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.30),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.50),
+    0 0 14px rgba(212,146,10,0.15) !important;
+}
+
+/* Create Room overlay panel — inset sub-console */
+html[data-weered-theme="ishimura"] .weered-rr-create-panel {
+  background:
+    linear-gradient(180deg,
+      rgba(22,16,10,0.95) 0%,
+      rgba(14,10,7,0.98) 100%) !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.7),
+    inset 0 0 20px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.30),
+    0 0 0 2px rgba(0,0,0,0.6),
+    0 0 12px rgba(212,146,10,0.08) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-create-title {
+  color: rgba(212,146,10,0.9) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  text-shadow: 0 0 6px rgba(212,146,10,0.5);
+  letter-spacing: 0.14em !important;
+}
+
+/* Module picker buttons — toggle switches */
+html[data-weered-theme="ishimura"] .weered-rr-module-btn {
+  background:
+    linear-gradient(180deg,
+      rgba(20,14,8,0.8) 0%,
+      rgba(10,7,4,0.9) 100%) !important;
+  border: 0 !important;
+  color: rgba(180,140,80,0.70) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.15) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-module-btn:hover {
+  color: rgba(255,210,120,0.90) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.30),
+    0 0 8px rgba(212,146,10,0.12) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-module-btn-active {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.95) 0%,
+      rgba(28,20,12,0.98) 100%) !important;
+  color: rgba(255,230,160,1) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.22),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 10px rgba(212,146,10,0.22) !important;
+  text-shadow: 0 0 4px rgba(212,146,10,0.45);
+}
+html[data-weered-theme="ishimura"] .weered-rr-module-btn-active span[style*="rgba(88,0,229"] {
+  background: rgba(212,146,10,0.30) !important;
+  color: rgba(255,230,160,1) !important;
+}
+
+/* Room cards — machined data slots */
+html[data-weered-theme="ishimura"] .weered-rr-room-card {
+  background:
+    linear-gradient(180deg,
+      rgba(24,17,11,0.85) 0%,
+      rgba(14,10,7,0.92) 100%) !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.06),
+    inset 0 -1px 1px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.15),
+    0 1px 2px rgba(0,0,0,0.4) !important;
+  overflow: hidden;
+  transition: all 0.18s !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-room-card:hover {
+  background:
+    linear-gradient(180deg,
+      rgba(34,24,14,0.92) 0%,
+      rgba(20,14,9,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.12),
+    inset 0 -1px 1px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(232,170,40,0.45),
+    0 0 10px rgba(212,146,10,0.18) !important;
+  transform: none !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-room-card-active {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.9) 0%,
+      rgba(28,20,12,0.95) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.20),
+    inset 0 -1px 1px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,170,40,0.60),
+    0 0 14px rgba(212,146,10,0.22) !important;
+  animation: ishimuraPower 3.2s ease-in-out infinite;
+}
+/* Room card live state — amber active indicator (replaces green) */
+html[data-weered-theme="ishimura"] .weered-rr-room-card-live {
+  background:
+    linear-gradient(180deg,
+      rgba(42,30,16,0.88) 0%,
+      rgba(20,14,8,0.94) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.10),
+    inset 0 -1px 1px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.40),
+    0 0 10px rgba(212,146,10,0.12) !important;
+}
+/* Hide purple top accent line + purple side bar, replace with amber */
+html[data-weered-theme="ishimura"] .weered-rr-room-card > div[style*="linear-gradient(90deg"] {
+  display: none !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-room-card > div[style*="background: #5800E5"],
+html[data-weered-theme="ishimura"] .weered-rr-room-card > div[style*="background:#5800E5"] {
+  background: rgba(212,146,10,0.9) !important;
+  box-shadow: 0 0 6px rgba(212,146,10,0.5) !important;
+}
+/* Retint green live badge to amber */
+html[data-weered-theme="ishimura"] .weered-rr-room-card div[style*="rgba(34,197,94"] {
+  background: rgba(212,146,10,0.10) !important;
+  border-color: rgba(212,146,10,0.30) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-room-card span[style*="background: #22c55e"],
+html[data-weered-theme="ishimura"] .weered-rr-room-card span[style*="background:#22c55e"] {
+  background: rgba(255,210,120,1) !important;
+  box-shadow: 0 0 5px rgba(212,146,10,0.7) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-room-card span[style*="rgba(134,239,172"] {
+  color: rgba(255,220,140,0.95) !important;
+  text-shadow: 0 0 4px rgba(212,146,10,0.45);
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+}
+
+/* Friend / Crew rows — data slots */
+html[data-weered-theme="ishimura"] .weered-rr-friend-row,
+html[data-weered-theme="ishimura"] .weered-rr-crew-row {
+  background:
+    linear-gradient(180deg,
+      rgba(22,16,10,0.85) 0%,
+      rgba(14,10,7,0.92) 100%) !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.06),
+    inset 0 -1px 1px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(212,146,10,0.15) !important;
+  transition: all 0.18s !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-friend-row:hover,
+html[data-weered-theme="ishimura"] .weered-rr-crew-row:hover {
+  background:
+    linear-gradient(90deg,
+      rgba(34,24,14,0.90) 0%,
+      rgba(42,30,18,0.92) 50%,
+      rgba(34,24,14,0.90) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.12),
+    0 0 0 1px rgba(232,170,40,0.40),
+    0 0 10px rgba(212,146,10,0.15) !important;
+}
+
+/* Status dots — green → amber in friend/crew rows */
+html[data-weered-theme="ishimura"] .weered-rr-friend-row span[style*="background: #22c55e"],
+html[data-weered-theme="ishimura"] .weered-rr-friend-row span[style*="background:#22c55e"],
+html[data-weered-theme="ishimura"] .weered-rr-crew-row span[style*="background: #22c55e"],
+html[data-weered-theme="ishimura"] .weered-rr-crew-row span[style*="background:#22c55e"] {
+  background: rgba(212,146,10,0.95) !important;
+  box-shadow: 0 0 4px rgba(212,146,10,0.6), 0 0 8px rgba(212,146,10,0.25) !important;
+}
+
+/* Unread indicator dot on section title (amber already — boost glow) */
+html[data-weered-theme="ishimura"] .weered-rr-section span[style*="background: #f59e0b"],
+html[data-weered-theme="ishimura"] .weered-rr-section span[style*="background:#f59e0b"] {
+  background: rgba(255,210,120,1) !important;
+  box-shadow: 0 0 6px rgba(212,146,10,0.8), 0 0 10px rgba(212,146,10,0.4) !important;
+  animation: ishimuraBreathe 2s ease-in-out infinite;
+}
+
+/* Search input — already covered by global terminal input */
+html[data-weered-theme="ishimura"] .weered-rr-search {
+  font-size: 12px !important;
+}
+
+/* Mod panel — inset sub-console */
+html[data-weered-theme="ishimura"] .weered-rr-mod-panel {
+  background:
+    linear-gradient(180deg,
+      rgba(20,14,8,0.9) 0%,
+      rgba(12,9,5,0.95) 100%) !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.6),
+    inset 0 0 16px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(212,146,10,0.25) !important;
+}
+
+/* Mod panel buttons — physical switches */
+html[data-weered-theme="ishimura"] .weered-rr-mod-panel button {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,22,0.92) 0%,
+      rgba(22,16,10,0.96) 100%) !important;
+  border: 0 !important;
+  color: rgba(255,220,140,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.18),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(212,146,10,0.30) !important;
+  text-shadow: 0 0 4px rgba(212,146,10,0.45);
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-mod-panel button:hover {
+  filter: brightness(1.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,140,0.28),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,170,40,0.55),
+    0 0 12px rgba(212,146,10,0.28) !important;
+}
+html[data-weered-theme="ishimura"] .weered-rr-mod-panel button:active {
+  transform: translateY(1px);
+  filter: brightness(0.90);
+}
+
+/* Status chip (CHAT LOCKED / CHAT OPEN) — warning beacon */
+html[data-weered-theme="ishimura"] .weered-rr-status-chip {
+  background:
+    linear-gradient(180deg,
+      rgba(50,36,18,0.9) 0%,
+      rgba(28,20,10,0.95) 100%) !important;
+  border: 0 !important;
+  color: rgba(255,220,140,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  letter-spacing: 0.14em !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.20),
+    inset 0 -1px 1px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(212,146,10,0.45),
+    0 0 10px rgba(212,146,10,0.18) !important;
+  text-shadow: 0 0 4px rgba(212,146,10,0.5);
+}
+
+/* Crew avatar — already amber-ish, boost ring */
+html[data-weered-theme="ishimura"] .weered-rr-crew-row div[style*="rgba(245,158,11"] {
+  background: rgba(212,146,10,0.3) !important;
+  color: rgba(255,230,160,1) !important;
+}
+
+/* Scrollbar — amber */
+html[data-weered-theme="ishimura"] *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(212,146,10,0.5), rgba(120,80,20,0.6)) !important;
+  box-shadow: 0 0 4px rgba(212,146,10,0.3);
+}
+html[data-weered-theme="ishimura"] *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(232,170,40,0.7), rgba(160,110,30,0.8)) !important;
+}
+html[data-weered-theme="ishimura"] *::-webkit-scrollbar-track {
+  background: rgba(10,7,4,0.6) !important;
+}
+
+/* REDUCE MOTION */
+html[data-weered-reduce-motion="1"] *,
+html[data-weered-reduce-motion="1"] *::before,
+html[data-weered-reduce-motion="1"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+

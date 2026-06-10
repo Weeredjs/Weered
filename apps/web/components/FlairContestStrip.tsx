@@ -26,10 +26,6 @@ function timeRemaining(target: string): string {
   return `${mins}m left`;
 }
 
-/**
- * Strip showing active VOTING + SUBMISSIONS flair contests for a lobby.
- * Hides itself when nothing is active. Polls every 30s.
- */
 export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
   const [contests, setContests] = React.useState<Contest[]>([]);
   const [collapsed, setCollapsed] = React.useState(false);

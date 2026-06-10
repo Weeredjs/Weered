@@ -44,7 +44,6 @@ export default function StreamInterceptModal({
   }
 
   function handleJoinRoom() {
-    // Navigate to a room with stream context — room ID = twitch username
     const roomId = `stream-${stream!.userLogin}`;
     router.push(
       `/room/${encodeURIComponent(roomId)}?twitch=${encodeURIComponent(stream!.userLogin)}&lobby=${encodeURIComponent(lobbyId || "")}`
@@ -58,7 +57,6 @@ export default function StreamInterceptModal({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -69,7 +67,6 @@ export default function StreamInterceptModal({
         }}
       />
 
-      {/* Modal */}
       <div
         style={{
           position: "fixed",
@@ -85,7 +82,6 @@ export default function StreamInterceptModal({
           animation: "weeredModalIn 0.25s cubic-bezier(0.22,1,0.36,1)",
         }}
       >
-        {/* Hero thumbnail */}
         <div style={{ position: "relative", aspectRatio: "16/9", background: "#000", overflow: "hidden" }}>
           {thumb ? (
             <img src={thumb} alt={stream.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: 0.7 }} />
@@ -94,11 +90,8 @@ export default function StreamInterceptModal({
               <span style={{ fontSize: 48, opacity: 0.2 }}>▶</span>
             </div>
           )}
-          {/* Gradient overlay */}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(10,10,18,0.95) 100%)" }} />
-          {/* LIVE badge */}
           <div style={{ position: "absolute", top: 14, left: 14, fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 5, background: "#ef4444", color: "#fff", letterSpacing: "0.06em" }}>LIVE</div>
-          {/* Close */}
           <button
             onClick={onClose}
             style={{
@@ -111,7 +104,6 @@ export default function StreamInterceptModal({
               cursor: "pointer",
             }}
           >✕</button>
-          {/* Stream info overlaid at bottom */}
           <div style={{ position: "absolute", bottom: 14, left: 14, right: 14 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(243,244,246,.98)", lineHeight: 1.3, marginBottom: 4 }}>
               {stream.userName}
@@ -127,7 +119,6 @@ export default function StreamInterceptModal({
           </div>
         </div>
 
-        {/* User presence card */}
         <div style={{ padding: "14px 18px 0" }}>
           <div style={{
             display: "flex", alignItems: "center", gap: 10,
@@ -166,13 +157,11 @@ export default function StreamInterceptModal({
           </div>
         </div>
 
-        {/* CTA section */}
         <div style={{ padding: "16px 18px 20px" }}>
           <div style={{ fontSize: 16, fontWeight: 800, textAlign: "center", marginBottom: 14, color: "rgba(243,244,246,.95)" }}>
             Where do you want to watch?
           </div>
 
-          {/* Watch Here */}
           <button
             onClick={handleWatchHere}
             style={{
@@ -207,7 +196,6 @@ export default function StreamInterceptModal({
             <span style={{ fontSize: 18, opacity: 0.4, flexShrink: 0, color: accent }}>→</span>
           </button>
 
-          {/* Join Live Room */}
           <button
             onClick={handleJoinRoom}
             style={{
@@ -243,7 +231,6 @@ export default function StreamInterceptModal({
           </button>
         </div>
 
-        {/* Dismiss hint */}
         <div style={{ textAlign: "center", paddingBottom: 14, fontSize: 10, opacity: 0.25, letterSpacing: "0.08em", textTransform: "uppercase" }}>
           esc or click outside to dismiss
         </div>

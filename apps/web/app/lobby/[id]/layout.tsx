@@ -5,8 +5,6 @@ import SyncAuthedAttribute from "./SyncAuthedAttribute";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
 
-// Per-lobby OG overrides. Default is the generic Weered card + description.
-// Add entries here when a lobby has its own branded social card.
 const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: string; description?: string; title?: string }> = {
   windrose: {
     ogImage: `${SITE}/brand/lobbies/windrose-og-v3.png`,
@@ -29,7 +27,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, { next: { revalidate: 300 } });
     if (res.ok) {
       const data = await res.json();
-      const lobby = data?.lobby ?? data; // handle both { ok, lobby } and flat shapes
+      const lobby = data?.lobby ?? data;
       if (lobby?.name) name = lobby.name;
       if (lobby?.description) description = lobby.description;
     }
@@ -98,6 +96,11 @@ export default async function LobbyIdLayout({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `try{if(localStorage.getItem('weered_token'))document.documentElement.setAttribute('data-weered-authed','1');}catch(e){}`,
+        }}
       />
       <SyncAuthedAttribute />
       <LobbySeoSlab lobbyId={id} />

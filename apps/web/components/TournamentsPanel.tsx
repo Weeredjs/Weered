@@ -8,6 +8,7 @@ import TournamentArchive from "./TournamentArchive";
 import { apiFetch } from "../lib/api";
 import { weeredConfirm } from "../lib/confirm";
 import { weeredToast } from "../lib/toast";
+import TournamentGuide from "./TournamentGuide";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#f58220";
@@ -33,10 +34,6 @@ type Tournament = {
   rewards?: Array<{ kind: string; itemId?: string; rank?: number; item?: { id: string; name: string; imageUrl?: string | null; category: string; rarity: string } }>;
 };
 
-/**
- * Tournament list + bracket viewer for a lobby. Lists active + upcoming
- * tournaments at the top. Click one to open its bracket.
- */
 export default function TournamentsPanel({
   lobbyId,
   currentUserId,
@@ -50,6 +47,7 @@ export default function TournamentsPanel({
   const [loading, setLoading] = React.useState(true);
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [showCreate, setShowCreate] = React.useState(false);
+  const [showGuide, setShowGuide] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
 
@@ -76,7 +74,7 @@ export default function TournamentsPanel({
 
   const fetchList = React.useCallback(async () => {
     try {
-      const j = await apiFetch<{ tournaments: Tournament[] }>(`/tournaments?lobbyId=${encodeURIComponent(lobbyId)}`, { silent: true });
+      const j = await apiFetch<{ tournaments: Tournament[] }>(`/tournaments?lobbyId=${encodeURIComponent(lobbyId)}&status=all`, { silent: true });
       if (j?.ok) setTournaments(j.tournaments || []);
     } finally {
       setLoading(false);
@@ -106,18 +104,32 @@ export default function TournamentsPanel({
             {active.length} active · {past.length} past
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          style={{
-            padding: "8px 14px",
-            background: `linear-gradient(135deg, ${ACCENT} 0%, #ff9a40 100%)`,
-            color: "#1a0e04", border: `1px solid ${ACCENT}`,
-            borderRadius: 4, fontSize: 11, fontWeight: 800, letterSpacing: 1,
-            textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit",
-          }}
-          title={isStaff ? "Create a tournament" : "Create your own tournament (one active at a time)"}
-        >+ New Tournament</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            style={{
+              padding: "8px 12px",
+              background: "rgba(255,255,255,.04)",
+              color: ACCENT, border: `1px solid ${ACCENT}55`,
+              borderRadius: 4, fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+              cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6,
+            }}
+            title="How challenges and tournaments work"
+          >{"\u{1F4D6}"} How it works</button>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            style={{
+              padding: "8px 14px",
+              background: `linear-gradient(135deg, ${ACCENT} 0%, #ff9a40 100%)`,
+              color: "#1a0e04", border: `1px solid ${ACCENT}`,
+              borderRadius: 4, fontSize: 11, fontWeight: 800, letterSpacing: 1,
+              textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit",
+            }}
+            title={isStaff ? "Create a tournament" : "Create your own tournament (one active at a time)"}
+          >+ New Tournament</button>
+        </div>
       </div>
 
       {!loading && tournaments.length > 3 && (
@@ -171,11 +183,13 @@ export default function TournamentsPanel({
               )}
             </>
           )}
-          {/* Always-rendered Hall of Fame so completed tournaments stay visible */}
           <TournamentArchive lobbyId={lobbyId} />
         </>
       )}
 
+      {showGuide && (
+        <TournamentGuide accent={ACCENT} onClose={() => setShowGuide(false)} onCreate={() => setShowCreate(true)} />
+      )}
       {showCreate && (
         <TournamentFormModal
           lobbyId={lobbyId}
@@ -212,7 +226,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function TournamentRow({ t, onOpen, muted, canManage, onEdit, onDelete }: { t: Tournament; onOpen: () => void; muted?: boolean; canManage?: boolean; onEdit?: () => void; onDelete?: () => void }) {
   const startDate = new Date(t.startsAt);
-  const formatLabel = t.format === "BRACKET" ? "Bracket" : t.format === "BRACKET_DOUBLE" ? "Double Elim" : t.format === "ROUND_ROBIN" ? "Round Robin" : t.format === "CHALLENGE_RACE" ? "Challenge Race" : "Leaderboard";
+  const formatLabel = t.format === "BRACKET" ? "Crucible Bracket" : t.format === "BRACKET_DOUBLE" ? "Crucible Bracket — Double" : t.format === "ROUND_ROBIN" ? "Crucible League" : t.format === "CHALLENGE_RACE" ? "Challenge Race" : "Leaderboard";
   const statusColor = t.status === "ACTIVE" ? "#4ade80" : t.status === "REGISTRATION" ? ACCENT : "rgba(255,255,255,.4)";
   return (
     <div role="button" tabIndex={0} onClick={onOpen}
@@ -650,7 +664,6 @@ function RaceLeaderboardView({ tournamentId, currentUserId }: { tournamentId: st
   const poolById: Record<string, PoolDef> = {};
   for (const d of pool) poolById[d.id] = d;
 
-  // Per-definition completion count across all entries (for pool overview chips)
   const completionCount: Record<string, number> = {};
   for (const r of rows) {
     for (const did of r.completedDefinitionIds || []) {
@@ -660,7 +673,6 @@ function RaceLeaderboardView({ tournamentId, currentUserId }: { tournamentId: st
 
   return (
     <div>
-      {/* Header strip — meta + Register/Withdraw button */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
         {meta && (
           <>
@@ -697,7 +709,6 @@ function RaceLeaderboardView({ tournamentId, currentUserId }: { tournamentId: st
         </div>
       </div>
 
-      {/* Pool overview — what challenges count toward this race */}
       {pool.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.4, color: "rgba(245,130,32,.7)", textTransform: "uppercase", marginBottom: 6 }}>
@@ -730,7 +741,6 @@ function RaceLeaderboardView({ tournamentId, currentUserId }: { tournamentId: st
         </div>
       )}
 
-      {/* Leaderboard table */}
       {rows.length === 0 ? (
         <div style={{ padding: 30, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 13, border: "1px dashed rgba(245,130,32,.25)", borderRadius: 6 }}>
           {me?.canRegister ? "No entries yet. Be the first — hit Register up top." : "No entries yet."}
@@ -838,7 +848,6 @@ const youPillS: React.CSSProperties = {
 const thS: React.CSSProperties = { padding: "7px 10px", textAlign: "center" };
 const tdS: React.CSSProperties = { padding: "8px 10px" };
 
-
 function EmptyState({ isStaff, onCreate }: { isStaff?: boolean; onCreate: () => void }) {
   return (
     <div style={{ padding: "40px 20px", textAlign: "center", border: "1px dashed rgba(245,130,32,.3)", borderRadius: 6, background: "rgba(20,14,8,.3)" }}>
@@ -859,34 +868,21 @@ function toLocalDt(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  // datetime-local wants "YYYY-MM-DDTHH:MM" in local time
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-// ── Tournament templates ──────────────────────────────────────────────────
-//
-// Pre-built configurations so users can ship a clan event in seconds. Each
-// template carries:
-//   - Display metadata (name, blurb, icon)
-//   - All the form defaults the template should fill in
-//   - poolTitles: challenge titles to look up + set as poolIds at apply time
-//
-// Lobby-keyed. Templates that aren't scoped to a specific lobby live under
-// "*" (universal). The template picker merges the lobby-specific list with
-// the universal list.
 
 type TournamentTemplate = {
   id: string;
   name: string;
   blurb: string;
-  icon: string;        // emoji glyph for the card
+  icon: string;
   format: "BRACKET" | "BRACKET_DOUBLE" | "LEADERBOARD" | "ROUND_ROBIN" | "CHALLENGE_RACE";
   winCondition?: "THRESHOLD" | "DEADLINE" | "ALL_COMPLETED";
   pointsPerCompletion?: number;
   pointsToWin?: number | null;
-  poolTitles?: string[];     // resolved against the lobby's challenge defs at apply time
-  durationDays: number;       // window length from "now" when the template is applied
+  poolTitles?: string[];
+  durationDays: number;
   maxEntries?: number;
   suggestedTitle: string;
   suggestedDescription: string;
@@ -1075,7 +1071,7 @@ function TournamentFormModal({
   const isEdit = !!existing;
   const [title, setTitle] = React.useState(existing?.title ?? "");
   const [description, setDescription] = React.useState(existing?.description ?? "");
-  const [format, setFormat] = React.useState<"BRACKET" | "BRACKET_DOUBLE" | "LEADERBOARD" | "ROUND_ROBIN" | "CHALLENGE_RACE">(existing?.format ?? "BRACKET");
+  const [format, setFormat] = React.useState<"BRACKET" | "BRACKET_DOUBLE" | "LEADERBOARD" | "ROUND_ROBIN" | "CHALLENGE_RACE">(existing?.format ?? "CHALLENGE_RACE");
   const [seeding, setSeeding] = React.useState<"random" | "rank">("random");
   const [maxEntries, setMaxEntries] = React.useState(String(existing?.maxEntries ?? 16));
   const [startsAt, setStartsAt] = React.useState(toLocalDt(existing?.startsAt));
@@ -1084,7 +1080,6 @@ function TournamentFormModal({
     existing?.featuredMode === "UPCOMING" || existing?.featuredMode === "ACTIVE" ? existing.featuredMode : "AUTO"
   );
 
-  // CHALLENGE_RACE-specific fields
   const [pointsPerCompletion, setPointsPerCompletion] = React.useState(String(existing?.pointsPerCompletion ?? 100));
   const [pointsToWin, setPointsToWin] = React.useState(existing?.pointsToWin != null ? String(existing.pointsToWin) : "");
   const [winCondition, setWinCondition] = React.useState<"THRESHOLD" | "DEADLINE" | "ALL_COMPLETED">(
@@ -1094,14 +1089,11 @@ function TournamentFormModal({
   const [defOptions, setDefOptions] = React.useState<{ id: string; title: string; category: string }[]>([]);
   const [defsLoaded, setDefsLoaded] = React.useState(false);
 
-  // For new tournaments, default to the template-picker step. Edit mode
-  // skips templates entirely.
   const [step, setStep] = React.useState<"template" | "form">(isEdit ? "form" : "template");
 
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
 
-  // Lazy-load challenge definitions for the pool multi-select when CHALLENGE_RACE
   React.useEffect(() => {
     if (format !== "CHALLENGE_RACE" || defOptions.length > 0) return;
     const tok = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
@@ -1124,7 +1116,6 @@ function TournamentFormModal({
     setFormat(t.format);
     if (t.maxEntries != null) setMaxEntries(String(t.maxEntries));
 
-    // Auto-set start/end based on durationDays. Start = now (rounded to next 5min).
     const now = new Date();
     const start = new Date(Math.ceil(now.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000));
     const end = new Date(start.getTime() + t.durationDays * 24 * 60 * 60 * 1000);
@@ -1136,8 +1127,6 @@ function TournamentFormModal({
       if (t.pointsPerCompletion != null) setPointsPerCompletion(String(t.pointsPerCompletion));
       setPointsToWin(t.pointsToWin != null ? String(t.pointsToWin) : "");
 
-      // Resolve poolTitles -> poolIds via the loaded defOptions. If defs
-      // haven't loaded yet, the picker still renders; user can re-tick if needed.
       if (t.poolTitles && t.poolTitles.length > 0) {
         const matched = defOptions
           .filter(d => t.poolTitles!.includes(d.title))
@@ -1152,7 +1141,6 @@ function TournamentFormModal({
   }
 
   function toDtLocalInput(d: Date): string {
-    // Format as "YYYY-MM-DDTHH:mm" for <input type="datetime-local">
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
@@ -1189,8 +1177,6 @@ function TournamentFormModal({
       const j = await apiFetch<any>(url.replace(API, ""), {
         method,
         body: JSON.stringify(body),
-        // We surface the error inside the modal instead of the toast,
-        // so the user sees it next to the form fields.
         silent: true,
       });
       if (j?.ok === false || !j?.tournament) {
@@ -1314,15 +1300,23 @@ function TournamentFormModal({
         </Field>
         <Field label="Format">
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {(["BRACKET", "BRACKET_DOUBLE", "ROUND_ROBIN", "LEADERBOARD", "CHALLENGE_RACE"] as const).map(f => (
-              <button key={f} type="button" onClick={() => setFormat(f)} style={{
-                flex: "1 1 30%", padding: "8px 10px",
-                background: format === f ? `${ACCENT}28` : "rgba(255,255,255,.04)",
-                border: `1px solid ${format === f ? ACCENT : "rgba(255,255,255,.1)"}`,
-                color: format === f ? "#fff" : "rgba(255,255,255,.7)",
-                borderRadius: 3, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                letterSpacing: 0.5, textTransform: "uppercase",
-              }}>{f.replace(/_/g, " ")}</button>
+            {([
+              { v: "CHALLENGE_RACE", label: "Challenge Race", hint: "Clear strikes, raids & challenges for points" },
+              { v: "LEADERBOARD", label: "Leaderboard", hint: "Ranked by a stat — fastest clear, most kills" },
+              { v: "BRACKET", label: "Crucible Bracket", hint: "Head-to-head PvP, single elim" },
+              { v: "BRACKET_DOUBLE", label: "Crucible Bracket — Double", hint: "PvP — lose twice, you're out" },
+              { v: "ROUND_ROBIN", label: "Crucible League", hint: "Everyone plays everyone" },
+            ] as const).map(o => (
+              <button key={o.v} type="button" onClick={() => setFormat(o.v)} style={{
+                flex: "1 1 30%", padding: "8px 10px", textAlign: "left",
+                background: format === o.v ? `${ACCENT}28` : "rgba(255,255,255,.04)",
+                border: `1px solid ${format === o.v ? ACCENT : "rgba(255,255,255,.1)"}`,
+                color: format === o.v ? "#fff" : "rgba(255,255,255,.7)",
+                borderRadius: 3, cursor: "pointer", fontFamily: "inherit",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>{o.label}</div>
+                <div style={{ fontSize: 9, fontWeight: 500, marginTop: 2, letterSpacing: 0, textTransform: "none", color: format === o.v ? "rgba(255,255,255,.72)" : "rgba(255,255,255,.4)" }}>{o.hint}</div>
+              </button>
             ))}
           </div>
         </Field>

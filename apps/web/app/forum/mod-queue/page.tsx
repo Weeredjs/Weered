@@ -6,10 +6,6 @@ import { useWeered } from "../../../components/WeeredProvider";
 import { apiFetch } from "../../../lib/api";
 import { weeredToast } from "../../../lib/toast";
 
-// Forum mod queue: pending reports with target preview, reporter, reason, and
-// quick triage actions. Mod-gated server-side; client renders a 403 message
-// gracefully if the GET fails.
-
 export default function ModQueuePageWrapper() {
   return (
     <Suspense fallback={<div style={{ padding: 40 }} />}>
@@ -120,7 +116,6 @@ function ModQueuePage() {
         }}>&larr; Forum</button>
       </div>
 
-      {/* Filters */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: 2 }}>
           {STATUSES.map(s => (

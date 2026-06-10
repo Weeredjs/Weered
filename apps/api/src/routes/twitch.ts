@@ -1,9 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /twitch/streams + /live/featured + /live/rooms — Helix + active-room
-// passthroughs for the home page Live Now section. App-only OAuth token
-// cached in-memory.
 type Opts = {
   rooms?: Map<string, any>;
 };
@@ -39,7 +36,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     }
   }
 
-  // Helix helpers — small wrappers over the two endpoints we use.
   async function helixGet(path: string): Promise<any> {
     const token = await getTwitchAppToken();
     if (!token) return null;
@@ -83,15 +79,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     return reply.send({ ok: true, streams, gameId, gameName });
   });
 
-  // ──────────────────────────────────────────────────────────────────────
-  // /live/featured — single "lead" stream for the home Live Now section,
-  // chosen via this cascade:
-  //   1. Any Weered user with a linked Twitch login who is currently live
-  //   2. Top stream of the current featured lobby's game (uses lobby.name)
-  //   3. League of Legends top stream — always populated, anti-empty-state
-  //
-  // Cached for ~90s so a busy home page doesn't hammer Helix.
-  // ──────────────────────────────────────────────────────────────────────
   type FeaturedCache = { ts: number; payload: any };
   let featuredCache: FeaturedCache | null = null;
   const FEATURED_TTL_MS = 90 * 1000;
@@ -108,13 +95,9 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       return reply.send(empty);
     }
 
-    // Helper: find a lobby that matches a game name, so we can route the
-    // Join Room button to a real lobby (everyone clicking lands in the same
-    // place to watch together).
     async function resolveLobbyForGame(gameName: string): Promise<string | null> {
       const g = gameName.toLowerCase().trim();
       try {
-        // Try exact name match first, then keyword match
         const exact = await (prisma as any).lobby.findFirst({
           where: { name: { equals: gameName, mode: "insensitive" } },
           select: { id: true },
@@ -128,7 +111,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       } catch { return null; }
     }
 
-    // 1. Linked Weered users currently live
     try {
       const linked: any[] = await (prisma as any).user.findMany({
         where: { twitchLogin: { not: null } },
@@ -137,15 +119,12 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       });
       const logins = linked.map(u => u.twitchLogin).filter(Boolean) as string[];
       if (logins.length > 0) {
-        // Helix accepts up to 100 user_login params per call
         const params = logins.slice(0, 100).map(l => `user_login=${encodeURIComponent(l)}`).join("&");
         const data = await helixGet(`streams?${params}&first=100`);
         const streams = data?.data || [];
         if (streams.length > 0) {
           const top = streams.sort((a: any, b: any) => b.viewer_count - a.viewer_count)[0];
           const weeredUser = linked.find(u => u.twitchLogin?.toLowerCase() === top.user_login?.toLowerCase());
-          // For a Weered user streaming, route to the lobby matching the
-          // game they're streaming, if we have one.
           const joinLobbyId = top.game_name ? await resolveLobbyForGame(top.game_name) : null;
           const payload = {
             ok: true,
@@ -164,7 +143,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       console.error("[live/featured] linked-users step", e);
     }
 
-    // 2. Featured lobby's game (uses lobby.name as the Twitch game query)
     try {
       const cfg = await (prisma as any).siteConfig.findUnique({ where: { key: "featuredLobbyId" } });
       const featuredId = cfg?.value || null;
@@ -193,7 +171,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       console.error("[live/featured] featured-game step", e);
     }
 
-    // 3. League of Legends fallback — always populated
     try {
       const game = await helixGet(`games?name=${encodeURIComponent("League of Legends")}`);
       const gameId = game?.data?.[0]?.id;
@@ -219,12 +196,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     return reply.send(empty);
   });
 
-  // ──────────────────────────────────────────────────────────────────────
-  // /live/rooms — active rooms with enrichment for the home Live Now
-  // right-column cards. Returns rooms that currently have ≥1 user, joined
-  // up to a small avatar sample, plus the parent lobby's logo / accent /
-  // name and a friendly "activity" label derived from activeModule.
-  // ──────────────────────────────────────────────────────────────────────
   function activityLabel(moduleKey: string | null | undefined): string {
     const k = String(moduleKey || "").toLowerCase();
     if (k === "youtube" || k === "co_watch")  return "Watching together";
@@ -239,7 +210,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
   app.get("/live/rooms", async (_req, reply) => {
     if (!roomsMap) return reply.send({ ok: true, rooms: [] });
 
-    // Pull each room with at least one online user
     type Active = { id: string; name: string; lobbyId: string | null; userIds: string[]; activeModule: string | null };
     const active: Active[] = [];
     for (const [rid, r] of roomsMap as any) {
@@ -255,7 +225,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     }
     if (active.length === 0) return reply.send({ ok: true, rooms: [] });
 
-    // Batch-resolve lobbies + avatars in two parallel queries
     const lobbyIds = [...new Set(active.map(r => r.lobbyId).filter(Boolean))] as string[];
     const allUserIds = [...new Set(active.flatMap(r => r.userIds))];
 
@@ -277,9 +246,6 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     const lobbyMap = new Map(lobbies.map((l: any) => [l.id, l]));
     const userMap  = new Map((users as any[]).map((u: any) => [u.id, u]));
 
-    // Some active "rooms" are actually lobby presence channels (the WS
-    // roomId equals a Lobby.id). Surface that as roomIsLobby so the home
-    // ticker can route the click to /lobby/<id> instead of /room/<id>.
     const allActiveIds = [...new Set(active.map(r => r.id))];
     const lobbyIdSet = new Set(
       allActiveIds.length

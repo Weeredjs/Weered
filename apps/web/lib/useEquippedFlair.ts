@@ -51,7 +51,6 @@ export function useEquippedFlair(userId: string | null | undefined, apiBase?: st
     if (!userId) { setFlair(null); return; }
     let alive = true;
 
-    // Subscribe to updates from other consumers
     let set = subs.get(userId);
     if (!set) { set = new Set(); subs.set(userId, set); }
     const cb = (f: EquippedFlair | null) => { if (alive) setFlair(f); };

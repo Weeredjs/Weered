@@ -21,7 +21,6 @@ export default function ForgotPasswordPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(isEmail ? { email: v.toLowerCase() } : { username: v.toLowerCase() }),
       });
-      // Always shows the same thing to avoid email enumeration.
       const _ = await r.json().catch(() => ({} as any));
       setDone(true);
     } catch (e: any) {

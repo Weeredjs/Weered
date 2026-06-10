@@ -1,26 +1,15 @@
-/**
- * Shared flair helpers — used by tournaments (winner gets flair),
- * contests (winning artist gets flair), and the flair routes.
- */
 
 import type { PrismaClient } from "@prisma/client";
 
 export type FlairKind = "BADGE" | "BANNER" | "NAMEPLATE";
 export type FlairSource = "MANUAL" | "TOURNAMENT" | "CONTEST" | "ACHIEVEMENT" | "PURCHASE";
 
-/**
- * Grant a FlairItem to a user. Idempotent — uses (userId, flairItemId) unique
- * constraint on UserFlair. Auto-equips if the user has no equipped flair.
- *
- * Returns { granted: boolean, alreadyOwned: boolean, equipped: boolean }.
- */
 export async function grantFlairToUser(
   prisma: PrismaClient,
   userId: string,
   flairItemId: string,
   acquiredFrom?: string,
 ): Promise<{ granted: boolean; alreadyOwned: boolean; equipped: boolean }> {
-  // Check existing ownership
   const existing = await (prisma as any).userFlair.findUnique({
     where: { userId_flairItemId: { userId, flairItemId } },
   });
@@ -30,7 +19,6 @@ export async function grantFlairToUser(
     data: { userId, flairItemId, acquiredFrom: acquiredFrom || "manual" },
   });
 
-  // Auto-equip if no current equipped flair
   const u = await (prisma as any).user.findUnique({
     where: { id: userId },
     select: { equippedFlairId: true },
@@ -47,9 +35,6 @@ export async function grantFlairToUser(
   return { granted: true, alreadyOwned: false, equipped };
 }
 
-/**
- * Look up the equipped flair details for a user. Returns null if none.
- */
 export async function getEquippedFlair(
   prisma: PrismaClient,
   userId: string,
@@ -66,11 +51,6 @@ export async function getEquippedFlair(
   return f || null;
 }
 
-/**
- * Bulk-load equipped flair for multiple users in one query. Use this in
- * member lists / leaderboards / chat history rather than calling
- * getEquippedFlair in a loop.
- */
 export async function getEquippedFlairBatch(
   prisma: PrismaClient,
   userIds: string[],
@@ -96,11 +76,6 @@ export async function getEquippedFlairBatch(
   return out;
 }
 
-/**
- * Mint a new FlairItem. Returns the created record.
- * `slug` should be unique — use prefixes like `tournament-{id}-champion`,
- * `contest-{id}-winner`, etc.
- */
 export async function mintFlairItem(
   prisma: PrismaClient,
   data: {

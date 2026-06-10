@@ -11,10 +11,11 @@ import {
 } from "livekit-client";
 import { useWeered } from "../WeeredProvider";
 import { useVoice } from "../VoiceContext";
+import MicSettings from "../MicSettings";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "chess" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "chess" | "gta" | "eve" | null;
 
 interface Props {
   roomId: string;
@@ -34,8 +35,6 @@ interface ParticipantTile {
   isLocal: boolean;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function getToken(): string {
   try {
     return (
@@ -51,6 +50,7 @@ import { avatarBg as avatarColor } from "../../lib/avatarColor";
 import PokerTable from "../PokerTable";
 import TradingModulesPanel from "../TradingModulesPanel";
 import LobbyModulesPanel from "../LobbyModulesPanel";
+import GtaModulePanel from "./GtaModulePanel";
 import LeagueModulesPanel from "../LeagueModulesPanel";
 import FortniteModulesPanel from "../FortniteModulesPanel";
 import PubgModulesPanel from "../PubgModulesPanel";
@@ -61,10 +61,10 @@ import StudyModulesPanel from "../StudyModulesPanel";
 import WindroseModulesPanel from "../WindroseModulesPanel";
 import DndStage from "./DndStage";
 import HelldiversModulesPanel from "../HelldiversModulesPanel";
+import EveModulesPanel from "../EveModulesPanel";
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
-  // Already a bare ID (11 chars, no slashes)
   if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
   try {
     const url = new URL(s.startsWith("http") ? s : `https://${s}`);
@@ -73,8 +73,6 @@ function extractVideoId(input: string): string | null {
   } catch {}
   return null;
 }
-
-// ─── YouTube Stage ────────────────────────────────────────────────────────────
 
 declare global {
   interface Window {
@@ -88,7 +86,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   const voice = useVoice();
   const playerRef    = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
-  const isSyncing    = useRef(false); // prevent echo when applying remote events
+  const isSyncing    = useRef(false);
 
   const [videoId,   setVideoId  ] = useState<string | null>(null);
   const [inputVal,  setInputVal ] = useState("");
@@ -97,14 +95,12 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   const [playing,   setPlaying  ] = useState(false);
   const didInitFromBuffer = useRef(false);
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
-  const [searchMode, setSearchMode] = useState(true); // start in search mode
+  const [searchMode, setSearchMode] = useState(true);
   const searchTimer = useRef<any>(null);
 
-  // ── Initialize from buffered server state on mount (handles late-join race) ──
   useEffect(() => {
     if (didInitFromBuffer.current) return;
     const buf = ytStateByRoom?.[roomId];
@@ -115,7 +111,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     }
   }, [ytStateByRoom, roomId]);
 
-  // ── Load YouTube IFrame API once ──
   useEffect(() => {
     if (window.YT?.Player) { setYtReady(true); return; }
     const existing = document.getElementById("yt-iframe-api");
@@ -131,12 +126,10 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     return () => clearInterval(poll);
   }, []);
 
-  // ── Create player once when API ready, load videos into it ──
   const currentVideoRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!ytReady || !playerDivRef.current || playerRef.current) return;
-    // Create a placeholder player (no video yet)
     playerRef.current = new window.YT.Player(playerDivRef.current, {
       width: "100%",
       height: "100%",
@@ -155,11 +148,9 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
           }
         },
         onReady: () => {
-          // If we already have a videoId queued, load it now
           if (currentVideoRef.current) {
             playerRef.current?.loadVideoById?.(currentVideoRef.current);
           }
-          // If joining late, seek to buffered position
           const buf = ytStateByRoom?.[roomId];
           if (buf?.videoId && buf.videoId === currentVideoRef.current) {
             const drift = (Date.now() - (buf.updatedAt || Date.now())) / 1000;
@@ -189,7 +180,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     };
   }, [ytReady]);
 
-  // ── Load video into existing player when videoId changes ──
   useEffect(() => {
     currentVideoRef.current = videoId;
     if (!videoId || !playerRef.current) return;
@@ -198,20 +188,17 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
     } catch {}
   }, [videoId]);
 
-  // ── Listen for WS youtube events ──
   useEffect(() => {
     const handler = (ev: any) => {
       const d = ev.detail;
       if (!d || d.roomId !== roomId) return;
 
-      // ── stop ──
       if (d.type === "youtube:stop" || d.type === "youtube:stopped") {
         setVideoId(null);
         setPlaying(false);
         return;
       }
 
-      // ── load new video ──
       if (d.type === "youtube:load") {
         if (!d.videoId) return;
         if (playerRef.current?.loadVideoById && d.videoId !== videoId) {
@@ -223,7 +210,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         return;
       }
 
-      // ── play ──
       if (d.type === "youtube:play") {
         const player = playerRef.current;
         if (!player?.seekTo) return;
@@ -241,7 +227,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         return;
       }
 
-      // ── pause ──
       if (d.type === "youtube:pause") {
         const player = playerRef.current;
         if (!player?.seekTo) return;
@@ -258,7 +243,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         return;
       }
 
-      // ── legacy youtube:state (late-join snapshot) ──
       if (d.type === "youtube:state") {
         if (d.videoId && d.videoId !== videoId) {
           if (playerRef.current?.loadVideoById) {
@@ -337,7 +321,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,.4)", ...style }}>
-      {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: videoId ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: videoId ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
@@ -351,14 +334,11 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, color: "#fff", padding: "2px 4px", marginLeft: videoId ? 0 : "auto" }}>✕</button>
       </div>
 
-      {/* Player div always in DOM — never unmounted */}
       <style>{`.yt-stage-player iframe { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }`}</style>
       <div style={{ display: videoId ? "flex" : "none", flex: 1, minHeight: 0, gap: 0, overflow: "hidden" }}>
-        {/* Player */}
         <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0, overflow: "hidden" }}>
           <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
         </div>
-          {/* Search / Queue sidebar */}
           <div style={{ width: 220, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, overflow: "hidden" }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35 }}>Now Playing</div>
             <div style={{ fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "#c4bef8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -405,7 +385,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
       </div>
       {!videoId && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 16, overflow: "hidden" }}>
-          {/* Search bar */}
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <div style={{ flex: 1, position: "relative" }}>
               <input
@@ -423,7 +402,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
           </div>
 
           {!searchMode ? (
-            /* URL paste mode */
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 12 }}>
               <div style={{ fontSize: 12, opacity: 0.4 }}>Paste a YouTube URL</div>
               <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 400 }}>
@@ -441,7 +419,6 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
               {inputErr && <div style={{ fontSize: 12, color: "#fca5a5" }}>{inputErr}</div>}
             </div>
           ) : (
-            /* Search results */
             <div style={{ flex: 1, overflow: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.2) transparent" }}>
               {searching && <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.5 }}>Searching...</div>}
               {!searching && searchResults.length === 0 && searchQuery.trim() && (
@@ -490,10 +467,8 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   );
 }
 
-// ─── Guardian cache for voice tiles ───────────────────────────────────────────
-
 const guardianTileCache = new Map<string, { data: any; at: number }>();
-const GUARDIAN_TTL = 120_000; // 2 min
+const GUARDIAN_TTL = 120_000;
 
 type GuardianChar = {
   className: string; light: number; raceName: string;
@@ -543,13 +518,11 @@ function useGuardianData(userId: string, moduleType?: string) {
   return data;
 }
 
-// ─── Voice Participant Card ───────────────────────────────────────────────────
-
 const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Titan: "🛡" };
 
 function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: string; roomUsers?: any[] }) {
   const guardian = useGuardianData(tile.identity, moduleType);
-  const mainChar = guardian?.characters?.[0]; // most recently played
+  const mainChar = guardian?.characters?.[0];
   const notInVoice = tile._notInVoice === true;
   const userInfo = roomUsers?.find((u: any) => u.id === tile.identity || u.userId === tile.identity);
   const userAvatar = userInfo?.avatar || null;
@@ -570,14 +543,12 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
       position: "relative",
       opacity: notInVoice ? 0.5 : 1,
     }}>
-      {/* Emblem banner */}
       {mainChar?.emblemBackgroundPath ? (
         <div style={{ height: 48, background: `url(${mainChar.emblemBackgroundPath}) center/cover`, opacity: 0.6 }} />
       ) : (
         <div style={{ height: 48, background: "linear-gradient(135deg, rgba(124,58,237,.15), rgba(79,136,198,.1))" }} />
       )}
 
-      {/* Avatar overlapping the banner */}
       <div style={{
         width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
         background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
@@ -589,7 +560,6 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
         {userAvatar ? <img src={userAvatar} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
       </div>
 
-      {/* Speaking indicator */}
       {tile.isSpeaking && (
         <div style={{
           position: "absolute", top: 6, right: 8,
@@ -604,9 +574,7 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
         </div>
       )}
 
-      {/* Info section */}
       <div style={{ padding: "20px 12px 10px" }}>
-        {/* Name + mute status */}
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{
             fontSize: 13, fontWeight: 700, maxWidth: 120,
@@ -618,10 +586,8 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
           {tile.isMuted && <span style={{ fontSize: 11, opacity: 0.4 }}>🔇</span>}
         </div>
 
-        {/* Destiny info */}
         {mainChar && (
           <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-            {/* Class + Light */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "rgba(226,232,240,.7)" }}>
                 <span>{CLASS_ICONS[mainChar.className] || "⚔"}</span>
@@ -633,7 +599,6 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
               </span>
             </div>
 
-            {/* Guardian Rank + Commendations */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10 }}>
               {guardian?.guardianRankName && (
                 <span style={{
@@ -651,7 +616,6 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
               )}
             </div>
 
-            {/* Last Activity */}
             {guardian?.lastActivity && (
               <div style={{
                 fontSize: 9, color: "rgba(148,163,184,.45)", marginTop: 1,
@@ -663,7 +627,6 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
           </div>
         )}
 
-        {/* Non-Destiny fallback info */}
         {!mainChar && !moduleType?.includes("BUNGIE") && (
           <div style={{ marginTop: 4, fontSize: 10, opacity: 0.3 }}>
             {tile.isSpeaking ? "speaking" : tile.isMuted ? "muted" : "connected"}
@@ -673,8 +636,6 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
     </div>
   );
 }
-
-// ─── Voice Stage ──────────────────────────────────────────────────────────────
 
 function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId: string; moduleType?: string; roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[]; onClose: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
@@ -715,11 +676,6 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   return (
     <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, height: "100%", ...style }}>
 
-      {/* Join prompt removed — the canonical "Join voice" CTA lives in
-          the always-visible RoomCanvas banner so it's reachable from
-          every module tab. The stage focuses on tiles + transport only. */}
-
-      {/* Header bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: live ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
@@ -733,6 +689,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
               <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
                 {muted ? "🔇 Unmute" : "🎙 Mute"}
               </button>
+              <MicSettings />
               <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
             </>
           )}
@@ -741,9 +698,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
         </div>
       </div>
 
-      {/* Participant cards — voice participants + room members not in voice */}
       {(() => {
-        // Build merged list: voice tiles first, then room members not in voice
         const voiceIdentities = new Set(tiles.map(t => t.identity));
         const nonVoiceUsers = (roomUsers || [])
           .filter(u => !voiceIdentities.has(u.id))
@@ -777,14 +732,11 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   );
 }
 
-// ─── Video tile ──────────────────────────────────────────────────────────────
-
 function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid: string) => HTMLVideoElement | null }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!ref.current) return;
-    // Clear previous
     while (ref.current.firstChild) ref.current.removeChild(ref.current.firstChild);
 
     const trackSid = tile.videoTrackSid || tile.screenTrackSid;
@@ -839,7 +791,6 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
           {tile.name?.[0]?.toUpperCase() || "?"}
         </div>
       )}
-      {/* Name label */}
       <div style={{
         position: "absolute", bottom: 4, left: 6, right: 6,
         display: "flex", alignItems: "center", gap: 4,
@@ -855,8 +806,6 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
   );
 }
 
-// ─── Video Stage ─────────────────────────────────────────────────────────────
-
 function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const { connState, tiles, muted, cameraOn, toggleMute, toggleCamera, connect, disconnect, getVideoElement } = voice;
@@ -867,12 +816,10 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
     }
   }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Only show camera tiles (not screen share)
   const cameraTiles = tiles.filter(t => t.hasVideo || !t.hasScreenShare);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, ...style }}>
-      {/* Controls bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
         borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0,
@@ -880,13 +827,13 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
         <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>📹 Video</span>
         <div style={{ flex: 1 }} />
         <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>
+        <MicSettings />
         <button onClick={toggleCamera} style={{ ...ctrlBtn, ...(cameraOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : {}) }}>
           {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
         </button>
         <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
       </div>
 
-      {/* Video grid */}
       <div style={{
         flex: 1, padding: 8, overflow: "auto",
         display: "grid",
@@ -906,14 +853,11 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
   );
 }
 
-// ─── Screen Share Stage ──────────────────────────────────────────────────────
-
 function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const { connState, activeRoomId, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
   const screenRef = useRef<HTMLDivElement>(null);
 
-  // Don't auto-connect to voice — only connect when user clicks Share Screen
   const handleShareScreen = useCallback(async () => {
     if (connState === "idle" || connState === "error") {
       await connect(roomId, { mic: false });
@@ -921,14 +865,11 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
     toggleScreenShare();
   }, [connState, roomId, connect, toggleScreenShare]);
 
-  // Find the screen share presenter
   const presenter = tiles.find(t => t.hasScreenShare);
   const screenSid = presenter?.screenTrackSid;
 
-  // Attach video element directly
   useEffect(() => {
     if (!screenRef.current || !screenSid) return;
-    // Clear previous
     while (screenRef.current.firstChild) screenRef.current.removeChild(screenRef.current.firstChild);
 
     let el: HTMLVideoElement | null = null;
@@ -964,7 +905,6 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
 
   return (
     <div style={{ height: "100%", position: "relative", ...style }}>
-      {/* Controls bar — absolute top */}
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, zIndex: 2,
         display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
@@ -974,6 +914,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>🖥 Screen Share</span>
         <div style={{ flex: 1 }} />
         {connState === "connected" && <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>}
+        {connState === "connected" && <MicSettings />}
         <button onClick={handleShareScreen} style={{ ...ctrlBtn, ...(screenShareOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : { background: "rgba(34,197,94,.12)", borderColor: "rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }) }}>
           {screenShareOn ? "🖥 Stop Sharing" : "🖥 Share Screen"}
         </button>
@@ -982,7 +923,6 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         )}
       </div>
 
-      {/* Screen share view — fills entire stage */}
       {presenter ? (
         <div
           ref={screenRef}
@@ -1008,7 +948,6 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
         </div>
       )}
 
-      {/* Presenter name */}
       {presenter && (
         <div style={{ padding: "4px 16px 8px", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.5)" }}>
           {presenter.isMuted && <span style={{ opacity: 0.4, marginRight: 4 }}>🔇</span>}
@@ -1025,8 +964,6 @@ const ctrlBtn: React.CSSProperties = {
   fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
 };
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-
 export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose, style }: Props) {
   const ctx = useWeered() as any;
   if (mode === "poker") return <PokerTable roomId={roomId} myId={ctx?.me?.id || ""} myName={ctx?.me?.name || ""} />;
@@ -1040,14 +977,15 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   if (mode === "dota2") return <Dota2ModulesPanel lobbyId={ctx?.currentLobbyId || "dota-2"} gameName="Dota 2" accentColor="#C23C2A" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "study") return <StudyModulesPanel lobbyId={ctx?.currentLobbyId || "study"} accentColor="#6366F1" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "windrose") return <WindroseModulesPanel slim lobbyId={ctx?.currentLobbyId || "windrose"} gameName="Windrose" accentColor="#c9a066" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "gta") return <GtaModulePanel lobbyId={ctx?.currentLobbyId || "gta6"} redditSub="gta6" accent="#e84393" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "helldivers") return <HelldiversModulesPanel lobbyId={ctx?.currentLobbyId || "helldivers2"} accentColor="#FFD700" currentUserId={ctx?.me?.id} hideSquad style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "eve") return <EveModulesPanel lobbyId={ctx?.currentLobbyId || "eve"} gameName="EVE Online" accentColor="#d4af37" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "dnd") return <DndStage roomId={roomId} onClose={onClose} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;
   if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "screen")  return <ScreenStage  roomId={roomId} onClose={onClose} style={style} />;
 
-  // Placeholder for future modes
   return (
     <div style={{ padding: 16, opacity: 0.5, fontSize: 13 }}>
       {mode} — coming soon

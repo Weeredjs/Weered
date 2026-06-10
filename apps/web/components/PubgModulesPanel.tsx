@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -16,20 +17,16 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,170,0,.35)", background: "rgba(255,170,0,.12)", fontSize: 12, cursor: "pointer", color: "rgb(255,170,0)", fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,170,0,.35)", background: "rgba(255,170,0,.12)", fontSize: 12, cursor: "pointer", color: "rgb(255,170,0)", fontWeight: 600 } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  select: { padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const ACCENT_PUBG = "#FFAA00";
-
-// ── Map name prettifier ─────────────────────────────────────────────────────
 
 const MAP_NAMES: Record<string, string> = {
   Baltic_Main: "Erangel", Desert_Main: "Miramar", Savage_Main: "Sanhok",
@@ -39,8 +36,6 @@ const MAP_NAMES: Record<string, string> = {
 };
 function mapName(raw?: string): string { return MAP_NAMES[raw || ""] || raw || "Unknown"; }
 
-// ── Mode prettifier ─────────────────────────────────────────────────────────
-
 function modeName(raw: string): string {
   const m: Record<string, string> = {
     solo: "Solo TPP", "solo-fpp": "Solo FPP", duo: "Duo TPP", "duo-fpp": "Duo FPP",
@@ -48,8 +43,6 @@ function modeName(raw: string): string {
   };
   return m[raw] || raw;
 }
-
-// ── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "streams" as const,     label: "Streams",     icon: "📺" },
@@ -61,14 +54,10 @@ const TABS = [
 ];
 type TabId = typeof TABS[number]["id"];
 
-// ── PUBG Constants ──────────────────────────────────────────────────────────
-
 const PUBG_MODES = ["Any", "Solo FPP", "Solo TPP", "Duo FPP", "Duo TPP", "Squad FPP", "Squad TPP", "Ranked"];
 const PUBG_RANKS = ["Any", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master"];
 const PUBG_REGIONS = ["Any", "NA", "EU", "AS", "OC", "SA", "SEA", "JP", "KR"];
 const PUBG_TAGS = ["casual", "competitive", "chill", "sweaty", "mic-required", "no-mic", "18+", "ranked-grind"];
-
-// ── Twitch Streams ──────────────────────────────────────────────────────────
 
 function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; lobbyId: string; accentColor: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -99,7 +88,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   return (
     <>
       {activeStream && (
-        <div style={{ ...S.card, padding: 0, marginBottom: 12, overflow: "hidden", border: `1px solid ${accentColor}55`, flexShrink: 0 }}>
+        <div style={{ ...S.card, padding: 0, marginBottom: 12, overflow: "hidden", border: `1px solid ${accentColor}55`, borderLeft: `2px solid ${accentColor}`, flexShrink: 0 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${parentHost}&muted=true`}
             width="100%" height="380" style={{ border: "none", display: "block" }} allowFullScreen
@@ -121,7 +110,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accentColor}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
-            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 2, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
@@ -134,8 +123,6 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
     </>
   );
 }
-
-// ── LFG Board ───────────────────────────────────────────────────────────────
 
 function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [posts, setPosts] = useState<any[]>([]);
@@ -265,17 +252,17 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                   </div>
                 </div>
                 <span style={{
-                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 2,
                   background: p.status === "OPEN" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
                   color: p.status === "OPEN" ? "#22C55E" : "#EF4444",
                 }}>{p.status}</span>
               </div>
               {((p.gameMode || p.rankTier || p.region || (p.tags && p.tags.length > 0))) && (
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {p.gameMode && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: `${accent}15`, color: accent, fontWeight: 700 }}>{p.gameMode}</span>}
-                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.rankTier}</span>}
-                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.6)", fontWeight: 600 }}>{p.region}</span>}
-                  {(p.tags || []).map((t: string) => <span key={t} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.45)", fontWeight: 500 }}>{t}</span>)}
+                  {p.gameMode && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `${accent}15`, color: accent, fontWeight: 700 }}>{p.gameMode}</span>}
+                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.rankTier}</span>}
+                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.6)", fontWeight: 600 }}>{p.region}</span>}
+                  {(p.tags || []).map((t: string) => <span key={t} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.45)", fontWeight: 500 }}>{t}</span>)}
                 </div>
               )}
               {p.description && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", lineHeight: 1.4 }}>{p.description}</div>}
@@ -286,8 +273,6 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     </div>
   );
 }
-
-// ── Stats Lookup ─────────────────────────────────────────────────────────────
 
 const FEATURED_PLAYERS = ["shroud", "chocoTaco", "WackyJacky101", "Kaymind", "Swagger"];
 
@@ -309,7 +294,7 @@ function StatsLookup({ accent }: { accent: string }) {
 
   function StatBox({ label, value }: { label: string; value: string | number }) {
     return (
-      <div style={{ flex: "1 1 80px", padding: "10px 12px", borderRadius: 8, border: `1px solid ${accent}20`, background: `${accent}06`, textAlign: "center" }}>
+      <div style={{ flex: "1 1 80px", padding: "10px 12px", borderRadius: 2, border: `1px solid ${accent}20`, background: `${accent}06`, textAlign: "center" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,.5)", letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{value}</div>
       </div>
@@ -331,7 +316,6 @@ function StatsLookup({ accent }: { accent: string }) {
     );
   }
 
-  // Aggregate totals from all modes
   function totals(statsObj: any) {
     if (!statsObj) return null;
     let wins = 0, kills = 0, rounds = 0, damage = 0, top10s = 0;
@@ -366,7 +350,7 @@ function StatsLookup({ accent }: { accent: string }) {
       {stats && (
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 10, border: `2px solid ${accent}44`, background: `${accent}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 900, color: accent }}>
+            <div style={{ width: 48, height: 48, borderRadius: 2, border: `2px solid ${accent}44`, background: `${accent}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 900, color: accent }}>
               {(stats.account?.name || "?")[0].toUpperCase()}
             </div>
             <div>
@@ -386,7 +370,6 @@ function StatsLookup({ accent }: { accent: string }) {
             </div>
           )}
 
-          {/* Season stats by mode */}
           <div style={S.card}>
             <div style={{ ...S.label, marginBottom: 8 }}>SEASON STATS</div>
             <ModeRow label="Solo FPP" data={stats.stats?.season?.["solo-fpp"]} />
@@ -397,7 +380,6 @@ function StatsLookup({ accent }: { accent: string }) {
             <ModeRow label="Squad TPP" data={stats.stats?.season?.squad} />
           </div>
 
-          {/* Lifetime stats by mode */}
           <div style={{ ...S.card, marginTop: 10 }}>
             <div style={{ ...S.label, marginBottom: 8 }}>LIFETIME STATS</div>
             <ModeRow label="Solo FPP" data={stats.stats?.lifetime?.["solo-fpp"]} />
@@ -412,8 +394,6 @@ function StatsLookup({ accent }: { accent: string }) {
     </div>
   );
 }
-
-// ── Weapon Mastery ──────────────────────────────────────────────────────────
 
 function WeaponMastery({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");
@@ -478,8 +458,6 @@ function WeaponMastery({ accent }: { accent: string }) {
   );
 }
 
-// ── Recent Matches ──────────────────────────────────────────────────────────
-
 function RecentMatches({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");
   const [platform, setPlatform] = useState("steam");
@@ -498,7 +476,6 @@ function RecentMatches({ accent }: { accent: string }) {
     if (j.ok && j.recentMatchIds?.length) {
       setMatchIds(j.recentMatchIds);
       setPlayerName(j.account?.name || n);
-      // Load match details
       setLoadingMatches(true);
       const loaded: any[] = [];
       for (const mid of j.recentMatchIds.slice(0, 5)) {
@@ -546,9 +523,8 @@ function RecentMatches({ accent }: { accent: string }) {
                   border: isWin ? "1px solid rgba(34,197,94,.25)" : undefined,
                   background: isWin ? "rgba(34,197,94,.06)" : undefined,
                 }}>
-                  {/* Placement badge */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 36, height: 36, borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 14, fontWeight: 900, flexShrink: 0,
                     background: isWin ? "rgba(34,197,94,.15)" : p?.rank && p.rank <= 10 ? `${accent}15` : "rgba(255,255,255,.04)",
                     color: isWin ? "#22C55E" : p?.rank && p.rank <= 10 ? accent : "rgba(148,163,184,.5)",
@@ -569,9 +545,8 @@ function RecentMatches({ accent }: { accent: string }) {
                     {m.match?.createdAt ? new Date(m.match.createdAt).toLocaleDateString() : ""}
                   </div>
                 </div>
-                {/* Expanded: top teams */}
                 {isExpanded && (
-                  <div style={{ padding: "8px 12px", background: "rgba(0,0,0,.2)", borderRadius: "0 0 10px 10px", border: "1px solid rgba(255,255,255,.05)", borderTop: "none" }}>
+                  <div style={{ padding: "8px 12px", background: "rgba(0,0,0,.2)", borderRadius: "0 0 2px 2px", border: "1px solid rgba(255,255,255,.05)", borderTop: "none" }}>
                     <div style={{ ...S.label, marginBottom: 6 }}>TOP TEAMS</div>
                     {(m.teams || []).slice(0, 5).map((t: any, ti: number) => (
                       <div key={ti} style={{ padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,.03)", fontSize: 11 }}>
@@ -593,8 +568,6 @@ function RecentMatches({ accent }: { accent: string }) {
     </div>
   );
 }
-
-// ── Leaderboard ─────────────────────────────────────────────────────────────
 
 function Leaderboard({ accent }: { accent: string }) {
   const [platform, setPlatform] = useState("steam");
@@ -637,7 +610,6 @@ function Leaderboard({ accent }: { accent: string }) {
       {loading && players.length === 0 && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading leaderboard...</div>}
       {players.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {/* Header */}
           <div style={{ display: "flex", gap: 4, padding: "6px 10px", fontSize: 9, fontWeight: 700, color: "rgba(148,163,184,.4)", letterSpacing: ".5px", textTransform: "uppercase" }}>
             <span style={{ width: 30 }}>#</span>
             <span style={{ flex: 1 }}>Player</span>
@@ -671,10 +643,6 @@ function Leaderboard({ accent }: { accent: string }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 export default function PubgModulesPanel({
   lobbyId,
   gameName = "PUBG: Battlegrounds",
@@ -691,24 +659,8 @@ export default function PubgModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto" }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-            background: tab === t.id ? `${accentColor}20` : "transparent",
-            color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-            fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-            transition: "background .1s, color .1s",
-            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"     && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"         && <LfgBoard lobbyId={lobbyId} accent={accentColor} />}
@@ -718,7 +670,6 @@ export default function PubgModulesPanel({
         {tab === "leaderboard" && <Leaderboard accent={accentColor} />}
       </div>
 
-      {/* Legal */}
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
           PUBG, PLAYERUNKNOWN'S BATTLEGROUNDS and all related logos are trademarks of PUBG Corporation or its affiliates. Weered is not affiliated with, endorsed by, or sponsored by KRAFTON, Inc.

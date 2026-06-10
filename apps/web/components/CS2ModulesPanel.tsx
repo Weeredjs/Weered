@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -16,20 +17,16 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const ACCENT_CS2 = "#DE9B35";
 
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(222,155,53,.35)", background: "rgba(222,155,53,.12)", fontSize: 12, cursor: "pointer", color: "rgb(222,155,53)", fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(222,155,53,.35)", background: "rgba(222,155,53,.12)", fontSize: 12, cursor: "pointer", color: "rgb(222,155,53)", fontWeight: 600 } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  select: { padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
-
-// ── CS2 Constants ────────────────────────────────────────────────────────────
 
 const CS2_MODES = ["Premier", "Competitive", "Wingman", "Casual", "Deathmatch", "Faceit"];
 
@@ -52,8 +49,6 @@ function maxPlayersForMode(mode: string): number {
   return 5;
 }
 
-// ── Rank Colors ─────────────────────────────────────────────────────────────
-
 function compRankColor(rank: string): string {
   if (rank.startsWith("Silver")) return "#8A8A8A";
   if (rank.startsWith("Gold Nova")) return "#D4A017";
@@ -70,8 +65,6 @@ function premierRatingColor(rating: number): string {
   return "#8A8A8A";
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "lfg" as const,     label: "Squad Finder", icon: "\u{1F3AE}" },
   { id: "streams" as const, label: "Live Streams", icon: "\u{1F4FA}" },
@@ -79,8 +72,6 @@ const TABS = [
   { id: "maps" as const,    label: "Map Pool",     icon: "\u{1F5FA}" },
 ];
 type TabId = typeof TABS[number]["id"];
-
-// ── Squad Finder (LFG) ─────────────────────────────────────────────────────
 
 function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [posts, setPosts] = useState<any[]>([]);
@@ -99,7 +90,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     ? CS2_PREMIER_RATINGS
     : CS2_COMP_RANKS;
 
-  // Reset rank when mode changes
   useEffect(() => {
     if (mode === "Premier" || mode === "Faceit") {
       if (!CS2_PREMIER_RATINGS.includes(rank)) setRank("Under 5K");
@@ -159,7 +149,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={S.label}>SQUAD FINDER ({openPosts.length} open)</div>
         <button
@@ -172,19 +161,17 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
       {msg && (
         <div style={{
-          marginBottom: 10, fontSize: 12, padding: "6px 10px", borderRadius: 8,
+          marginBottom: 10, fontSize: 12, padding: "6px 10px", borderRadius: 2,
           background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.2)",
           color: "rgba(252,165,165,.8)",
         }}>{msg}</div>
       )}
 
-      {/* Create Form */}
       {showForm && (
         <div style={{
           ...S.card, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10,
-          border: `1px solid ${accent}33`, background: `${accent}06`,
+          border: `1px solid ${accent}33`, borderLeft: `2px solid ${accent}`, background: `${accent}06`,
         }}>
-          {/* Row 1: Mode + Rank */}
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Mode</div>
@@ -200,7 +187,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
             </div>
           </div>
 
-          {/* Row 2: Map + Region */}
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Map Preference</div>
@@ -216,13 +202,12 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
             </div>
           </div>
 
-          {/* Row 3: Mic toggle + Team size indicator */}
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button
               onClick={() => setMicRequired(!micRequired)}
               style={{
                 display: "flex", alignItems: "center", gap: 8,
-                padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                padding: "6px 12px", borderRadius: 2, cursor: "pointer",
                 border: micRequired ? `1px solid ${accent}55` : "1px solid rgba(255,255,255,.10)",
                 background: micRequired ? `${accent}18` : "rgba(255,255,255,.03)",
                 color: micRequired ? accent : "rgba(148,163,184,.6)",
@@ -239,7 +224,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
             </div>
           </div>
 
-          {/* Note */}
           <div>
             <div style={S.label}>Note (optional)</div>
             <input
@@ -251,7 +235,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
             />
           </div>
 
-          {/* Submit */}
           <button
             style={{ ...S.btnPri, padding: "10px 24px", alignSelf: "flex-start", fontSize: 13 }}
             onClick={create}
@@ -262,7 +245,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
         </div>
       )}
 
-      {/* Posts List */}
       {posts.length === 0 ? (
         <EmptyState icon="🎮" title="No squads posted yet." hint="Drop the first one — someone's queueing." />
       ) : (
@@ -280,7 +262,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                 opacity: isFull ? 0.65 : 1,
                 transition: "border-color .15s",
               }}>
-                {/* Top row: activity + status */}
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", lineHeight: 1.4 }}>
@@ -292,25 +273,23 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                     </div>
                   </div>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, flexShrink: 0,
+                    fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 2, flexShrink: 0,
                     background: isFull ? "rgba(239,68,68,.12)" : "rgba(34,197,94,.12)",
                     color: isFull ? "#EF4444" : "#22C55E",
                   }}>{p.status}</span>
                 </div>
 
-                {/* Description/note */}
                 {p.description && (
                   <div style={{ fontSize: 11, color: "rgba(148,163,184,.55)", lineHeight: 1.4, fontStyle: "italic" }}>
                     {p.description}
                   </div>
                 )}
 
-                {/* Slot visualization */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ display: "flex", gap: 3 }}>
                     {slots.map((filled, i) => (
                       <div key={i} style={{
-                        width: 22, height: 22, borderRadius: 6,
+                        width: 22, height: 22, borderRadius: 2,
                         border: filled ? `1.5px solid ${accent}` : "1.5px solid rgba(255,255,255,.10)",
                         background: filled ? `${accent}25` : "rgba(255,255,255,.02)",
                         display: "flex", alignItems: "center", justifyContent: "center",
@@ -326,12 +305,11 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                   </span>
                 </div>
 
-                {/* Player names */}
                 {(p.playerNames || []).length > 0 && (
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {p.playerNames.map((n: string, i: number) => (
                       <span key={i} style={{
-                        fontSize: 10, padding: "2px 7px", borderRadius: 999,
+                        fontSize: 10, padding: "2px 7px", borderRadius: 2,
                         background: `${accent}12`, border: `1px solid ${accent}28`,
                         color: `${accent}dd`, fontWeight: 600,
                       }}>{n}</span>
@@ -339,7 +317,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                   </div>
                 )}
 
-                {/* Actions */}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   {!isFull && (
                     <button
@@ -368,8 +345,6 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     </div>
   );
 }
-
-// ── Twitch Streams ──────────────────────────────────────────────────────────
 
 function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; lobbyId: string; accentColor: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -413,7 +388,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
   return (
     <>
       {activeStream && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accentColor}40`, background: "#000", marginBottom: 8 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accentColor}40`, background: "#000", marginBottom: 8 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
@@ -437,7 +412,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
             {s.thumbnailUrl && (
               <img
                 src={(s.thumbnailUrl || "").replace("{width}", "80").replace("{height}", "45")}
-                alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
+                alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 2, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
               />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -459,8 +434,6 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
     </>
   );
 }
-
-// ── Ranks Reference ─────────────────────────────────────────────────────────
 
 const RANK_TIERS = [
   {
@@ -496,7 +469,6 @@ const PREMIER_TIERS = [
 function RanksReference({ accent }: { accent: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Premier Rating */}
       <div>
         <div style={{ ...S.label, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 12 }}>{"\u2B50"}</span> PREMIER CS RATING
@@ -508,7 +480,7 @@ function RanksReference({ accent }: { accent: string }) {
               border: `1px solid ${t.color}30`, background: t.bg,
             }}>
               <div style={{
-                width: 8, height: 24, borderRadius: 4, flexShrink: 0,
+                width: 8, height: 24, borderRadius: 2, flexShrink: 0,
                 background: t.color,
                 boxShadow: `0 0 8px ${t.color}40`,
               }} />
@@ -526,7 +498,6 @@ function RanksReference({ accent }: { accent: string }) {
         </div>
       </div>
 
-      {/* Competitive Ranks */}
       <div>
         <div style={{ ...S.label, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 12 }}>{"\u{1F396}"}</span> COMPETITIVE RANKS
@@ -547,7 +518,7 @@ function RanksReference({ accent }: { accent: string }) {
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {tier.ranks.map(r => (
                   <span key={r} style={{
-                    fontSize: 10, padding: "3px 8px", borderRadius: 6,
+                    fontSize: 10, padding: "3px 8px", borderRadius: 2,
                     background: `${tier.color}12`, border: `1px solid ${tier.color}28`,
                     color: `${tier.color}cc`, fontWeight: 600,
                   }}>{r}</span>
@@ -558,7 +529,6 @@ function RanksReference({ accent }: { accent: string }) {
         </div>
       </div>
 
-      {/* Legend */}
       <div style={{
         ...S.card, border: `1px solid ${accent}20`, background: `${accent}04`,
         fontSize: 11, color: "rgba(148,163,184,.5)", lineHeight: 1.6,
@@ -569,8 +539,6 @@ function RanksReference({ accent }: { accent: string }) {
     </div>
   );
 }
-
-// ── Map Pool ────────────────────────────────────────────────────────────────
 
 const MAP_DATA: { name: string; color: string; bgColor: string; desc: string }[] = [
   { name: "Dust2",    color: "#D4A017", bgColor: "rgba(212,160,23,.08)",  desc: "Classic desert battleground" },
@@ -590,7 +558,7 @@ function MapPool({ accent }: { accent: string }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 8 }}>
         {MAP_DATA.map(m => (
           <div key={m.name} style={{
-            borderRadius: 12, overflow: "hidden",
+            borderRadius: 2, overflow: "hidden",
             border: `1px solid ${m.color}25`,
             background: m.bgColor,
             padding: "14px 14px 12px",
@@ -606,7 +574,6 @@ function MapPool({ accent }: { accent: string }) {
               e.currentTarget.style.transform = "translateY(0)";
             }}
           >
-            {/* Map icon bar */}
             <div style={{
               width: "100%", height: 4, borderRadius: 2, marginBottom: 10,
               background: `linear-gradient(90deg, ${m.color}60, ${m.color}15)`,
@@ -621,7 +588,6 @@ function MapPool({ accent }: { accent: string }) {
         ))}
       </div>
 
-      {/* Quick reference */}
       <div style={{
         ...S.card, marginTop: 12, border: `1px solid ${accent}15`, background: `${accent}04`,
         fontSize: 11, color: "rgba(148,163,184,.45)", lineHeight: 1.6, textAlign: "center",
@@ -631,10 +597,6 @@ function MapPool({ accent }: { accent: string }) {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
 
 interface Props {
   lobbyId: string;
@@ -654,27 +616,8 @@ export default function CS2ModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{
-        display: "flex", gap: 2, padding: "8px 12px 0",
-        borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto",
-      }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-            background: tab === t.id ? `${accentColor}20` : "transparent",
-            color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-            fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-            transition: "background .1s, color .1s",
-            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "lfg"     && <SquadFinder lobbyId={lobbyId} accent={accentColor} />}
         {tab === "streams" && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
@@ -682,7 +625,6 @@ export default function CS2ModulesPanel({
         {tab === "maps"    && <MapPool accent={accentColor} />}
       </div>
 
-      {/* Valve legal disclaimer */}
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
           Weered is not affiliated with, endorsed by, or sponsored by Valve Corporation. Counter-Strike 2 and all related logos and trademarks are the property of Valve Corporation.

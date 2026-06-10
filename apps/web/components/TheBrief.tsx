@@ -1,13 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-// ── The Brief ─────────────────────────────────────────────────────────────
-// First-time onboarding for FakeOut. Eight panels written in The Operator's
-// voice (street-smart, slightly sarcastic, helpful with attitude — same
-// character that heckles trades in chat). Auto-opens once per user;
-// localStorage flag prevents replays. Always-on access lives in the
-// trading panel header so anyone can re-summon it.
-
 const STORAGE_KEY = "weered:fakeout:brief:seen";
 const ACCENT = "#F5C518";
 const GREEN = "#22c55e";
@@ -20,8 +13,6 @@ type PanelDef = {
   visual: React.ReactNode;
 };
 
-// ── Visual aids — small inline mocks/diagrams. SVG + CSS only so the
-// component is self-contained (no image hosting, no asset pipeline).
 function VisualWordmark() {
   return (
     <div style={{
@@ -372,7 +363,6 @@ export default function TheBrief({
           fontFamily: "var(--font-barlow), system-ui, sans-serif",
         }}
       >
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
@@ -392,7 +382,6 @@ export default function TheBrief({
           >×</button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "22px 24px 18px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div>{panel.visual}</div>
           <div>
@@ -406,7 +395,6 @@ export default function TheBrief({
           </div>
         </div>
 
-        {/* Step indicator */}
         <div style={{ display: "flex", justifyContent: "center", gap: 5, padding: "0 24px" }}>
           {PANELS.map((_, i) => (
             <button
@@ -424,7 +412,6 @@ export default function TheBrief({
           ))}
         </div>
 
-        {/* Footer controls */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 18px" }}>
           <button
             type="button"
@@ -463,7 +450,6 @@ export default function TheBrief({
   );
 }
 
-// ── Hook for first-time auto-open + a stable open/reopen handle ──────────
 export function useTheBrief(): { open: boolean; show: () => void; hide: () => void } {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -471,7 +457,6 @@ export function useTheBrief(): { open: boolean; show: () => void; hide: () => vo
     let seen = false;
     try { seen = localStorage.getItem(STORAGE_KEY) === "1"; } catch {}
     if (!seen) {
-      // Tiny delay so the surrounding panel mounts first.
       const t = setTimeout(() => setOpen(true), 600);
       return () => clearTimeout(t);
     }

@@ -38,7 +38,6 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
 
   const listRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
-    // snap to bottom when switching threads
     requestAnimationFrame(() => {
       if (!listRef.current) return;
       listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -52,13 +51,11 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
   const send = React.useCallback(() => {
     const v = draft.trim();
     if (!v) return;
-    // UI-only: clear current draft; later wire to WS + optimistic append
     setDraft("");
   }, [draft, setDraft]);
 
   return (
     <div style={{ display: "flex", height: "100%", width: "100%", minHeight: 560 }}>
-      {/* Left: thread list */}
       <div
         style={{
           width: 300,
@@ -166,7 +163,6 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
         </div>
       </div>
 
-      {/* Right: thread */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <div
           style={{

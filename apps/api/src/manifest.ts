@@ -1,23 +1,9 @@
-/**
- * Bungie Manifest Cache & Hash Resolver
- * 
- * Downloads Destiny 2 manifest definition tables from Bungie CDN,
- * strips them to lightweight indices, caches to disk, and serves
- * hash → {name, icon, ...} lookups from memory.
- *
- * Usage:
- *   import { syncManifest, resolveItem, resolveActivity, ... } from "./manifest";
- *   await syncManifest(BUNGIE_API_KEY);         // call once on startup
- *   const item = resolveItem(1234567890);        // → { name, icon, tier, ... }
- */
 
 import fs from "fs";
 import path from "path";
 
 const BUNGIE_BASE = "https://www.bungie.net";
 const CACHE_DIR = path.join(process.cwd(), "manifest-cache");
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ItemDef {
   name: string;
@@ -38,13 +24,7 @@ export interface ActivityDef {
   icon: string;
   description: string;
   lightLevel: number;
-  // Modifier hashes baked into the activity definition (e.g. Singes, Match
-  // Game, Champions). Stored as strings to match BungieActivityLog.modifierHashes
-  // JSON shape. Empty array if the activity has none.
   modifierHashes: string[];
-  // Bungie's directActivityModeHash signals difficulty tier indirectly;
-  // many activities also expose tier via display name (Master / Hero / etc).
-  // We record difficulty inferred from name where unambiguous.
   difficultyTier: number | null;
 }
 
@@ -81,14 +61,11 @@ export interface ModifierDef {
   description: string;
 }
 
-// ── Tier / Type lookups ───────────────────────────────────────────────────────
-
 const TIER_NAMES: Record<number, string> = {
   0: "Unknown", 1: "Currency", 2: "Common", 3: "Uncommon",
   4: "Rare", 5: "Legendary", 6: "Exotic",
 };
 
-// Well-known bucket hashes for equipment slots
 export const BUCKET_HASHES = {
   KINETIC:   1498876634,
   ENERGY:    2465295065,
@@ -116,7 +93,6 @@ export const ARMOR_BUCKETS = new Set([
   BUCKET_HASHES.LEGS, BUCKET_HASHES.CLASS,
 ]);
 
-// Well-known armor stat hashes
 export const ARMOR_STAT_HASHES = {
   MOBILITY:    2996146975,
   RESILIENCE:  392767087,
@@ -125,8 +101,6 @@ export const ARMOR_STAT_HASHES = {
   INTELLECT:   144602215,
   STRENGTH:    4244567218,
 };
-
-// ── In-memory indices ─────────────────────────────────────────────────────────
 
 const itemIndex     = new Map<string, ItemDef>();
 const activityIndex = new Map<string, ActivityDef>();
@@ -140,8 +114,6 @@ const modifierIndex = new Map<string, ModifierDef>();
 let _loaded = false;
 let _version = "";
 let _syncing = false;
-
-// ── Resolvers ─────────────────────────────────────────────────────────────────
 
 export function resolveItem(hash: number | string): ItemDef | null {
   return itemIndex.get(String(hash)) || null;
@@ -179,12 +151,6 @@ export function resolveItemPerks(plugHashes: number[]): { hash: number; name: st
 export function isLoaded(): boolean { return _loaded; }
 export function manifestVersion(): string { return _version; }
 
-// ── Enrichment helpers ────────────────────────────────────────────────────────
-
-/**
- * Given raw Bungie profile response (from components 200,201,205,300,102),
- * return enriched character data with resolved item names/icons/stats.
- */
 export function enrichProfile(profileData: any) {
   const characters = profileData?.characters?.data || {};
   const equipment  = profileData?.characterEquipment?.data || {};
@@ -195,12 +161,10 @@ export function enrichProfile(profileData: any) {
   const itemStats  = profileData?.itemComponents?.stats?.data || {};
   const vaultItems = profileData?.profileInventory?.data?.items || [];
 
-  // Build enriched characters
   const enrichedChars = Object.entries(characters).map(([charId, char]: [string, any]) => {
     const equippedItems = (equipment[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
     const inventoryItems = (inventories[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
 
-    // Group equipped by slot
     const weapons = equippedItems.filter((i: any) => WEAPON_BUCKETS.has(i.bucketHash));
     const armor   = equippedItems.filter((i: any) => ARMOR_BUCKETS.has(i.bucketHash));
     const other   = equippedItems.filter((i: any) => !WEAPON_BUCKETS.has(i.bucketHash) && !ARMOR_BUCKETS.has(i.bucketHash));
@@ -225,7 +189,6 @@ export function enrichProfile(profileData: any) {
     };
   });
 
-  // Enrich vault
   const enrichedVault = vaultItems.map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
 
   return {
@@ -235,7 +198,6 @@ export function enrichProfile(profileData: any) {
   };
 }
 
-// Names of "junk" sockets that aren't interesting to display prominently
 const HIDDEN_PLUG_NAMES = new Set([
   "Empty Mod Socket", "Empty Tuning Mod Socket", "Default Shader",
   "Default Ornament", "Upgrade Armor", "Upgrade Weapon",
@@ -256,7 +218,6 @@ function enrichItem(
   const damage = resolveDamageType(instance.damageTypeHash || def?.damageTypeHash || 0);
   const bHash = item.bucketHash || def?.bucketHash || 0;
 
-  // Resolve perks from component 304 socket data (live instance perks)
   let perks: { hash: number; name: string; icon: string; description: string; isEnabled: boolean; isJunk: boolean; socketIndex: number; availablePlugs?: { hash: number; name: string; icon: string; description: string }[] }[] = [];
   const socketData = sockets?.[item.itemInstanceId]?.sockets;
   const reusableData = reusablePlugs?.[item.itemInstanceId]?.plugs;
@@ -270,7 +231,6 @@ function enrichItem(
         if (!plugDef || !plugDef.name) return null;
         const isJunk = HIDDEN_PLUG_NAMES.has(plugDef.name);
 
-        // Get available plugs for this socket from component 305
         let availablePlugs: { hash: number; name: string; icon: string; description: string }[] | undefined;
         if (reusableData?.[String(idx)]) {
           availablePlugs = reusableData[String(idx)]
@@ -303,7 +263,6 @@ function enrichItem(
       })
       .filter(Boolean) as any;
   } else if (def?.socketEntries) {
-    // Fallback: use manifest default perks
     perks = def.socketEntries
       .map((s, idx) => {
         const plugDef = resolveItem(s.plugHash);
@@ -313,7 +272,6 @@ function enrichItem(
       .filter(Boolean) as any;
   }
 
-  // Armor stats from component 302
   let armorStats: any = undefined;
   if (ARMOR_BUCKETS.has(bHash) && itemStats?.[item.itemInstanceId]?.stats) {
     const stats = itemStats[item.itemInstanceId].stats;
@@ -331,7 +289,6 @@ function enrichItem(
     itemInstanceId: item.itemInstanceId,
     quantity: item.quantity || 1,
     bucketHash: bHash,
-    // Resolved fields
     name: def?.name || `Unknown (${item.itemHash})`,
     icon: def?.icon ? `${BUNGIE_BASE}${def.icon}` : "",
     tierName: def?.tierName || "Unknown",
@@ -339,23 +296,17 @@ function enrichItem(
     itemType: def?.itemType || 0,
     description: def?.description || "",
     watermark: def?.watermark ? `${BUNGIE_BASE}${def.watermark}` : "",
-    // Instance data
     primaryStat: instance.primaryStat?.value || null,
     damageType: damage?.name || null,
     damageIcon: damage?.icon ? `${BUNGIE_BASE}${damage.icon}` : null,
     isEquipped: instance.isEquipped || false,
     canEquip: instance.canEquip ?? true,
-    // Slot name
     slotName: bucket?.name || "",
-    // Perks & stats (Phase 2)
     perks,
     armorStats,
   };
 }
 
-/**
- * Enrich Xur vendor sale items with manifest data + socket perks
- */
 export function enrichVendorSales(
   salesData: Record<string, any>,
   socketsData?: Record<string, any>,
@@ -367,7 +318,6 @@ export function enrichVendorSales(
     const def = resolveItem(itemHash);
     if (!def) continue;
 
-    // Resolve perks from component 304 vendor socket data
     let perks: { hash: number; name: string; icon: string }[] = [];
     const itemSockets = socketsData?.[vendorItemIndex]?.sockets;
     if (itemSockets && Array.isArray(itemSockets)) {
@@ -405,14 +355,10 @@ export function enrichVendorSales(
       costs: (sale as any).costs || [],
     });
   }
-  // Exotics first, then by tier
   items.sort((a, b) => (b.tierType || 0) - (a.tierType || 0));
   return items;
 }
 
-/**
- * Enrich weekly milestones with resolved names and activity details
- */
 export function enrichMilestones(milestonesData: Record<string, any>) {
   const result: any[] = [];
 
@@ -449,7 +395,6 @@ export function enrichMilestones(milestonesData: Record<string, any>) {
     });
   }
 
-  // Sort: named milestones first, then by activity count
   result.sort((a, b) => {
     const aKnown = a.name.startsWith("Milestone") ? 0 : 1;
     const bKnown = b.name.startsWith("Milestone") ? 0 : 1;
@@ -460,22 +405,13 @@ export function enrichMilestones(milestonesData: Record<string, any>) {
   return result;
 }
 
-// ── Sync / Download ───────────────────────────────────────────────────────────
-
-/**
- * Download manifest definitions from Bungie CDN and build in-memory indices.
- * Safe to call multiple times — will skip if already syncing.
- * Caches stripped indices to disk for fast restart.
- */
 export async function syncManifest(apiKey: string): Promise<{ ok: boolean; version: string; counts: Record<string, number> }> {
   if (_syncing) return { ok: false, version: _version, counts: {} };
   _syncing = true;
 
   try {
-    // Ensure cache dir exists
     if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
 
-    // Check if we have a recent cache on disk
     const metaPath = path.join(CACHE_DIR, "_meta.json");
     let diskMeta: any = null;
     try {
@@ -484,7 +420,6 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
       }
     } catch {}
 
-    // Fetch manifest metadata from Bungie
     console.log("[manifest] Fetching manifest metadata...");
     const metaRes = await fetch(`${BUNGIE_BASE}/Platform/Destiny2/Manifest/`, {
       headers: { "X-API-Key": apiKey },
@@ -496,14 +431,12 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
 
     console.log(`[manifest] Version: ${version}`);
 
-    // If disk cache is same version and loaded, skip download
     if (diskMeta?.version === version && _loaded) {
       console.log("[manifest] Already up to date.");
       _syncing = false;
       return { ok: true, version, counts: { items: itemIndex.size, activities: activityIndex.size } };
     }
 
-    // If disk cache is same version but not loaded in memory, load from disk
     if (diskMeta?.version === version && !_loaded) {
       console.log("[manifest] Loading from disk cache...");
       loadFromDisk();
@@ -514,7 +447,6 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
       }
     }
 
-    // Download needed definition tables
     const tables: [string, string, (raw: Record<string, any>) => void][] = [
       ["DestinyInventoryItemDefinition", jsonPaths.DestinyInventoryItemDefinition, buildItemIndex],
       ["DestinyActivityDefinition", jsonPaths.DestinyActivityDefinition, buildActivityIndex],
@@ -542,7 +474,6 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
       }
     }
 
-    // Save stripped indices to disk
     saveToDisk(version);
     _loaded = true;
     _version = version;
@@ -558,8 +489,6 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
     return { ok: false, version: _version, counts: getCounts() };
   }
 }
-
-// ── Index builders ────────────────────────────────────────────────────────────
 
 function buildItemIndex(raw: Record<string, any>) {
   itemIndex.clear();
@@ -578,7 +507,6 @@ function buildItemIndex(raw: Record<string, any>) {
       description: (dp.description || "").slice(0, 200),
       watermark: def.iconWatermark || "",
     };
-    // Extract default socket plugs (perks/mods) — cap at 10 per item
     const sockets = def.sockets?.socketEntries;
     if (sockets && Array.isArray(sockets)) {
       entry.socketEntries = sockets
@@ -605,8 +533,6 @@ function buildActivityIndex(raw: Record<string, any>) {
   for (const [hash, def] of Object.entries(raw)) {
     const dp = def?.displayProperties;
     if (!dp?.name) continue;
-    // Bungie shape: def.modifiers = [{ activityModifierHash: <number> }, ...]
-    // (see DestinyActivityDefinition spec). Extract just the hashes as strings.
     const modifierHashes: string[] = Array.isArray(def.modifiers)
       ? def.modifiers.map((m: any) => String(m?.activityModifierHash || "")).filter((h: string) => h)
       : [];
@@ -693,8 +619,6 @@ function buildModifierIndex(raw: Record<string, any>) {
   }
 }
 
-// ── Disk persistence ──────────────────────────────────────────────────────────
-
 function saveToDisk(version: string) {
   try {
     const serialize = (m: Map<string, any>) => JSON.stringify(Object.fromEntries(m));
@@ -750,8 +674,4 @@ function getCounts() {
   };
 }
 
-/**
- * Try to load from disk on import (non-blocking).
- * Full sync (with CDN download) requires calling syncManifest().
- */
 try { loadFromDisk(); } catch {}

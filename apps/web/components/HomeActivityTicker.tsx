@@ -5,20 +5,13 @@ import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-type Event = {
-  id: string;
-  ts: number;
-  kind: string;
-  lobbyId: string | null;
-  lobbyName: string | null;
-  userId: string | null;
-  userName: string | null;
-  text: string;
-  accent?: string | null;
+type ConvItem = {
+  key: string; href: string; name: string; sub: string | null;
+  logo: string | null; accent: string | null; online: number; live: boolean;
 };
 
 export default function HomeActivityTicker() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [items, setItems] = useState<ConvItem[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
   const aliveRef = useRef(true);
 
@@ -26,57 +19,66 @@ export default function HomeActivityTicker() {
     aliveRef.current = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    async function tick() {
+    async function load() {
       try {
-        const tok = (() => {
-          try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
-        })();
-        const r = await fetch(`${API}/activity/recent`, {
-          cache: "no-store",
-          headers: tok ? { Authorization: `Bearer ${tok}` } : {},
-        });
-        const j = await r.json();
+        const tok = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
+        const headers: Record<string, string> = tok ? { Authorization: `Bearer ${tok}` } : {};
+        const [liveR, lobR] = await Promise.all([
+          fetch(`${API}/live/rooms`, { cache: "no-store", headers }).then(r => r.json()).catch(() => ({})),
+          fetch(`${API}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
+        ]);
         if (!aliveRef.current) return;
-        const all: Event[] = Array.isArray(j?.events) ? j.events : [];
-        setEvents(all);
+        const rooms: any[] = Array.isArray(liveR?.rooms) ? liveR.rooms : [];
+        const lobbies: any[] = Array.isArray(lobR?.lobbies) ? lobR.lobbies : [];
+
+        const liveItems: ConvItem[] = rooms.map(r => ({
+          key: `r-${r.id}`,
+          href: r.roomIsLobby ? `/lobby/${r.lobbyId}` : `/room/${r.id}`,
+          name: r.roomIsLobby ? (r.lobbyName || r.name) : r.name,
+          sub: r.roomIsLobby ? null : (r.lobbyName || null),
+          logo: r.lobbyLogoUrl || null,
+          accent: r.lobbyAccentColor || null,
+          online: r.onlineCount || 0,
+          live: true,
+        }));
+        const liveLobbyIds = new Set(rooms.filter(r => r.roomIsLobby).map(r => r.lobbyId));
+        const lobbyItems: ConvItem[] = lobbies
+          .filter(l => !liveLobbyIds.has(l.id))
+          .map(l => ({
+            key: `l-${l.id}`, href: `/lobby/${l.id}`, name: l.name, sub: null,
+            logo: l.logoUrl || null, accent: l.accentColor || null, online: 0, live: false,
+          }));
+
+        setItems([...liveItems, ...lobbyItems].slice(0, 32));
         setHasFetched(true);
       } catch {
         if (aliveRef.current) setHasFetched(true);
       }
-      if (aliveRef.current) timer = setTimeout(tick, 10_000);
+      if (aliveRef.current) timer = setTimeout(load, 15_000);
     }
-    tick();
+    load();
 
-    return () => {
-      aliveRef.current = false;
-      if (timer) clearTimeout(timer);
-    };
+    return () => { aliveRef.current = false; if (timer) clearTimeout(timer); };
   }, []);
 
-  const display = events.slice(0, 8);
+  const belt = items.length > 0 ? [...items, ...items] : [];
 
   return (
     <>
       <style>{`
         .home-ticker {
           display: flex; align-items: center; gap: 12px;
-          padding: 10px 16px;
-          height: 44px;
-          border-radius: 10px;
-          background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.01));
-          border: 1px solid rgba(255,255,255,.06);
+          padding: 6px 0; height: 42px;
+          background: transparent;
+          border: none;
           font-family: var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif;
         }
         .home-ticker-label {
           flex: 0 0 auto;
           display: inline-flex; align-items: center; gap: 6px;
-          padding: 3px 9px;
           font-size: 9px; font-weight: 800;
           letter-spacing: 0.18em; text-transform: uppercase;
-          color: #d9a942;
-          background: rgba(217,169,66,.08);
-          border: 1px solid rgba(217,169,66,.2);
-          border-radius: 3px;
+          color: #6ee7b7;
         }
         .home-ticker-pulse {
           width: 5px; height: 5px; border-radius: 50%;
@@ -90,89 +92,71 @@ export default function HomeActivityTicker() {
           100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
         }
         .home-ticker-track {
-          flex: 1; overflow: hidden; height: 24px;
+          flex: 1; overflow: hidden; height: 32px;
           display: flex; align-items: center;
-          mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-          -webkit-mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+          -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
         }
         .home-ticker-marquee {
-          display: inline-flex; align-items: center; gap: 0;
+          display: inline-flex; align-items: center;
           white-space: nowrap;
-          animation: home-ticker-scroll 60s linear infinite;
+          animation: home-ticker-scroll 75s linear infinite;
         }
         .home-ticker:hover .home-ticker-marquee { animation-play-state: paused; }
         @keyframes home-ticker-scroll {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
-        .home-ticker-item {
-          display: inline-flex; align-items: baseline; gap: 8px;
-          font-size: 13px;
-          color: rgba(232,232,236,.85);
+        .conv-item {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 4px 0; margin-right: 26px;
+          color: rgba(232,232,236,.82); text-decoration: none;
+          font-size: 13px; font-weight: 600; white-space: nowrap;
+          transition: color .12s;
         }
-        .home-ticker-dot {
-          width: 5px; height: 5px; border-radius: 50%;
-          background: #d9a942;
-          align-self: center;
+        .conv-item:hover { color: #fff; }
+        .conv-logo {
+          width: 19px; height: 19px; border-radius: 2px; object-fit: cover; flex-shrink: 0;
+          background: rgba(0,0,0,.3);
         }
-        .home-ticker-text { color: rgba(232,232,236,.92); }
-        .home-ticker-lobby {
-          color: rgba(232,232,236,.55);
-          text-decoration: none;
-          padding-left: 6px;
-          transition: color .12s, text-decoration-color .12s;
-          text-decoration: underline;
-          text-decoration-color: transparent;
-          text-underline-offset: 3px;
+        .conv-dot {
+          width: 19px; height: 19px; border-radius: 2px; flex-shrink: 0;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 800; color: #fff;
         }
-        .home-ticker-lobby:hover {
-          color: #d9a942;
-          text-decoration-color: rgba(217,169,66,.5);
+        .conv-sub { color: rgba(232,232,236,.45); font-size: 11px; font-weight: 500; }
+        .conv-online {
+          display: inline-flex; align-items: center; gap: 4px;
+          color: #6ee7b7; font-size: 11px; font-weight: 800; letter-spacing: .02em;
         }
-        .home-ticker-ts   { color: rgba(232,232,236,.4); font-size: 11px; }
-        .home-ticker-sep  { color: rgba(232,232,236,.18); padding: 0 14px; }
+        .conv-online .d { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e; }
         .home-ticker-empty {
-          font-size: 12px;
-          color: rgba(232,232,236,.5);
-          font-style: italic;
-          letter-spacing: 0.04em;
+          font-size: 12px; color: rgba(232,232,236,.5); font-style: italic; letter-spacing: 0.04em;
         }
       `}</style>
-      <div className="home-ticker" aria-label="Recent activity across Weered">
+      <div className="home-ticker" aria-label="Live rooms and lobbies across Weered">
         <div className="home-ticker-label">
           <span className="home-ticker-pulse" />
           live
         </div>
         <div className="home-ticker-track">
-          {display.length === 0 && hasFetched && (
-            <div className="home-ticker-empty">
-              the platform's quiet right now — go make some noise
-            </div>
+          {belt.length === 0 && hasFetched && (
+            <div className="home-ticker-empty">no lobbies to show right now</div>
           )}
-          {display.length === 0 && !hasFetched && (
-            <div className="home-ticker-empty">listening…</div>
+          {belt.length === 0 && !hasFetched && (
+            <div className="home-ticker-empty">loading the belt…</div>
           )}
-          {display.length > 0 && (
+          {belt.length > 0 && (
             <div className="home-ticker-marquee">
-              {[...display, ...display].map((ev, i) => (
-                <span key={`${ev.id}-${i}`} className="home-ticker-item">
-                  <span
-                    className="home-ticker-dot"
-                    style={{ background: ev.accent || "#d9a942" }}
-                  />
-                  <span className="home-ticker-text">{ev.text}</span>
-                  {ev.lobbyId && (
-                    <Link
-                      href={`/lobby/${ev.lobbyId}`}
-                      className="home-ticker-lobby"
-                      title={`Open /${ev.lobbyId}`}
-                    >
-                      /{ev.lobbyId}
-                    </Link>
-                  )}
-                  <span className="home-ticker-ts">{timeAgo(ev.ts)}</span>
-                  <span className="home-ticker-sep">·</span>
-                </span>
+              {belt.map((it, i) => (
+                <Link key={`${it.key}-${i}`} href={it.href} className={`conv-item${it.live && it.online > 0 ? " is-live" : ""}`} title={it.sub ? `${it.name} · in ${it.sub}` : it.name}>
+                  {it.logo
+                    ? <img className="conv-logo" src={it.logo} alt="" />
+                    : <span className="conv-dot" style={{ background: it.accent || "linear-gradient(135deg,#7c3aed,#5800e5)" }}>{(it.name || "?").charAt(0).toUpperCase()}</span>}
+                  <span>{it.name}</span>
+                  {it.sub && <span className="conv-sub">/{it.sub}</span>}
+                  {it.online > 0 && <span className="conv-online"><span className="d" />{it.online}</span>}
+                </Link>
               ))}
             </div>
           )}
@@ -180,13 +164,4 @@ export default function HomeActivityTicker() {
       </div>
     </>
   );
-}
-
-function timeAgo(ts: number): string {
-  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h`;
 }

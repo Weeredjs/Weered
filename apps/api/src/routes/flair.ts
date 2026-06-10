@@ -2,8 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { grantFlairToUser, getEquippedFlair, mintFlairItem } from "../lib/flair";
 
-// /flair/* — equippable account ornaments. Templates are FlairItems,
-// ownership is UserFlair, the User has a single equippedFlairId pointer.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
   getGlobalRole?: (userId: string) => Promise<string>;
@@ -24,7 +22,6 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
   }
 
-  // GET /flair/inventory
   app.get("/flair/inventory", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -66,7 +63,6 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, inventory, equippedFlairId: equippedId });
   });
 
-  // POST /flair/equip
   app.post("/flair/equip", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -87,7 +83,6 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, equippedFlairId: flairItemId });
   });
 
-  // GET /flair/items/:id
   app.get("/flair/items/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
     const f = await (prisma as any).flairItem.findUnique({ where: { id } });
@@ -95,7 +90,6 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, flairItem: f });
   });
 
-  // GET /flair/equipped/:userId
   app.get("/flair/equipped/:userId", async (req, reply) => {
     const userId = String((req as any).params?.userId || "");
     if (!userId) return reply.code(400).send({ ok: false, error: "bad_request" });
@@ -103,7 +97,6 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, flair: f });
   });
 
-  // POST /flair/mint — staff only
   app.post("/flair/mint", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -143,7 +136,6 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // POST /flair/grant — staff only
   app.post("/flair/grant", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });

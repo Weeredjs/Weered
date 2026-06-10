@@ -1,11 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /staff/outreach/* + /staff/analytics — Ops CRM (20+ contacts across
-// trading/crypto, municipalities, aquaculture) and the live analytics
-// dashboard. Analytics merges in-memory room state with DB counters to
-// show online-now / active-rooms / retention cohorts without a
-// dedicated metrics pipeline.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
@@ -16,11 +11,6 @@ type Opts = {
 export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAccessStaff, rooms } = opts;
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── OUTREACH CRM ───────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
-
-// GET /staff/outreach — list all contacts
 app.get("/staff/outreach", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -41,7 +31,6 @@ app.get("/staff/outreach", async (req, reply) => {
   return reply.send({ ok: true, contacts });
 });
 
-// POST /staff/outreach — create contact
 app.post("/staff/outreach", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -69,7 +58,6 @@ app.post("/staff/outreach", async (req, reply) => {
   return reply.send({ ok: true, contact });
 });
 
-// PATCH /staff/outreach/:id — update contact
 app.patch("/staff/outreach/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -96,7 +84,6 @@ app.patch("/staff/outreach/:id", async (req, reply) => {
   } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
 });
 
-// DELETE /staff/outreach/:id — remove contact
 app.delete("/staff/outreach/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -109,10 +96,6 @@ app.delete("/staff/outreach/:id", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── STAFF ANALYTICS ────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
-
 app.get("/staff/analytics", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -124,7 +107,6 @@ app.get("/staff/analytics", async (req, reply) => {
   const weekStart = new Date(now - 7 * 86400000);
   const monthStart = new Date(now - 30 * 86400000);
 
-  // ── Live data from in-memory rooms ──────────────────────────────────────
   const onlineUserIds = new Set<string>();
   const activeRoomsList: { roomId: string; name: string; users: number }[] = [];
   for (const [roomId, room] of rooms) {
@@ -136,7 +118,6 @@ app.get("/staff/analytics", async (req, reply) => {
   const topActiveRooms = activeRoomsList.slice(0, 10);
   const onlineNow = onlineUserIds.size;
 
-  // ── Parallel DB queries ─────────────────────────────────────────────────
   const [
     totalUsers,
     usersToday,
@@ -154,32 +135,25 @@ app.get("/staff/analytics", async (req, reply) => {
     recentSignups,
     topUsersByNotoriety,
   ] = await Promise.all([
-    // users
     (prisma as any).user.count(),
     (prisma as any).user.count({ where: { createdAt: { gte: todayStart } } }),
     (prisma as any).user.count({ where: { createdAt: { gte: weekStart } } }),
     (prisma as any).user.count({ where: { createdAt: { gte: monthStart } } }),
-    // direct messages
     (prisma as any).directMessage.count({ where: { createdAt: { gte: todayStart } } }),
     (prisma as any).directMessage.count({ where: { createdAt: { gte: weekStart } } }),
-    // room messages
     (prisma as any).roomMessage.count({ where: { ts: { gte: todayStart } } }),
     (prisma as any).roomMessage.count({ where: { ts: { gte: weekStart } } }),
-    // engagement
     (prisma as any).lfgPost.count({ where: { createdAt: { gte: weekStart } } }),
     (prisma as any).notorietyEvent.count({ where: { createdAt: { gte: todayStart } } }),
     (prisma as any).notification.count({ where: { createdAt: { gte: todayStart } } }),
     (prisma as any).pushSubscription.count(),
-    // lobbies with member counts
     (prisma as any).lobby.findMany({
       select: { id: true, name: true, _count: { select: { members: true } } },
     }),
-    // recent signups for retention calc (id + createdAt only)
     (prisma as any).user.findMany({
       where: { createdAt: { gte: monthStart } },
       select: { id: true, createdAt: true },
     }),
-    // top 10 users by notoriety
     (prisma as any).user.findMany({
       orderBy: { notoriety: "desc" },
       take: 10,
@@ -187,7 +161,6 @@ app.get("/staff/analytics", async (req, reply) => {
     }),
   ]);
 
-  // ── Lobbies with online counts ──────────────────────────────────────────
   const lobbyOnline = new Map<string, number>();
   for (const [, room] of rooms) {
     if (room.lobbyId && room.users.size > 0) {
@@ -203,7 +176,6 @@ app.get("/staff/analytics", async (req, reply) => {
   lobbyList.sort((a: any, b: any) => b.onlineNow - a.onlineNow || b.members - a.members);
   const topLobbies = lobbyList.slice(0, 20);
 
-  // ── Retention ───────────────────────────────────────────────────────────
   const signupsLast30d = (recentSignups as any[]).length;
   let returnedAfter1d = 0;
   let returnedAfter7d = 0;
@@ -213,7 +185,6 @@ app.get("/staff/analytics", async (req, reply) => {
     const userCreatedMap = new Map<string, Date>();
     for (const su of recentSignups as any[]) userCreatedMap.set(su.id, new Date(su.createdAt));
 
-    // Find users who sent a DM or room message after their signup + N days
     const [dmActivity, chatActivity] = await Promise.all([
       (prisma as any).directMessage.findMany({
         where: { fromId: { in: userIds }, createdAt: { gte: monthStart } },
@@ -246,7 +217,6 @@ app.get("/staff/analytics", async (req, reply) => {
     returnedAfter7d = returned7d.size;
   }
 
-  // ── Top users messages this week ────────────────────────────────────────
   const topUserIds = (topUsersByNotoriety as any[]).map((u: any) => u.id);
   const dmCounts = await (prisma as any).directMessage.groupBy({
     by: ["fromId"],

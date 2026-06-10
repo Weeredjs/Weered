@@ -19,12 +19,26 @@ function authHeaders() {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 
+let _sessionExpiredNotified = false;
 async function apiFetch(path: string, opts?: RequestInit) {
   const r = await fetch(`${API_BASE}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+  if (r.status === 401) {
+    if (typeof window !== "undefined" && !_sessionExpiredNotified) {
+      _sessionExpiredNotified = true;
+      try {
+        const evt = new CustomEvent("weered:session-expired", { detail: { path } });
+        window.dispatchEvent(evt);
+      } catch {}
+      setTimeout(() => {
+        if (typeof document !== "undefined" && document.title.indexOf("Session expired") === -1) {
+          try { console.warn("[Weered] Session expired — sign out + back in to refresh."); } catch {}
+        }
+      }, 500);
+    }
+  }
   return r.json();
 }
 
-// Rooms are always /room/ — only Friends/Crew presence uses roomIsLobby from API
 function roomHref(id: string): string {
   let clean = id || "";
   if (clean.startsWith("room:")) clean = clean.slice(5);
@@ -32,7 +46,6 @@ function roomHref(id: string): string {
   return `/room/${encodeURIComponent(clean)}`;
 }
 
-// For friends/crew: use roomIsLobby from the API response
 function presenceHref(roomId: string, roomIsLobby: boolean): string {
   let clean = roomId || "";
   if (clean.startsWith("room:")) clean = clean.slice(5);
@@ -41,11 +54,6 @@ function presenceHref(roomId: string, roomIsLobby: boolean): string {
   return roomIsLobby ? `/lobby/${encodeURIComponent(clean)}` : `/room/${encodeURIComponent(clean)}`;
 }
 
-// ── AvatarStack ───────────────────────────────────────────────────────────────
-// ── Hooks for lobby-wide discovery data ─────────────────────────────────
-// Both polled at 20s. Used by WhosHerePanel + the empty-state replacements
-// in RoomsPanel / FriendsPanel / CrewPanel so a fresh account never lands
-// on a barren rail.
 function useLobbyPresence(lobbyId: string) {
   const [users, setUsers] = React.useState<any[]>([]);
   React.useEffect(() => {
@@ -84,14 +92,9 @@ function useLobbyCrews(lobbyId: string, enabled: boolean) {
   return crews;
 }
 
-// ── Tiny presence avatar (used in WhosHerePanel + discovery cards) ──────
 function PresenceAvatar({ user, size = 28, onClick }: { user: any; size?: number; onClick?: () => void }) {
   const name = String(user?.name || "?");
   const initial = name.slice(0, 1).toUpperCase();
-  // avatarBg(name, isMe?, chosenColor?) — passing name first; chosenColor
-  // (the user's stored avatarColor) optionally drives priority. Bug
-  // earlier was calling avatarBg(avatarColor) which set name=undefined
-  // and crashed on name.length for users without an avatarColor.
   const bg = user?.avatar ? "rgba(255,255,255,.08)" : avatarBg(name, false, user?.avatarColor);
   return (
     <button
@@ -120,10 +123,6 @@ function PresenceAvatar({ user, size = 28, onClick }: { user: any; size?: number
   );
 }
 
-// ── WHO'S HERE — slim avatar strip rendered ONLY for new users (no
-// friends, no crew) as filler so the rail doesn't read empty. Established
-// users already see lobby presence in the left rail, so this would be
-// redundant for them. Self filtered out of the count + display.
 function WhosHerePanel({ lobbyId }: { lobbyId: string }) {
   const ctx: any = useWeered();
   const meId = String(ctx?.me?.id || "");
@@ -198,9 +197,6 @@ function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
   );
 }
 
-// ── RoomsPanel ────────────────────────────────────────────────────────────────
-// ── ROOMS empty-state discovery — instead of the dead "No rooms here"
-// message, show who's currently active in the lobby + a Spin-up CTA. ──
 function RoomsEmptyDiscovery({ lobbyId, canPin }: { lobbyId: string; canPin: boolean }) {
   const ctx: any = useWeered();
   const meId = String(ctx?.me?.id || "");
@@ -250,7 +246,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   const [loading,  setLoading]  = React.useState(false);
   const [err,      setErr]      = React.useState("");
 
-  // Create room overlay state
   const [showCreate, setShowCreate] = React.useState(false);
   const [newRoom,    setNewRoom]    = React.useState("");
   const [creating,   setCreating]   = React.useState(false);
@@ -273,7 +268,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
   async function togglePin(roomId: string, currentlyPinned: boolean) {
     const target = !currentlyPinned;
-    // Optimistic
     setRows(cur => cur.map(r => r.id === roomId ? { ...r, pinned: target } : r));
     try {
       const endpoint = isLobbyOwner && !isStaff
@@ -284,7 +278,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         body: JSON.stringify({ pinned: target }),
       }).then(r => r.json());
       if (!res?.ok) {
-        // Revert
         setRows(cur => cur.map(r => r.id === roomId ? { ...r, pinned: currentlyPinned } : r));
       }
     } catch {
@@ -366,10 +359,8 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
       setSelectedModule("voice");
       setRoomPassword("");
 
-      // Auto-join: navigate into the new room
       navRouter.push(`/room/${encodeURIComponent(roomId)}`);
 
-      // Set the module after a brief delay to let the room join complete
       if (chosenModule && chosenModule !== "none") {
         setTimeout(() => {
           try { w?.setModuleState?.(chosenModule); } catch {}
@@ -380,14 +371,11 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   }
 
   React.useEffect(() => { void load(); }, [lobbyId]);
-  // 15s for live room counts. WS broadcasts room create/delete and presence,
-  // so this is reconciliation only.
   React.useEffect(() => { const t = setInterval(load, 15000); return () => clearInterval(t); }, [lobbyId]);
 
   const filtered = rows
     .filter(r => !q.trim() || (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => {
-      // Events first, then pinned, then by user count
       if (!!a.isEvent !== !!b.isEvent) return a.isEvent ? -1 : 1;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.users - a.users;
@@ -416,7 +404,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         </button>
       </div>
 
-      {/* ── Create Room Overlay ── */}
       {showCreate && (
         <div className="weered-rr-create-panel" style={{
           marginBottom: 10, padding: "12px", borderRadius: 12,
@@ -426,7 +413,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
             Create Room
           </div>
 
-          {/* Room name */}
           <input
             style={{ ...s.input, marginBottom: 8, borderColor: "rgba(88,0,229,.20)" }}
             placeholder="Room name…"
@@ -436,7 +422,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
             autoFocus
           />
 
-          {/* Module picker */}
           <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
             Starting Module
           </div>
@@ -477,7 +462,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
             })}
           </div>
 
-          {/* Optional password */}
           <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
             Password <span style={{ fontWeight: 400, opacity: 0.6 }}>(optional)</span>
           </div>
@@ -490,7 +474,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
             onChange={e => setRoomPassword(e.target.value)}
           />
 
-          {/* Create button */}
           <button
             className="weered-rr-primary weered-rr-primary-solid"
             onClick={createRoom}
@@ -525,9 +508,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
           const liveCount   = liveWsUsers.length || rm.users;
           const isLive      = liveCount > 0;
 
-          // Mini icon: owner-set iconUrl wins. Otherwise falls back to
-          // the emoji-by-name heuristic below. Owner appearance overrides
-          // everything so a custom icon shows up in the rail too.
           const n = (rm.name || "").toLowerCase();
           const isWindrose = lobbyId === "windrose" || rm.lobbyId === "windrose";
           const customIcon = (rm as any).iconUrl ? String((rm as any).iconUrl) : null;
@@ -557,7 +537,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
               )
             : "◆";
 
-          // Color: owner accent wins. Else live = green, active = violet, default = subtle.
           const cardAccent = customAccent || (isLive ? "#22c55e" : active ? "#5800E5" : "rgba(255,255,255,.08)");
           const borderColor = customAccent ? `${customAccent}55` : (active ? "rgba(88,0,229,.45)" : isLive ? "rgba(34,197,94,.25)" : "rgba(255,255,255,.06)");
           const bg = customAccent ? `${customAccent}10` : (active ? "rgba(88,0,229,.08)" : isLive ? "rgba(34,197,94,.04)" : "rgba(255,255,255,.015)");
@@ -588,7 +567,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 el.style.boxShadow = "none";
               }}
             >
-              {/* Owner-set banner — fills the card, scrim keeps text legible */}
               {customBanner && (
                 <div aria-hidden style={{
                   position: "absolute", inset: 0, backgroundImage: `url("${customBanner}")`,
@@ -604,10 +582,8 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                 }} />
               )}
 
-              {/* Active accent bar */}
               {active && <div style={{ position: "absolute", left: 0, top: 3, bottom: 3, width: 2.5, borderRadius: 2, background: "#5800E5", boxShadow: "0 0 6px rgba(88,0,229,.4)" }} />}
 
-              {/* Top accent line */}
               <div style={{
                 position: "absolute", top: 0, left: "10%", right: "10%", height: 1,
                 background: `linear-gradient(90deg, transparent, ${cardAccent}${isLive ? "44" : active ? "33" : "08"}, transparent)`,
@@ -615,7 +591,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
               }} />
 
               <div style={{ display: "flex", alignItems: "center", gap: 9, position: "relative", zIndex: 1 }}>
-                {/* Mini icon */}
                 <div style={{
                   width: 38, height: 38, borderRadius: 9, flexShrink: 0,
                   background: customIcon ? "rgba(0,0,0,.25)" : (isLive ? "rgba(34,197,94,.10)" : active ? "rgba(88,0,229,.10)" : "rgba(255,255,255,.03)"),
@@ -627,7 +602,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                   {icon}
                 </div>
 
-                {/* Name + lock */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontWeight: 700, fontSize: 12, lineHeight: 1.3,
@@ -648,7 +622,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                     {rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔒</span>}
                     {rm.hasPassword && !rm.locked && <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.45 }}>🔑</span>}
                   </div>
-                  {/* Avatar stack row */}
                   {liveWsUsers.length > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
                       <AvatarStack users={liveWsUsers} size={16} />
@@ -657,7 +630,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                   )}
                 </div>
 
-                {/* Live badge / count */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                   {isLive ? (
                     <div style={{
@@ -713,7 +685,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   );
 }
 
-// ── LobbyModPanel ─────────────────────────────────────────────────────────────
 function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: string }) {
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
   if (!canMod) return null;
@@ -760,38 +731,70 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
 
   return (
     <div className="weered-rr-section" style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Lobby Controls</div>
-        {chatLocked !== null && (
-          <span className="weered-rr-status-chip" style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 999, letterSpacing: ".4px", background: isLocked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${isLocked ? "rgba(245,158,11,.35)" : "rgba(16,185,129,.30)"}`, color: isLocked ? "rgb(253,230,138)" : "rgb(167,243,208)" }}>
-            {isLocked ? "CHAT LOCKED" : "CHAT OPEN"}
-          </span>
-        )}
-      </div>
+      <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>Lobby Controls</div>
       <div className="weered-rr-mod-panel" style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "10px 12px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          <button disabled={loading} onClick={() => action("lock")} style={{ padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer", border: isLocked ? "1px solid rgba(245,158,11,.50)" : "1px solid rgba(245,158,11,.25)", background: isLocked ? "rgba(245,158,11,.18)" : "rgba(245,158,11,.08)", color: "rgb(253,230,138)", fontWeight: isLocked ? 700 : 400 }}>{isLocked ? "🔒 Locked" : "Lock Chat"}</button>
-          <button disabled={loading} onClick={() => action("unlock")} style={{ padding: "8px 10px", borderRadius: 9, fontSize: 12, cursor: loading ? "default" : "pointer", border: !isLocked ? "1px solid rgba(16,185,129,.50)" : "1px solid rgba(16,185,129,.25)", background: !isLocked ? "rgba(16,185,129,.18)" : "rgba(16,185,129,.08)", color: "rgb(167,243,208)", fontWeight: !isLocked ? 700 : 400 }}>{!isLocked ? "✓ Unlocked" : "Unlock Chat"}</button>
-          <button disabled={loading} style={{ padding: "8px 10px", borderRadius: 9, border: "1px solid rgba(239,68,68,.25)", background: "rgba(239,68,68,.08)", fontSize: 12, cursor: "pointer", color: "rgba(252,165,165,.90)", gridColumn: "span 2" }}
-            onClick={async () => {
-              const ok = await weeredConfirm({ title: "Clear all lobby chat?", body: "Every message in this lobby's chat gets wiped. Can't be undone.", confirmLabel: "Clear chat", destructive: true });
-              if (!ok) return;
-              setLoad(true);
-              try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? "Chat cleared." : j.error || "Failed."); }
-              catch { setNote("Request failed."); } finally { setLoad(false); }
-            }}>Clear Chat</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: ".6px", textTransform: "uppercase", flexShrink: 0 }}>Chat</span>
+          <div className="weered-rr-chatlock" style={{
+            display: "flex", flex: 1, background: "rgba(0,0,0,.22)",
+            borderRadius: 8, padding: 2, border: "1px solid rgba(255,255,255,.04)",
+          }}>
+            <button
+              disabled={loading || !isLocked}
+              onClick={() => action("unlock")}
+              style={{
+                flex: 1, padding: "5px 0", borderRadius: 6, border: "none",
+                background: !isLocked ? "rgba(16,185,129,.22)" : "transparent",
+                color: !isLocked ? "rgb(167,243,208)" : "rgba(255,255,255,.42)",
+                fontSize: 10, fontWeight: 700, letterSpacing: ".5px",
+                cursor: loading || !isLocked ? "default" : "pointer",
+                transition: "background .15s, color .15s",
+              }}
+            >OPEN</button>
+            <button
+              disabled={loading || isLocked}
+              onClick={() => action("lock")}
+              style={{
+                flex: 1, padding: "5px 0", borderRadius: 6, border: "none",
+                background: isLocked ? "rgba(245,158,11,.22)" : "transparent",
+                color: isLocked ? "rgb(253,230,138)" : "rgba(255,255,255,.42)",
+                fontSize: 10, fontWeight: 700, letterSpacing: ".5px",
+                cursor: loading || isLocked ? "default" : "pointer",
+                transition: "background .15s, color .15s",
+              }}
+            >LOCKED</button>
+          </div>
         </div>
+        <div style={{ height: 1, background: "rgba(255,255,255,.05)", margin: "10px 0 6px 0" }} />
+        <a
+          className="weered-rr-destroy-link"
+          role="button"
+          tabIndex={loading ? -1 : 0}
+          aria-disabled={loading}
+          onClick={async () => {
+            if (loading) return;
+            const ok = await weeredConfirm({ title: "Clear all lobby chat?", body: "Every message in this lobby's chat gets wiped. Can't be undone.", confirmLabel: "Clear chat", destructive: true });
+            if (!ok) return;
+            setLoad(true);
+            try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? "Chat cleared." : j.error || "Failed."); }
+            catch { setNote("Request failed."); } finally { setLoad(false); }
+          }}
+          onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !loading) (e.currentTarget as HTMLElement).click(); }}
+          style={{
+            display: "block", width: "100%", padding: "6px 0", background: "transparent",
+            border: "none", color: "rgba(252,165,165,.62)", fontSize: 11,
+            fontWeight: 600, cursor: loading ? "default" : "pointer",
+            textAlign: "left", letterSpacing: ".2px", textDecoration: "none",
+            textTransform: "none", fontFamily: "inherit", boxShadow: "none",
+            textShadow: "none", userSelect: "none",
+          }}
+        >Clear all chat</a>
         {note && <div style={{ marginTop: 8, fontSize: 11, opacity: 0.65 }}>{note}</div>}
       </div>
     </div>
   );
 }
 
-// ── FRIENDS empty-state discovery: people active in this lobby.
-// Static "Friendless" placeholder — sits at the top of the empty FRIENDS
-// state so the section is always visible and visitors learn the row
-// shape (avatar, name, platform tags, location) before they have any
-// real friends. Vibes-driven; the tags + location are theatre.
 function FriendlessRow() {
   const PlatformDot = ({ color, label }: { color: string; label: string }) => (
     <span title={label} style={{
@@ -887,7 +890,6 @@ function FriendsEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── FriendsPanel ──────────────────────────────────────────────────────────────
 function FriendsPanel({ lobbyId }: { lobbyId: string }) {
   const { openSheet } = useOverlay();
   const [friends, setFriends] = React.useState<any[]>([]);
@@ -904,8 +906,6 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
 
   if (!mounted) return null;
 
-  // Empty-state replacement: surface presence-based suggestions instead of
-  // returning null. The rail stays alive for fresh accounts.
   if (!friends.length) {
     return <FriendsEmptyDiscovery lobbyId={lobbyId} />;
   }
@@ -917,9 +917,6 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
     const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
     const userId      = String(f.id ?? f.userId ?? f.username ?? "");
     const rawRoomId   = String(f.roomId || "").replace(/^room:/, "");
-    // Trust the API's roomIsLobby verdict. The previous regex heuristic
-    // matched almost any lowercase roomId as a lobby and was sending Join
-    // clicks to /lobby/* even when the friend was in a sub-room.
     const isLobby     = f.roomIsLobby === true || rawRoomId === "lobby";
     const joinHref    = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
 
@@ -930,10 +927,6 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
       psn:    !!f.psnAccountId,
     };
 
-    // Friends list shows *Weered* location — "Online in Destiny 2",
-    // "Lying low in Destiny 2". Cross-platform game state lives on the left
-    // rail where we're already with them; here the useful signal is where on
-    // Weered they are so you know whether to jump in.
     const locationLabel = (f.roomName || "").trim();
     const friendSecondary: React.ReactNode = (() => {
       if (!f.online) return <span style={{ opacity: 0.4, fontStyle: "italic" }}>offline</span>;
@@ -949,6 +942,14 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
           <span style={{ color: "rgba(203,213,225,.82)" }}>
             Online <span style={{ opacity: 0.55 }}>in</span>{" "}
             <span style={{ fontWeight: 600, color: "rgba(243,244,246,.92)" }}>{locationLabel}</span>
+          </span>
+        );
+      }
+      if (f.statusText || f.statusEmoji) {
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, opacity: 0.85 }}>
+            {f.statusEmoji && <span style={{ flexShrink: 0 }}>{f.statusEmoji}</span>}
+            {f.statusText && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: "italic" }}>{f.statusText}</span>}
           </span>
         );
       }
@@ -978,6 +979,10 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
           online={f.online}
           isAway={!!f.isAway}
           roomName={f.roomName}
+          statusText={f.statusText}
+          statusEmoji={f.statusEmoji}
+          nameEffect={f.nameEffect}
+          avatarFrame={f.avatarFrame}
           secondaryText={friendSecondary}
           platforms={platforms}
           pillBgColor={f.pillBgColor}
@@ -1019,7 +1024,6 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── CREW empty-state discovery: top crews active in this lobby.
 function CrewEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
   const router = useRouter();
   const lobbyCrews = useLobbyCrews(lobbyId, true);
@@ -1033,10 +1037,6 @@ function CrewEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
         Crew · 1 online
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {/* Lone Wolf — static placeholder so the CREW section is always
-            visible and visitors learn what a crew row looks like before
-            they have one. The button is theatre; clicking it just hints
-            at the real action below. */}
         <div
           style={{
             display: "flex", alignItems: "center", gap: 10,
@@ -1113,7 +1113,6 @@ function CrewEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── CrewPanel ─────────────────────────────────────────────────────────────────
 function CrewPanel({ lobbyId }: { lobbyId: string }) {
   const { openSheet } = useOverlay();
   const [crews, setCrews] = React.useState<any[]>([]);
@@ -1145,9 +1144,6 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
           {allMembers.map((m: any) => {
             const userId     = String(m.userId ?? m.id ?? "");
             const rawRoomId  = String(m.roomId || "").replace(/^room:/, "");
-            // Trust the API's roomIsLobby verdict. Old regex heuristic was
-            // routing Join clicks to /lobby/* even when the crewmate was in
-            // a sub-room (e.g. Crucible inside destiny2-crucible).
             const isLobby    = m.roomIsLobby === true || rawRoomId === "lobby";
             const joinHref   = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
             return (
@@ -1186,11 +1182,6 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── Discover Lobbies — fallback rail filler for fresh accounts.
-// Only renders when the user has no friends AND no crew (i.e. a brand-
-// new signup). Established users see nothing — their rail keeps its
-// existing density. Lone fresh user in an empty lobby goes from a barren
-// rail to "here are the verified lobbies people actually hang out in."
 function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
   const router = useRouter();
   const [eligible, setEligible] = React.useState(false);
@@ -1278,7 +1269,6 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
   );
 }
 
-// ── RightRail ─────────────────────────────────────────────────────────────────
 export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const pathname       = usePathname() || "";
   const { globalRole } = useWeered() as any;
@@ -1324,13 +1314,8 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
             <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>context: {resolvedLobbyId}</div>
           </div>
         </div>
-        {/* tools pill removed — collapse button is in ShellGate */}
       </div>
       <LobbyModPanel globalRole={globalRole || ""} lobbyId={resolvedLobbyId} />
-      {/* WhosHerePanel self-gates to new users only (no friends, no crew).
-          Established users see lobby presence in the left rail, so this
-          would be redundant for them; for fresh accounts it's filler so
-          the top of the rail isn't a blank shelf. */}
       <WhosHerePanel lobbyId={resolvedLobbyId} />
       <RoomsPanel currentRoomId={currentRoomId} lobbyId={resolvedLobbyId} />
       <FriendsPanel lobbyId={resolvedLobbyId} />

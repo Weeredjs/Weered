@@ -21,7 +21,6 @@ function LoginForm() {
   const captchaRef = React.useRef<HTMLDivElement | null>(null);
   const captchaWidgetIdRef = React.useRef<string | null>(null);
 
-  // Render Turnstile only on the register tab and only if a site key is configured.
   React.useEffect(() => {
     if (!TURNSTILE_SITE_KEY || mode !== "register") return;
     let cancelled = false;
@@ -68,7 +67,7 @@ function LoginForm() {
 
   React.useEffect(() => {
     try {
-      if (localStorage.getItem("weered_token")) router.replace(nextPath);
+      if (localStorage.getItem("weered_user")) router.replace(nextPath);
     } catch {}
   }, [router, nextPath]);
 
@@ -97,7 +96,7 @@ function LoginForm() {
       if (!r.ok) throw new Error(j?.error || j?.message || `Error ${r.status}`);
       const tok = String(j?.token || "");
       if (!tok) throw new Error("No token returned.");
-      localStorage.setItem("weered_token", tok);
+      void 0;
       try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
       if (j?.pendingVerification) {
@@ -123,7 +122,7 @@ function LoginForm() {
       });
       const j = await r.json().catch(() => ({} as any));
       if (!r.ok) throw new Error(j?.error || `Error ${r.status}`);
-      localStorage.setItem("weered_token", j.token);
+      void 0;
       try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
       router.replace(nextPath);
@@ -133,7 +132,6 @@ function LoginForm() {
       setBusy(false);
     }
   }
-
 
   async function googleLogin() {
     const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";

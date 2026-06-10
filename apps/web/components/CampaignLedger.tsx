@@ -144,8 +144,6 @@ export default function CampaignLedger({ roomId }: { roomId: string }) {
   );
 }
 
-// ── Bootstrap (no campaign yet) ────────────────────────────────────────────
-
 function CampaignBootstrap({ roomId, onCreated, errMsg }: { roomId: string; onCreated: () => void; errMsg: string }) {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
@@ -207,8 +205,6 @@ function CampaignBootstrap({ roomId, onCreated, errMsg }: { roomId: string; onCr
   );
 }
 
-// ── Ledger ──────────────────────────────────────────────────────────────────
-
 function LedgerSection({
   roomId, isDM, members, onPartyGoldChange,
 }: { roomId: string; isDM: boolean; members: Member[]; onPartyGoldChange: (g: number) => void }) {
@@ -236,8 +232,6 @@ function LedgerSection({
     const n = Math.trunc(Number(delta));
     if (!Number.isFinite(n) || n === 0) return;
     setBusy(true);
-    // XP with distribute=true and no awardedTo → split evenly across all
-    // party characters via the integration endpoint (one entry per char).
     if (type === "XP" && distributeXp && !awardedTo) {
       const r = await apiFetch(`/rooms/${roomId}/campaign/ledger/distribute`, {
         method: "POST",
@@ -380,8 +374,6 @@ function LedgerSection({
   );
 }
 
-// ── Sessions ────────────────────────────────────────────────────────────────
-
 function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
   const [sessions, setSessions] = useState<SessionLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -499,8 +491,6 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     </div>
   );
 }
-
-// ── NPCs ────────────────────────────────────────────────────────────────────
 
 const NPC_STATUSES: Npc["status"][] = ["ALIVE", "DEAD", "HOSTILE", "ALLIED", "UNKNOWN"];
 
@@ -627,8 +617,6 @@ function statusColor(s: Npc["status"]): string {
   }
 }
 
-// ── Plot Threads ────────────────────────────────────────────────────────────
-
 const THREAD_STATUSES: Thread["status"][] = ["OPEN", "DORMANT", "CLOSED"];
 
 function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
@@ -748,8 +736,6 @@ function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     </div>
   );
 }
-
-// ── World Notes (hierarchical wiki) ─────────────────────────────────────────
 
 function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
   const [notes, setNotes] = useState<WorldNote[]>([]);
@@ -914,8 +900,6 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
   );
 }
 
-// ── Party section: campaign characters with current HP + derived XP totals.
-// Reads via the cross-system endpoint added by integration glue.
 function PartySection({ roomId }: { roomId: string }) {
   const [loading, setLoading] = useState(true);
   const [party, setParty] = useState<any[]>([]);

@@ -1,9 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /paper/* — wallet, tip, daily bonus. The awardPaper helper is the
-// single chokepoint for all Paper movement (it lives in main() because
-// many other modules call it too); routes here just compose it.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
   awardPaper: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;

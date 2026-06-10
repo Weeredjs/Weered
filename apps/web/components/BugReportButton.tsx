@@ -5,10 +5,7 @@ import { usePathname } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-// Pages where the floating button overlaps real content (staff chat panel,
-// in-room voice/video controls, lobby admin chat). On these we hide the
-// pill — feedback is still reachable from the SiteFooter when present.
-const HIDE_ON_PREFIXES = ["/staff", "/room/", "/lobby/"];
+const HIDE_ON_PREFIXES = ["/staff", "/room/", "/lobby/", "/overlay/"];
 
 function authHeader(): Record<string, string> {
   try {
@@ -70,8 +67,6 @@ export default function BugReportButton() {
         onClick={() => { setOpen(true); setErr(""); setDone(false); }}
         title="Report a bug"
         style={{
-          // Sits ABOVE the SiteFooter (28px tall, fixed bottom) with a small
-          // gap so it never overlaps the footer nav links on the right side.
           position: "fixed",
           bottom: 36,
           right: 12,

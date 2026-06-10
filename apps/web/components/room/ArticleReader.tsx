@@ -75,7 +75,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
       height: "100%", overflow: "hidden",
       fontFamily: FONT_STACK,
     }}>
-      {/* Compact top bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         padding: "6px 12px",
@@ -105,7 +104,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
         )}
       </div>
 
-      {/* Scrollable article */}
       <div style={{
         flex: 1, overflowY: "auto",
         padding: "16px 20px 32px",
@@ -113,7 +111,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(255,255,255,.08) transparent",
       }}>
-        {/* Hero image — only if valid */}
         {article.image && imgOk && (
           <div style={{ marginBottom: 16, borderRadius: 10, overflow: "hidden" }}>
             <img
@@ -123,7 +120,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
               style={{ width: "100%", height: "auto", maxHeight: 220, objectFit: "cover", display: "block" }}
               onLoad={e => {
                 const img = e.target as HTMLImageElement;
-                // Hide if image is tiny (tracking pixel) or broken
                 if (img.naturalWidth < 100 || img.naturalHeight < 60) {
                   setImgOk(false);
                 }
@@ -133,7 +129,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
           </div>
         )}
 
-        {/* Title */}
         <h1 style={{
           fontSize: 19, fontWeight: 800, lineHeight: 1.35,
           letterSpacing: "-0.2px", margin: "0 0 8px",
@@ -143,7 +138,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
           {article.title}
         </h1>
 
-        {/* Meta line */}
         <div style={{
           display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
           fontSize: 10, opacity: 0.4, marginBottom: 16,
@@ -154,14 +148,12 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
           {article.publishedAt && <><span>&middot;</span><span>{timeAgo(article.publishedAt)}</span></>}
         </div>
 
-        {/* Body */}
         <div style={{
           fontSize: 13.5, lineHeight: 1.75, color: "rgba(229,231,235,.78)",
           fontFamily: FONT_STACK,
           wordBreak: "break-word",
         }}>
           {article.body.split("\n\n").map((block, i) => {
-            // Image: ![alt](src)
             const imgMatch = block.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
             if (imgMatch) {
               return (
@@ -196,7 +188,6 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
           })}
         </div>
 
-        {/* Footer */}
         <div style={{
           marginTop: 20, paddingTop: 12,
           borderTop: "1px solid rgba(255,255,255,.06)",

@@ -13,8 +13,6 @@ import ArticleReader from "./ArticleReader";
 import CopyButton from "../CopyButton";
 import { weeredToast } from "../../lib/toast";
 
-// ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
-
 function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
     <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
@@ -22,8 +20,6 @@ function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; co
     </svg>
   );
 }
-
-// ── YouTube play icon (official shape, used per YouTube API branding guidelines) ──
 
 function YouTubeIcon({ size = 11, color = "#FF0000", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
@@ -34,8 +30,6 @@ function YouTubeIcon({ size = 11, color = "#FF0000", style }: { size?: number; c
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function safeCopy(s: string) {
   try { navigator.clipboard?.writeText?.(s); } catch {}
 }
@@ -43,8 +37,6 @@ function safeCopy(s: string) {
 function safeJsonParse<T>(s: string | null, fallback: T): T {
   try { if (!s) return fallback; return JSON.parse(s) as T; } catch { return fallback; }
 }
-
-// ─── Module pill definitions ──────────────────────────────────────────────────
 
 const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
   { id: "voice",   icon: "🎙", label: "Voice",   live: true  },
@@ -68,13 +60,13 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "windrose",icon: "⚓", label: "Windrose", live: true  },
   { id: "helldivers",icon: "💀", label: "Helldivers", live: true  },
   { id: "chess",   icon: "♟",  label: "Chess",    live: true  },
+  { id: "gta",     icon: "🌴", label: "GTA",      live: true  },
+  { id: "eve",     icon: "🛰", label: "EVE",      live: true  },
 ];
 
-// Module type → which special modules are available in rooms of that lobby
 const LOBBY_MODULE_MAP: Record<string, string[]> = {
   POKER:   ["voice", "poker"],
   TRADING: ["voice", "fakeout", "video", "screen"],
-  // Game lobbies get standard media modules, no poker/trading
   BUNGIE:  ["voice", "destiny", "youtube", "twitch", "video", "screen"],
   RIOT:    ["voice", "league", "youtube", "twitch", "video", "screen"],
   FORTNITE:["voice", "fortnite", "youtube", "twitch", "video", "screen"],
@@ -88,34 +80,26 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   WINDROSE:    ["voice", "windrose", "youtube", "twitch", "video", "screen"],
   HELLDIVERS2: ["voice", "helldivers", "youtube", "twitch", "video", "screen"],
   CHESS:       ["voice", "chess", "youtube", "twitch", "video", "screen"],
+  EVE:         ["voice", "eve", "youtube", "twitch", "video", "screen"],
 };
 
-// Default modules for lobbies without a specific mapping
 const DEFAULT_ROOM_MODULES = ["voice", "youtube", "twitch", "browser", "video", "screen"];
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
-// Chat panel dimensions
 const CHAT_WIDTH_DESKTOP = 580;
 const CHAT_WIDTH_MOBILE  = 300;
 const CHAT_HEIGHT_DESKTOP = 420;
 const CHAT_HEIGHT_MOBILE  = "100%";
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
   const activeRid = (w?.activeRoomId || "").replace("room:", "");
   const joinStatus = w?.statusByRoom?.[activeRid] || w?.statusByRoom?.["room:" + activeRid] || w?.statusByRoom?.[roomId] || "idle";
-  // console.log("[knock debug]", { roomId, activeRid, joinStatus, statusByRoom: w?.statusByRoom });
   const { openSheet } = useOverlay();
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>("voice");
 
-  // ── Solo viewing — when true, this user's module switches don't
-  // broadcast and incoming module:state events are ignored. Lets one
-  // user watch Twitch while the next watches YouTube in the same room.
-  // Persisted per-room so it survives reload.
   const SOLO_KEY = `weered:room:${roomId}:solo`;
   const [soloViewing, setSoloViewing] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -128,7 +112,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const soloRef = useRef(soloViewing);
   useEffect(() => { soloRef.current = soloViewing; }, [soloViewing]);
 
-  // Responsive chat width
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -141,8 +124,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const CHAT_WIDTH = isMobile ? CHAT_WIDTH_MOBILE : CHAT_WIDTH_DESKTOP;
   const CHAT_HEIGHT = isMobile ? "100%" : CHAT_HEIGHT_DESKTOP;
 
-  // Fetch room metadata so we can honor the creator's defaultModule on first join.
-  // Only applies before any serverModule broadcast wins (see selfSetRef logic below).
   const initialModuleAppliedRef = useRef(false);
   useEffect(() => {
     if (initialModuleAppliedRef.current) return;
@@ -162,7 +143,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     return () => { cancelled = true; };
   }, [roomId]);
 
-  // Lobby context for this room
   const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string; enabledModules?: string[] } | null>(null);
   const currentLobbyId = w?.currentLobbyId || null;
   useEffect(() => {
@@ -183,14 +163,16 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       .catch(() => {});
   }, [currentLobbyId]);
 
-  // Filter modules based on lobby context
   const MODULES = useMemo(() => {
+    if (currentLobbyId === "gta6") {
+      const allowed = ["voice", "gta", "youtube", "twitch", "video", "screen"];
+      return ALL_MODULES.filter(m => allowed.includes(m.id));
+    }
     if (!lobbyContext?.moduleType) return ALL_MODULES.filter(m => DEFAULT_ROOM_MODULES.includes(m.id));
     const allowed = LOBBY_MODULE_MAP[lobbyContext.moduleType] || DEFAULT_ROOM_MODULES;
     return ALL_MODULES.filter(m => allowed.includes(m.id));
-  }, [lobbyContext?.moduleType]);
+  }, [lobbyContext?.moduleType, currentLobbyId]);
 
-  // Lobby-specific theme takeover — persist into room pages too
   useEffect(() => {
     const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd", "helldivers2"]);
     const id = lobbyContext?.id;
@@ -205,15 +187,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [browserInput, setBrowserInput] = useState<string>("");
   const [iframeBlocked, setIframeBlocked] = useState(false);
 
-  // Twitch state
   const [twitchChannel, setTwitchChannel] = useState<string>("");
   const [twitchInput, setTwitchInput]     = useState<string>("");
 
-  // Chess state — value is a lichess embed URL (TV / puzzle / game / study)
   const [chessSource, setChessSource] = useState<string>("");
   const [chessInput, setChessInput]   = useState<string>("");
 
-  // Chat state — open on desktop, collapsed on mobile
   const [chatOpen, setChatOpen]         = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
   const [chatFullscreen, setChatFullscreen] = useState(() => {
     try { return typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"; } catch { return false; }
@@ -223,10 +202,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       try { localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1"); } catch {}
       return !v;
     });
-    // Ensure the panel is open when expanding to full
     setChatOpen(true);
   };
-  // ESC to exit fullscreen
   useEffect(() => {
     if (!chatFullscreen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggleChatFullscreen(); };
@@ -238,23 +215,26 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const [voicePrompt, setVoicePrompt] = useState(true);
 
-  // Track whether we set the module ourselves (avoid echo-back re-setting)
+  const prevVoiceConnRef = React.useRef(voice.connState);
+  React.useEffect(() => {
+    const prev = prevVoiceConnRef.current;
+    if ((prev === "connected" || prev === "connecting") && voice.connState === "idle") {
+      setVoicePrompt(true);
+    }
+    prevVoiceConnRef.current = voice.connState;
+  }, [voice.connState]);
+
   const selfSetRef = useRef(false);
 
-  // ── Module sync: initialize from server state on join ──
   const serverModule = w?.moduleState;
   const prevServerModuleRef = useRef<any>(null);
 
   useEffect(() => {
-    // Skip if this is our own echo
     if (selfSetRef.current) { selfSetRef.current = false; return; }
-    // Skip if nothing changed
     if (JSON.stringify(serverModule) === JSON.stringify(prevServerModuleRef.current)) return;
     prevServerModuleRef.current = serverModule;
 
     if (!serverModule || !serverModule.mode) {
-      // Module was cleared by someone — don't force-close if user has local state
-      // Only clear if we didn't set it ourselves
       return;
     }
 
@@ -279,18 +259,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, [serverModule]);
 
-  // ── Module sync: listen for live updates from other users ──
   useEffect(() => {
     function onModuleState(ev: any) {
       const detail = ev?.detail;
       if (!detail || detail.roomId !== roomId) return;
       if (selfSetRef.current) { selfSetRef.current = false; return; }
-      // Solo viewing: ignore module changes that come from other users.
       if (soloRef.current) return;
 
       const mod = detail.activeModule;
       if (!mod || !mod.mode) {
-        // Another user cleared the module
         setStageMode(null);
         return;
       }
@@ -319,20 +296,16 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   function toEmbedUrl(url: string): string {
     try {
       const u = new URL(url);
-      // Standard watch URL: youtube.com/watch?v=ID
       if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
         return `https://www.youtube.com/embed/${u.searchParams.get("v")}?autoplay=0`;
       }
-      // Shorts: youtube.com/shorts/ID
       if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
         const id = u.pathname.replace("/shorts/", "").split("/")[0];
         if (id) return `https://www.youtube.com/embed/${id}?autoplay=0`;
       }
-      // Short URL: youtu.be/ID
       if (u.hostname.includes("youtu.be")) {
         return `https://www.youtube.com/embed${u.pathname}?autoplay=0`;
       }
-      // Any other youtube.com URL — block it, YouTube sets X-Frame-Options: sameorigin
       if (u.hostname.includes("youtube.com")) {
         return "__youtube_blocked__";
       }
@@ -359,7 +332,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // Unread indicator — watch msgs directly from WeeredProvider, no event bus needed
   const msgs = Array.isArray(w?.msgs) ? w.msgs : [];
   const prevMsgCountRef = useRef(msgs.length);
   useEffect(() => {
@@ -372,7 +344,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     prevMsgCountRef.current = msgs.length;
   }, [msgs.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear on open
   useEffect(() => {
     if (chatOpen) { setChatUnread(false); setChatUnreadCount(0); }
   }, [chatOpen]);
@@ -383,7 +354,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
 
-  // Thumbnail: from meta (seeded by feed worker) or derived from article/YouTube URL
   const roomThumbnail = useMemo(() => {
     if (w?.meta?.thumbnail) return w.meta.thumbnail;
     if (!articleUrl) return null;
@@ -457,11 +427,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     const newMode = stageMode === id ? null : id;
-    // Disabled-modules guard: the picker should refuse to switch to a
-    // module the owner has disabled. Earlier this check only lived inside
-    // setModuleState (in WeeredProvider), so the local stageMode flipped
-    // before we bailed — user saw the tab change visually even when the
-    // broadcast got blocked. Guard at the click site too.
     if (newMode) {
       const disabled: string[] = (w?.meta?.disabledModules as string[] | undefined) || [];
       const isStaff = ["GOD", "STAFF", "SUPPORT", "ADMIN"].includes(String(w?.globalRole || w?.me?.globalRole || "USER").toUpperCase());
@@ -474,10 +439,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
     setStageMode(newMode);
     selfSetRef.current = true;
-    // Solo viewing: skip the broadcast — the room state stays as it was.
     if (soloViewing) return;
     if (newMode) {
-      // Broadcast the new module — for twitch/browser, content will be set when user enters a channel/URL
       const opts: any = {};
       if (newMode === "twitch" && twitchChannel) opts.channel = twitchChannel;
       if (newMode === "chess" && chessSource) opts.source = chessSource;
@@ -495,10 +458,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     ? `${window.location.origin}/room/${encodeURIComponent(roomId)}`
     : "";
 
-  // ─── Details panel ────────────────────────────────────────────────────────
-  // Effective-owner check: actual room owner OR global staff/god roles.
-  // Mods get their own controls via isMod (passed separately to widgets
-  // that distinguish — appearance editor stays owner-only).
   const meId: string = String(w?.me?.id || "");
   const roomOwnerId: string = String(w?.meta?.ownerId || "");
   const myGlobalRole = String(w?.globalRole || w?.me?.globalRole || "USER").toUpperCase();
@@ -506,11 +465,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const isRoomOwner = (!!meId && meId === roomOwnerId) || isStaffGlobal;
   const isRoomMod = !!(w?.meta?.mods && Array.isArray(w.meta.mods) && w.meta.mods.includes(meId)) || isStaffGlobal;
 
-  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-w-0" style={{ position: "relative", overflow: "hidden", height: "calc(100vh - 32px)" }}>
 
-      {/* ── Knock waiting overlay ── */}
       {joinStatus === "knocking" && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.2)", border: "2px solid rgba(124,58,237,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, animation: "weered-pulse 2s ease-in-out infinite" }}>🚪</div>
@@ -523,7 +480,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* ── Denied overlay ── */}
       {joinStatus === "denied" && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
           <div style={{ fontSize: 40 }}>🚫</div>
@@ -535,7 +491,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* ── Header ── */}
       <RoomHeader
         title={roomLabel}
         memberCount={memberCount}
@@ -560,9 +515,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         }}
       />
 
-      {/* ── Member toolbar — solo viewing + raise hand. Always visible
-          to all members; admin-only voice settings live in the Details
-          panel. ── */}
       <RoomMemberToolbar
         soloViewing={soloViewing}
         setSoloViewing={setSoloViewing}
@@ -575,12 +527,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         lobbyModuleType={lobbyContext?.moduleType ?? null}
       />
 
-      {/* ── Launch Pad (MPlayer-style game launcher) ── */}
       <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
-      {/* ── Voice available prompt — canonical Join CTA across every
-          module tab. Hidden once the user is connected to voice. The
-          inline join in RoomStage was removed to avoid duplication. ── */}
       {voicePrompt && voice.connState !== "connected" && voice.connState !== "connecting" && (
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -597,7 +545,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* ── Voice active bar ── */}
       {voice.connState === "connected" && voice.activeRoomId === roomId && (
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "6px 16px", background: "rgba(34,197,94,0.08)", borderBottom: "1px solid rgba(34,197,94,0.15)" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e", flexShrink: 0 }} />
@@ -620,7 +567,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* ── Stage zone ── */}
       <div
         className={[
           `border-b border-white/[0.07] overflow-auto`,
@@ -642,7 +588,15 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
           <div style={{ height: "100%" }}>
-            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} roomUsers={Array.isArray(w?.users) ? w.users : []} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
+            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} roomUsers={(() => {
+              const wsUsers = Array.isArray(w?.users) ? w.users : [];
+              const me: any = w?.me;
+              const meId = String(me?.id || "");
+              if (meId && !wsUsers.some((u: any) => String(u?.id || "") === meId)) {
+                return [me, ...wsUsers];
+              }
+              return wsUsers;
+            })()} onClose={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} />
           </div>
         )}
 
@@ -708,7 +662,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {/* ── Article reader stage ── */}
         {stageActive && stageMode === "article" && articleUrl && (
           <ArticleReader
             url={articleUrl}
@@ -716,7 +669,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           />
         )}
 
-        {/* ── Twitch stage ── */}
         {stageActive && stageMode === "twitch" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(145,70,255,0.08)", borderBottom: "1px solid rgba(145,70,255,0.15)", flexShrink: 0 }}>
@@ -761,7 +713,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {/* ── Chess (Lichess embed) stage ── */}
         {stageActive && stageMode === "chess" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)", flexShrink: 0, flexWrap: "wrap" }}>
@@ -796,23 +747,18 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                       const u = new URL(raw);
                       if (u.hostname.endsWith("lichess.org")) {
                         const path = u.pathname.replace(/\/$/, "");
-                        // /tv → /tv/frame
                         if (path === "/tv" || path.startsWith("/tv/")) {
                           url = `https://lichess.org${path.includes("/frame") ? path : path + "/frame"}?theme=brown&bg=dark`;
                         }
-                        // /training → /training/frame
                         else if (path === "/training" || path.startsWith("/training/")) {
                           url = `https://lichess.org${path.includes("/frame") ? path : path + "/frame"}?theme=brown&bg=dark`;
                         }
-                        // /study/{id}/{chapter} → /embed/study/...
                         else if (path.startsWith("/study/")) {
                           url = `https://lichess.org/embed${path}?theme=brown&bg=dark`;
                         }
-                        // /broadcast/... — embed via /embed prefix
                         else if (path.startsWith("/broadcast/")) {
                           url = `https://lichess.org/embed${path}?theme=brown&bg=dark`;
                         }
-                        // /{gameId} or /{gameId}/{color} — 8-char game id
                         else {
                           const m = path.match(/^\/([a-zA-Z0-9]{8})(\/(white|black))?$/);
                           if (m) {
@@ -821,7 +767,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                         }
                       }
                     } catch {
-                      // Bare ID? Allow `xxxxxxxx` (8 chars) as a game id
                       if (/^[a-zA-Z0-9]{8}$/.test(raw)) {
                         url = `https://lichess.org/embed/${raw}?theme=brown&bg=dark`;
                       }
@@ -857,23 +802,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
       </div>
 
-      {/* ── Main body ── */}
-      {/*
-        Chat panel and tab live here at the outer level so they are never
-        clipped by the center column and always paint above the iframe.
-        position:relative on this wrapper is the stacking root.
-      */}
       <div className={isFullStageMode ? "flex" : stageActive ? "flex" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible", ...(isFullStageMode ? { flexShrink: 0, maxHeight: 50 } : stageActive ? { flexShrink: 0, height: 0 } : {}) }}>
 
-        {/* ── Center column — no overflow:hidden so chat can escape ── */}
         <div className={isFullStageMode ? "" : "flex flex-col flex-1 min-w-0 min-h-0"} style={{ position: "relative" }}>
 
-          {/* Spacer — collapses when stage fills the space */}
           {!isFullStageMode && (
             <div className="flex-1 min-h-0" />
           )}
 
-          {/* ── Bottom pills — rendered here but also duplicated at root level for visibility ── */}
           <div style={{ display: "none" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
               {MODULES.map((m) => {
@@ -882,7 +818,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 const isTwitch = m.icon === "__twitch__";
                 const isYT     = m.icon === "__youtube__";
 
-                // Per-module accent colors
                 const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#38bdf8" : "#7C3AED";
 
                 return (
@@ -968,13 +903,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         </div>
 
-        {/*
-          ── Chat tab + panel ──
-          Hoisted to the outer body wrapper so they are never clipped and
-          always paint above iframes regardless of stacking context.
-        */}
-
-        {/* Tab handle */}
         <div
           onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
           style={{
@@ -1029,7 +957,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <span>CHAT</span>
         </div>
 
-        {/* Chat panel — fixed height, bottom-anchored, frosted glass, above everything */}
         <div
           onTouchStart={e => { (e.currentTarget as any)._swipe = { x: e.touches[0].clientX, t: Date.now() }; }}
           onTouchMove={e => {
@@ -1046,13 +973,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           }}
           className={chatFullscreen ? "weered-chat-fullscreen" : ""}
           style={{
-            // Fullscreen overrides everything else — fixed viewport overlay
-            // that covers the main content + right rail, leaves the left
-            // rail alone. The CSS class handles responsive left offsets.
             ...(chatFullscreen ? {
               position: "fixed",
               top: 0, right: 0, bottom: 0,
-              // left handled by CSS class for responsiveness
               width: "auto",
               height: "auto",
               borderLeft: "1px solid rgba(124,58,237,0.22)",
@@ -1090,7 +1013,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         >
           {chatOpen && (
             <>
-              {/* Swipe hint — mobile only, faint watermark */}
               {isMobile && (
                 <div style={{
                   position: "absolute", inset: 0, zIndex: 0,
@@ -1168,7 +1090,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       </div>
 
-      {/* ── Bottom module pills — root level so never clipped ── */}
       <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(10,10,18,0.95)", zIndex: 20 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           {MODULES.map((m) => {
@@ -1200,7 +1121,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* ── Floating voice pill — connected to a DIFFERENT room ── */}
       {voice.connState === "connected" && voice.activeRoomId && voice.activeRoomId !== roomId && (
         <div style={{
           position: "fixed", bottom: 80, right: 16, zIndex: 9999,
@@ -1231,12 +1151,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   );
 }
 
-// ── Room Member Toolbar ────────────────────────────────────────────────
-// Slim bar mounted below the room header. Member-facing actions only —
-// solo viewing toggle (always shown) and raise-hand (only in QUEUED mode
-// when the user isn't already a speaker/mod/owner). Owner/mod controls
-// stay in the Details panel.
-
 function RoomMemberToolbar({
   soloViewing,
   setSoloViewing,
@@ -1264,10 +1178,6 @@ function RoomMemberToolbar({
   const handRaised = queue.includes(meId);
   const isSpeaker = speakers.includes(meId);
 
-  // What goes here:
-  //   - Solo viewing toggle: always visible (per-user preference)
-  //   - Raise hand: only in QUEUED mode for non-mod non-speaker
-  //   - Speaker badge: in QUEUED mode if you're an approved speaker
   const showRaise   = mode === "QUEUED" && !isMod && !isOwner && !isSpeaker;
   const showSpeaker = mode === "QUEUED" && isSpeaker && !isMod && !isOwner;
 

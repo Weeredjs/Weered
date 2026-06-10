@@ -14,12 +14,6 @@ const MAX_IMAGES = 3;
 
 type ImageSlot = { dataUrl: string; previewUrl: string };
 
-/**
- * Submission flow. Drag-drop up to 3 images, fill in metadata, preview,
- * submit. Uses the same dataURL → server WebP pipeline as the avatar
- * upload route. Watermark toggle applies a subtle author tag in the
- * bottom-right corner of every uploaded image.
- */
 export default function WindroseBuildBuilder({
   onClose,
   onCreated,
@@ -173,7 +167,6 @@ export default function WindroseBuildBuilder({
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 360px)", gap: 16 }}>
-          {/* LEFT — image upload + form fields */}
           <div>
             <Label>Images</Label>
             <DropZone
@@ -253,7 +246,6 @@ export default function WindroseBuildBuilder({
             </div>
           </div>
 
-          {/* RIGHT — categorization + flags + submit */}
           <div>
             <Label>Biome</Label>
             <Selector value={biome} setValue={setBiome} options={BIOMES} />

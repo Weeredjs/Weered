@@ -30,18 +30,14 @@ export default function MapContent() {
   const [clickToPlace, setClickToPlace] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
-  // Lobby pins
   const [lobbyPins, setLobbyPins] = useState<LobbyPin[]>([]);
   const [showLobbyPins, setShowLobbyPins] = useState(true);
 
-  // Game filter
   const [gameFilter, setGameFilter] = useState<string>("all");
   const [availableGames, setAvailableGames] = useState<{ id: string; name: string; count: number }[]>([]);
 
-  // Auto-refresh
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // Check opt-in status on mount
   useEffect(() => {
     const h = authHeaders();
     if (!h.Authorization) { setOptIn(false); return; }
@@ -56,7 +52,6 @@ export default function MapContent() {
       .catch(() => setOptIn(false));
   }, []);
 
-  // Load hex data
   const loadHexes = useCallback(() => {
     const params = gameFilter !== "all" ? `?game=${encodeURIComponent(gameFilter)}` : "";
     fetch(`${API}/map/hexes${params}`)
@@ -72,13 +67,11 @@ export default function MapContent() {
 
   useEffect(() => { loadHexes(); }, [loadHexes]);
 
-  // Auto-refresh every 30s
   useEffect(() => {
     const iv = setInterval(loadHexes, 30000);
     return () => clearInterval(iv);
   }, [loadHexes]);
 
-  // Load nearby users when position available
   useEffect(() => {
     if (!userPos) return;
     const h = authHeaders();
@@ -89,7 +82,6 @@ export default function MapContent() {
       .catch(() => {});
   }, [userPos]);
 
-  // Load lobby pins
   useEffect(() => {
     fetch(`${API}/map/lobbies`)
       .then(r => r.json())
@@ -97,7 +89,6 @@ export default function MapContent() {
       .catch(() => {});
   }, []);
 
-  // Initialize Leaflet map
   useEffect(() => {
     if (!mapRef.current || leafletMap.current) return;
     let cancelled = false;
@@ -133,13 +124,11 @@ export default function MapContent() {
     return () => { cancelled = true; };
   }, []);
 
-  // Pan to saved position once ready
   useEffect(() => {
     if (!mapReady || !userPos || !leafletMap.current) return;
     leafletMap.current.setView(userPos, Math.max(leafletMap.current.getZoom(), 8), { animate: true });
   }, [mapReady, userPos]);
 
-  // Draw hex polygons
   useEffect(() => {
     if (!mapReady || !hexLayer.current) return;
     import("leaflet").then(L => {
@@ -165,7 +154,6 @@ export default function MapContent() {
         hexLayer.current.addLayer(polygon);
       }
 
-      // User marker
       if (userPos) {
         const marker = L.circleMarker(userPos, {
           radius: 8, color: "#d4920a", fillColor: "#f5a623", fillOpacity: 0.9, weight: 2,
@@ -179,7 +167,6 @@ export default function MapContent() {
     });
   }, [hexes, mapReady, userPos]);
 
-  // Draw lobby pins
   useEffect(() => {
     if (!mapReady || !lobbyLayer.current) return;
     import("leaflet").then(L => {
@@ -218,14 +205,12 @@ export default function MapContent() {
     });
   }, [lobbyPins, mapReady, showLobbyPins, gameFilter]);
 
-  // Fly to me
   const flyToMe = () => {
     if (userPos && leafletMap.current) {
       leafletMap.current.flyTo(userPos, 10, { duration: 1.2 });
     }
   };
 
-  // Enable location
   const enableLocation = () => {
     setLocating(true);
     setGpsError(null);
@@ -274,7 +259,6 @@ export default function MapContent() {
     );
   };
 
-  // Save manual location
   const saveManualLocation = async (lat: number, lng: number) => {
     setUserPos([lat, lng]);
     setClickToPlace(false);
@@ -289,7 +273,6 @@ export default function MapContent() {
     } catch {}
   };
 
-  // Map click for manual placement
   useEffect(() => {
     if (!mapReady || !leafletMap.current) return;
     const map = leafletMap.current;
@@ -304,7 +287,6 @@ export default function MapContent() {
     return () => { map.off("click", handler); container.classList.remove("click-to-place"); };
   }, [mapReady, clickToPlace]);
 
-  // Disable location
   const disableLocation = async () => {
     try {
       await fetch(`${API}/me/location`, { method: "DELETE", headers: authHeaders() });
@@ -387,14 +369,11 @@ export default function MapContent() {
       <div className="weered-map-root">
         <div ref={mapRef} className="weered-map-container" />
 
-        {/* HUD overlay */}
         <div className="map-hud">
-          {/* Title + stats */}
           <div className="map-panel">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div className="map-title">Locator</div>
               <div style={{ display: "flex", gap: 4 }}>
-                {/* Fly to me */}
                 {userPos && (
                   <button className="map-btn map-btn-ghost map-btn-icon" onClick={flyToMe} title="Fly to my location">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -402,7 +381,6 @@ export default function MapContent() {
                     </svg>
                   </button>
                 )}
-                {/* Refresh */}
                 <button className="map-btn map-btn-ghost map-btn-icon" onClick={loadHexes} title="Refresh map data">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0115.36-6.36L21 8" />
@@ -420,7 +398,6 @@ export default function MapContent() {
             </div>
           </div>
 
-          {/* Game filter */}
           {availableGames.length > 1 && (
             <div className="map-panel" style={{ padding: "10px 14px" }}>
               <div style={{ fontSize: 10, color: "rgba(212,146,10,0.45)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Filter by game</div>
@@ -437,7 +414,6 @@ export default function MapContent() {
             </div>
           )}
 
-          {/* Controls */}
           {optIn !== null && (
             <div className="map-panel" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {optIn ? (
@@ -452,7 +428,6 @@ export default function MapContent() {
                     </button>
                     <button className="map-btn map-btn-danger" onClick={disableLocation}>Disable</button>
                   </div>
-                  {/* Lobby pins toggle */}
                   <label className="map-toggle">
                     <input type="checkbox" checked={showLobbyPins} onChange={e => setShowLobbyPins(e.target.checked)} />
                     Show lobby pins ({lobbyPins.length})
@@ -466,7 +441,6 @@ export default function MapContent() {
             </div>
           )}
 
-          {/* Nearby users */}
           {nearby.length > 0 && (
             <div className="map-panel">
               <div style={{ fontSize: 10, color: "rgba(212,146,10,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
@@ -503,7 +477,6 @@ export default function MapContent() {
           )}
         </div>
 
-        {/* Click-to-place banner */}
         {clickToPlace && (
           <div style={{
             position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1500,
@@ -523,7 +496,6 @@ export default function MapContent() {
           </div>
         )}
 
-        {/* Consent modal */}
         {showConsent && (
           <div className="consent-overlay">
             <div className="consent-card">
@@ -560,9 +532,8 @@ export default function MapContent() {
 }
 
 function intensityColor(t: number): string {
-  // Amber gradient matching Ishimura theme
-  const r = Math.round(180 + t * 32);  // 180 → 212
-  const g = Math.round(100 + t * 46);  // 100 → 146
-  const b = Math.round(5 + t * 5);     // 5 → 10
+  const r = Math.round(180 + t * 32);
+  const g = Math.round(100 + t * 46);
+  const b = Math.round(5 + t * 5);
   return `rgb(${r},${g},${b})`;
 }

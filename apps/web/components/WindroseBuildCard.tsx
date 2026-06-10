@@ -32,11 +32,6 @@ const TYPE_LABEL: Record<string, string> = {
   HIDEOUT: "Hideout", OUTPOST: "Outpost", BRIDGE: "Bridge", MISC: "Misc",
 };
 
-/**
- * Single build tile in the masonry grid. Variable height based on the
- * primary image aspect ratio. Dominant color fills the placeholder box
- * while the image lazy-loads, so there's no flash of empty space.
- */
 export default function WindroseBuildCard({
   build,
   onOpen,
@@ -90,7 +85,6 @@ export default function WindroseBuildCard({
           : "0 4px 14px rgba(0,0,0,.35)";
       }}
     >
-      {/* Image wrapper with aspect ratio lock */}
       <div style={{
         position: "relative",
         width: "100%",
@@ -113,7 +107,6 @@ export default function WindroseBuildCard({
           />
         )}
 
-        {/* Multi-image badge */}
         {build.imageCount && build.imageCount > 1 ? (
           <span style={{
             position: "absolute", top: 6, right: 6,
@@ -127,7 +120,6 @@ export default function WindroseBuildCard({
           }}>+{build.imageCount - 1}</span>
         ) : null}
 
-        {/* Captain's Pick wax-seal stamp */}
         {build.featured && (
           <span
             title="Captain's Pick"
@@ -146,7 +138,6 @@ export default function WindroseBuildCard({
           >★</span>
         )}
 
-        {/* Bottom gradient with title overlay */}
         <div style={{
           position: "absolute", left: 0, right: 0, bottom: 0,
           padding: "30px 10px 8px",
@@ -170,7 +161,6 @@ export default function WindroseBuildCard({
         </div>
       </div>
 
-      {/* Bottom strip — author + biome + score */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         padding: "8px 10px",

@@ -19,17 +19,6 @@ type State =
   | { status: "no-data" }
   | { status: "ok"; gameName: string | null; total: number; unlocked: number; achievements: Achievement[] };
 
-/**
- * Compact achievements showcase for a single Steam-backed game.
- *
- * - Polls `/steam/achievements/:appId` once on mount; the route caches per
- *   (user, appId) for 30 minutes server-side.
- * - Pass `userId` to view another user's achievements (works only for users
- *   with a public Steam profile). Omit to view authenticated user.
- * - Renders nothing if the user has no Steam ID linked, the response is
- *   empty, or the API call errored — keeps profile sheets tidy when the
- *   data isn't available rather than showing a broken placeholder.
- */
 export default function SteamAchievementsPanel({
   appId,
   userId,
@@ -81,7 +70,6 @@ export default function SteamAchievementsPanel({
   const { gameName, total, unlocked, achievements } = state;
   const pct = total > 0 ? Math.round((unlocked / total) * 100) : 0;
 
-  // Sort: most-recently unlocked first, then unlocked first, then locked
   const sorted = [...achievements].sort((a, b) => {
     if (a.achieved !== b.achieved) return a.achieved ? -1 : 1;
     return (b.unlockTime || 0) - (a.unlockTime || 0);
@@ -122,7 +110,6 @@ export default function SteamAchievementsPanel({
         </div>
       </div>
 
-      {/* Progress bar */}
       <div style={{
         height: 4, borderRadius: 2,
         background: "rgba(255,255,255,.06)",
@@ -136,7 +123,6 @@ export default function SteamAchievementsPanel({
         }} />
       </div>
 
-      {/* Icon grid */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(56px, 1fr))",

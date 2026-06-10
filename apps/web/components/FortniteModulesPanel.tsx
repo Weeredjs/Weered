@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -17,20 +18,16 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(80,200,255,.35)", background: "rgba(80,200,255,.12)", fontSize: 12, cursor: "pointer", color: "rgb(80,200,255)", fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(80,200,255,.35)", background: "rgba(80,200,255,.12)", fontSize: 12, cursor: "pointer", color: "rgb(80,200,255)", fontWeight: 600 } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  select: { padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer" } as React.CSSProperties,
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const ACCENT_FN = "#00D4FF";
-
-// ── Rarity Colors ────────────────────────────────────────────────────────────
 
 const RARITY_COLORS: Record<string, string> = {
   legendary: "#FF8C00", epic: "#B15BFF", rare: "#00AAFF", uncommon: "#30B030",
@@ -39,8 +36,6 @@ const RARITY_COLORS: Record<string, string> = {
   shadow: "#5E35B1", slurp: "#00DDAA", star: "#E57C00",
 };
 function rarityColor(rarity?: string): string { return RARITY_COLORS[rarity?.toLowerCase() || ""] || "#8A8A8A"; }
-
-// ── Wishlist Hook ────────────────────────────────────────────────────────────
 
 function useWishlist() {
   const [items, setItems] = useState<Map<string, any>>(new Map());
@@ -72,8 +67,6 @@ function useWishlist() {
   return { items, loaded, toggle, reload: load };
 }
 
-// ── Wishlist Heart Button ────────────────────────────────────────────────────
-
 function WishlistHeart({ cosmeticId, wishlisted, onToggle, size = 16 }: {
   cosmeticId: string; wishlisted: boolean; onToggle: () => void; size?: number;
 }) {
@@ -93,8 +86,6 @@ function WishlistHeart({ cosmeticId, wishlisted, onToggle, size = 16 }: {
   );
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "streams" as const,   label: "Streams",   icon: "📺" },
   { id: "lfg" as const,       label: "Find Team", icon: "🎮" },
@@ -106,14 +97,10 @@ const TABS = [
 ];
 type TabId = typeof TABS[number]["id"];
 
-// ── Fortnite Constants ───────────────────────────────────────────────────────
-
 const FN_MODES = ["Any", "Solo", "Duo", "Squad", "Zero Build Solo", "Zero Build Duo", "Zero Build Squad", "Ranked", "Creative"];
 const FN_RANKS = ["Any", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Elite", "Champion", "Unreal"];
 const FN_REGIONS = ["Any", "NAE", "NAW", "EU", "OCE", "ASIA", "BR", "ME"];
 const FN_TAGS = ["casual", "competitive", "chill", "sweaty", "mic-required", "no-mic", "18+", "content-creator"];
-
-// ── Twitch Streams ──────────────────────────────────────────────────────────
 
 function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; lobbyId: string; accentColor: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -166,7 +153,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accentColor}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
-            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 2, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
@@ -179,8 +166,6 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
     </>
   );
 }
-
-// ── LFG Board (Fortnite-specific) ───────────────────────────────────────────
 
 function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [posts, setPosts] = useState<any[]>([]);
@@ -236,7 +221,7 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       </div>
 
       {showForm && (
-        <div style={{ ...S.card, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${accent}33`, background: `${accent}06` }}>
+        <div style={{ ...S.card, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${accent}33`, borderLeft: `2px solid ${accent}`, background: `${accent}06` }}>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Mode</div>
@@ -310,18 +295,17 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                   </div>
                 </div>
                 <span style={{
-                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 2,
                   background: p.status === "OPEN" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
                   color: p.status === "OPEN" ? "#22C55E" : "#EF4444",
                 }}>{p.status}</span>
               </div>
-              {/* Tags row */}
               {((p.gameMode || p.rankTier || p.region || (p.tags && p.tags.length > 0))) && (
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {p.gameMode && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: `${accent}15`, color: accent, fontWeight: 700 }}>{p.gameMode}</span>}
-                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.rankTier}</span>}
-                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.6)", fontWeight: 600 }}>{p.region}</span>}
-                  {(p.tags || []).map((t: string) => <span key={t} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.45)", fontWeight: 500 }}>{t}</span>)}
+                  {p.gameMode && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `${accent}15`, color: accent, fontWeight: 700 }}>{p.gameMode}</span>}
+                  {p.rankTier && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: "rgba(255,215,0,.12)", color: "#FFD700", fontWeight: 700 }}>{p.rankTier}</span>}
+                  {p.region && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: "rgba(255,255,255,.06)", color: "rgba(148,163,184,.6)", fontWeight: 600 }}>{p.region}</span>}
+                  {(p.tags || []).map((t: string) => <span key={t} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: "rgba(255,255,255,.04)", color: "rgba(148,163,184,.45)", fontWeight: 500 }}>{t}</span>)}
                 </div>
               )}
               {p.description && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", lineHeight: 1.4 }}>{p.description}</div>}
@@ -332,8 +316,6 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     </div>
   );
 }
-
-// ── Stats Lookup ─────────────────────────────────────────────────────────────
 
 const FEATURED_PLAYERS = ["Bugha", "MrSavage", "Tfue", "Mero", "EpikWhale", "Queasy"];
 
@@ -355,7 +337,6 @@ function StatsLookup({ accent }: { accent: string }) {
     setLoading(false);
   }
 
-  // Auto-load a featured player on mount
   useEffect(() => {
     const pick = FEATURED_PLAYERS[Math.floor(Math.random() * FEATURED_PLAYERS.length)];
     setPreloaded(true);
@@ -364,7 +345,7 @@ function StatsLookup({ accent }: { accent: string }) {
 
   function StatBox({ label, value }: { label: string; value: string | number }) {
     return (
-      <div style={{ flex: "1 1 90px", padding: "10px 12px", borderRadius: 8, border: `1px solid ${accent}20`, background: `${accent}06`, textAlign: "center" }}>
+      <div style={{ flex: "1 1 90px", padding: "10px 12px", borderRadius: 2, border: `1px solid ${accent}20`, background: `${accent}06`, textAlign: "center" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,.5)", letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{value}</div>
       </div>
@@ -395,11 +376,11 @@ function StatsLookup({ accent }: { accent: string }) {
       {stats && (
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            {stats.image && <img src={stats.image} alt={(stats.account?.name || "Player") + " avatar"} style={{ width: 64, height: 64, borderRadius: 10, border: `2px solid ${accent}44`, objectFit: "cover" }} />}
+            {stats.image && <img src={stats.image} alt={(stats.account?.name || "Player") + " avatar"} style={{ width: 64, height: 64, borderRadius: 2, border: `2px solid ${accent}44`, objectFit: "cover" }} />}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: "rgba(243,244,246,.95)" }}>{stats.account?.name}</span>
-                {preloaded && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${accent}15`, color: accent, letterSpacing: ".3px" }}>FEATURED</span>}
+                {preloaded && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 2, background: `${accent}15`, color: accent, letterSpacing: ".3px" }}>FEATURED</span>}
               </div>
               {stats.battlePass && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>BP Level {stats.battlePass.level}</div>}
             </div>
@@ -425,8 +406,6 @@ function StatsLookup({ accent }: { accent: string }) {
     </div>
   );
 }
-
-// ── Ranked Comparison ────────────────────────────────────────────────────────
 
 function RankedTab({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");
@@ -509,8 +488,6 @@ function RankedTab({ accent }: { accent: string }) {
   );
 }
 
-// ── Item Shop ────────────────────────────────────────────────────────────────
-
 function ItemShop({ accent, wishlist }: { accent: string; wishlist: ReturnType<typeof useWishlist> }) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -538,8 +515,7 @@ function ItemShop({ accent, wishlist }: { accent: string; wishlist: ReturnType<t
           const rc = rarityColor(item.rarityColor);
           const wishlisted = wishlist.items.has(item.id);
           return (
-            <div key={item.id + i} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${rc}33`, background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`, position: "relative" }}>
-              {/* Wishlist heart */}
+            <div key={item.id + i} style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${rc}33`, background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`, position: "relative" }}>
               <div style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}>
                 <WishlistHeart cosmeticId={item.id} wishlisted={wishlisted} onToggle={() => wishlist.toggle(item.id, { name: item.name, type: item.type, rarity: item.rarity, image: item.image })} />
               </div>
@@ -564,8 +540,6 @@ function ItemShop({ accent, wishlist }: { accent: string; wishlist: ReturnType<t
   );
 }
 
-// ── News ─────────────────────────────────────────────────────────────────────
-
 function FnNews() {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -578,7 +552,7 @@ function FnNews() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {news.map(n => (
-        <div key={n.id} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)" }}>
+        <div key={n.id} style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)" }}>
           {(n.image || n.tileImage) && <div style={{ height: 140, background: `url(${n.image || n.tileImage}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.06)" }} />}
           <div style={{ padding: "12px 14px" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(243,244,246,.95)", lineHeight: 1.3 }}>{n.title}</div>
@@ -590,8 +564,6 @@ function FnNews() {
   );
 }
 
-// ── Cosmetic Search ──────────────────────────────────────────────────────────
-
 function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: ReturnType<typeof useWishlist> }) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<any[]>([]);
@@ -599,7 +571,6 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
   const [searched, setSearched] = useState(false);
   const [showingNew, setShowingNew] = useState(true);
 
-  // Preload newest cosmetics
   useEffect(() => {
     setLoading(true);
     apiFetch("/fortnite/cosmetics/new").then(j => {
@@ -635,7 +606,7 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
           const rc = rarityColor(item.rarityColor);
           const wishlisted = wishlist.items.has(item.id);
           return (
-            <div key={item.id} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${rc}33`, background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`, position: "relative" }}>
+            <div key={item.id} style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${rc}33`, background: `linear-gradient(180deg, ${rc}12 0%, rgba(0,0,0,0.2) 100%)`, position: "relative" }}>
               <div style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}>
                 <WishlistHeart cosmeticId={item.id} wishlisted={wishlisted} onToggle={() => wishlist.toggle(item.id, { name: item.name, type: item.type, rarity: item.rarity, image: item.image })} />
               </div>
@@ -656,10 +627,6 @@ function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: Return
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 export default function FortniteModulesPanel({
   lobbyId,
   gameName = "Fortnite",
@@ -677,27 +644,17 @@ export default function FortniteModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto" }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-            background: tab === t.id ? `${accentColor}20` : "transparent",
-            color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-            fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-            transition: "background .1s, color .1s",
-            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-            {t.id === "shop" && wishlist.items.size > 0 && (
-              <span style={{ fontSize: 9, fontWeight: 800, color: "#EF4444", marginLeft: 2 }}>♥{wishlist.items.size}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar
+        tabs={TABS.map(t => ({
+          id: t.id,
+          label: t.id === "shop" && wishlist.items.size > 0 ? `${t.label} ♥${wishlist.items.size}` : t.label,
+          icon: t.icon,
+        }))}
+        active={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        accent={accentColor}
+      />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"   && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"       && <LfgBoard lobbyId={lobbyId} accent={accentColor} />}
@@ -708,7 +665,6 @@ export default function FortniteModulesPanel({
         {tab === "news"      && <FnNews />}
       </div>
 
-      {/* Epic Games legal disclaimer */}
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
           Weered is not affiliated with, endorsed by, or sponsored by Epic Games, Inc. Fortnite and all related logos and trademarks are the property of Epic Games, Inc.

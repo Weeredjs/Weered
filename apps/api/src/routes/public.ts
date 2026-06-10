@@ -2,9 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { getActivity } from "../lib/publicActivity";
 
-// /public/* — read-only endpoints for the logged-out landing page.
-// No auth, cached briefly, no PII.
-
 type Opts = {
   rooms: Map<string, { users: Set<string>; sockets: Set<any>; [k: string]: any }>;
   applyWindroseReel?: (lobby: any) => any;
@@ -25,8 +22,6 @@ async function getLobbyNameMap(): Promise<Map<string, string>> {
   return map;
 }
 
-// Curated featured order — top of the wall on the landing page. Anything
-// outside this list still ships if pinned, but ordered after.
 const FEATURED_ORDER = [
   "dnd", "fakeout", "windrose", "destiny", "poker", "study",
   "league", "cs2", "dota2", "fortnite", "pubg", "poe",
@@ -82,9 +77,6 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, events });
   });
 
-  // /activity/recent — same ring buffer, authenticated, non-anonymized.
-  // Returns real handles + lobby names so the logged-in home ticker can
-  // link lobby names and surface user identity.
   app.get("/activity/recent", async (req, reply) => {
     const u = authFromHeader ? authFromHeader((req as any).headers?.authorization) : null;
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });

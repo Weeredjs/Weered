@@ -16,11 +16,7 @@ const TEXT_MUTED = "rgba(243,244,246,.35)";
 const BORDER = "rgba(255,255,255,.08)";
 const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
 
-/* ---------- Types ---------- */
-
 import type { Lobby } from "@weered/shared";
-
-/* ---------- Helpers ---------- */
 
 function hueFromId(id: string): number {
   return (
@@ -90,7 +86,6 @@ function LobbyLogo({
   return <InitialAvatar id={lobby.id} name={lobby.name} size={size} />;
 }
 
-/* Pulsing green dot */
 function PulseDot({ size = 8 }: { size?: number }) {
   return (
     <span
@@ -108,7 +103,6 @@ function PulseDot({ size = 8 }: { size?: number }) {
   );
 }
 
-/* Module type badge */
 function ModuleBadge({ type }: { type: string }) {
   return (
     <span
@@ -119,7 +113,7 @@ function ModuleBadge({ type }: { type: string }) {
         letterSpacing: ".06em",
         textTransform: "uppercase",
         padding: "2px 7px",
-        borderRadius: 4,
+        borderRadius: 2,
         background: "rgba(88,0,229,.18)",
         border: `1px solid rgba(88,0,229,.35)`,
         color: "rgba(176,130,255,.9)",
@@ -131,7 +125,6 @@ function ModuleBadge({ type }: { type: string }) {
   );
 }
 
-/* Verified badge */
 function VerifiedBadge() {
   return (
     <span
@@ -155,8 +148,6 @@ function VerifiedBadge() {
   );
 }
 
-/* ---------- Live Now Card (horizontal strip) ---------- */
-
 function LiveCard({
   lobby,
   onClick,
@@ -174,7 +165,7 @@ function LiveCard({
         flex: "0 0 auto",
         width: 180,
         padding: "14px 14px 12px",
-        borderRadius: 14,
+        borderRadius: 2,
         border: `1px solid ${hovered ? "rgba(88,0,229,.5)" : BORDER}`,
         background: hovered
           ? "rgba(88,0,229,.12)"
@@ -222,8 +213,6 @@ function LiveCard({
   );
 }
 
-/* ---------- Grid Lobby Card ---------- */
-
 function LobbyCard({
   lobby,
   onClick,
@@ -254,7 +243,7 @@ function LobbyCard({
         position: "relative",
         width: "100%",
         minHeight: 220,
-        borderRadius: 16,
+        borderRadius: 2,
         border: `1px solid ${hovered ? `${accent}66` : BORDER}`,
         overflow: "hidden",
         cursor: "pointer",
@@ -272,9 +261,7 @@ function LobbyCard({
         ...bannerBg,
       }}
     >
-      {/* Content area at bottom */}
       <div style={{ padding: "56px 16px 16px", position: "relative", zIndex: 1 }}>
-        {/* Logo + Name row */}
         <div
           style={{
             display: "flex",
@@ -308,7 +295,6 @@ function LobbyCard({
           </div>
         </div>
 
-        {/* Description */}
         {lobby.description && (
           <div
             style={{
@@ -326,7 +312,6 @@ function LobbyCard({
           </div>
         )}
 
-        {/* Footer: badges + counts */}
         <div
           style={{
             display: "flex",
@@ -370,8 +355,6 @@ function LobbyCard({
   );
 }
 
-/* ---------- Keyframe injection (once) ---------- */
-
 let stylesInjected = false;
 function injectStyles() {
   if (stylesInjected) return;
@@ -414,8 +397,6 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
-/* ========== Main Component ========== */
-
 export default function LobbyBrowser() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -427,7 +408,6 @@ export default function LobbyBrowser() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
 
-  /* Ensure portal target is available (client-only) */
   useEffect(() => {
     setMounted(true);
     injectStyles();
@@ -459,17 +439,14 @@ export default function LobbyBrowser() {
         );
       }
     } catch {
-      /* swallow */
     } finally {
       setLoading(false);
     }
   }, []);
 
-  /* Listen for browse event */
   useEffect(() => {
     const onBrowse = () => {
       setOpen(true);
-      // Trigger fade-in
       requestAnimationFrame(() => setVisible(true));
       load();
     };
@@ -477,7 +454,6 @@ export default function LobbyBrowser() {
     return () => window.removeEventListener("weered:lobby:browse", onBrowse);
   }, [load]);
 
-  /* Poll while open */
   useEffect(() => {
     if (open) {
       load();
@@ -490,7 +466,6 @@ export default function LobbyBrowser() {
     };
   }, [open, load]);
 
-  /* ESC to close */
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -500,7 +475,6 @@ export default function LobbyBrowser() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  /* Focus search on open */
   useEffect(() => {
     if (open && searchRef.current) {
       setTimeout(() => searchRef.current?.focus(), 80);
@@ -520,7 +494,6 @@ export default function LobbyBrowser() {
     close();
   }
 
-  /* Filter */
   const filtered = lobbies
     .filter((l) => {
       if (!q.trim()) return true;
@@ -531,7 +504,6 @@ export default function LobbyBrowser() {
       );
     })
     .sort((a, b) => {
-      // Pinned first, then by online, then by members
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       if (b.onlineCount !== a.onlineCount)
         return b.onlineCount - a.onlineCount;
@@ -559,7 +531,6 @@ export default function LobbyBrowser() {
         transition: "opacity .2s ease",
       }}
     >
-      {/* ===== Header ===== */}
       <div
         style={{
           position: "sticky",
@@ -586,7 +557,6 @@ export default function LobbyBrowser() {
           Discover
         </div>
 
-        {/* Search */}
         <div style={{ flex: 1, maxWidth: 480 }}>
           <input
             ref={searchRef}
@@ -596,7 +566,7 @@ export default function LobbyBrowser() {
             style={{
               width: "100%",
               padding: "9px 14px",
-              borderRadius: 10,
+              borderRadius: 2,
               border: `1px solid rgba(255,255,255,.1)`,
               background: "rgba(255,255,255,.04)",
               fontSize: 14,
@@ -614,7 +584,6 @@ export default function LobbyBrowser() {
           />
         </div>
 
-        {/* Loading indicator */}
         {loading && (
           <span
             style={{
@@ -634,12 +603,11 @@ export default function LobbyBrowser() {
           </span>
         )}
 
-        {/* Create Lobby CTA */}
         <button
           onClick={() => { close(); router.push("/lobby/create"); }}
           style={{
             display: "flex", alignItems: "center", gap: 10,
-            padding: "8px 20px", borderRadius: 12,
+            padding: "8px 20px", borderRadius: 2,
             background: "linear-gradient(135deg, rgba(88,0,229,.15), rgba(212,160,23,.10))",
             border: "1px solid rgba(212,160,23,.30)",
             cursor: "pointer", flexShrink: 0,
@@ -655,13 +623,12 @@ export default function LobbyBrowser() {
           </div>
         </button>
 
-        {/* Close */}
         <button
           onClick={close}
           style={{
             width: 36,
             height: 36,
-            borderRadius: 10,
+            borderRadius: 2,
             border: `1px solid rgba(255,255,255,.1)`,
             background: "rgba(255,255,255,.04)",
             fontSize: 18,
@@ -688,7 +655,6 @@ export default function LobbyBrowser() {
         </button>
       </div>
 
-      {/* ===== Scrollable body ===== */}
       <div
         className="weered-discover-scroll"
         style={{
@@ -697,7 +663,6 @@ export default function LobbyBrowser() {
           overflowX: "hidden",
         }}
       >
-        {/* ---- Live Now strip ---- */}
         {live.length > 0 && (
           <div
             style={{
@@ -757,7 +722,6 @@ export default function LobbyBrowser() {
           </div>
         )}
 
-        {/* ---- All Lobbies grid ---- */}
         <div
           style={{
             padding: "20px 28px 40px",

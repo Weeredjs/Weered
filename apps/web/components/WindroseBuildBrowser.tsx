@@ -32,11 +32,6 @@ const PAGE_LIMIT = 24;
 
 type Build = any;
 
-/**
- * The build showcase. Hero featured carousel at top, filter bar, masonry
- * grid below with infinite scroll. Clicking a card opens the full detail
- * modal. The "+ New Build" button opens the builder flow.
- */
 export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAccent?: string }) {
   const accent = lobbyAccent;
   const [featured, setFeatured] = React.useState<Build[]>([]);
@@ -54,7 +49,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const debounceRef = React.useRef<any>(null);
 
-  // Featured (one-shot)
   React.useEffect(() => {
     let alive = true;
     fetch(`${API}/windrose/builds/featured`)
@@ -64,9 +58,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
     return () => { alive = false; };
   }, []);
 
-  // Open a build deep-link from query string (?build=slug). Used by the
-  // server-rendered share page at /windrose/build/[slug] which redirects
-  // here with this query param after attaching OpenGraph metadata.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -76,7 +67,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
     } catch {}
   }, []);
 
-  // List (re-fetch on filter/search change with debounce)
   const fetchList = React.useCallback(async (resetOffset: boolean) => {
     const useOffset = resetOffset ? 0 : offset;
     if (resetOffset) setLoading(true); else setLoadingMore(true);
@@ -104,14 +94,12 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
     }
   }, [biome, buildType, sort, q, offset]);
 
-  // Reset + refetch when filters change (debounce search)
   React.useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => { fetchList(true); }, q ? 250 : 0);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [biome, buildType, sort, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Infinite scroll
   React.useEffect(() => {
     const node = sentinelRef.current;
     if (!node) return;
@@ -127,7 +115,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
   function handleCreated(slug: string) {
     setShowBuilder(false);
     setOpenSlug(slug);
-    // Re-fetch to surface the new build
     setTimeout(() => fetchList(true), 200);
   }
 
@@ -138,7 +125,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
       color: "rgba(228,212,176,.92)",
       fontFamily: "inherit",
     }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
         <div>
           <div style={{
@@ -170,7 +156,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
         >+ File a Log</button>
       </div>
 
-      {/* Featured carousel */}
       {featured.length > 0 && (
         <div style={{ marginBottom: 18 }}>
           <div style={{
@@ -194,7 +179,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
         </div>
       )}
 
-      {/* Filter bar */}
       <div style={{
         display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
         padding: 10, marginBottom: 12,
@@ -264,7 +248,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
         />
       </div>
 
-      {/* Masonry grid */}
       {loading && builds.length === 0 ? (
         <div style={{ padding: 30, textAlign: "center", color: "rgba(228,212,176,.45)", fontSize: 13 }}>
           Hauling the logbook from below decks…
@@ -273,10 +256,8 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
         <EmptyState onCreate={() => setShowBuilder(true)} accent={accent} />
       ) : (
         <div style={{
-          // CSS columns for true masonry
           columnCount: 1,
           columnGap: 12,
-          // Responsive column count via inline media-style fallback below
         }} className="windrose-build-masonry">
           <style>{`
             .windrose-build-masonry { column-count: 1; }
@@ -291,7 +272,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
         </div>
       )}
 
-      {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} style={{ height: 1 }} />
       {loadingMore && (
         <div style={{ padding: 16, textAlign: "center", color: "rgba(228,212,176,.45)", fontSize: 11 }}>
@@ -299,7 +279,6 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
         </div>
       )}
 
-      {/* Modals */}
       {openSlug && (
         <WindroseBuildDetail
           slug={openSlug}

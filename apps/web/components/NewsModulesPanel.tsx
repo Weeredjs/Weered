@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ModuleTabBar from "./ModuleTabBar";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -13,8 +14,6 @@ async function apiFetch(path: string) {
   const r = await fetch(`${API}${path}`, { headers: { "Content-Type": "application/json", ...authHeaders() } });
   return r.json();
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
   try {
@@ -40,8 +39,6 @@ function stripHtml(s: string): string {
     .trim();
 }
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
 type Article = {
   id: string;
   guid: string;
@@ -56,8 +53,6 @@ type Article = {
   heat: number;
 };
 
-// ── Categories ───────────────────────────────────────────────────────────────
-
 const CATEGORIES = [
   { id: "top",           label: "Top Stories" },
   { id: "world",         label: "World" },
@@ -69,22 +64,20 @@ const CATEGORIES = [
   { id: "entertainment", label: "Entertainment" },
 ];
 
-// ── Hero Story ───────────────────────────────────────────────────────────────
-
 function HeroStory({ article, accent, onClick }: { article: Article; accent: string; onClick: () => void }) {
   return (
     <a
       href="#"
       onClick={e => { e.preventDefault(); onClick(); }}
       style={{
-        display: "block", borderRadius: 14, overflow: "hidden",
+        display: "block", borderRadius: 2, overflow: "hidden",
         position: "relative", height: 240, marginBottom: 14,
         background: "linear-gradient(135deg, rgba(20,20,30,1), rgba(30,20,40,1))",
         textDecoration: "none", color: "#fff",
         border: "1px solid rgba(255,255,255,.08)",
+        borderLeft: `2px solid ${accent}`,
       }}
     >
-      {/* Background image via <img> for referrer policy */}
       {article.imageUrl && (
         <img
           src={article.imageUrl}
@@ -95,12 +88,10 @@ function HeroStory({ article, accent, onClick }: { article: Article; accent: str
           onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
       )}
-      {/* Gradient overlay */}
       <div style={{
         position: "absolute", inset: 0,
         background: "linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.45) 45%, rgba(0,0,0,.1) 100%)",
       }} />
-      {/* Content */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
         padding: "20px 18px",
@@ -132,8 +123,6 @@ function HeroStory({ article, accent, onClick }: { article: Article; accent: str
   );
 }
 
-// ── Primary Story Card ───────────────────────────────────────────────────────
-
 function PrimaryCard({ article, accent, onClick }: { article: Article; accent: string; onClick: () => void }) {
   return (
     <a
@@ -141,7 +130,7 @@ function PrimaryCard({ article, accent, onClick }: { article: Article; accent: s
       onClick={e => { e.preventDefault(); onClick(); }}
       style={{
         display: "flex", gap: 10, padding: "10px 12px",
-        borderRadius: 10, background: "rgba(255,255,255,.03)",
+        borderRadius: 2, background: "rgba(255,255,255,.03)",
         border: "1px solid rgba(255,255,255,.06)",
         textDecoration: "none", color: "inherit",
         transition: "border-color 0.15s, background 0.15s",
@@ -156,7 +145,6 @@ function PrimaryCard({ article, accent, onClick }: { article: Article; accent: s
         (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)";
       }}
     >
-      {/* Text */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{
           fontSize: 13, fontWeight: 700, lineHeight: 1.35,
@@ -180,10 +168,9 @@ function PrimaryCard({ article, accent, onClick }: { article: Article; accent: s
           <span>{timeAgo(article.publishedAt)}</span>
         </div>
       </div>
-      {/* Thumbnail */}
       {article.imageUrl && (
         <div style={{
-          width: 88, height: 62, borderRadius: 8, overflow: "hidden", flexShrink: 0,
+          width: 88, height: 62, borderRadius: 2, overflow: "hidden", flexShrink: 0,
           background: "rgba(255,255,255,.05)",
         }}>
           <img
@@ -200,8 +187,6 @@ function PrimaryCard({ article, accent, onClick }: { article: Article; accent: s
   );
 }
 
-// ── Secondary Story Link ─────────────────────────────────────────────────────
-
 function SecondaryLink({ article, accent, onClick }: { article: Article; accent: string; onClick: () => void }) {
   return (
     <a
@@ -209,7 +194,7 @@ function SecondaryLink({ article, accent, onClick }: { article: Article; accent:
       onClick={e => { e.preventDefault(); onClick(); }}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "8px 12px", borderRadius: 8,
+        padding: "8px 12px", borderRadius: 2,
         textDecoration: "none", color: "inherit",
         transition: "background 0.12s",
       }}
@@ -230,13 +215,11 @@ function SecondaryLink({ article, accent, onClick }: { article: Article; accent:
   );
 }
 
-// ── Trending Sidebar ─────────────────────────────────────────────────────────
-
 function TrendingSidebar({ articles, accent, onArticleClick }: { articles: Article[]; accent: string; onArticleClick: (a: Article) => void }) {
   if (!articles.length) return null;
   return (
     <div style={{
-      borderRadius: 12, background: "rgba(255,255,255,.025)",
+      borderRadius: 2, background: "rgba(255,255,255,.025)",
       border: "1px solid rgba(255,255,255,.06)",
       padding: "14px 0",
     }}>
@@ -285,8 +268,6 @@ function TrendingSidebar({ articles, accent, onArticleClick }: { articles: Artic
   );
 }
 
-// ── Article Intercept Modal ───────────────────────────────────────────────────
-
 function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
   article: Article;
   accent: string;
@@ -296,7 +277,6 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
   const router = useRouter();
 
   function handleReadInRoom() {
-    // Create a room keyed to this article URL hash
     const hash = article.url.replace(/[^a-zA-Z0-9]/g, "").slice(-12);
     const roomId = `news-${hash}`;
     router.push(`/room/${encodeURIComponent(roomId)}?article=${encodeURIComponent(article.url)}&lobby=${encodeURIComponent(lobbyId)}`);
@@ -312,12 +292,11 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
       <div style={{
         position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
         width: "min(420px, 90vw)", background: "var(--weered-panel2, rgb(15,18,28))",
-        border: "1px solid rgba(255,255,255,.1)", borderRadius: 16,
+        border: "1px solid rgba(255,255,255,.1)", borderRadius: 2,
         padding: 0, zIndex: 50001, overflow: "hidden",
         boxShadow: "0 24px 80px rgba(0,0,0,.6)",
         animation: "slideUp 0.2s ease",
       }}>
-        {/* Hero thumbnail */}
         {article.imageUrl && (
           <div style={{ height: 140, overflow: "hidden", position: "relative" }}>
             <img src={article.imageUrl} alt={article.title} referrerPolicy="no-referrer"
@@ -327,7 +306,6 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%)" }} />
           </div>
         )}
-        {/* Content */}
         <div style={{ padding: "16px 20px 20px" }}>
           <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.3, marginBottom: 8 }}>
             {stripHtml(article.title)}
@@ -335,10 +313,9 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
           <div style={{ fontSize: 11, opacity: 0.4, marginBottom: 16 }}>
             {article.source} &middot; {timeAgo(article.publishedAt)}
           </div>
-          {/* Buttons */}
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={handleReadInRoom} style={{
-              flex: 1, padding: "11px 0", borderRadius: 10, border: "none",
+              flex: 1, padding: "11px 0", borderRadius: 2, border: "none",
               background: `linear-gradient(135deg, ${accent}cc, ${accent}99)`,
               color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
               fontFamily: "inherit", transition: "all 0.15s",
@@ -346,7 +323,7 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
               Read in Room
             </button>
             <a href={article.url} target="_blank" rel="noopener noreferrer" onClick={onClose} style={{
-              flex: 1, padding: "11px 0", borderRadius: 10,
+              flex: 1, padding: "11px 0", borderRadius: 2,
               border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)",
               color: "rgba(255,255,255,.6)", fontSize: 13, fontWeight: 600,
               textDecoration: "none", textAlign: "center",
@@ -365,21 +342,17 @@ function ArticleInterceptModal({ article, accent, lobbyId, onClose }: {
   );
 }
 
-// ── Loading skeleton ─────────────────────────────────────────────────────────
-
 function Skeleton() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 0" }}>
-      <div style={{ height: 200, borderRadius: 14, background: "rgba(255,255,255,.04)", animation: "shimmer 1.5s ease-in-out infinite" }} />
+      <div style={{ height: 200, borderRadius: 2, background: "rgba(255,255,255,.04)", animation: "shimmer 1.5s ease-in-out infinite" }} />
       {[1,2,3,4].map(i => (
-        <div key={i} style={{ height: 72, borderRadius: 10, background: "rgba(255,255,255,.03)", animation: `shimmer 1.5s ease-in-out ${i * 0.15}s infinite` }} />
+        <div key={i} style={{ height: 72, borderRadius: 2, background: "rgba(255,255,255,.03)", animation: `shimmer 1.5s ease-in-out ${i * 0.15}s infinite` }} />
       ))}
       <style>{`@keyframes shimmer{0%,100%{opacity:0.3}50%{opacity:0.6}}`}</style>
     </div>
   );
 }
-
-// ── Main Component ───────────────────────────────────────────────────────────
 
 export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
   lobbyId: string;
@@ -412,13 +385,11 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
   useEffect(() => { loadFeed(category); }, [category, loadFeed]);
   useEffect(() => { loadTrending(); }, [loadTrending]);
 
-  // Auto-refresh every 60 seconds
   useEffect(() => {
     const iv = setInterval(() => { loadFeed(category); loadTrending(); }, 60_000);
     return () => clearInterval(iv);
   }, [category, loadFeed, loadTrending]);
 
-  // Hero = first article with an image; rest flow into primary/secondary
   const heroIdx = articles.findIndex(a => !!a.imageUrl);
   const hero = heroIdx >= 0 ? articles[heroIdx] : null;
   const rest = hero ? [...articles.slice(0, heroIdx), ...articles.slice(heroIdx + 1)] : articles;
@@ -431,37 +402,13 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
       overflow: "hidden",
       ...style,
     }}>
-      {/* ── Category tabs ── */}
-      <div style={{
-        display: "flex", gap: 2, padding: "8px 12px",
-        overflowX: "auto", flexShrink: 0,
-        borderBottom: "1px solid rgba(255,255,255,.06)",
-        scrollbarWidth: "none",
-      }}>
-        {CATEGORIES.map(cat => {
-          const active = cat.id === category;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setCategory(cat.id)}
-              style={{
-                padding: "6px 14px", borderRadius: 8, border: "none",
-                fontSize: 11, fontWeight: 700, fontFamily: "inherit",
-                cursor: "pointer", whiteSpace: "nowrap",
-                transition: "all 0.15s",
-                background: active ? `${accent}20` : "transparent",
-                color: active ? accent : "rgba(255,255,255,.45)",
-                borderBottom: active ? `2px solid ${accent}` : "2px solid transparent",
-              }}
-            >
-              {cat.label}
-            </button>
-          );
-        })}
-      </div>
+      <ModuleTabBar
+        tabs={CATEGORIES}
+        active={category}
+        onSelect={(id) => setCategory(id as any)}
+        accent={accent}
+      />
 
-      {/* ── Content area ── */}
       <div style={{
         flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden",
         padding: "14px 14px 24px",
@@ -487,17 +434,13 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
             display: "flex", gap: 16,
             flexWrap: "wrap",
           }}>
-            {/* Main feed column */}
             <div style={{ flex: "1 1 340px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-              {/* Hero */}
               {hero && <HeroStory article={hero} accent={accent} onClick={() => setInterceptArticle(hero)} />}
 
-              {/* Primary cards */}
               {primary.map(a => (
                 <PrimaryCard key={a.id} article={a} accent={accent} onClick={() => setInterceptArticle(a)} />
               ))}
 
-              {/* Secondary links */}
               {secondary.length > 0 && (
                 <div style={{
                   marginTop: 8, borderTop: "1px solid rgba(255,255,255,.06)",
@@ -517,7 +460,6 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
               )}
             </div>
 
-            {/* Trending sidebar */}
             <div style={{ flex: "0 0 220px", minWidth: 180 }}>
               <TrendingSidebar articles={trending} accent={accent} onArticleClick={setInterceptArticle} />
             </div>
@@ -525,7 +467,6 @@ export default function NewsModulesPanel({ lobbyId, accentColor, style }: {
         )}
       </div>
 
-      {/* Article intercept modal */}
       {interceptArticle && (
         <ArticleInterceptModal
           article={interceptArticle}

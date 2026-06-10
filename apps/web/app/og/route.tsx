@@ -2,14 +2,11 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-// Dynamic OG image — used by routes that don't have a per-route
-// override (most invite links, profile shares, raw weered.ca pastes).
-// Renders 1200×630 with the current W mark + tagline.
-//
-// Per-lobby OG cards still take precedence: layout.tsx's
-// generateMetadata sets a static image when LOBBY_OG_OVERRIDES has an
-// entry. This route is the fallback otherwise.
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v || 0));
+  const width = clamp(Number(searchParams.get("w")), 320, 1920) || 1200;
+  const height = clamp(Number(searchParams.get("h")), 180, 1080) || 630;
   return new ImageResponse(
     (
       <div
@@ -27,7 +24,6 @@ export async function GET() {
           position: "relative",
         }}
       >
-        {/* Soft purple radial behind the mark */}
         <div
           style={{
             position: "absolute",
@@ -42,7 +38,6 @@ export async function GET() {
           }}
         />
 
-        {/* W mark */}
         <img
           src="https://weered.ca/brand/logo/weered-logo-128.png"
           alt=""
@@ -51,7 +46,6 @@ export async function GET() {
           style={{ borderRadius: 24, marginBottom: 28 }}
         />
 
-        {/* Wordmark */}
         <div
           style={{
             fontSize: 96,
@@ -68,7 +62,6 @@ export async function GET() {
           weered
         </div>
 
-        {/* Tagline */}
         <div
           style={{
             marginTop: 18,
@@ -82,7 +75,6 @@ export async function GET() {
           Lobbies · Crews · Live rooms
         </div>
 
-        {/* Bottom strip */}
         <div
           style={{
             position: "absolute",
@@ -104,6 +96,6 @@ export async function GET() {
         </div>
       </div>
     ),
-    { width: 1200, height: 630 }
+    { width, height }
   );
 }

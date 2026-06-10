@@ -1,14 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /notifications/* + /push/* — in-app notification list + web push
-// (VAPID) + Expo push tokens for the mobile app. Push subscribes/
-// unsubscribes write to prisma.pushSubscription; Expo tokens write to
-// prisma.expoPushToken. Delivery happens elsewhere (sendPush in main).
-//
-// Note: the original /push/subscribe and /push/subscribe DELETE
-// referenced an undefined extractViewer — swapped to authFromHeader,
-// same shape, silently unbreaks web-push sub/unsub.
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
   VAPID_PUBLIC: string;
@@ -17,8 +9,6 @@ type Opts = {
 
 export default async function notificationsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, VAPID_PUBLIC, sendPush } = opts;
-
-  // ── Web push (VAPID) ────────────────────────────────────────────────
 
   app.post("/push/subscribe", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
@@ -46,8 +36,6 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, key: VAPID_PUBLIC });
   });
 
-  // ── Expo push (mobile) ─────────────────────────────────────────────
-
   app.post("/push/expo-register", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -65,6 +53,13 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
+  app.post("/push/debug", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    const body = (req as any).body || {};
+    console.log('[push/debug]', { userId: u?.id || null, stage: body.stage, error: body.error, info: body.info });
+    return reply.send({ ok: true });
+  });
+
   app.delete("/push/expo-register", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -75,10 +70,6 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
-  // Self-test: fires a push to every registered transport for the caller.
-  // Returns counts of web-push subs + Expo tokens it tried to deliver to so
-  // the client can tell the difference between "no tokens registered" and
-  // "tokens exist but Expo dropped them."
   app.post("/push/test", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -97,8 +88,6 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     });
     return reply.send({ ok: true, webSubs, expoTokens });
   });
-
-  // ── In-app notifications ────────────────────────────────────────────
 
   app.get("/notifications", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);

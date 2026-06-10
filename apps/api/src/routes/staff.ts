@@ -3,11 +3,6 @@ import { prisma } from "../lib/prisma";
 import { GlobalRole } from "@prisma/client";
 import { randomUUID } from "crypto";
 
-// /staff/* — global staff/admin endpoints. Covers users (role/note/kick/ban/tier),
-// audit, lobby control (lock/unlock/clear/featured/pin), rooms (delete/rename/
-// pin/event/close/list), broadcast, banner, reports queue, reserved names,
-// board posts, roster, site config, subscriptions list/grant. Permission gate
-// is canAccessStaff or canAssignRoles depending on action.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
@@ -18,19 +13,24 @@ type Opts = {
   broadcastEvent: (title: string, when: Date) => void;
   rooms: Map<string, any>;
   send: (sock: any, payload: any) => void;
-  wss: any;
+  getWss: () => any;
   shortRoomId: (n: number) => string;
   getAllSiteConfig: () => Promise<Record<string, any>>;
   setSiteConfig: (key: string, value: any) => Promise<void>;
   SITE_CONFIG_DEFAULTS: Record<string, any>;
   getSiteConfig: (key: string) => Promise<any>;
+  isModOrOwner: (room: any, userId?: string, globalRole?: string | null) => boolean;
+  audit: (room: any, item: any) => void;
+  publishState: (room: any) => void;
+  findSocketsByUser: (room: any, userId: string) => any[];
 };
 
 export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader, getGlobalRole, canAccessStaff, canAssignRoles, globalAudit,
-    broadcast, broadcastEvent, rooms, send, wss, shortRoomId,
+    broadcast, broadcastEvent, rooms, send, getWss, shortRoomId,
     getAllSiteConfig, setSiteConfig, SITE_CONFIG_DEFAULTS, getSiteConfig,
+    isModOrOwner, audit, publishState, findSocketsByUser,
   } = opts;
 
 app.get("/staff/me", async (req, reply) => {
@@ -74,9 +74,7 @@ app.post("/staff/users/:userId/role", async (req, reply) => {
   }
   await prisma.user.update({ where: { id: targetId }, data: { globalRole: newRole } });
   await globalAudit(u.id, u.name, "role_change", targetId, target.name, { from: target.globalRole, to: newRole });
-  // Propagate to in-memory presence so connected clients see the new role
-  // without requiring the target to reconnect
-  for (const sock of wss.clients as any) {
+  for (const sock of ((getWss()?.clients ?? []) as any)) {
     if ((sock as any).user?.id === targetId) (sock as any).user.globalRole = newRole;
   }
   for (const [, room] of rooms) {
@@ -161,7 +159,7 @@ app.post("/staff/lobby/clear-chat", async (req, reply) => {
   if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
   const lid = String((req.body as any)?.lobbyId || "lobby");
   const room = rooms.get(lid);
-  if (room) room.msgs = []; // clear in-memory so rejoining clients get empty history
+  if (room) room.msgs = [];
   await prisma.lobbyMessage.deleteMany({ where: { lobbyId: lid } });
   await globalAudit(u.id, u.name, "lobby_clear_chat", lid);
   if (room) broadcast(room, { type: "chat:cleared", roomId: lid });
@@ -177,9 +175,7 @@ app.post("/staff/room/clear-chat", async (req, reply) => {
   const room = rooms.get(rid);
   if (!room) return reply.code(404).send({ ok: false, error: "room not found" });
   if (!isModOrOwner(room, u.id, globalRole)) return reply.code(403).send({ ok: false, error: "forbidden" });
-  // Clear in-memory msgs
   room.msgs = [];
-  // Clear persisted messages
   await prisma.roomMessage.deleteMany({ where: { roomId: rid } });
   audit(room, { type: "chat_clear", actorId: u.id, actorName: u.name });
   broadcast(room, { type: "chat:cleared", roomId: rid });
@@ -252,13 +248,11 @@ app.post("/staff/users/:userId/ban", async (req, reply) => {
   const body: any = (req as any).body || {};
   const reason = typeof body.reason === "string" ? body.reason.slice(0, 500) : "";
 
-  // Set banned flag on user
   await prisma.user.update({
     where: { id: targetId },
     data: { banned: true, banReason: reason || null, bannedAt: new Date(), bannedBy: u.id },
   });
 
-  // Kick from all rooms (same as global kick)
   for (const room of rooms.values()) {
     if (room.users.has(targetId) || room.mods.has(targetId)) {
       room.users.delete(targetId);
@@ -308,7 +302,6 @@ app.delete("/staff/rooms/:roomId", async (req, reply) => {
   const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true } });
   if (!room) return reply.code(404).send({ ok: false, error: "not_found" });
 
-  // Kick anyone currently in the room
   const liveRoom = rooms.get(roomId);
   if (liveRoom) {
     for (const s of liveRoom.sockets) {
@@ -335,14 +328,12 @@ app.post("/staff/rooms/:roomId/rename", async (req, reply) => {
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 100) : "";
   if (!name) return reply.code(400).send({ ok: false, error: "name required" });
 
-  // Update DB
   try {
     await prisma.room.update({ where: { id: roomId }, data: { name } });
   } catch {
     return reply.code(404).send({ ok: false, error: "room_not_found" });
   }
 
-  // Update in-memory
   const room = rooms.get(roomId);
   if (room) {
     room.name = name;
@@ -361,15 +352,13 @@ app.post("/staff/rooms/:roomId/pin", async (req, reply) => {
 
   const roomId = String((req as any).params?.roomId || "");
   const body: any = (req as any).body || {};
-  const pinned = body.pinned !== false; // default to pinning
+  const pinned = body.pinned !== false;
 
-  // Update in-memory
   const room = rooms.get(roomId);
   if (room) {
     room.pinned = pinned;
   }
 
-  // Persist to DB so it survives restart
   try {
     await prisma.room.update({ where: { id: roomId }, data: { pinned } });
   } catch (e) {
@@ -413,7 +402,6 @@ app.post("/staff/rooms/:roomId/close", async (req, reply) => {
   const room = rooms.get(roomId);
 
   if (room) {
-    // Kick everyone
     for (const s of room.sockets) {
       send(s, { type: "room:closed", roomId, by: u.name });
       try { s.close(4004, "room:closed"); } catch {}
@@ -423,7 +411,6 @@ app.post("/staff/rooms/:roomId/close", async (req, reply) => {
     rooms.delete(roomId);
   }
 
-  // Delete from DB
   try {
     await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
     await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
@@ -433,10 +420,6 @@ app.post("/staff/rooms/:roomId/close", async (req, reply) => {
   await globalAudit(u.id, u.name, "room_close", roomId);
   return reply.send({ ok: true });
 });
-
-// /staff/banner stays in main() — mutates the siteBanner module-level state
-// shared with the public GET /banner route. Re-extract once that becomes a
-// shared lib-state module.
 
 app.get("/staff/reports", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
@@ -451,7 +434,6 @@ app.get("/staff/reports", async (req, reply) => {
     orderBy: { createdAt: "desc" },
     take: 100,
   });
-  // Enrich with reporter names and target names (for USER targets)
   const userIds = new Set<string>();
   for (const r of rows) {
     userIds.add(r.reporterId);
@@ -548,9 +530,7 @@ app.get("/staff/config", async (req, reply) => {
   if (role !== GlobalRole.GOD) return reply.code(403).send({ ok: false, error: "forbidden" });
 
   const stored = await getAllSiteConfig();
-  // Merge defaults with stored values
   const config = { ...SITE_CONFIG_DEFAULTS, ...stored };
-  // Parse types for frontend
   return reply.send({
     ok: true,
     config: {
@@ -598,14 +578,12 @@ app.post("/staff/featured", async (req, reply) => {
   const lobbyId = String(body.lobbyId || "").trim();
 
   if (lobbyId) {
-    // Verify lobby exists
     const lobby = await (prisma as any).lobby.findUnique({ where: { id: lobbyId }, select: { id: true, name: true } });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
     await setSiteConfig("featuredLobbyId", lobbyId);
     await globalAudit(u.id, u.name, "set_featured", lobbyId, lobby.name);
     return reply.send({ ok: true, featuredLobbyId: lobbyId });
   } else {
-    // Clear featured
     await setSiteConfig("featuredLobbyId", "");
     await globalAudit(u.id, u.name, "clear_featured");
     return reply.send({ ok: true, featuredLobbyId: "" });
@@ -655,6 +633,21 @@ app.post("/staff/lobbies/:id/pin", async (req, reply) => {
   const { pinned } = req.body as any;
   await (prisma as any).lobby.update({ where: { id: lobbyId }, data: { pinned: Boolean(pinned) } });
   return reply.send({ ok: true, pinned: Boolean(pinned) });
+});
+
+app.post("/staff/lobbies/:id/clear-branding", async (req, reply) => {
+  const u = authFromHeader((req as any).headers?.authorization);
+  if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+  const role = await getGlobalRole(u.id);
+  if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+  const lobbyId = String((req.params as any).id || "");
+  try {
+    await (prisma as any).lobby.update({ where: { id: lobbyId }, data: { logoUrl: null, bannerUrl: null } });
+    await globalAudit(u.id, u.name, "lobby_clear_branding", lobbyId);
+    return reply.send({ ok: true });
+  } catch {
+    return reply.code(500).send({ ok: false, error: "clear_failed" });
+  }
 });
 
 app.get("/staff/roster", async (req, reply) => {
@@ -747,7 +740,6 @@ app.post("/staff/users/:userId/tier", async (req, reply) => {
   const userTier = tier as "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
   await prisma.user.update({ where: { id: targetId }, data: { tier: userTier } });
 
-  // Also update subscription record if it exists
   const subTier = tier === "INNOCENT" ? "FREE" : tier;
   await (prisma as any).subscription.upsert({
     where: { userId: targetId },
@@ -758,8 +750,6 @@ app.post("/staff/users/:userId/tier", async (req, reply) => {
   await globalAudit(u.id, u.name, "tier_change", targetId, undefined, { tier });
   return reply.send({ ok: true, tier });
 });
-
-// ── Mods admin (catalog opt-out for authors who request removal) ──────────────
 
 app.get("/staff/mods", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);

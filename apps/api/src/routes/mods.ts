@@ -2,11 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { fetchAndUpsertMod } from "../nexusPoller";
 
-// /mods/* + /crews/:crewId/mods + /users/:userId/mods + /crews/:crewId/loadout
-// Mod browser (Windrose-first), self-reported user installs, and crew-scoped
-// loadouts. Read endpoints are public; writes are auth-gated. The Nexus poller
-// keeps the prisma.mod table fresh in the background; this module just exposes
-// reads + lazy-loads any nexus:<id> we haven't seen yet.
 type Opts = {
   verifyToken: (token: string) => { id: string } | null;
 };

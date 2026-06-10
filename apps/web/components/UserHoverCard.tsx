@@ -66,13 +66,12 @@ function formatPlaytime(mins: number): string {
 
 type UserBadgeDisplay = { id?: string; name?: string; description?: string; iconUrl?: string; rarity?: number; earnedAt?: string };
 
-const BADGE_RARITY_COLORS = ["#94a3b8", "#22c55e", "#3b82f6", "#a855f7", "#f59e0b"]; // common, uncommon, rare, epic, legendary
+const BADGE_RARITY_COLORS = ["#94a3b8", "#22c55e", "#3b82f6", "#a855f7", "#f59e0b"];
 
-// ── Cache to avoid re-fetching ──────────────────────────────────────────────
 const profileCache = new Map<string, { data: Profile; at: number }>();
 const guardianCache = new Map<string, { data: GuardianInfo | null; at: number }>();
 const badgeCache = new Map<string, { data: UserBadgeDisplay[]; at: number }>();
-const CACHE_TTL = 60_000; // 1 min
+const CACHE_TTL = 60_000;
 
 export type HoverCardPosition = { x: number; y: number };
 
@@ -80,8 +79,8 @@ export interface UserHoverCardProps {
   userId: string;
   userName: string;
   position: HoverCardPosition;
-  lobbyModuleType?: string; // "BUNGIE" to show guardian stats
-  isAway?: boolean;         // live AFK flag from presence; profile endpoint doesn't carry this
+  lobbyModuleType?: string;
+  isAway?: boolean;
   onClose: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
@@ -100,7 +99,6 @@ export default function UserHoverCard({
   const [loading, setLoading] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Fetch profile
   useEffect(() => {
     if (!userId) return;
     const cached = profileCache.get(userId);
@@ -123,7 +121,6 @@ export default function UserHoverCard({
       .finally(() => setLoading(false));
   }, [userId]);
 
-  // Fetch Bungie guardian if in Destiny lobby
   useEffect(() => {
     if (lobbyModuleType !== "BUNGIE" || !profile?.name) return;
     const cached = guardianCache.get(profile.name);
@@ -145,8 +142,6 @@ export default function UserHoverCard({
       .catch(() => {});
   }, [lobbyModuleType, profile?.name]);
 
-  // Fetch Windrose mod kit — subtle line, only when the hover is on a
-  // Windrose lobby. Nothing fancy; just "Running N mods" if they have any.
   const [modCount, setModCount] = useState<number | null>(null);
   useEffect(() => {
     if (!userId || lobbyModuleType !== "WINDROSE") { setModCount(null); return; }
@@ -156,7 +151,6 @@ export default function UserHoverCard({
       .catch(() => setModCount(null));
   }, [userId, lobbyModuleType]);
 
-  // Fetch badges
   useEffect(() => {
     if (!userId) return;
     const cached = badgeCache.get(userId);
@@ -174,7 +168,6 @@ export default function UserHoverCard({
       .catch(() => {});
   }, [userId]);
 
-  // Clamp position to viewport
   const [pos, setPos] = useState(position);
   useEffect(() => {
     if (!cardRef.current) return;
@@ -217,7 +210,6 @@ export default function UserHoverCard({
     >
       <style>{`@keyframes hoverCardIn { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
 
-      {/* Tier banner */}
       <div style={{
         height: 36, background: `linear-gradient(135deg, ${tier.color}12, transparent 60%)`,
         borderBottom: `1px solid ${tier.color}15`,
@@ -232,7 +224,6 @@ export default function UserHoverCard({
         </div>
       </div>
 
-      {/* Avatar + name */}
       <div style={{ padding: "0 14px", marginTop: -18 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 8 }}>
           <div style={{
@@ -274,7 +265,6 @@ export default function UserHoverCard({
           </div>
         </div>
 
-        {/* Bio */}
         {profile?.bio && (
           <div style={{
             fontSize: 11, lineHeight: 1.5, opacity: 0.5, marginBottom: 8,
@@ -285,7 +275,6 @@ export default function UserHoverCard({
           </div>
         )}
 
-        {/* Stats row */}
         {profile && (
           <div style={{
             display: "flex", gap: 12, marginBottom: 10, fontSize: 10,
@@ -299,8 +288,6 @@ export default function UserHoverCard({
           </div>
         )}
 
-        {/* Crew flair — subtle row: icon + name + tag. Links to crew page.
-            Hidden if user isn't in a crew so there's no empty slot. */}
         {profile?.primaryCrew && (() => {
           const pc = profile.primaryCrew;
           const accent = pc.accentColor && /^#[0-9a-f]{6}$/i.test(pc.accentColor) ? pc.accentColor : "#c9a066";
@@ -335,7 +322,6 @@ export default function UserHoverCard({
           );
         })()}
 
-        {/* Identity glossary — role, tier, linked platforms */}
         {profile && (() => {
           const rows: { icon: React.ReactNode; label: string; value?: string; color?: string }[] = [];
           if (profile.globalRole && profile.globalRole !== "USER") {
@@ -394,7 +380,6 @@ export default function UserHoverCard({
           );
         })()}
 
-        {/* Guardian stats (Destiny lobbies only) */}
         {guardian && guardian.characters.length > 0 && (
           <div style={{
             marginBottom: 10, padding: "8px 10px", borderRadius: 8,
@@ -427,7 +412,6 @@ export default function UserHoverCard({
           </div>
         )}
 
-        {/* Badges */}
         {badges.length > 0 && (
           <div style={{
             marginBottom: 10, padding: "6px 10px", borderRadius: 8,
@@ -463,8 +447,6 @@ export default function UserHoverCard({
           </div>
         )}
 
-        {/* Windrose mod kit — one-line teaser, click to view full list.
-            Intentionally quiet: no section header, no chrome. */}
         {lobbyModuleType === "WINDROSE" && modCount !== null && modCount > 0 && (
           <div
             onClick={() => onViewProfile?.(userId)}
@@ -480,7 +462,6 @@ export default function UserHoverCard({
           </div>
         )}
 
-        {/* Actions */}
         <div style={{ display: "flex", gap: 6, paddingBottom: 12 }}>
           {onViewProfile && (
             <button onClick={() => onViewProfile(userId)} style={{
@@ -512,8 +493,6 @@ export default function UserHoverCard({
     document.body
   );
 }
-
-// ── Hook for easy integration ───────────────────────────────────────────────
 
 export function useUserHover(opts?: { lobbyModuleType?: string; onViewProfile?: (id: string) => void; onMessage?: (id: string, name: string) => void }) {
   const [hover, setHover] = useState<{ userId: string; userName: string; pos: HoverCardPosition; isAway?: boolean } | null>(null);

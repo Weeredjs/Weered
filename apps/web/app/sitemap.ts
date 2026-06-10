@@ -6,22 +6,22 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
 
-  // Static pages
   const statics: MetadataRoute.Sitemap = [
     { url: BASE, lastModified: now, changeFrequency: "daily", priority: 1.0 },
     { url: `${BASE}/home`, lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/premium`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${BASE}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE}/lobby`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${BASE}/explore`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${BASE}/compare`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${BASE}/lfg`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE}/forum`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: `${BASE}/why-not-discord`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/guidelines`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE}/map`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${BASE}/desktop`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
   
-    // SEO-targeted marketing landing pages
     { url: `${BASE}/alternatives/discord`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/tournaments/destiny-2`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/play/chess`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
@@ -29,13 +29,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/play/fakeout`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
   ];
 
-  // Lobby IDs to exclude from sitemap:
-  // - garbage / aliases that duplicate canonical slugs
-  // - subreddit-mirror lobbies (thin content, external)
-  const SKIP_LOBBIES = new Set(["lobby", "weered.ca", "poe", "hq"]);
+  const SKIP_LOBBIES = new Set(["lobby", "weered.ca", "path-of-exile", "hq"]);
   const isRedditMirror = (id: string) => id.startsWith("r/") || id.startsWith("r%2F");
 
-  // Dynamic lobby pages
   let lobbyEntries: MetadataRoute.Sitemap = [];
   try {
     const res = await fetch(`${API}/lobbies`, { next: { revalidate: 3600 } });
@@ -52,8 +48,47 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {}
 
-  // Dynamic forum posts — recent + high-score posts. Cap at 200 to keep
-  // sitemap size sane.
+  let aboutEntries: MetadataRoute.Sitemap = [];
+  try {
+    const res = await fetch(`${API}/lobbies`, { next: { revalidate: 3600 } });
+    const data = await res.json();
+    if (data?.ok && Array.isArray(data.lobbies)) {
+      aboutEntries = data.lobbies
+        .filter((l: any) => l?.id && !SKIP_LOBBIES.has(l.id) && !isRedditMirror(l.id))
+        .filter((l: any) => typeof l?.description === "string" && l.description.length >= 500)
+        .map((l: any) => ({
+          url: `${BASE}/about/lobby/${encodeURIComponent(l.id)}`,
+          lastModified: now,
+          changeFrequency: "weekly" as const,
+          priority: 0.5,
+        }));
+    }
+  } catch {}
+
+  let lfgEntries: MetadataRoute.Sitemap = [];
+  try {
+    const lfgData = require("../data/lfg-guides.json");
+    const guides = lfgData?.guides ?? [];
+    lfgEntries = guides.map((g: any) => ({
+      url: `${BASE}/lfg/${g.lobby_id}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
+  } catch {}
+
+  let compareEntries: MetadataRoute.Sitemap = [];
+  try {
+    const competitorsData = require("../data/competitors.json");
+    const competitors = competitorsData?.competitors ?? [];
+    compareEntries = competitors.map((c: any) => ({
+      url: `${BASE}/compare/weered-vs/${c.id}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
+  } catch {}
+
   let forumEntries: MetadataRoute.Sitemap = [];
   try {
     const res = await fetch(`${API}/forum/posts?sort=new&limit=200`, { next: { revalidate: 3600 } });
@@ -72,5 +107,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {}
 
-  return [...statics, ...lobbyEntries, ...forumEntries];
+  return [...statics, ...lobbyEntries, ...aboutEntries, ...compareEntries, ...lfgEntries, ...forumEntries];
 }

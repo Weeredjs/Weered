@@ -5,6 +5,7 @@ import { getWeeredClient } from "../app/weeredClient";
 import { weeredConfirm } from "../lib/confirm";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import ModuleTabBar from "./ModuleTabBar";
 import TheBrief, { useTheBrief } from "./TheBrief";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -17,20 +18,16 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Styles ──────────────────────────────────────────────────────────────────
-
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
-const ACCENT = "#F5C518"; // gold — trading vibe
-
-// ── Price formatter ─────────────────────────────────────────────────────────
+const ACCENT = "#F5C518";
 
 function fmtPrice(p: number | null | undefined): string {
   if (p == null) return "—";
@@ -45,8 +42,6 @@ function fmtPct(n: number): string {
   const prefix = n >= 0 ? "+" : "";
   return `${prefix}${n.toFixed(2)}%`;
 }
-
-// ── Chart component (TradingView lightweight-charts) ────────────────────────
 
 const TIMEFRAMES: { id: string; label: string }[] = [
   { id: "1m",  label: "1m"  },
@@ -96,7 +91,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
     let cleanup = false;
 
     (async () => {
-      // Dynamic import to avoid SSR issues
       const lc = await import("lightweight-charts");
       if (cleanup) return;
 
@@ -121,9 +115,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
           timeVisible: true,
           secondsVisible: false,
         },
-        // Disable mouse-wheel zoom + scroll so the page can scroll past the
-        // chart without it eating the wheel. Drag-to-pan and pinch zoom on
-        // touch devices stay on; explicit +/-/reset buttons cover the rest.
         handleScroll: {
           mouseWheel: false,
           pressedMouseMove: true,
@@ -139,7 +130,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
       });
       chartRef.current = chart;
 
-      // v5 API: addSeries(SeriesType, options)
       candleSeries = chart.addSeries(lc.CandlestickSeries, {
         upColor: GREEN,
         downColor: RED,
@@ -160,7 +150,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
       });
       volumeSeriesRef.current = volumeSeries;
 
-      // Load historical candles for the selected timeframe
       try {
         const data = await apiFetch(`/trading/candles?symbol=${symbol}&interval=${timeframe}&limit=300`);
         if (data.ok && data.candles?.length) {
@@ -174,7 +163,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
         }
       } catch (e) { console.error("[chart] candle load failed:", e); }
 
-      // Subscribe to real-time kline updates via WS
       const wc = getWeeredClient();
       wc.send("trading:subscribe", { symbol: symbol.toUpperCase() });
 
@@ -200,7 +188,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
 
       const unsub = wc.on("trading:kline", handleKline);
 
-      // Resize observer
       const ro = new ResizeObserver(() => {
         if (chart && containerRef.current) {
           chart.applyOptions({ width: containerRef.current.clientWidth });
@@ -208,7 +195,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
       });
       ro.observe(containerRef.current!);
 
-      // Store cleanup refs
       (containerRef.current as any).__cleanup = () => {
         unsub();
         wc.send("trading:unsubscribe", { symbol: symbol.toUpperCase() });
@@ -227,7 +213,7 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
 
   const zoomBtn: React.CSSProperties = {
     width: 26, height: 26, padding: 0,
-    borderRadius: 6,
+    borderRadius: 2,
     border: "1px solid rgba(255,255,255,.10)",
     background: "rgba(0,0,0,.55)",
     color: "rgba(243,244,246,.85)",
@@ -238,7 +224,7 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
 
   return (
     <div style={{ position: "relative" }}>
-      <div ref={containerRef} style={{ width: "100%", borderRadius: 10, overflow: "hidden" }} />
+      <div ref={containerRef} style={{ width: "100%", borderRadius: 2, overflow: "hidden" }} />
       <div style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 4, zIndex: 2 }}>
         <button type="button" onClick={zoomReset}  style={{ ...zoomBtn, width: "auto", padding: "0 8px", fontSize: 10, letterSpacing: "0.5px" }} title="Fit content">FIT</button>
         <button type="button" onClick={zoomOut}    style={zoomBtn} aria-label="Zoom out" title="Zoom out">−</button>
@@ -247,8 +233,6 @@ function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; acce
     </div>
   );
 }
-
-// ── Symbol Selector ─────────────────────────────────────────────────────────
 
 type SymInfo = { symbol: string; name: string; icon: string; price: number | null; assetClass?: "crypto" | "fx" | "metal"; comingSoon?: boolean };
 
@@ -315,8 +299,6 @@ function SymbolBar({ symbols, selected, onSelect, livePrice }: {
   );
 }
 
-// ── Order Entry ─────────────────────────────────────────────────────────────
-
 function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
   symbol: string;
   lobbyId: string;
@@ -329,8 +311,6 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
   const [usdAmount, setUsdAmount] = useState(defaultUsd);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  // Optional auto-exits set at trade inception. Both default empty
-  // (trade has no SL/TP) and can be edited per-position later.
   const [showExits, setShowExits] = useState(false);
   const [stopLoss, setStopLoss] = useState("");
   const [takeProfit, setTakeProfit] = useState("");
@@ -338,13 +318,11 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
   const quantity = livePrice && parseFloat(usdAmount) > 0 ? parseFloat(usdAmount) / livePrice : 0;
   const slNum = stopLoss ? parseFloat(stopLoss) : null;
   const tpNum = takeProfit ? parseFloat(takeProfit) : null;
-  // Live preview of $ risk at SL / $ reward at TP using current mark.
   const slRisk = (slNum != null && livePrice) ? (side === "BUY" ? (livePrice - slNum) : (slNum - livePrice)) * quantity : null;
   const tpReward = (tpNum != null && livePrice) ? (side === "BUY" ? (tpNum - livePrice) : (livePrice - tpNum)) * quantity : null;
 
   async function placeOrder() {
     let price = livePrice;
-    // Fallback: fetch price if WS feed isn't connected
     if (!price) {
       try {
         const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
@@ -367,8 +345,6 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
     if (j.ok) {
       setResult({ ok: true, msg: `${side} ${quantity.toFixed(6)} ${symbol} @ $${fmtPrice(j.filled.price)}` });
       onTrade();
-      // Clear exits on a clean fill so the next trade isn't carrying
-      // stale numbers — entry price will be different.
       setStopLoss("");
       setTakeProfit("");
     } else {
@@ -382,12 +358,11 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
     <div style={{ ...S.card, marginBottom: 10 }}>
       <div style={S.label}>TRADE</div>
 
-      {/* Side toggle */}
       <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
         <button
           onClick={() => setSide("BUY")}
           style={{
-            flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
+            flex: 1, padding: "8px 0", borderRadius: 2, border: "none", cursor: "pointer",
             fontWeight: 700, fontSize: 13,
             background: side === "BUY" ? GREEN : "rgba(255,255,255,.05)",
             color: side === "BUY" ? "#fff" : "rgba(243,244,246,.4)",
@@ -398,7 +373,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
         <button
           onClick={() => setSide("SELL")}
           style={{
-            flex: 1, padding: "8px 0", borderRadius: 8, border: "none", cursor: "pointer",
+            flex: 1, padding: "8px 0", borderRadius: 2, border: "none", cursor: "pointer",
             fontWeight: 700, fontSize: 13,
             background: side === "SELL" ? RED : "rgba(255,255,255,.05)",
             color: side === "SELL" ? "#fff" : "rgba(243,244,246,.4)",
@@ -408,7 +383,6 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
         </button>
       </div>
 
-      {/* USD Amount */}
       <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
         {presets.map(p => (
           <button
@@ -443,16 +417,13 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
         </div>
       )}
 
-      {/* Auto-exit toggles — collapsed by default. Stop loss + take
-          profit, both absolute price levels. The position worker auto-
-          closes when the live mark crosses either. */}
       <div style={{ marginBottom: 8 }}>
         <button
           type="button"
           onClick={() => setShowExits(s => !s)}
           style={{
             display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "5px 10px", borderRadius: 7,
+            padding: "5px 10px", borderRadius: 2,
             cursor: "pointer",
             fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
             fontWeight: 800,
@@ -526,7 +497,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
         onClick={placeOrder}
         disabled={loading || parseFloat(usdAmount) <= 0}
         style={{
-          width: "100%", padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer",
+          width: "100%", padding: "10px 0", borderRadius: 2, border: "none", cursor: "pointer",
           fontWeight: 700, fontSize: 14, letterSpacing: ".3px",
           background: side === "BUY"
             ? "linear-gradient(135deg, #22c55e, #16a34a)"
@@ -540,7 +511,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
 
       {result && (
         <div style={{
-          marginTop: 8, padding: "6px 10px", borderRadius: 8, fontSize: 11,
+          marginTop: 8, padding: "6px 10px", borderRadius: 2, fontSize: 11,
           background: result.ok ? "rgba(34,197,94,.10)" : "rgba(239,68,68,.10)",
           color: result.ok ? GREEN : RED,
           border: `1px solid ${result.ok ? "rgba(34,197,94,.2)" : "rgba(239,68,68,.2)"}`,
@@ -551,8 +522,6 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
     </div>
   );
 }
-
-// ── Positions ───────────────────────────────────────────────────────────────
 
 function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId: string; onClose: () => void }) {
   const [closing, setClosing] = useState<string | null>(null);
@@ -580,7 +549,7 @@ function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId:
           <div key={p.id} style={{ ...S.card, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{
-                padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+                padding: "2px 6px", borderRadius: 2, fontSize: 10, fontWeight: 700,
                 background: p.side === "BUY" ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)",
                 color: p.side === "BUY" ? GREEN : RED,
               }}>
@@ -612,18 +581,16 @@ function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId:
               </button>
             </div>
 
-            {/* SL/TP row — shows current triggers + edit pencil. Either
-                or both can be set; edit modal supports clearing either. */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontFamily: "monospace", flexWrap: "wrap" }}>
               {p.stopLoss != null ? (
-                <span title="Stop loss" style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(239,68,68,.10)", border: "1px solid rgba(239,68,68,.25)", color: "rgba(252,165,165,.85)" }}>
+                <span title="Stop loss" style={{ padding: "1px 6px", borderRadius: 2, background: "rgba(239,68,68,.10)", border: "1px solid rgba(239,68,68,.25)", color: "rgba(252,165,165,.85)" }}>
                   SL ${fmtPrice(p.stopLoss)}
                 </span>
               ) : (
                 <span style={{ opacity: 0.3, padding: "1px 6px" }}>SL —</span>
               )}
               {p.takeProfit != null ? (
-                <span title="Take profit" style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(167,243,208,.85)" }}>
+                <span title="Take profit" style={{ padding: "1px 6px", borderRadius: 2, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(167,243,208,.85)" }}>
                   TP ${fmtPrice(p.takeProfit)}
                 </span>
               ) : (
@@ -655,9 +622,6 @@ function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId:
   );
 }
 
-// Inline editor for SL/TP on an open position. Loads the position's
-// current values, lets the user blank either to clear, validates against
-// entry side, PATCHes /trading/position/:id/exits.
 function ExitsEditor({ position, onSaved, onCancel }: {
   position: any;
   onSaved: () => void;
@@ -684,7 +648,7 @@ function ExitsEditor({ position, onSaved, onCancel }: {
 
   return (
     <div style={{
-      marginTop: 4, padding: 8, borderRadius: 8,
+      marginTop: 4, padding: 8, borderRadius: 2,
       border: "1px solid rgba(255,255,255,.06)", background: "rgba(0,0,0,.2)",
       display: "flex", flexDirection: "column", gap: 6,
     }}>
@@ -737,8 +701,6 @@ function ExitsEditor({ position, onSaved, onCancel }: {
   );
 }
 
-// ── Account Summary ─────────────────────────────────────────────────────────
-
 function AccountSummary({ account, paperBalance, onReset }: { account: any; paperBalance?: number; onReset: () => void }) {
   if (!account) return null;
   const isProfit = account.totalPnl >= 0;
@@ -784,8 +746,6 @@ function AccountSummary({ account, paperBalance, onReset }: { account: any; pape
   );
 }
 
-// ── Leaderboard ─────────────────────────────────────────────────────────────
-
 function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RANKED" }) {
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -800,7 +760,7 @@ function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RAN
   useEffect(() => {
     setLoading(true);
     load();
-    const iv = setInterval(load, 10000); // refresh every 10s
+    const iv = setInterval(load, 10000);
     return () => clearInterval(iv);
   }, [load]);
 
@@ -852,8 +812,6 @@ function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RAN
   );
 }
 
-// ── Trade Feed (live trades from lobby members) ─────────────────────────────
-
 function TradeFeed() {
   const [trades, setTrades] = useState<any[]>([]);
 
@@ -893,11 +851,6 @@ function TradeFeed() {
   );
 }
 
-// ── Live PnL Ticker ─────────────────────────────────────────────────────────
-// Marquee bar that shows the top traders' realized + unrealized PnL,
-// polling /trading/leaderboard every 5s. Visible across all trading-panel
-// tabs. Witnesses by default — Discord can't do this.
-
 function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RANKED" }) {
   const [entries, setEntries] = useState<any[]>([]);
 
@@ -916,7 +869,6 @@ function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "
 
   if (entries.length < 2) return null;
 
-  // Duplicate the entry list so the marquee scroll is seamless.
   const loop = [...entries, ...entries];
   const RANK_BADGES = ["1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH"];
 
@@ -936,19 +888,18 @@ function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "
           marginBottom: 10,
           padding: "6px 0 6px 0",
           paddingLeft: 76,
-          borderRadius: 8,
+          borderRadius: 2,
           border: "1px solid rgba(255,255,255,.06)",
+          borderLeft: `2px solid ${ACCENT}`,
           background: "linear-gradient(90deg, rgba(245,197,24,.04) 0%, rgba(245,197,24,.08) 50%, rgba(245,197,24,.04) 100%)",
           overflow: "hidden",
           position: "relative",
         }}
       >
-        {/* Mode pill — pinned to the left so first-time viewers know which
-            leaderboard they're looking at. */}
         <div style={{
           position: "absolute", left: 6, top: "50%", transform: "translateY(-50%)",
           zIndex: 3,
-          padding: "3px 7px", borderRadius: 999,
+          padding: "3px 7px", borderRadius: 2,
           fontSize: 9, fontWeight: 800, letterSpacing: "0.6px", textTransform: "uppercase",
           border: `1px solid ${ACCENT}55`,
           background: mode === "RANKED" ? "rgba(245,197,24,.18)" : "rgba(255,255,255,.04)",
@@ -1005,8 +956,6 @@ function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "
   );
 }
 
-// ── Main Panel ──────────────────────────────────────────────────────────────
-
 type Tab = "trade" | "leaderboard" | "history";
 
 type PaperMode = "CASUAL" | "RANKED";
@@ -1023,7 +972,6 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
     try { return (localStorage.getItem(MODE_STORAGE_KEY) as PaperMode) === "RANKED" ? "RANKED" : "CASUAL"; }
     catch { return "CASUAL"; }
   });
-  // Persist mode + reload history when switching.
   useEffect(() => {
     try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch {}
   }, [mode]);
@@ -1032,25 +980,20 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
   const [history, setHistory] = useState<{ orders: any[]; closedPositions: any[] } | null>(null);
   const [paperBalance, setPaperBalance] = useState<number | undefined>(undefined);
 
-  // The Brief — first-time onboarding modal. Auto-opens once per user;
-  // the chip below the PnL ticker reopens it on demand.
   const brief = useTheBrief();
 
-  // Load Paper balance
   useEffect(() => {
     apiFetch("/paper/wallet").then(j => {
       if (j.balance !== undefined) setPaperBalance(j.balance);
     }).catch(() => {});
   }, []);
 
-  // Load symbols
   useEffect(() => {
     apiFetch("/trading/symbols").then(j => {
       if (j.ok && j.symbols?.length) setSymbols(j.symbols);
     });
   }, []);
 
-  // Load account (mode-scoped). Switching mode reloads.
   const loadAccount = useCallback(() => {
     apiFetch(`/trading/account/${lobbyId}?mode=${mode}`).then(j => {
       if (j.ok) setAccount(j.account);
@@ -1059,15 +1002,12 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
 
   useEffect(() => {
     loadAccount();
-    const iv = setInterval(loadAccount, 8000); // refresh P&L
+    const iv = setInterval(loadAccount, 8000);
     return () => clearInterval(iv);
   }, [loadAccount]);
 
-  // History is mode-scoped — clear cached history on mode change so the
-  // next history-tab open refetches.
   useEffect(() => { setHistory(null); }, [mode]);
 
-  // Subscribe to live price for selected symbol
   useEffect(() => {
     const wc = getWeeredClient();
     const handler = (msg: any) => {
@@ -1084,7 +1024,6 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
     };
   }, [selectedSymbol]);
 
-  // Load history when tab changes
   useEffect(() => {
     if (tab === "history" && !history) {
       apiFetch(`/trading/history/${lobbyId}?mode=${mode}`).then(j => {
@@ -1116,10 +1055,8 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
 
   return (
     <div style={{ padding: "0 1px" }}>
-      {/* Live PnL ticker — visible across all tabs */}
       <LobbyPnlTicker lobbyId={lobbyId} mode={mode} />
 
-      {/* The Brief — auto-opens first time, chip reopens it. */}
       <TheBrief open={brief.open} onClose={brief.hide} />
       <button
         type="button"
@@ -1128,7 +1065,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
           marginBottom: 10, padding: "5px 12px",
-          borderRadius: 999,
+          borderRadius: 2,
           border: `1px solid ${accentColor}40`,
           background: `${accentColor}0d`,
           color: accentColor, fontSize: 10, fontWeight: 800,
@@ -1141,16 +1078,13 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         <span style={{ fontSize: 11 }}>📓</span> The Brief
       </button>
 
-      {/* Mode selector — Casual ($100K, for fun) vs Ranked ($1K, counts).
-          Persisted in localStorage. Switching mode reloads account/history
-          from the mode-scoped backend. */}
       <div style={{
         display: "flex",
         alignItems: "stretch",
         gap: 6,
         marginBottom: 10,
         padding: 4,
-        borderRadius: 8,
+        borderRadius: 2,
         border: "1px solid rgba(255,255,255,.06)",
         background: "rgba(0,0,0,.20)",
       }}>
@@ -1165,7 +1099,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
               style={{
                 flex: 1,
                 padding: "7px 10px",
-                borderRadius: 6,
+                borderRadius: 2,
                 border: active ? `1px solid ${accentColor}55` : "1px solid transparent",
                 background: active
                   ? (isRanked ? "linear-gradient(135deg, rgba(245,197,24,.18), rgba(239,68,68,.10))" : "rgba(255,255,255,.04)")
@@ -1190,9 +1124,6 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         })}
       </div>
 
-      {/* Roadmap signal — direction-of-travel breadcrumb so traders see
-          where this is heading without us pretending features ship that
-          haven't. Click opens an interest stub. */}
       <div style={{
         display: "flex",
         alignItems: "center",
@@ -1200,7 +1131,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         gap: 8,
         marginBottom: 10,
         padding: "5px 10px",
-        borderRadius: 6,
+        borderRadius: 2,
         border: "1px dashed rgba(255,255,255,.08)",
         background: "rgba(255,255,255,.015)",
         fontSize: 10,
@@ -1211,28 +1142,10 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         <span>FX feeds (twelvedata) · MyFXBook verified-stats sync · crew portfolios</span>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: "flex", gap: 2, marginBottom: 12, borderBottom: "1px solid rgba(255,255,255,.06)", paddingBottom: 6 }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              ...S.btn, padding: "5px 12px", fontSize: 11,
-              borderColor: tab === t.id ? `${accentColor}55` : undefined,
-              background: tab === t.id ? `${accentColor}15` : undefined,
-              color: tab === t.id ? accentColor : "rgba(243,244,246,.5)",
-              fontWeight: tab === t.id ? 700 : 400,
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as Tab)} accent={accentColor} />
 
       {tab === "trade" && (
         <>
-          {/* Symbol bar */}
           <SymbolBar
             symbols={symbols}
             selected={selectedSymbol}
@@ -1240,7 +1153,6 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
             livePrice={livePrice}
           />
 
-          {/* Timeframe selector */}
           <div style={{ display: "flex", gap: 4, marginBottom: 8, alignItems: "center" }}>
             <span style={{ ...S.label, marginBottom: 0, marginRight: 6 }}>Timeframe</span>
             {TIMEFRAMES.map(t => {
@@ -1252,7 +1164,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
                   onClick={() => setSelectedTimeframe(t.id)}
                   style={{
                     padding: "3px 9px",
-                    borderRadius: 6,
+                    borderRadius: 2,
                     border: `1px solid ${active ? `${accentColor}55` : "rgba(255,255,255,.08)"}`,
                     background: active ? `${accentColor}15` : "rgba(255,255,255,.03)",
                     color: active ? accentColor : "rgba(243,244,246,.55)",
@@ -1268,18 +1180,14 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
             })}
           </div>
 
-          {/* Chart */}
-          <div style={{ marginBottom: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
+          <div style={{ marginBottom: 10, borderRadius: 2, border: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
             <PriceChart symbol={selectedSymbol} accent={accentColor} timeframe={selectedTimeframe} />
           </div>
 
-          {/* Trade feed */}
           <TradeFeed />
 
-          {/* Account summary */}
           <AccountSummary account={account} paperBalance={paperBalance} onReset={resetAccount} />
 
-          {/* Order entry */}
           <OrderEntry
             symbol={selectedSymbol}
             lobbyId={lobbyId}
@@ -1288,7 +1196,6 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
             onTrade={loadAccount}
           />
 
-          {/* Open positions */}
           {account?.positions?.length > 0 && (
             <div style={{ marginTop: 10 }}>
               <div style={S.label}>OPEN POSITIONS</div>
@@ -1318,7 +1225,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
                       return (
                         <div key={p.id} style={{ ...S.card, padding: "8px 10px", display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{
-                            padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700,
+                            padding: "2px 6px", borderRadius: 2, fontSize: 10, fontWeight: 700,
                             background: p.side === "BUY" ? "rgba(34,197,94,.10)" : "rgba(239,68,68,.10)",
                             color: p.side === "BUY" ? GREEN : RED, opacity: 0.6,
                           }}>
@@ -1370,8 +1277,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         </div>
       )}
 
-      {/* Disclaimer */}
-      <div style={{ marginTop: 20, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
+      <div style={{ marginTop: 20, padding: "8px 10px", borderRadius: 2, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
         <div style={{ fontSize: 9, opacity: 0.25, lineHeight: 1.5 }}>
           FakeOut — paper trading only, no real money at risk. Market data provided by Binance. Prices are real-time but simulated trades have no market impact. Not financial advice.
         </div>

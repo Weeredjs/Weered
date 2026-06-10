@@ -2,11 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 
-// /staff/events/* + /lobbies/:id/events/* + /events/* — global + lobby
-// event listings, with a promotion flow that lets a lobby owner request
-// global visibility for a published lobby event (staff approves/denies).
-// All status transitions and edits drop into either globalAudit (staff
-// scope) or lobbyAudit (lobby scope) so we always have an actor trail.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
@@ -20,7 +15,6 @@ type Opts = {
 export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAssignRoles, canAccessStaff, broadcastEvent, globalAudit, lobbyAdminAccess } = opts;
 
-// GET /staff/events — list all events with filters
 app.get("/staff/events", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -42,7 +36,6 @@ app.get("/staff/events", async (req, reply) => {
   return reply.send({ ok: true, events });
 });
 
-// GET /staff/events/promotions — pending promotion requests
 app.get("/staff/events/promotions", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -56,7 +49,6 @@ app.get("/staff/events/promotions", async (req, reply) => {
   return reply.send({ ok: true, events });
 });
 
-// POST /staff/events — create a global event
 app.post("/staff/events", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -78,10 +70,9 @@ app.post("/staff/events", async (req, reply) => {
       broadcastOnPublish: Boolean(body.broadcastOnPublish),
       createdById: u.id,
       createdByName: u.name,
-      lobbyId: null, // global
+      lobbyId: null,
     },
   });
-  // Broadcast if publishing immediately
   if (event.status === "PUBLISHED" && event.broadcastOnPublish) {
     broadcastEvent(event.title, event.startsAt);
   }
@@ -89,7 +80,6 @@ app.post("/staff/events", async (req, reply) => {
   return reply.send({ ok: true, event });
 });
 
-// PATCH /staff/events/:id — update any event
 app.patch("/staff/events/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -110,7 +100,6 @@ app.patch("/staff/events/:id", async (req, reply) => {
   if (body.status !== undefined) data.status = String(body.status).toUpperCase();
   if (body.broadcastOnPublish !== undefined) data.broadcastOnPublish = Boolean(body.broadcastOnPublish);
   const event = await (prisma as any).event.update({ where: { id: eventId }, data });
-  // Broadcast if just published with flag
   if (data.status === "PUBLISHED" && existing.status !== "PUBLISHED" && event.broadcastOnPublish) {
     broadcastEvent(event.title, event.startsAt);
   }
@@ -118,7 +107,6 @@ app.patch("/staff/events/:id", async (req, reply) => {
   return reply.send({ ok: true, event });
 });
 
-// DELETE /staff/events/:id — hard-delete an event
 app.delete("/staff/events/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -132,7 +120,6 @@ app.delete("/staff/events/:id", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// POST /staff/events/:id/promotion-review — approve or deny a promotion request
 app.post("/staff/events/:id/promotion-review", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -159,15 +146,11 @@ app.post("/staff/events/:id/promotion-review", async (req, reply) => {
   return reply.send({ ok: true, event: updated });
 });
 
-// ── Lobby Event Endpoints ─────────────────────────────────────────────────
-
-// GET /lobbies/:id/events — list events for a lobby
 app.get("/lobbies/:id/events", async (req, reply) => {
   const lobbyId = String((req as any).params?.id || "");
   const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
   if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
   const q: any = (req as any).query || {};
-  // If admin auth provided, show all statuses; otherwise only PUBLISHED
   const u = authFromHeader((req as any).headers?.authorization);
   let showAll = false;
   if (u) {
@@ -186,7 +169,6 @@ app.get("/lobbies/:id/events", async (req, reply) => {
   return reply.send({ ok: true, events });
 });
 
-// POST /lobbies/:id/events — create a lobby event
 app.post("/lobbies/:id/events", async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
@@ -214,7 +196,6 @@ app.post("/lobbies/:id/events", async (req, reply) => {
   return reply.send({ ok: true, event });
 });
 
-// PATCH /lobbies/:id/events/:eventId — update a lobby event
 app.patch("/lobbies/:id/events/:eventId", async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
@@ -238,7 +219,6 @@ app.patch("/lobbies/:id/events/:eventId", async (req, reply) => {
   return reply.send({ ok: true, event });
 });
 
-// DELETE /lobbies/:id/events/:eventId — delete a lobby event
 app.delete("/lobbies/:id/events/:eventId", async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
@@ -252,7 +232,6 @@ app.delete("/lobbies/:id/events/:eventId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// POST /lobbies/:id/events/:eventId/promote — request global promotion (owner only)
 app.post("/lobbies/:id/events/:eventId/promote", async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 5);
   if (!ctx) return;
@@ -272,9 +251,6 @@ app.post("/lobbies/:id/events/:eventId/promote", async (req, reply) => {
   return reply.send({ ok: true, event: updated });
 });
 
-// ── Public Event Endpoints ────────────────────────────────────────────────
-
-// GET /events/upcoming — upcoming published events (global + promoted-approved lobby events)
 app.get("/events/upcoming", async (req, reply) => {
   const q: any = (req as any).query || {};
   const events = await (prisma as any).event.findMany({
@@ -293,7 +269,6 @@ app.get("/events/upcoming", async (req, reply) => {
   return reply.send({ ok: true, events });
 });
 
-// GET /events/:id — single event detail
 app.get("/events/:id", async (req, reply) => {
   const eventId = String((req as any).params?.id || "");
   const event = await (prisma as any).event.findUnique({

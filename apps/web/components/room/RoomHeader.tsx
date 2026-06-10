@@ -13,8 +13,6 @@ export type ModulePill = {
   active: boolean;
 };
 
-// ── Inline brand icons ───────────────────────────────────────────────────────
-
 function TwitchIcon({ size = 13, color = "#9146FF" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}>
@@ -41,8 +39,6 @@ function getAccent(id: string): string {
     default:        return "#5800E5";
   }
 }
-
-// ── Avatar stack ─────────────────────────────────────────────────────────────
 
 function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
   const shown = users.slice(0, max);
@@ -91,8 +87,6 @@ function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
   );
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
-
 export default function RoomHeader({
   title,
   memberCount,
@@ -123,11 +117,8 @@ export default function RoomHeader({
   onLeave?: () => void;
 }) {
   const activeModule = pills?.find(p => p.active);
-  // Room-owner accent takes priority over active-module tint. Gives rooms
-  // a consistent look even as the user flips between Voice / YouTube / etc.
   const roomAccent = accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : null;
   const activeAccent = roomAccent || (activeModule ? getAccent(activeModule.id) : "#5800E5");
-  // Banner wash: prefer owner-set banner, fall back to module thumbnail.
   const washUrl = bannerUrl || thumbnail;
   const userArr = Array.isArray(users) ? users : [];
   const count = memberCount ?? userArr.length;
@@ -138,11 +129,7 @@ export default function RoomHeader({
       borderBottom: "1px solid rgba(255,255,255,0.05)",
       background: "rgba(10,10,18,0.6)",
     }}>
-      {/* ── Ambient layers ── */}
 
-      {/* Thumbnail / banner wash — owner-set bannerUrl wins, so the room
-          brand stays consistent when the active module changes. When bannerUrl
-          is set we pump the opacity up a bit so it actually reads. */}
       {washUrl && (
         <div style={{
           position: "absolute", inset: 0, zIndex: 0,
@@ -155,13 +142,11 @@ export default function RoomHeader({
         }} />
       )}
 
-      {/* Gradient base */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
         background: "linear-gradient(180deg, rgba(10,10,18,0.2) 0%, rgba(10,10,18,0.65) 100%)",
       }} />
 
-      {/* Accent wash — visible color tint from active module */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
         background: activeModule
@@ -170,7 +155,6 @@ export default function RoomHeader({
         transition: "background 0.4s ease",
       }} />
 
-      {/* Accent glow orb — top-left radial */}
       <div style={{
         position: "absolute", top: -15, left: 30, width: 160, height: 80,
         borderRadius: "50%",
@@ -179,7 +163,6 @@ export default function RoomHeader({
         transition: "background 0.4s ease",
       }} />
 
-      {/* Noise texture */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
         opacity: 0.015,
@@ -187,7 +170,6 @@ export default function RoomHeader({
         backgroundSize: "16px 16px",
       }} />
 
-      {/* Bottom edge glow — thicker, more visible */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0, height: 2,
         background: `linear-gradient(90deg, transparent 2%, ${activeAccent}50 20%, ${activeAccent}35 50%, ${activeAccent}50 80%, transparent 98%)`,
@@ -196,14 +178,10 @@ export default function RoomHeader({
         boxShadow: `0 0 12px ${activeAccent}25, 0 0 4px ${activeAccent}15`,
       }} />
 
-      {/* ── Content ── */}
       <div style={{ position: "relative", zIndex: 1, padding: "10px 16px 8px" }}>
 
-        {/* ── Row 1: Identity bar ── */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
 
-          {/* Room icon (owner-set) wins over lobby logo; both fall back to
-              a letter tile. Gives each room its own face when it wants one. */}
           <div style={{ display: "flex", alignItems: "center", gap: 9, flex: 1, minWidth: 0 }}>
             {iconUrl ? (
               <div style={{
@@ -262,10 +240,8 @@ export default function RoomHeader({
             </div>
           </div>
 
-          {/* Right cluster */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
 
-            {/* People block */}
             <div style={{
               display: "flex", alignItems: "center", gap: 7,
               padding: "4px 10px 4px 5px",
@@ -291,7 +267,6 @@ export default function RoomHeader({
               </span>
             </div>
 
-            {/* Leave button */}
             {onLeave && (
               <button
                 type="button"
@@ -316,7 +291,6 @@ export default function RoomHeader({
           </div>
         </div>
 
-        {/* ── Row 2: Module controls ── */}
         {pills && pills.length > 0 && (
           <div style={{
             display: "flex", alignItems: "center", gap: 4,

@@ -63,14 +63,11 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
     return () => { alive = false; clearInterval(t); };
   }, []);
 
-  // Live ticking countdown.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // When there is no active MO, surface the most recent outcome from the
-  // dispatches feed so the empty state still tells the story.
   useEffect(() => {
     if (loading) return;
     if (orders && orders.length > 0) { setLastOutcome(null); return; }
@@ -88,8 +85,6 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
             msg.includes("WON") || msg.includes("VICTORY") || msg.includes("SUCCESS") ? "WON" :
             msg.includes("LOST") || msg.includes("FAIL") || msg.includes("DEFEAT") ? "LOST" :
             "ENDED";
-          // First sentence as title (cap 80 chars). Strip Steam-style
-          // <i=N>...</i> emphasis tags so they don't render as literal text.
           const raw = String(d.message || d.text || d.body || "")
             .replace(/<\/?i(?:=\d+)?>/g, "")
             .replace(/\s+/g, " ")
@@ -165,7 +160,6 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
 
   return (
     <div style={panelBase(style)}>
-      {/* Single shared header instead of per-order repeat */}
       <div style={{
         padding: "8px 14px",
         borderBottom: "1px solid rgba(255,215,0,.18)",
@@ -186,7 +180,6 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
           <div key={o.id} style={{
             borderTop: i === 0 ? "none" : "1px solid rgba(255,215,0,.10)",
           }}>
-            {/* Compact one-line summary — title • countdown • progress bar */}
             <button
               type="button"
               onClick={() => setExpandedOrderId(expanded ? null : o.id)}
@@ -239,7 +232,6 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
               </div>
             )}
 
-            {/* Reward (only shown when expanded) */}
             {expanded && o.reward && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "rgba(255,255,255,.85)", padding: "0 14px 12px 30px" }}>
                 <span style={{
@@ -263,7 +255,6 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
 }
 
 function rewardLabel(type: any): string {
-  // Reward type 1 = Medals (most common). Fall back gracefully.
   const t = Number(type);
   if (t === 1) return "Medals";
   if (t === 2) return "Super Credits";

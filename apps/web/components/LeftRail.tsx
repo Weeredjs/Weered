@@ -30,28 +30,18 @@ function normRoomKey(x: any): string {
   return String(s || "").trim();
 }
 
-// ── FIX: strip room: prefix before routing logic ──────────────────────────────
 function lobbyHref(id: string): string {
   let clean = id || "";
   if (clean.startsWith("room:")) clean = clean.slice(5);
   try { clean = decodeURIComponent(clean); } catch {}
   if (!clean) return "/lobby";
-  // Room prefixes: these are always rooms, never lobbies. Includes the
-  // generic content prefixes (stream-, news-, etc) plus seeded house-room
-  // prefixes that follow the <lobbyId>-<slug> naming convention. Without
-  // these, IDs like "fakeout-newcomers" match the lobby-slug regex below
-  // and get misrouted to /lobby/fakeout-newcomers.
   const ROOM_PREFIXES = [
     "stream-", "news-", "article-", "watch-",
-    // Seeded house-room prefixes — add here when a new lobby ships
-    // pinned house rooms that follow the <lobbyId>-<slug> convention.
     "fakeout-", "destiny2-", "dnd-", "windrose-",
     "mlb-", "league-", "fortnite-", "cs2-", "dota2-", "pubg-", "hq-",
     "poker-", "study-", "marathon-",
   ];
   if (ROOM_PREFIXES.some(p => clean.startsWith(p))) return `/room/${encodeURIComponent(clean)}`;
-  // Lobby slugs: lowercase with hyphens/dots (e.g. cnc-generals, weered.ca, r/gaming)
-  // Room hashes: mixed-case alphanumeric (e.g. XlKwIz, MwlnQa, 7AE05O)
   const isLobbySlug = /^[a-z][a-z0-9._/-]*$/.test(clean) || clean.includes(".") || clean.includes("/");
   if (isLobbySlug) return `/lobby/${encodeURIComponent(clean)}`;
   return `/room/${encodeURIComponent(clean)}`;
@@ -90,7 +80,6 @@ type Flair = {
   icon?: React.ReactNode;
 };
 
-// ── Role display names (DB value → street name) ─────────────────────────────
 const ROLE_DISPLAY: Record<string, string> = {
   GOD: "Godfather", ADMIN: "Lieutenant", STAFF: "Enforcer", SUPPORT: "Backup",
   MOD: "Captain", OWNER: "Founder",
@@ -109,8 +98,6 @@ function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
   return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase();
 }
 
-// ── Role icons — emoji, readable at any size ─────────────────────────────────
-// ── Role icons — brand PNGs via RoleIcon component ──────────────────────────
 const ICON_GOD     = <RoleIcon role="GOD" size={14} />;
 const ICON_ADMIN   = <RoleIcon role="ADMIN" size={14} />;
 const ICON_STAFF   = <RoleIcon role="STAFF" size={14} />;
@@ -158,7 +145,6 @@ function groupRank(u: any): number {
   return 5;
 }
 
-// ── Simple accent color from room name hash ───────────────────────────────────
 const ROOM_ACCENTS = [
   "#7c6af7", "#22c55e", "#f97316", "#60a5fa", "#ef4444",
   "#eab308", "#ec4899", "#14b8a6", "#a78bfa", "#fb923c",
@@ -175,7 +161,6 @@ export default function LeftRail() {
   const router = useRouter();
   const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } = useWeered() as any;
 
-  // ── Lobby-theme label swap (reactive to data-weered-lobby attr) ───────────
   const [lobbyTheme, setLobbyTheme] = useState<string | null>(null);
   useEffect(() => {
     const read = () => setLobbyTheme(document.documentElement.getAttribute("data-weered-lobby"));
@@ -185,7 +170,6 @@ export default function LeftRail() {
     return () => obs.disconnect();
   }, []);
 
-  // Lobby-scoped vocabulary swap
   const isWindrose = lobbyTheme === "windrose";
   const isDestiny  = lobbyTheme === "destiny2";
   const isDnd      = lobbyTheme === "dnd";
@@ -238,7 +222,6 @@ export default function LeftRail() {
   const rawRoomKey = pickFirstString(joinedRoomId, activeRoomId, "");
   const roomLabel  = useMemo(() => normRoomKey(rawRoomKey), [rawRoomKey]);
 
-  // ── Lobby-wide presence aggregation ──────────────────────────────────────
   const [lobbyPresence, setLobbyPresence] = useState<any[]>([]);
   const lobbyPresenceId = isLobbyActive ? (currentLobbyId || "") : "";
 
@@ -253,16 +236,12 @@ export default function LeftRail() {
       } catch {}
     };
     fetchPresence();
-    // 20s reconciliation poll — WS push handles real-time presence; this is
-    // only a fallback for missed leave/join broadcasts.
     const t = setInterval(fetchPresence, 20000);
     return () => { cancelled = true; clearInterval(t); };
   }, [lobbyPresenceId]);
 
-  // When on a lobby page, merge lobby-wide presence with WS users
   const effectiveUsers = useMemo(() => {
     if (!isLobbyActive || !lobbyPresence.length) return users;
-    // Merge: lobby presence is the primary source, WS users fill gaps
     const seen = new Map<string, any>();
     for (const u of lobbyPresence) { if (u?.id) seen.set(u.id, u); }
     for (const u of (Array.isArray(users) ? users : [])) {
@@ -302,14 +281,11 @@ export default function LeftRail() {
     return arr;
   }, [filtered]);
 
-  // ── Recents (server-side) + Favorites (local) ──────────────────────────────
   const FAVS_KEY = "weered:favs:v1";
 
-  // Server-side recents
   const [serverRecents, setServerRecents] = useState<any[]>([]);
   const recentsLoaded = useRef(false);
 
-  // Fetch recents from API on mount + when user authenticates
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
     if (!token || !me?.id) return;
@@ -319,7 +295,6 @@ export default function LeftRail() {
       .catch(() => {});
   }, [me?.id]);
 
-  // Record visits server-side when navigating
   useEffect(() => {
     const raw = normRoomKey(joinedRoomId || activeRoomId || "");
     if (!raw || raw === "lobby") return;
@@ -327,7 +302,6 @@ export default function LeftRail() {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
     if (!token) return;
 
-    // Determine if this is a lobby or a room
     const isLobbySlug = /^[a-z][a-z0-9._/-]*$/.test(room) && room.length > 2;
     const body = isLobbySlug ? { lobbyId: room } : { roomId: room };
 
@@ -338,7 +312,6 @@ export default function LeftRail() {
     })
       .then(r => r.json())
       .then(() => {
-        // Re-fetch recents to get updated list
         fetch(`${API_BASE}/recents`, { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.json())
           .then(j => { if (Array.isArray(j?.recents)) setServerRecents(j.recents); })
@@ -347,13 +320,11 @@ export default function LeftRail() {
       .catch(() => {});
   }, [joinedRoomId, activeRoomId]);
 
-  // Derive recents as string IDs for compatibility with existing rendering
   const recents = useMemo(() =>
     serverRecents.map(r => r.lobbyId || r.roomId).filter(Boolean),
     [serverRecents]
   );
 
-  // Build a map from ID → server recent data (for name/logo enrichment)
   const serverRecentMap = useMemo(() => {
     const m = new Map<string, any>();
     for (const r of serverRecents) {
@@ -367,17 +338,47 @@ export default function LeftRail() {
     try { const r = localStorage.getItem(FAVS_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
   });
 
+  const favsSynced = useRef(false);
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
+    if (!token || !me?.id || favsSynced.current) return;
+    favsSynced.current = true;
+    (async () => {
+      try {
+        let local: string[] = [];
+        try { local = JSON.parse(localStorage.getItem(FAVS_KEY) || "[]"); } catch {}
+        const res = await fetch(`${API_BASE}/me/favorites/merge`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: local }),
+        });
+        const j = await res.json();
+        if (j?.ok && Array.isArray(j.ids)) {
+          setFavs(j.ids);
+          try { localStorage.setItem(FAVS_KEY, JSON.stringify(j.ids)); } catch {}
+        }
+      } catch {}
+    })();
+  }, [me?.id]);
+
   function toggleFav(room: string) {
     setFavs(prev => {
-      const next = prev.includes(room) ? prev.filter(r => r !== room) : [room, ...prev].slice(0, 12);
+      const adding = !prev.includes(room);
+      const next = adding ? [room, ...prev] : prev.filter(r => r !== room);
       try { localStorage.setItem(FAVS_KEY, JSON.stringify(next)); } catch {}
+      const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
+      if (token) {
+        fetch(`${API_BASE}/me/favorites/${encodeURIComponent(room)}`, {
+          method: adding ? "POST" : "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
       return next;
     });
   }
 
   const recentRooms = recents.filter(r => !favs.includes(r));
 
-  // ── Lobby logo cache (for recents/favs room sublabels) ────────────────────
   const [lobbyLogos, setLobbyLogos] = useState<Record<string, string>>({});
   useEffect(() => {
     fetch(`${API_BASE}/lobbies`).then(r => r.json()).then(j => {
@@ -390,7 +391,6 @@ export default function LeftRail() {
     }).catch(() => {});
   }, []);
 
-  // ── Room name cache ────────────────────────────────────────────────────────
   const [roomNameCache, setRoomNameCache] = useState<Record<string,string>>(() => {
     try { return JSON.parse(localStorage.getItem("weered:roomnames:v1") || "{}"); } catch { return {}; }
   });
@@ -402,7 +402,6 @@ export default function LeftRail() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
   const getRoomName = (id: string) => {
-    // Check server recents first (has enriched name from API)
     const sr = serverRecentMap.get(id);
     if (sr?.name && sr.name !== id) return sr.name;
     const v = roomNameCache[id];
@@ -412,7 +411,6 @@ export default function LeftRail() {
     return id;
   };
   const getRoomLobby = (id: string): string => {
-    // Check server recents for lobby context
     const sr = serverRecentMap.get(id);
     if (sr?.lobbyId && sr.lobbyId !== id) return sr.lobbyName || sr.lobbyId;
     if (sr?.lobbyId === id) return "lobby";
@@ -420,12 +418,9 @@ export default function LeftRail() {
     if (typeof v === "object" && v !== null) return (v as any).lobbyId || (v as any).lobby || "";
     return "";
   };
-  // Sublabel: show parent lobby name for rooms, "lobby" for lobby slugs
   const getRoomSublabel = (id: string): string => {
     const sr = serverRecentMap.get(id);
-    // If it's a lobby visit, show the slug as sublabel
     if (sr?.lobbyId === id) return id;
-    // If it's a room in a lobby, show the lobby name
     if (sr?.lobbyName) return sr.lobbyName;
     if (sr?.lobbyId) return sr.lobbyId;
     const lobby = getRoomLobby(id);
@@ -435,7 +430,6 @@ export default function LeftRail() {
     return "";
   };
   const getLobbyLogo = (id: string): string | null => {
-    // Check server recents for logo
     const sr = serverRecentMap.get(id);
     if (sr?.logoUrl) return sr.logoUrl;
     if (lobbyLogos[id]) return lobbyLogos[id];
@@ -444,7 +438,6 @@ export default function LeftRail() {
     return null;
   };
 
-  // ── Online counts for favs/recents (fetched periodically) ─────────────────
   const [roomCounts, setRoomCounts] = useState<Record<string, number>>({});
   useEffect(() => {
     const ids = [...new Set([...favs, ...recentRooms])];
@@ -465,7 +458,6 @@ export default function LeftRail() {
     return () => clearInterval(t);
   }, [favs.length, recentRooms.length]);
 
-  // ── Pending knock indicator ─────────────────────────────────────────────────
   const [pendingRooms, setPendingRooms] = useState<Set<string>>(new Set());
   useEffect(() => {
     const onKnockQueued = (e: Event) => {
@@ -499,8 +491,6 @@ export default function LeftRail() {
     return false;
   };
 
-  // ── Presence popover ───────────────────────────────────────────────────────
-  // User hover card (replaces old presence popover)
   const _lobbyMod =
     String(currentLobbyId || "").toLowerCase() === "windrose" ? "WINDROSE" :
     undefined;
@@ -512,14 +502,12 @@ export default function LeftRail() {
     },
   });
 
-  // ── Active room info for favs/recents ─────────────────────────────────────
   const activeRoomNorm = normRoomKey(joinedRoomId || activeRoomId || "");
 
   return (
     <div className="weered-left-inner">
       <UserCorner />
 
-      {/* ── Communities ───────────────────────────────────────────────────── */}
       <div className="weered-left-section">
         <div className="weered-left-title">{navLabels.communities}</div>
 
@@ -558,7 +546,6 @@ export default function LeftRail() {
         </div>
       </div>
 
-      {/* ── Presence ──────────────────────────────────────────────────────── */}
       <div className="weered-presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">Presence</div>
@@ -581,10 +568,6 @@ export default function LeftRail() {
               psn:    !!u?.psnAccountId,
             };
 
-            // Only override the default line for the Operator row. Everyone
-            // else — including "you" — falls through to PresenceRow's own
-            // logic so we get the platform icon + game / "lying low" /
-            // "online" treatment. Self-row still stands out via row background.
             const isOperator = uid === "operator";
             const secondary: React.ReactNode | undefined = isOperator
               ? <span style={{ color: "rgba(212,160,23,.7)", fontStyle: "italic" }}>AI · @operator</span>
@@ -610,6 +593,10 @@ export default function LeftRail() {
                   online={true}
                   isAway={!!u?.isAway}
                   livePresence={u?.livePresence}
+                  statusText={u?.statusText}
+                  statusEmoji={u?.statusEmoji}
+                  nameEffect={u?.nameEffect}
+                  avatarFrame={u?.avatarFrame}
                   secondaryText={secondary}
                   platforms={platforms}
                   pillBgColor={u?.pillBgColor}
@@ -624,10 +611,8 @@ export default function LeftRail() {
         </div>
       </div>
 
-      {/* ── Presence popover ──────────────────────────────────────────────── */}
       {hoverCard}
 
-      {/* ── Favorites + Recents ───────────────────────────────────────────── */}
       <div className="weered-left-section">
 
         {favs.length > 0 && (
@@ -672,7 +657,6 @@ export default function LeftRail() {
                       el.style.borderColor = isActive ? `${accent}55` : `${accent}22`;
                     }}
                   >
-                    {/* Top row: logo + name + live badge */}
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                       {(() => {
                         const logo = getLobbyLogo(room);
@@ -707,7 +691,6 @@ export default function LeftRail() {
                         </span>
                       )}
                     </div>
-                    {/* Sub row: lobby context */}
                     {(() => { const sub = getRoomSublabel(room); const logo = getLobbyLogo(room); return sub ? (
                       <div style={{ fontSize:10, opacity:0.32, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace", paddingLeft: logo ? 22 : 0 }}>
                         {sub}
@@ -771,7 +754,6 @@ export default function LeftRail() {
                     }}
                   >
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      {/* Lobby logo or live dot */}
                       {(() => {
                         const logo = getLobbyLogo(room);
                         return logo ? (
@@ -832,7 +814,6 @@ export default function LeftRail() {
         )}
       </div>
 
-      {/* ── Rail footer ─────────────────────────────────────────────── */}
       <div style={{
         marginTop: "auto",
         padding: "12px 0 4px",
@@ -863,7 +844,6 @@ export default function LeftRail() {
         </div>
       </div>
 
-      {/* Pending pill animation */}
       <style>{`@keyframes weered-pending-pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
     </div>
   );

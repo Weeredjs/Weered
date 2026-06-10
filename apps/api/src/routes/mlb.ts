@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// MLB Stats API — free, no key. Returns today's scoreboard, standings,
-// stat leaders, player bios/stats, game box scores, highlights, and
-// enriched matchup data. All pure proxy/shaping, no DB state.
 export default async function mlbRoutes(app: FastifyInstance) {
   const MLB_API = "https://statsapi.mlb.com/api/v1";
 

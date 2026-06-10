@@ -32,10 +32,6 @@ type Standing = {
   alive: boolean;
 };
 
-/**
- * Round-robin viewer: standings table on top, ungrouped match list below.
- * Click a match to open the same TournamentMatchModal used for brackets.
- */
 export default function TournamentRoundRobin({
   tournamentId,
   matches,
@@ -63,7 +59,6 @@ export default function TournamentRoundRobin({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Standings table */}
       <div style={{
         border: `1px solid ${ACCENT}38`,
         borderRadius: 6,
@@ -105,7 +100,6 @@ export default function TournamentRoundRobin({
         </table>
       </div>
 
-      {/* Remaining matches */}
       {remaining.length > 0 && (
         <Section title={`Remaining · ${remaining.length}`}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 8 }}>
@@ -114,7 +108,6 @@ export default function TournamentRoundRobin({
         </Section>
       )}
 
-      {/* Completed matches */}
       {completed.length > 0 && (
         <Section title={`Results · ${completed.length}`} muted>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 8 }}>

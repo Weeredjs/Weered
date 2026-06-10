@@ -1,36 +1,7 @@
-/**
- * Destiny 2 modifier catalog — structured to match the in-game Portal taxonomy.
- *
- * Used by:
- *   - Challenge admin UI picker (groups by tab)
- *   - Worker (filter check at PGCR completion)
- *   - Frontend display (chips next to challenges)
- *
- * Six tabs match the in-game Portal:
- *   BOON       — 3 player-pick slots; positive buffs (Surges live here)
- *   BUILDCRAFT — Loadout/buildcraft restrictions; some pickable, some locked
- *   GAMEPLAY   — Mostly locked rewards/revives/timers
- *   CHALLENGE  — 5 player-pick slots; banes, threats, debuffs (the "5 of 17" pool)
- *   RULE       — Locked Bungie-set rules (Champions hardcode lives here)
- *   TIER       — Difficulty tier (Normal → Ultimate, 6 levels)
- *
- * slotKind tells the picker UI whether a player can self-serve via Custom
- * Ops (PLAYER_PICK) or has to wait for the activity rotation (ACTIVITY_LOCKED).
- *
- * rewardStars (1-5) reflects the in-game reward multiplier for using this mod.
- *
- * NOTE: Anti-Surges (Stasis Anti-Surge etc — "% decrease to outgoing X damage")
- * appear in newer Portal content but aren't in our May 5 manifest cache. Add
- * them on the next manifest re-sync.
- *
- * Regenerated from manifest by scripts/restructure_catalog.js.
- */
 
 export type ModifierTab = "BOON" | "BUILDCRAFT" | "GAMEPLAY" | "CHALLENGE" | "RULE" | "TIER";
 export type SlotKind = "PLAYER_PICK" | "ACTIVITY_LOCKED";
 
-// Legacy category type kept for back-compat with old callers; new code should
-// use `tab` + `slotKind` instead.
 export type ModifierCategory = "BURN" | "SURGE" | "THREAT" | "RESTRICTION" | "DIFFICULTY" | "TIER";
 
 export type ModifierEntry = {
@@ -43,11 +14,9 @@ export type ModifierEntry = {
   rewardStars?: 1 | 2 | 3 | 4 | 5;
   icon: string;
   color?: string;
-  // legacy field — derived from tab for back-compat
   category?: ModifierCategory;
 };
 
-// Map tab -> legacy category for back-compat
 function legacyCategory(tab: ModifierTab): ModifierCategory {
   switch (tab) {
     case "BOON":      return "SURGE";

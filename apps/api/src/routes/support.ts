@@ -1,5 +1,3 @@
-// Support: Ban Court v1 (public list + appeal queue) AND in-app bug reports.
-// Pairs with web /ban-court and the Ban Appeals + Bug Reports tabs in /staff.
 
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
@@ -14,8 +12,6 @@ type Opts = {
 export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
 
-  // GET /bans/public — paginated list of currently banned users.
-  // Public so the community can see who's been banned and why.
   app.get<{ Querystring: { take?: string; skip?: string } }>("/bans/public", async (req, reply) => {
     const take = Math.min(Math.max(Number(req.query?.take || 50), 1), 100);
     const skip = Math.max(Number(req.query?.skip || 0), 0);
@@ -31,9 +27,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, total, rows });
   });
 
-  // POST /bans/appeal — banned user submits an appeal. We can't trust JWT
-  // since banned accounts can't sign in normally; instead we re-verify
-  // username + password against LocalAuth. One PENDING appeal at a time.
   app.post<{
     Body: { username?: string; password?: string; reason?: string };
   }>("/bans/appeal", {
@@ -68,7 +61,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, appealId: created.id, submittedAt: created.createdAt });
   });
 
-  // GET /staff/ban-appeals — staff list of pending (default) or all appeals.
   app.get<{ Querystring: { status?: string; take?: string } }>("/staff/ban-appeals", async (req, reply) => {
     const u = authFromHeader(req.headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -89,7 +81,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, rows });
   });
 
-  // POST /staff/ban-appeals/:id/review — staff approves (= unban) or denies.
   app.post<{
     Params: { id: string };
     Body: { decision?: string; note?: string };
@@ -125,11 +116,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // ── Bug Reports ──────────────────────────────────────────────────────────
-
-  // POST /bugs — anyone can submit (signed-in or not). Captures page +
-  // user-agent automatically. Rate-limited per IP. Body ≤ 4000 chars.
-  // category routes the triage view in /staff but otherwise same flow.
   const VALID_CATEGORIES = new Set(["BUG", "LOBBY_MODULE_REQUEST", "FEEDBACK"]);
   app.post<{
     Body: { body?: string; page?: string; category?: string };
@@ -150,8 +136,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, id: created.id, submittedAt: created.createdAt });
   });
 
-  // GET /staff/bugs — paginated list of bug reports, default OPEN.
-  // Optional &category=BUG|LOBBY_MODULE_REQUEST|FEEDBACK to filter triage queue.
   app.get<{ Querystring: { status?: string; take?: string; category?: string } }>("/staff/bugs", async (req, reply) => {
     const u = authFromHeader(req.headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -175,7 +159,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, rows });
   });
 
-  // POST /staff/bugs/:id/close — close a report with optional internal note.
   app.post<{
     Params: { id: string };
     Body: { note?: string };

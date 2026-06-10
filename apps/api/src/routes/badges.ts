@@ -1,9 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /badges/* — global badge definitions and per-user earned badges.
-// Badges are awarded by the challenge worker; this module just exposes
-// read endpoints + admin create.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
 };

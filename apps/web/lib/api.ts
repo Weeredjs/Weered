@@ -13,24 +13,12 @@ function authHeaders(): Record<string, string> {
 }
 
 export type ApiFetchOptions = RequestInit & {
-  // Suppress the toast for non-2xx or {ok:false} responses. Default false —
-  // the whole point of this helper is that errors are visible by default.
   silent?: boolean;
-  // Override the toast message on error. If omitted, uses the API's
-  // `message` field, then `error` field, then a generic fallback.
   errorLabel?: string;
 };
 
 export type ApiResult<T = any> = T & { ok?: boolean; error?: string; message?: string };
 
-/**
- * Centralized API fetch. Adds Bearer auth, sets JSON content-type when a
- * body is present, parses the response, and **surfaces errors via toast
- * automatically** so silent failures stop happening.
- *
- * Returns the parsed JSON regardless of status — callers can still inspect
- * `.ok` / `.error` if they want extra handling.
- */
 export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}): Promise<ApiResult<T>> {
   const { silent, errorLabel, headers: callerHeaders, body, ...rest } = opts;
   const finalHeaders: Record<string, string> = {
@@ -66,7 +54,6 @@ export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}
   return json as ApiResult<T>;
 }
 
-// Map known machine-readable error codes to friendly user-facing copy.
 const ERROR_COPY: Record<string, string> = {
   bungie_not_linked: "Link your Bungie account first — hit the \"Link Bungie\" pill in the destiny2 lobby tab bar, or open My Guardian.",
   challenge_not_active: "This challenge is no longer active.",

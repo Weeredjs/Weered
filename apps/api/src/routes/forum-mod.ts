@@ -2,8 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { LobbyRole, ForumReportReason, ForumReportStatus, ForumModActionKind, ForumAutoModKind, ForumAutoModAction } from "@prisma/client";
 
-// /forum/* moderation surface — reports, mod actions audit log, automod rules.
-// Slice C of the Tier 2 forum upgrade. Companion to routes/forum.ts.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
@@ -16,8 +14,6 @@ const REPORT_STATUSES = ["PENDING", "REVIEWED", "ACTIONED", "DISMISSED"];
 const AUTOMOD_KINDS = ["REGEX_FILTER", "KARMA_MIN", "ACCOUNT_AGE_MIN", "LINK_BLOCK", "WORD_BLOCK"];
 const AUTOMOD_ACTIONS = ["REPORT", "REMOVE", "SHADOW_REMOVE", "REQUIRE_REVIEW"];
 
-// Sentinel reporterId for automod-generated reports. Falls back to env override
-// or first staff user. Resolved lazily and cached per-process.
 let _automodReporterId: string | null = null;
 async function getAutomodReporterId(): Promise<string> {
   if (_automodReporterId) return _automodReporterId;
@@ -26,8 +22,6 @@ async function getAutomodReporterId(): Promise<string> {
     const u = await prisma.user.findUnique({ where: { id: fromEnv }, select: { id: true } });
     if (u) { _automodReporterId = u.id; return u.id; }
   }
-  // Fall back to any staff user; if none, the first user. The reporterId column
-  // is non-nullable so something has to go there.
   const staff = await prisma.user.findFirst({ where: { globalRole: { in: ["FOUNDER", "ADMIN", "STAFF", "MOD"] as any } }, select: { id: true } });
   if (staff) { _automodReporterId = staff.id; return staff.id; }
   const any = await prisma.user.findFirst({ select: { id: true } });
@@ -35,7 +29,6 @@ async function getAutomodReporterId(): Promise<string> {
   throw new Error("no_user_for_automod_reporter");
 }
 
-// Shared mod-permission check: global staff, lobby OWNER, or lobby MOD.
 async function isLobbyModOrStaff(userId: string, lobbyId: string | null, opts: Opts): Promise<{ ok: boolean; isOwner: boolean; isStaff: boolean }> {
   const role = await opts.getGlobalRole(userId);
   if (opts.canAccessStaff(role)) return { ok: true, isOwner: false, isStaff: true };
@@ -52,8 +45,6 @@ async function isLobbyOwnerOrStaff(userId: string, lobbyId: string, opts: Opts):
   return lr === LobbyRole.OWNER;
 }
 
-// Insert a row into the audit log. Wraps prisma.create so callers don't have to
-// remember the field shape.
 export async function recordModAction(lobbyId: string | null, modId: string, kind: ForumModActionKind, targetType: "POST" | "COMMENT" | "USER", targetId: string, reason: string, meta: any = {}) {
   try {
     return await prisma.forumModAction.create({
@@ -64,9 +55,6 @@ export async function recordModAction(lobbyId: string | null, modId: string, kin
   }
 }
 
-// Run all enabled rules in a lobby against new content. Returns {blocked, action,
-// ruleId, reason}. Caller decides whether to short-circuit (REMOVE) or commit
-// the content with side-effects (SHADOW_REMOVE / REQUIRE_REVIEW / REPORT).
 export async function runAutoMod(lobbyId: string | null, content: { kind: "POST" | "COMMENT"; title?: string; body: string; authorId: string }): Promise<{ blocked: boolean; action?: ForumAutoModAction; ruleId?: string; ruleName?: string; reason?: string }> {
   if (!lobbyId) return { blocked: false };
   let rules: any[] = [];
@@ -125,7 +113,7 @@ export async function runAutoMod(lobbyId: string | null, content: { kind: "POST"
           if (ageDays < minDays) { trigger = true; reason = `account age ${ageDays.toFixed(1)}d < ${minDays}d`; }
         }
       }
-    } catch { /* rule errors are non-fatal */ }
+    } catch { }
 
     if (trigger) {
       return { blocked: rule.action === ForumAutoModAction.REMOVE, action: rule.action, ruleId: rule.id, ruleName: rule.name, reason };
@@ -134,13 +122,9 @@ export async function runAutoMod(lobbyId: string | null, content: { kind: "POST"
   return { blocked: false };
 }
 
-// Periodically unlock posts whose tags.unlockAt has passed. Called from the
-// worker tick in apps/api/src/index.ts.
 export async function autoModTick() {
   try {
     const now = new Date();
-    // Posts have a JSON `tags` field. Filter at JS level since JSON path queries
-    // are awkward across providers; cap the scan to locked posts only.
     const locked = await prisma.forumPost.findMany({ where: { locked: true }, select: { id: true, lobbyId: true, tags: true } });
     for (const p of locked) {
       const t: any = p.tags;
@@ -156,7 +140,6 @@ export async function autoModTick() {
 export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
 
-  // POST /forum/reports — anyone authed can file a report
   app.post("/forum/reports", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -192,7 +175,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, report });
   });
 
-  // GET /forum/reports — staff or lobby mod
   app.get("/forum/reports", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -205,7 +187,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
 
     const where: any = {};
     if (REPORT_STATUSES.includes(status)) where.status = status;
-    // Lobby filter applied via post.lobbyId or comment.post.lobbyId
     if (lobbyId) {
       where.OR = [
         { post: { lobbyId } },
@@ -230,7 +211,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, reports: out });
   });
 
-  // PATCH /forum/reports/:id — staff or lobby mod transitions a report
   app.patch("/forum/reports/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -259,7 +239,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, report: updated });
   });
 
-  // POST /forum/posts/:id/remove — soft-delete a post
   app.post("/forum/posts/:id/remove", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -274,7 +253,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // POST /forum/posts/:id/restore
   app.post("/forum/posts/:id/restore", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -288,7 +266,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // POST /forum/posts/:id/lock — accepts optional unlockAt ISO for scheduled unlock
   app.post("/forum/posts/:id/lock", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -311,7 +288,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // POST /forum/posts/:id/unlock
   app.post("/forum/posts/:id/unlock", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -326,7 +302,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // POST /forum/posts/:id/pin — body.pinned=false unpins
   app.post("/forum/posts/:id/pin", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -336,7 +311,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     if (!post) return reply.code(404).send({ error: "not_found" });
     const perm = await isLobbyModOrStaff(u.id, post.lobbyId, opts);
     if (!perm.ok) return reply.code(403).send({ error: "forbidden" });
-    // Pin requires owner/staff; mods cannot pin
     if (!perm.isOwner && !perm.isStaff) {
       const role = await opts.getGlobalRole(u.id);
       if (!opts.canAccessStaff(role)) return reply.code(403).send({ error: "forbidden" });
@@ -346,7 +320,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, pinned });
   });
 
-  // POST /forum/comments/:id/remove — mod or author
   app.post("/forum/comments/:id/remove", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -366,7 +339,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // POST /forum/comments/:id/restore — mod only
   app.post("/forum/comments/:id/restore", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -381,7 +353,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // GET /forum/mod-actions — audit log
   app.get("/forum/mod-actions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -401,7 +372,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, actions: rows.map(r => ({ ...r, modName: mmap[r.modId] || (r.modId === "system" ? "system" : "Unknown") })) });
   });
 
-  // GET /forum/automod — list rules in a lobby (mod-gated)
   app.get("/forum/automod", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -413,7 +383,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, rules });
   });
 
-  // POST /forum/automod — owner or staff only
   app.post("/forum/automod", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -432,7 +401,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, rule });
   });
 
-  // PATCH /forum/automod/:id
   app.patch("/forum/automod/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -456,7 +424,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, rule });
   });
 
-  // DELETE /forum/automod/:id
   app.delete("/forum/automod/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -470,8 +437,6 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
   });
 }
 
-// Lightweight per-kind config validator. Returns {value} on success, {error} on
-// failure. Extracted so create + patch share the rules.
 function validateAutoModConfig(kind: string, raw: any): { value?: any; error?: string } {
   const cfg = raw && typeof raw === "object" ? raw : {};
   if (kind === "REGEX_FILTER") {
@@ -502,9 +467,6 @@ function validateAutoModConfig(kind: string, raw: any): { value?: any; error?: s
   return { error: "unknown_kind" };
 }
 
-// Helper exported for forum.ts to apply automod side-effects after creating
-// content. Returns the new fields to merge into the create-data, or null if
-// caller should reject the create entirely.
 export async function applyAutoModSideEffects(lobbyId: string | null, content: { kind: "POST" | "COMMENT"; title?: string; body: string; authorId: string }): Promise<{ blocked: boolean; ruleId?: string; ruleName?: string; reason?: string; action?: ForumAutoModAction; sideEffect?: { removedAt?: Date; removedById?: string; removeReason?: string; tagsPatch?: any } }> {
   const result = await runAutoMod(lobbyId, content);
   if (!result.action) return { blocked: false };
@@ -524,13 +486,9 @@ export async function applyAutoModSideEffects(lobbyId: string | null, content: {
       sideEffect: { tagsPatch: { requiresReview: true, automodRuleId: result.ruleId, automodReason: result.reason } },
     };
   }
-  // REPORT: file a report against the new content (caller fills in target id
-  // post-create via fileAutoModReport).
   return { blocked: false, ruleId: result.ruleId, ruleName: result.ruleName, reason: result.reason, action: result.action };
 }
 
-// Called by forum.ts after a POST/COMMENT is created when automod returned
-// REPORT — wires the report row to the actual target id.
 export async function fileAutoModReport(target: { kind: "POST" | "COMMENT"; id: string }, ruleName: string | undefined, reason: string | undefined) {
   try {
     const reporterId = await getAutomodReporterId();

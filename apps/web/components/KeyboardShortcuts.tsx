@@ -2,14 +2,6 @@
 
 import { useEffect } from "react";
 
-/**
- * Global keyboard shortcuts.
- * - "/" focuses the first visible element matching [data-weered-search]
- *   (skipped when focus is already in an input/textarea/contenteditable).
- *
- * Mount once at layout level. Tag search inputs with:
- *   <input data-weered-search ... />
- */
 export default function KeyboardShortcuts() {
   useEffect(() => {
     function isTypingTarget(el: Element | null): boolean {
@@ -34,14 +26,12 @@ export default function KeyboardShortcuts() {
     }
 
     function onKey(e: KeyboardEvent) {
-      // "/" to focus search
       if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (isTypingTarget(document.activeElement)) return;
         const target = firstVisible(document.querySelectorAll("[data-weered-search]"));
         if (target) {
           e.preventDefault();
           target.focus();
-          // Also select any existing text so user can type over it
           try {
             if ("select" in target && typeof (target as HTMLInputElement).select === "function") {
               (target as HTMLInputElement).select();

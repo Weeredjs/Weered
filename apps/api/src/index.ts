@@ -1,17 +1,13 @@
 import dotenv from "dotenv";
 dotenv.config({ override: true });
+import nodeHttps from "https";
 import * as Sentry from "@sentry/node";
 if (process.env.SENTRY_DSN_API) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN_API,
     environment: process.env.NODE_ENV || "production",
     tracesSampleRate: 0.1,
-    // Body-parse failures (malformed client JSON, bad multipart, etc.) are
-    // user-input noise. Fastify returns a clean 400; no server bug to chase.
-    // Plus transient upstream provider 5xx — Anthropic / Bungie occasionally
-    // 500 and our worker try/catch handles them; no need to alert.
     ignoreErrors: [
-      // Body-parse noise
       "Bad escaped character in JSON",
       "Unexpected token",
       "Unexpected end of JSON input",
@@ -19,14 +15,13 @@ if (process.env.SENTRY_DSN_API) {
       "Body cannot be empty",
       "FST_ERR_CTP_INVALID_MEDIA_TYPE",
       "FST_ERR_CTP_EMPTY_JSON_BODY",
-      // Upstream provider transient errors
-      "Internal server error",          // generic upstream 500
-      "api_error",                       // Anthropic error.type
-      "overloaded_error",                // Anthropic overloaded
-      "ECONNRESET",                      // upstream socket closed
-      "ETIMEDOUT",                       // upstream timeout
-      "ENOTFOUND",                       // DNS hiccup
-      "fetch failed",                    // generic undici fetch failure
+      "Internal server error",
+      "api_error",
+      "overloaded_error",
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "ENOTFOUND",
+      "fetch failed",
     ],
   });
 }
@@ -37,9 +32,14 @@ import tenorRoutes from "./routes/tenor";
 import twitchRoutes from "./routes/twitch";
 import youtubeRoutes from "./routes/youtube";
 import fortniteRoutes from "./routes/fortnite";
+import scryfallRoutes from "./routes/scryfall";
+import mtgRoutes from "./routes/mtg";
 import pubgRoutes from "./routes/pubg";
 import leagueRoutes from "./routes/league";
 import bungieRoutes from "./routes/bungie";
+import eveRoutes from "./routes/eve";
+import poeRoutes from "./routes/poe";
+import mcRoutes from "./routes/mc";
 import windroseRoutes from "./routes/windrose";
 import helldiversStratagemsRoutes from "./routes/helldivers-stratagems";
 import helldiversLoadoutsRoutes from "./routes/helldivers-loadouts";
@@ -51,6 +51,7 @@ import flairContestsRoutes, { startFlairContestTick } from "./routes/flair-conte
 import flairRoutes from "./routes/flair";
 import { mintFlairItem as mintFlairItemHelper, grantFlairToUser as grantFlairToUserHelper } from "./lib/flair";
 import lfgRoutes from "./routes/lfg";
+import redditRoutes from "./routes/reddit";
 import helldiversMoRoutes from "./routes/helldivers-mo";
 import { runHelldiversWorker } from "./helldiversWorker";
 import paperRoutes from "./routes/paper";
@@ -83,6 +84,7 @@ import diceRoutes from "./routes/dice";
 import mapsRoutes from "./routes/maps";
 import supportRoutes from "./routes/support";
 import publicRoutes from "./routes/public";
+import overlayRoutes from "./routes/overlay";
 import { pushActivity, anonymousFor, shouldEmit, seedSyntheticActivity } from "./lib/publicActivity";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -90,7 +92,7 @@ import { WebSocketServer, WebSocket as WsClient } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
-import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType } from "@prisma/client";
+import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType, Prisma } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
 import { syncManifest, enrichProfile, enrichMilestones, enrichVendorSales, resolveItem, resolveBucket, resolveDamageType, isLoaded as manifestLoaded, manifestVersion, WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES } from "./manifest";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
@@ -102,7 +104,6 @@ import { startNexusPoller, fetchAndUpsertMod } from "./nexusPoller";
 import webpush from "web-push";
 import { sendMail, buildVerifyEmail, buildResetEmail } from "./lib/email";
 
-// ── Anthropic AI SDK (optional) ──────────────────────────────────────────────
 let _anthropicModule: any = null;
 let _anthropicLoaded = false;
 
@@ -129,9 +130,15 @@ function isAIAvailable(): boolean {
 
 import { prisma } from "./lib/prisma";
 
-const JWT_SECRET = process.env.JWT_SECRET || "weered-dev-secret";
+const JWT_SECRET = (() => {
+  const s = process.env.JWT_SECRET;
+  if (s) return s;
+  if (process.env.NODE_ENV === "development") return "weered-dev-secret";
+  throw new Error("FATAL: JWT_SECRET is not set — refusing to start with a default secret.");
+})();
 
-// ── Web Push (VAPID) ──────────────────────────────────────────────────────
+const DEV_LOGIN_ENABLED = process.env.ALLOW_DEV_LOGIN === "1" || process.env.NODE_ENV === "development";
+
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || "";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT     || "mailto:support@weered.ca";
@@ -146,11 +153,11 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 
 type AuthedUser = { id: string; name: string; usernameKey?: string; globalRole?: string; tier?: string; avatarColor?: string; avatar?: string };
-type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string };
+type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string; joinedRoomId?: string };
 
 type Role = "owner" | "mod" | "member";
 type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; tier?: string; avatarColor?: string | null; avatar?: string | null };
-type ReactionAgg = { emoji: string; count: number; users: string[] }; // users = first N user IDs for "you reacted" detection + hover
+type ReactionAgg = { emoji: string; count: number; users: string[] };
 type ReplyTo = { id: string; userId: string; userName: string; body: string };
 type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number; reactions?: ReactionAgg[]; replyTo?: ReplyTo };
 type Knock = { userId: string; name: string; ts: number };
@@ -174,24 +181,22 @@ type ModuleState = {
   setAt?: number;
 };
 
-// MPlayer-style launch target, set by the room host. Lives in-memory on
-// the room; cleared when the room is evicted or the host clears it.
 type LaunchTarget = {
-  appid: number;          // Steam AppID, e.g. 3041230 for Windrose
-  connect: string;        // "ip:port" or "ip:port/password" — feeds steam://connect/
-  display: string;        // human label shown to members (server name)
-  note?: string;          // free-text from host
-  setBy: string;          // userId of whoever set it
-  setAt: number;          // epoch ms
+  appid: number;
+  connect: string;
+  display: string;
+  note?: string;
+  setBy: string;
+  setAt: number;
 };
 
 type LaunchSlot = "player" | "observer";
 
 type LaunchState = {
   target: LaunchTarget | null;
-  slots: Map<string, LaunchSlot>;  // userId → slot
-  ready: Set<string>;              // userIds of player-slotted users who've clicked Ready
-  firedAt: number | null;          // epoch ms when host hit fire (null otherwise)
+  slots: Map<string, LaunchSlot>;
+  ready: Set<string>;
+  firedAt: number | null;
   firedBy: string | null;
 };
 
@@ -222,10 +227,6 @@ type RoomState = {
   isEvent: boolean;
   passwordHash?: string;
   launch?: LaunchState;
-  // Voice gating — schema-backed mode + ephemeral queue/speaker sets.
-  // OPEN = anyone publishes. QUEUED = raise hand → mod approves → speaker
-  // set entry → token grants canPublish on next join. LISTEN_ONLY = only
-  // mods/owner ever publish.
   voiceMode?: "OPEN" | "QUEUED" | "LISTEN_ONLY";
   voiceQueue?: Set<string>;
   voiceSpeakers?: Set<string>;
@@ -233,11 +234,9 @@ type RoomState = {
   };
 
 const rooms = new Map<string, RoomState>();
-// Title/thumbnail for article rooms — populated by feed worker, used in ensureRoomLoaded
 const articleRoomMeta = new Map<string, { name: string; thumbnail?: string }>();
 let wss: WebSocketServer;
-
-// ── Poker Engine — Types & State ──────────────────────────────────────────────
+let broadcastToLobbyRef: ((lobbyId: string, event: any) => void) | undefined;
 
 type Card = { rank: string; suit: string };
 
@@ -272,17 +271,12 @@ type PokerTable = {
   minBuyin: number;
   maxBuyin: number;
   lastShowdownResult: any | null;
-  // Last per-player action (call/raise/fold/check/allin). The PokerTable
-  // frontend component reads this off the broadcast state and toasts it
-  // ("donkey raised $20"). Cleared at the start of each new hand.
   lastAction: { userId: string; action: string; amount?: number } | null;
   handInProgress: boolean;
   autoStartTimer: ReturnType<typeof setTimeout> | null;
 };
 
 const pokerTables = new Map<string, PokerTable>();
-
-// ── Poker Engine — Utility Functions ──────────────────────────────────────────
 
 const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 const SUITS: ("h" | "d" | "c" | "s")[] = ["h", "d", "c", "s"];
@@ -308,51 +302,41 @@ function shuffleDeck(deck: Card[]): Card[] {
 
 function rankValue(r: string): number {
   const idx = RANKS.indexOf(r);
-  return idx >= 0 ? idx + 2 : 0; // "2"=2 ... "A"=14
+  return idx >= 0 ? idx + 2 : 0;
 }
 
-/** Returns all C(n,k) combinations of an array */
 function combinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]];
   if (arr.length < k) return [];
   const result: T[][] = [];
   const first = arr[0];
   const rest = arr.slice(1);
-  // combos that include first
   for (const combo of combinations(rest, k - 1)) {
     result.push([first, ...combo]);
   }
-  // combos that don't include first
   for (const combo of combinations(rest, k)) {
     result.push(combo);
   }
   return result;
 }
 
-/**
- * Evaluate the best 5-card poker hand from exactly 5 cards.
- * Returns { rank, name, kickers } where kickers is used for tiebreaking.
- */
 function evaluate5(cards: Card[]): { rank: number; name: string; kickers: number[]; best: Card[] } {
   const vals = cards.map(c => rankValue(c.rank)).sort((a, b) => b - a);
   const suits = cards.map(c => c.suit);
 
   const isFlush = suits.every(s => s === suits[0]);
 
-  // Check straight (including A-2-3-4-5 wheel)
   let isStraight = false;
   let straightHigh = 0;
   if (vals[0] - vals[4] === 4 && new Set(vals).size === 5) {
     isStraight = true;
     straightHigh = vals[0];
   }
-  // Wheel: A-2-3-4-5
   if (vals[0] === 14 && vals[1] === 5 && vals[2] === 4 && vals[3] === 3 && vals[4] === 2) {
     isStraight = true;
-    straightHigh = 5; // 5-high straight
+    straightHigh = 5;
   }
 
-  // Count occurrences
   const counts = new Map<number, number>();
   for (const v of vals) counts.set(v, (counts.get(v) || 0) + 1);
   const groups = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
@@ -393,9 +377,6 @@ function evaluate5(cards: Card[]): { rank: number; name: string; kickers: number
   return { rank: 0, name: "High Card", kickers: vals, best: cards };
 }
 
-/**
- * Evaluate the best 5-card hand from 7 cards (2 hole + 5 community).
- */
 function evaluateHand(cards: Card[]): { rank: number; name: string; best: Card[] ; kickers: number[] } {
   let bestResult: { rank: number; name: string; best: Card[]; kickers: number[] } | null = null;
 
@@ -410,9 +391,6 @@ function evaluateHand(cards: Card[]): { rank: number; name: string; best: Card[]
   return bestResult!;
 }
 
-/**
- * Compare two evaluated hands. Returns 1 if a wins, -1 if b wins, 0 if tie.
- */
 function compareHands(a: { rank: number; kickers: number[] }, b: { rank: number; kickers: number[] }): number {
   if (a.rank !== b.rank) return a.rank > b.rank ? 1 : -1;
   for (let i = 0; i < Math.max(a.kickers.length, b.kickers.length); i++) {
@@ -423,9 +401,6 @@ function compareHands(a: { rank: number; kickers: number[] }, b: { rank: number;
   return 0;
 }
 
-/**
- * Given active (not folded) seats and community cards, returns indices of winners.
- */
 function determineWinners(seats: (PokerSeat | null)[], communityCards: Card[]): number[] {
   let bestEval: { rank: number; kickers: number[] } | null = null;
   let winnerIndices: number[] = [];
@@ -452,8 +427,6 @@ function determineWinners(seats: (PokerSeat | null)[], communityCards: Card[]): 
 
   return winnerIndices;
 }
-
-// ── Poker Engine — Game Flow Helpers ──────────────────────────────────────────
 
 function getOrCreatePokerTable(tableId: string): PokerTable {
   let table = pokerTables.get(tableId);
@@ -527,10 +500,6 @@ function resetForNewHand(table: PokerTable) {
   }
 }
 
-/**
- * Build a sanitized table state for broadcasting. Each player only sees their own cards.
- * During showdown, all remaining players' cards are revealed.
- */
 function buildPokerStateForUser(table: PokerTable, userId?: string): any {
   const isShowdown = table.phase === "showdown";
   return {
@@ -585,7 +554,6 @@ function broadcastPokerState(tableId: string) {
   for (const sock of wss.clients) {
     const su = (sock as any).user as AuthedUser | undefined;
     if (!su) continue;
-    // Send to seated players and spectators
     const isSeated = table.seats.some(s => s && s.userId === su.id);
     const isSpectator = table.spectators.has(su.id);
     if (isSeated || isSpectator) {
@@ -608,7 +576,6 @@ function collectBetsIntoPot(table: PokerTable) {
 }
 
 function buildSidePots(table: PokerTable): SidePot[] {
-  // Gather all active bets from non-folded players who have bet this round
   const activeBets: { seatIndex: number; totalBet: number }[] = [];
   for (let i = 0; i < table.seats.length; i++) {
     const s = table.seats[i];
@@ -627,13 +594,10 @@ function buildSidePots(table: PokerTable): SidePot[] {
     if (bet > prevBet) {
       const contrib = bet - prevBet;
       const eligible = activeBets.filter((_, j) => j >= i).map(b => b.seatIndex);
-      // Each player at or above this level contributes
       const amount = contrib * (activeBets.length - i);
-      // Also add contributions from folded players at this level
       for (const seat of table.seats) {
         if (seat && seat.folded && seat.bet > prevBet) {
           const foldedContrib = Math.min(seat.bet - prevBet, contrib);
-          // Already collected; skip for side pot calculation
         }
       }
       pots.push({ amount, eligible });
@@ -644,7 +608,6 @@ function buildSidePots(table: PokerTable): SidePot[] {
   return pots;
 }
 
-/** Deal the next community cards based on the phase transition */
 function dealCommunityCards(table: PokerTable, count: number) {
   for (let i = 0; i < count; i++) {
     const card = table.deck.pop();
@@ -652,7 +615,6 @@ function dealCommunityCards(table: PokerTable, count: number) {
   }
 }
 
-/** Check if the betting round is complete */
 function isBettingRoundComplete(table: PokerTable): boolean {
   const active = table.seats.filter(s => s && !s.folded && !s.allIn) as PokerSeat[];
   if (active.length === 0) return true;
@@ -660,11 +622,9 @@ function isBettingRoundComplete(table: PokerTable): boolean {
   return active.every(s => s.bet === table.currentBet);
 }
 
-/** Advance to the next phase or next player after an action */
 function advancePokerGame(table: PokerTable) {
   const activePlayers = activePlayersInHand(table);
 
-  // Only one player left — they win
   if (activePlayers.length === 1) {
     collectBetsIntoPot(table);
     const winner = activePlayers[0];
@@ -678,9 +638,7 @@ function advancePokerGame(table: PokerTable) {
     table.phase = "showdown";
     table.handInProgress = false;
     broadcastPokerState(table.tableId);
-    // Surface to public activity feed (≥200 Paper threshold inside capture)
-    broadcastToLobby("poker", { type: "poker:pot-won", userId: winner.userId, userName: winner.name, amount: wonAmount });
-    // Winner celebration chip in poker table chat
+    broadcastToLobbyRef?.("poker", { type: "poker:pot-won", userId: winner.userId, userName: winner.name, amount: wonAmount });
     broadcastToPokerTable(table.tableId, {
       type: "poker:winner-chip",
       tableId: table.tableId,
@@ -693,11 +651,9 @@ function advancePokerGame(table: PokerTable) {
     return;
   }
 
-  // All remaining players are all-in (or only one non-all-in player) — run out community cards
   const canAct = table.seats.filter(s => s && !s.folded && !s.allIn) as PokerSeat[];
   if (canAct.length <= 1) {
     collectBetsIntoPot(table);
-    // Deal remaining community cards
     while (table.communityCards.length < 5) {
       dealCommunityCards(table, 1);
     }
@@ -705,7 +661,6 @@ function advancePokerGame(table: PokerTable) {
     return;
   }
 
-  // Check if the current betting round is done
   if (isBettingRoundComplete(table)) {
     collectBetsIntoPot(table);
 
@@ -723,7 +678,6 @@ function advancePokerGame(table: PokerTable) {
       return;
     }
 
-    // New betting round starts from first active player after dealer
     table.currentBet = 0;
     for (const seat of table.seats) {
       if (seat) seat.bet = 0;
@@ -733,7 +687,6 @@ function advancePokerGame(table: PokerTable) {
     return;
   }
 
-  // Move to next player
   table.turnIndex = nextActiveIndex(table, table.turnIndex);
   broadcastPokerState(table.tableId);
 }
@@ -749,7 +702,7 @@ async function resolveShowdown(table: PokerTable) {
   for (let i = 0; i < winnerIndices.length; i++) {
     const idx = winnerIndices[i];
     const seat = table.seats[idx]!;
-    const payout = share + (i === 0 ? remainder : 0); // first winner gets remainder
+    const payout = share + (i === 0 ? remainder : 0);
     seat.chips += payout;
     const handEval = evaluateHand([...seat.cards, ...table.communityCards]);
     winners.push({
@@ -759,9 +712,7 @@ async function resolveShowdown(table: PokerTable) {
       hand: handEval.name,
       bestCards: handEval.best,
     });
-    // Surface biggest single payout to public activity ticker. Throttle inside
-    // the capture filter dedupes within an 8s window so split-pot doesn't flood.
-    broadcastToLobby("poker", { type: "poker:pot-won", userId: seat.userId, userName: seat.name, amount: payout });
+    broadcastToLobbyRef?.("poker", { type: "poker:pot-won", userId: seat.userId, userName: seat.name, amount: payout });
   }
 
   const totalPot = table.pot;
@@ -769,7 +720,6 @@ async function resolveShowdown(table: PokerTable) {
   table.pot = 0;
   table.handInProgress = false;
   broadcastPokerState(table.tableId);
-  // Winner celebration chip — single chip per showdown listing all winners
   broadcastToPokerTable(table.tableId, {
     type: "poker:winner-chip",
     tableId: table.tableId,
@@ -790,7 +740,6 @@ function scheduleAutoStart(table: PokerTable) {
   if (table.autoStartTimer) clearTimeout(table.autoStartTimer);
   table.autoStartTimer = setTimeout(() => {
     table.autoStartTimer = null;
-    // Remove players with 0 chips
     for (let i = 0; i < table.seats.length; i++) {
       const s = table.seats[i];
       if (s && s.chips <= 0) {
@@ -812,13 +761,11 @@ function startPokerHand(table: PokerTable) {
   resetForNewHand(table);
   table.handInProgress = true;
 
-  // Move dealer
   table.dealerIndex = nextOccupiedIndex(table, table.dealerIndex);
 
   const sbIndex = nextOccupiedIndex(table, table.dealerIndex);
   const bbIndex = nextOccupiedIndex(table, sbIndex);
 
-  // Post blinds
   const sbSeat = table.seats[sbIndex]!;
   const bbSeat = table.seats[bbIndex]!;
 
@@ -834,7 +781,6 @@ function startPokerHand(table: PokerTable) {
 
   table.currentBet = bbAmount;
 
-  // Deal 2 cards to each player
   for (let round = 0; round < 2; round++) {
     for (let i = 0; i < 6; i++) {
       const seat = table.seats[i];
@@ -846,9 +792,7 @@ function startPokerHand(table: PokerTable) {
   }
 
   table.phase = "preflop";
-  // Action starts at player after big blind
   table.turnIndex = nextActiveIndex(table, bbIndex);
-  // Edge case: if turnIndex is -1 (all players all-in from blinds), advance directly
   if (table.turnIndex === -1) {
     collectBetsIntoPot(table);
     while (table.communityCards.length < 5) dealCommunityCards(table, 1);
@@ -857,11 +801,6 @@ function startPokerHand(table: PokerTable) {
   }
   broadcastPokerState(table.tableId);
 }
-
-// ── Pinned lobbies now seeded from DB via seedLobbies() on startup ────────────
-
-
-// ── Global role helpers ───────────────────────────────────────────────────────
 
 async function getGlobalRole(userId: string): Promise<GlobalRole> {
   try {
@@ -884,7 +823,6 @@ async function isGloballyBanned(userId: string): Promise<boolean> {
   } catch { return false; }
 }
 
-// ── Reserved name check ─────────────────────────────────────────────────────
 async function isNameReserved(name: string, scope: "LOBBY" | "USERNAME" | "BOTH"): Promise<boolean> {
   const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!normalized) return false;
@@ -896,8 +834,6 @@ async function isNameReserved(name: string, scope: "LOBBY" | "USERNAME" | "BOTH"
   });
   return Boolean(match);
 }
-
-// ── Lobby role helpers ────────────────────────────────────────────────────────
 
 async function getLobbyRole(userId: string, lobbyId: string): Promise<LobbyRole | null> {
   try {
@@ -912,23 +848,22 @@ async function canModLobby(userId: string, lobbyId: string, globalRole: GlobalRo
   return lr === LobbyRole.OWNER || lr === LobbyRole.MOD;
 }
 
-// ── Seed pinned lobbies into DB on startup ────────────────────────────────────
-
 const SEED_LOBBIES = [
   { id: "lobby",        name: "The Lobby",    description: "General hangout. Everyone starts here.", keywords: ["lobby","general","home"],              moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/all" } },
   { id: "r/all",        name: "r/all",        description: "Reddit firehose. All topics welcome.",   keywords: ["reddit","all","general"],              moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/all" } },
   { id: "r/gaming",     name: "r/gaming",     description: "Gamers of all kinds.",                   keywords: ["reddit","gaming","games","gamer"],     moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/gaming" } },
   { id: "r/technology", name: "r/technology", description: "Tech news, discussion, builds.",         keywords: ["reddit","tech","technology","coding"],  moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/technology" } },
-  { id: "r/worldnews",  name: "r/worldnews",  description: "Global news and current events.",        keywords: ["reddit","news","world","worldnews"],   moduleType: ModuleType.FEED,  moduleConfig: { subreddit: "r/worldnews" } },
-  { id: "weered.ca",    name: "Weered HQ",    description: "Meta, announcements, beta feedback.",    keywords: ["weered","meta","official","hq"],       moduleType: ModuleType.NONE,    moduleConfig: null },
   { id: "destiny2", name: "Destiny 2", description: "Guardians, raids, dungeons, Trials, Gambit, and the Traveler's Light. Live raid races, Bungie API loadouts, LFG for every activity. The unofficial Guardian hub.", keywords: ["destiny", "destiny2", "bungie", "guardian", "warlock", "titan", "hunter", "raid", "crucible", "gambit", "trials", "iron banner", "nightfall", "dungeon"], moduleType: ModuleType.BUNGIE, moduleConfig: { subreddits: ["r/DestinyTheGame", "r/destiny2"], steamAppId: "1085660" }, accentColor: "#f58220", logoUrl: "/brand/lobbies/destiny2-logo.png", bannerUrl: "/brand/lobbies/destiny2-banner.svg", websiteUrl: "https://www.bungie.net" },
   { id: "news", name: "News", description: "Breaking news and headlines from around the world. CBC, BBC, Reuters, and more.", keywords: ["news","breaking","headlines","world","canada","politics","tech","business","science"], moduleType: ModuleType.NEWS, moduleConfig: {}, accentColor: "#DC2626" },
   { id: "fakeout", name: "FakeOut", description: "Paper trade crypto with fake money against real Binance prices. Live candlestick charts, instant orders, public leaderboards. All the thrill, none of the risk.", keywords: ["fakeout","trading","crypto","bitcoin","paper","stocks","market","btc","eth","finance","investing","fake"], moduleType: ModuleType.TRADING, moduleConfig: {}, accentColor: "#F5C518" },
   { id: "dnd", name: "Dungeons & Dragons", description: "The Tavern. Find a party, roll dice, look up spells and monsters, and play at the table. Full SRD compendium, AI NPCs, initiative tracker, and community dice tower.", keywords: ["dnd","dungeons","dragons","d&d","tabletop","ttrpg","rpg","5e","dungeon master","dm","pathfinder","dice","d20","campaign"], moduleType: ModuleType.DND, moduleConfig: { twitchCategory: "Dungeons & Dragons" }, accentColor: "#C4A55A", logoUrl: "/brand/lobbies/dnd-logo.png", bannerUrl: "/brand/lobbies/dnd-banner.png" },
+  { id: "mtg", name: "Magic: The Gathering", description: "The kitchen table. Find a Commander pod tonight, brew jank decks, share cube lists, swap stories. Scryfall card lookup, Moxfield deck import, pod LFG for paper and online. Casual first.", keywords: ["mtg","magic","magic the gathering","mtga","mtgo","commander","edh","modern","standard","pioneer","legacy","vintage","pauper","cube","draft","deck","deckbuilder","scryfall","moxfield"], moduleType: ModuleType.MTG, moduleConfig: { twitchCategory: "Magic: The Gathering" }, accentColor: "#9C7C3F", logoUrl: "/brand/lobbies/mtg-logo.png" },
   { id: "poe", name: "Path of Exile", description: "Wraeclast awaits. Live economy dashboard powered by poe.ninja, currency trends, item prices, div cards, gem values, and party finder.", keywords: ["poe","path of exile","exile","wraeclast","arpg","grinding gear","ggg","currency","divine","chaos","mirror","mapping","builds"], moduleType: ModuleType.POE, moduleConfig: { twitchCategory: "Path of Exile" }, accentColor: "#AF6025", logoUrl: null, bannerUrl: null, websiteUrl: "https://www.pathofexile.com" },
   { id: "windrose", name: "Windrose", description: "Age of Piracy survival adventure by Kraken Express. Build, sail, survive. Live Steam player count, dev dispatches, Crew Finder, Captain's Log. The unofficial flagship hub.", keywords: ["windrose","kraken","kraken express","pocketpair","pirate","pirates","age of piracy","survival","souls-like","crosswind","naval","sailing","ship","black flag","co-op","pve"], moduleType: ModuleType.WINDROSE, moduleConfig: { twitchCategory: "Windrose", steamAppId: "3041230", publisher: "Pocketpair", studio: "Kraken Express" }, accentColor: "#b8935a", logoUrl: "/brand/lobbies/windrose-logo-official.png", bannerUrl: "/brand/lobbies/windrose-banner-v2.svg", websiteUrl: "https://playwindrose.com/" },
   { id: "hq", name: "Headquarters", description: "Weered HQ. Reception, Builders Bench, Newcomers, Changelog. Where the platform itself lives.", keywords: ["hq","headquarters","weered","meta"], moduleType: ModuleType.HEADQUARTERS, moduleConfig: {}, accentColor: "#5800E5" },
   { id: "helldivers2", name: "Helldivers 2", description: "Spread Managed Democracy across the galaxy. Live war map, Major Orders, defense campaigns, dispatches, squad finder, loadout sharer. The unofficial Super Earth war room.", keywords: ["helldivers","helldivers2","hd2","democracy","arrowhead","super earth","terminids","automatons","illuminate","stratagem","galactic war","managed democracy"], moduleType: ModuleType.HELLDIVERS2, moduleConfig: { twitchCategory: "Helldivers 2", subreddit: "r/Helldivers", steamAppId: "553850" }, accentColor: "#FFD700", logoUrl: "/brand/lobbies/helldivers2-logo.png", bannerUrl: "/brand/lobbies/helldivers2-banner.png", websiteUrl: "https://www.helldivers.com" },
+  { id: "eve", name: "EVE Online", description: "New Eden's capsuleer hub. Link your character with CCP's official ESI for live location, ship, skill training and killboard, plus character/corp lookup and a no-judgement New Pilots lounge for surviving your first 30 days. The unofficial newbro home.", keywords: ["eve","eve online","ccp","capsuleer","new eden","newbro","null sec","nullsec","wormhole","mining","industry","pvp","corp","corporation","alliance","esi"," isk","pilot"], moduleType: ModuleType.EVE, moduleConfig: { twitchCategory: "EVE Online", subreddit: "r/Eve" }, accentColor: "#d4af37", logoUrl: null, bannerUrl: null, websiteUrl: "https://www.eveonline.com" },
+  { id: "gta6", name: "GTA 6", description: "The unofficial community hub for Grand Theft Auto VI. Find a crew, build a heist team, post LFG, run voice, and follow the news. Crew finder and player matchmaking for GTA 6 Online — where players actually link up.", keywords: ["gta6","gta 6","gta vi","grand theft auto 6","grand theft auto vi","gta6 crew","gta 6 crew finder","gta 6 lfg","find gta 6 players","gta 6 community","gta 6 online","gta 6 heist team","gta online","vice city","leonida","rockstar"], moduleType: ModuleType.FEED, moduleConfig: { subreddit: "r/GTA6" }, accentColor: "#e84393" },
 ];
 
 const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: string; defaultModule?: string }[] = [
@@ -953,58 +888,66 @@ const SEED_ROOMS: { id: string; name: string; description: string; lobbyId: stri
   { id: "destiny2-gjallarhorn",name: "Gjallarhorn Wing",   description: "Lore, theorycrafting, patch speculation. Any and all non-fireteam discourse.",          lobbyId: "destiny2" },
   { id: "destiny2-clip-vault", name: "Clip Vault",        description: "Best plays, worst deaths, most cursed loadouts. Post the shot.",                         lobbyId: "destiny2" },
 
-  // FakeOut house rooms — pinned, undeletable. Always-on entry points so
-  // a first-timer landing on /lobby/fakeout never sees an empty rooms
-  // list. The Floor is the headline trading chat; The Pit is for hot
-  // takes and rapid-fire reactions; Newcomers is a low-bar onboarding
-  // room that opens chat-first (no module on first join).
   { id: "fakeout-floor",      name: "The Floor",     description: "Main trading chat. Live charts, live trades, live witnesses. Where everyone hangs.", lobbyId: "fakeout", defaultModule: "fakeout" },
   { id: "fakeout-pit",        name: "The Pit",       description: "Hot takes, rapid-fire reactions, daily watchlists. Bring volume.",                    lobbyId: "fakeout", defaultModule: "fakeout" },
   { id: "fakeout-newcomers",  name: "Newcomers",     description: "First time? Start here. Ask anything. Read The Brief. Place your first paper trade with company.", lobbyId: "fakeout" },
 
-  // ── League of Legends ──
+  { id: "mtg-library",       name: "The Library",        description: "General chat for planeswalkers. Decks, meta, salt, and 'is this combo good' debates.",                lobbyId: "mtg" },
+  { id: "mtg-commander",     name: "Commander Tables",   description: "Find a Commander pod tonight. Paper, Spelltable, MTGO — post your power level, format, and table type.", lobbyId: "mtg" },
+  { id: "mtg-brew",          name: "Brew Lab",           description: "Decklists and theorycraft. Drop a Moxfield link, get feedback. Jank welcome, optimization optional.",  lobbyId: "mtg" },
+  { id: "mtg-cube",          name: "The Cube",           description: "Drafting and cube curation. Pod-up for online drafts or share your latest 540-card list.",            lobbyId: "mtg" },
+  { id: "mtg-going-first",   name: "Going First",        description: "60-card formats. Modern, Pioneer, Standard, Legacy. Tournament prep, meta reads, sideboard talk.",   lobbyId: "mtg" },
+
+  { id: "poe-wraeclast",   name: "Wraeclast",      description: "General PoE chat. League talk, patch reactions, and the eternal 'is this build dead' discourse.", lobbyId: "poe" },
+  { id: "poe-trade",       name: "Trade Hall",     description: "Buy, sell, price-check. Currency, items, bulk. Post your shop, no scams.",                        lobbyId: "poe" },
+  { id: "poe-builds",      name: "Build Lab",      description: "Theorycraft and PoB pastebins. League-starter debates, min-max math — bring receipts.",        lobbyId: "poe" },
+  { id: "poe-atlas",       name: "The Atlas",      description: "Mapping strategy, Atlas trees, juicing, scarabs and sextants. Share your farming setup.",          lobbyId: "poe" },
+  { id: "poe-bosses",      name: "Boss Lounge",    description: "Pinnacle carries, deathless attempts, Uber strats. Mageblood not required.",                       lobbyId: "poe" },
+  { id: "poe-leaguestart", name: "League Start",   description: "Fresh economy chaos. Day-1 plans, leveling routes, first-target farming. Race the curve.",         lobbyId: "poe" },
+
   { id: "league-rift",         name: "Summoner's Rift",        description: "General League chat. Champion talk, patch hot takes, the eternal Yasuo discourse.",                  lobbyId: "league-of-legends" },
   { id: "league-lfg-ranked",   name: "LFG · Ranked",           description: "Find a duo for Solo/Duo. Roles played, current rank, server in your post.",                          lobbyId: "league-of-legends" },
   { id: "league-lfg-flex",     name: "LFG · Flex / Clash",     description: "Five-stacks for Flex queue and Clash weekends. Bring friends or steal some.",                        lobbyId: "league-of-legends" },
   { id: "league-aram",         name: "ARAM Den",               description: "For when you can't be bothered with macro. Reroll talk, snowball strats, just bonk.",                lobbyId: "league-of-legends" },
   { id: "league-lab",          name: "Champion Lab",           description: "Theorycraft, off-meta builds, runes that shouldn't work but do. Bring receipts.",                    lobbyId: "league-of-legends" },
 
-  // ── Counter-Strike 2 ──
   { id: "cs2-lobby",           name: "The Lobby",              description: "General CS2 chat. Patch reactions, meta talk, complaints about the M4. Welcome.",                    lobbyId: "counter-strike-2" },
   { id: "cs2-lfg-premier",     name: "LFG · Premier",          description: "Premier queue partners. Post your CS rating + map preferences.",                                     lobbyId: "counter-strike-2" },
   { id: "cs2-lfg-faceit",      name: "LFG · FACEIT",           description: "FACEIT lobbies. Level + region in post. No ELO snobbery.",                                           lobbyId: "counter-strike-2" },
   { id: "cs2-aim",             name: "Aim Training Grounds",   description: "Routines, aim_botz, Kovaak's, Aim Lab. Share your warmup and your gains.",                           lobbyId: "counter-strike-2" },
   { id: "cs2-demo",            name: "Demo Theater",           description: "Clip review. Drop your demos, get crispy callouts back. Tactical or just funny.",                    lobbyId: "counter-strike-2" },
 
-  // ── Dota 2 ──
   { id: "dota-ancient",        name: "The Ancient",            description: "General Dota chat. Patches, Pudge complaints, eternal Aghanim's discourse.",                          lobbyId: "dota-2" },
   { id: "dota-lfg-ranked",     name: "LFG · Ranked",           description: "Stack up. Post your MMR, role queue, region.",                                                       lobbyId: "dota-2" },
   { id: "dota-lfg-turbo",      name: "LFG · Turbo",            description: "Quick games, low commitment. Just queue and click heads.",                                            lobbyId: "dota-2" },
   { id: "dota-lab",            name: "Hero Lab",               description: "Off-meta builds, position 5 carry, the eternal Tinker question. Theorycraft welcome.",                lobbyId: "dota-2" },
   { id: "dota-fountain",       name: "Fountain Hooks",         description: "Best plays, worst feeders, salt mine. Drop your clips.",                                              lobbyId: "dota-2" },
 
-  // ── PUBG ──
   { id: "pubg-zone",           name: "Drop Zone",              description: "General PUBG chat. Map rotations, the eternal Pochinki nostalgia, server complaints.",                lobbyId: "pubg" },
   { id: "pubg-lfg-squad",      name: "LFG · Squads",           description: "Find your fourth. Server, map preference, voice required in post.",                                   lobbyId: "pubg" },
   { id: "pubg-lfg-duo",        name: "LFG · Duos",             description: "Two-stacks. Less bickering, more headshots.",                                                         lobbyId: "pubg" },
   { id: "pubg-loot",           name: "Loot Pool",              description: "Hot drop strategies, vehicle meta, gear talk. From M4 to Mosin.",                                     lobbyId: "pubg" },
   { id: "pubg-vault",          name: "Clip Vault",             description: "Best plays, worst luck, last circle stories. Post the shot.",                                         lobbyId: "pubg" },
 
-  // ── MLB ──
   { id: "mlb-dugout",          name: "The Dugout",             description: "General baseball chat. Standings, trade rumors, the eternal Yankees discourse.",                      lobbyId: "mlb" },
   { id: "mlb-gameday",         name: "Game Day Threads",       description: "Live threads for whatever's on right now. Pitch by pitch, inning by inning.",                          lobbyId: "mlb" },
   { id: "mlb-stats",           name: "Sabermetrics",           description: "WAR, FIP, xwOBA. Numbers people. Bring a CSV.",                                                       lobbyId: "mlb" },
   { id: "mlb-trade",           name: "Trade Talk",             description: "Rumors, deadlines, hot stove takes. Speculation welcome, math appreciated.",                          lobbyId: "mlb" },
   { id: "mlb-prospects",       name: "Prospect Watch",         description: "Minor leagues, draft talk, future stars. Who's coming up next.",                                       lobbyId: "mlb" },
 
-  // ── Fortnite ──
   { id: "fortnite-island",     name: "The Island",             description: "General Fortnite chat. Skin drops, map updates, the eternal sweat-vs-casual debate.",                  lobbyId: "fortnite" },
   { id: "fortnite-lfg-squads", name: "LFG · Squads",           description: "Build squads. Drop region + style (BR / ZB / Reload).",                                              lobbyId: "fortnite" },
   { id: "fortnite-lfg-zb",     name: "LFG · Zero Build",       description: "For the no-build lifers. Pure aim, pure cover, pure pain.",                                          lobbyId: "fortnite" },
   { id: "fortnite-comp",       name: "Comp Corner",            description: "FNCS, cash cups, scrim discussion. Loadout debates, zone reads.",                                     lobbyId: "fortnite" },
   { id: "fortnite-creative",   name: "Creative Lobby",         description: "Map codes, parkour, deathruns, mini-games. Post your favorites.",                                     lobbyId: "fortnite" },
 
-  // ── Headquarters (HQ) ──
+  { id: "gta6-strip",          name: "The Strip",              description: "General GTA 6 chat. News, leaks, hype, Vice City speculation. Everyone starts here.",                lobbyId: "gta6" },
+  { id: "gta6-crew-finder",    name: "Crew Finder",            description: "Find a GTA 6 crew or recruit members. Post your crew, your platform, and your playstyle.",            lobbyId: "gta6" },
+  { id: "gta6-lfg",            name: "LFG · Find Players",     description: "Looking for GTA 6 players to run with. Post platform, region, mic, and what you're grinding.",        lobbyId: "gta6" },
+  { id: "gta6-heists",         name: "Heist Team",             description: "Build a heist crew. Coordinate roles, set up, and find a reliable team for GTA 6 Online jobs.",      lobbyId: "gta6" },
+  { id: "gta6-news",           name: "News & Leaks",           description: "Trailers, official drops, dataminer leaks, release-date watch. Sort the real from the fake.",         lobbyId: "gta6" },
+  { id: "gta6-clips",          name: "Clip Vault",             description: "Best plays, funniest deaths, cinematic shots. Post the clip.",                                       lobbyId: "gta6" },
+
   { id: "hq-reception",        name: "Reception",              description: "Welcome to Weered HQ. Platform questions, intros, hi.",                                              lobbyId: "hq" },
   { id: "hq-feedback",         name: "Builder's Bench",        description: "Feature requests, bug reports, why-doesn't-it-do-X. The dev team reads this.",                       lobbyId: "hq" },
   { id: "hq-newcomers",        name: "Newcomers",              description: "First time on Weered? Start here. Ask anything, no judgment.",                                       lobbyId: "hq" },
@@ -1017,10 +960,6 @@ async function seedLobbies() {
     try {
       await (prisma as any).lobby.upsert({
         where: { id: l.id },
-        // Update only code-authoritative fields. Branding (name, description,
-        // accentColor, logoUrl, bannerUrl, websiteUrl, keywords) is admin-
-        // editable via /lobbies/:id/admin/branding — re-applying the seed
-        // value on every API restart was wiping admin changes.
         update: { pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
         create:  { id: l.id, name: l.name, description: l.description, pinned: true, verified: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any, keywords: l.keywords, accentColor: (l as any).accentColor ?? null, logoUrl: (l as any).logoUrl ?? null, bannerUrl: (l as any).bannerUrl ?? null, websiteUrl: (l as any).websiteUrl ?? null },
       });
@@ -1028,16 +967,10 @@ async function seedLobbies() {
   }
   console.log("[weered] lobbies seeded");
 
-  // Seed rooms — upsert so that newly-added seeds are created AND existing
-  // seed rooms are force-pinned (they should never dissolve; they're the
-  // default architecture of their parent lobby, not ephemeral user rooms).
   for (const r of SEED_ROOMS) {
     try {
       await prisma.room.upsert({
         where: { id: r.id },
-        // defaultModule is part of the seed contract — re-applying on
-        // every restart keeps it in sync if the seed evolves. Branding
-        // (icon/banner/accent) stays admin-editable separately.
         update: { name: r.name, description: r.description, lobbyId: r.lobbyId, pinned: true, ...(r.defaultModule !== undefined ? { defaultModule: r.defaultModule } : {}) },
         create: { id: r.id, name: r.name, description: r.description, lobbyId: r.lobbyId, locked: false, pinned: true, ...(r.defaultModule !== undefined ? { defaultModule: r.defaultModule } : {}) },
       });
@@ -1073,7 +1006,6 @@ async function getAllSiteConfig(): Promise<Record<string, string>> {
   return config;
 }
 
-// Default config values — used when keys don't exist in DB yet
 const SITE_CONFIG_DEFAULTS: Record<string, string> = {
   featuredLobbyId: "",
   registrationOpen: "true",
@@ -1082,7 +1014,6 @@ const SITE_CONFIG_DEFAULTS: Record<string, string> = {
   maxRoomsPerLobby: "50",
   chatRateLimit: "30",
 };
-// ── Room helpers ──────────────────────────────────────────────────────────────
 
 function makeEmptyRoom(roomId: string): RoomState {
   return {
@@ -1166,7 +1097,6 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       } : undefined,
     }));
 
-    // Attach reaction aggregates to the loaded messages
     try {
       const msgIds = r.msgs.map(m => m.id);
       if (msgIds.length > 0) {
@@ -1196,7 +1126,6 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }));
   }
 
-  // Apply article room meta — in-memory map first, then DB fallback for fresh deploys
   if (!r.name) {
     const meta = articleRoomMeta.get(roomId);
     if (meta) {
@@ -1220,7 +1149,6 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }
   }
 
-  // If this room IS a lobby, set lobbyId to itself
   if (!r.lobbyId) {
     try {
       const isLobby = await prisma.lobby.findUnique({ where: { id: roomId }, select: { id: true } });
@@ -1281,7 +1209,6 @@ function roleOf(room: RoomState, userId: string): Role {
   return "member";
 }
 
-// ── Room launcher (MPlayer-style) ──────────────────────────────────────────
 function ensureLaunch(room: RoomState): LaunchState {
   if (!room.launch) {
     room.launch = { target: null, slots: new Map(), ready: new Set(), firedAt: null, firedBy: null };
@@ -1350,7 +1277,6 @@ function buildStatePayload(room: RoomState) {
     pillBgColor: (u.id ? pillBgMap.get(u.id) : undefined) ?? (u as any).pillBgColor ?? undefined,
     pillAccentColor: (u.id ? pillAccentMap.get(u.id) : undefined) ?? (u as any).pillAccentColor ?? undefined,
   }));
-  // Inject The Operator as a virtual presence if AI is available
   if (isAIAvailable()) {
     users.push({
       id: "operator", name: "The Operator", usernameKey: "operator",
@@ -1378,7 +1304,6 @@ function buildStatePayload(room: RoomState) {
   };
 }
 
-// Send full state to a single socket only (used on join — don't overwrite others' incremental state)
 function publishStateToSocket(ws: Sock, room: RoomState) {
   send(ws, buildStatePayload(room));
   const uid = ws.user?.id;
@@ -1418,9 +1343,6 @@ function leaveRoom(ws: Sock) {
 
   room.sockets.delete(ws);
   if (ws.user) {
-    // Only remove the user from the room if they have NO other sockets still connected.
-    // During a page refresh the new socket joins before the old one fires "close",
-    // so deleting by userId here would evict the user who already reconnected.
     let userHasOtherSocket = false;
     for (const s of room.sockets) {
       if (s.user?.id === ws.user.id) { userHasOtherSocket = true; break; }
@@ -1428,15 +1350,12 @@ function leaveRoom(ws: Sock) {
     if (!userHasOtherSocket) {
       const existed = room.users.delete(ws.user.id);
       if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
-      // Record last-seen so the friends list can show "Last seen in <x>"
-      // on the offline row. Stamp the room name (falls back to roomId).
       const userId = ws.user.id;
       const location = (room as any).name || roomId;
       (prisma as any).user.update({
         where: { id: userId },
         data: { lastSeenAt: new Date(), lastSeenLocation: location },
       }).catch(() => {});
-      // Drop any launch slot/ready entries the user held
       if (room.launch) {
         const hadSlot = room.launch.slots.delete(ws.user.id);
         const hadReady = room.launch.ready.delete(ws.user.id);
@@ -1446,23 +1365,19 @@ function leaveRoom(ws: Sock) {
   }
   ws.roomId = undefined;
 
-  // Mark last activity so dissolution timer knows when the room went idle
   room.lastActiveAt = Date.now();
-  // Don't delete immediately — let the dissolution interval handle cleanup after TTL
 }
-// ── Notoriety system ──────────────────────────────────────────────────────────
-// Point values per action (idempotent where flagged)
 const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean; cooldown?: number }> = {
   BIO_COMPLETE:        { points: 50,   once: true  },
   FIRST_ROOM_HOSTED:   { points: 100,  once: true  },
   ROOM_25_USERS:       { points: 250,  once: false },
   SUBREDDIT_LINKED:    { points: 75,   once: true  },
-  DAILY_ACTIVE:        { points: 10,   once: false, cooldown: 86400000 },  // 24h
-  CHAT_MESSAGE:        { points: 2,    once: false, cooldown: 30000   },   // 30s cooldown
-  ROOM_JOINED:         { points: 5,    once: false, cooldown: 60000   },   // 1min cooldown
-  VOICE_JOINED:        { points: 15,   once: false, cooldown: 300000  },   // 5min cooldown
-  CHALLENGE_COMPLETED: { points: 200,  once: false, cooldown: 0       },   // Per challenge completion
-  FIRST_CHALLENGE:     { points: 100,  once: true                     },   // First ever challenge
+  DAILY_ACTIVE:        { points: 10,   once: false, cooldown: 86400000 },
+  CHAT_MESSAGE:        { points: 2,    once: false, cooldown: 30000   },
+  ROOM_JOINED:         { points: 5,    once: false, cooldown: 60000   },
+  VOICE_JOINED:        { points: 15,   once: false, cooldown: 300000  },
+  CHALLENGE_COMPLETED: { points: 200,  once: false, cooldown: 0       },
+  FIRST_CHALLENGE:     { points: 100,  once: true                     },
   CREW_CREATED:        { points: 100,  once: true  },
   CREW_JOINED:         { points: 25,   once: false },
   FRIEND_ADDED:        { points: 15,   once: false },
@@ -1470,11 +1385,11 @@ const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean; cooldo
   AVATAR_SET:          { points: 30,   once: true  },
   BUNGIE_LINKED:       { points: 75,   once: true  },
   FIRST_FAKEOUT_TRADE: { points: 100,  once: true  },
-  FAKEOUT_TRADE:       { points: 5,    once: false, cooldown: 60000  },  // 1min cooldown
-  FAKEOUT_PROFIT:      { points: 25,   once: false, cooldown: 0      },  // Each profitable close
+  FAKEOUT_TRADE:       { points: 5,    once: false, cooldown: 60000  },
+  FAKEOUT_PROFIT:      { points: 25,   once: false, cooldown: 0      },
+  LFG_COMPLETED:       { points: 20,   once: false, cooldown: 600000 },
 };
 
-// Notoriety rank titles (cosmetic only — does NOT affect Stripe tier)
 const NOTORIETY_RANKS = [
   { title: "Street Rat",   min: 0    },
   { title: "Corner Boy",   min: 100  },
@@ -1497,17 +1412,13 @@ function getNotorietyRank(n: number): { title: string; min: number; next: { titl
   return { ...rank, next };
 }
 
-// Cooldown tracking (in-memory, resets on restart — good enough for rate limiting XP)
 const notorietyCooldowns = new Map<string, number>();
 
-// Track one-time awards in a simple DB table — for now use a JSON field on User
-// or a separate NotorietyEvent table. Using NotorietyEvent for auditability.
 async function awardNotoriety(userId: string, action: string): Promise<number | null> {
   const cfg = NOTORIETY_ACTIONS[action];
   if (!cfg) return null;
 
   try {
-    // Check cooldown
     if (cfg.cooldown) {
       const key = `${userId}:${action}`;
       const last = notorietyCooldowns.get(key) || 0;
@@ -1516,7 +1427,6 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
     }
 
     if (cfg.once) {
-      // Check if already awarded
       const existing = await prisma.notorietyEvent.findFirst({
         where: { userId, action },
       });
@@ -1524,7 +1434,6 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
       if (existing) return null;
     }
 
-    // Get current score before awarding
     const userBefore = await prisma.user.findUnique({ where: { id: userId }, select: { notoriety: true, name: true } });
     const scoreBefore = userBefore?.notoriety || 0;
     const rankBefore = getNotorietyRank(scoreBefore);
@@ -1540,18 +1449,15 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
     const scoreAfter = scoreBefore + cfg.points;
     const rankAfter = getNotorietyRank(scoreAfter);
 
-    // Send realtime XP notification via WebSocket
     for (const sock of wss.clients) {
       if ((sock as any).user?.id === userId) {
         send(sock as any, { type: "notoriety:award", action, points: cfg.points });
-        // Rank-up event
         if (rankAfter.title !== rankBefore.title) {
           send(sock as any, { type: "notoriety:rankup", oldRank: rankBefore.title, newRank: rankAfter.title, score: scoreAfter });
         }
       }
     }
 
-    // Notification for rank-up
     if (rankAfter.title !== rankBefore.title) {
       createNotification({
         userId,
@@ -1569,7 +1475,6 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
   }
 }
 
-// DM delivery — push to all sockets belonging to a user
 function dmDeliver(toUserId: string, payload: object) {
   for (const sock of wss.clients) {
     if ((sock as any).user?.id === toUserId) {
@@ -1578,10 +1483,6 @@ function dmDeliver(toUserId: string, payload: object) {
   }
 }
 
-// ── @mention resolution ──────────────────────────────────────────────────────
-// Extract @handles from body and look them up against User.usernameKey.
-// Returns { id, name }[] of resolved mentioned users, excluding the sender.
-// Case-insensitive; tolerates hyphens, underscores, numbers.
 const MENTION_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
 const RESERVED_MENTIONS = new Set(["operator", "everyone", "all", "here", "admin", "mods", "staff"]);
 
@@ -1608,7 +1509,6 @@ async function resolveMentions(body: string, senderId: string): Promise<{ id: st
   }
 }
 
-// ── Reaction helper: toggle a user's reaction on a target, return full aggregate
 async function toggleReactionOnTarget(targetType: "ROOM_MESSAGE" | "DIRECT_MESSAGE" | "CREW_MESSAGE", targetId: string, userId: string, emoji: string): Promise<{ ok: true; reactions: ReactionAgg[] } | { ok: false; reason: string }> {
   try {
     const existing = await (prisma as any).reaction.findUnique({
@@ -1663,16 +1563,14 @@ async function fetchReactionsForTargets(targetType: "ROOM_MESSAGE" | "DIRECT_MES
   return byMsg;
 }
 
-// ── Chat rate limit + URL spam filter ────────────────────────────────────────
-const CHAT_RATE_MAX = 6;          // messages per window
-const CHAT_RATE_WINDOW_MS = 10_000; // 10s sliding window
-const CHAT_MAX_URLS = 3;          // per message
+const CHAT_RATE_MAX = 6;
+const CHAT_RATE_WINDOW_MS = 10_000;
+const CHAT_MAX_URLS = 3;
 const recentChatSends = new Map<string, number[]>();
 
 function checkChatRateLimit(userId: string): { ok: boolean; reason?: string; retryInMs?: number } {
   const now = Date.now();
   const arr = recentChatSends.get(userId) || [];
-  // Prune anything outside the window
   const fresh = arr.filter(ts => now - ts < CHAT_RATE_WINDOW_MS);
   if (fresh.length >= CHAT_RATE_MAX) {
     const oldest = fresh[0];
@@ -1695,7 +1593,6 @@ function checkUrlSpam(body: string): { ok: boolean; reason?: string } {
   return { ok: true };
 }
 
-// Occasional cleanup of stale entries so the map doesn't grow unbounded
 setInterval(() => {
   const now = Date.now();
   for (const [uid, arr] of recentChatSends) {
@@ -1705,18 +1602,13 @@ setInterval(() => {
   }
 }, 60_000);
 
-// ── Steam Rich Presence poller ───────────────────────────────────────────────
-// Polls Steam GetPlayerSummaries every PRESENCE_POLL_MS for all users with a
-// steamId set. Updates User.livePresence with { source: "STEAM", activity,
-// detail, url, updatedAt } or clears it when they're offline/hidden.
-const PRESENCE_POLL_MS = 120_000; // 2 min
+const PRESENCE_POLL_MS = 60_000;
 const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID || "";
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
 const OPENXBL_API_KEY = process.env.OPENXBL_API_KEY || "";
-// OpenXBL free tier: 60 requests per 5 min. Each Xbox-linked user costs 1
-// request per cycle, so cap Xbox polling to stay well under the ceiling.
 const XBL_POLL_CAP_PER_CYCLE = 20;
+let _xblRateLimitedUntil = 0;
 const STEAM_PERSONASTATES: Record<number, string> = {
   0: "Offline", 1: "Online", 2: "Busy", 3: "Away", 4: "Snooze", 5: "Looking to trade", 6: "Looking to play",
 };
@@ -1798,7 +1690,7 @@ async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string
           updatedAt: new Date().toISOString(),
         };
       } else {
-        out[sid] = null; // offline / hidden
+        out[sid] = null;
       }
     }
     return out;
@@ -1807,25 +1699,46 @@ async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record<string
   }
 }
 
-// ── OpenXBL (xbl.io) Xbox presence ────────────────────────────────────
-// Free tier rate-limit: 60 requests per 5 min. No batch endpoint; one
-// request per gamertag lookup / presence poll. Uses X-Authorization header.
 const XBL_BASE = "https://xbl.io/api/v2";
+
+function xblGet(pathname: string): Promise<{ status: number; json: any | null }> {
+  return new Promise((resolve) => {
+    if (!OPENXBL_API_KEY) return resolve({ status: 0, json: null });
+    if (Date.now() < _xblRateLimitedUntil) return resolve({ status: 429, json: null });
+    let settled = false;
+    const settle = (v: { status: number; json: any | null }) => { if (!settled) { settled = true; resolve(v); } };
+    const req = nodeHttps.get({
+      host: "xbl.io",
+      path: pathname,
+      headers: { "X-Authorization": OPENXBL_API_KEY, Accept: "application/json" },
+    }, (res: any) => {
+      let body = "";
+      res.on("data", (c: any) => { body += c; });
+      res.on("end", () => {
+        if (res.statusCode === 429) {
+          _xblRateLimitedUntil = Date.now() + 5 * 60 * 1000;
+          console.warn('[xbl] hit 429; cooling down 5 min');
+          return settle({ status: 429, json: null });
+        }
+        try { settle({ status: res.statusCode || 0, json: JSON.parse(body) }); }
+        catch { settle({ status: res.statusCode || 0, json: null }); }
+      });
+    });
+    req.on("error", () => settle({ status: 0, json: null }));
+    req.setTimeout(10000, () => { req.destroy(); settle({ status: 0, json: null }); });
+  });
+}
 
 async function resolveXboxGamertag(gamertag: string): Promise<{ xuid: string; gamertag: string } | null> {
   if (!OPENXBL_API_KEY) return null;
   try {
-    const res = await fetch(`${XBL_BASE}/search/${encodeURIComponent(gamertag)}`, {
-      headers: { "X-Authorization": OPENXBL_API_KEY, Accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    const j: any = await res.json();
-    // Responses come wrapped: { content: { people: [...] } } or { content: { profileUsers: [...] } }
+    const { status, json } = await xblGet(`/api/v2/search/${encodeURIComponent(gamertag)}`);
+    if (status !== 200 || !json) return null;
+    const j: any = json;
     const content = j?.content ?? j;
     const p = content?.people?.[0] || content?.profileUsers?.[0] || null;
     if (!p) return null;
     const xuid = String(p.xuid || p.id || "");
-    // Prefer the modern display form ("Weered#3068") so our stored copy matches what the user typed
     const gt = String(p.uniqueModernGamertag || p.gamertag || p.modernGamertag || gamertag);
     if (!xuid) return null;
     return { xuid, gamertag: gt };
@@ -1835,17 +1748,12 @@ async function resolveXboxGamertag(gamertag: string): Promise<{ xuid: string; ga
 async function pollXboxPresenceOne(xuid: string): Promise<any | null> {
   if (!OPENXBL_API_KEY || !xuid) return null;
   try {
-    const res = await fetch(`${XBL_BASE}/${encodeURIComponent(xuid)}/presence`, {
-      headers: { "X-Authorization": OPENXBL_API_KEY, Accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    const j: any = await res.json();
-    // OpenXBL wraps the payload in `content`
+    const { status, json } = await xblGet(`/api/v2/${encodeURIComponent(xuid)}/presence`);
+    if (status !== 200 || !json) return null;
+    const j: any = json;
     const body = j?.content ?? j;
     const state = String(body?.state || "").toLowerCase();
     const devices: any[] = Array.isArray(body?.devices) ? body.devices : [];
-    // Prefer Full placement + Active state, and skip "Home" (the dashboard) /
-    // empty-name entries (anonymous web sessions)
     const titles = devices.flatMap(d => Array.isArray(d?.titles) ? d.titles : []);
     const game = titles.find(t => {
       const name = String(t?.name || "").trim();
@@ -1911,7 +1819,6 @@ async function runPresencePoll() {
       const tw = u.twitchLogin ? twitchData[(u.twitchLogin as string).toLowerCase()] : undefined;
       const xb = u.xboxXuid ? xboxData[u.xboxXuid as string] : undefined;
       const st = u.steamId ? steamData[u.steamId as string] : undefined;
-      // Priority: Twitch-live > Xbox game > Steam game/online > null
       const primary = (tw && tw.source === "TWITCH") ? tw
         : (xb && xb.source === "XBOX") ? xb
         : (st ?? null);
@@ -1921,10 +1828,6 @@ async function runPresencePoll() {
         data: { livePresence: primary as any, presenceCheckedAt: new Date() },
       }).catch(() => {});
 
-      // Push the change into every room this user is currently in so the
-      // left-rail presence line updates without requiring a rejoin. We also
-      // refresh the AuthedUser on any connected sockets so subsequent
-      // presence:join broadcasts carry the latest state.
       try {
         for (const [, room] of rooms) {
           const entry = room.users.get(u.id);
@@ -1935,7 +1838,7 @@ async function runPresencePoll() {
         for (const s of wss.clients as any) {
           if (s?.user?.id === u.id) (s.user as any).livePresence = primary ?? null;
         }
-      } catch { /* ignore — best-effort fanout */ }
+      } catch { }
     }
   } catch (e) { console.error("[presence poll]", e); }
 }
@@ -1956,10 +1859,6 @@ function isUserOnline(userId: string): boolean {
   return false;
 }
 
-// ── Operator system user + welcome DM ───────────────────────────────────────
-// "operator" is a reserved mention but we own a real User row for it so the
-// welcome DM can FK against User.id. Cached on first lookup. Created lazily
-// the first time we need it (typically on the first signup).
 let _operatorUserId: string | null = null;
 async function getOperatorUserId(): Promise<string> {
   if (_operatorUserId) return _operatorUserId;
@@ -1983,8 +1882,6 @@ async function getOperatorUserId(): Promise<string> {
   }
 }
 
-// Seed a single welcome DM from The Operator to a freshly-registered user
-// so they have an unread in the Burner on first login. Fire-and-forget.
 async function seedWelcomeDM(toUserId: string): Promise<void> {
   try {
     const fromId = await getOperatorUserId();
@@ -2030,8 +1927,6 @@ async function sendWebPush(userId: string, data: { title: string; body: string; 
   }
 }
 
-// Expo Push (mobile). Accepts Expo push tokens (ExponentPushToken[...]).
-// Server-to-server REST call to exp.host — no VAPID keys, no FCM creds needed.
 async function sendExpoPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
   const tokens = await (prisma as any).expoPushToken.findMany({ where: { userId } });
   if (tokens.length === 0) return;
@@ -2051,7 +1946,6 @@ async function sendExpoPush(userId: string, data: { title: string; body: string;
     if (!res.ok) return;
     const json: any = await res.json().catch(() => null);
     const tickets: any[] = json?.data || [];
-    // Drop tokens Expo flags as DeviceNotRegistered so they don't accumulate.
     for (let i = 0; i < tickets.length; i++) {
       const ticket = tickets[i];
       const token = tokens[i];
@@ -2063,7 +1957,6 @@ async function sendExpoPush(userId: string, data: { title: string; body: string;
   } catch {}
 }
 
-// Convenience wrapper that fires both transports for a user.
 async function sendPush(userId: string, data: { title: string; body: string; url?: string; tag?: string }) {
   await Promise.all([
     sendWebPush(userId, data),
@@ -2071,7 +1964,6 @@ async function sendPush(userId: string, data: { title: string; body: string; url
   ]);
 }
 
-// ── Notification helper — creates in-app notification + WS push + browser push ──
 async function createNotification(opts: {
   userId: string;
   type: string;
@@ -2095,16 +1987,23 @@ async function createNotification(opts: {
         meta: opts.meta || undefined,
       },
     });
-    // Push to user via WebSocket if online
+    let matched = 0;
+    const socketUserIds: string[] = [];
     for (const sock of wss.clients) {
-      if ((sock as any).user?.id === opts.userId) {
+      const sid = (sock as any).user?.id;
+      if (sid) socketUserIds.push(sid);
+      if (sid === opts.userId) {
+        matched++;
         send(sock as Sock, {
           type: "notification:new",
           notification: { ...notif, createdAt: notif.createdAt?.toISOString?.() || notif.createdAt },
         });
       }
     }
-    // Browser push if offline
+    console.log("[notification]", opts.type, "target=" + opts.userId, "total_clients=" + wss.clients.size, "authed_count=" + socketUserIds.length, "matched=" + matched);
+    if (matched === 0 && socketUserIds.length > 0) {
+      console.log("[notification] target not found among:", JSON.stringify(socketUserIds.slice(0, 10)));
+    }
     if (!isUserOnline(opts.userId)) {
       sendPush(opts.userId, {
         title: opts.title,
@@ -2128,12 +2027,11 @@ function removeKnock(room: RoomState, userId: string) {
   room.knocks = room.knocks.filter((k) => k.userId !== userId);
 }
 
-// Hydrate globalRole onto AuthedUser from DB (called once per WS connection)
 async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
   try {
     const u = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { usernameKey: true, globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true, pillAccentColor: true } as any,
+      select: { usernameKey: true, globalRole: true, tier: true, avatarColor: true, avatar: true, steamId: true, twitchLogin: true, xboxGamertag: true, livePresence: true, panelBgColor: true, panelAccentColor: true, pillBgColor: true, pillAccentColor: true, statusText: true, statusEmoji: true, nameEffect: true, avatarFrame: true } as any,
     });
     return {
       ...user,
@@ -2150,6 +2048,10 @@ async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
       panelAccentColor: (u as any)?.panelAccentColor ?? undefined,
       pillBgColor: (u as any)?.pillBgColor ?? undefined,
       pillAccentColor: (u as any)?.pillAccentColor ?? undefined,
+      statusText: (u as any)?.statusText ?? undefined,
+      statusEmoji: (u as any)?.statusEmoji ?? undefined,
+      nameEffect: (u as any)?.nameEffect ?? undefined,
+      avatarFrame: (u as any)?.avatarFrame ?? undefined,
     } as any;
   } catch { return user; }
 }
@@ -2165,10 +2067,6 @@ function verifyToken(token?: string): AuthedUser | null {
   } catch { return null; }
 }
 
-// ── Operator system prompt — lobby-aware ────────────────────────────────────
-// Returns the system-prompt string for The Operator chat replies. Default
-// keeps the slim GTA persona; specific lobbies swap in fatter, more
-// knowledgeable variants. Add cases here as more lobbies need depth.
 function buildOperatorSystemPrompt(lobbyId: string): string {
   const base = 'You are "The Operator" — the AI behind Weered, a lobby-based social gaming platform with a GTA street aesthetic. You are street-smart, slightly sarcastic, helpful but with attitude. Keep responses SHORT (1-3 sentences max). Never break character. Never be mean, just witty. No emojis, no hashtags, no quotes. If someone asks something you do not know, deflect with style — do not make up numbers or live state.';
 
@@ -2233,8 +2131,6 @@ WEERED\'S CHESS LAYER (be specific):
 WHEN ASKED ABOUT LIVE STATE you can\'t see (current leaderboard, who\'s playing now, who\'s in a specific game), be honest you can\'t see that yet — point them to the right tab: Tournaments for events, Challenges for personal progress, Players list for lobby presence, or their own audit log for game-by-game truth.`;
   }
 
-    // Default — slim prompt that mentions all platform features for awareness
-  // without going deep on any single one.
   return base + ` You know about: lobbies (gaming communities), Paper (virtual currency), notoriety (XP), FakeOut (paper trading), poker (Texas Hold'em with Paper stakes), crews, challenges, and game integrations (Destiny 2, League of Legends, Fortnite, Helldivers 2, Marathon).`;
 }
 
@@ -2243,19 +2139,15 @@ function authFromHeader(authHeader?: string): AuthedUser | null {
   const raw = String(authHeader).trim();
   const m = raw.match(/^Bearer\s+(.+)$/i);
   if (m) return verifyToken(m[1]);
-  // Fallback: try raw token directly (for query param auth)
   return verifyToken(raw);
 }
 
 async function resolveUserId(raw: string): Promise<string> {
-  console.log("[resolveUserId] raw=", JSON.stringify(raw));
-  // If it looks like a cuid already, use it directly
   if (raw.length > 20 && !raw.includes(" ")) return raw;
   const found = await prisma.user.findFirst({
     where: { OR: [{ usernameKey: raw.toLowerCase() }, { name: raw }] },
     select: { id: true },
   });
-  console.log("[resolveUserId] found=", JSON.stringify(found));
   return found?.id ?? raw;
 }
 
@@ -2309,7 +2201,6 @@ async function doJoin(ws: Sock, roomId: string) {
     return false;
   }
 
-  // Already in this room on this socket — just republish state to this socket only, not everyone
   if (ws.roomId === roomId) { publishStateToSocket(ws, room); return true; }
   if (ws.roomId) leaveRoom(ws);
 
@@ -2320,37 +2211,27 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    const userEntry = { id: ws.user.id, name: ws.user.name, usernameKey: (ws.user as any).usernameKey ?? undefined, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null, pillBgColor: (ws.user as any).pillBgColor ?? undefined, pillAccentColor: (ws.user as any).pillAccentColor ?? undefined };
+    const userEntry = { id: ws.user.id, name: ws.user.name, usernameKey: (ws.user as any).usernameKey ?? undefined, globalRole: ws.user.globalRole || "USER", tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor ?? undefined, avatar: ws.user.avatar ?? undefined, steamId: (ws.user as any).steamId ?? undefined, twitchLogin: (ws.user as any).twitchLogin ?? undefined, xboxGamertag: (ws.user as any).xboxGamertag ?? undefined, isAway: Boolean((ws.user as any).isAway), livePresence: (ws.user as any).livePresence ?? null, pillBgColor: (ws.user as any).pillBgColor ?? undefined, pillAccentColor: (ws.user as any).pillAccentColor ?? undefined, statusText: (ws.user as any).statusText ?? undefined, statusEmoji: (ws.user as any).statusEmoji ?? undefined, nameEffect: (ws.user as any).nameEffect ?? undefined, avatarFrame: (ws.user as any).avatarFrame ?? undefined };
     room.users.set(ws.user.id, userEntry);
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
 
   if (ws.user) { try { await persistMember(room, ws.user); } catch {} }
 
-  // Award notoriety for joining a room (cooldown-gated)
   if (ws.user) awardNotoriety(ws.user.id, "ROOM_JOINED").catch(() => {});
 
-  // Only send full state to the joining socket — everyone else already got presence:join
   publishStateToSocket(ws, room);
 
   if (room.msgs.length) {
     send(ws, { type: "chat:history", roomId, msgs: room.msgs.slice(-80) });
   }
 
-  // Send current YouTube state so late joiners see what everyone is watching
   if (room.ytState) {
     send(ws, { type: "youtube:state", roomId, ...room.ytState });
   }
 
   return true;
 }
-
-// ── HTTP server ───────────────────────────────────────────────────────────────
-
-
-// ── Content Ingestion Worker ──────────────────────────────────────────────────
-// Fetches from 6 sources every 20 min, normalises into FeedItem, stores in DB.
-// Heat = recency score (0-70) + room presence bonus (0-30)
 
 interface RawItem {
   url: string;
@@ -2493,7 +2374,6 @@ async function runFeedWorker() {
         update: { heat, usersInRoom, fetchedAt: new Date(), title: item.title, thumbnail: item.thumbnail ?? null },
         create: { url: item.url, title: item.title, thumbnail: item.thumbnail ?? null, domain: item.domain, sourceName: item.sourceName, category: item.category, heat, usersInRoom, postedAt: item.postedAt },
       }).catch((e: any) => console.warn("[feed] upsert failed:", e?.message));
-      // Seed in-memory article room meta — title + thumbnail for header display
       const shortTitle = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
       articleRoomMeta.set(roomId, { name: shortTitle, thumbnail: item.thumbnail || undefined });
       if (roomState) {
@@ -2508,9 +2388,29 @@ async function runFeedWorker() {
 
 async function main() {
   const app = Fastify({ logger: true });
+  const AUTH_COOKIE = "weered_token";
+  function setAuthCookie(reply: any, token: string) {
+    reply.header("Set-Cookie", AUTH_COOKIE + "=" + token + "; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=" + (7 * 24 * 3600));
+  }
+  function clearAuthCookie(reply: any) {
+    reply.header("Set-Cookie", AUTH_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=0");
+  }
+  function readCookieToken(req: any): string | null {
+    const raw = req.headers.cookie;
+    if (!raw) return null;
+    for (const part of String(raw).split(";")) {
+      const i = part.indexOf("=");
+      if (i > 0 && part.slice(0, i).trim() === AUTH_COOKIE) return decodeURIComponent(part.slice(i + 1).trim());
+    }
+    return null;
+  }
+  app.addHook("onRequest", async (req: any) => {
+    if (!req.headers.authorization) {
+      const c = readCookieToken(req);
+      if (c) req.headers.authorization = "Bearer " + c;
+    }
+  });
 
-  // Rate limiting — defends auth/signup against brute force and bot signups.
-  // Global default is generous; auth routes opt into stricter per-route limits below.
   const { default: rateLimit } = await import("@fastify/rate-limit");
   await app.register(rateLimit, {
     global: true,
@@ -2528,12 +2428,9 @@ async function main() {
     }),
   });
 
-  // Cloudflare Turnstile verifier — gated behind TURNSTILE_SECRET. Without
-  // the secret set this is a no-op so the existing flow keeps working until
-  // keys are provisioned. Site key lives client-side as NEXT_PUBLIC_TURNSTILE_SITE_KEY.
   async function verifyCaptcha(token: unknown, ip: string): Promise<{ ok: true } | { ok: false; reason: string }> {
     const secret = process.env.TURNSTILE_SECRET;
-    if (!secret) return { ok: true }; // gating disabled
+    if (!secret) return { ok: true };
     if (typeof token !== "string" || !token) return { ok: false, reason: "missing_captcha" };
     try {
       const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -2550,14 +2447,12 @@ async function main() {
     }
   }
 
-  // Store raw body for Stripe webhook signature verification
   app.addHook("preParsing", async (req, _reply, payload) => {
     if (req.url === "/subscribe/webhook") {
       const chunks: Buffer[] = [];
       for await (const chunk of payload as any) chunks.push(Buffer.from(chunk));
       const raw = Buffer.concat(chunks);
       (req as any).rawBody = raw;
-      // Return a new readable stream so Fastify can still parse it
       const { Readable } = await import("stream");
       const copy = new Readable();
       copy.push(raw);
@@ -2567,10 +2462,6 @@ async function main() {
     return payload;
   });
 
-  // Windrose banner reel — 24 cinematic images, one chosen at random per
-  // request so the hero rotates every refresh. Applied to any lobby response
-  // where `id === "windrose"`. If we ever want per-lobby reels, promote this
-  // to a schema field and iterate the list.
   const WINDROSE_BANNER_COUNT = 24;
   function applyWindroseReel<T extends { id?: string; bannerUrl?: string | null } | null>(lobby: T): T {
     if (!lobby || lobby.id !== "windrose") return lobby;
@@ -2580,11 +2471,9 @@ async function main() {
     return lobby;
   }
 
-  // GET /featured — public endpoint returning featured lobby for homepage hero
   app.get("/featured", async (_req, reply) => {
     const featuredId = await getSiteConfig("featuredLobbyId");
     if (!featuredId) {
-      // Fallback: return first pinned lobby by name
       const fallback = await (prisma as any).lobby.findFirst({
         where: { pinned: true },
         select: {
@@ -2615,16 +2504,15 @@ async function main() {
     return reply.send({ ok: true, lobby: applyWindroseReel(lobby), source: "config" });
   });
 
-  // Health
   app.get("/health", async () => {
     try { await prisma.$queryRaw`SELECT 1`; return { ok: true, db: "ok" }; }
     catch { return { ok: true, db: "down" }; }
   });
 
-  // Auth: dev-login
   app.post("/auth/dev-login", {
     config: { rateLimit: { max: 30, timeWindow: "10 minutes" } },
   }, async (req, reply) => {
+    if (!DEV_LOGIN_ENABLED) return reply.code(404).send({ error: "not_found" });
     const body: any = (req as any).body || {};
     const raw = typeof body.username === "string" ? body.username : "";
     let name = (raw || "").trim().slice(0, 32);
@@ -2639,11 +2527,11 @@ async function main() {
   });
 
   app.post("/dev-login", async (req, reply) => {
+    if (!DEV_LOGIN_ENABLED) return reply.code(404).send({ error: "not_found" });
     const r = await (app as any).inject({ method: "POST", url: "/auth/dev-login", payload: (req as any).body || {} });
     reply.code(r.statusCode).headers(r.headers).send(r.json());
   });
 
-  // Auth: register — 5 attempts/IP/hour, plus Turnstile if configured.
   app.post("/auth/register", {
     config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
   }, async (req, reply) => {
@@ -2671,7 +2559,6 @@ async function main() {
     const user = await prisma.user.create({ data: { name: username, usernameKey: username, email } });
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Verification token only generated when email provided. 24h expiry.
     let verifyToken: string | null = null;
     let verifyTokenExp: Date | null = null;
     if (email) {
@@ -2690,10 +2577,10 @@ async function main() {
     }
     seedWelcomeDM(user.id).catch(() => {});
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    setAuthCookie(reply, token);
     return reply.send({ token, user, pendingVerification: Boolean(email) });
   });
 
-  // Auth: verify email — token comes from the link in the verification email.
   app.post("/auth/verify-email", {
     config: { rateLimit: { max: 30, timeWindow: "1 hour" } },
   }, async (req, reply) => {
@@ -2713,12 +2600,10 @@ async function main() {
     if (!user) return reply.code(500).send({ error: "Account record missing" });
     if (user.banned) return reply.code(403).send({ ok: false, error: "banned" });
     const sessionToken = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    setAuthCookie(reply, sessionToken);
     return reply.send({ ok: true, token: sessionToken, user });
   });
 
-  // Auth: resend verification email — by username so the user can request it
-  // even if they don't remember which email they used. Always returns ok to
-  // avoid leaking whether the username exists.
   app.post("/auth/resend-verification", {
     config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
   }, async (req, reply) => {
@@ -2736,8 +2621,6 @@ async function main() {
     return reply.send({ ok: true });
   });
 
-  // Auth: forgot password — body is { username } OR { email }. Always returns
-  // ok regardless of whether the account exists (prevents email enumeration).
   app.post("/auth/forgot-password", {
     config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
   }, async (req, reply) => {
@@ -2749,7 +2632,7 @@ async function main() {
     else if (email) la = await prisma.localAuth.findUnique({ where: { email } }).catch(() => null);
     if (la && la.email) {
       const resetToken = randomBytes(32).toString("hex");
-      const resetExp = new Date(Date.now() + 60 * 60 * 1000); // 1h
+      const resetExp = new Date(Date.now() + 60 * 60 * 1000);
       await prisma.localAuth.update({
         where: { id: la.id },
         data: { passwordResetToken: resetToken, passwordResetTokenExp: resetExp },
@@ -2760,8 +2643,6 @@ async function main() {
     return reply.send({ ok: true });
   });
 
-  // Auth: reset password — { token, password }. Validates token + expiry,
-  // sets new password, invalidates token.
   app.post("/auth/reset-password", {
     config: { rateLimit: { max: 10, timeWindow: "1 hour" } },
   }, async (req, reply) => {
@@ -2783,8 +2664,6 @@ async function main() {
     return reply.send({ ok: true });
   });
 
-  // Auth: login — 20 attempts/IP/15min. Username-level limiting would require a
-  // stateful store (redis); IP-level keeps it simple and still defeats spray attacks.
   app.post("/auth/login", {
     config: { rateLimit: { max: 20, timeWindow: "15 minutes" } },
   }, async (req, reply) => {
@@ -2802,18 +2681,25 @@ async function main() {
     if (!user) return reply.code(401).send({ error: "Invalid credentials" });
     if (user.banned) return reply.code(403).send({ ok: false, error: "banned", message: "Your account has been suspended." });
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+    setAuthCookie(reply, token);
     return reply.send({ token, user });
   });
 
+  app.get("/auth/ws-ticket", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    return reply.send({ ok: true, ticket: jwt.sign({ sub: u.id, name: u.name }, JWT_SECRET, { expiresIn: "60s" }) });
+  });
+  app.post("/auth/logout", async (_req, reply) => {
+    clearAuthCookie(reply);
+    return reply.send({ ok: true });
+  });
 
-  // Auth: Google OAuth
   const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || "";
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
   const GOOGLE_CALLBACK_URL  = process.env.GOOGLE_CALLBACK_URL  || "https://api.weered.ca/auth/google/callback";
   const WEB_URL              = process.env.APP_URL               || "https://weered.ca";
 
-  // Allowlist: web app, mobile standalone scheme, and Expo Go dev redirects.
-  // Mobile passes its own redirect URI because it differs between Expo Go and a built app.
   const REDIRECT_ALLOW = [
     /^https:\/\/([a-z0-9-]+\.)?weered\.ca(\/.*)?$/i,
     /^weered:\/\/[^\s]*$/i,
@@ -2839,7 +2725,6 @@ async function main() {
 
   app.get("/auth/google/callback", async (req, reply) => {
     const { code, state } = (req as any).query as { code?: string; state?: string };
-    // Decode a custom redirect if one was signed into state on the start leg.
     let customRedirect: string | null = null;
     if (state) {
       try {
@@ -2867,10 +2752,8 @@ async function main() {
       const avatar = payload.picture || null;
       const displayName = payload.name || `g_${googleId.slice(0, 12)}`;
 
-      // 1. Find by googleId
       let user = await prisma.user.findFirst({ where: { googleId } });
 
-      // 2. Find by email and link
       if (!user && email) {
         user = await prisma.user.findFirst({ where: { email } });
         if (user) {
@@ -2878,7 +2761,6 @@ async function main() {
         }
       }
 
-      // 3. Create new user
       const isNew = !user;
       if (!user) {
         const tempName = `g_${googleId.slice(0, 12)}`;
@@ -2887,6 +2769,7 @@ async function main() {
       }
       if (user.banned) return reply.redirect(customRedirect ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=account_suspended` : `${WEB_URL}/login?error=account_suspended`);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
+      setAuthCookie(reply, token);
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
       const qs = `token=${token}&user=${userParam}${isNew ? "&new=1" : ""}`;
       return reply.redirect(finishUrl(isNew ? "/onboarding" : "/auth/google/finish", qs));
@@ -2896,7 +2779,6 @@ async function main() {
     }
   });
 
-  // Auth: username availability check
   app.get("/auth/username-check", async (req, reply) => {
     const { username } = (req as any).query as { username?: string };
     const clean = (username || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32);
@@ -2905,7 +2787,6 @@ async function main() {
     return reply.send({ available: !existing });
   });
 
-  // Auth: onboarding — set username after Google login
   app.post("/auth/onboarding", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -2925,11 +2806,6 @@ async function main() {
     return reply.send({ token, user: { id: updated.id, name: updated.name } });
   });
 
-  // Voice token (LiveKit). Publish permission is gated by the room's
-  // voiceMode + speaker set:
-  //   OPEN        → anyone may publish
-  //   QUEUED      → mods + owner + approved speakers may publish
-  //   LISTEN_ONLY → mods + owner only
   app.post("/voice/token", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -2938,9 +2814,6 @@ async function main() {
     const roomIdRaw = String(body.roomId || body.room || "").trim().slice(0, 64);
     if (!roomIdRaw) return reply.code(400).send({ ok: false, error: "missing_roomId" });
 
-    // Resolve the room state — strip a leading "room:" prefix if present
-    // (clients connect to LiveKit by raw room id but our state uses the
-    // canonicalized id) and check voice gating.
     const cleaned = roomIdRaw.startsWith("room:") ? roomIdRaw.slice(5) : roomIdRaw;
     const lookup = normalizeRoomId(cleaned);
     let canPublish = true;
@@ -2953,7 +2826,7 @@ async function main() {
           canPublish = true;
         } else if (mode === "LISTEN_ONLY") {
           canPublish = isOwnerOrMod;
-        } else { // QUEUED
+        } else {
           canPublish = isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
         }
       }
@@ -2966,12 +2839,6 @@ async function main() {
     return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
   });
 
-  // Rooms
-  // GET /lobbies — all lobbies with live counts
-
-
-  // ── Lobby admin access helper (used by lobbies, events, billing plugins) ──
-  // Returns null and sends an error response if access is denied; caller checks.
   async function lobbyAdminAccess(req: any, reply: any, minLevel = 4): Promise<{ user: any; lobby: any; member: any; globalRole: any; overrideRole: string | null } | null> {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) { reply.code(401).send({ ok: false, error: "unauthorized" }); return null; }
@@ -2985,54 +2852,24 @@ async function main() {
     return { user: u, lobby, member, globalRole: gr, overrideRole: null };
   }
 
-  // ── Lobbies — extracted to routes/lobbies.ts ──────────────────────────────
   await app.register(lobbiesRoutes, {
     authFromHeader, verifyToken, getGlobalRole, canAccessStaff, getLobbyRole,
     applyWindroseReel, lobbyAdminAccess, globalAudit, rooms,
+    isNameReserved, awardNotoriety, send,
   } as any);
 
-  // ── Rooms — extracted to routes/rooms.ts ──────────────────────────────────
   await app.register(roomsRoutes, {
     authFromHeader, verifyToken, getGlobalRole, canAccessStaff,
     rooms, ensureRoomLoaded, normalizeRoomId, buildStatePayload, send, shortRoomId,
     broadcastToLobby,
   } as any);
 
-  // ── Staff — extracted to routes/staff.ts ──────────────────────────────────
   await app.register(staffRoutes, {
     authFromHeader, getGlobalRole, canAccessStaff, canAssignRoles, globalAudit,
-    broadcast, broadcastEvent, rooms, send, wss, shortRoomId,
+    broadcast, broadcastEvent, rooms, send, getWss: () => wss, shortRoomId,
     getAllSiteConfig, setSiteConfig, SITE_CONFIG_DEFAULTS, getSiteConfig,
+    isModOrOwner, audit, publishState, findSocketsByUser,
   } as any);
-
-  // ── Staff API (remaining inline staff routes — gradually migrating) ────────
-
-  // GET /staff/me
-
-  // GET /staff/users?q=
-
-  // POST /staff/users/:userId/role
-
-  // POST /staff/users/:userId/note
-
-  // GET /staff/users/:userId/notes
-
-  // GET /staff/audit
-// POST /staff/lobby/lock — lock lobby chat (SUPPORT+)
-
-  // POST /staff/lobby/unlock — unlock lobby chat (SUPPORT+)
-
-  // POST /staff/lobby/clear-chat — clear lobby messages (STAFF+)
-
-  // POST /staff/room/clear-chat — clear room messages (room owner/mod or STAFF+)
-  // POST /staff/broadcast — send a system message to all connected users
-  // POST /staff/users/:userId/kick
-
-  // POST /staff/users/:userId/ban — global platform ban
-
-  // DELETE /staff/users/:userId/ban — unban user
-
-  // ── Start HTTP ────────────────────────────────────────────────────────────────
 
   await 
     app.get("/staff/rooms", async (req, reply) => {
@@ -3076,6 +2913,10 @@ async function main() {
           id: true,
           name: true,
           bio: true,
+          statusText: true,
+          statusEmoji: true,
+          avatarFrame: true,
+          nameEffect: true,
           notoriety: true,
           tier: true,
           globalRole: true,
@@ -3092,18 +2933,13 @@ async function main() {
 
       if (!u) return reply.code(404).send({ error: "User not found" });
 
-      // Count rooms hosted (owned)
       const roomsHosted = await prisma.room.count({ where: { ownerId: u.id } });
 
-      // Linked game accounts (public info only)
       const gameAccounts = await prisma.userGameAccount.findMany({
         where: { userId: u.id },
         select: { gameType: true, displayName: true, platform: true, createdAt: true },
       });
 
-      // Primary crew (earliest-joined). Used as repping flair next to the
-      // user's name in chat + hover cards. If the user's in multiple crews
-      // we surface the oldest one — "your first ship" wins by default.
       const primaryMembership = await (prisma as any).crewMember.findFirst({
         where: { userId: u.id },
         orderBy: { joinedAt: "asc" },
@@ -3115,6 +2951,10 @@ async function main() {
         id: u.id,
         name: u.name,
         bio: u.bio || "",
+        statusText: (u as any).statusText || null,
+        statusEmoji: (u as any).statusEmoji || null,
+        avatarFrame: (u as any).avatarFrame || null,
+        nameEffect: (u as any).nameEffect || null,
         notoriety: u.notoriety ?? 0,
         notorietyRank: nRank.title,
         notorietyNext: nRank.next ? { title: nRank.next.title, min: nRank.next.min } : null,
@@ -3153,7 +2993,6 @@ async function main() {
     }
   });
 
-  // PATCH /profile/me  — update own bio / avatarColor
   app.patch("/profile/me", async (req, reply) => {
     const authHeader = (req.headers as any).authorization;
     const viewer = authFromHeader(authHeader);
@@ -3164,9 +3003,13 @@ async function main() {
     const avatarColor = typeof body.avatarColor === "string" ? body.avatarColor.slice(0, 20) : undefined;
     const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 500) : undefined;
     const bannerUrl = typeof body.bannerUrl === "string" ? body.bannerUrl.slice(0, 500) : undefined;
+    const statusText = typeof body.statusText === "string" ? body.statusText.trim().slice(0, 80) : undefined;
+    const statusEmoji = typeof body.statusEmoji === "string" ? body.statusEmoji.trim().slice(0, 24) : undefined;
+    const FRAME_KEYS = ["none","gold","flames","crystal","neon","circuit"];
+    const avatarFrame = typeof body.avatarFrame === "string" && FRAME_KEYS.includes(body.avatarFrame) ? body.avatarFrame : undefined;
+    const NAME_KEYS = ["none","gold","fire","ice","toxic","royal","rainbow"];
+    const nameEffect = typeof body.nameEffect === "string" && NAME_KEYS.includes(body.nameEffect) ? body.nameEffect : undefined;
 
-    // Profile customization (Phase 1: colors). Accept either a valid #RRGGBB
-    // hex or empty string to clear. Anything else is silently dropped.
     const isHex = (s: string) => /^#[0-9a-f]{6}$/i.test(s);
     const normColor = (raw: any): string | null | undefined => {
       if (typeof raw !== "string") return undefined;
@@ -3183,6 +3026,7 @@ async function main() {
       bio === undefined && avatarColor === undefined && avatar === undefined && bannerUrl === undefined
       && panelBgColor === undefined && panelAccentColor === undefined
       && pillBgColor === undefined && pillAccentColor === undefined
+      && statusText === undefined && statusEmoji === undefined && avatarFrame === undefined && nameEffect === undefined
     ) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
@@ -3193,23 +3037,22 @@ async function main() {
           ...(avatarColor !== undefined && { avatarColor }),
           ...(avatar !== undefined && { avatar: avatar || null }),
           ...(bannerUrl !== undefined && { bannerUrl: bannerUrl || null }),
+          ...(statusText !== undefined && { statusText: statusText || null }),
+          ...(statusEmoji !== undefined && { statusEmoji: statusEmoji || null }),
+          ...(avatarFrame !== undefined && { avatarFrame: avatarFrame === "none" ? null : avatarFrame }),
+          ...(nameEffect !== undefined && { nameEffect: nameEffect === "none" ? null : nameEffect }),
           ...(panelBgColor !== undefined && { panelBgColor }),
           ...(panelAccentColor !== undefined && { panelAccentColor }),
           ...(pillBgColor !== undefined && { pillBgColor }),
           ...(pillAccentColor !== undefined && { pillAccentColor }),
         } as any,
-        select: { id: true, bio: true } as any,
+        select: { id: true, bio: true, statusText: true, statusEmoji: true } as any,
       });
 
-      // Award notoriety for completing bio (one-time)
       if (bio !== undefined && bio.length >= 10) {
         await awardNotoriety(viewer.id, "BIO_COMPLETE");
       }
 
-      // If any visible field changed, update all live sockets for this user
-      // and re-broadcast presence in every room they're in so other clients
-      // see the change instantly. Without this, viewers would only see the
-      // updated colours after a fresh /friends fetch or a page reload.
       const visibleChanged =
         avatarColor !== undefined || avatar !== undefined
         || panelBgColor !== undefined || panelAccentColor !== undefined
@@ -3242,34 +3085,27 @@ async function main() {
         }
       }
 
-      return reply.send({ ok: true, bio: u.bio });
+      return reply.send({ ok: true, bio: u.bio, statusText: (u as any).statusText ?? null, statusEmoji: (u as any).statusEmoji ?? null });
     } catch (e) {
       console.error("[profile PATCH]", e);
       return reply.code(500).send({ error: "Server error" });
     }
   });
 
-  // ── Rich Presence (Steam pull) ───────────────────────────────────────────
-  // POST /profile/me/steam-id  { steamId } — accepts a SteamID64 (17 digits)
-  // OR a vanity URL/username (e.g. "weeredjs" from steamcommunity.com/id/weeredjs)
-  // Resolves vanity via Steam's ResolveVanityURL API.
   app.post("/profile/me/steam-id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
     let raw = String(body.steamId || "").trim();
 
-    // Clear
     if (raw === "") {
       await prisma.user.update({
         where: { id: u.id },
-        data: { steamId: null, livePresence: null, presenceCheckedAt: null },
+        data: { steamId: null, livePresence: Prisma.DbNull, presenceCheckedAt: null },
       });
       return reply.send({ ok: true, steamId: null });
     }
 
-    // Strip common paste mistakes — users often paste the full profile URL
-    // e.g. "https://steamcommunity.com/id/weeredjs/" or ".../profiles/76561198..."
     const urlMatch = raw.match(/steamcommunity\.com\/(id|profiles)\/([^/\s?#]+)/i);
     if (urlMatch) raw = urlMatch[2];
 
@@ -3278,7 +3114,6 @@ async function main() {
     if (/^\d{17}$/.test(raw)) {
       steamId = raw;
     } else if (STEAM_API_KEY) {
-      // Resolve vanity URL -> SteamID64
       try {
         const resolveUrl = `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${STEAM_API_KEY}&vanityurl=${encodeURIComponent(raw)}`;
         const res = await fetch(resolveUrl);
@@ -3308,7 +3143,6 @@ async function main() {
     return reply.send({ ok: true, steamId, resolvedFrom: raw !== steamId ? raw : undefined });
   });
 
-  // POST /profile/me/twitch-login  { twitchLogin } — set or clear
   app.post("/profile/me/twitch-login", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3320,13 +3154,11 @@ async function main() {
     }
     await prisma.user.update({
       where: { id: u.id },
-      data: { twitchLogin, livePresence: twitchLogin ? undefined : null, presenceCheckedAt: null },
+      data: { twitchLogin, livePresence: twitchLogin ? undefined : Prisma.DbNull, presenceCheckedAt: null },
     });
     return reply.send({ ok: true, twitchLogin });
   });
 
-  // POST /profile/me/xbox-gamertag  { gamertag } — set or clear. Resolves
-  // gamertag -> xuid via OpenXBL (xbl.io). Empty string clears.
   app.post("/profile/me/xbox-gamertag", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3336,7 +3168,7 @@ async function main() {
     if (raw === "") {
       await prisma.user.update({
         where: { id: u.id },
-        data: { xboxGamertag: null, xboxXuid: null, livePresence: null, presenceCheckedAt: null },
+        data: { xboxGamertag: null, xboxXuid: null, livePresence: Prisma.DbNull, presenceCheckedAt: null },
       });
       return reply.send({ ok: true, xboxGamertag: null });
     }
@@ -3357,10 +3189,6 @@ async function main() {
     return reply.send({ ok: true, xboxGamertag: resolved.gamertag, xboxXuid: resolved.xuid });
   });
 
-  // POST /profile/me/psn-account-id  { psnAccountId } — set or clear. PSN
-  // has no public OAuth or username lookup, so this is identity-only — we
-  // store the string the user gives us and display it as a chip. Validation
-  // is format-only: 3-16 chars, alpha+digit+hyphen+underscore, leading letter.
   app.post("/profile/me/psn-account-id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3384,7 +3212,6 @@ async function main() {
     return reply.send({ ok: true, psnAccountId: raw });
   });
 
-  // GET /profile/me/presence — authed user's own link state + most recent detected presence
   app.get("/profile/me/presence", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3405,7 +3232,6 @@ async function main() {
     });
   });
 
-  // POST /profile/me/presence/refresh — force an immediate poll for this user
   app.post("/profile/me/presence/refresh", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3431,7 +3257,6 @@ async function main() {
       xboxData = await pollXboxPresenceOne(row.xboxXuid);
     }
 
-    // Priority: Twitch-live > Xbox game > Steam game/online > null
     const primary = (twitchData && twitchData.source === "TWITCH") ? twitchData
       : (xboxData && xboxData.source === "XBOX") ? xboxData
       : (steamData ?? null);
@@ -3444,7 +3269,6 @@ async function main() {
     return reply.send({ ok: true, livePresence: primary ?? null, presenceCheckedAt: new Date().toISOString() });
   });
 
-  // GET /presence/users?ids=a,b,c — batch live-presence for friend lists etc.
   app.get("/presence/users", async (req, reply) => {
     const ids = String((req.query as any)?.ids || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 60);
     if (ids.length === 0) return reply.send({ ok: true, presence: {} });
@@ -3457,11 +3281,6 @@ async function main() {
     return reply.send({ ok: true, presence: out });
   });
 
-  // ── Account deletion (GDPR right to erasure) ─────────────────────────────
-  // POST /profile/me/delete — user-initiated account wipe.
-  // Requires body.confirm === "DELETE" (typed-word gate).
-  // Scrubs PII, deletes auth rows + push subs, keeps content for FK integrity
-  // (messages attributed to a generic "deleted_user" handle).
   app.post("/profile/me/delete", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3473,13 +3292,10 @@ async function main() {
     const userId = viewer.id;
 
     try {
-      // Generate a stable anonymized handle so this user's id can still be FK'd
-      // without leaking their old identity. Use first 8 chars of cuid for uniqueness.
       const anonSuffix = userId.slice(-8).toLowerCase();
       const anonName = `deleted_${anonSuffix}`;
 
       await prisma.$transaction(async (tx) => {
-        // 1. Scrub PII on User row + mark deleted
         await tx.user.update({
           where: { id: userId },
           data: {
@@ -3500,17 +3316,13 @@ async function main() {
           },
         });
 
-        // 2. Delete auth credentials so they can't log back in
         await tx.localAuth.deleteMany({ where: { userId } });
 
-        // 3. Kill push subscriptions
         await (tx as any).pushSubscription.deleteMany({ where: { userId } });
 
-        // 4. Remove linked game accounts (revoke OAuth)
         await (tx as any).userGameAccount.deleteMany({ where: { userId } });
       });
 
-      // Best-effort: terminate live sockets for this user
       try {
         for (const sock of wss.clients) {
           if ((sock as any).user?.id === userId) {
@@ -3528,10 +3340,8 @@ async function main() {
     }
   });
 
-  // ── GPS Location (opt-in) ─────────────────────────────────────────────────
-  const H3_RES = 7; // ~5.16 km edge length
+  const H3_RES = 7;
 
-  // POST /me/location — opt-in and store approximate location
   app.post("/me/location", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -3549,7 +3359,6 @@ async function main() {
     return reply.send({ ok: true, h3: h3Index });
   });
 
-  // DELETE /me/location — opt-out, wipe stored location
   app.delete("/me/location", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -3560,7 +3369,6 @@ async function main() {
     return reply.send({ ok: true });
   });
 
-  // GET /me/location — get own location opt-in status
   app.get("/me/location", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -3568,13 +3376,10 @@ async function main() {
     return reply.send({ optIn: u?.locationOptIn || false, latitude: u?.latitude || null, longitude: u?.longitude || null, h3: u?.locationH3 || null, updatedAt: u?.locationUpdatedAt || null });
   });
 
-  // GET /map/hexes — aggregated hex grid cells with user counts (public)
-  // Optional ?game= filter to show only users in a specific lobby moduleType
   app.get("/map/hexes", async (req, reply) => {
     const q: any = (req as any).query || {};
     const gameFilter = typeof q.game === "string" ? q.game.trim().toUpperCase() : "";
 
-    // If filtering by game, join through LobbyMember → Lobby
     let users: { locationH3: string | null }[];
     if (gameFilter) {
       const members = await prisma.lobbyMember.findMany({
@@ -3604,7 +3409,6 @@ async function main() {
       return { h3, count, boundary };
     });
 
-    // Build game breakdown for filter UI
     const allLocUsers = await prisma.user.findMany({
       where: { locationOptIn: true, locationH3: { not: null } },
       select: { id: true },
@@ -3629,8 +3433,6 @@ async function main() {
     return reply.send({ hexes, games });
   });
 
-  // GET /map/nearby?lat=&lng= — users in your hex + neighbors (auth required)
-  // Enriched with current lobby membership info
   app.get("/map/nearby", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -3645,7 +3447,6 @@ async function main() {
       select: { id: true, usernameKey: true, name: true, avatar: true, avatarColor: true, tier: true, locationH3: true },
     });
     const others = nearby.filter(u => u.id !== viewer.id).slice(0, 50);
-    // Enrich with most recent lobby membership
     const userIds = others.map(u => u.id);
     const memberships = userIds.length ? await prisma.lobbyMember.findMany({
       where: { userId: { in: userIds } },
@@ -3663,9 +3464,7 @@ async function main() {
     return reply.send({ hex: center, nearbyCount: enriched.length, users: enriched });
   });
 
-  // GET /map/lobbies — lobby pins with geographic center of their members
   app.get("/map/lobbies", async (_req, reply) => {
-    // Get all users with location opted in
     const locUsers = await prisma.user.findMany({
       where: { locationOptIn: true, latitude: { not: null }, longitude: { not: null } },
       select: { id: true, latitude: true, longitude: true },
@@ -3698,17 +3497,15 @@ async function main() {
     return reply.send({ lobbies: pins });
   });
 
-  // ── Avatar upload (Indicted+ only) ────────────────────────────────────────
   const AVATAR_DIR = join(process.cwd(), "uploads", "avatars");
   if (!existsSync(AVATAR_DIR)) mkdirSync(AVATAR_DIR, { recursive: true });
-  const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+  const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const SITE_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
   app.post("/profile/avatar/upload", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
 
-    // Tier gate — Indicted+ only
     const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     if (tier === "INNOCENT") {
@@ -3721,7 +3518,6 @@ async function main() {
       return reply.code(400).send({ error: "missing_image" });
     }
 
-    // Validate data URL format
     const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
     if (!match) {
       return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
@@ -3741,16 +3537,13 @@ async function main() {
 
       const avatarUrl = `${SITE_BASE}/avatars/${filename}`;
 
-      // Update user record
       await prisma.user.update({
         where: { id: u.id },
         data: { avatar: avatarUrl },
       });
 
-      // Award notoriety for setting avatar
       awardNotoriety(u.id, "AVATAR_SET").catch(() => {});
 
-      // Update live WS presence
       for (const sock of wss.clients) {
         const s = sock as Sock;
         if (s.user?.id === u.id) {
@@ -3773,7 +3566,6 @@ async function main() {
     }
   });
 
-  // Serve uploaded avatars as static files
   app.get("/avatars/:filename", async (req, reply) => {
     const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
     if (!filename) return reply.code(400).send("bad request");
@@ -3790,10 +3582,9 @@ async function main() {
     return reply.send(data);
   });
 
-  // ── Banner upload (Indicted+ only) — wide ID-card banner image ────────────
   const BANNER_DIR = join(process.cwd(), "uploads", "banners");
   if (!existsSync(BANNER_DIR)) mkdirSync(BANNER_DIR, { recursive: true });
-  const BANNER_MAX_BYTES = 4 * 1024 * 1024; // 4MB (banners are wider than avatars)
+  const BANNER_MAX_BYTES = 4 * 1024 * 1024;
 
   app.post("/profile/banner/upload", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -3829,6 +3620,36 @@ async function main() {
     }
   });
 
+  app.post("/lobbies/upload-image", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ error: "unauthorized" });
+    const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true, globalRole: true } });
+    const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
+    const isStaff = canAccessStaff(dbUser?.globalRole as any);
+    if (tier === "INNOCENT" && !isStaff) {
+      return reply.code(403).send({ error: "tier_required", message: "Lobby branding requires Indicted tier or higher." });
+    }
+    const body: any = (req as any).body || {};
+    const dataUrl = body.image;
+    if (!dataUrl || typeof dataUrl !== "string") return reply.code(400).send({ error: "missing_image" });
+    const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,(.+)$/);
+    if (!match) return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, GIF, or SVG." });
+    const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1] === "svg+xml" ? "svg" : match[1];
+    const buffer = Buffer.from(match[2], "base64");
+    if (buffer.length > BANNER_MAX_BYTES) return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+    try {
+      const kind = String(body.kind || "img").replace(/[^a-z]/g, "").slice(0, 8) || "img";
+      const filename = `lobby-${kind}-${u.id}-${Date.now()}.${ext}`;
+      const filepath = join(BANNER_DIR, filename);
+      writeFileSync(filepath, buffer);
+      const url = `${SITE_BASE}/banners/${filename}`;
+      return reply.send({ ok: true, url });
+    } catch (e) {
+      console.error("[lobby image upload]", e);
+      return reply.code(500).send({ error: "upload_failed" });
+    }
+  });
+
   app.get("/banners/:filename", async (req, reply) => {
     const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
     if (!filename) return reply.code(400).send("bad request");
@@ -3843,7 +3664,6 @@ async function main() {
     return reply.send(data);
   });
 
-  // GET /notoriety/me — current user's notoriety score, rank, recent events, next milestone
   app.get("/notoriety/me", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -3873,7 +3693,6 @@ async function main() {
     });
   });
 
-  // GET /notoriety/leaderboard — top users by notoriety
   app.get("/notoriety/leaderboard", async (req, reply) => {
     const limit = Math.min(Number((req as any).query?.limit || 25), 50);
     const leaders = await prisma.user.findMany({
@@ -3894,33 +3713,14 @@ async function main() {
     return reply.send({ ok: true, leaders: ranked });
   });
 
-  // ── Crews — extracted to routes/crews.ts ─────────────────────────────────
   await app.register(crewsRoutes, { authFromHeader, verifyToken, awardNotoriety, createNotification, rooms, fetchReactionsForTargets, getNotorietyRank } as any);
 
-
-  // DELETE /staff/rooms/:roomId — STAFF+ can delete rooms
-  // POST /staff/rooms/:roomId/rename — rename a room
-
-  // POST /staff/rooms/:roomId/pin — pin/unpin a room (pinned rooms don't dissolve)
-
-  // POST /staff/rooms/:roomId/event — toggle event room flag
-
-  // POST /staff/rooms/:roomId/close — staff force-close a room
-
-// ── Invites — extracted to routes/invites.ts ────────────────────────────────
   await app.register(invitesRoutes, { authFromHeader, awardNotoriety, getGlobalRole, canAssignRoles, WEB_URL } as any);
   await app.register(chessRoutes, { authFromHeader } as any);
 
-
-  // ── DM — extracted to routes/dm.ts ────────────────────────────────────────
   await app.register(dmRoutes, { authFromHeader, resolveUserId, fetchReactionsForTargets, dmDeliver, isUserOnline, sendPush } as any);
   await app.register(groupRoutes, { authFromHeader, resolveUserId, dmDeliver, isUserOnline, sendPush, resolveMentions, createNotification } as any);
 
-
-
-  // ── Feed API ────────────────────────────────────────────────────────────────
-
-  // GET /feed/hot — returns top 50 items sorted by heat
   app.get("/feed/hot", async (req, reply) => {
     const qs       = (req as any).query as any;
     const category = qs?.category && qs.category !== "all" ? String(qs.category) : undefined;
@@ -3937,56 +3737,37 @@ async function main() {
     return reply.send({ items, updatedAt: new Date().toISOString() });
   });
 
-  // Run worker on startup then every 20 minutes
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
-  // Helldivers 2 worker (Slice D): pinned campaign rooms + Operator commentary + MO challenges
   setInterval(() => { void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers }); }, 10 * 60 * 1000);
   setTimeout(() => { void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers }); }, 30_000);
 
-  // ── Forum — extracted to routes/forum.ts ──────────────────────────────────
   await app.register(forumRoutes, { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole, resolveMentions, createNotification } as any);
   await app.register(forumModRoutes, { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole } as any);
-  // Forum auto-mod scheduled-unlock tick (every 60s)
   setInterval(() => { void autoModTick(); }, 60_000);
 
-
-  // ── News RSS ingestion worker ─────────────────────────────────────────────
   const NEWS_FEEDS = [
-    // CBC (top + world work; others blocked from server)
-    { url: "https://www.cbc.ca/webfeed/rss/rss-topstories",  category: "top",            source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-world",       category: "world",           source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-canada",      category: "canada",          source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-technology",   category: "tech",            source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-business",    category: "business",        source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-sports",      category: "sports",          source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    { url: "https://www.cbc.ca/webfeed/rss/rss-entertainment",category: "entertainment",  source: "CBC News",    icon: "https://www.cbc.ca/favicon.ico" },
-    // BBC (reliable, always works)
+    { url: "https://news.google.com/rss/search?q=site:cbc.ca+when:1d&hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "CBC News", icon: "https://www.cbc.ca/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/world/rss.xml",    category: "world",           source: "BBC World",   icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/technology/rss.xml",category: "tech",           source: "BBC Tech",    icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", category: "science", source: "BBC Science", icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "business",        source: "BBC Business",icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", category: "entertainment", source: "BBC Arts", icon: "https://www.bbc.co.uk/favicon.ico" },
     { url: "https://feeds.bbci.co.uk/sport/rss.xml",         category: "sports",          source: "BBC Sport",   icon: "https://www.bbc.co.uk/favicon.ico" },
-    // BBC Top Stories + Canada-relevant (these include <media:thumbnail>)
     { url: "https://feeds.bbci.co.uk/news/rss.xml",              category: "top",            source: "BBC News",    icon: "https://www.bbc.co.uk/favicon.ico" },
-    // CTV + Global (Canadian sources with images)
-    { url: "https://www.ctvnews.ca/rss/ctvnews-ca-top-stories-public-rss-1.822009", category: "canada", source: "CTV News", icon: "https://www.ctvnews.ca/favicon.ico" },
+    { url: "https://news.google.com/rss/search?q=site:ctvnews.ca+when:1d&hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "CTV News", icon: "https://www.ctvnews.ca/favicon.ico" },
     { url: "https://globalnews.ca/feed/",                         category: "canada",         source: "Global News", icon: "https://globalnews.ca/favicon.ico" },
-    // Google News (no images but good for headlines)
     { url: "https://news.google.com/rss?hl=en-CA&gl=CA&ceid=CA:en", category: "top",        source: "Google News", icon: "https://news.google.com/favicon.ico" },
     { url: "https://news.google.com/rss/search?q=canada+when:1d&hl=en-CA&gl=CA&ceid=CA:en", category: "canada", source: "Google News", icon: "https://news.google.com/favicon.ico" },
-    // Gaming
     { url: "https://www.eurogamer.net/?format=rss",                                          category: "gaming",  source: "Eurogamer",   icon: "https://www.eurogamer.net/favicon.ico" },
     { url: "https://www.polygon.com/rss/index.xml",                                          category: "gaming",  source: "Polygon",     icon: "https://www.polygon.com/favicon.ico" },
     { url: "https://kotaku.com/rss",                                                         category: "gaming",  source: "Kotaku",      icon: "https://kotaku.com/favicon.ico" },
     { url: "https://www.gamespot.com/feeds/news/",                                           category: "gaming",  source: "GameSpot",    icon: "https://www.gamespot.com/favicon.ico" },
-    { url: "https://www.ign.com/rss/articles?tags=games",                                    category: "gaming",  source: "IGN",         icon: "https://www.ign.com/favicon.ico" },
-    // Finance
+    { url: "https://news.google.com/rss/search?q=site:ign.com+when:2d&hl=en-US&gl=US&ceid=US:en",                                    category: "gaming",  source: "IGN",         icon: "https://www.ign.com/favicon.ico" },
+    { url: "https://news.google.com/rss/search?q=%22GTA+6%22+OR+%22Grand+Theft+Auto+VI%22+when:7d&hl=en-US&gl=US&ceid=US:en", category: "gaming", source: "GTA 6 News", icon: "https://news.google.com/favicon.ico" },
     { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html",                          category: "finance", source: "CNBC",        icon: "https://www.cnbc.com/favicon.ico" },
     { url: "https://www.marketwatch.com/rss/topstories",                                     category: "finance", source: "MarketWatch", icon: "https://www.marketwatch.com/favicon.ico" },
     { url: "https://feeds.bloomberg.com/markets/news.rss",                                   category: "finance", source: "Bloomberg",   icon: "https://www.bloomberg.com/favicon.ico" },
-    { url: "https://feeds.reuters.com/reuters/businessNews",                                 category: "finance", source: "Reuters",     icon: "https://www.reuters.com/favicon.ico" },
   ];
 
   async function fetchNewsRss(feedUrl: string, category: string, source: string, sourceIcon: string): Promise<any[]> {
@@ -4060,7 +3841,6 @@ async function main() {
         } catch {}
       }
 
-      // Purge articles older than 72 hours
       await prisma.newsArticle.deleteMany({
         where: { publishedAt: { lt: new Date(Date.now() - 72 * 3600 * 1000) } },
       });
@@ -4070,41 +3850,89 @@ async function main() {
     } catch (e) { console.error("[news] worker error:", e); }
   }
 
-  // ── News routes — extracted to routes/news.ts (worker stays here) ──────────
   await app.register(newsRoutes);
 
+  const annDb = prisma as any;
 
-  // ── Persistent Banner ──────────────────────────────────────────────────────
-  let siteBanner: { message: string; level: string; from: string; ts: number } | null = {
-    message: "Early access build — things may break. Report bugs in the Forum. New features ship daily. Type @operator in any chat for help.",
-    level: "info",
-    from: "Weered",
-    ts: 1,
-  };
+  (async () => {
+    try {
+      const count = await annDb.announcement.count();
+      if (count === 0) {
+        await annDb.announcement.create({ data: {
+          message: "Early access build — things may break. Report bugs in the Forum. New features ship daily. Type @operator in any chat for help.",
+          level: "info", pinned: true, sticky: true, createdById: "system", createdByName: "Weered",
+        } });
+      }
+    } catch (e) { console.warn("[announcements] seed:", e); }
+  })();
 
   app.get("/banner", async (_req, reply) => {
-    return reply.send({ ok: true, banner: siteBanner });
+    const pinned = await annDb.announcement.findMany({
+      where: { pinned: true }, orderBy: { createdAt: "desc" }, take: 10,
+    });
+    const banners = pinned.map((a: any) => ({ id: a.id, message: a.message, level: a.level, sticky: a.sticky, from: a.createdByName, ts: a.createdAt?.getTime?.() ?? 1 }));
+    return reply.send({ ok: true, banner: banners[0] ?? null, banners });
   });
 
-  // /staff/banner stays here with /banner — both mutate/read siteBanner.
+  app.get("/staff/announcements", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    const items = await annDb.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
+    return reply.send({ ok: true, announcements: items.map((a: any) => ({ ...a, createdAt: a.createdAt?.toISOString?.() })) });
+  });
+
+  app.post("/staff/announcements", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    const b: any = (req as any).body || {};
+    const message = String(b.message || "").trim().slice(0, 500);
+    if (!message) return reply.code(400).send({ ok: false, error: "message required" });
+    const level = ["info", "warning", "urgent"].includes(b.level) ? b.level : "info";
+    const a = await annDb.announcement.create({ data: {
+      message, level, pinned: !!b.pinned, sticky: !!b.pinned && !!b.sticky,
+      createdById: u.id, createdByName: u.name,
+    } });
+    await globalAudit(u.id, u.name, "announcement_create", a.id, undefined, { message, level, pinned: !!b.pinned });
+    return reply.send({ ok: true, announcement: { ...a, createdAt: a.createdAt?.toISOString?.() } });
+  });
+
+  app.patch("/staff/announcements/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    const id = String((req as any).params?.id || "");
+    const b: any = (req as any).body || {};
+    const data: any = {};
+    if (b.pinned !== undefined) data.pinned = !!b.pinned;
+    if (b.sticky !== undefined) data.sticky = !!b.sticky;
+    if (data.pinned === false) data.sticky = false;
+    const a = await annDb.announcement.update({ where: { id }, data });
+    await globalAudit(u.id, u.name, "announcement_update", id, undefined, data);
+    return reply.send({ ok: true, announcement: { ...a, createdAt: a.createdAt?.toISOString?.() } });
+  });
+
+  app.delete("/staff/announcements/:id", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false });
+    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    const id = String((req as any).params?.id || "");
+    await annDb.announcement.delete({ where: { id } }).catch(() => {});
+    await globalAudit(u.id, u.name, "announcement_delete", id);
+    return reply.send({ ok: true });
+  });
+
   app.post("/staff/banner", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false });
+    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const { message, level, clear } = (req as any).body || {};
-    if (clear) { siteBanner = null; return reply.send({ ok: true, banner: null }); }
+    if (clear) { await annDb.announcement.updateMany({ where: { pinned: true }, data: { pinned: false, sticky: false } }); return reply.send({ ok: true, banner: null }); }
     if (!message) return reply.code(400).send({ ok: false, error: "message required" });
-    siteBanner = { message, level: level || "info", from: u.name, ts: 1 };
-    return reply.send({ ok: true, banner: siteBanner });
+    const a = await annDb.announcement.create({ data: { message: String(message).slice(0, 500), level: level || "info", pinned: true, sticky: true, createdById: u.id, createdByName: u.name } });
+    return reply.send({ ok: true, banner: { id: a.id, message: a.message, level: a.level, sticky: true, from: u.name, ts: 1 } });
   });
-
-  // ── Desktop app updater (Tauri) ─────────────────────────────────────────────
-  // Tauri's updater plugin polls this endpoint on launch. We pull the latest
-  // signed release from GitHub Releases and translate it into the manifest
-  // shape Tauri expects. Returns 204 (no update) if there's no release,
-  // the user is already current, or GitHub is unreachable — never errors
-  // back to the client (we'd rather miss an update than crash the desktop app).
 
   type DesktopReleaseManifest = {
     version: string;
@@ -4113,8 +3941,6 @@ async function main() {
     platforms: Record<string, { signature: string; url: string }>;
   };
 
-  // Map Tauri's target strings to release-asset filename patterns.
-  // GitHub Actions uploads artifacts named like Weered_0.2.0_x64-setup.exe etc.
   const TAURI_TARGET_MATCHERS: Record<string, RegExp> = {
     "windows-x86_64":  /Weered.*x64-setup\.exe$/i,
     "darwin-x86_64":   /Weered.*x64\.app\.tar\.gz$/i,
@@ -4133,12 +3959,9 @@ async function main() {
     draft: boolean;
   };
 
-  // Cache the latest manifest for 5 minutes — Tauri clients poll on each launch
-  // and we don't want to hammer GitHub. Also keeps the endpoint snappy.
   let desktopReleaseCache: { manifest: DesktopReleaseManifest | null; expiresAt: number } | null = null;
   const DESKTOP_RELEASE_TTL = 5 * 60 * 1000;
 
-  // GitHub repo to pull releases from. Override via env if the repo moves.
   const DESKTOP_RELEASES_REPO = process.env.DESKTOP_RELEASES_REPO || "Weeredjs/Weered";
 
   async function fetchLatestDesktopRelease(): Promise<DesktopReleaseManifest | null> {
@@ -4158,16 +3981,12 @@ async function main() {
       if (!res.ok) throw new Error(`GitHub releases ${res.status}`);
       const releases = (await res.json()) as GhRelease[];
 
-      // Find the latest non-draft, non-prerelease desktop release.
       const latest = releases.find((r) => !r.draft && !r.prerelease && /^desktop-v/.test(r.tag_name));
       if (!latest) {
         manifest = null;
       } else {
         const version = latest.tag_name.replace(/^desktop-v/, "");
 
-        // Build the platforms map. .sig file is optional — without it the
-        // entry still serves the landing page download URL but Tauri's
-        // auto-updater will skip the platform (it requires signatures).
         const platforms: DesktopReleaseManifest["platforms"] = {};
         for (const [target, matcher] of Object.entries(TAURI_TARGET_MATCHERS)) {
           const asset = latest.assets.find((a) => matcher.test(a.name));
@@ -4194,7 +4013,6 @@ async function main() {
       }
     } catch (e) {
       console.warn("[desktop-updater] fetchLatestDesktopRelease failed:", e);
-      // On error, keep whatever we had cached. If nothing cached, return null.
       if (desktopReleaseCache?.manifest) return desktopReleaseCache.manifest;
     }
 
@@ -4210,16 +4028,11 @@ async function main() {
       const { version, target } = req.params;
       if (manifest.version === version) return reply.code(204).send();
       const plat = manifest.platforms[target];
-      // Tauri auto-updater requires a signature; if we don't have one,
-      // pretend there's no update for this platform. Landing page download
-      // links still work via /desktop/latest.
       if (!plat || !plat.signature) return reply.code(204).send();
       return reply.send(manifest);
     },
   );
 
-  // Convenience endpoint for the /desktop landing page — returns the latest
-  // release info (or null) so the page can render real download buttons.
   app.get("/desktop/latest", async (_req, reply) => {
     const manifest = await fetchLatestDesktopRelease();
     if (!manifest) return reply.send({ ok: true, release: null });
@@ -4236,15 +4049,10 @@ async function main() {
     });
   });
 
-
-  // ── YouTube Search — extracted to routes/youtube.ts ────────────────────────
   await app.register(youtubeRoutes);
 
-  // ── AI Endpoints — extracted to routes/ai.ts ───────────────────────────────
   await app.register(aiRoutes, { authFromHeader, isAIAvailable, getAI, rooms } as any);
 
-
-  // Start news worker on startup then every 15 minutes
   runNewsWorker();
   setInterval(runNewsWorker, 15 * 60 * 1000);
 
@@ -4259,14 +4067,7 @@ async function main() {
     reply.status(err.statusCode || 500).send({ error: err.message || "Internal error" });
   });
 
-  // ── Mods — extracted to routes/mods.ts ─────────────────────────────────────
   await app.register(modsRoutes, { verifyToken } as any);
-
-
-  // app.listen() moved to the end of main() — routes after this point would
-  // throw FST_ERR_INSTANCE_ALREADY_LISTENING if we awaited it here.
-
-  // ── WebSocket server ──────────────────────────────────────────────────────────
 
   wss = new WebSocketServer({ port: WS_PORT });
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
@@ -4283,16 +4084,13 @@ async function main() {
           const u = verifyToken(msg.token);
           if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
           ws.user = await hydrateGlobalRole(u);
-          // Block globally banned users from connecting
           if (await isGloballyBanned(ws.user.id)) {
             send(ws, { type: "auth:fail", reason: "Your account has been suspended." });
             try { ws.close(4003, "banned"); } catch {}
             return;
           }
           send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar, panelBgColor: (ws.user as any).panelBgColor, panelAccentColor: (ws.user as any).panelAccentColor, pillBgColor: (ws.user as any).pillBgColor, pillAccentColor: (ws.user as any).pillAccentColor } });
-          // Award daily active notoriety (cooldown-gated, fires at most once per 24h)
           awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
-          // Crew presence: notify crew mates this user came online
           (async () => {
             try {
               const memberships = await (prisma as any).crewMember.findMany({ where: { userId: ws.user!.id }, select: { crewId: true } });
@@ -4312,8 +4110,6 @@ async function main() {
 
         if (!ws.user) { send(ws, { type: "auth:fail", reason: "Not authenticated" }); return; }
 
-
-        // ── rooms:list — return lobby directory from DB ───────────────────
         if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
           const [lobbyList, roomList] = await Promise.all([
             (prisma as any).lobby.findMany({
@@ -4357,7 +4153,6 @@ async function main() {
           const uid = ws.user.id;
           const isLobby = String(roomId || "").startsWith("lobby:");
 
-          // Password-protected rooms: check password before allowing entry
           if (room.passwordHash && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
             const suppliedPassword = typeof msg.password === "string" ? msg.password : "";
             if (!suppliedPassword) {
@@ -4369,7 +4164,6 @@ async function main() {
               send(ws, { type: "room:password:wrong", roomId });
               return;
             }
-            // Password correct — fall through to normal join
           }
 
           if (isLobby) room.locked = false;
@@ -4395,11 +4189,6 @@ async function main() {
           return;
         }
 
-        // ── Pin / unpin messages ───────────────────────────────────────
-        // Mods + owners can pin up to 10 messages in a room. State is
-        // held on room.pinned (Set<msgId>) in memory and broadcast as
-        // chat:pins whenever it changes. Clients render a strip at the
-        // top of chat listing pinned messages.
         if (msg.type === "chat:pin" || msg.type === "chat:unpin") {
           if (!ws.user?.id || !ws.joinedRoomId) return;
           const room = rooms.get(ws.joinedRoomId);
@@ -4421,10 +4210,6 @@ async function main() {
           return;
         }
 
-        // ── Chat typing indicator ──────────────────────────────────────
-        // Clients send chat:typing while the composer has focus + input.
-        // Broadcast a minimal payload (id, name) to the room. Clients
-        // self-expire stale entries after ~5s, so no server-side state.
         if (msg.type === "chat:typing") {
           if (!ws.user?.id || !ws.joinedRoomId) return;
           const room = rooms.get(ws.joinedRoomId);
@@ -4441,8 +4226,6 @@ async function main() {
           if (!ws.user) return;
           const away = Boolean(msg.away);
           (ws.user as any).isAway = away;
-          // Update and rebroadcast in every room this user is currently in
-          // so the red dot flips instantly for everyone else in the same room.
           for (const [, room] of rooms) {
             const entry = room.users.get(ws.user.id);
             if (entry) {
@@ -4453,10 +4236,6 @@ async function main() {
           return;
         }
 
-        // ── Room launcher (MPlayer-style) ──────────────────────────────────
-        // All launch:* messages target the user's currently-joined room. Only
-        // the room owner can set/clear a target and fire the countdown. Any
-        // member can pick player/observer and ready up.
         if (msg.type === "launch:set" || msg.type === "launch:clear"
             || msg.type === "launch:slot" || msg.type === "launch:ready"
             || msg.type === "launch:fire" || msg.type === "launch:abort") {
@@ -4475,7 +4254,6 @@ async function main() {
             const note    = msg.note ? String(msg.note).trim().slice(0, 300) : undefined;
             if (!appid || !connect) return;
             launch.target = { appid, connect, display, note, setBy: ws.user.id, setAt: Date.now() };
-            // Reset ready set + firedAt on a new target; preserve slot picks
             launch.ready.clear();
             launch.firedAt = null;
             launch.firedBy = null;
@@ -4497,14 +4275,12 @@ async function main() {
           if (msg.type === "launch:slot") {
             const slot: LaunchSlot = msg.slot === "player" ? "player" : "observer";
             launch.slots.set(ws.user.id, slot);
-            // Dropping out of player slot also drops ready
             if (slot === "observer") launch.ready.delete(ws.user.id);
             broadcastLaunch(room);
             return;
           }
 
           if (msg.type === "launch:ready") {
-            // Only player-slotted users can ready up
             if (launch.slots.get(ws.user.id) !== "player") return;
             const ready = Boolean(msg.ready);
             if (ready) launch.ready.add(ws.user.id);
@@ -4515,13 +4291,11 @@ async function main() {
 
           if (msg.type === "launch:fire") {
             if (!userIsOwner || !launch.target) return;
-            // Need at least one player-slotted user to fire
             const anyPlayer = Array.from(launch.slots.values()).some(s => s === "player");
             if (!anyPlayer) return;
             launch.firedAt = Date.now();
             launch.firedBy = ws.user.id;
             broadcastLaunch(room);
-            // Auto-reset 60s after fire so a new match can be queued
             setTimeout(() => {
               const r = rooms.get(room.roomId);
               if (!r?.launch) return;
@@ -4558,15 +4332,11 @@ async function main() {
             }
             return;
           }
-          // Only leave if the roomId in the message matches where this socket currently is.
-          // Stale presence:leave messages (sent by client after navigating away) must not
-          // kick the socket out of the room it has already joined.
           const leaveRid = normalizeRoomId(String(msg.roomId || ""));
           if (leaveRid && ws.roomId && leaveRid !== ws.roomId) return;
           leaveRoom(ws);
           return;
         }
-          // ── module:set — user sets the active module for the room
         if (msg.type === "module:set") {
           const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
           if (!roomId) return;
@@ -4580,15 +4350,11 @@ async function main() {
             broadcast(room, { type: "module:state", roomId, activeModule: null });
             return;
           }
-          // Reject if owner has disabled this module for the room.
-          // Owner + mods + global staff bypass — they need to be able to
-          // test the room and toggle modules even when disabled.
           const disabled: string[] = Array.isArray((room as any).disabledModules) ? (room as any).disabledModules : [];
           if (disabled.includes(mode) && !isModOrOwner(room, ws.user.id, ws.user?.globalRole)) {
             try { send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" }); } catch {}
             return;
           }
-          // Clear YouTube state when switching away from YouTube
           if (mode !== "youtube") room.ytState = null;
           const moduleState: ModuleState = {
             mode,
@@ -4614,15 +4380,6 @@ async function main() {
           return;
         }
 
-        // ── Voice queue / hand-raise WS protocol ───────────────────────
-        // voice:mode    → owner sets OPEN | QUEUED | LISTEN_ONLY (persisted)
-        // voice:raise   → user adds self to queue (QUEUED mode only)
-        // voice:lower   → user removes self from queue
-        // voice:approve → mod adds a queued user to speakers (auto-removes from queue)
-        // voice:revoke  → mod removes user from speakers
-        // After every change we broadcast voice:state. Granted/revoked users
-        // also receive a voice:permission ping so their client can refresh
-        // its LiveKit token + reconnect to pick up canPublish.
         function broadcastVoiceState(room: RoomState) {
           broadcast(room, {
             type: "voice:state",
@@ -4649,16 +4406,12 @@ async function main() {
           const next = String(msg.mode || "").toUpperCase();
           if (!["OPEN", "QUEUED", "LISTEN_ONLY"].includes(next)) return;
           room.voiceMode = next as any;
-          // Switching to LISTEN_ONLY clears queue + speakers (no-one speaks
-          // except mods/owner). Switching to OPEN also clears them — the
-          // gating no longer applies.
           if (next === "LISTEN_ONLY" || next === "OPEN") {
             const dropped = new Set([...(room.voiceSpeakers || []), ...(room.voiceQueue || [])]);
             room.voiceQueue = new Set();
             room.voiceSpeakers = new Set();
             for (const uid of dropped) pushVoicePermission(room, uid);
           }
-          // Persist mode to DB.
           (prisma as any).room.update({ where: { id: roomId }, data: { voiceMode: next } }).catch(() => {});
           broadcastVoiceState(room);
           return;
@@ -4672,7 +4425,7 @@ async function main() {
           if (!room.users.has(ws.user.id)) return;
           if ((room.voiceMode || "OPEN") !== "QUEUED") return;
           if (!room.voiceQueue) room.voiceQueue = new Set();
-          if (room.voiceSpeakers?.has(ws.user.id)) return; // already a speaker
+          if (room.voiceSpeakers?.has(ws.user.id)) return;
           room.voiceQueue.add(ws.user.id);
           broadcastVoiceState(room);
           return;
@@ -4719,16 +4472,13 @@ async function main() {
           broadcastVoiceState(room);
           return;
         }
-                // ── room:close — owner/mod force-closes the room ─────────────────
         if (msg.type === "room:close") {
           const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
           if (!roomId) return;
           const room = rooms.get(roomId);
           if (!room) return;
-          // Only owner, mods, or staff can close
           if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
 
-          // Don't delete pinned rooms — just kick everyone and clear state
           if (room.pinned) {
             for (const s of room.sockets) {
               send(s, { type: "room:closed", roomId, by: ws.user.name });
@@ -4741,26 +4491,22 @@ async function main() {
             return;
           }
 
-          // Kick everyone
           for (const s of room.sockets) {
             send(s, { type: "room:closed", roomId, by: ws.user.name });
             try { s.close(4004, "room:closed"); } catch {}
           }
 
-          // Clean up in-memory state
           room.users.clear();
           room.sockets.clear();
           room.msgs = [];
           room.activeModule = null;
 
-          // Delete from DB
           try {
             await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
             await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
             await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
           } catch {}
 
-          // Remove from in-memory map
           rooms.delete(roomId);
 
           await globalAudit(ws.user.id, ws.user.name, "room_close", roomId);
@@ -4774,15 +4520,10 @@ async function main() {
           if (!room.users.has(ws.user.id)) return;
           if (room.banned.has(ws.user.id)) return;
           if (room.muted.has(ws.user.id)) return;
-          // URL spam check
           const urlCheck = checkUrlSpam(body);
           if (!urlCheck.ok) { send(ws, { type: "chat:rejected", roomId, reason: urlCheck.reason }); return; }
-          // Rate limit
           const rate = checkChatRateLimit(ws.user.id);
           if (!rate.ok) { send(ws, { type: "chat:rejected", roomId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
-          // AutoMod-light: lobby-owner-configurable filters. Cached on the
-          // room object; refreshed lazily after 60s. Owner edits flush the
-          // cache via /lobbies/:id/admin/moderation handler below.
           if (room.lobbyId) {
             const cache = (room as any).modPolicy as { blockedWords: string[]; blockedDomains: string[]; newAccountChatHours: number; expiresAt: number } | undefined;
             let policy = cache && cache.expiresAt > Date.now() ? cache : null;
@@ -4801,7 +4542,6 @@ async function main() {
                 (room as any).modPolicy = policy;
               } catch { policy = { blockedWords: [], blockedDomains: [], newAccountChatHours: 0, expiresAt: Date.now() + 60_000 }; }
             }
-            // 1. New-account chat cooldown
             if (policy.newAccountChatHours > 0) {
               try {
                 const u = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { createdAt: true } });
@@ -4811,7 +4551,6 @@ async function main() {
                 }
               } catch {}
             }
-            // 2. Blocked words (case-insensitive substring)
             if (policy.blockedWords.length > 0) {
               const lower = body.toLowerCase();
               const hit = policy.blockedWords.find(w => w && lower.includes(String(w).toLowerCase()));
@@ -4820,7 +4559,6 @@ async function main() {
                 return;
               }
             }
-            // 3. Blocked domains (substring match against any URL)
             if (policy.blockedDomains.length > 0) {
               const urls = body.match(/https?:\/\/[^\s)]+/gi) || [];
               const bad = urls.find(u => policy!.blockedDomains.some(d => d && u.toLowerCase().includes(String(d).toLowerCase())));
@@ -4830,7 +4568,6 @@ async function main() {
               }
             }
           }
-          // Optional reply-to — snapshot parent from in-memory room.msgs
           let replyTo: ReplyTo | undefined;
           const replyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
           if (replyToId) {
@@ -4862,26 +4599,23 @@ async function main() {
           broadcast(room, { type: "chat:new", roomId, msg: m });
           room.lastActiveAt = Date.now();
           awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(() => {});
-          // @mention notifications — resolves against the User table so
-          // offline / out-of-room users still get pinged
           (async () => {
             try {
-              const mentioned = await resolveMentions(body, ws.user.id);
+              const mentioned = await resolveMentions(body, ws.user!.id);
               const roomPath = room.lobbyId ? `/lobby/${room.lobbyId}` : `/room/${room.roomId}`;
               for (const u of mentioned) {
                 createNotification({
                   userId: u.id,
                   type: "MENTION",
-                  title: `${ws.user.name} mentioned you in ${room.name || "a lobby"}`,
+                  title: `${ws.user!.name} mentioned you in ${room.name || "a lobby"}`,
                   body: body.slice(0, 120),
-                  actorId: ws.user.id,
-                  actorName: ws.user.name,
+                  actorId: ws.user!.id,
+                  actorName: ws.user!.name,
                   actionUrl: roomPath,
                 }).catch(() => {});
               }
             } catch {}
           })();
-          // AI Operator bot detection
           if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
             const question = body.replace(/@operator/gi, "").replace(/^\/ask\s*/i, "").trim();
             if (question.length > 0) {
@@ -4924,9 +4658,8 @@ async function main() {
           const target = room.msgs.find(m => m.id === msgId);
           if (!target) return;
           if (target.deletedAt) return;
-          if (target.user.id !== ws.user.id) return; // only sender can edit
+          if (target.user.id !== ws.user.id) return;
           if (target.body === newBody) return;
-          // 15 min edit window
           if (Date.now() - target.ts > 15 * 60 * 1000) return;
           target.body = newBody;
           const editedAt = Date.now();
@@ -4975,7 +4708,6 @@ async function main() {
           const target = room.msgs.find(m => m.id === msgId);
           if (!target || target.deletedAt) return;
 
-          // Spam guard — max 20 distinct emojis across all users per message
           if (room.roomId !== "lobby") {
             try {
               const existing = await (prisma as any).reaction.findUnique({
@@ -4995,7 +4727,6 @@ async function main() {
                   data: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji },
                 });
               }
-              // Rebuild aggregation for this message
               const rows = await (prisma as any).reaction.findMany({
                 where: { targetType: "ROOM_MESSAGE", targetId: msgId },
                 select: { emoji: true, userId: true },
@@ -5011,16 +4742,15 @@ async function main() {
               broadcast(room, { type: "reaction:changed", roomId: rId, msgId, reactions });
             } catch (e) { console.error("[reaction:toggle]", e); }
           } else {
-            // Root lobby is in-memory only; toggle on ChatMsg.reactions directly
             target.reactions = target.reactions || [];
             const existing = target.reactions.find(r => r.emoji === emoji);
             if (existing) {
-              if (existing.users.includes(ws.user.id)) {
-                existing.users = existing.users.filter(u => u !== ws.user.id);
+              if (existing.users.includes(ws.user!.id)) {
+                existing.users = existing.users.filter(u => u !== ws.user!.id);
                 existing.count = Math.max(0, existing.count - 1);
                 if (existing.count === 0) target.reactions = target.reactions.filter(r => r.emoji !== emoji);
               } else {
-                existing.users.push(ws.user.id);
+                existing.users.push(ws.user!.id);
                 existing.count++;
               }
             } else {
@@ -5035,8 +4765,6 @@ async function main() {
           return;
         }
 
-        // Crew and DM messages don't carry a roomId — let them fall through to
-        // their dedicated handlers below without forcing a room context.
         const isCrewOrDm = typeof msg.type === "string" && (msg.type.startsWith("crew:") || msg.type.startsWith("dm:"));
         const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ws.pendingRoomId || ""));
         if (!roomId && !isCrewOrDm) return;
@@ -5049,7 +4777,6 @@ async function main() {
         const actorIsOwner = roomId ? (isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole)) : false;
 
         if (msg.type === "room:getAdminState") {
-          // Allow any user to request presence state; admin state only goes to mods
           publishState(room);
           return;
         }
@@ -5264,16 +4991,11 @@ async function main() {
           return;
         }
 
-        // ── YouTube / media sync ──────────────────────────────────────────────
-        // Relay any youtube: message to every OTHER socket in the same room.
-        // The client sends: { type: "youtube:load"|"youtube:sync"|"youtube:play"|"youtube:pause"|"youtube:stop", roomId, url?, ts?, playing? }
         if (msg.type === "youtube:load" || msg.type === "youtube:sync" ||
             msg.type === "youtube:play" || msg.type === "youtube:pause" || msg.type === "youtube:stop") {
           if (!room.users.has(ws.user.id)) return;
-          // Store YouTube state so late joiners can catch up
           if (msg.type === "youtube:load" && msg.videoId) {
             room.ytState = { videoId: String(msg.videoId), playing: false, position: 0, updatedAt: Date.now() };
-            // Also store videoId in activeModule for completeness
             if (room.activeModule && room.activeModule.mode === "youtube") {
               room.activeModule.url = String(msg.videoId);
             }
@@ -5291,7 +5013,6 @@ async function main() {
           return;
         }
 
-        // ── D&D Module — broadcast initiative + dice + cross-system events to room ───
         if (
           msg.type === "dnd:initiative" ||
           msg.type === "dnd:roll" ||
@@ -5306,7 +5027,6 @@ async function main() {
           return;
         }
 
-        // Tactical Map: token-move + fog edits broadcast to room
         if (msg.type === "map:token-move" || msg.type === "map:fog-reveal" || msg.type === "map:fog-clear") {
           if (!room.users.has(ws.user.id)) return;
           for (const s of room.sockets) {
@@ -5316,8 +5036,6 @@ async function main() {
           return;
         }
 
-        // ── Poker Engine — WebSocket Handlers ─────────────────────────────────
-
         if (msg.type === "poker:join") {
           const tableId = String(msg.tableId || "").trim();
           const buyin = Number(msg.buyin || 0);
@@ -5325,26 +5043,22 @@ async function main() {
 
           const table = getOrCreatePokerTable(tableId);
 
-          // Validate buyin range
           if (buyin < table.minBuyin || buyin > table.maxBuyin) {
             send(ws, { type: "poker:error", error: `Buy-in must be between ${table.minBuyin} and ${table.maxBuyin} Paper` });
             return;
           }
 
-          // Check if already seated
           if (table.seats.some(s => s && s.userId === ws.user!.id)) {
             send(ws, { type: "poker:error", error: "Already seated at this table" });
             return;
           }
 
-          // Find first empty seat
           const emptySeatIndex = table.seats.findIndex(s => s === null);
           if (emptySeatIndex === -1) {
             send(ws, { type: "poker:error", error: "Table is full" });
             return;
           }
 
-          // Verify and deduct Paper balance
           try {
             const user = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { paper: true } });
             if (!user || (user as any).paper < buyin) {
@@ -5382,13 +5096,11 @@ async function main() {
             seatIndex: emptySeatIndex,
           };
 
-          // Remove from spectators if present
           table.spectators.delete(ws.user.id);
 
           console.log(`[poker] ${ws.user.name} joined table ${tableId} seat ${emptySeatIndex} with ${buyin} chips`);
           broadcastPokerState(tableId);
 
-          // Auto-start when 2+ players seated and not already in a hand
           const seatedCount = table.seats.filter(s => s !== null).length;
           if (seatedCount >= 2 && table.phase === "waiting") {
             setTimeout(() => {
@@ -5426,16 +5138,12 @@ async function main() {
 
           const seat = table.seats[seatIdx]!;
 
-          // If mid-hand and they have cards, auto-fold
           if (table.handInProgress && seat.cards.length > 0 && !seat.folded) {
             seat.folded = true;
-            // If it was their turn, advance
             if (table.turnIndex === seatIdx) {
-              // We'll handle chip return after fold processing
             }
           }
 
-          // Return remaining chips to Paper balance
           if (seat.chips > 0) {
             try {
               const user = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { paper: true } });
@@ -5465,20 +5173,14 @@ async function main() {
 
           console.log(`[poker] ${ws.user.name} left table ${tableId}`);
 
-          // Send the leaving user the final state directly. Without this
-          // they wouldn't receive the post-leave broadcast (they're no longer
-          // seated and not a spectator), so their UI would still think they
-          // are seated and the Leave button would appear unresponsive.
           send(ws, { type: "poker:state", ...buildPokerStateForUser(table, ws.user.id), youLeft: true });
 
-          // If the game was waiting on them, advance
           if (wasTheirTurn && table.handInProgress) {
             advancePokerGame(table);
           } else {
             broadcastPokerState(tableId);
           }
 
-          // If fewer than 2 players remain mid-hand, resolve
           if (table.handInProgress && activePlayersInHand(table).length <= 1) {
             advancePokerGame(table);
           }
@@ -5491,7 +5193,6 @@ async function main() {
           const table = pokerTables.get(tableId);
           if (!table) { send(ws, { type: "poker:error", error: "Table not found" }); return; }
 
-          // Must be seated
           if (!table.seats.some(s => s && s.userId === ws.user!.id)) {
             send(ws, { type: "poker:error", error: "Not seated at this table" });
             return;
@@ -5523,13 +5224,11 @@ async function main() {
             return;
           }
 
-          // Find player seat
           const seatIdx = table.seats.findIndex(s => s && s.userId === ws.user!.id);
           if (seatIdx === -1) { send(ws, { type: "poker:error", error: "Not seated" }); return; }
 
           const seat = table.seats[seatIdx]!;
 
-          // Verify it's their turn
           if (table.turnIndex !== seatIdx) {
             send(ws, { type: "poker:error", error: "Not your turn" });
             return;
@@ -5542,10 +5241,6 @@ async function main() {
 
           const toCall = table.currentBet - seat.bet;
 
-          // Track for the toast/announcement on the client. The frontend's
-          // PokerTable component reads table.lastAction and surfaces a toast
-          // ("donkey raised $20"). Set this BEFORE advancePokerGame so the
-          // broadcast carries it.
           let actionAmount: number | undefined;
 
           if (action === "fold") {
@@ -5555,10 +5250,8 @@ async function main() {
               send(ws, { type: "poker:error", error: "Cannot check — must call, raise, or fold" });
               return;
             }
-            // Check is a no-op on bet
           } else if (action === "call") {
             if (toCall <= 0) {
-              // Treat as check
             } else {
               const callAmount = Math.min(toCall, seat.chips);
               seat.chips -= callAmount;
@@ -5569,7 +5262,7 @@ async function main() {
           } else if (action === "raise") {
             if (amount <= 0) { send(ws, { type: "poker:error", error: "Raise amount required" }); return; }
 
-            const totalBet = amount; // Total bet amount (not additional)
+            const totalBet = amount;
             const raiseAmount = totalBet - seat.bet;
 
             if (raiseAmount <= 0 || raiseAmount > seat.chips) {
@@ -5577,7 +5270,6 @@ async function main() {
               return;
             }
 
-            // Minimum raise is at least double the current bet (or all-in)
             if (totalBet < table.currentBet * 2 && raiseAmount < seat.chips) {
               send(ws, { type: "poker:error", error: `Minimum raise is ${table.currentBet * 2}` });
               return;
@@ -5602,11 +5294,8 @@ async function main() {
             return;
           }
 
-          // Stamp the action so the table announces it
           table.lastAction = { userId: seat.userId, action, amount: actionAmount };
 
-          // Broadcast a chat chip so the action lands in poker table chat
-          // (e.g. "donkey CALLED $20"). Mirrors dice/trade chip pattern.
           broadcastToPokerTable(table.tableId, {
             type: "poker:action-chip",
             tableId: table.tableId,
@@ -5617,32 +5306,26 @@ async function main() {
             time: Date.now(),
           });
 
-          // Advance game logic (broadcasts state to all clients)
           advancePokerGame(table);
           return;
         }
 
-        // ── Crew Chat via WebSocket ──────────────────────────────────────────
         if (msg.type === "crew:send") {
           const crewId = String(msg.crewId || "").trim();
           const body = String(msg.body || "").trim().slice(0, 2000);
           const fromId = ws.user?.id;
           if (!fromId || !crewId || !body) return;
-          // URL spam check
           const urlCheck = checkUrlSpam(body);
           if (!urlCheck.ok) { send(ws, { type: "crew:rejected", crewId, reason: urlCheck.reason }); return; }
-          // Rate limit
           const rate = checkChatRateLimit(fromId);
           if (!rate.ok) { send(ws, { type: "crew:rejected", crewId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
 
           try {
-            // Verify sender is a member of the crew
             const membership = await (prisma as any).crewMember.findFirst({
               where: { crewId, userId: fromId },
             });
             if (!membership) return;
 
-            // Optional reply-to — look up parent (must be same crew)
             let crewReplyData: any = {};
             const crewReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
             if (crewReplyToId) {
@@ -5657,19 +5340,16 @@ async function main() {
               }
             }
 
-            // Save message
             const message = await (prisma as any).crewMessage.create({
               data: { crewId, userId: fromId, userName: ws.user?.name || "Unknown", body, ...crewReplyData },
               select: { id: true, crewId: true, userId: true, userName: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true },
             });
 
-            // Get all crew members
             const members = await (prisma as any).crewMember.findMany({
               where: { crewId },
               select: { userId: true },
             });
 
-            // Broadcast to all online crew members
             const payload = { type: "crew:message", crewId, message: { ...message, createdAt: message.createdAt.toISOString() } };
             for (const sock of wss.clients) {
               const sockUser = (sock as any).user;
@@ -5678,7 +5358,6 @@ async function main() {
               }
             }
 
-            // Notify offline members
             for (const m of members) {
               if (m.userId === fromId) continue;
               if (!isUserOnline(m.userId)) {
@@ -5693,8 +5372,6 @@ async function main() {
 
             awardNotoriety(fromId, "CHAT_MESSAGE").catch(() => {});
 
-            // @mention notifications inside crew chat — only pings
-            // crew members (we don't notify random users via crew chat)
             (async () => {
               try {
                 const mentioned = await resolveMentions(body, fromId);
@@ -5705,7 +5382,7 @@ async function main() {
                 });
                 const memberSet = new Set<string>(memberRows.map((r: any) => r.userId));
                 for (const u of mentioned) {
-                  if (!memberSet.has(u.id)) continue; // skip non-members
+                  if (!memberSet.has(u.id)) continue;
                   createNotification({
                     userId: u.id,
                     type: "MENTION",
@@ -5756,7 +5433,6 @@ async function main() {
             const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
             if (!row) return;
             if (row.deletedAt) return;
-            // Sender, or crew leader/officer
             const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
             const isMod = membership?.role === "LEADER" || membership?.role === "OFFICER";
             if (row.userId !== meId && !isMod) return;
@@ -5783,7 +5459,7 @@ async function main() {
             if (!row) return;
             if (row.deletedAt) return;
             const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
-            if (!membership) return; // must be a crew member
+            if (!membership) return;
             const res = await toggleReactionOnTarget("CREW_MESSAGE", msgId, meId, emoji);
             if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
             const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
@@ -5797,7 +5473,6 @@ async function main() {
           return;
         }
 
-        // ── DM via WebSocket ──────────────────────────────────────────────────
         if (msg.type === "dm:send") {
           const rawToId = String(msg.toId  || "").trim();
           const body    = String(msg.body  || "").trim().slice(0, 2000);
@@ -5806,14 +5481,11 @@ async function main() {
           if (!fromId) { send(ws, { type: "dm:rejected", reason: "Session expired. Refresh the page." }); return; }
           if (!rawToId) { send(ws, { type: "dm:rejected", reason: "No recipient selected." }); return; }
           if (!body) { send(ws, { type: "dm:rejected", reason: "Empty message." }); return; }
-          // URL spam check
           const urlCheck = checkUrlSpam(body);
           if (!urlCheck.ok) { send(ws, { type: "dm:rejected", reason: urlCheck.reason }); return; }
-          // Rate limit
           const rate = checkChatRateLimit(fromId);
           if (!rate.ok) { send(ws, { type: "dm:rejected", reason: rate.reason, retryInMs: rate.retryInMs }); return; }
           const toId = await resolveUserId(rawToId);
-          // Block check — either direction blocks
           try {
             const blocked = await (prisma as any).userBlock.findFirst({
               where: {
@@ -5832,14 +5504,12 @@ async function main() {
               return;
             }
           } catch {}
-          // Optional reply-to — look up the parent message to snapshot
           let dmReplyData: any = {};
           const dmReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
           if (dmReplyToId) {
             try {
               const parent = await prisma.directMessage.findUnique({ where: { id: dmReplyToId } });
               if (parent && !(parent as any).deletedAt) {
-                // Only allow replying to messages in the same thread
                 const sameThread =
                   (parent.fromId === fromId && parent.toId === toId) ||
                   (parent.fromId === toId && parent.toId === fromId);
@@ -5860,11 +5530,9 @@ async function main() {
               data: { fromId, toId, body, ...dmReplyData },
               select: { id: true, fromId: true, toId: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
             });
-          const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
+          const payload = { type: "dm:message", message: { ...dm, createdAt: (dm as any).createdAt.toISOString() } };
           dmDeliver(toId, payload);
-          if (!isUserOnline(toId)) {
-            sendPush(toId, { title: `DM from ${ws.user?.name || "Someone"}`, body: body.slice(0, 120), url: "/home", tag: `dm:${fromId}` }).catch(() => {});
-          }
+          sendPush(toId, { title: `DM from ${ws.user?.name || "Someone"}`, body: body.slice(0, 120), url: "/home", tag: `dm:${fromId}` }).catch(() => {});
           createNotification({ userId: toId, type: "DM_RECEIVED", title: `${ws.user?.name || "Someone"} sent you a message`, body: body.slice(0, 120), actorId: fromId, actorName: ws.user?.name || undefined, actionUrl: "/home", meta: { fromId } }).catch(() => {});
           } catch (e) { console.error("[dm:send]", e); }
           return;
@@ -5892,7 +5560,7 @@ async function main() {
           try {
             const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
             if (!dm) return;
-            if (dm.fromId !== meId) return; // sender-only
+            if (dm.fromId !== meId) return;
             if ((dm as any).deletedAt) return;
             if (dm.body === newBody) return;
             if (Date.now() - new Date(dm.createdAt).getTime() > 15 * 60 * 1000) return;
@@ -5915,7 +5583,7 @@ async function main() {
           try {
             const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
             if (!dm) return;
-            if (dm.fromId !== meId) return; // sender-only; DMs have no mods
+            if (dm.fromId !== meId) return;
             if ((dm as any).deletedAt) return;
             const deletedAt = new Date();
             await prisma.directMessage.update({
@@ -5938,7 +5606,7 @@ async function main() {
             const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
             if (!dm) return;
             if ((dm as any).deletedAt) return;
-            if (dm.fromId !== meId && dm.toId !== meId) return; // only the two peers
+            if (dm.fromId !== meId && dm.toId !== meId) return;
             const res = await toggleReactionOnTarget("DIRECT_MESSAGE", msgId, meId, emoji);
             if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
             const payload = { type: "dm:reaction", msgId, fromId: dm.fromId, toId: dm.toId, reactions: res.reactions };
@@ -5961,7 +5629,6 @@ async function main() {
           if (set && set.size === 0) r.pending.delete(ws.user.id);
         }
       }
-      // Crew presence: notify crew mates this user went offline (only if no other sockets)
       if (ws.user) {
         const closingUserId = ws.user.id;
         const closingUserName = ws.user.name;
@@ -5982,27 +5649,14 @@ async function main() {
               } catch {}
             })();
           }
-        }, 2000); // 2s delay to avoid flicker on page navigation
+        }, 2000);
       }
       leaveRoom(ws);
     });
   });
 
-  // ── Social (Friends + Recents + Blocks + user-side Reports) ───────────────
-  // Extracted to routes/social.ts. /staff/reports/* below stays put (will move
-  // with the staff extraction).
   await app.register(socialRoutes, { authFromHeader, verifyToken, awardNotoriety, createNotification, rooms } as any);
 
-
-  // GET /staff/reports — queue
-
-  // POST /staff/reports/:id/action — mark as reviewed/actioned/dismissed
-
-
-
-// ── Lobby search ──────────────────────────────────────────────────────────
-
-  // GET /users/search?q=... — search users by name/usernameKey
   app.get("/users/search", async (req, reply) => {
     const q = String((req.query as any).q ?? "").trim();
     if (!q || q.length < 2) return reply.send({ ok: true, users: [] });
@@ -6021,22 +5675,8 @@ async function main() {
     return reply.send({ ok: true, users });
   });
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── LOBBY PAID TIERS + STRIPE — extracted to routes/billing.ts ────────────
-  // ══════════════════════════════════════════════════════════════════════════════
   await app.register(billingRoutes, { authFromHeader, getGlobalRole, canAccessStaff, canAssignRoles, globalAudit, lobbyAdminAccess } as any);
 
-
-  // ── Reserved Names (staff-managed blocklist) ────────────────────────────────
-
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── EVENT MANAGER ──────────────────────────────────────────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  // Helper: broadcast an event announcement to all connected users
   function broadcastEvent(title: string, startsAt: Date) {
     const timeStr = startsAt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
     const payload = { type: "system:broadcast", message: `Event: ${title} — ${timeStr}`, level: "info", from: "Events", ts: Date.now() };
@@ -6052,79 +5692,21 @@ async function main() {
     return sent.size;
   }
 
-  // ── Events — extracted to routes/events.ts ────────────────────────────────
   await app.register(eventsRoutes, { authFromHeader, getGlobalRole, canAssignRoles, canAccessStaff, broadcastEvent, globalAudit, lobbyAdminAccess } as any);
 
-
-  // GET /staff/config — returns all site config values
-
-  // POST /staff/config — update site config values
-  // POST /staff/featured — set the featured lobby for the homepage hero
-
-  // GET /staff/featured — get current featured lobby ID
-
-
-  // GET /staff/lobbies — list all lobbies for staff management
-  // POST /staff/lobbies/:id/pin — toggle lobby pinned state
-
-  // ── Notifications + Push — extracted to routes/notifications.ts ─────────
   await app.register(notificationsRoutes, { authFromHeader, VAPID_PUBLIC, sendPush } as any);
 
-
-  // GET /staff/roster — list all staff members with roles
-
-  // GET /staff/board — list staff board posts
-
-  // POST /staff/board — create a board post
-
-  // POST /staff/board/:id/pin — toggle pin on a board post
-
-  // DELETE /staff/board/:id — delete a board post
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── NOTIFICATIONS — extracted to routes/notifications.ts ──────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── ACTIVITY FEED + UNFURL — extracted to routes/activity.ts ──────────────
-  // ══════════════════════════════════════════════════════════════════════════════
   await app.register(activityRoutes, { authFromHeader } as any);
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── OUTREACH + ANALYTICS — extracted to routes/staffOps.ts ────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
   await app.register(staffOpsRoutes, { authFromHeader, getGlobalRole, canAccessStaff, rooms } as any);
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── TENOR + TWITCH — extracted to routes/tenor.ts and routes/twitch.ts ─────
-  // ══════════════════════════════════════════════════════════════════════════════
 
   await app.register(tenorRoutes);
   await app.register(twitchRoutes, { rooms } as any);
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── MLB STATS API INTEGRATION — extracted to routes/mlb.ts ──────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
   await app.register(mlbRoutes);
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── PGA TOUR API INTEGRATION — extracted to routes/pga.ts ────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
 
   await app.register(pgaRoutes);
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── YOUTUBE RSS FEED ───────────────────────────────────────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  // In-memory cache for YouTube RSS (avoids hammering YouTube)
   const ytCache: Record<string, { data: any; ts: number }> = {};
 
   app.get<{ Params: { channelId: string } }>("/youtube/channel/:channelId", async (req, reply) => {
@@ -6140,9 +5722,8 @@ async function main() {
       if (!res.ok) return reply.code(502).send({ ok: false, error: "youtube_fetch_failed" });
       const xml = await res.text();
 
-      // Parse XML entries — lightweight regex parse, no external XML lib needed
       const entries: any[] = [];
-      const entryBlocks = xml.split("<entry>").slice(1); // skip first chunk (feed header)
+      const entryBlocks = xml.split("<entry>").slice(1);
       for (const block of entryBlocks.slice(0, 20)) {
         const tag = (name: string) => {
           const m = block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`));
@@ -6177,37 +5758,24 @@ async function main() {
     }
   });
 
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── BUNGIE API INTEGRATION — extracted to routes/bungie.ts ─────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
   await app.register(bungieRoutes, { authFromHeader, awardNotoriety } as any);
+  await app.register(eveRoutes,    { authFromHeader, awardNotoriety } as any);
+  await app.register(poeRoutes,    { authFromHeader, awardNotoriety } as any);
+  await app.register(mcRoutes,     { authFromHeader } as any);
 
-  // Auto-sync Bungie manifest on startup (non-blocking) — kept here because
-  // it's a startup workflow, not a request handler.
   if (process.env.BUNGIE_API_KEY) {
     syncManifest(process.env.BUNGIE_API_KEY).then(r => {
       console.log(`[manifest] Startup sync: ${r.ok ? "OK" : "FAILED"} — v${r.version}`, r.counts);
     }).catch(e => console.error("[manifest] Startup sync error:", e));
   }
 
-
-  // POST /staff/users/:userId/tier — update user tier (alias for subscription grant)
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── DESTINY CHALLENGES ────────────────────────────────────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  // GET /challenges — list active challenge instances
   app.get("/challenges", async (req, reply) => {
     const { scope, lobbyId, category } = req.query as any;
-    const where: any = {
-      status: "ACTIVE",
-      ...(scope ? { definition: { scope } } : {}),
-      ...(lobbyId ? { definition: { lobbyId } } : {}),
-      ...(category ? { definition: { category } } : {}),
-    };
+    const defFilter: any = { status: { not: "ARCHIVED" } };
+    if (scope) defFilter.scope = scope;
+    if (lobbyId) defFilter.lobbyId = lobbyId;
+    if (category) defFilter.category = category;
+    const where: any = { status: "ACTIVE", definition: defFilter };
     const instances = await prisma.challengeInstance.findMany({
       where,
       include: { definition: true, _count: { select: { enrollments: true } } },
@@ -6217,7 +5785,6 @@ async function main() {
     return reply.send({ ok: true, challenges: instances });
   });
 
-  // GET /challenges/:instanceId — single challenge with user's enrollment
   app.get("/challenges/:instanceId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     const instanceId = String((req as any).params?.instanceId || "");
@@ -6236,7 +5803,6 @@ async function main() {
     return reply.send({ ok: true, challenge: instance, enrollment });
   });
 
-  // POST /challenges/:instanceId/enroll — enroll in a challenge
   app.post("/challenges/:instanceId/enroll", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6249,11 +5815,9 @@ async function main() {
     if (!instance || instance.status !== "ACTIVE") return reply.code(400).send({ ok: false, error: "challenge_not_active" });
     if (instance.endsAt && new Date() > instance.endsAt) return reply.code(400).send({ ok: false, error: "challenge_expired" });
 
-    // Check Bungie account linked
     const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "BUNGIE" } });
     if (!acct) return reply.code(400).send({ ok: false, error: "bungie_not_linked" });
 
-    // Initialize progress
     const objectives = (instance.definition.objectives as any[]) || [];
     const progress: Record<string, any> = {};
     for (const obj of objectives) {
@@ -6271,7 +5835,6 @@ async function main() {
     }
   });
 
-  // DELETE /challenges/:instanceId/enroll — abandon a challenge
   app.delete("/challenges/:instanceId/enroll", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6284,7 +5847,6 @@ async function main() {
     return reply.send({ ok: true });
   });
 
-  // GET /challenges/my — user's active enrollments with progress
   app.get("/challenges/my", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6298,7 +5860,6 @@ async function main() {
     return reply.send({ ok: true, enrollments });
   });
 
-  // GET /challenges/:instanceId/leaderboard — completion leaderboard
   app.get("/challenges/:instanceId/leaderboard", async (req, reply) => {
     const instanceId = String((req as any).params?.instanceId || "");
     const enrollments = await prisma.challengeEnrollment.findMany({
@@ -6306,7 +5867,6 @@ async function main() {
       orderBy: { completedAt: "asc" },
       take: 50,
     });
-    // Resolve usernames
     const userIds = enrollments.map(e => e.userId);
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
@@ -6323,9 +5883,6 @@ async function main() {
     return reply.send({ ok: true, leaderboard });
   });
 
-  // ── Challenge Admin (staff or lobby owner) ────────────────────────────────
-
-  // Helper: who can manage this challenge definition (staff or creator or lobby OWNER/MOD).
   async function canManageChallenge(userId: string, def: { lobbyId: string | null; createdById: string }): Promise<boolean> {
     const role = await getGlobalRole(userId);
     if (canAccessStaff(role)) return true;
@@ -6337,8 +5894,6 @@ async function main() {
     return false;
   }
 
-  // POST /challenges/definitions — create a challenge definition.
-  // Creators: global staff OR lobby OWNER/MOD when scoping to that lobby.
   app.post("/challenges/definitions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6347,7 +5902,6 @@ async function main() {
     const role = await getGlobalRole(u.id);
     const isStaff = canAccessStaff(role);
     if (!isStaff) {
-      // Non-staff can only create if they're OWNER/MOD of the target lobby.
       if (!body.lobbyId) return reply.code(403).send({ ok: false, error: "forbidden" });
       const lr = await getLobbyRole(u.id, body.lobbyId);
       if (lr !== LobbyRole.OWNER && lr !== LobbyRole.MOD) {
@@ -6385,8 +5939,113 @@ async function main() {
     return reply.send({ ok: true, definition: def });
   });
 
-  // PATCH /challenges/definitions/:id — edit definition fields. Same gate as create.
-  // Some fields are locked once instances exist (objectives, scope, lobbyId).
+  app.post("/challenges/member-create", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body = req.body as any;
+    const lobbyId = String(body.lobbyId || "");
+    if (!lobbyId) return reply.code(400).send({ ok: false, error: "lobby_required", message: "Create challenges from inside a lobby." });
+
+    const role = await getGlobalRole(u.id);
+    const isStaff = canAccessStaff(role);
+    if (!isStaff) {
+      const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, select: { ownerId: true, name: true } });
+      const lr = await getLobbyRole(u.id, lobbyId);
+      const isMember = lr !== null || (lobby && lobby.ownerId === u.id);
+      if (!isMember) {
+        return reply.code(403).send({ ok: false, error: "not_a_member", message: `Join the ${lobby?.name || "lobby"} to build a challenge here.` });
+      }
+      const liveCount = await (prisma as any).challengeDefinition.count({
+        where: { createdById: u.id, status: "ACTIVE" },
+      });
+      if (liveCount >= 3) {
+        return reply.code(400).send({ ok: false, error: "challenge_limit", message: "You already have 3 live challenges. Delete one to build another." });
+      }
+    }
+
+    const { DESTINY_MODIFIERS } = await import("./lib/destinyModifiers");
+    const bySlug: Record<string, any> = {};
+    const byHash: Record<string, any> = {};
+    for (const m of DESTINY_MODIFIERS as any[]) { bySlug[m.slug] = m; byHash[String(m.hash)] = m; }
+
+    const g = globalThis as any;
+    if (!g.__skullNameMap) {
+      try {
+        const fs = await import("fs");
+        const path = await import("path");
+        const p = path.join(process.cwd(), "manifest-cache", "skulls.json");
+        const raw = JSON.parse(fs.readFileSync(p, "utf-8"));
+        const map: Record<string, string> = {};
+        for (const [sid, v] of Object.entries(raw as any)) {
+          const nm = (((v as any)?.name) || "").trim();
+          if (nm && !map[nm]) map[nm] = sid;
+        }
+        g.__skullNameMap = map;
+      } catch { g.__skullNameMap = {}; }
+    }
+    const skullByName: Record<string, string> = g.__skullNameMap;
+
+    function resolveModifier(idf: string): { hash: string; name: string } | null {
+      const m = bySlug[idf] || byHash[String(idf)];
+      if (!m) return null;
+      const skull = skullByName[(m.name || "").trim()];
+      return { hash: skull || String(m.hash), name: m.name };
+    }
+
+    const ACTIVITY: Record<string, { modes?: number[]; label: string }> = {
+      ANY:       { label: "any activity" },
+      DUNGEON:   { modes: [82, 69], label: "a Dungeon" },
+      RAID:      { modes: [4], label: "a Raid" },
+      NIGHTFALL: { modes: [16, 17, 46], label: "a Nightfall" },
+      STRIKE:    { modes: [3, 18], label: "a Strike" },
+      CRUCIBLE:  { modes: [5, 10, 12, 19, 24, 25, 31, 37, 38, 43, 84], label: "a Crucible match" },
+      GAMBIT:    { modes: [63, 48, 75], label: "a Gambit match" },
+    };
+
+    const steps: any[] = Array.isArray(body.steps) ? body.steps.slice(0, 5) : [];
+    if (steps.length === 0) return reply.code(400).send({ ok: false, error: "no_steps", message: "Add at least one step." });
+
+    const objectives: any[] = [];
+    const descParts: string[] = [];
+    steps.forEach((s: any, i: number) => {
+      const act = ACTIVITY[String(s.activity || "ANY").toUpperCase()] || ACTIVITY.ANY;
+      const count = Math.max(1, Math.min(10, parseInt(s.count) || 1));
+      const mods = (Array.isArray(s.modifiers) ? s.modifiers : [])
+        .map((x: any) => resolveModifier(String(x)))
+        .filter(Boolean) as { hash: string; name: string }[];
+      const filters: any = { requireCompletion: true };
+      if (act.modes) filters.modes = act.modes;
+      if (mods.length) filters.requiredModifiers = mods.map((m) => m.hash);
+      const modText = mods.length ? ` with ${mods.map((m) => m.name).join(" + ")}` : "";
+      objectives.push({ id: `s${i + 1}`, type: "activities", target: count, filters, description: `Complete ${count}× ${act.label}${modText}` });
+      descParts.push(`${count}× ${act.label}${modText}`);
+    });
+
+    const title = String(body.title || "").trim().slice(0, 80) || ("Complete " + descParts.join(", then "));
+
+    const def = await (prisma as any).challengeDefinition.create({
+      data: {
+        title,
+        description: descParts.map((p) => "• " + p).join("\n"),
+        category: "pve",
+        difficulty: 1,
+        scope: "LOBBY",
+        lobbyId,
+        createdById: u.id,
+        objectives,
+        requireAll: true,
+        requiredModifiers: [],
+        notorietyReward: 0,
+        status: "ACTIVE",
+      },
+    });
+    await (prisma as any).challengeInstance.create({
+      data: { definitionId: def.id, startsAt: new Date(), status: "ACTIVE" },
+    });
+
+    return reply.send({ ok: true, definition: def });
+  });
+
   app.patch("/challenges/definitions/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6421,9 +6080,6 @@ async function main() {
     if (body.status !== undefined && ["DRAFT", "ACTIVE", "ARCHIVED"].includes(body.status)) data.status = body.status;
     if (body.objectives !== undefined) {
       if (def._count.instances > 0) {
-        // Mid-flight: allow per-objective `target` changes only. Other fields
-        // would break enrollment evaluation. Merge by objective id; new
-        // objectives can't be added or removed once instances exist.
         const existing = await (prisma as any).challengeDefinition.findUnique({ where: { id }, select: { objectives: true } });
         const existingObjs: any[] = (existing?.objectives as any[]) || [];
         const incomingById: Record<string, any> = {};
@@ -6447,8 +6103,6 @@ async function main() {
     return reply.send({ ok: true, definition: updated });
   });
 
-  // DELETE /challenges/definitions/:id — soft-archive if instances or enrollments exist.
-  // Hard-delete only when nothing is attached.
   app.delete("/challenges/definitions/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6465,15 +6119,14 @@ async function main() {
       return reply.code(403).send({ ok: false, error: "forbidden" });
     }
     if (def._count.instances > 0) {
-      // Soft-archive — preserves enrollment history.
       await (prisma as any).challengeDefinition.update({ where: { id }, data: { status: "ARCHIVED" } });
+      await (prisma as any).challengeInstance.updateMany({ where: { definitionId: id, status: "ACTIVE" }, data: { status: "ARCHIVED" } });
       return reply.send({ ok: true, mode: "archived" });
     }
     await (prisma as any).challengeDefinition.delete({ where: { id } });
     return reply.send({ ok: true, mode: "deleted" });
   });
 
-  // PATCH /challenges/instances/:id — extend endsAt, change status, etc.
   app.patch("/challenges/instances/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6496,8 +6149,6 @@ async function main() {
     return reply.send({ ok: true, instance: updated });
   });
 
-  // DELETE /challenges/instances/:id — hard delete only if no enrollments exist;
-  // otherwise archive.
   app.delete("/challenges/instances/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6521,13 +6172,11 @@ async function main() {
     return reply.send({ ok: true, mode: "deleted" });
   });
 
-  // GET /challenges/modifiers/catalog — public modifier list for admin pickers + display chips.
   app.get("/challenges/modifiers/catalog", async (_req, reply) => {
     const { DESTINY_MODIFIERS } = await import("./lib/destinyModifiers");
     return reply.send({ ok: true, modifiers: DESTINY_MODIFIERS });
   });
 
-  // POST /challenges/definitions/:id/activate — create an active instance
   app.post("/challenges/definitions/:id/activate", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6540,10 +6189,8 @@ async function main() {
     const def = await prisma.challengeDefinition.findUnique({ where: { id: defId } });
     if (!def) return reply.code(404).send({ ok: false, error: "not_found" });
 
-    // Activate the definition
     await prisma.challengeDefinition.update({ where: { id: defId }, data: { status: "ACTIVE" } });
 
-    // Create instance
     const instance = await prisma.challengeInstance.create({
       data: {
         definitionId: defId,
@@ -6555,18 +6202,11 @@ async function main() {
     return reply.send({ ok: true, instance });
   });
 
-  // GET /challenges/definitions — list all definitions (admin or lobby mod).
-  // Optional ?lobbyId= filter; when provided, returns defs scoped to that
-  // lobby (or GLOBAL). Staff via DB lookup since JWT has no role claim.
   app.get("/challenges/definitions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const q: any = (req as any).query || {};
     const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
-    // Read access is open to any authed user — challenge definitions are
-    // discoverable through the Challenges tab anyway, and the tournament-
-    // create picker needs them too. Create/edit/delete remain staff-or-mod
-    // gated via their own handlers.
     const where: any = {};
     if (lobbyId) {
       where.OR = [
@@ -6582,37 +6222,18 @@ async function main() {
     return reply.send({ ok: true, definitions: defs });
   });
 
-  // ── BADGES + TOURNAMENTS — extracted to routes/badges.ts + routes/tournaments.ts
   await app.register(badgesRoutes, { authFromHeader } as any);
   await app.register(tournamentsRoutes, { authFromHeader, awardNotoriety, awardPaper, createNotification, getGlobalRole, canAccessStaff, getLobbyRole, onTournamentMatchLive: (mid: string) => (globalThis as any).__weeredAutoDetect?.onMatchLive(mid) } as any);
   await app.register(flairContestsRoutes, { authFromHeader, awardNotoriety, getGlobalRole, canAccessStaff, getLobbyRole, broadcastToLobby, createNotification } as any);
   await app.register(flairRoutes, { authFromHeader, getGlobalRole, canAccessStaff } as any);
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── RIOT / LEAGUE — extracted to routes/league.ts ──────────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
   await app.register(leagueRoutes);
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── FORTNITE API INTEGRATION — extracted to routes/fortnite.ts ─────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
   await app.register(fortniteRoutes, { authFromHeader, sendPush } as any);
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── PUBG API INTEGRATION — extracted to routes/pubg.ts ─────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
+  await app.register(scryfallRoutes, {} as any);
+  await app.register(mtgRoutes, {} as any);
 
   await app.register(pubgRoutes);
-
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── WINDROSE — extracted to routes/windrose.ts ─────────────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
 
   await app.register(windroseRoutes, { authFromHeader, sendPush, awardPaper, isAIAvailable, getAI, broadcastToLobby } as any);
   await app.register((await import("./routes/helldivers")).default, { authFromHeader } as any);
@@ -6621,10 +6242,6 @@ async function main() {
   await app.register(steamRoutes, { authFromHeader, createNotification } as any);
   await app.register(windroseBuildsRoutes, { authFromHeader, awardNotoriety, broadcastToLobby, canAccessStaff, getGlobalRole } as any);
 
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── DESTINY 2 (Steam appid 1085660) ───────────────────────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
   const DESTINY2_APPID = "1085660";
   const d2Cache = new Map<string, { data: any; expiresAt: number }>();
   function d2CacheGet(key: string) {
@@ -6656,25 +6273,17 @@ async function main() {
     }
   });
 
-  // ══════════════════════════════════════════════════════════════════════════════
-  // ── LFG / FIRETEAM BOARD — extracted to routes/lfg.ts ──────────────────────
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby } as any);
+  await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby, awardNotoriety, createNotification } as any);
+  await app.register(redditRoutes);
   await app.register(helldiversMoRoutes, { authFromHeader, awardPaper } as any);
 
-
-  // ── Paper Economy ──────────────────────────────────────────────────────────
-  // Virtual currency system: earn Paper through gameplay, spend in store/marketplace.
-
-  // Core transaction function — all Paper movement goes through here
   async function awardPaper(userId: string, type: string, amount: number, description: string, refId?: string): Promise<{ balance: number } | null> {
     try {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { paper: true } });
       if (!user) return null;
 
       const newBalance = (user as any).paper + amount;
-      if (newBalance < 0) return null; // can't go negative
+      if (newBalance < 0) return null;
 
       await prisma.$transaction([
         (prisma as any).paperTransaction.create({
@@ -6690,13 +6299,8 @@ async function main() {
     }
   }
 
-  // ── Paper routes — extracted to routes/paper.ts ────────────────────────
   await app.register(paperRoutes, { authFromHeader, awardPaper } as any);
 
-
-  // ── Poker — REST Endpoints ────────────────────────────────────────────────
-
-  // GET /poker/:tableId — public table state (no hole cards)
   app.get("/poker/:tableId", async (req, reply) => {
     const tableId = String((req as any).params?.tableId || "").trim();
     if (!tableId) return reply.code(400).send({ ok: false, error: "missing tableId" });
@@ -6704,12 +6308,10 @@ async function main() {
     const table = pokerTables.get(tableId);
     if (!table) return reply.send({ ok: true, table: null, message: "No active table" });
 
-    // Optionally auth to show the requester's own cards
     const u = authFromHeader((req as any).headers?.authorization);
     return reply.send({ ok: true, table: buildPokerStateForUser(table, u?.id) });
   });
 
-  // POST /poker/:tableId/cashout — cash out remaining chips to Paper
   app.post("/poker/:tableId/cashout", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -6725,7 +6327,6 @@ async function main() {
 
     const seat = table.seats[seatIdx]!;
 
-    // Can't cash out mid-hand
     if (table.handInProgress && !seat.folded) {
       return reply.code(400).send({ ok: false, error: "Cannot cash out during an active hand. Fold first or wait for the hand to end." });
     }
@@ -6766,23 +6367,15 @@ async function main() {
     }
   });
 
-  // ── Store + Inventory + Market — extracted to routes/store.ts ────────────
   await app.register(storeRoutes, { authFromHeader } as any);
-
-
-  // ── Paper Trading — Binance Market Data Bridge ─────────────────────────────
-  // Server-side bridge: connects to Binance WebSocket for real-time crypto prices,
-  // relays to connected clients. Also provides REST endpoints for historical candles.
 
   const BINANCE_WS_BASE = "wss://stream.binance.com:9443";
   const BINANCE_REST = "https://api.binance.com";
 
-  // In-memory price cache: symbol → latest price + kline data
   const livePrices = new Map<string, { price: number; time: number }>();
-  const binanceSubs = new Map<string, WsClient>(); // symbol → upstream WS
-  const symbolSubscribers = new Map<string, Set<Sock>>(); // symbol → client sockets
+  const binanceSubs = new Map<string, WsClient>();
+  const symbolSubscribers = new Map<string, Set<Sock>>();
 
-  // Default symbols to always stream
   const DEFAULT_SYMBOLS = ["btcusdt", "ethusdt", "solusdt", "dogeusdt", "bnbusdt", "xrpusdt", "adausdt", "avaxusdt", "maticusdt", "linkusdt"];
 
   function subscribeBinanceSymbol(symbol: string) {
@@ -6802,7 +6395,6 @@ async function main() {
         if (data.e === "trade") {
           const price = parseFloat(data.p);
           livePrices.set(sym, { price, time: Date.now() });
-          // Relay to subscribed clients
           const subs = symbolSubscribers.get(sym);
           if (subs && subs.size > 0) {
             const msg = { type: "trading:price", symbol: sym.toUpperCase(), price, time: data.T, qty: parseFloat(data.q) };
@@ -6823,7 +6415,7 @@ async function main() {
               low: parseFloat(k.l),
               close: parseFloat(k.c),
               volume: parseFloat(k.v),
-              closed: k.x, // is this kline closed?
+              closed: k.x,
             };
             for (const sock of subs) {
               try { send(sock, msg); } catch {}
@@ -6846,16 +6438,8 @@ async function main() {
     binanceSubs.set(sym, upstream);
   }
 
-  // Boot default symbols
   for (const sym of DEFAULT_SYMBOLS) subscribeBinanceSymbol(sym);
 
-  // Handle client subscribe/unsubscribe via existing WS
-  // Clients send: { type: "trading:subscribe", symbol: "BTCUSDT" }
-  // Clients send: { type: "trading:unsubscribe", symbol: "BTCUSDT" }
-  // (Hooked into the main WS message handler below)
-
-  // ── Trading REST + workers — extracted to routes/trading.ts ───────────────
-  // Helpers the plugin needs to broadcast over the global wss:
   function broadcastToLobby(lobbyId: string, event: any) {
     for (const sock of wss.clients) {
       const s = sock as Sock;
@@ -6865,10 +6449,8 @@ async function main() {
     }
     try { capturePublicActivity(event, { lobbyId }); } catch {}
   }
+  broadcastToLobbyRef = broadcastToLobby;
 
-  // Count unique authed users currently connected to a lobby room. Used to
-  // gate AI Operator commentary so we don't burn tokens broadcasting to
-  // empty rooms.
   function countLobbyActiveUsers(lobbyId: string): number {
     const uids = new Set<string>();
     for (const sock of wss.clients) {
@@ -6890,10 +6472,6 @@ async function main() {
     try { capturePublicActivity(event, { roomId }); } catch {}
   }
 
-  // Filter and translate selected broadcast events into public activity
-  // entries. Each entry carries both an anonymized line (for the logged-out
-  // landing ticker) and a non-anonymized line (for /activity/recent). Per-key
-  // throttle so identical chatter doesn't dominate either feed.
   function capturePublicActivity(event: any, ctx: { lobbyId?: string; roomId?: string }) {
     const t = String(event?.type || "");
     if (!t) return;
@@ -7038,10 +6616,6 @@ async function main() {
       return;
     }
     if (t === "campaign:ledger") {
-      // Campaign Ledger entries: GOLD / ITEM / XP awards from the DM. The
-      // entire chronicle persistence story is one of the big differentiators
-      // vs Discord+spreadsheet workflows, so surfacing these adds variety
-      // to the activity ticker beyond dice + trades.
       const entry = event?.entry || {};
       const entryType = String(entry.type || "").toUpperCase();
       const delta = Number(entry.delta || 0);
@@ -7081,15 +6655,8 @@ async function main() {
     }
   }
 
-  // ── Operator commentary on FakeOut trades ────────────────────────────────
-  // The Operator (Weered's AI) heckles big trades in the lobby chat. We
-  // throttle per-lobby (30s min between comments) to cap cost + spam, and
-  // only invoke AI when a context arrives (caller decides what's worth
-  // commenting on). Output is broadcast as operator:commentary; the client
-  // synthesizes a chat row keyed to the active lobby room.
   const _operatorLastByLobby = new Map<string, number>();
   async function operatorCommentateOnTrade(lobbyId: string, context: string) {
-    // Skip when the lobby is empty — don't burn tokens broadcasting to no one.
     if (countLobbyActiveUsers(lobbyId) === 0) return;
     const now = Date.now();
     const last = _operatorLastByLobby.get(lobbyId) || 0;
@@ -7140,10 +6707,10 @@ async function main() {
     rooms, applyWindroseReel, authFromHeader,
   } as any);
 
+  await app.register(overlayRoutes, {
+    rooms, verifyToken,
+  } as any);
 
-  // ── Hook trading:subscribe / trading:unsubscribe into WS message handler ──
-  // (We patch the existing ws.on("message") handler by also checking here)
-  // The main handler is above; we add a secondary listener for trading msgs.
   wss.on("connection", (rawWs) => {
     const ws = rawWs as Sock;
     (ws as any)._tradingSubs = new Set<string>();
@@ -7155,13 +6722,10 @@ async function main() {
       if (msg.type === "trading:subscribe") {
         const sym = String(msg.symbol || "").toLowerCase();
         if (!sym) return;
-        // Subscribe to Binance if not already
         subscribeBinanceSymbol(sym);
-        // Track this client's subscription
         if (!symbolSubscribers.has(sym)) symbolSubscribers.set(sym, new Set());
         symbolSubscribers.get(sym)!.add(ws);
         (ws as any)._tradingSubs.add(sym);
-        // Send current price immediately
         const p = livePrices.get(sym);
         if (p) send(ws, { type: "trading:price", symbol: sym.toUpperCase(), price: p.price, time: p.time });
       }
@@ -7174,7 +6738,6 @@ async function main() {
     });
 
     ws.on("close", () => {
-      // Clean up trading subscriptions
       const subs = (ws as any)._tradingSubs as Set<string> | undefined;
       if (subs) {
         for (const sym of subs) {
@@ -7187,21 +6750,14 @@ async function main() {
   console.log("[trading] Paper trading engine initialized with", DEFAULT_SYMBOLS.length, "default symbols");
 
   process.on("SIGINT", async () => {
-    // Close Binance connections
     for (const [, ws] of binanceSubs) { try { ws.close(); } catch {} }
     try { await prisma.$disconnect(); } catch {}
     process.exit(0);
   });
-    // ── Room dissolution: clean up empty unpinned rooms after 1 hour ──────────
-  const ROOM_TTL_MS = 60 * 60 * 1000; // 1 hour
-  const DISSOLUTION_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
+  const ROOM_TTL_MS = 60 * 60 * 1000;
+  const DISSOLUTION_INTERVAL_MS = 5 * 60 * 1000;
 
-  // Synthetic activity ticker filler — pushes a plausible event every 32s
-  // when the public activity buffer is sparse (< 6 items). Real activity
-  // always wins; this only kicks in when the platform is actually quiet so
-  // the landing/home tickers never look dead. Both anonymized.
   setInterval(() => { try { seedSyntheticActivity(); } catch {} }, 32_000);
-  // Prime the buffer immediately on boot so the first ticker fetch isn't empty
   for (let i = 0; i < 5; i++) seedSyntheticActivity();
 
   setInterval(async () => {
@@ -7209,13 +6765,9 @@ async function main() {
     const toDelete: string[] = [];
 
     for (const [roomId, room] of rooms.entries()) {
-      // Skip pinned rooms
       if (room.pinned) continue;
-      // Skip lobby rooms
       if (roomId.startsWith("lobby:") || roomId === "lobby" || roomId === "@ops") continue;
-      // Skip rooms with users
       if (room.users.size > 0 || room.sockets.size > 0) continue;
-      // Skip rooms that haven't been empty long enough
       if (now - room.lastActiveAt < ROOM_TTL_MS) continue;
 
       toDelete.push(roomId);
@@ -7223,10 +6775,8 @@ async function main() {
 
     for (const roomId of toDelete) {
       rooms.delete(roomId);
-      // Also delete from DB (soft — just remove the room record)
       try {
         await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
-        // Clean up related records
         await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
         await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
       } catch {}
@@ -7238,7 +6788,6 @@ async function main() {
     }
   }, DISSOLUTION_INTERVAL_MS);
 
-  // ── Challenge tracking worker ──────────────────────────────────────────────
   if (process.env.BUNGIE_API_KEY) {
     setBungieApiKey(process.env.BUNGIE_API_KEY);
     startChallengeWorker(prisma, awardNotoriety, (userId, event) => {
@@ -7251,8 +6800,6 @@ async function main() {
       }
     }, awardPaper, broadcastToLobby, createNotification);
 
-    // Tournament auto-detect: piggybacks on Bungie API to auto-confirm
-    // Destiny 2 tournament matches from PGCR data.
     const autoDetect = startTournamentAutoDetect(prisma, {
       notify: (userId, event) => {
         for (const sock of wss.clients) {
@@ -7264,7 +6811,6 @@ async function main() {
     (globalThis as any).__weeredAutoDetect = autoDetect;
   }
 
-  // ── Flair contest auto-tick: flips SUBMISSIONS→VOTING and auto-finalizes ──
   startFlairContestTick(prisma, {
     mintFlairItem: mintFlairItemHelper,
     grantFlairToUser: grantFlairToUserHelper,
@@ -7273,10 +6819,8 @@ async function main() {
     intervalMs: 60_000,
   });
 
-  // ── Nexus Mods poller ──────────────────────────────────────────────────────
   startNexusPoller(prisma);
 
-  // ── HTTP listen — must be the LAST step so all routes are registered ──────
   try {
     await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
     app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);

@@ -1,26 +1,3 @@
-/**
- * Tournament Auto-Detect (Bungie / Destiny 2)
- *
- * Bridges the gap between "two players played a match in D2" and
- * "TournamentMatch.status = CONFIRMED with verified scores."
- *
- * Strategy:
- *   1. Find matches in destiny2 tournaments that are READY/LIVE and not yet
- *      auto-detected.
- *   2. For each match, look in BungieActivityLog for a single activity
- *      instance where BOTH participants appear during a time window
- *      bracketing the match (scheduled / live / now).
- *   3. If found: pull both players' rows, set scores from `score`, winner
- *      from `standing` (0 = Victory), stamp pgcrInstanceId + autoDetectedAt,
- *      flip status to CONFIRMED, advance the bracket.
- *
- * The activity log is populated by:
- *   - challengeWorker (for users with active challenge enrollments)
- *   - tournament-triggered fresh pull (when match flips to LIVE)
- *
- * The fresh-pull path is the load-bearing one for tournaments — most
- * tournament participants will not also have an active challenge.
- */
 
 import type { PrismaClient } from "@prisma/client";
 import { pollAndStoreActivities } from "./lib/bungieActivities";
@@ -39,8 +16,8 @@ type AutoDetectNotify = (
   },
 ) => void;
 
-const POLL_INTERVAL_MS = 2 * 60 * 1000; // every 2 min
-const FRESH_PULL_DEBOUNCE_MS = 30 * 1000; // don't re-pull same user within 30s
+const POLL_INTERVAL_MS = 2 * 60 * 1000;
+const FRESH_PULL_DEBOUNCE_MS = 30 * 1000;
 
 export function startTournamentAutoDetect(
   prisma: PrismaClient,
@@ -59,11 +36,10 @@ export function startTournamentAutoDetect(
   },
 ) {
   const { notify, createNotification } = opts;
-  const lastPullAt = new Map<string, number>(); // userId → ts
+  const lastPullAt = new Map<string, number>();
 
   console.log("[tournament-autodetect] Worker started — polling every 2m");
 
-  /** Pull fresh activities for both participants of a match. */
   async function freshPullForMatch(matchId: string) {
     const m = await (prisma as any).tournamentMatch.findUnique({
       where: { id: matchId },
@@ -94,7 +70,6 @@ export function startTournamentAutoDetect(
     const bUserId = match.entryB?.userId;
     if (!aUserId || !bUserId) return false;
 
-    // Time window: from scheduledAt (or 1h before liveAt) up to 4h after now.
     const now = new Date();
     const startBound = match.scheduledAt
       ? new Date(new Date(match.scheduledAt).getTime() - 60 * 60 * 1000)
@@ -103,8 +78,6 @@ export function startTournamentAutoDetect(
         : new Date(now.getTime() - 4 * 60 * 60 * 1000);
     const endBound = new Date(now.getTime() + 30 * 60 * 1000);
 
-    // Build the JOIN: find activityInstanceIds that BOTH userA and userB
-    // played within the window.
     const aLogs = await (prisma as any).bungieActivityLog.findMany({
       where: {
         userId: aUserId,
@@ -129,7 +102,6 @@ export function startTournamentAutoDetect(
     });
     if (bLogs.length === 0) return false;
 
-    // Take the most recent shared instance.
     const bByInstance = new Map<string, any>();
     for (const l of bLogs) bByInstance.set(l.activityInstanceId, l);
     const aByInstance = new Map<string, any>();
@@ -146,9 +118,6 @@ export function startTournamentAutoDetect(
     const aRow = aByInstance.get(instanceId);
     const bRow = bByInstance.get(instanceId);
 
-    // Determine scores. PvP modes use `score`. PvE uses `kills` as a proxy
-    // (round 1v1 PvE doesn't really exist for tournaments anyway, but it's
-    // a sane fallback so the match doesn't auto-confirm with 0-0).
     let scoreA = aRow.score ?? 0;
     let scoreB = bRow.score ?? 0;
     if (scoreA === 0 && scoreB === 0) {
@@ -156,7 +125,6 @@ export function startTournamentAutoDetect(
       scoreB = bRow.kills ?? 0;
     }
 
-    // Winner: prefer `standing` (0 = Victory). Fall back to higher score.
     let winnerEntryId: string;
     if (aRow.standing === 0 && bRow.standing !== 0) {
       winnerEntryId = match.entryAId;
@@ -167,11 +135,9 @@ export function startTournamentAutoDetect(
     } else if (scoreB > scoreA) {
       winnerEntryId = match.entryBId;
     } else {
-      // Tied — don't auto-confirm a tie, leave for manual.
       return false;
     }
 
-    // Update match
     await (prisma as any).tournamentMatch.update({
       where: { id: match.id },
       data: {
@@ -182,14 +148,12 @@ export function startTournamentAutoDetect(
       },
     });
 
-    // Advance bracket (drops loser to losers bracket for double-elim)
     try {
       await bracketAdvanceWinner(prisma, match.id, { createNotification });
     } catch (err) {
       console.error("[tournament-autodetect] advanceWinner failed", err);
     }
 
-    // Notify both players
     const aWon = winnerEntryId === match.entryAId;
     if (notify) {
       try {
@@ -245,9 +209,6 @@ export function startTournamentAutoDetect(
 
   async function cycle() {
     try {
-      // Find candidate matches: destiny2 tournaments, READY/LIVE, no PGCR yet.
-      // Schema has no `tournament` relation on TournamentMatch, so we filter
-      // tournaments first then look up matches by tournamentId.
       const tourns = await (prisma as any).tournament.findMany({
         where: { lobbyId: "destiny2", status: "ACTIVE" },
         select: { id: true },
@@ -265,7 +226,6 @@ export function startTournamentAutoDetect(
       });
       if (rawMatches.length === 0) return;
 
-      // Resolve entry → userId for downstream detectMatch.
       const entryIds = Array.from(new Set(
         rawMatches.flatMap((m: any) => [m.entryAId, m.entryBId]).filter(Boolean)
       )) as string[];
@@ -281,13 +241,10 @@ export function startTournamentAutoDetect(
         entryB: m.entryBId ? eById[m.entryBId] || null : null,
       }));
 
-      // Fresh-pull both players for each LIVE match (or READY matches that
-      // already have a liveAt within the last 4h, suggesting they started).
       for (const m of matches) {
         if (m.status === "LIVE") await freshPullForMatch(m.id);
       }
 
-      // Detect
       for (const m of matches) {
         try {
           await detectMatch(m);
@@ -300,13 +257,11 @@ export function startTournamentAutoDetect(
     }
   }
 
-  // Kick the loop. Don't run cycle synchronously on startup — let API boot.
   setTimeout(() => {
     cycle();
     setInterval(cycle, POLL_INTERVAL_MS);
   }, 30_000);
 
-  // Expose hook for "match just went LIVE — pull fresh now."
   return {
     onMatchLive: freshPullForMatch,
     runOnce: cycle,

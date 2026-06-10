@@ -7,8 +7,6 @@ import CampaignLedger from "../CampaignLedger";
 import CharacterSheet from "../CharacterSheet";
 import TacticalMap from "../TacticalMap";
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const S = {
   card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
   btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
@@ -18,8 +16,6 @@ const S = {
 };
 
 const ACCENT = "#C4A55A";
-
-// ── Dice Engine (shared with DndModulesPanel) ───────────────────────────────
 
 type DiceResult = {
   id: string; expr: string; rolls: number[]; modifier: number; total: number;
@@ -52,8 +48,6 @@ function rollDice(parsed: { count: number; sides: number; modifier: number; adva
   return { rolls, kept: rolls, dropped: [], modifier: parsed.modifier, total: sum + parsed.modifier, sides: parsed.sides, isNat20: parsed.sides === 20 && parsed.count === 1 && rolls[0] === 20, isNat1: parsed.sides === 20 && parsed.count === 1 && rolls[0] === 1 };
 }
 
-// ── Conditions Data ─────────────────────────────────────────────────────────
-
 const CONDITIONS = [
   { name: "Blinded", icon: "🙈" }, { name: "Charmed", icon: "💘" }, { name: "Deafened", icon: "🔇" },
   { name: "Frightened", icon: "😨" }, { name: "Grappled", icon: "🤼" }, { name: "Incapacitated", icon: "💫" },
@@ -62,8 +56,6 @@ const CONDITIONS = [
   { name: "Stunned", icon: "💥" }, { name: "Unconscious", icon: "💤" }, { name: "Exhaustion", icon: "😩" },
   { name: "Concentrating", icon: "🧠" },
 ];
-
-// ── Initiative Tracker ──────────────────────────────────────────────────────
 
 type Combatant = {
   id: string;
@@ -83,14 +75,12 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
   const [round, setRound] = useState(1);
   const [showAdd, setShowAdd] = useState(false);
 
-  // Add form state
   const [addName, setAddName] = useState("");
   const [addInit, setAddInit] = useState("");
   const [addHp, setAddHp] = useState("");
   const [addAc, setAddAc] = useState("");
   const [addIsNpc, setAddIsNpc] = useState(false);
 
-  // Condition picker
   const [condPicker, setCondPicker] = useState<string | null>(null);
 
   const sorted = useMemo(() => [...combatants].sort((a, b) => b.initiative - a.initiative), [combatants]);
@@ -99,7 +89,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     sendRaw?.({ type: "dnd:initiative", roomId, combatants: updated, currentTurn: turn, round: rnd });
   }
 
-  // Listen for WS updates from other users + cross-tab events
   useEffect(() => {
     function handler(ev: any) {
       const d = ev?.detail;
@@ -108,7 +97,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
       if (typeof d.currentTurn === "number") setCurrentTurn(d.currentTurn);
       if (typeof d.round === "number") setRound(d.round);
     }
-    // Damage applied from chat target picker — patch one combatant's HP and rebroadcast
     function damageHandler(ev: any) {
       const d = ev?.detail;
       if (!d || d.roomId !== roomId || !d.combatantId) return;
@@ -122,7 +110,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
         return updated;
       });
     }
-    // Token clicked on map → highlight matching combatant in tracker
     function selectHandler(ev: any) {
       const d = ev?.detail;
       if (!d || d.roomId !== roomId || !d.combatantId) return;
@@ -142,8 +129,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     };
   }, [roomId, sendRaw, currentTurn, round]);
 
-  // Publish combatants on window so the chat target picker can read them
-  // even when the InitiativeTracker isn't the active tab.
   useEffect(() => {
     try {
       (window as any).__weeredInitiative = (window as any).__weeredInitiative || {};
@@ -220,7 +205,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <span className="dnd-heading" style={{ fontSize: 18, color: "#F5D58A" }}>Initiative Tracker</span>
@@ -232,7 +216,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* Add form */}
       {showAdd && (
         <div style={{ ...S.card, display: "flex", flexDirection: "column", gap: 8, border: `1px solid ${ACCENT}33`, background: `${ACCENT}06` }}>
           <div style={{ display: "flex", gap: 6 }}>
@@ -250,7 +233,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* Combatant list */}
       {sorted.length === 0 ? (
         <div style={{ textAlign: "center", padding: 30, opacity: 0.4, fontSize: 13 }}>
           No combatants. Add creatures to begin tracking initiative.
@@ -268,7 +250,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
                 background: isActive ? `${ACCENT}0A` : "rgba(255,255,255,.03)",
                 boxShadow: isActive ? `0 0 12px ${ACCENT}15` : "none",
               }}>
-                {/* Top row: initiative, name, AC, remove */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {isActive && <span style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 6px ${ACCENT}`, flexShrink: 0 }} />}
                   <span style={{ fontSize: 16, fontWeight: 900, color: ACCENT, minWidth: 28, textAlign: "center" }}>{c.initiative}</span>
@@ -280,7 +261,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
                   <button onClick={() => removeCombatant(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(239,68,68,.4)", fontSize: 14, padding: 2, lineHeight: 1 }}>×</button>
                 </div>
 
-                {/* HP bar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button onClick={() => adjustHp(c.id, -1)} style={{ ...S.btn, padding: "2px 8px", fontSize: 14, fontWeight: 900, color: "#EF4444", borderColor: "rgba(239,68,68,.2)" }}>−</button>
                   <div style={{ flex: 1, position: "relative" }}>
@@ -296,7 +276,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
                   <button onClick={() => adjustHp(c.id, 5)} style={{ ...S.btn, padding: "2px 6px", fontSize: 9, color: "#22C55E" }}>+5</button>
                 </div>
 
-                {/* Conditions */}
                 <div style={{ display: "flex", gap: 3, flexWrap: "wrap", alignItems: "center" }}>
                   {c.conditions.map(cond => {
                     const ci = CONDITIONS.find(x => x.name === cond);
@@ -312,7 +291,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
                   }}>+ condition</button>
                 </div>
 
-                {/* Condition picker dropdown */}
                 {condPicker === c.id && (
                   <div style={{ display: "flex", gap: 3, flexWrap: "wrap", padding: "6px 0", borderTop: "1px solid rgba(255,255,255,.06)" }}>
                     {CONDITIONS.map(cond => (
@@ -330,7 +308,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* Turn controls */}
       {sorted.length > 0 && (
         <div style={{ display: "flex", gap: 8, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,.06)" }}>
           <button onClick={prevTurn} style={{ ...S.btn, flex: 1, padding: "10px 16px", fontSize: 13 }}>← Prev</button>
@@ -340,8 +317,6 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     </div>
   );
 }
-
-// ── Room Dice Roller (broadcasts to room) ───────────────────────────────────
 
 const QUICK_DICE = [
   { label: "d4", expr: "d4" }, { label: "d6", expr: "d6" }, { label: "d8", expr: "d8" },
@@ -356,7 +331,6 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
   const [lastRoll, setLastRoll] = useState<DiceResult | null>(null);
   const [showFlash, setShowFlash] = useState(false);
 
-  // Listen for dice rolls from other users
   useEffect(() => {
     function handler(ev: any) {
       const d = ev?.detail;
@@ -387,13 +361,11 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
     setHistory(prev => [roll, ...prev].slice(0, 50));
     setShowFlash(true);
     setTimeout(() => setShowFlash(false), 600);
-    // Broadcast to room
     sendRaw?.({ type: "dnd:roll", roomId, roll });
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
-      {/* Brazier — stone-mouth result panel with pulsing coal glow */}
       <div className="dnd-brazier" style={{
         boxShadow: showFlash
           ? (lastRoll?.isNat20 ? "0 0 56px rgba(122,209,88,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
@@ -434,7 +406,6 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
         )}
       </div>
 
-      {/* Carved-stone quick-roll tiles */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {QUICK_DICE.map(d => (
           <button key={d.label} onClick={() => doRoll(d.expr)} className="dnd-stone-tile">
@@ -443,7 +414,6 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
         ))}
       </div>
 
-      {/* Advantage / Disadvantage */}
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => doRoll("d20adv")} className="dnd-stone-tile dnd-stone-tile--adv" style={{ flex: 1 }}>
           d20 Advantage
@@ -453,7 +423,6 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
         </button>
       </div>
 
-      {/* Custom — parchment input + Cast button */}
       <div style={{ display: "flex", gap: 8 }}>
         <input
           className="dnd-parchment-input"
@@ -469,7 +438,6 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
         >Cast</button>
       </div>
 
-      {/* Roll history — wooden ledger */}
       {history.length > 0 && (
         <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
           <div className="dnd-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -509,7 +477,6 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
   );
 }
 
-// SVG d20 — empty-state die in the in-room brazier. Mirrors the lobby version.
 function RoomD20Icon() {
   return (
     <svg width="96" height="96" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -552,8 +519,6 @@ function RoomD20Icon() {
     </svg>
   );
 }
-
-// ── Quick Reference ─────────────────────────────────────────────────────────
 
 const ACTIONS_IN_COMBAT = [
   { name: "Attack", desc: "Make a melee or ranged attack." },
@@ -636,10 +601,6 @@ function QuickReference() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN DND STAGE
-// ═══════════════════════════════════════════════════════════════════════════
-
 const STAGE_TABS = [
   { id: "sheets" as const,     label: "Sheets",     icon: "📜" },
   { id: "map" as const,        label: "Battle Map", icon: "🗺" },
@@ -657,7 +618,6 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
 
   return (
     <div className="weered-dnd-modules" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
-      {/* Tab bar — parchment-pill in-room sub-lectern */}
       <div style={{ display: "flex", gap: 5, padding: "10px 12px", borderBottom: "1px solid rgba(196,165,90,.18)", flexShrink: 0, flexWrap: "wrap" }}>
         {STAGE_TABS.map(t => (
           <button
@@ -670,7 +630,6 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
         ))}
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, overflow: tab === "map" ? "hidden" : "auto", padding: tab === "npcs" || tab === "map" ? 0 : 12 }}>
         {tab === "initiative" && <InitiativeTracker roomId={roomId} />}
         {tab === "map" && <TacticalMap roomId={roomId} />}

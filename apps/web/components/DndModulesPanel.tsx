@@ -17,8 +17,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const S = {
   card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
   btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
@@ -29,8 +27,6 @@ const S = {
 };
 
 const ACCENT = "#C4A55A";
-
-// ── Color Maps ──────────────────────────────────────────────────────────────
 
 const CLASS_COLORS: Record<string, string> = {
   Barbarian: "#E7623E", Bard: "#AB6DAC", Cleric: "#91A1B2", Druid: "#7A853B",
@@ -90,8 +86,6 @@ function crColor(cr: number): string {
   return "#EF5350";
 }
 
-// ── Dice Engine ─────────────────────────────────────────────────────────────
-
 type DiceResult = {
   id: string; expr: string; rolls: number[]; modifier: number; total: number;
   advantage?: boolean; disadvantage?: boolean; kept?: number[]; dropped?: number[];
@@ -127,10 +121,8 @@ function rollDice(parsed: { count: number; sides: number; modifier: number; adva
   return { rolls, kept: rolls, dropped: [], modifier: parsed.modifier, total: sum + parsed.modifier, sides: parsed.sides, isNat20, isNat1 };
 }
 
-// ── Open5e Cache ────────────────────────────────────────────────────────────
-
 const o5eCache = new Map<string, { data: any; ts: number }>();
-const O5E_TTL = 300000; // 5 min
+const O5E_TTL = 300000;
 
 async function o5eFetch(path: string) {
   const cached = o5eCache.get(path);
@@ -140,8 +132,6 @@ async function o5eFetch(path: string) {
   o5eCache.set(path, { data: j, ts: Date.now() });
   return j;
 }
-
-// ── Tabs ────────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "compendium" as const, label: "Compendium", icon: "📜" },
@@ -160,21 +150,13 @@ const COMP_TABS = [
 ];
 type CompTabId = typeof COMP_TABS[number]["id"];
 
-// Codex ribbon colors per chapter — used as the silk ribbon hanging from
-// the tome-spine. Wizard blue, druid green, sorcerer red, monk teal,
-// paladin gold. Set via --ribbon-rgb CSS var as "r, g, b" so the CSS
-// gradient can use it with alpha.
 const RIBBON_RGB: Record<CompTabId, string> = {
-  spells:     "42, 80, 161",   // arcane blue
-  monsters:   "122, 133, 59",  // druid green
-  classes:    "153, 46, 46",   // sorcerer red
-  magicitems: "81, 165, 197",  // monk teal
-  conditions: "181, 158, 84",  // paladin gold
+  spells:     "42, 80, 161",
+  monsters:   "122, 133, 59",
+  classes:    "153, 46, 46",
+  magicitems: "81, 165, 197",
+  conditions: "181, 158, 84",
 };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SPELL BROWSER
-// ═══════════════════════════════════════════════════════════════════════════
 
 const SPELL_LEVELS = ["All", "Cantrip", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const SPELL_SCHOOLS = ["All", "Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];
@@ -263,12 +245,10 @@ function SpellBrowser() {
 
   return (
     <div>
-      {/* Search + Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search spells..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        {/* Level pills */}
         {SPELL_LEVELS.map(l => (
           <button key={l} onClick={() => setLevel(l)} style={{
             ...S.btn, fontSize: 10, padding: "3px 8px",
@@ -325,7 +305,6 @@ function SpellBrowser() {
             })}
           </div>
 
-          {/* Pagination */}
           {total > 20 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
               <button style={S.btn} disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</button>
@@ -338,10 +317,6 @@ function SpellBrowser() {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MONSTER BROWSER (BESTIARY)
-// ═══════════════════════════════════════════════════════════════════════════
 
 const MONSTER_TYPES = ["All", "aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
 const MONSTER_CRS = ["All", "0", "1/8", "1/4", "1/2", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "30"];
@@ -397,7 +372,6 @@ function MonsterBrowser() {
       <div>
         <button onClick={() => setSelected(null)} style={{ ...S.btn, marginBottom: 12, fontSize: 11 }}>← Back to Bestiary</button>
         <div style={{ ...S.card, border: `1px solid ${cc}33`, background: `${cc}06` }}>
-          {/* Header */}
           <div style={{ borderBottom: `2px solid ${cc}44`, paddingBottom: 10, marginBottom: 12, display: "flex", gap: 12, alignItems: "center" }}>
             {MONSTER_ICONS[(m.type || "").toLowerCase()] && (
               <div style={{ width: 48, height: 48, borderRadius: 8, background: `${cc}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -412,7 +386,6 @@ function MonsterBrowser() {
             </div>
           </div>
 
-          {/* AC / HP / Speed */}
           <div style={{ display: "flex", gap: 16, marginBottom: 14, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,.06)" }}>
             <div><span style={S.label}>Armor Class</span><div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.9)" }}>{m.armor_class}</div></div>
             <div><span style={S.label}>Hit Points</span><div style={{ fontSize: 14, fontWeight: 800, color: "#EF5350" }}>{m.hit_points} <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(148,163,184,.5)" }}>({m.hit_dice})</span></div></div>
@@ -421,7 +394,6 @@ function MonsterBrowser() {
             </div></div>
           </div>
 
-          {/* Ability Scores */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, marginBottom: 14, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
             <AbilityScore label="STR" val={m.strength} />
             <AbilityScore label="DEX" val={m.dexterity} />
@@ -431,7 +403,6 @@ function MonsterBrowser() {
             <AbilityScore label="CHA" val={m.charisma} />
           </div>
 
-          {/* Defensive info */}
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14, fontSize: 12 }}>
             {m.damage_immunities && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Damage Immunities</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.damage_immunities}</span></div>}
             {m.damage_resistances && <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Damage Resistances</strong> <span style={{ color: "rgba(148,163,184,.6)" }}>{m.damage_resistances}</span></div>}
@@ -442,7 +413,6 @@ function MonsterBrowser() {
             <div><strong style={{ color: "rgba(243,244,246,.7)" }}>Challenge</strong> <span style={{ color: cc, fontWeight: 700 }}>{m.challenge_rating}</span></div>
           </div>
 
-          {/* Special Abilities */}
           {m.special_abilities?.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ ...S.label, marginBottom: 8, color: cc, opacity: 1 }}>Traits</div>
@@ -455,7 +425,6 @@ function MonsterBrowser() {
             </div>
           )}
 
-          {/* Actions */}
           {m.actions?.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ ...S.label, marginBottom: 8, color: "#EF5350", opacity: 1, borderTop: `2px solid ${cc}44`, paddingTop: 10 }}>Actions</div>
@@ -468,7 +437,6 @@ function MonsterBrowser() {
             </div>
           )}
 
-          {/* Legendary Actions */}
           {m.legendary_actions?.length > 0 && (
             <div>
               <div style={{ ...S.label, marginBottom: 8, color: "#FF8F00", opacity: 1, borderTop: `2px solid ${cc}44`, paddingTop: 10 }}>Legendary Actions</div>
@@ -551,10 +519,6 @@ function MonsterBrowser() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CLASS BROWSER
-// ═══════════════════════════════════════════════════════════════════════════
-
 const CLASS_DATA: { name: string; hitDie: string; primary: string; saves: string; desc: string }[] = [
   { name: "Barbarian", hitDie: "d12", primary: "Strength", saves: "STR, CON", desc: "A fierce warrior who channels primal rage to devastate enemies on the battlefield." },
   { name: "Bard", hitDie: "d8", primary: "Charisma", saves: "DEX, CHA", desc: "A master of song, speech, and magic who inspires allies and manipulates foes." },
@@ -613,7 +577,6 @@ function ClassBrowser() {
             </div>
           </div>
 
-          {/* API-sourced class details */}
           {loading && <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading class features...</div>}
           {classDetail && (
             <div>
@@ -683,10 +646,6 @@ function ClassBrowser() {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MAGIC ITEM BROWSER
-// ═══════════════════════════════════════════════════════════════════════════
 
 const RARITY_OPTIONS = ["All", "common", "uncommon", "rare", "very rare", "legendary", "artifact"];
 
@@ -784,10 +743,6 @@ function MagicItemBrowser() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CONDITIONS REFERENCE
-// ═══════════════════════════════════════════════════════════════════════════
-
 const CONDITIONS_DATA = [
   { name: "Blinded", desc: "Can't see. Auto-fail sight checks. Attacks have disadvantage. Attacks against have advantage.", icon: "🙈" },
   { name: "Charmed", desc: "Can't attack charmer or target them with harmful abilities. Charmer has advantage on social checks.", icon: "💘" },
@@ -822,10 +777,6 @@ function ConditionsReference() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// DICE TOWER
-// ═══════════════════════════════════════════════════════════════════════════
-
 const QUICK_DICE = [
   { label: "d4", expr: "d4" }, { label: "d6", expr: "d6" }, { label: "d8", expr: "d8" },
   { label: "d10", expr: "d10" }, { label: "d12", expr: "d12" }, { label: "d20", expr: "d20" },
@@ -837,9 +788,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
   const [customExpr, setCustomExpr] = useState("");
   const [lastRoll, setLastRoll] = useState<DiceResult | null>(null);
   const [showFlash, setShowFlash] = useState(false);
-  // Witnessed-rolls toggle. Default ON so the headline feature lands on
-  // first interaction. Persisted per-lobby so a DM who toggles off (e.g.
-  // for stat blocks) doesn't re-toggle every visit.
   const [isPublic, setIsPublic] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -856,9 +804,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
   async function doRoll(expr: string) {
     setError(null);
     if (isPublic) {
-      // Server-authoritative roll. Response includes the computed result so
-      // the local display updates instantly; the same event also broadcasts
-      // back over WS and lands as a chip in lobby chat.
       if (busy) return;
       setBusy(true);
       try {
@@ -888,7 +833,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
       return;
     }
 
-    // Private roll — purely local, no broadcast.
     const parsed = parseDice(expr);
     if (!parsed) { setError("Bad expression. Try 1d20, 2d8+5, d20adv."); return; }
     const result = rollDice(parsed);
@@ -911,9 +855,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Public/private toggle. Public broadcasts every roll to lobby chat
-          as a witnessed chip. Private is a personal dice tray — useful for
-          DMs rolling stat blocks behind the screen. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", background: "rgba(0,0,0,.20)" }}>
         <button
           type="button"
@@ -956,7 +897,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
         </div>
       )}
 
-      {/* Brazier — stone-mouth result panel with pulsing coal glow */}
       <div className="dnd-brazier" style={{
         boxShadow: showFlash
           ? (lastRoll?.isNat20 ? "0 0 56px rgba(122,209,88,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
@@ -997,7 +937,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
         )}
       </div>
 
-      {/* Quick dice tiles — carved-stone */}
       <div>
         <div className="dnd-section-label">Quick Roll</div>
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
@@ -1009,7 +948,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
         </div>
       </div>
 
-      {/* Advantage / Disadvantage */}
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={() => advRoll(true)} className="dnd-stone-tile dnd-stone-tile--adv" disabled={busy} style={{ flex: 1 }}>
           d20 Advantage
@@ -1019,7 +957,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
         </button>
       </div>
 
-      {/* Custom roll — parchment input */}
       <div>
         <div className="dnd-section-label">Custom Roll</div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -1039,7 +976,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
         </div>
       </div>
 
-      {/* Roll history — wooden ledger */}
       {history.length > 0 && (
         <div>
           <div className="dnd-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1080,7 +1016,6 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// SVG d20 — empty-state die in the brazier. Stylized 2D, isometric face.
 function D20Icon() {
   return (
     <svg width="96" height="96" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -1123,10 +1058,6 @@ function D20Icon() {
     </svg>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TAVERN BOARD (D&D LFG)
-// ═══════════════════════════════════════════════════════════════════════════
 
 const DND_SYSTEMS = ["D&D 5e", "D&D 5.5e (2024)", "Pathfinder 2e", "Call of Cthulhu", "OSR", "Other"];
 const DND_SESSION_TYPES = ["One-Shot", "Campaign", "West Marches", "Drop-in", "Tutorial"];
@@ -1324,10 +1255,6 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TWITCH STREAMS
-// ═══════════════════════════════════════════════════════════════════════════
-
 function TwitchStreams({ lobbyId }: { lobbyId: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1398,10 +1325,6 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN PANEL
-// ═══════════════════════════════════════════════════════════════════════════
-
 export default function DndModulesPanel({
   lobbyId, accentColor, gameName, style,
 }: {
@@ -1412,15 +1335,12 @@ export default function DndModulesPanel({
   useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [compTab, setCompTab] = useState<CompTabId>("spells");
 
-  // Session Zero — first-time onboarding modal. Auto-opens once per user;
-  // the chip below the tabs reopens it on demand.
   const sessionZero = useSessionZero();
 
   return (
     <div className="weered-dnd-modules" style={{ padding: "14px 16px", overflow: "auto", position: "relative", ...style }}>
       <SessionZero open={sessionZero.open} onClose={sessionZero.hide} />
 
-      {/* Lectern — carved wooden bar with four tool alcoves + Session Zero quill */}
       <div className="dnd-lectern">
         {TABS.map(t => (
           <button
@@ -1443,10 +1363,8 @@ export default function DndModulesPanel({
         </button>
       </div>
 
-      {/* Compendium */}
       {tab === "compendium" && (
         <>
-          {/* Codex — chapter ribbons hanging from the tome-spine */}
           <div className="dnd-codex">
             <div className="dnd-codex-ribbons">
               {COMP_TABS.map(ct => (

@@ -8,7 +8,7 @@ type LatestRelease = {
   version: string;
   pub_date: string;
   notes: string;
-  downloads: Record<string, string>; // tauri target -> url
+  downloads: Record<string, string>;
 };
 
 const FEATURES: { icon: string; title: string; body: string }[] = [
@@ -24,7 +24,7 @@ type Platform = {
   id: "windows" | "macos-intel" | "macos-arm" | "linux";
   label: string;
   sub: string;
-  target: string;       // tauri target string used in /desktop/updates/:target
+  target: string;
   detect: (ua: string, plat: string) => boolean;
 };
 
@@ -41,21 +41,18 @@ export default function DesktopContent() {
   const [primaryPlatform, setPrimaryPlatform] = useState<Platform["id"] | null>(null);
 
   useEffect(() => {
-    // Detect the visitor's OS so we can highlight the right download.
     if (typeof window !== "undefined") {
       const ua = window.navigator.userAgent || "";
       const plat = window.navigator.platform || "";
       const match = PLATFORMS.find((p) => p.detect(ua, plat));
       if (match) setPrimaryPlatform(match.id);
     }
-    // Fetch latest release info from API. Safe fallback: if it fails or
-    // returns null, we just show "Coming soon" tiles (current behavior).
     fetch(`${API_BASE}/desktop/latest`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.ok && data.release) setRelease(data.release as LatestRelease);
       })
-      .catch(() => { /* silent — page degrades to "Coming soon" */ })
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 

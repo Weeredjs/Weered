@@ -1,15 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /trading/* — FakeOut paper trading. REST layer only: candles proxy,
-// symbol catalog, account + positions + market orders + close +
-// leaderboard + history + reset + competitions. Plus two background
-// workers: 60s competition status sweep (UPCOMING→ACTIVE→ENDED with
-// prize payout), 5s limit/stop-order fill checker.
-//
-// Binance WebSocket bridge, the live-prices map, and the per-client
-// trading:subscribe handler stay in main() — they're long-lived
-// streaming infra hooked into the global wss.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   awardPaper: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;
@@ -29,12 +20,6 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     return p ? p.price : null;
   }
 
-  // ── Paper Account modes ─────────────────────────────────────────────────
-  // CASUAL: $100K start, low Paper conversion, no Notoriety. For-fun.
-  // RANKED: $1K start, 10× Paper conversion, counts toward Notoriety XP.
-  // Mode comes from the query (?mode=RANKED|CASUAL) and defaults to CASUAL
-  // for backward-compat with existing accounts (which all have mode=CASUAL
-  // post-migration).
   type PaperMode = "CASUAL" | "RANKED";
   function parseMode(req: any): PaperMode {
     const m = String(req?.query?.mode || (req?.body as any)?.mode || "CASUAL").toUpperCase();
@@ -43,14 +28,10 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
   function startBalanceFor(mode: PaperMode): number {
     return mode === "RANKED" ? 1000 : 100000;
   }
-  // Paper-per-$100-of-profit multiplier. Ranked is 10× to make $1K
-  // accounts produce comparable rewards to $100K accounts at the same
-  // % return — but the leaderboard separates them.
   function paperRateMultiplierFor(mode: PaperMode): number {
     return mode === "RANKED" ? 10 : 1;
   }
 
-// ── REST: Historical candles (proxy Binance) ──────────────────────────────
 app.get("/trading/candles", async (req, reply) => {
   const q: any = (req as any).query || {};
   const symbol = String(q.symbol || "BTCUSDT").toUpperCase();
@@ -78,10 +59,6 @@ app.get("/trading/candles", async (req, reply) => {
   }
 });
 
-// ── REST: Available symbols ───────────────────────────────────────────────
-// Crypto pairs are wired through Binance WS. FX + metals are flagged
-// `comingSoon` so the picker can show them as direction-of-travel without
-// letting users open paper orders against feeds we haven't bridged yet.
 const TRADING_SYMBOLS: { symbol: string; name: string; icon: string; assetClass?: "crypto" | "fx" | "metal"; comingSoon?: boolean }[] = [
   { symbol: "BTCUSDT", name: "Bitcoin", icon: "₿", assetClass: "crypto" },
   { symbol: "ETHUSDT", name: "Ethereum", icon: "Ξ", assetClass: "crypto" },
@@ -104,7 +81,6 @@ const TRADING_SYMBOLS: { symbol: string; name: string; icon: string; assetClass?
   { symbol: "SHIBUSDT", name: "Shiba Inu", icon: "🐕", assetClass: "crypto" },
   { symbol: "TRUMPUSDT", name: "Trump", icon: "🇺🇸", assetClass: "crypto" },
 
-  // FX majors — feed wiring in progress (twelvedata mid-rate poll).
   { symbol: "EURUSD", name: "EUR/USD", icon: "€", assetClass: "fx", comingSoon: true },
   { symbol: "GBPUSD", name: "GBP/USD", icon: "£", assetClass: "fx", comingSoon: true },
   { symbol: "USDJPY", name: "USD/JPY", icon: "¥", assetClass: "fx", comingSoon: true },
@@ -116,7 +92,6 @@ const TRADING_SYMBOLS: { symbol: string; name: string; icon: string; assetClass?
 ];
 
 app.get("/trading/symbols", async (_req, reply) => {
-  // Attach live prices
   const out = TRADING_SYMBOLS.map(s => ({
     ...s,
     price: s.comingSoon ? null : (livePrices.get(s.symbol.toLowerCase())?.price || null),
@@ -124,14 +99,6 @@ app.get("/trading/symbols", async (_req, reply) => {
   return reply.send({ ok: true, symbols: out });
 });
 
-// ── Paper Trading Engine ──────────────────────────────────────────────────
-
-function getLivePrice(symbol: string): number | null {
-  const p = livePrices.get(symbol.toLowerCase());
-  return p ? p.price : null;
-}
-
-// GET /trading/account/:lobbyId?mode=RANKED|CASUAL — get or create paper account
 app.get("/trading/account/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -151,7 +118,6 @@ app.get("/trading/account/:lobbyId", async (req, reply) => {
     });
   }
 
-  // Calculate unrealized P&L for open positions
   let unrealizedPnl = 0;
   const positionsWithPnl = account.positions.map((p: any) => {
     const currentPrice = getLivePrice(p.symbol);
@@ -188,7 +154,6 @@ app.get("/trading/account/:lobbyId", async (req, reply) => {
   });
 });
 
-// POST /trading/order/:lobbyId — place an order
 app.post("/trading/order/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -200,9 +165,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
   const orderType = String(body.orderType || "MARKET").toUpperCase();
   const quantity = parseFloat(body.quantity);
   const limitPrice = body.price ? parseFloat(body.price) : null;
-  // Optional SL/TP at inception. Validated against the live mark below
-  // once we know it. Both are absolute price levels; the position worker
-  // (5s loop) auto-closes when the live price crosses either.
   const rawStopLoss = body.stopLoss !== undefined && body.stopLoss !== null && body.stopLoss !== "" ? parseFloat(body.stopLoss) : null;
   const rawTakeProfit = body.takeProfit !== undefined && body.takeProfit !== null && body.takeProfit !== "" ? parseFloat(body.takeProfit) : null;
   const stopLoss = (rawStopLoss !== null && Number.isFinite(rawStopLoss) && rawStopLoss > 0) ? rawStopLoss : null;
@@ -215,7 +177,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     return reply.code(400).send({ ok: false, error: "invalid_quantity" });
   }
 
-  // Get or create account (mode-scoped)
   const mode = parseMode(req);
   const startBal = startBalanceFor(mode);
   const paperMul = paperRateMultiplierFor(mode);
@@ -230,7 +191,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     });
   }
 
-  // Limit orders: store and return
   if (orderType === "LIMIT" || orderType === "STOP") {
     if (!limitPrice || limitPrice <= 0) {
       return reply.code(400).send({ ok: false, error: "limit_price_required" });
@@ -241,15 +201,11 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     return reply.send({ ok: true, order: { ...order, createdAt: order.createdAt?.toISOString() } });
   }
 
-  // Market orders: execute immediately
   const currentPrice = getLivePrice(symbol);
   if (!currentPrice) {
     return reply.code(400).send({ ok: false, error: "no_price_data", message: "No live price available for " + symbol });
   }
 
-  // Validate SL/TP against the entry side. Long: SL below entry, TP above.
-  // Short: SL above entry, TP below. Reject backwards levels at the door
-  // so the worker doesn't have to defend against them later.
   if (stopLoss !== null) {
     if (side === "BUY"  && stopLoss >= currentPrice) return reply.code(400).send({ ok: false, error: "sl_must_be_below_entry", message: `For a long, stop loss must be below ${currentPrice}.` });
     if (side === "SELL" && stopLoss <= currentPrice) return reply.code(400).send({ ok: false, error: "sl_must_be_above_entry", message: `For a short, stop loss must be above ${currentPrice}.` });
@@ -262,15 +218,12 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
   const cost = currentPrice * quantity;
 
   if (side === "BUY") {
-    // Check cash
     if (cost > account.cashBalance) {
       return reply.code(400).send({ ok: false, error: "insufficient_funds", available: account.cashBalance, required: cost });
     }
 
-    // Check if we have an existing open position in same direction
     const existing = account.positions.find((p: any) => p.side === "BUY");
     if (existing) {
-      // Average into existing position
       const newQty = existing.quantity + quantity;
       const newEntry = ((existing.entryPrice * existing.quantity) + (currentPrice * quantity)) / newQty;
       await (prisma as any).paperPosition.update({
@@ -278,7 +231,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
         data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
       });
     } else {
-      // Check if we have a SHORT — close it first
       const shortPos = account.positions.find((p: any) => p.side === "SELL");
       if (shortPos) {
         const pnl = (shortPos.entryPrice - currentPrice) * shortPos.quantity;
@@ -295,7 +247,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut short profit: $${pnl.toFixed(2)} on ${symbol}`, shortPos.id).catch(() => {});
           if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
         }
-        // If buying more than closing, open new long with remainder
         const remaining = quantity - shortPos.quantity;
         if (remaining > 0) {
           const remainCost = currentPrice * remaining;
@@ -308,7 +259,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           });
         }
       } else {
-        // New long position
         await (prisma as any).paperPosition.create({
           data: { accountId: account.id, symbol, side: "BUY", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
         });
@@ -320,18 +270,13 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     }
 
     if (!account.positions.find((p: any) => p.side === "SELL")) {
-      // Only deduct if we didn't already handle above
       if (!account.positions.find((p: any) => p.side === "BUY") && !account.positions.find((p: any) => p.side === "SELL")) {
-        // Already handled above
       }
     }
   } else {
-    // SELL side
-    // Check if we have a long position to close
     const longPos = account.positions.find((p: any) => p.side === "BUY");
     if (longPos) {
       if (quantity >= longPos.quantity) {
-        // Close entire long position
         const pnl = (currentPrice - longPos.entryPrice) * longPos.quantity;
         await (prisma as any).paperPosition.update({
           where: { id: longPos.id },
@@ -346,7 +291,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut long profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
           if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
         }
-        // If selling more than closing, open short with remainder
         const remaining = quantity - longPos.quantity;
         if (remaining > 0) {
           const remainValue = currentPrice * remaining;
@@ -359,7 +303,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
           });
         }
       } else {
-        // Partial close
         const pnl = (currentPrice - longPos.entryPrice) * quantity;
         const newQty = longPos.quantity - quantity;
         await (prisma as any).paperPosition.update({
@@ -377,7 +320,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
         }
       }
     } else {
-      // Open short position (or add to existing short)
       const existingShort = account.positions.find((p: any) => p.side === "SELL");
       if (existingShort) {
         const newQty = existingShort.quantity + quantity;
@@ -398,26 +340,18 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
     }
   }
 
-  // Record the filled order
   await (prisma as any).paperOrder.create({
     data: { accountId: account.id, symbol, side, orderType: "MARKET", quantity, filledPrice: currentPrice, filledAt: new Date(), status: "FILLED" },
   });
 
-  // Award Notoriety for trading — ranked only. Casual mode is for fun.
   if (mode === "RANKED") {
     awardNotoriety(u.id, "FIRST_FAKEOUT_TRADE").catch(() => {});
     awardNotoriety(u.id, "FAKEOUT_TRADE").catch(() => {});
   }
 
-  // Broadcast trade to lobby room (everyone sees trades). `notional` is
-  // included so the public-activity capture filter (≥$1k threshold) can
-  // see the trade size without recomputing.
   const tradeEvent = { type: "trading:trade", userId: u.id, userName: u.name, symbol, side, quantity, price: currentPrice, notional: currentPrice * quantity, time: Date.now() };
   broadcastToLobby(lobbyId, tradeEvent);
 
-  // Operator commentary on noteworthy trades. Look up any position this
-  // user just closed to surface realized PnL — falls back to entry size for
-  // big new positions. Throttling lives inside operatorCommentateOnTrade.
   if (operatorCommentateOnTrade) {
     (async () => {
       try {
@@ -450,7 +384,6 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
   return reply.send({ ok: true, filled: { symbol, side, quantity, price: currentPrice } });
 });
 
-// POST /trading/close/:lobbyId/:positionId — close a specific position
 app.post("/trading/close/:lobbyId/:positionId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -479,8 +412,6 @@ app.post("/trading/close/:lobbyId/:positionId", async (req, reply) => {
     data: { cashBalance: { increment: pos.entryValue + pnl }, realizedPnl: { increment: pnl } },
   });
 
-  // Award Paper for profitable trades. Ranked mode pays 10× and grants
-  // Notoriety; casual is for-fun and pays the base rate without XP.
   const accountMode: PaperMode = (pos.account?.mode === "RANKED" ? "RANKED" : "CASUAL");
   const paperMul = paperRateMultiplierFor(accountMode);
   if (pnl > 0) {
@@ -489,7 +420,6 @@ app.post("/trading/close/:lobbyId/:positionId", async (req, reply) => {
     if (accountMode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
   }
 
-  // Operator commentary on closed positions with meaningful PnL.
   if (operatorCommentateOnTrade && Math.abs(pnl) >= 500) {
     const lobbyId = String((req as any).params?.lobbyId || pos.account.lobbyId || "");
     if (lobbyId) {
@@ -504,8 +434,6 @@ app.post("/trading/close/:lobbyId/:positionId", async (req, reply) => {
   return reply.send({ ok: true, pnl, exitPrice: currentPrice });
 });
 
-// PATCH /trading/position/:positionId/exits — alter stopLoss / takeProfit
-// on an OPEN position. Sending null for a field clears that exit.
 app.patch("/trading/position/:positionId/exits", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -519,7 +447,6 @@ app.patch("/trading/position/:positionId/exits", async (req, reply) => {
   if (!pos || pos.account.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
   if (pos.status !== "OPEN") return reply.code(400).send({ ok: false, error: "already_closed" });
 
-  // null clears, undefined leaves untouched, number sets.
   const data: any = {};
   if (Object.prototype.hasOwnProperty.call(body, "stopLoss")) {
     if (body.stopLoss === null || body.stopLoss === "") {
@@ -552,7 +479,6 @@ app.patch("/trading/position/:positionId/exits", async (req, reply) => {
   return reply.send({ ok: true, position: { id: updated.id, stopLoss: updated.stopLoss, takeProfit: updated.takeProfit } });
 });
 
-// GET /trading/leaderboard/:lobbyId?mode=RANKED|CASUAL — ranked by total P&L
 app.get("/trading/leaderboard/:lobbyId", async (req, reply) => {
   const lobbyId = String((req as any).params?.lobbyId || "");
   const mode = parseMode(req);
@@ -602,7 +528,6 @@ app.get("/trading/leaderboard/:lobbyId", async (req, reply) => {
   return reply.send({ ok: true, leaderboard });
 });
 
-// GET /trading/history/:lobbyId?mode=RANKED|CASUAL — order history
 app.get("/trading/history/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -633,19 +558,12 @@ app.get("/trading/history/:lobbyId", async (req, reply) => {
   });
 });
 
-// GET /trading/lobby-feed/:lobbyId?mode=RANKED|CASUAL — chronological
-// stream of recent trade events across every account in the lobby. Powers
-// the lobby's Feed tab so a visitor can watch the action without picking
-// a room. Returns last 60 events: filled market orders + closed positions
-// (closes carry realized PnL). The frontend stitches WS trading:trade
-// events on top for live additions.
 app.get("/trading/lobby-feed/:lobbyId", async (req, reply) => {
   const lobbyId = String((req as any).params?.lobbyId || "");
   const mode = parseMode(req);
 
-  const since = new Date(Date.now() - 6 * 60 * 60 * 1000); // last 6 hours
+  const since = new Date(Date.now() - 6 * 60 * 60 * 1000);
 
-  // Pull recent FILLED orders and CLOSED positions in parallel.
   const [orders, closedPositions] = await Promise.all([
     (prisma as any).paperOrder.findMany({
       where: {
@@ -669,7 +587,6 @@ app.get("/trading/lobby-feed/:lobbyId", async (req, reply) => {
     }),
   ]);
 
-  // One user lookup for everyone referenced.
   const userIds = Array.from(new Set([
     ...orders.map((o: any) => o.account.userId),
     ...closedPositions.map((p: any) => p.account.userId),
@@ -679,7 +596,6 @@ app.get("/trading/lobby-feed/:lobbyId", async (req, reply) => {
     : [];
   const userMap = new Map(users.map(u => [u.id, u]));
 
-  // Merge into a single chronological feed.
   type FeedItem = {
     type: "open" | "close";
     ts: number;
@@ -732,8 +648,6 @@ app.get("/trading/lobby-feed/:lobbyId", async (req, reply) => {
   return reply.send({ ok: true, items: items.slice(0, 80) });
 });
 
-// POST /trading/reset/:lobbyId — reset account (start fresh) for the
-// requested mode. ?mode=RANKED|CASUAL, defaults to CASUAL.
 app.post("/trading/reset/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -746,7 +660,6 @@ app.post("/trading/reset/:lobbyId", async (req, reply) => {
   });
   if (!account) return reply.send({ ok: true });
 
-  // Delete all positions and orders, reset balance to mode start.
   await (prisma as any).paperPosition.deleteMany({ where: { accountId: account.id } });
   await (prisma as any).paperOrder.deleteMany({ where: { accountId: account.id } });
   await (prisma as any).paperAccount.update({
@@ -757,9 +670,6 @@ app.post("/trading/reset/:lobbyId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// ── Trading Competition endpoints ─────────────────────────────────────────
-
-// POST /trading/competition/:lobbyId — create competition
 app.post("/trading/competition/:lobbyId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -782,7 +692,6 @@ app.post("/trading/competition/:lobbyId", async (req, reply) => {
   return reply.send({ ok: true, competition: { ...comp, startTime: comp.startTime.toISOString(), endTime: comp.endTime.toISOString(), createdAt: comp.createdAt.toISOString() } });
 });
 
-// GET /trading/competitions/:lobbyId — list competitions
 app.get("/trading/competitions/:lobbyId", async (req, reply) => {
   const lobbyId = String((req as any).params?.lobbyId || "");
 
@@ -803,7 +712,6 @@ app.get("/trading/competitions/:lobbyId", async (req, reply) => {
   });
 });
 
-// POST /trading/competition/:compId/join — join a competition
 app.post("/trading/competition/:compId/join", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -813,7 +721,6 @@ app.post("/trading/competition/:compId/join", async (req, reply) => {
   if (!comp) return reply.code(404).send({ ok: false, error: "not_found" });
   if (comp.status === "ENDED") return reply.code(400).send({ ok: false, error: "competition_ended" });
 
-  // Check if already enrolled
   const existing = await (prisma as any).paperAccount.findFirst({
     where: { userId: u.id, lobbyId: comp.lobbyId, competitionId: compId },
   });
@@ -826,7 +733,6 @@ app.post("/trading/competition/:compId/join", async (req, reply) => {
   return reply.send({ ok: true, accountId: account.id });
 });
 
-// GET /trading/competition/:compId/leaderboard — competition leaderboard
 app.get("/trading/competition/:compId/leaderboard", async (req, reply) => {
   const compId = String((req as any).params?.compId || "");
 
@@ -862,22 +768,18 @@ app.get("/trading/competition/:compId/leaderboard", async (req, reply) => {
   return reply.send({ ok: true, leaderboard });
 });
 
-// ── Competition status worker (activate/end competitions) ─────────────────
 setInterval(async () => {
   try {
     const now = new Date();
-    // Activate upcoming competitions
     await (prisma as any).tradingCompetition.updateMany({
       where: { status: "UPCOMING", startTime: { lte: now } },
       data: { status: "ACTIVE" },
     });
-    // End expired competitions and award Paper to winners
     const ending = await (prisma as any).tradingCompetition.findMany({
       where: { status: "ACTIVE", endTime: { lte: now } },
     });
     for (const comp of ending) {
       await (prisma as any).tradingCompetition.update({ where: { id: comp.id }, data: { status: "ENDED" } });
-      // Calculate final standings and award Paper
       const accounts = await (prisma as any).paperAccount.findMany({
         where: { competitionId: comp.id },
         include: { positions: { where: { status: "OPEN" } } },
@@ -890,7 +792,7 @@ setInterval(async () => {
         }
         return { userId: a.userId, totalPnl: (a.cashBalance + unrealizedPnl) - a.startBalance };
       }).sort((a: any, b: any) => b.totalPnl - a.totalPnl);
-      const prizes = [500, 250, 100]; // 1st, 2nd, 3rd
+      const prizes = [500, 250, 100];
       for (let i = 0; i < Math.min(3, ranked.length); i++) {
         if (ranked[i].totalPnl > 0) {
           awardPaper(ranked[i].userId, "EARN_COMPETITION", prizes[i], `${i === 0 ? "1st" : i === 1 ? "2nd" : "3rd"} place: ${comp.name}`, comp.id).catch(() => {});
@@ -899,9 +801,8 @@ setInterval(async () => {
       console.log(`[trading] Competition "${comp.name}" ended — ${ranked.length} participants`);
     }
   } catch (e) { console.error("[trading] competition worker error:", e); }
-}, 60 * 1000); // check every minute
+}, 60 * 1000);
 
-// ── Limit order fill checker ──────────────────────────────────────────────
 setInterval(async () => {
   try {
     const pending = await (prisma as any).paperOrder.findMany({
@@ -922,11 +823,10 @@ setInterval(async () => {
       }
 
       if (shouldFill) {
-        // Execute the fill at the limit price
         const fillPrice = order.price;
         const cost = fillPrice * order.quantity;
 
-        if (order.side === "BUY" && cost > order.account.cashBalance) continue; // insufficient funds
+        if (order.side === "BUY" && cost > order.account.cashBalance) continue;
 
         await (prisma as any).paperOrder.update({
           where: { id: order.id },
@@ -951,19 +851,12 @@ setInterval(async () => {
           });
         }
 
-        // Notify user via WS
         notifyUser(order.account.userId, { type: "trading:order_filled", orderId: order.id, symbol: order.symbol, side: order.side, quantity: order.quantity, price: fillPrice });
       }
     }
   } catch (e) { console.error("[trading] limit fill check error:", e); }
-}, 5000); // check every 5 seconds
+}, 5000);
 
-// ── SL/TP auto-close worker ───────────────────────────────────────────────
-// Walks every open position with an SL or TP set, compares the live mark
-// against the trigger, and auto-closes when it crosses. Mirrors the
-// manual-close logic so the resulting trade stream is identical to a
-// user-driven close — same broadcast, same Paper award, same Notoriety,
-// same Operator commentary.
 setInterval(async () => {
   try {
     const positions = await (prisma as any).paperPosition.findMany({
@@ -987,9 +880,6 @@ setInterval(async () => {
       }
       if (!trigger) continue;
 
-      // Fill at the trigger level (not the current mark) so the user sees
-      // exactly what they asked for. In a real exchange this is "stop with
-      // limit"; we simulate it cleanly because we control the engine.
       const exitPrice = trigger === "STOP_LOSS" ? pos.stopLoss : pos.takeProfit;
       const pnl = pos.side === "BUY"
         ? (exitPrice - pos.entryPrice) * pos.quantity
@@ -1009,7 +899,6 @@ setInterval(async () => {
         continue;
       }
 
-      // Paper + Notoriety on profitable exits, mirroring manual close.
       const accountMode: PaperMode = (pos.account?.mode === "RANKED" ? "RANKED" : "CASUAL");
       const paperMul = paperRateMultiplierFor(accountMode);
       if (pnl > 0) {
@@ -1018,20 +907,15 @@ setInterval(async () => {
         if (accountMode === "RANKED") awardNotoriety(pos.account.userId, "FAKEOUT_PROFIT").catch(() => {});
       }
 
-      // Notify the user + broadcast a close-style trade event so chat
-      // chips and the lobby feed pick it up.
       notifyUser(pos.account.userId, { type: "trading:position_closed", positionId: pos.id, reason: trigger, pnl, exitPrice });
       const lookupUser = await prisma.user.findUnique({ where: { id: pos.account.userId }, select: { name: true } });
       const userName = lookupUser?.name || "trader";
-      // `notional` is required for the public-activity capture filter's
-      // ≥$1k threshold to evaluate. Same fix as the user-driven trade
-      // broadcast above; auto-closes were silently dropped before.
       broadcastToLobby(pos.account.lobbyId, {
         type: "trading:trade",
         userId: pos.account.userId,
         userName,
         symbol: pos.symbol,
-        side: pos.side === "BUY" ? "SELL" : "BUY", // close direction
+        side: pos.side === "BUY" ? "SELL" : "BUY",
         quantity: pos.quantity,
         price: exitPrice,
         notional: pos.quantity * exitPrice,
@@ -1040,7 +924,6 @@ setInterval(async () => {
         pnl,
       });
 
-      // Operator commentary on auto-closes with meaningful PnL.
       if (operatorCommentateOnTrade && Math.abs(pnl) >= 500) {
         const sym = pos.symbol.replace(/USDT$/, "");
         const ctx = trigger === "TAKE_PROFIT"
@@ -1050,5 +933,5 @@ setInterval(async () => {
       }
     }
   } catch (e) { console.error("[trading] sl/tp worker error:", e); }
-}, 5000); // check every 5 seconds
+}, 5000);
 }

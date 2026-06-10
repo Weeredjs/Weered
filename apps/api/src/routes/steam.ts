@@ -12,21 +12,16 @@ type Opts = {
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
 
-// ── Caches ────────────────────────────────────────────────────────────────
-// Player count cache: per-app, 60s TTL.
 const playersCache = new Map<string, { count: number; ts: number }>();
 const PLAYERS_TTL_MS = 60_000;
 
-// Owned cache: per (userId, appId), 1h TTL.
 type OwnedRow = { owned: boolean; hoursPlayed: number; lastPlayed: number | null; ts: number };
 const ownedCache = new Map<string, OwnedRow>();
 const OWNED_TTL_MS = 60 * 60 * 1000;
 
-// Achievement schema cache: per app, 24h (the schema is static).
 const schemaCache = new Map<string, { schema: any; ts: number }>();
 const SCHEMA_TTL_MS = 24 * 60 * 60 * 1000;
 
-// Per-user achievements: per (userId, appId), 30min.
 type AchievementsRow = { achievements: any[]; gameName: string | null; total: number; unlocked: number; ts: number };
 const achievementsCache = new Map<string, AchievementsRow>();
 const ACHIEVEMENTS_TTL_MS = 30 * 60 * 1000;
@@ -43,8 +38,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
   const INVITE_LIMIT = 3;
   const INVITE_WINDOW_MS = 60_000;
 
-  // GET /steam/players/:appId — public; live concurrent player count.
-  // Cached 60s in-process. Public Steam endpoint requires no API key.
   app.get("/steam/players/:appId", async (req, reply) => {
     const appId = String((req as any).params?.appId || "");
     if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
@@ -66,7 +59,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       reply.header("Cache-Control", "public, max-age=30");
       return reply.send({ ok: true, count, ts: now });
     } catch (e) {
-      // Fall back to last cached value if any, even if stale
       if (cached) {
         return reply.send({ ok: true, count: cached.count, ts: cached.ts, stale: true });
       }
@@ -74,9 +66,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // GET /steam/owned/:appId — auth required. Returns ownership + playtime
-  // for the currently-authenticated user, derived from their linked Steam ID.
-  // Cached per-user for 1h.
   app.get("/steam/owned/:appId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -84,7 +73,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
     if (!STEAM_API_KEY) return reply.send({ ok: true, linked: false, owned: false, hoursPlayed: 0, lastPlayed: null });
 
-    // Look up the user's linked Steam ID
     const dbUser = await prisma.user.findUnique({
       where: { id: u.id },
       select: { steamId: true } as any,
@@ -114,7 +102,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       ownedCache.set(key, row);
       return reply.send({ ok: true, linked: true, owned, hoursPlayed, lastPlayed });
     } catch (e) {
-      // If we have stale cache, serve it; otherwise return a soft "linked but unknown"
       if (cached) {
         return reply.send({ ok: true, linked: true, owned: cached.owned, hoursPlayed: cached.hoursPlayed, lastPlayed: cached.lastPlayed, stale: true });
       }
@@ -122,9 +109,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // GET /steam/achievements/:appId — auth required. Returns the user's
-  // achievements for the given app, joined with the game's schema (icons +
-  // names). Cached per-user 30min, schema 24h.
   app.get("/steam/achievements/:appId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -132,8 +116,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
     if (!STEAM_API_KEY) return reply.send({ ok: true, linked: false, achievements: [] });
 
-    // ?userId=X lets viewers see another user's achievements (if their
-    // Steam profile is public). Defaults to authenticated user.
     const targetUserId = String(((req as any).query?.userId || u.id));
     const dbUser = await prisma.user.findUnique({
       where: { id: targetUserId },
@@ -154,7 +136,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      // Schema: cached 24h, language=english.
       const schemaKey = `${appId}:en`;
       const cs = schemaCache.get(schemaKey);
       let schema: any = cs && now - cs.ts < SCHEMA_TTL_MS ? cs.schema : null;
@@ -169,14 +150,12 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       const schemaList: any[] = schema?.game?.availableGameStats?.achievements || [];
       const schemaByName = new Map(schemaList.map((s: any) => [String(s.name), s]));
 
-      // Player achievements
       const aUrl = `https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?key=${STEAM_API_KEY}&steamid=${steamId}&appid=${appId}&l=english`;
       const ar = await fetch(aUrl);
       if (!ar.ok) throw new Error(String(ar.status));
       const aj: any = await ar.json();
       const playerStats = aj?.playerstats;
       if (!playerStats?.success) {
-        // success=false means no permission OR appid has no achievements OR profile private
         const row: AchievementsRow = { achievements: [], gameName: null, total: 0, unlocked: 0, ts: now };
         achievementsCache.set(key, row);
         return reply.send({ ok: true, linked: true, gameName: null, total: 0, unlocked: 0, achievements: [], reason: playerStats?.error || "no_data" });
@@ -215,11 +194,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // GET /steam/playing/:appId — lists users with a Steam Rich Presence
-  // entry matching the given appId. Surfaces lobby-scoped "in service"
-  // panels: who's playing Helldivers 2 right now per the Steam poller.
-  // Public — no auth required, but only returns publicly-visible profile
-  // fields (id, name, avatar). 30s cache.
   type PlayingRow = { items: any[]; ts: number };
   const playingCache = new Map<string, PlayingRow>();
   const PLAYING_TTL_MS = 30_000;
@@ -233,8 +207,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       return reply.send({ ok: true, items: cached.items, cached: true });
     }
     try {
-      // Find users whose livePresence.appId matches. Filter in JS since
-      // Prisma JSON path queries are awkward with shared interfaces.
       const candidates = await prisma.user.findMany({
         where: { steamId: { not: null } } as any,
         select: { id: true, name: true, avatar: true, avatarColor: true, livePresence: true } as any,
@@ -262,10 +234,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // POST /steam/squad-invite — invites a user currently playing the lobby's
-  // Steam game to squad up. Creates a LOBBY_EVENT notification with the
-  // inviter's name and a deep link to the lobby. Rate-limited per inviter
-  // (3 invites per minute) so this can't be used for spam.
   app.post("/steam/squad-invite", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -280,7 +248,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (targetUserId === u.id) return reply.code(400).send({ ok: false, error: "self_invite" });
     if (appId && !isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
 
-    // Rate-limit per inviter
     const now = Date.now();
     const window = (inviteWindow.get(u.id) || []).filter(t => now - t < INVITE_WINDOW_MS);
     if (window.length >= INVITE_LIMIT) {
@@ -293,7 +260,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     window.push(now);
     inviteWindow.set(u.id, window);
 
-    // Resolve target user + lobby for the notification text.
     const [target, lobby] = await Promise.all([
       prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, livePresence: true } as any }),
       (prisma as any).lobby.findUnique({ where: { id: lobbyId }, select: { id: true, name: true, moduleConfig: true } }),
@@ -301,9 +267,6 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (!target) return reply.code(404).send({ ok: false, error: "target_not_found" });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
 
-    // Optional sanity check: the target should be playing the right game.
-    // Soft-fail (still send) if not, but include a flag in the response so
-    // the frontend can show a "they're not in-game right now" warning.
     const lp: any = (target as any).livePresence;
     const targetAppId = lp?.appId ? String(lp.appId) : "";
     const expectedAppId = appId || (lobby.moduleConfig as any)?.steamAppId || "";

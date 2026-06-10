@@ -2,11 +2,6 @@
 
 import React from "react";
 
-// Lightweight safe markdown renderer.
-// Supports: bold, italic, inline code, links, images, lists (ul/ol),
-// code blocks (fenced), blockquotes, h1-h3, line breaks. Everything else is
-// HTML-escaped. No raw HTML passes through. URLs are sanitized to http/https.
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -23,23 +18,17 @@ function safeUrl(url: string): string {
 }
 
 function renderInline(s: string): string {
-  // Order matters. Operate on the already-escaped string.
   let out = escapeHtml(s);
-  // images: ![alt](url)
   out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, alt: string, url: string) =>
     `<img src="${safeUrl(url)}" alt="${alt}" style="max-width:100%;border-radius:6px;margin:6px 0;" />`
   );
-  // links: [text](url)
   out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, text: string, url: string) =>
     `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`
   );
-  // bold: **x** or __x__
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/__([^_]+)__/g, "<strong>$1</strong>");
-  // italic: *x* or _x_
   out = out.replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, "$1<em>$2</em>");
   out = out.replace(/(^|[^_])_([^_\s][^_]*?)_/g, "$1<em>$2</em>");
-  // inline code: `x`
   out = out.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;">$1</code>');
   return out;
 }
@@ -62,7 +51,6 @@ export function renderMarkdown(md: string): string {
 
   while (i < lines.length) {
     const ln = lines[i];
-    // fenced code
     if (/^```/.test(ln)) {
       if (inCode) {
         out.push(`<pre style="background:rgba(0,0,0,.4);padding:10px 12px;border-radius:8px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;margin:8px 0;"><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`);
@@ -77,14 +65,12 @@ export function renderMarkdown(md: string): string {
     }
     if (inCode) { codeBuf.push(ln); i++; continue; }
 
-    // blank line
     if (!ln.trim()) {
       flushList();
       out.push("");
       i++;
       continue;
     }
-    // headers
     const h = ln.match(/^(#{1,3})\s+(.+)$/);
     if (h) {
       flushList();
@@ -93,28 +79,24 @@ export function renderMarkdown(md: string): string {
       out.push(`<h${lvl} style="font-size:${sizes[lvl]}px;font-weight:800;margin:10px 0 6px;letter-spacing:-0.2px;">${renderInline(h[2])}</h${lvl}>`);
       i++; continue;
     }
-    // blockquote
     if (/^>\s?/.test(ln)) {
       flushList();
       const text = ln.replace(/^>\s?/, "");
       out.push(`<blockquote style="border-left:3px solid rgba(167,139,250,.4);padding:4px 12px;margin:6px 0;color:rgba(229,231,235,.7);">${renderInline(text)}</blockquote>`);
       i++; continue;
     }
-    // unordered list
     const ul = ln.match(/^[\s]*[-*+]\s+(.+)$/);
     if (ul) {
       if (listType !== "ul") { flushList(); listType = "ul"; }
       listItems.push(renderInline(ul[1]));
       i++; continue;
     }
-    // ordered list
     const ol = ln.match(/^[\s]*\d+\.\s+(.+)$/);
     if (ol) {
       if (listType !== "ol") { flushList(); listType = "ol"; }
       listItems.push(renderInline(ol[1]));
       i++; continue;
     }
-    // paragraph: collect consecutive non-empty non-list lines
     flushList();
     const para: string[] = [ln];
     i++;

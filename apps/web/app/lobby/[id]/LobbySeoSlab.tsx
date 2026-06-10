@@ -1,15 +1,3 @@
-/**
- * Server-rendered SEO slab for /lobby/[id].
- *
- * Hidden visually for authenticated users via CSS gate
- * (`html[data-weered-authed] .seo-slab { display: none }`) set by the
- * theme-boot script in app/layout.tsx before paint. Visible to crawlers
- * and to unauthenticated landings — the live client app mounts on top.
- *
- * Pulls four cheap reads in parallel. All have public endpoints; no auth
- * needed. Failures degrade silently — the slab still renders whatever it
- * could fetch.
- */
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -19,6 +7,11 @@ type Lobby = { id: string; name: string; description?: string | null; moduleType
 type Room  = { id: string; roomId?: string; name: string; description?: string | null; _count?: { members?: number } };
 type Post  = { id: string; title: string; body?: string | null; commentCount?: number; score?: number; createdAt?: string };
 type Challenge = { id: string; status?: string; definition?: { title?: string; description?: string; difficulty?: number } };
+type News  = { id: string; url: string; title: string; source?: string; publishedAt?: string };
+
+const LOBBY_NEWS: Record<string, { category: string; source: string }> = {
+  gta6: { category: "gaming", source: "GTA 6 News" },
+};
 
 async function jget<T>(url: string, fallback: T): Promise<T> {
   try {
@@ -32,18 +25,23 @@ async function jget<T>(url: string, fallback: T): Promise<T> {
 
 export default async function LobbySeoSlab({ lobbyId }: { lobbyId: string }) {
   const id = decodeURIComponent(lobbyId);
+  const newsCfg = LOBBY_NEWS[id];
 
-  const [lobbyRes, roomsRes, postsRes, challengesRes] = await Promise.all([
+  const [lobbyRes, roomsRes, postsRes, challengesRes, newsRes] = await Promise.all([
     jget<{ lobby?: Lobby } & Lobby>(`${API}/lobbies/${encodeURIComponent(id)}`, {} as any),
     jget<{ rooms?: Room[] }>(`${API}/lobbies/${encodeURIComponent(id)}/rooms`, { rooms: [] }),
     jget<{ posts?: Post[] }>(`${API}/forum/posts?lobbyId=${encodeURIComponent(id)}&limit=6&sort=hot`, { posts: [] }),
     jget<{ challenges?: Challenge[] }>(`${API}/challenges?lobbyId=${encodeURIComponent(id)}`, { challenges: [] }),
+    newsCfg
+      ? jget<{ articles?: News[] }>(`${API}/news/feed?category=${encodeURIComponent(newsCfg.category)}&source=${encodeURIComponent(newsCfg.source)}&limit=6`, { articles: [] })
+      : Promise.resolve({ articles: [] as News[] }),
   ]);
 
   const lobby: Lobby = (lobbyRes as any).lobby ?? (lobbyRes as Lobby);
   const rooms = (roomsRes.rooms ?? []).slice(0, 8);
   const posts = (postsRes.posts ?? []).slice(0, 6);
   const challenges = (challengesRes.challenges ?? []).filter(c => c.status === "ACTIVE" && c.definition?.title).slice(0, 6);
+  const news = (newsRes.articles ?? []).slice(0, 6);
 
   if (!lobby?.name) return null;
 
@@ -91,6 +89,20 @@ export default async function LobbySeoSlab({ lobbyId }: { lobbyId: string }) {
           </section>
         )}
 
+        {news.length > 0 && (
+          <section className="seo-slab-section">
+            <h2>Latest {lobby.name} news</h2>
+            <ul>
+              {news.map(n => (
+                <li key={n.id}>
+                  <a href={n.url} rel="noopener noreferrer nofollow" target="_blank">{n.title}</a>
+                  {n.source && <span className="seo-slab-meta"> · {n.source}</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {posts.length > 0 && (
           <section className="seo-slab-section">
             <h2>Recent discussions</h2>
@@ -109,6 +121,9 @@ export default async function LobbySeoSlab({ lobbyId }: { lobbyId: string }) {
           <p>
             Weered is a real-time community platform for lobbies, rooms, presence, and modules.
             <Link href="/"> Join the {lobby.name} community on Weered →</Link>
+          </p>
+          <p>
+            <Link href={`/about/lobby/${encodeURIComponent(id)}`}>About the {lobby.name} lobby on Weered</Link>
           </p>
           <p className="seo-slab-canonical">
             <Link href={url}>{url}</Link>

@@ -1,0 +1,190 @@
+{
+  "_readme": "Source of truth for /compare/weered-vs-[id] pages. Add an entry, redeploy, get a new comparison page + sitemap entry automatically. Voice rules: honest about competitor strengths, specific about Weered's niche, never attack-piece tone.",
+  "competitors": [
+    {
+      "id": "discord",
+      "name": "Discord",
+      "url": "https://discord.com",
+      "tagline": "The default chat platform for online communities — gaming and beyond.",
+      "summary": "Discord is the largest and most established community chat platform. For most communities, it's the right default. Weered exists for the specific case where your community is centered on a single game and benefits from verified-via-API tournaments, presence that tracks what your friends are actually playing, and integrations Discord can't host natively.",
+      "use_them_if": [
+        "Your community spans many topics, not just one game",
+        "You need a battle-tested platform with mobile parity and millions of bots",
+        "Your members are already on Discord and migration friction is the deciding factor",
+        "You want general-purpose voice, video, and chat with the broadest ecosystem"
+      ],
+      "use_weered_if": [
+        "Your community centers on a single game (Destiny 2, League, MTG, EVE, Path of Exile, etc.)",
+        "You want tournaments verified through the game's actual API (Bungie PGCR, Riot, etc.) instead of trust-based brackets",
+        "You want presence showing what friends are playing across Steam, Xbox, PSN, Twitch — not just Discord status",
+        "You want a lobby-first layout (themed hubs) rather than a server/channel structure",
+        "You want deep per-game integrations (Bungie API, Riot API, Lichess, GGG OAuth, Scryfall, etc.) without third-party bot setup"
+      ],
+      "feature_table": [
+        ["Text + voice chat", "Yes", "Yes"],
+        ["Video chat / screen share", "Yes", "Yes"],
+        ["Mobile app", "Yes", "Planned (Q3 2026)"],
+        ["Per-game presence (Steam/Xbox/PSN/Twitch)", "Discord status only", "Cross-platform aggregated"],
+        ["Verified-via-game-API tournaments", "Not native", "Yes (Bungie PGCR, etc.)"],
+        ["Lobby-first structure", "Servers/channels", "Themed lobbies + rooms"],
+        ["Bot ecosystem", "Massive (millions)", "Not user-extensible"],
+        ["Native game data integrations", "Via third-party bots", "Built-in per lobby"],
+        ["Account requirement", "Yes", "Yes (Steam/Xbox/PSN/email)"],
+        ["Pricing", "Free + Nitro tiers", "Free + premium tier"]
+      ],
+      "bottom_line": "Discord remains the right call for the vast majority of communities. Choose Weered when your community lives inside specific games and the depth of game-integrated features matters more than the breadth of Discord's general-purpose ecosystem."
+    },
+    {
+      "id": "guilded",
+      "name": "Guilded",
+      "url": "https://www.guilded.gg",
+      "tagline": "Discord-style chat platform with gaming-team management built in.",
+      "summary": "Guilded is the closest direct competitor — both platforms target gaming communities with chat, voice, and organizational tools. Guilded leans toward esports team management (schedules, rosters, scrims); Weered leans toward per-game lobbies with deep API integrations and verified tournaments. Different bets on what gaming-community software should be.",
+      "use_them_if": [
+        "You're running an esports team and need scheduling, rosters, and scrim coordination as first-class features",
+        "You want a Discord-like structure (servers, channels) with gaming-specific overlays",
+        "You're already on Roblox-owned platforms and want the integration",
+        "You need calendar and event management for a competitive team specifically"
+      ],
+      "use_weered_if": [
+        "You want lobbies that are themed per-game (Destiny 2 hub, MTG hub, EVE hub) rather than per-team servers",
+        "You want tournaments verified through the game's own API (PGCR-verified Destiny clears, etc.) — not trust-based brackets",
+        "You want presence showing what friends play across Steam/Xbox/PSN/Twitch — not just Guilded activity",
+        "You want native data integrations (Bungie, Riot, Lichess, GGG, Scryfall, Moxfield) without bot setup"
+      ],
+      "feature_table": [
+        ["Text + voice chat", "Yes", "Yes"],
+        ["Esports team management (rosters, scrims)", "First-class feature", "Not focused on this"],
+        ["Calendar / scheduling", "Built-in", "Tournament-focused"],
+        ["Per-game lobbies", "Server-based", "Lobby-first"],
+        ["Verified-via-game-API tournaments", "Not native", "Yes (Bungie PGCR)"],
+        ["Cross-platform presence (Steam/Xbox/PSN/Twitch)", "Limited", "Aggregated"],
+        ["Native game integrations", "Through bots", "Built-in per lobby"],
+        ["Pricing", "Free", "Free + premium tier"]
+      ],
+      "bottom_line": "Guilded is the better fit for organized esports teams that need roster + scrim management. Weered is the better fit for game-centered communities that want lobby-first structure and game-API-verified events."
+    },
+    {
+      "id": "teamspeak",
+      "name": "TeamSpeak",
+      "url": "https://www.teamspeak.com",
+      "tagline": "Self-hostable low-latency voice platform with a 20-year gaming legacy.",
+      "summary": "TeamSpeak is the legacy voice platform many older gaming communities still run. Its strength is rock-solid low-latency voice and self-hosting control. Weered's strength is a modern chat-and-community layer with deep game-API integrations on top of voice — different generational priorities.",
+      "use_them_if": [
+        "You need self-hosted voice you fully control (legal, compliance, or sovereignty reasons)",
+        "You want the lowest possible voice latency for competitive play",
+        "Your community is already on a TeamSpeak server and stability outweighs new features",
+        "You don't want or need a modern chat/forum/presence layer wrapped around voice"
+      ],
+      "use_weered_if": [
+        "You want voice + chat + forum + presence + game integrations in one platform",
+        "You want hosting handled (no server admin work)",
+        "You want native integrations with Bungie, Riot, Lichess, Steam Rich Presence, etc.",
+        "You're building a community now, not migrating one with 10 years of TeamSpeak inertia"
+      ],
+      "feature_table": [
+        ["Voice chat", "Best-in-class low latency", "LiveKit-based, very good"],
+        ["Text chat", "Minimal", "Full chat + threads"],
+        ["Self-hosting", "Yes (primary model)", "No"],
+        ["Forum / persistent posts", "No", "Yes"],
+        ["Game-API integrations", "No", "Bungie, Riot, Lichess, GGG, etc."],
+        ["Cross-platform presence", "No", "Yes (Steam/Xbox/PSN/Twitch)"],
+        ["Tournaments / brackets", "No", "Yes (verified via API)"],
+        ["Pricing", "Free + paid licenses for hosting", "Free + premium tier"]
+      ],
+      "bottom_line": "TeamSpeak remains the right call for self-hosted, voice-only communities prioritizing latency and control. Weered fits modern communities that want voice plus a full community-platform stack — chat, forum, presence, and game integrations — without running servers."
+    },
+    {
+      "id": "revolt",
+      "name": "Revolt",
+      "url": "https://revolt.chat",
+      "tagline": "Open-source Discord-style platform with strong privacy positioning.",
+      "summary": "Revolt is the open-source alternative for people who specifically want a Discord-shaped experience without the closed-source ownership. Privacy and open-source are core values. Weered is closed-source and centralized — different value system, with a focus on gaming-specific depth instead of platform openness.",
+      "use_them_if": [
+        "Open source is a hard requirement for your community",
+        "You want a familiar Discord-style layout without the closed-source baggage",
+        "You may want to self-host eventually",
+        "Privacy + decentralization principles matter more than game integrations"
+      ],
+      "use_weered_if": [
+        "You're building a gaming community and want native game-API integrations (Bungie, Riot, Lichess, GGG, Scryfall) rather than building them yourself",
+        "You want verified tournaments tied to the game's actual API",
+        "You want cross-platform presence (Steam/Xbox/PSN/Twitch)",
+        "Closed-source is acceptable in exchange for built-in features that would otherwise need engineering effort"
+      ],
+      "feature_table": [
+        ["Open source", "Yes (AGPL)", "No"],
+        ["Self-hostable", "Yes", "No"],
+        ["Text + voice chat", "Yes", "Yes"],
+        ["Game-API integrations", "Via bots", "Built-in per lobby"],
+        ["Verified tournaments", "No", "Yes"],
+        ["Cross-platform presence", "No", "Yes"],
+        ["Lobby-first structure", "No (Discord-style)", "Yes"],
+        ["Pricing", "Free", "Free + premium tier"]
+      ],
+      "bottom_line": "Revolt is the right call if open source is non-negotiable. Weered is the right call if you'd rather have game-depth features built in than the freedom to fork the platform."
+    },
+    {
+      "id": "element",
+      "name": "Element",
+      "url": "https://element.io",
+      "tagline": "Matrix-based federated chat with end-to-end encryption.",
+      "summary": "Element is the flagship Matrix client — federated, end-to-end encrypted, used heavily by privacy-focused communities and some governments. Weered is a centralized, closed-source platform optimized for game-community depth rather than communication-protocol openness. Built for opposite priorities.",
+      "use_them_if": [
+        "End-to-end encryption is a hard requirement",
+        "You need federation (different communities running their own servers but still able to talk)",
+        "You're privacy-focused and Matrix's protocol openness matters",
+        "Your community has technical members who can run a homeserver"
+      ],
+      "use_weered_if": [
+        "You're a gaming community and want game-API integrations as a built-in feature",
+        "You want verified tournaments tied to the game (Bungie API, Riot, etc.)",
+        "You want presence showing what friends are playing across consoles and PC",
+        "Federation and end-to-end encryption aren't priorities; built-in gaming depth is"
+      ],
+      "feature_table": [
+        ["End-to-end encryption", "Yes (default)", "TLS in transit only"],
+        ["Federation", "Yes (Matrix protocol)", "No (centralized)"],
+        ["Self-hostable", "Yes (homeserver)", "No"],
+        ["Text + voice chat", "Yes", "Yes"],
+        ["Game-API integrations", "No", "Built-in per lobby"],
+        ["Cross-platform presence", "No", "Yes (Steam/Xbox/PSN/Twitch)"],
+        ["Tournaments", "No", "Yes (API-verified)"],
+        ["Pricing", "Free + hosted plans", "Free + premium tier"]
+      ],
+      "bottom_line": "Element is the right call if E2EE and federation matter most. Weered is the right call if you're building a gaming community and want built-in game-data integrations more than communication-protocol openness."
+    },
+    {
+      "id": "steam-chat",
+      "name": "Steam Chat",
+      "url": "https://store.steampowered.com",
+      "tagline": "Steam's built-in friends list, voice chat, and group chats.",
+      "summary": "Steam Chat is the chat layer baked into Steam — friends list, voice, group chats, all tied to your Steam account. Free, zero-setup, already where your PC gaming friends are. Weered is a separate platform with deeper community-building tools (lobbies, forums, tournaments) that Steam Chat doesn't try to do.",
+      "use_them_if": [
+        "You only need to coordinate small groups of PC gaming friends",
+        "Your community is purely Steam-based with no console crossover",
+        "Zero-setup matters more than community-building features",
+        "You don't need forums, persistent rooms, or tournament brackets"
+      ],
+      "use_weered_if": [
+        "Your community spans Steam + Xbox + PSN + mobile and you want unified presence across all of them",
+        "You want themed lobbies (Destiny 2, EVE, MTG, etc.) rather than just friend groups",
+        "You want persistent forum/discussion alongside chat",
+        "You want verified tournaments tied to game APIs",
+        "You're recruiting strangers into a community, not just chatting with existing friends"
+      ],
+      "feature_table": [
+        ["Voice + text chat", "Yes", "Yes"],
+        ["Friends list", "Steam friends only", "Cross-platform"],
+        ["Group chats", "Yes", "Yes (rooms within lobbies)"],
+        ["Themed community lobbies", "No", "Yes (45+ lobbies)"],
+        ["Cross-platform presence", "Steam only", "Steam + Xbox + PSN + Twitch"],
+        ["Forum / persistent posts", "No", "Yes"],
+        ["Tournaments", "No", "Yes (API-verified)"],
+        ["Account requirement", "Steam", "Steam/Xbox/PSN/email"],
+        ["Pricing", "Free (included with Steam)", "Free + premium tier"]
+      ],
+      "bottom_line": "Steam Chat is great for chatting with PC friends you already know. Weered is for building a game-centered community with persistent structure, cross-platform presence, and verified tournaments that Steam Chat doesn't provide."
+    }
+  ]
+}

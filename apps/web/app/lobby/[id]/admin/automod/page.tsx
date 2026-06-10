@@ -6,9 +6,6 @@ import { apiFetch } from "../../../../../lib/api";
 import { weeredToast } from "../../../../../lib/toast";
 import { weeredConfirm } from "../../../../../lib/confirm";
 
-// Auto-mod rules admin (owner-gated). Lists rules for the current lobby with
-// enabled toggles + edit/delete. "Add Rule" opens a kind-aware form.
-
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 const KINDS: { id: Kind; label: string; hint: string }[] = [
@@ -159,8 +156,6 @@ function RuleEditor({ lobbyId, rule, onClose, onSaved }: { lobbyId: string; rule
   const [config, setConfig] = useState<any>(rule?.config || defaultConfig("WORD_BLOCK"));
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset config to a kind-appropriate default when switching kinds (only on
-  // create; preserve user-entered values when editing).
   useEffect(() => {
     if (!rule) setConfig(defaultConfig(kind));
   }, [kind, rule]);

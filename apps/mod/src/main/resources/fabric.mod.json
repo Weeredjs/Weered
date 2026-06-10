@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "weered_connect",
+  "version": "${version}",
+  "name": "Weered Connect",
+  "description": "Bridges Minecraft to Weered (weered.ca), a lobby-first community platform. Auto-registers the server you join as a Weered lobby, shows a HUD list of other Weered users on the same server, and lets you find recurring groups for your Realm or private server.\n\nData sent to api.weered.ca: your Minecraft username and UUID, the address of the server you join, and the world name. No chat, location, inventory, or other in-game data is transmitted. You can unlink at any time from your Weered settings page.",
+  "authors": [ "Weered" ],
+  "contact": {
+    "homepage": "https://weered.ca",
+    "sources": "https://github.com/Weeredjs/weered-connect",
+    "issues": "https://github.com/Weeredjs/weered-connect/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/weered_connect/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [ "ca.weered.connect.WeeredConnectClient" ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://weered.ca/lobby/minecraft"
+      }
+    }
+  }
+}

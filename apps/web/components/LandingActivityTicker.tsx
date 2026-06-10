@@ -36,9 +36,6 @@ export default function LandingActivityTicker() {
     };
   }, []);
 
-  // The ticker shows real events when they exist. When the buffer is
-  // genuinely empty (fresh deploy, no live activity yet) we show a quiet
-  // honest placeholder rather than fake events.
   const display = events.slice(0, 8);
 
   return (

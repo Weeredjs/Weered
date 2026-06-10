@@ -26,11 +26,10 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
       try { localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1"); } catch {}
       return !v;
     });
-    setOpen(true); // always open when expanding
+    setOpen(true);
     setUnread(0);
   };
 
-  // ESC to exit fullscreen
   useEffect(() => {
     if (!fullscreen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggleFullscreen(); };
@@ -38,12 +37,10 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
     return () => window.removeEventListener("keydown", onKey);
   }, [fullscreen]);
 
-  // accent with fallback
   const ac = accentColor || "#7C3AED";
   const acDim = `${ac}33`;
   const acMid = `${ac}55`;
 
-  // Resolve effective room ID from prop
   const effectiveRoomId = (() => {
     let rid = String(roomId || "").trim();
     if (rid.startsWith("room:")) rid = rid.slice(5);
@@ -51,17 +48,14 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
     return rid;
   })();
 
-  // Keep ref in sync
   useEffect(() => { openRef.current = open; try { window.dispatchEvent(new CustomEvent("weered:chat:drawer", { detail: { open } })); } catch {} }, [open]);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Track unread via DOM event — works even when chat panel is unmounted
   useEffect(() => {
     function onChatNew(e: Event) {
       const detail = (e as CustomEvent)?.detail;
       if (!detail || String(detail.roomId || "") !== effectiveRoomId) return;
-      // Don't count own messages
       const senderId = detail.msg?.user?.id;
       const myId = ctx?.me?.id;
       if (senderId && myId && senderId === myId) return;
@@ -73,7 +67,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
     return () => window.removeEventListener("weered:chat:new", onChatNew);
   }, [effectiveRoomId, ctx?.me?.id]);
 
-  // Clear unread when opening
   function handleOpen() {
     setOpen(true);
     setUnread(0);
@@ -116,10 +109,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           box-shadow: -8px 0 40px rgba(0,0,0,0.45), inset 1px 0 0 rgba(255,255,255,0.04);
           animation: drawerSlideIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
-        /* Fullscreen mode — the .weered-chat-fullscreen class (defined in
-           globals.css) carries the responsive left offsets that leave the
-           left rail visible. We override the drawer's own positioning + size
-           so the full-overlay treatment takes over cleanly. */
         .lobby-chat-drawer.weered-chat-fullscreen {
           position: fixed !important;
           top: 0 !important;
@@ -217,7 +206,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         }
       `}</style>
 
-      {/* Tab trigger */}
       {mounted && (
         <div
           className={`lobby-chat-tab${open ? " open" : ""}${hasUnread && !open ? " has-unread" : ""}`}
@@ -225,7 +213,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
           style={{ right: open ? "min(340px, 90%)" : 0 }}
         >
           CHAT
-          {/* Unread badge */}
           {hasUnread && !open && (
             <div style={{
               position: "absolute", top: 8, left: "50%",
@@ -245,7 +232,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         </div>
       )}
 
-      {/* Drawer panel */}
       {mounted && open && (
         <div
           className={`lobby-chat-drawer${fullscreen ? " weered-chat-fullscreen" : ""}`}
@@ -263,7 +249,6 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
             (e.currentTarget as any)._swipeDx = 0;
           }}
         >
-          {/* Swipe hint watermark */}
           <div style={{
             position: "absolute", inset: 0, zIndex: 0,
             display: "flex", alignItems: "center", justifyContent: "center",

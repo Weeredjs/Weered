@@ -13,7 +13,7 @@ function GoogleFinish() {
       const token = sp?.get("token") || "";
       const userRaw = sp?.get("user") || "";
       if (token) {
-        localStorage.setItem("weered_token", token);
+        /* token now lives in the httpOnly cookie set by the server */
         if (userRaw) {
           const user = JSON.parse(decodeURIComponent(userRaw));
           localStorage.setItem("weered_user", JSON.stringify(user));

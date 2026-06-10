@@ -31,7 +31,6 @@ export default function RankUpCelebration() {
     setPhase("enter");
     setShow(true);
 
-    // Hold for 4 seconds, then exit
     setTimeout(() => setPhase("hold"), 600);
     setTimeout(() => setPhase("exit"), 4000);
     setTimeout(() => { setShow(false); setData(null); }, 4800);
@@ -55,7 +54,6 @@ export default function RankUpCelebration() {
       transition: "background 0.8s, backdrop-filter 0.8s",
       pointerEvents: "none",
     }}>
-      {/* Radial glow */}
       <div style={{
         position: "absolute", inset: 0,
         background: `radial-gradient(circle at 50% 45%, ${color}25 0%, transparent 60%)`,
@@ -63,7 +61,6 @@ export default function RankUpCelebration() {
         transition: "opacity 0.8s",
       }} />
 
-      {/* Particle ring */}
       <div style={{
         position: "absolute", width: 300, height: 300,
         borderRadius: "50%",
@@ -75,7 +72,6 @@ export default function RankUpCelebration() {
         animation: phase === "hold" ? "rankup-spin 8s linear infinite" : "none",
       }} />
 
-      {/* Old rank (fades out) */}
       <div style={{
         fontSize: 14, fontWeight: 700, fontFamily: "monospace",
         letterSpacing: "2px", textTransform: "uppercase",
@@ -89,7 +85,6 @@ export default function RankUpCelebration() {
         {data.oldRank}
       </div>
 
-      {/* Arrow / divider */}
       <div style={{
         fontSize: 20, color: `${color}88`,
         opacity: phase === "hold" ? 1 : 0,
@@ -100,7 +95,6 @@ export default function RankUpCelebration() {
         &#x2B07;
       </div>
 
-      {/* New rank (big reveal) */}
       <div style={{
         fontSize: 42, fontWeight: 900,
         letterSpacing: "-1px",
@@ -114,7 +108,6 @@ export default function RankUpCelebration() {
         {data.newRank}
       </div>
 
-      {/* Subtitle */}
       <div style={{
         marginTop: 12, fontSize: 13, fontFamily: "monospace",
         letterSpacing: "1px", color: "rgba(243,244,246,.45)",
@@ -125,7 +118,6 @@ export default function RankUpCelebration() {
         {data.score?.toLocaleString()} NOTORIETY
       </div>
 
-      {/* XP bar flash */}
       <div style={{
         marginTop: 20, width: 200, height: 4, borderRadius: 2,
         background: "rgba(255,255,255,.06)",

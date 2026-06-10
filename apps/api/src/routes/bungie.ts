@@ -9,11 +9,6 @@ import {
   WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES,
 } from "../manifest";
 
-// /bungie/* + /auth/bungie* — full Destiny 2 integration. Includes
-// Xur vendor inventory (cached cross-user), weekly milestones, public
-// guardian lookup, OAuth link/callback, /bungie/me, equip/transfer
-// actions, and per-user card cache. Manifest-aware enrichment when
-// loaded; falls back to raw Bungie response otherwise.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
@@ -26,9 +21,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
   const BUNGIE_CLIENT_SECRET = process.env.BUNGIE_CLIENT_SECRET || "";
   const BUNGIE_ROOT          = "https://www.bungie.net/Platform";
   const SITE_URL             = process.env.SITE_URL || "https://weered.ca";
-
-  // (Manifest startup sync stays in index.ts — runs once at boot
-  // there alongside the other workers; no need to duplicate it here.)
 
   async function bungieGet(path: string, accessToken?: string) {
     const headers: Record<string, string> = { "X-API-Key": BUNGIE_API_KEY };
@@ -119,8 +111,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     }
   }
 
-  // ── Routes ────────────────────────────────────────────────────────────
-
   app.get("/bungie/xur", async (req, reply) => {
     if (!BUNGIE_API_KEY) return reply.send({ ok: true, available: false, error: "bungie_not_configured" });
 
@@ -196,18 +186,12 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, loaded: manifestLoaded(), version: manifestVersion() });
   });
 
-  // GET /bungie/my-activities — the authed user's last N PGCR-derived activity
-  // log rows, with each modifier hash resolved to its display name from the
-  // skull + activity-modifier manifest caches. Used by the run-audit UI: when
-  // a user disputes whether their run was credited correctly, this is the
-  // ground truth — every hash Bungie returned, named.
   app.get("/bungie/my-activities", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const q: any = (req as any).query || {};
     const limit = Math.max(1, Math.min(50, Number(q.limit) || 10));
 
-    // Load both manifests for name lookup
     const skullsPath = path.join(process.cwd(), "manifest-cache", "skulls.json");
     const modsPath = path.join(process.cwd(), "manifest-cache", "modifiers.json");
     let skulls: Record<string, any> = {};
@@ -253,9 +237,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, activities });
   });
 
-  // Activities grouped by base map name. Used by the challenge-creation UI
-  // to let staff require "K1 Logistics" once and have it resolve to ALL the
-  // hashes behind that name (Customize / Matchmade / Master / Ultimate / etc).
   app.get("/bungie/activities", async (_req, reply) => {
     try {
       const cachePath = path.join(process.cwd(), "manifest-cache", "activities.json");
@@ -264,26 +245,17 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       }
       const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<string, { name: string; icon: string; description: string; lightLevel?: number }>;
 
-      // Strip variant suffixes AND (Heroic)/(Legendary) prefixes so all
-      // "K1 Logistics: <flavor>" / "(Heroic) X" entries collapse to one
-      // group keyed by their base name.
       function baseName(n: string): string {
         return String(n || "")
-          // Suffix forms: "Map: Customize", "Map: Master", "Map: Legendary"
           .replace(/:\s*(Customize|Matchmade|Adept|Hero|Legend|Legendary|Master|Grandmaster|Ultimate|Story|Standard|Normal|Expert)\b.*$/i, "")
-          // Parenthetical suffix forms: "Map (Legendary)"
           .replace(/\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*$/i, "")
-          // Parenthetical prefix forms: "(Heroic) Map", "(Legendary) Map"
           .replace(/^\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*/i, "")
           .trim();
       }
 
-      // Skip noise: empty names, internal placeholders, missing icon entries
-      // that look like Bungie test/internal records.
       function isReal(name: string, def: any): boolean {
         if (!name) return false;
         if (/^\s*$/.test(name)) return false;
-        // Bungie ships a lot of placeholder rows
         if (/^(Classified|Z\?\?\?|\?\?\?|Test|Debug)$/i.test(name.trim())) return false;
         if (name.length < 3) return false;
         return true;
@@ -294,7 +266,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         if (!isReal(def.name, def)) continue;
         const base = baseName(def.name);
         if (!base) continue;
-        // Variant label = the suffix after the base name (or "Standard" if none)
         const variant = def.name === base ? "Standard" : def.name.slice(base.length).replace(/^[:\s]+/, "").trim() || "Variant";
         if (!groups[base]) {
           groups[base] = {
@@ -308,13 +279,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         groups[base].variants.push({ hash, variant });
       }
 
-      // Drop groups whose base ended up empty / "???", then sort.
       const result = Object.values(groups)
         .filter(g => g.name && !/^[?:\s]+$/.test(g.name) && g.hashes.length >= 1)
         .sort((a, b) => {
-          // Multi-variant groups (real maps with several difficulties) bubble
-          // up first since those are what challenge authors are typically
-          // scoping to. Within each tier, alphabetical.
           const va = a.variants.length, vb = b.variants.length;
           if (va >= 2 && vb < 2) return -1;
           if (vb >= 2 && va < 2) return 1;
@@ -332,9 +299,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // Categorized modifier list for challenge-creation UIs. Reads the on-disk
-  // manifest cache directly (367 entries) and groups them so the picker can
-  // present "Surges", "Threats", "Champions", "Loadout", etc. as sections.
   app.get("/bungie/modifiers", async (_req, reply) => {
     try {
       const cachePath = path.join(process.cwd(), "manifest-cache", "modifiers.json");
@@ -345,7 +309,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
       function categorize(name: string): string | null {
         const n = name.toLowerCase();
-        // Skip noise — internal flags, raid challenges, "a challenge awaits"
         if (!name || /^a challenge awaits/i.test(name)) return null;
         if (/raid challenges|boosts gained|^\d+\+ feats/i.test(name)) return null;
 
@@ -372,12 +335,10 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           description: def.description || "",
         });
       }
-      // Sort each group alphabetically
       for (const k of Object.keys(grouped)) {
         grouped[k].sort((a, b) => a.name.localeCompare(b.name));
       }
 
-      // Also drop a flat list for search-style UIs
       const flat = Object.values(grouped).flat().sort((a, b) => a.name.localeCompare(b.name));
 
       return reply.send({

@@ -13,7 +13,6 @@ type Props = {
   minimal?: boolean;
 };
 
-// Markdown composer with write/preview tabs and image-upload button.
 export default function MarkdownComposer({ value, onChange, placeholder, maxLength = 10000, rows = 5, minimal }: Props) {
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [uploading, setUploading] = useState(false);

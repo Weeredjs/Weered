@@ -5,11 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
+import TournamentsPanel from "../../../../components/TournamentsPanel";
 import { weeredConfirm } from "../../../../lib/confirm";
+import LobbyBranding, { type BrandingValue } from "../../../../components/LobbyBranding";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-
-// ── Types ────────────────────────────────────────────────────────────────────
 
 type AdminMember = { id: string; userId: string; name: string; role: string; roleLevel: number; createdAt: string };
 type AdminRoom   = { id: string; name: string; locked: boolean; ownerId?: string; onlineCount: number; memberCount: number };
@@ -28,6 +28,7 @@ type LobbyData = {
   blockedWords?: string[];
   blockedDomains?: string[];
   newAccountChatHours?: number;
+  memberPerks?: string[];
 };
 
 type DashboardData = {
@@ -42,8 +43,6 @@ type DashboardData = {
   perms: string[];
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
 }
@@ -56,8 +55,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
   return r.json();
 }
-
-// ── Style System ─────────────────────────────────────────────────────────────
 
 const S = {
   card:    { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "11px 14px" } as React.CSSProperties,
@@ -97,8 +94,6 @@ function OverrideBadge({ role }: { role: string }) {
   );
 }
 
-// ── Nav ──────────────────────────────────────────────────────────────────────
-
 const NAV_ITEMS = [
   { id: "branding",      label: "Branding",       icon: "🎨", minLevel: 4 },
   { id: "modules",       label: "Modules",        icon: "🧩", minLevel: 4 },
@@ -115,8 +110,6 @@ const NAV_ITEMS = [
 ] as const;
 
 type NavId = typeof NAV_ITEMS[number]["id"];
-
-// ── Presence Sidebar ─────────────────────────────────────────────────────────
 
 function AdminPresence({ lobbyId, roleNames }: { lobbyId: string; roleNames: Record<string, string> }) {
   const ctx = useWeered() as any;
@@ -143,8 +136,6 @@ function AdminPresence({ lobbyId, roleNames }: { lobbyId: string; roleNames: Rec
   );
 }
 
-// ── Branding Tab ─────────────────────────────────────────────────────────────
-
 function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => void }) {
   const [name, setName]               = useState(lobby.name);
   const [description, setDescription] = useState(lobby.description);
@@ -156,7 +147,6 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
   const [saving, setSaving]           = useState(false);
   const [msg, setMsg]                 = useState("");
 
-  // Join mode
   const [joinMode, setJoinMode]       = useState(lobby.joinMode || "OPEN");
   const [joinPassword, setJoinPassword] = useState(lobby.joinPassword || "");
   const [joinSaving, setJoinSaving]   = useState(false);
@@ -200,37 +190,29 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
     </div>
   );
 
-  return (
-    <div style={{ maxWidth: 560 }}>
-      {/* Preview */}
-      <div style={{ marginBottom: 20, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", overflow: "hidden" }}>
-        {bannerUrl && (
-          <div style={{ height: 80, background: `url(${bannerUrl}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.08)" }} />
-        )}
-        <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, background: accentColor ? `${accentColor}10` : "rgba(255,255,255,.02)" }}>
-          {logoUrl && <img src={logoUrl} alt={`${name || "Lobby"} logo`} style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", border: "1px solid rgba(255,255,255,.10)" }} />}
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>{name || "Unnamed"}</div>
-            <div style={{ fontSize: 11, opacity: 0.5, marginTop: 1 }}>{description || "No description"}</div>
-          </div>
-          {accentColor && <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: 6, background: accentColor, border: "1px solid rgba(255,255,255,.15)" }} />}
-        </div>
-      </div>
+  const brandingValue: BrandingValue = { name, description, accentColor: accentColor || "#7c3aed", logoUrl, bannerUrl };
+  const patchBranding = (p: Partial<BrandingValue>) => {
+    if (p.name !== undefined) setName(p.name);
+    if (p.description !== undefined) setDescription(p.description);
+    if (p.accentColor !== undefined) setAccentColor(p.accentColor);
+    if (p.logoUrl !== undefined) setLogoUrl(p.logoUrl);
+    if (p.bannerUrl !== undefined) setBannerUrl(p.bannerUrl);
+  };
 
-      <Field label="Display Name" value={name} onChange={setName} placeholder="My Lobby" />
-      <Field label="Description" value={description} onChange={setDescription} placeholder="What's this lobby about?" multiline />
-      <Field label="Accent Color (hex)" value={accentColor} onChange={setAccentColor} placeholder="#4F88C6" />
-      <Field label="Logo URL" value={logoUrl} onChange={setLogoUrl} placeholder="https://..." />
-      <Field label="Banner URL" value={bannerUrl} onChange={setBannerUrl} placeholder="https://..." />
-      <Field label="Website URL" value={websiteUrl} onChange={setWebsiteUrl} placeholder="https://..." />
-      <Field label="Keywords (comma-separated)" value={keywords} onChange={setKeywords} placeholder="gaming, destiny, fps" />
+  return (
+    <div style={{ maxWidth: 880 }}>
+      <LobbyBranding value={brandingValue} onChange={patchBranding} />
+
+      <div style={{ marginTop: 20, maxWidth: 560 }}>
+        <Field label="Website URL" value={websiteUrl} onChange={setWebsiteUrl} placeholder="https://..." />
+        <Field label="Keywords (comma-separated)" value={keywords} onChange={setKeywords} placeholder="gaming, destiny, fps" />
+      </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
         <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={save} disabled={saving}>{saving ? "Saving..." : "Save Branding"}</button>
         {msg && <span style={{ fontSize: 12, opacity: 0.7 }}>{msg}</span>}
       </div>
 
-      {/* ── Join Mode ──────────────────────────────────────────── */}
       <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.06)" }}>
         <div style={{ ...S.label, marginBottom: 12 }}>MEMBERSHIP GATING</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -268,11 +250,96 @@ function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => 
           {joinMsg && <span style={{ fontSize: 12, opacity: 0.7 }}>{joinMsg}</span>}
         </div>
       </div>
+
+      <MemberPerksEditor lobby={lobby} onRefresh={onRefresh} />
     </div>
   );
 }
 
-// ── Modules Tab ──────────────────────────────────────────────────────────────
+function MemberPerksEditor({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => void }) {
+  const initial = Array.isArray(lobby.memberPerks) && lobby.memberPerks.length > 0
+    ? lobby.memberPerks
+    : [];
+  const [perks, setPerks] = useState<string[]>(initial);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  function updatePerk(i: number, v: string) {
+    setPerks(p => {
+      const next = [...p];
+      next[i] = v;
+      return next;
+    });
+  }
+  function removePerk(i: number) {
+    setPerks(p => p.filter((_, idx) => idx !== i));
+  }
+  function addPerk() {
+    if (perks.length >= 5) return;
+    setPerks(p => [...p, ""]);
+  }
+  async function save() {
+    setSaving(true); setMsg("");
+    const cleaned = perks.map(p => p.trim()).filter(p => p.length > 0).slice(0, 5);
+    const j = await apiFetch(`/lobbies/${encodeURIComponent(lobby.id)}/admin/perks`, {
+      method: "PATCH",
+      body: JSON.stringify({ memberPerks: cleaned }),
+    });
+    setSaving(false);
+    setMsg(j.ok ? "Saved." : j.error || "Failed.");
+    if (j.ok) onRefresh();
+  }
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+      <div style={{ ...S.label, marginBottom: 6 }}>MEMBER PERKS</div>
+      <div style={{ fontSize: 11, color: "rgba(148,163,184,.55)", marginBottom: 14, lineHeight: 1.5 }}>
+        Up to 5 perks shown in the Join overlay non-members see. Leave empty
+        to use the platform defaults (themed experience, room creation,
+        tournament eligibility, announcements, member badge). Keep each entry
+        short — they render as a checklist.
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+        {perks.map((p, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 11, opacity: 0.5, width: 14, textAlign: "right" }}>{i + 1}.</span>
+            <input
+              style={{ ...S.input, flex: 1 }}
+              value={p}
+              maxLength={80}
+              placeholder="e.g. Exclusive cube-draft rooms"
+              onChange={e => updatePerk(i, e.target.value)}
+            />
+            <button
+              onClick={() => removePerk(i)}
+              style={{
+                padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,.25)",
+                background: "rgba(239,68,68,.08)", color: "rgba(252,165,165,.7)",
+                fontSize: 11, fontWeight: 600, cursor: "pointer",
+              }}
+            >Remove</button>
+          </div>
+        ))}
+        {perks.length < 5 && (
+          <button
+            onClick={addPerk}
+            style={{
+              padding: "8px 14px", borderRadius: 8, border: "1px dashed rgba(255,255,255,.12)",
+              background: "transparent", color: "rgba(148,163,184,.7)",
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}
+          >+ Add perk ({perks.length}/5)</button>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={save} disabled={saving}>
+          {saving ? "Saving..." : "Save Perks"}
+        </button>
+        {msg && <span style={{ fontSize: 12, opacity: 0.7 }}>{msg}</span>}
+      </div>
+    </div>
+  );
+}
 
 const ALL_MODULES = [
   { key: "voice",   label: "Voice (LiveKit)",   desc: "Real-time voice chat in rooms" },
@@ -293,8 +360,6 @@ function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => v
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState("");
 
-  // Resync local state when the lobby refreshes (otherwise the toggles
-  // visually stick to their pre-save state on reload).
   React.useEffect(() => {
     setEnabled(lobby.enabledModules || []);
   }, [lobby.enabledModules]);
@@ -342,8 +407,6 @@ function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => v
     </div>
   );
 }
-
-// ── Moderation Tab (AutoMod-light) ──────────────────────────────────────────
 
 function ModerationTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => void }) {
   const [blockedWords, setBlockedWords] = useState<string>((lobby.blockedWords || []).join(", "));
@@ -421,8 +484,6 @@ function ModerationTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () =
   );
 }
 
-// ── Rooms Tab ────────────────────────────────────────────────────────────────
-
 function RoomsTab({ lobbyId, initialRooms, perms, onRefresh }: { lobbyId: string; initialRooms: AdminRoom[]; perms: string[]; onRefresh: () => void }) {
   const [rooms, setRooms] = useState(initialRooms);
   const [msg, setMsg]     = useState("");
@@ -464,8 +525,6 @@ function RoomsTab({ lobbyId, initialRooms, perms, onRefresh }: { lobbyId: string
     </div>
   );
 }
-
-// ── Roles Tab ────────────────────────────────────────────────────────────────
 
 const DEFAULT_ROLE_NAMES: Record<string, string> = { "5": "Owner", "4": "Admin", "3": "Moderator", "2": "Trusted", "1": "Member" };
 
@@ -530,8 +589,6 @@ function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => voi
   );
 }
 
-// ── Members Tab ──────────────────────────────────────────────────────────────
-
 function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overrideRole, onRefresh }: {
   lobbyId: string; initialMembers: AdminMember[]; roleNames: Record<string, string>;
   myLevel: number; perms: string[]; overrideRole: string | null; onRefresh: () => void;
@@ -581,7 +638,6 @@ function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overri
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start", height: "100%" }}>
-      {/* List */}
       <div>
         <input style={{ ...S.input, marginBottom: 10 }} placeholder="Search members..." value={filter} onChange={e => setFilter(e.target.value)} />
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -598,7 +654,6 @@ function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overri
         </div>
       </div>
 
-      {/* Detail */}
       {selected ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={S.card}>
@@ -618,7 +673,6 @@ function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overri
             <div style={{ fontSize: 11, opacity: 0.4, fontFamily: "monospace" }}>ID: {selected.userId}</div>
           </div>
 
-          {/* Role actions */}
           {canRole && (
             <div style={S.card}>
               <div style={S.sectionTitle}>Set Role</div>
@@ -632,7 +686,6 @@ function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overri
             </div>
           )}
 
-          {/* Actions */}
           <div style={{ display: "flex", gap: 6 }}>
             {canKick && <button style={S.danger} onClick={() => kickMember(selected.userId, selected.name)}>Kick</button>}
             {canBan  && <button style={{ ...S.danger, borderColor: "rgba(239,68,68,.50)" }} onClick={() => banMember(selected.userId, selected.name)}>Ban</button>}
@@ -648,10 +701,6 @@ function MembersTab({ lobbyId, initialMembers, roleNames, myLevel, perms, overri
   );
 }
 
-// ── Audit Tab ────────────────────────────────────────────────────────────────
-
-// ── Paid Tiers Tab ────────────────────────────────────────────────────────
-
 type AdminTier = {
   id: string; name: string; description: string; priceMonthly: number;
   grantLevel: number; color: string | null; sortOrder: number; active: boolean;
@@ -665,7 +714,6 @@ function TiersTab({ lobbyId, roleNames, onRefresh }: { lobbyId: string; roleName
   const [msg, setMsg] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // New tier form state
   const [form, setForm] = useState({ name: "", description: "", priceDollars: "", grantLevel: "2", color: "", sortOrder: "0" });
 
   const load = useCallback(async () => {
@@ -726,7 +774,6 @@ function TiersTab({ lobbyId, roleNames, onRefresh }: { lobbyId: string; roleName
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {msg && <div style={{ fontSize: 12, color: "rgba(167,243,208,.9)", padding: "8px 12px", borderRadius: 8, background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)" }}>{msg}</div>}
 
-      {/* Existing tiers */}
       <div>
         <div style={S.sectionTitle}>Active Tiers</div>
         {tiers.length === 0 && <div style={{ opacity: 0.4, fontSize: 13, padding: "16px 0" }}>No paid tiers yet. Create one below.</div>}
@@ -752,7 +799,6 @@ function TiersTab({ lobbyId, roleNames, onRefresh }: { lobbyId: string; roleName
         </div>
       </div>
 
-      {/* Create tier form */}
       <div>
         <div style={S.sectionTitle}>Create New Tier</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -794,7 +840,6 @@ function TiersTab({ lobbyId, roleNames, onRefresh }: { lobbyId: string; roleName
         </button>
       </div>
 
-      {/* Revenue share */}
       <div>
         <div style={S.sectionTitle}>Revenue Share</div>
         <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 10 }}>Percentage of lobby tier revenue allocated to the lobby owner. Payouts are processed manually.</div>
@@ -807,8 +852,6 @@ function TiersTab({ lobbyId, roleNames, onRefresh }: { lobbyId: string; roleName
     </div>
   );
 }
-
-// ── Events Tab ────────────────────────────────────────────────────────────
 
 type LobbyEvent = {
   id: string; title: string; description: string; category: string;
@@ -829,8 +872,6 @@ function EventStatusBadge({ status }: { status: string }) {
   const c = EVENT_STATUS_COLORS[status] || EVENT_STATUS_COLORS.DRAFT;
   return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.color, fontWeight: 700, letterSpacing: ".4px" }}>{status}</span>;
 }
-
-// ── Challenges Admin Tab ────────────────────────────────────────────────────
 
 const OBJECTIVE_TYPES = [
   { value: "kills", label: "Kills" },
@@ -864,7 +905,6 @@ function ChallengesTab({ lobbyId }: { lobbyId: string }) {
   const [msg, setMsg] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Form state
   const [form, setForm] = useState({
     title: "", description: "", category: "pve", difficulty: 2,
     scope: "LOBBY", notorietyReward: 200, isRecurring: false, recurSchedule: "",
@@ -911,7 +951,6 @@ function ChallengesTab({ lobbyId }: { lobbyId: string }) {
 
     setCreating(true);
 
-    // Build objectives JSON
     const objs = objectives.map(o => ({
       id: o.id,
       type: o.type,
@@ -966,7 +1005,6 @@ function ChallengesTab({ lobbyId }: { lobbyId: string }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {msg && <div style={{ fontSize: 12, color: "rgba(167,243,208,.9)", padding: "8px 12px", borderRadius: 8, background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)" }}>{msg}</div>}
 
-      {/* Create Challenge */}
       <div>
         <div style={S.sectionTitle}>Create Challenge</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1008,7 +1046,6 @@ function ChallengesTab({ lobbyId }: { lobbyId: string }) {
           </div>
         </div>
 
-        {/* Objectives */}
         <div style={{ marginTop: 16 }}>
           <div style={{ ...S.label, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span>Objectives</span>
@@ -1081,7 +1118,6 @@ function ChallengesTab({ lobbyId }: { lobbyId: string }) {
         </button>
       </div>
 
-      {/* Existing Definitions */}
       <div>
         <div style={S.sectionTitle}>Challenge Definitions ({defs.length})</div>
         {defs.length === 0 && <div style={{ opacity: 0.4, fontSize: 13, padding: "16px 0", textAlign: "center" }}>No challenge definitions yet.</div>}
@@ -1120,7 +1156,6 @@ function ChallengesTab({ lobbyId }: { lobbyId: string }) {
         </div>
       </div>
 
-      {/* Active Instances */}
       <div>
         <div style={S.sectionTitle}>Active Challenge Instances ({instances.length})</div>
         {instances.length === 0 && <div style={{ opacity: 0.4, fontSize: 13, padding: "16px 0", textAlign: "center" }}>No active challenges.</div>}
@@ -1205,6 +1240,25 @@ function TournamentsTab({ lobbyId }: { lobbyId: string }) {
 
   if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading tournaments...</div>;
 
+  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading tournaments...</div>;
+
+  return (
+    <>
+      <TournamentsPanel lobbyId={lobbyId} isStaff={true} />
+
+      <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>Winner Flair (per tournament)</div>
+        <div style={{ fontSize: 11, color: "rgba(148,163,184,.55)", marginBottom: 14, lineHeight: 1.5 }}>
+          Attach a flair reward to each tournament. The first-place entry is granted the item on tournament completion. Items shown are from the platform store (BADGE / TITLE / AVATAR categories).
+        </div>
+      </div>
+    {(() => null)()}
+    <FlairEditor tournaments={tournaments} flairItems={flairItems} savingId={savingId} msg={msg} currentFlairId={currentFlairId} setFlair={setFlair} />
+    </>
+  );
+}
+
+function FlairEditor({ tournaments, flairItems, savingId, msg, currentFlairId, setFlair }: any) {
   return (
     <div>
       <div style={S.sectionTitle}>Tournaments in this lobby</div>
@@ -1330,7 +1384,6 @@ function LobbyEventsTab({ lobbyId, myLevel, overrideRole, onRefresh }: { lobbyId
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {msg && <div style={{ fontSize: 12, color: "rgba(167,243,208,.9)", padding: "8px 12px", borderRadius: 8, background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)" }}>{msg}</div>}
 
-      {/* Create form */}
       <div>
         <div style={S.sectionTitle}>Create Event</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1365,7 +1418,6 @@ function LobbyEventsTab({ lobbyId, myLevel, overrideRole, onRefresh }: { lobbyId
         <button style={{ ...S.btnPri, marginTop: 12 }} onClick={createEvent} disabled={creating}>{creating ? "Creating..." : "Create Event"}</button>
       </div>
 
-      {/* Events list */}
       <div>
         <div style={S.sectionTitle}>Events</div>
         {events.length === 0 && <div style={{ opacity: 0.4, fontSize: 13, padding: "16px 0", textAlign: "center" }}>No events yet.</div>}
@@ -1412,8 +1464,6 @@ function LobbyEventsTab({ lobbyId, myLevel, overrideRole, onRefresh }: { lobbyId
     </div>
   );
 }
-
-// ── Join Requests Tab ────────────────────────────────────────────────────────
 
 function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
   const [requests, setRequests] = useState<any[]>([]);
@@ -1546,8 +1596,6 @@ function AuditTab({ lobbyId, initialLogs }: { lobbyId: string; initialLogs: Admi
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
-
 export default function LobbyAdminPage() {
   const router = useRouter();
   const params = useParams();
@@ -1563,7 +1611,6 @@ export default function LobbyAdminPage() {
 
   const adminRoomId = `@admin-${lobbyId}`;
 
-  // Join the admin room for presence + chat
   useEffect(() => {
     try { ctx?.join?.(adminRoomId); } catch {}
     try { ctx?.setActiveRoomId?.(adminRoomId); } catch {}
@@ -1604,7 +1651,6 @@ export default function LobbyAdminPage() {
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.92)", fontFamily: "system-ui, sans-serif", overflow: "hidden" }}>
 
-      {/* Header */}
       <div style={{ borderBottom: `1px solid ${accent}25`, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, background: `${accent}08` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {lobby.logoUrl && <img src={lobby.logoUrl} alt={`${lobby.name || lobbyId} logo`} style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover" }} />}
@@ -1627,15 +1673,12 @@ export default function LobbyAdminPage() {
         </div>
       </div>
 
-      {/* Voice bar (collapsible) */}
       {voiceOpen && (
         <RoomStage roomId={adminRoomId} mode="voice" onClose={() => setVoiceOpen(false)} style={{ flexShrink: 0 }} />
       )}
 
-      {/* Body: 3 columns */}
       <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}>
 
-        {/* Left: nav + presence */}
         <div style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2, minHeight: 0 }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Navigation</div>
           {visibleNav.map(item => (
@@ -1646,7 +1689,6 @@ export default function LobbyAdminPage() {
             </button>
           ))}
 
-          {/* Stats */}
           <div style={{ marginTop: 20, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,.06)" }}>
             <div style={S.label}>Stats</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11 }}>
@@ -1662,20 +1704,18 @@ export default function LobbyAdminPage() {
             </div>
           </div>
 
-          {/* Presence */}
           <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.06)" }}>
             <AdminPresence lobbyId={lobbyId} roleNames={roleNames} />
           </div>
         </div>
 
-        {/* Center: content */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 15 }}>
               {visibleNav.find(n => n.id === nav)?.icon} {visibleNav.find(n => n.id === nav)?.label}
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 80px" }}>
             {nav === "branding" && <BrandingTab lobby={lobby} onRefresh={load} />}
             {nav === "modules"  && <ModulesTab lobby={lobby} onRefresh={load} />}
             {nav === "moderation" && <ModerationTab lobby={lobby} onRefresh={load} />}
@@ -1691,7 +1731,6 @@ export default function LobbyAdminPage() {
           </div>
         </div>
 
-        {/* Right: admin team chat */}
         <div style={{ borderLeft: "1px solid rgba(255,255,255,.07)", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 13 }}>Team Chat</div>
