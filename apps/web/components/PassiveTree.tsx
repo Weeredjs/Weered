@@ -12,8 +12,11 @@ async function api(path: string) {
   return r.json();
 }
 
-type TNode = { h: number; x: number; y: number; k: number; n: string; st: string[]; o: number[]; asc?: string; cls?: number };
-type Tree = { nodes: TNode[]; bounds: { minX: number; minY: number; maxX: number; maxY: number }; ver?: string };
+type TNode = { h: number; x: number; y: number; k: number; n: string; st: string[]; o: number[]; ic?: string; asc?: string; cls?: number };
+type Coord = { x: number; y: number; w: number; h: number };
+type Sheet = { url: string; coords: Record<string, Coord> };
+type Sprites = { zoom: number; active: Sheet; inactive: Sheet; masteryActive: Sheet; masteryInactive: Sheet };
+type Tree = { nodes: TNode[]; bounds: { minX: number; minY: number; maxX: number; maxY: number }; sprites?: Sprites; ver?: string };
 
 // module cache so the 419KB tree is fetched once per session
 let _tree: Tree | null = null;
@@ -37,6 +40,8 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
   const view = useRef({ scale: 0.05, ox: 0, oy: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const raf = useRef<number | null>(null);
+  const sheets = useRef<{ active?: HTMLImageElement; inactive?: HTMLImageElement; mA?: HTMLImageElement; mI?: HTMLImageElement }>({});
+  const [spriteTick, setTick] = useState(0);
 
   const byId = useMemo(() => {
     const m = new Map<number, TNode>();
@@ -51,6 +56,14 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     }
     return out;
   }, [tree, byId]);
+
+  // ── load sprite sheets (cross-origin draw is fine; we never read the canvas back) ──
+  useEffect(() => {
+    if (!tree?.sprites) return;
+    const sp = tree.sprites;
+    const mk = (url: string) => { const im = new Image(); im.onload = () => setTick((t) => t + 1); im.src = url; return im; };
+    sheets.current = { active: mk(sp.active.url), inactive: mk(sp.inactive.url), mA: mk(sp.masteryActive.url), mI: mk(sp.masteryInactive.url) };
+  }, [tree]);
 
   // ── load tree + characters ──
   useEffect(() => {
@@ -149,28 +162,34 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
 
-    // nodes
+    // nodes — draw GGG sprite art, fall back to styled shapes if a sheet/coord is missing
+    const sp = tree.sprites;
+    const z = sp?.zoom || 0.5;
     for (const n of tree.nodes) {
-      if (n.k === KIND.ASCEND) continue;
+      if (n.k === KIND.ASCEND || n.k === KIND.START) continue;
       const on = allocated.has(n.h);
-      let rad = 22, fill = "#33333c", ring = "";
-      if (n.k === KIND.KEYSTONE) { rad = 60; }
-      else if (n.k === KIND.NOTABLE) { rad = 40; }
-      else if (n.k === KIND.MASTERY) { rad = 34; }
-      else if (n.k === KIND.JEWEL) { rad = 30; }
-      else if (n.k === KIND.START) { continue; }
+      const isMast = n.k === KIND.MASTERY;
+      const sheet = isMast ? (on ? sheets.current.mA : sheets.current.mI) : (on ? sheets.current.active : sheets.current.inactive);
+      const cmap = sp ? (isMast ? (on ? sp.masteryActive : sp.masteryInactive) : (on ? sp.active : sp.inactive)).coords : null;
+      const co = cmap && n.ic ? cmap[n.ic] : null;
 
-      if (on) {
-        fill = accent;
-        ctx.shadowColor = accent; ctx.shadowBlur = n.k === KIND.KEYSTONE ? 34 : 18;
+      if (sheet && sheet.complete && sheet.naturalWidth > 0 && co) {
+        const rw = co.w / z, rh = co.h / z;
+        ctx.globalAlpha = on ? 1 : (hasBuild ? 0.6 : 0.92);
+        if (on) { ctx.shadowColor = accent; ctx.shadowBlur = n.k === KIND.KEYSTONE ? 42 : n.k === KIND.NOTABLE ? 26 : 14; }
+        ctx.drawImage(sheet, co.x, co.y, co.w, co.h, n.x - rw / 2, n.y - rh / 2, rw, rh);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        if (on && (n.k === KIND.NOTABLE || n.k === KIND.KEYSTONE)) {
+          ctx.beginPath(); ctx.arc(n.x, n.y, Math.max(rw, rh) / 2 + 5, 0, Math.PI * 2);
+          ctx.lineWidth = 4; ctx.strokeStyle = accent; ctx.stroke();
+        }
       } else {
-        fill = hasBuild ? "#2a2a31" : "#3c3c45";
+        const rad = n.k === KIND.KEYSTONE ? 60 : n.k === KIND.NOTABLE ? 40 : n.k === KIND.MASTERY ? 34 : n.k === KIND.JEWEL ? 30 : 22;
+        if (on) { ctx.shadowColor = accent; ctx.shadowBlur = n.k === KIND.KEYSTONE ? 34 : 18; }
+        ctx.beginPath(); ctx.arc(n.x, n.y, rad, 0, Math.PI * 2); ctx.fillStyle = on ? accent : (hasBuild ? "#2a2a31" : "#3c3c45"); ctx.fill();
         ctx.shadowBlur = 0;
       }
-      ctx.beginPath(); ctx.arc(n.x, n.y, rad, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill();
-      ctx.shadowBlur = 0;
-      if (n.k === KIND.KEYSTONE) { ctx.lineWidth = 8; ctx.strokeStyle = on ? "#ffd9a0" : "#56565f"; ctx.stroke(); }
-      else if (n.k === KIND.NOTABLE) { ctx.lineWidth = 6; ctx.strokeStyle = on ? "#ffcf95" : "#4a4a53"; ctx.stroke(); }
     }
 
     // hover ring
@@ -188,7 +207,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     raf.current = requestAnimationFrame(() => { raf.current = null; draw(); });
   }, [draw]);
 
-  useEffect(() => { requestDraw(); }, [requestDraw, tree, allocated, hover]);
+  useEffect(() => { requestDraw(); }, [requestDraw, tree, allocated, hover, spriteTick]);
   useEffect(() => { if (tree && view.current.scale === 0.05) fit(); }, [tree, fit]);
 
   // resize

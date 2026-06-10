@@ -98,6 +98,7 @@ function trendPercent(sparkline: number[] | null | undefined): string {
 const TABS = [
   { id: "economy" as const, label: "Economy",    icon: "\u{1FA99}" },
   { id: "tree" as const,    label: "Skill Tree",  icon: "\u{1F333}" },
+  { id: "divcards" as const,label: "Div Cards",   icon: "\u{1F0CF}" },
   { id: "ladder" as const,  label: "Ladder",      icon: "\u{1F3C6}" },
   { id: "streams" as const, label: "Live Streams", icon: "\u{1F4FA}" },
   { id: "lfg" as const,     label: "Find Team",   icon: "\u{1F465}" },
@@ -105,7 +106,7 @@ const TABS = [
 ];
 type TabId = typeof TABS[number]["id"];
 
-function EconomyTab({ league, accent }: { league: string; accent: string }) {
+function EconomyTab({ league, accent, filterCat }: { league: string; accent: string; filterCat?: string }) {
   const [data, setData] = useState<{ asOf?: string; divineChaos?: number; chaosIcon?: string; divineIcon?: string; currencies: any[] }>({ currencies: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -136,9 +137,10 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
   const sorted = [...data.currencies].sort((a: any, b: any) =>
     sort === "volume" ? (b.volume || 0) - (a.volume || 0) : (b.chaos || 0) - (a.chaos || 0)
   );
+  const pool = filterCat ? sorted.filter((i: any) => i.cat === filterCat) : sorted;
   const filtered = search
-    ? sorted.filter((i: any) => (i.name || i.id || "").toLowerCase().includes(search.toLowerCase()))
-    : sorted;
+    ? pool.filter((i: any) => (i.name || i.id || "").toLowerCase().includes(search.toLowerCase()))
+    : pool;
   const maxVol = Math.max(1, ...data.currencies.map((c: any) => c.volume || 0));
 
   if (loading) return <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading Wraeclast economy...</div>;
@@ -189,7 +191,7 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
 
       <input
         style={{ ...S.input, marginBottom: 10 }}
-        placeholder="Search currency..."
+        placeholder={filterCat === "Cards" ? "Search cards..." : "Search currency..."}
         value={search}
         onChange={e => setSearch(e.target.value)}
       />
@@ -1155,7 +1157,7 @@ export default function PoeModulesPanel({
           accent={accent}
         />
 
-        {(tab === "economy" || tab === "ladder") && (
+        {(tab === "economy" || tab === "divcards" || tab === "ladder") && (
           <select
             value={league}
             onChange={e => setLeague(e.target.value)}
@@ -1172,6 +1174,7 @@ export default function PoeModulesPanel({
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "economy"  && <EconomyTab league={league} accent={accent} />}
         {tab === "tree"     && <PassiveTree accent={accent} />}
+        {tab === "divcards" && <EconomyTab league={league} accent={accent} filterCat="Cards" />}
         {tab === "ladder"   && <LadderTab league={league} accent={accent} />}
         {tab === "streams"  && <TwitchStreams lobbyId={lobbyId} accent={accent} />}
         {tab === "lfg"      && <FindTeam lobbyId={lobbyId} accent={accent} />}
