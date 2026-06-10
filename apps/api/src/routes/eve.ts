@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
 
 const ESI_USER_AGENT = "Weered/1.0 (james@weered.ca)";
 const ESI_BASE = "https://esi.evetech.net/latest";
@@ -101,11 +102,11 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, awardNotoriety } = opts;
 
   app.get("/auth/eve", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization || (req as any).query?.token);
+    const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "Login first" });
     if (!EVE_CLIENT_ID) return reply.code(500).send({ error: "EVE OAuth not configured" });
 
-    const state = Buffer.from(JSON.stringify({ userId: u.id })).toString("base64url");
+    const state = signOAuthState(u.id);
     const redirectUri = `${API_URL}/auth/eve/callback`;
     const url = `${OAUTH_BASE}/authorize?response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&client_id=${EVE_CLIENT_ID}&scope=${encodeURIComponent(EVE_SCOPES)}&state=${state}`;
     return reply.redirect(url);
@@ -116,11 +117,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     const state = String((req as any).query?.state || "");
     if (!code) return reply.code(400).send({ error: "Missing code" });
 
-    let userId = "";
-    try {
-      const parsed = JSON.parse(Buffer.from(state, "base64url").toString());
-      userId = parsed.userId;
-    } catch { return reply.code(400).send({ error: "Invalid state" }); }
+    const userId = verifyOAuthState(state);
     if (!userId) return reply.code(400).send({ error: "Invalid state" });
 
     try {

@@ -194,7 +194,7 @@ try {
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users
   // before paint (no FOUC). The slab stays in the DOM for crawlers.
-  if (localStorage.getItem('weered_token')) d.setAttribute('data-weered-authed', '1');
+  if (localStorage.getItem('weered_user')) d.setAttribute('data-weered-authed', '1');
   // Streamer overlay route — strip chrome + transparent body before paint
   // so OBS browser-source captures a clean composite over the game capture.
   if (location.pathname.indexOf('/overlay/') === 0 || location.pathname === '/overlay') {
@@ -231,7 +231,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('weered_token')){localStorage.removeItem('weered_token');}}catch(e){}if(typeof window==='undefined'||window.__wfp)return;window.__wfp=1;var _f=window.fetch;window.fetch=function(i,o){o=o||{};var u=typeof i==='string'?i:(i&&i.url)||'';if(u.indexOf('api.weered.ca')!==-1){o.credentials='include';try{var h=new Headers(o.headers||{});h.delete('authorization');o.headers=h;}catch(e){}}return _f.call(this,i,o);};})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('weered_token')){localStorage.removeItem('weered_token');}}catch(e){}if(typeof window==='undefined'||window.__wfp)return;window.__wfp=1;var _f=window.fetch;window.fetch=function(i,o){o=o||{};var u=typeof i==='string'?i:(i&&i.url)||'';if(u.indexOf('api.weered.ca')!==-1){o.credentials='include';try{var h=new Headers(o.headers||{});h.delete('authorization');h.set('x-client','web');o.headers=h;}catch(e){}}return _f.call(this,i,o);};})();` }} />
       </head>
       <body>
         <ThemeRestore />

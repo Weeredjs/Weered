@@ -39,7 +39,9 @@ export default async function tenorRoutes(app: FastifyInstance) {
     return reply.send({ ok: true, results: normalizeGiphy(data.data || []) });
   });
 
-  app.get("/tenor/search", async (req, reply) => {
+  app.get("/tenor/search", {
+    config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
+  }, async (req, reply) => {
     const q = String((req as any).query?.q || "").trim();
     if (!q) return reply.send({ ok: true, results: [] });
     const data = await giphyFetch("search", { q });

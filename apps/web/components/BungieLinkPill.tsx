@@ -24,8 +24,7 @@ export default function BungieLinkPill({ size = "sm" }: { size?: "sm" | "xs" }) 
   if (state !== "unlinked") return null;
 
   const onClick = () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-    window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(token)}`;
+    window.location.href = `${API}/auth/bungie`;
   };
 
   const padding = size === "xs" ? "3px 8px" : "5px 10px";
