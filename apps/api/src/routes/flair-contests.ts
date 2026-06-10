@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";
@@ -85,14 +86,7 @@ function filenameFromUrl(url: string): string | null {
 export default async function flairContestsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole, broadcastToLobby, createNotification } = opts;
 
-  async function isStaffUser(userId: string): Promise<boolean> {
-    if (getGlobalRole && canAccessStaff) {
-      const role = await getGlobalRole(userId);
-      return canAccessStaff(role);
-    }
-    const u = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
-    return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
-  }
+  const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, canAccessStaff);
 
   async function canManageContest(userId: string, contest: { lobbyId: string | null; createdById: string }): Promise<boolean> {
     if (await isStaffUser(userId)) return true;

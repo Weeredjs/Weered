@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
@@ -17,14 +18,7 @@ type Opts = {
 export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, awardNotoriety, awardPaper, createNotification, getGlobalRole, canAccessStaff } = opts;
 
-  async function isStaffUser(userId: string): Promise<boolean> {
-    if (getGlobalRole && canAccessStaff) {
-      const role = await getGlobalRole(userId);
-      return canAccessStaff(role);
-    }
-    const u = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
-    return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
-  }
+  const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, canAccessStaff);
 
   async function enrichRewards(rows: any[]): Promise<void> {
     const ids = new Set<string>();
