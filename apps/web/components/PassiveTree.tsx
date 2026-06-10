@@ -12,11 +12,11 @@ async function api(path: string) {
   return r.json();
 }
 
-type TNode = { h: number; x: number; y: number; k: number; n: string; st: string[]; o: number[]; ic?: string; asc?: string; cls?: number };
+type TNode = { h: number; x: number; y: number; k: number; n: string; st: string[]; o: number[]; ic?: string; asc?: string; cls?: number; gi?: number; ob?: number; cx?: number; cy?: number; ang?: number };
 type Coord = { x: number; y: number; w: number; h: number };
 type Sheet = { url: string; coords: Record<string, Coord> };
 type Sprites = { zoom: number; active: Sheet; inactive: Sheet; masteryActive: Sheet; masteryInactive: Sheet };
-type Tree = { nodes: TNode[]; bounds: { minX: number; minY: number; maxX: number; maxY: number }; sprites?: Sprites; ver?: string };
+type Tree = { nodes: TNode[]; bounds: { minX: number; minY: number; maxX: number; maxY: number }; sprites?: Sprites; orbitRadii?: number[]; ver?: string };
 
 // module cache so the 419KB tree is fetched once per session
 let _tree: Tree | null = null;
@@ -70,7 +70,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     let alive = true;
     (async () => {
       if (!_tree) {
-        try { const j = await api("/poe/tree?v=2"); if (j?.ok) { _tree = j as Tree; } } catch { }
+        try { const j = await api("/poe/tree?v=3"); if (j?.ok) { _tree = j as Tree; } } catch { }
       }
       if (alive) { setTree(_tree); setLoading(false); }
     })();
@@ -152,21 +152,30 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
 
     const hasBuild = allocated.size > 0;
 
-    // edges
+    // edges — arc along the orbit when both ends share a group+orbit, else straight
+    const orbitRadii = tree.orbitRadii || [0, 82, 162, 335, 493, 662, 846];
     ctx.lineCap = "round";
     for (const [a, b] of edges) {
-      if (a.k === KIND.ASCEND || b.k === KIND.ASCEND) continue; // ascendancy drawn separately/skipped for clarity
       const both = allocated.has(a.h) && allocated.has(b.h);
       ctx.strokeStyle = both ? accent : (hasBuild ? "rgba(120,120,135,.10)" : "rgba(150,150,165,.16)");
       ctx.lineWidth = both ? 7 : 4;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.beginPath();
+      if (a.gi != null && a.gi === b.gi && a.ob === b.ob && (a.ob || 0) > 0 && a.cx != null && a.ang != null && b.ang != null) {
+        let d = b.ang - a.ang;
+        while (d <= -Math.PI) d += Math.PI * 2;
+        while (d > Math.PI) d -= Math.PI * 2;
+        ctx.arc(a.cx, a.cy as number, orbitRadii[a.ob as number], a.ang, b.ang, d < 0);
+      } else {
+        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      }
+      ctx.stroke();
     }
 
     // nodes — draw GGG sprite art, fall back to styled shapes if a sheet/coord is missing
     const sp = tree.sprites;
     const z = sp?.zoom || 0.5;
     for (const n of tree.nodes) {
-      if (n.k === KIND.ASCEND || n.k === KIND.START) continue;
+      if (n.k === KIND.START) continue;
       const on = allocated.has(n.h);
       const isMast = n.k === KIND.MASTERY;
       const sheet = isMast ? (on ? sheets.current.mA : sheets.current.mI) : (on ? sheets.current.active : sheets.current.inactive);
@@ -228,7 +237,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     const tol = 60 / view.current.scale;
     let best: TNode | null = null, bestD = tol * tol;
     for (const n of tree.nodes) {
-      if (n.k === KIND.START || n.k === KIND.ASCEND) continue;
+      if (n.k === KIND.START) continue;
       const dx = n.x - wpt.x, dy = n.y - wpt.y, d = dx * dx + dy * dy;
       const r = (n.k === KIND.KEYSTONE ? 64 : n.k === KIND.NOTABLE ? 44 : n.k === KIND.MASTERY ? 38 : 28);
       if (d < r * r && d < bestD) { bestD = d; best = n; }
