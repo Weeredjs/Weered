@@ -70,7 +70,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     let alive = true;
     (async () => {
       if (!_tree) {
-        try { const j = await api("/poe/tree"); if (j?.ok) { _tree = j as Tree; } } catch { }
+        try { const j = await api("/poe/tree?v=2"); if (j?.ok) { _tree = j as Tree; } } catch { }
       }
       if (alive) { setTree(_tree); setLoading(false); }
     })();
@@ -208,7 +208,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
   }, [draw]);
 
   useEffect(() => { requestDraw(); }, [requestDraw, tree, allocated, hover, spriteTick]);
-  useEffect(() => { if (tree && view.current.scale === 0.05) fit(); }, [tree, fit]);
+  useEffect(() => { if (tree && !loading && view.current.scale === 0.05) fit(); }, [tree, loading, fit]);
 
   // resize
   useEffect(() => {
