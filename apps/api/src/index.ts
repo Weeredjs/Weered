@@ -1191,7 +1191,21 @@ function send(ws: Sock, msg: any) {
 
 function broadcast(room: RoomState, msg: any) {
   for (const s of room.sockets) send(s, msg);
+  // Room occupancy changed: ping everyone so lobby rails refresh on push
+  // instead of polling. Tiny payload, throttled to 1/2s per room.
+  if (msg && (msg.type === "presence:join" || msg.type === "presence:leave")) {
+    const now = Date.now();
+    const last = _lobbyActivityAt.get(room.roomId) || 0;
+    if (now - last > 2000) {
+      _lobbyActivityAt.set(room.roomId, now);
+      const ping = JSON.stringify({ type: "lobby:activity", lobbyId: room.lobbyId || null, roomId: room.roomId });
+      for (const sock of wss.clients) {
+        try { if ((sock as any).readyState === 1) sock.send(ping); } catch {}
+      }
+    }
+  }
 }
+const _lobbyActivityAt = new Map<string, number>();
 
 function isOwner(room: RoomState, userId?: string) {
   return Boolean(userId && room.ownerId && room.ownerId === userId);
