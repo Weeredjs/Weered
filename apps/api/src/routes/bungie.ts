@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import {
   syncManifest, enrichProfile, enrichMilestones, enrichVendorSales,
-  resolveItem, resolveBucket, resolveDamageType,
+  resolveItem, resolveBucket, resolveDamageType, resolveActivity,
   isLoaded as manifestLoaded, manifestVersion,
   WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES,
 } from "../manifest";
@@ -571,7 +571,6 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           const actRes = await bungieGet(`/Destiny2/${memberType}/Account/${memberId}/Character/${mainChar.characterId}/Stats/Activities/?count=1&mode=0`);
           const act = actRes?.Response?.activities?.[0];
           if (act) {
-            const { resolveActivity } = require("../manifest");
             const actDef = resolveActivity(act.activityDetails?.referenceId);
             const MODE_NAMES: Record<number, string> = {
               0: "None", 2: "Story", 3: "Strike", 4: "Raid", 5: "PvP", 6: "Patrol",

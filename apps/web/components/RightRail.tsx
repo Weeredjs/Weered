@@ -54,6 +54,20 @@ function presenceHref(roomId: string, roomIsLobby: boolean): string {
   return roomIsLobby ? `/lobby/${encodeURIComponent(clean)}` : `/room/${encodeURIComponent(clean)}`;
 }
 
+// Refresh on pushed WS events instead of waiting for the next poll tick.
+// The provider re-dispatches every socket message as a weered:<type> CustomEvent.
+function useWsRefresh(types: string[], cb: () => void) {
+  const cbRef = React.useRef(cb); cbRef.current = cb;
+  React.useEffect(() => {
+    let t: any = null;
+    const fire = () => { if (t) return; t = setTimeout(() => { t = null; cbRef.current(); }, 800); };
+    const names = types.map(x => `weered:${x}`);
+    names.forEach(n => window.addEventListener(n, fire));
+    return () => { if (t) clearTimeout(t); names.forEach(n => window.removeEventListener(n, fire)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [types.join("|")]);
+}
+
 function useLobbyPresence(lobbyId: string) {
   const [users, setUsers] = React.useState<any[]>([]);
   React.useEffect(() => {
@@ -67,9 +81,12 @@ function useLobbyPresence(lobbyId: string) {
       } catch {}
     };
     load();
-    const t = setInterval(load, 20000);
+    loadRef.current = load;
+    const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
   }, [lobbyId]);
+  const loadRef = React.useRef<() => void>(() => {});
+  useWsRefresh(["presence:join", "presence:leave", "presence:state", "lobby:activity"], () => loadRef.current());
   return users;
 }
 
@@ -371,7 +388,8 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   }
 
   React.useEffect(() => { void load(); }, [lobbyId]);
-  React.useEffect(() => { const t = setInterval(load, 15000); return () => clearInterval(t); }, [lobbyId]);
+  React.useEffect(() => { const t = setInterval(load, 60000); return () => clearInterval(t); }, [lobbyId]);
+  useWsRefresh(["lobby:activity", "room:closed", "room:locked"], load);
 
   const filtered = rows
     .filter(r => !q.trim() || (r.name + " " + r.id).toLowerCase().includes(q.trim().toLowerCase()))
