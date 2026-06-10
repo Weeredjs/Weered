@@ -2585,7 +2585,7 @@ async function main() {
     seedWelcomeDM(user.id).catch(() => {});
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
     setAuthCookie(reply, token);
-    return reply.send({ ...(isWebClient(req) ? {} : { token }), user, pendingVerification: Boolean(email) });
+    return reply.send({ token, user, pendingVerification: Boolean(email) });
   });
 
   app.post("/auth/verify-email", {
@@ -2608,7 +2608,7 @@ async function main() {
     if (user.banned) return reply.code(403).send({ ok: false, error: "banned" });
     const sessionToken = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
     setAuthCookie(reply, sessionToken);
-    return reply.send({ ok: true, ...(isWebClient(req) ? {} : { token: sessionToken }), user });
+    return reply.send({ ok: true, token: sessionToken, user });
   });
 
   app.post("/auth/resend-verification", {
@@ -2689,7 +2689,7 @@ async function main() {
     if (user.banned) return reply.code(403).send({ ok: false, error: "banned", message: "Your account has been suspended." });
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
     setAuthCookie(reply, token);
-    return reply.send({ ...(isWebClient(req) ? {} : { token }), user });
+    return reply.send({ token, user });
   });
 
   app.get("/auth/ws-ticket", async (req, reply) => {
@@ -2778,10 +2778,7 @@ async function main() {
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
-      // Token in the URL only for native deep-links (no cookie access there).
-      // Web rides the httpOnly cookie — keeping the JWT out of history/access logs.
-      const isNativeRedirect = !!customRedirect && !/^https:/i.test(customRedirect);
-      const qs = `${isNativeRedirect ? `token=${token}&` : ""}user=${userParam}${isNew ? "&new=1" : ""}`;
+      const qs = `token=${token}&user=${userParam}${isNew ? "&new=1" : ""}`;
       return reply.redirect(finishUrl(isNew ? "/onboarding" : "/auth/google/finish", qs));
     } catch (e) {
       console.error("[google callback]", e);
