@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useWeered } from "../../../components/WeeredProvider";
 import { weeredConfirm } from "../../../lib/confirm";
 import LobbyContent from "../../../components/LobbyContent";
@@ -9,47 +10,52 @@ import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
-import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
-import ChessModulesPanel from "../../../components/ChessModulesPanel";
-import MarathonModulesPanel from "../../../components/MarathonModulesPanel";
-import MlbModulesPanel from "../../../components/MlbModulesPanel";
-import PgaModulesPanel from "../../../components/PgaModulesPanel";
-import NewsModulesPanel from "../../../components/NewsModulesPanel";
-import LeagueModulesPanel from "../../../components/LeagueModulesPanel";
-import FortniteModulesPanel from "../../../components/FortniteModulesPanel";
-import TradingModulesPanel from "../../../components/TradingModulesPanel";
-import PokerTable from "../../../components/PokerTable";
-import HeadquartersModulesPanel from "../../../components/HeadquartersModulesPanel";
-import CS2ModulesPanel from "../../../components/CS2ModulesPanel";
-import Dota2ModulesPanel from "../../../components/Dota2ModulesPanel";
-import StudyModulesPanel from "../../../components/StudyModulesPanel";
-import PubgModulesPanel from "../../../components/PubgModulesPanel";
-import DndModulesPanel from "../../../components/DndModulesPanel";
-import MtgModulesPanel from "../../../components/MtgModulesPanel";
-import PoeModulesPanel from "../../../components/PoeModulesPanel";
-import EveModulesPanel from "../../../components/EveModulesPanel";
-import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
-import HelldiversWarMapPanel from "../../../components/HelldiversWarMapPanel";
-import HelldiversMajorOrderPanel from "../../../components/HelldiversMajorOrderPanel";
-import HelldiversDispatchesPanel from "../../../components/HelldiversDispatchesPanel";
-import HelldiversSliceBPanel from "../../../components/HelldiversSliceBPanel";
-import HelldiversLoadoutBrowser from "../../../components/HelldiversLoadoutBrowser";
-import HelldiversModulesPanel from "../../../components/HelldiversModulesPanel";
 import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
 import LobbySplash, { WINDROSE_SPLASH_PALETTE, DESTINY_SPLASH_PALETTE } from "../../../components/LobbySplash";
-import ForumPage from "../../../components/forum/ForumPage";
-import TradingFeed from "../../../components/TradingFeed";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
-import GtaLfgBoard from "../../../components/GtaLfgBoard";
-import RedditFeedTab from "../../../components/RedditFeedTab";
 
 const LFG_BOARD_LOBBIES = new Set(["gta6"]);
 const REDDIT_TAB_LOBBIES: Record<string, string> = { gta6: "gta6" };
 import BungieLinkPill from "../../../components/BungieLinkPill";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
+
+// Per-vertical panels are code-split: a lobby only downloads its own module.
+const panelLoading = () => (
+  <div style={{ flex: 1, display: "grid", placeItems: "center", minHeight: 200, color: "rgba(148,163,184,.4)", fontSize: 12 }}>Loading module\u2026</div>
+);
+const LobbyModulesPanel = dynamic(() => import("../../../components/LobbyModulesPanel"), { loading: panelLoading, ssr: false });
+const ChessModulesPanel = dynamic(() => import("../../../components/ChessModulesPanel"), { loading: panelLoading, ssr: false });
+const MarathonModulesPanel = dynamic(() => import("../../../components/MarathonModulesPanel"), { loading: panelLoading, ssr: false });
+const MlbModulesPanel = dynamic(() => import("../../../components/MlbModulesPanel"), { loading: panelLoading, ssr: false });
+const PgaModulesPanel = dynamic(() => import("../../../components/PgaModulesPanel"), { loading: panelLoading, ssr: false });
+const NewsModulesPanel = dynamic(() => import("../../../components/NewsModulesPanel"), { loading: panelLoading, ssr: false });
+const LeagueModulesPanel = dynamic(() => import("../../../components/LeagueModulesPanel"), { loading: panelLoading, ssr: false });
+const FortniteModulesPanel = dynamic(() => import("../../../components/FortniteModulesPanel"), { loading: panelLoading, ssr: false });
+const TradingModulesPanel = dynamic(() => import("../../../components/TradingModulesPanel"), { loading: panelLoading, ssr: false });
+const PokerTable = dynamic(() => import("../../../components/PokerTable"), { loading: panelLoading, ssr: false });
+const HeadquartersModulesPanel = dynamic(() => import("../../../components/HeadquartersModulesPanel"), { loading: panelLoading, ssr: false });
+const CS2ModulesPanel = dynamic(() => import("../../../components/CS2ModulesPanel"), { loading: panelLoading, ssr: false });
+const Dota2ModulesPanel = dynamic(() => import("../../../components/Dota2ModulesPanel"), { loading: panelLoading, ssr: false });
+const StudyModulesPanel = dynamic(() => import("../../../components/StudyModulesPanel"), { loading: panelLoading, ssr: false });
+const PubgModulesPanel = dynamic(() => import("../../../components/PubgModulesPanel"), { loading: panelLoading, ssr: false });
+const DndModulesPanel = dynamic(() => import("../../../components/DndModulesPanel"), { loading: panelLoading, ssr: false });
+const MtgModulesPanel = dynamic(() => import("../../../components/MtgModulesPanel"), { loading: panelLoading, ssr: false });
+const PoeModulesPanel = dynamic(() => import("../../../components/PoeModulesPanel"), { loading: panelLoading, ssr: false });
+const EveModulesPanel = dynamic(() => import("../../../components/EveModulesPanel"), { loading: panelLoading, ssr: false });
+const WindroseModulesPanel = dynamic(() => import("../../../components/WindroseModulesPanel"), { loading: panelLoading, ssr: false });
+const HelldiversWarMapPanel = dynamic(() => import("../../../components/HelldiversWarMapPanel"), { loading: panelLoading, ssr: false });
+const HelldiversMajorOrderPanel = dynamic(() => import("../../../components/HelldiversMajorOrderPanel"), { loading: panelLoading, ssr: false });
+const HelldiversDispatchesPanel = dynamic(() => import("../../../components/HelldiversDispatchesPanel"), { loading: panelLoading, ssr: false });
+const HelldiversSliceBPanel = dynamic(() => import("../../../components/HelldiversSliceBPanel"), { loading: panelLoading, ssr: false });
+const HelldiversLoadoutBrowser = dynamic(() => import("../../../components/HelldiversLoadoutBrowser"), { loading: panelLoading, ssr: false });
+const HelldiversModulesPanel = dynamic(() => import("../../../components/HelldiversModulesPanel"), { loading: panelLoading, ssr: false });
+const ForumPage = dynamic(() => import("../../../components/forum/ForumPage"), { loading: panelLoading, ssr: false });
+const TradingFeed = dynamic(() => import("../../../components/TradingFeed"), { loading: panelLoading, ssr: false });
+const GtaLfgBoard = dynamic(() => import("../../../components/GtaLfgBoard"), { loading: panelLoading, ssr: false });
+const RedditFeedTab = dynamic(() => import("../../../components/RedditFeedTab"), { loading: panelLoading, ssr: false });
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 

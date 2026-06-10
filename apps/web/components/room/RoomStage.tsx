@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   Room,
   RoomEvent,
@@ -47,21 +48,26 @@ function getToken(): string {
 }
 
 import { avatarBg as avatarColor } from "../../lib/avatarColor";
-import PokerTable from "../PokerTable";
-import TradingModulesPanel from "../TradingModulesPanel";
-import LobbyModulesPanel from "../LobbyModulesPanel";
 import GtaModulePanel from "./GtaModulePanel";
-import LeagueModulesPanel from "../LeagueModulesPanel";
-import FortniteModulesPanel from "../FortniteModulesPanel";
-import PubgModulesPanel from "../PubgModulesPanel";
-import HeadquartersModulesPanel from "../HeadquartersModulesPanel";
-import CS2ModulesPanel from "../CS2ModulesPanel";
-import Dota2ModulesPanel from "../Dota2ModulesPanel";
-import StudyModulesPanel from "../StudyModulesPanel";
-import WindroseModulesPanel from "../WindroseModulesPanel";
 import DndStage from "./DndStage";
-import HelldiversModulesPanel from "../HelldiversModulesPanel";
-import EveModulesPanel from "../EveModulesPanel";
+
+// Game panels are code-split: a room only downloads the module it runs.
+const stageLoading = () => (
+  <div style={{ flex: 1, display: "grid", placeItems: "center", minHeight: 200, color: "rgba(148,163,184,.4)", fontSize: 12 }}>Loading module\u2026</div>
+);
+const PokerTable = dynamic(() => import("../PokerTable"), { loading: stageLoading, ssr: false });
+const TradingModulesPanel = dynamic(() => import("../TradingModulesPanel"), { loading: stageLoading, ssr: false });
+const LobbyModulesPanel = dynamic(() => import("../LobbyModulesPanel"), { loading: stageLoading, ssr: false });
+const LeagueModulesPanel = dynamic(() => import("../LeagueModulesPanel"), { loading: stageLoading, ssr: false });
+const FortniteModulesPanel = dynamic(() => import("../FortniteModulesPanel"), { loading: stageLoading, ssr: false });
+const PubgModulesPanel = dynamic(() => import("../PubgModulesPanel"), { loading: stageLoading, ssr: false });
+const HeadquartersModulesPanel = dynamic(() => import("../HeadquartersModulesPanel"), { loading: stageLoading, ssr: false });
+const CS2ModulesPanel = dynamic(() => import("../CS2ModulesPanel"), { loading: stageLoading, ssr: false });
+const Dota2ModulesPanel = dynamic(() => import("../Dota2ModulesPanel"), { loading: stageLoading, ssr: false });
+const StudyModulesPanel = dynamic(() => import("../StudyModulesPanel"), { loading: stageLoading, ssr: false });
+const WindroseModulesPanel = dynamic(() => import("../WindroseModulesPanel"), { loading: stageLoading, ssr: false });
+const HelldiversModulesPanel = dynamic(() => import("../HelldiversModulesPanel"), { loading: stageLoading, ssr: false });
+const EveModulesPanel = dynamic(() => import("../EveModulesPanel"), { loading: stageLoading, ssr: false });
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
