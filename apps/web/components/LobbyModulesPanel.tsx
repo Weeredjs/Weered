@@ -4,7 +4,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import TournamentsPanel from "./TournamentsPanel";
 import LoadingState from "./LoadingState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -18,28 +20,29 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
+function currentUserId(): string | null {
+  try {
+    const t = localStorage.getItem("weered_token") || "";
+    const p = JSON.parse(atob(t.split(".")[1]));
+    return p.sub || p.userId || null;
+  } catch { return null; }
+}
 
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", fontSize: 12, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", fontSize: 12, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const ACCENT_DESTINY = "#4F88C6";
 
-// ── Tier colors for item rarity ──────────────────────────────────────────────
-
 const TIER_COLORS: Record<string, string> = { Exotic: "#ceae33", Legendary: "#522f65", Rare: "#5076a3", Uncommon: "#366e42", Common: "#c3bcb4", Unknown: "rgba(255,255,255,.1)", Currency: "rgba(255,255,255,.1)" };
 const TIER_BORDER: Record<string, string> = { Exotic: "rgba(206,174,51,.6)", Legendary: "rgba(82,47,101,.8)", Rare: "rgba(80,118,163,.6)", Uncommon: "rgba(54,110,66,.6)", Common: "rgba(195,188,180,.4)", Unknown: "rgba(255,255,255,.08)", Currency: "rgba(255,255,255,.08)" };
 
-// ── Perk Row (small perk icons with tooltips) ───────────────────────────────
-
 function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
   if (!perks?.length) return null;
-  // Filter out common cosmetic/tracker plugs by checking for icons
   const visible = perks.filter((p: any) => p.icon && p.name).slice(0, max);
   if (!visible.length) return null;
   return (
@@ -52,8 +55,6 @@ function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
     </div>
   );
 }
-
-// ── Armor Stat Bar ──────────────────────────────────────────────────────────
 
 const STAT_BARS = [
   { key: "mobility", label: "MOB", color: "#7dd3fc" },
@@ -84,8 +85,6 @@ function ArmorStatBar({ stats }: { stats: any }) {
   );
 }
 
-// ── Perk Detail (expanded perk row with description + alternatives) ──────────
-
 function PerkDetail({ perk }: { perk: any }) {
   const [expanded, setExpanded] = useState(false);
   const hasAlts = perk.availablePlugs?.length > 0;
@@ -95,12 +94,12 @@ function PerkDetail({ perk }: { perk: any }) {
       <div
         onClick={() => hasAlts && setExpanded(v => !v)}
         style={{
-          display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 8px", borderRadius: 6,
+          display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 8px", borderRadius: 2,
           background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)",
           cursor: hasAlts ? "pointer" : "default",
         }}
       >
-        <div style={{ width: 28, height: 28, borderRadius: 5, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
+        <div style={{ width: 28, height: 28, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
           {perk.icon && <img src={perk.icon} alt={perk.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -120,12 +119,11 @@ function PerkDetail({ perk }: { perk: any }) {
         </div>
       </div>
 
-      {/* Available alternatives */}
       {expanded && perk.availablePlugs && (
         <div style={{ marginLeft: 36, display: "flex", flexDirection: "column", gap: 2, marginTop: 2, marginBottom: 2 }}>
           {perk.availablePlugs.map((alt: any, j: number) => (
             <div key={j} style={{
-              display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 6px", borderRadius: 4,
+              display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 6px", borderRadius: 2,
               background: "rgba(124,58,237,.04)", border: "1px solid rgba(124,58,237,.08)",
             }}>
               <div style={{ width: 18, height: 18, borderRadius: 3, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
@@ -143,8 +141,6 @@ function PerkDetail({ perk }: { perk: any }) {
   );
 }
 
-// ── Item Detail Panel (overlay when clicking an item) ───────────────────────
-
 function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, currentCharId }: {
   item: any; onClose: () => void;
   onEquip?: (itemId: string, charId: string) => void;
@@ -161,16 +157,15 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
         <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 16, padding: "2px 6px" }}>✕</button>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
-        {/* Icon + Name */}
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-          <div style={{ width: 80, height: 80, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: `2px solid ${borderColor}`, position: "relative", background: "rgba(0,0,0,.5)" }}>
+          <div style={{ width: 80, height: 80, borderRadius: 2, overflow: "hidden", flexShrink: 0, border: `2px solid ${borderColor}`, position: "relative", background: "rgba(0,0,0,.5)" }}>
             {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
             {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, pointerEvents: "none" }} />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: tier === "Exotic" ? "#ceae33" : "#fff" }}>{item.name}</div>
             <div style={{ fontSize: 11, opacity: 0.5, display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-              <span style={{ padding: "1px 6px", borderRadius: 4, background: `${TIER_COLORS[tier] || "rgba(255,255,255,.1)"}40`, border: `1px solid ${borderColor}`, fontSize: 9, fontWeight: 700 }}>{tier}</span>
+              <span style={{ padding: "1px 6px", borderRadius: 2, background: `${TIER_COLORS[tier] || "rgba(255,255,255,.1)"}40`, border: `1px solid ${borderColor}`, fontSize: 9, fontWeight: 700 }}>{tier}</span>
               {item.slotName && <span>{item.slotName}</span>}
               {item.damageType && item.damageType !== "None" && (
                 <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -183,10 +178,8 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
           </div>
         </div>
 
-        {/* Description */}
         {item.description && <div style={{ fontSize: 12, opacity: 0.5, lineHeight: 1.5 }}>{item.description}</div>}
 
-        {/* Perks — split into real perks and mods/cosmetics */}
         {item.perks?.length > 0 && (() => {
           const realPerks = item.perks.filter((p: any) => p.icon && p.name && !p.isJunk);
           const junkPerks = item.perks.filter((p: any) => p.icon && p.name && p.isJunk);
@@ -207,8 +200,8 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
                   <div style={{ ...S.label, opacity: 0.25 }}>Mod Slots</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     {junkPerks.map((p: any, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 6, background: "rgba(255,255,255,.015)", border: "1px solid rgba(255,255,255,.03)" }}>
-                        <div style={{ width: 20, height: 20, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px dashed rgba(255,255,255,.08)" }}>
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 2, background: "rgba(255,255,255,.015)", border: "1px solid rgba(255,255,255,.03)" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px dashed rgba(255,255,255,.08)" }}>
                           {p.icon && <img src={p.icon} alt={p.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3 }} />}
                         </div>
                         <span style={{ fontSize: 10, opacity: 0.3, fontStyle: "italic" }}>{p.name}</span>
@@ -224,7 +217,6 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
           );
         })()}
 
-        {/* Armor Stats */}
         {item.armorStats && (
           <div>
             <div style={S.label}>Stats</div>
@@ -232,7 +224,6 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
           </div>
         )}
 
-        {/* Actions */}
         {(onEquip || onTransfer) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
             {onEquip && currentCharId && !item.isEquipped && (
@@ -257,8 +248,6 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
   );
 }
 
-// ── Item Tile (compact or full, with perks + click support) ─────────────────
-
 function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; onClick?: () => void }) {
   const tier = item.tierName || "Unknown";
   const borderColor = TIER_BORDER[tier] || "rgba(255,255,255,.08)";
@@ -268,7 +257,7 @@ function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; on
   if (compact) {
     return (
       <div title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`} onClick={onClick} style={{
-        width: 44, height: 44, borderRadius: 8, background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
+        width: 44, height: 44, borderRadius: 2, background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
         border: `1.5px solid ${borderColor}`, overflow: "hidden", position: "relative", ...clickStyle,
       }}>
         {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
@@ -282,8 +271,8 @@ function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; on
   }
 
   return (
-    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, border: `1px solid ${borderColor}`, background: `${bgColor}18`, ...clickStyle }}>
-      <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: item.icon ? "rgba(0,0,0,.5)" : bgColor, border: `1px solid ${borderColor}`, position: "relative" }}>
+    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 2, border: `1px solid ${borderColor}`, background: `${bgColor}18`, ...clickStyle }}>
+      <div style={{ width: 40, height: 40, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: item.icon ? "rgba(0,0,0,.5)" : bgColor, border: `1px solid ${borderColor}`, position: "relative" }}>
         {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
         {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.3, pointerEvents: "none" }} />}
       </div>
@@ -302,8 +291,6 @@ function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; on
     </div>
   );
 }
-
-// ── Twitch Streams ───────────────────────────────────────────────────────────
 
 function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameName?: string; lobbyId?: string; accentColor?: string }) {
   const [streams, setStreams] = useState<any[]>([]);
@@ -341,9 +328,8 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Embed player */}
       {activeStream && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(145,70,255,.25)", background: "#000", marginBottom: 4 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(145,70,255,.25)", borderLeft: "2px solid rgba(124,58,237,.5)", background: "#000", marginBottom: 4 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%"
@@ -358,7 +344,6 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
         </div>
       )}
 
-      {/* Stream grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
         {streams.map(s => (
           <div
@@ -373,7 +358,7 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
             }}
           >
             {s.thumbnailUrl && (
-              <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 2, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
             )}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.userName}
@@ -405,8 +390,6 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
     </div>
   );
 }
-
-// ── LFG Board ────────────────────────────────────────────────────────────────
 
 const D2_ACTIVITIES = [
   "Raid: Crota's End", "Raid: Root of Nightmares", "Raid: King's Fall",
@@ -512,7 +495,7 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, display: "flex", alignItems: "center", gap: 8 }}>
                   {p.activity}
-                  {isFull && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.25)", color: "rgb(253,230,138)" }}>FULL</span>}
+                  {isFull && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.25)", color: "rgb(253,230,138)" }}>FULL</span>}
                 </div>
                 {p.description && <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{p.description}</div>}
                 <div style={{ display: "flex", gap: 8, fontSize: 11, opacity: 0.5 }}>
@@ -523,7 +506,7 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
                 {(p.playerNames || []).length > 0 && (
                   <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
                     {p.playerNames.map((n: string, i: number) => (
-                      <span key={i} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "rgba(79,136,198,.12)", border: "1px solid rgba(79,136,198,.25)", color: "rgba(147,197,253,.85)" }}>{n}</span>
+                      <span key={i} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 2, background: "rgba(79,136,198,.12)", border: "1px solid rgba(79,136,198,.25)", color: "rgba(147,197,253,.85)" }}>{n}</span>
                     ))}
                   </div>
                 )}
@@ -545,8 +528,6 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── Bungie Weekly / Xur ──────────────────────────────────────────────────────
-
 function BungieWeekly({ accentColor }: { accentColor?: string }) {
   const accent = accentColor || ACCENT_DESTINY;
   const [data, setData] = useState<any>(null);
@@ -566,7 +547,6 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Xur Status + Inventory */}
       <div style={{ ...S.card, border: xur?.available ? "1px solid rgba(245,158,11,.30)" : "1px solid rgba(255,255,255,.08)", background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: xur?.available && xur?.items?.length ? 10 : 0 }}>
           <span style={{ fontSize: 22 }}>🐍</span>
@@ -578,8 +558,8 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
         {xur?.available && xur?.items?.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid rgba(245,158,11,.12)", paddingTop: 8 }}>
             {xur.items.map((item: any, i: number) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 8, border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, background: `${TIER_COLORS[item.tierName] || "rgba(255,255,255,.03)"}18` }}>
-                <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.5)", border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, position: "relative" }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 2, border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, background: `${TIER_COLORS[item.tierName] || "rgba(255,255,255,.03)"}18` }}>
+                <div style={{ width: 40, height: 40, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.5)", border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, position: "relative" }}>
                   {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -595,16 +575,15 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
         )}
       </div>
 
-      {/* Milestones */}
       {milestones.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {milestones.filter((ms: any) => !ms.name.startsWith("Milestone")).slice(0, 20).map((ms: any) => (
             <div key={ms.hash} style={{ ...S.card }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: ms.activities?.length ? 8 : 0 }}>
                 {ms.icon ? (
-                  <img src={ms.icon} alt={ms.name + " icon"} style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                  <img src={ms.icon} alt={ms.name + " icon"} style={{ width: 32, height: 32, borderRadius: 2, objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>📋</div>
+                  <div style={{ width: 32, height: 32, borderRadius: 2, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>📋</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{ms.name}</div>
@@ -615,8 +594,8 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
               {hasManifest && ms.activities?.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {ms.activities.slice(0, 5).map((act: any, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
-                      {act.icon && <img src={act.icon} alt={act.name + " icon"} style={{ width: 24, height: 24, borderRadius: 5, objectFit: "cover", flexShrink: 0 }} />}
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 2, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
+                      {act.icon && <img src={act.icon} alt={act.name + " icon"} style={{ width: 24, height: 24, borderRadius: 2, objectFit: "cover", flexShrink: 0 }} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, fontWeight: 600 }}>{act.name}</div>
                         {act.lightLevel > 0 && <span style={{ fontSize: 9, opacity: 0.4 }}>{act.lightLevel} Power</span>}
@@ -624,7 +603,7 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
                       {act.modifiers?.length > 0 && (
                         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                           {act.modifiers.slice(0, 6).map((mod: any, mi: number) => (
-                            <div key={mi} title={`${mod.name}: ${mod.description || ""}`} style={{ width: 20, height: 20, borderRadius: 4, overflow: "hidden", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
+                            <div key={mi} title={`${mod.name}: ${mod.description || ""}`} style={{ width: 20, height: 20, borderRadius: 2, overflow: "hidden", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
                               {mod.icon && <img src={mod.icon} alt={mod.name + " modifier icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                             </div>
                           ))}
@@ -651,8 +630,6 @@ function BungieWeekly({ accentColor }: { accentColor?: string }) {
     </div>
   );
 }
-
-// ── Guardian Lookup ──────────────────────────────────────────────────────────
 
 function GuardianLookup() {
   const [query, setQuery]     = useState("");
@@ -695,10 +672,9 @@ function GuardianLookup() {
 
       {result && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Player card */}
           <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, border: `1px solid ${ACCENT_DESTINY}30`, background: `${ACCENT_DESTINY}08` }}>
             {result.player?.iconPath && (
-              <img src={result.player.iconPath} alt="Player emblem" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover" }} />
+              <img src={result.player.iconPath} alt="Player emblem" style={{ width: 44, height: 44, borderRadius: 2, objectFit: "cover" }} />
             )}
             <div>
               <div style={{ fontWeight: 800, fontSize: 15 }}>
@@ -715,7 +691,6 @@ function GuardianLookup() {
             <div style={{ ...S.card, textAlign: "center", fontSize: 12, opacity: 0.5 }}>This guardian's equipment is private.</div>
           )}
 
-          {/* Characters with equipment */}
           {(result.characters || []).map((c: any) => (
             <div key={c.characterId} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{
@@ -745,13 +720,11 @@ function GuardianLookup() {
                   </div>
                 </div>
               </div>
-              {/* Equipped items grid */}
               {(c.weapons?.length > 0 || c.armor?.length > 0 || c.equipped?.length > 0) && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingLeft: 4 }}>
                   {(c.weapons || []).concat(c.armor || []).concat(c.otherEquipped || []).slice(0, 12).map((item: any, i: number) => (
                     <ItemTile key={i} item={item} compact onClick={() => setSelectedItem(item)} />
                   ))}
-                  {/* Fallback: if no grouped data, use flat equipped */}
                   {!c.weapons?.length && !c.armor?.length && (c.equipped || []).slice(0, 12).map((item: any, i: number) => (
                     <ItemTile key={`e${i}`} item={item} compact onClick={() => setSelectedItem(item)} />
                   ))}
@@ -768,13 +741,10 @@ function GuardianLookup() {
         </div>
       )}
 
-      {/* Read-only detail panel (no equip/transfer — it's someone else's guardian) */}
       {selectedItem && <ItemDetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />}
     </div>
   );
 }
-
-// ── My Guardian (linked Bungie account) ─────────────────────────────────────
 
 function MyGuardian({ accentColor }: { accentColor?: string }) {
   const accent = accentColor || ACCENT_DESTINY;
@@ -827,7 +797,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
           Connect your Bungie.net account to view your characters, inventory, vault, and loadouts right here on Weered.
         </div>
         <a href={linkUrl} style={{
-          display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 12,
+          display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 2,
           background: `${accent}20`, border: `1px solid ${accent}50`, color: accent, fontWeight: 800, fontSize: 14,
           textDecoration: "none", cursor: "pointer",
         }}>Link Bungie Account</a>
@@ -849,7 +819,7 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
             Your Bungie authorization has expired. Re-link to restore access to your characters, inventory, and vault.
           </div>
           <a href={linkUrl} style={{
-            display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 12,
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 2,
             background: `${accent}20`, border: `1px solid ${accent}50`, color: accent, fontWeight: 800, fontSize: 14,
             textDecoration: "none", cursor: "pointer",
           }}>Re-link Bungie Account</a>
@@ -867,20 +837,18 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%", position: "relative" }}>
-      {/* Account header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 7, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>⚔</div>
+        <div style={{ width: 30, height: 30, borderRadius: 2, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>⚔</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
             {data.displayName}
-            <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 999, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
+            <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 2, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
           </div>
           <div style={{ fontSize: 9, opacity: 0.4 }}>Platform {data.platform} · {characters.length} chars{data.vaultCount ? ` · ${data.vaultCount} vault` : ""}</div>
         </div>
         <button onClick={() => { const t = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""; window.location.href = `${API}/auth/bungie?token=${encodeURIComponent(t)}`; }} style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}>Re-link</button>
       </div>
 
-      {/* Character tabs */}
       {characters.length > 0 && (
         <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden" }}>
           {characters.map((c: any, i: number) => (
@@ -908,12 +876,11 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
         </div>
       )}
 
-      {/* Sub-tabs for character view */}
       {subTab !== "vault" && char && (
         <div style={{ display: "flex", gap: 2, padding: "6px 12px", borderBottom: "1px solid rgba(255,255,255,.04)", flexShrink: 0 }}>
           {(["equipped", "inventory"] as const).map(st => (
             <button key={st} onClick={() => setSubTab(st)} style={{
-              padding: "4px 10px", borderRadius: 6, border: "none", fontSize: 11, cursor: "pointer",
+              padding: "4px 10px", borderRadius: 2, border: "none", fontSize: 11, cursor: "pointer",
               background: subTab === st ? `${accent}20` : "transparent",
               color: subTab === st ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
               fontWeight: subTab === st ? 700 : 400, textTransform: "capitalize",
@@ -922,14 +889,12 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
         </div>
       )}
 
-      {/* Action message */}
       {actionMsg && (
         <div style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, textAlign: "center", color: actionMsg.includes("failed") || actionMsg.includes("error") ? "rgba(252,165,165,.9)" : "rgba(134,239,172,.9)", background: actionMsg.includes("failed") || actionMsg.includes("error") ? "rgba(252,165,165,.06)" : "rgba(34,197,94,.06)", borderBottom: "1px solid rgba(255,255,255,.04)", flexShrink: 0 }}>
           {actionMsg}
         </div>
       )}
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12 }}>
         {subTab === "vault" ? (
           <VaultView items={vault} onItemClick={setSelectedItem} />
@@ -944,7 +909,6 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
         )}
       </div>
 
-      {/* Item detail overlay — positioned over entire MyGuardian panel */}
       {selectedItem && (
         <ItemDetailPanel
           item={selectedItem}
@@ -981,7 +945,7 @@ function EquippedView({ char, hasManifest, accent, onItemClick }: { char: any; h
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {char.emblemBackgroundPath && (
-        <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", height: 56,
+        <div style={{ borderRadius: 2, overflow: "hidden", position: "relative", height: 56,
           background: `url(${char.emblemBackgroundPath?.startsWith("http") ? char.emblemBackgroundPath : "https://www.bungie.net" + char.emblemBackgroundPath}) center/cover` }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,.7) 0%, transparent 60%)", display: "flex", alignItems: "center", padding: "0 16px", gap: 10 }}>
             <span style={{ fontSize: 20 }}>{char.classType === 0 ? "🛡" : char.classType === 1 ? "🗡" : "✨"}</span>
@@ -1042,7 +1006,7 @@ function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: 
       <div style={{ display: "flex", gap: 4 }}>
         {(["all", "weapons", "armor"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
-            padding: "4px 10px", borderRadius: 6, border: "none", fontSize: 11, cursor: "pointer",
+            padding: "4px 10px", borderRadius: 2, border: "none", fontSize: 11, cursor: "pointer",
             background: filter === f ? "rgba(245,158,11,.15)" : "transparent",
             color: filter === f ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.5)",
             fontWeight: filter === f ? 700 : 400, textTransform: "capitalize",
@@ -1056,10 +1020,6 @@ function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: 
     </div>
   );
 }
-
-
-
-// ── Challenge Board ──────────────────────────────────────────────────────────
 
 const DIFFICULTY_STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
 const CATEGORY_COLORS: Record<string, string> = {
@@ -1088,13 +1048,12 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
       background: isCompleted ? "rgba(34,197,94,.05)" : isEnrolled ? `${catColor}08` : "rgba(255,255,255,.03)",
       display: "flex", flexDirection: "column", gap: 8,
     }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
             <span style={{
               fontSize: 8, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
-              padding: "1px 6px", borderRadius: 4,
+              padding: "1px 6px", borderRadius: 2,
               background: `${catColor}20`, color: catColor,
             }}>
               {def.category || "general"}
@@ -1110,9 +1069,8 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
             {def.description}
           </div>
         </div>
-        {/* Reward badge */}
         <div style={{
-          textAlign: "center", padding: "6px 10px", borderRadius: 8,
+          textAlign: "center", padding: "6px 10px", borderRadius: 2,
           background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.2)",
           flexShrink: 0,
         }}>
@@ -1121,7 +1079,6 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
         </div>
       </div>
 
-      {/* Objectives with progress */}
       {objectives.map((obj: any) => {
         const p = progress[obj.id] || { current: 0, target: obj.target, completed: false };
         const pct = Math.min(100, Math.round((p.current / p.target) * 100));
@@ -1149,7 +1106,6 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
         );
       })}
 
-      {/* Footer — time + action */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
         <div style={{ fontSize: 10, opacity: 0.35 }}>
           {daysLeft != null ? `${daysLeft}d remaining` : "No deadline"}
@@ -1157,7 +1113,7 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
         </div>
         {isCompleted ? (
           <span style={{
-            padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700,
+            padding: "4px 12px", borderRadius: 2, fontSize: 11, fontWeight: 700,
             background: "rgba(34,197,94,.15)", color: "#86efac",
           }}>
             ✓ Completed
@@ -1179,8 +1135,6 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
   );
 }
 
-// ── Leaderboard Component ─────────────────────────────────────────────────
-
 function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: string; challengeTitle: string }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1195,14 +1149,14 @@ function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: stri
   if (loading) return <LoadingState compact label="Loading" />;
   if (rows.length === 0) return <EmptyState compact title="No completions yet." />;
 
-  const RANK_COLORS = ["#fcd34d", "#94a3b8", "#cd7f32"]; // gold, silver, bronze
+  const RANK_COLORS = ["#fcd34d", "#94a3b8", "#cd7f32"];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{challengeTitle}</div>
       {rows.map((r: any) => (
         <div key={r.rank} style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8,
+          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 2,
           background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
           borderLeft: r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
         }}>
@@ -1217,7 +1171,7 @@ function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: stri
             {r.name}
           </span>
           <span style={{
-            fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+            fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 2,
             background: "rgba(124,58,237,.1)", color: "#a78bfa", textTransform: "uppercase",
             letterSpacing: "0.5px",
           }}>
@@ -1232,12 +1186,190 @@ function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: stri
   );
 }
 
+const CB_ACCENT = "#f58220";
+const CB_ACTIVITIES: { v: string; label: string }[] = [
+  { v: "ANY", label: "Any activity" },
+  { v: "DUNGEON", label: "A Dungeon" },
+  { v: "RAID", label: "A Raid" },
+  { v: "NIGHTFALL", label: "A Nightfall" },
+  { v: "STRIKE", label: "A Strike" },
+  { v: "CRUCIBLE", label: "A Crucible match" },
+  { v: "GAMBIT", label: "A Gambit match" },
+];
+const CB_ACT_LABEL: Record<string, string> = Object.fromEntries(CB_ACTIVITIES.map(a => [a.v, a.label]));
+
+type CBStep = { activity: string; count: number; mods: string[] };
+
+function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
+  lobbyId: string;
+  myCreated: any[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [steps, setSteps] = useState<CBStep[]>([{ activity: "ANY", count: 1, mods: [] }]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiFetch("/challenges/modifiers/catalog").then((j: any) => {
+      if (j?.modifiers) setCatalog(j.modifiers.filter((m: any) => m.slotKind === "PLAYER_PICK" && (m.tab === "BOON" || m.tab === "CHALLENGE")));
+    });
+  }, []);
+
+  const groups = [
+    { tab: "BOON", label: "Boons — buffs you turn on" },
+    { tab: "CHALLENGE", label: "Challenge modifiers — make it harder" },
+  ];
+
+  function setStep(i: number, patch: Partial<CBStep>) {
+    setSteps(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
+  }
+  function toggleMod(i: number, slug: string) {
+    setSteps(prev => prev.map((s, idx) => {
+      if (idx !== i) return s;
+      const has = s.mods.includes(slug);
+      return { ...s, mods: has ? s.mods.filter(x => x !== slug) : [...s.mods, slug] };
+    }));
+  }
+  function addStep() { if (steps.length < 5) setSteps(prev => [...prev, { activity: "ANY", count: 1, mods: [] }]); }
+  function removeStep(i: number) { setSteps(prev => prev.filter((_, idx) => idx !== i)); }
+
+  const modName = (slug: string) => catalog.find(m => m.slug === slug)?.name || slug;
+  const preview = steps.map(s => {
+    const a = (CB_ACT_LABEL[s.activity] || "Any activity").toLowerCase();
+    const m = s.mods.length ? ` with ${s.mods.map(modName).join(" + ")}` : "";
+    return `${s.count}× ${a}${m}`;
+  }).join(", then ");
+
+  const atCap = myCreated.length >= 3;
+
+  async function create() {
+    setBusy(true); setError("");
+    try {
+      const j = await apiFetch("/challenges/member-create", {
+        method: "POST",
+        body: JSON.stringify({ lobbyId, title: title.trim() || undefined, steps: steps.map(s => ({ activity: s.activity, count: s.count, modifiers: s.mods })) }),
+      });
+      if (j?.ok === false || !j?.definition) { setError(j?.message || j?.error || "Could not create challenge."); return; }
+      onChanged(); onClose();
+    } catch (e: any) { setError(e?.message || "Failed"); }
+    finally { setBusy(false); }
+  }
+
+  async function del(defId: string) {
+    await apiFetch(`/challenges/definitions/${defId}`, { method: "DELETE" });
+    onChanged();
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(6,5,3,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 560, maxWidth: "100%", maxHeight: "88vh", overflowY: "auto", background: "#15110b", border: `1px solid ${CB_ACCENT}55`, borderRadius: 6, padding: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.5, color: CB_ACCENT, textTransform: "uppercase" }}>Build a Challenge</div>
+          <button onClick={onClose} style={{ marginLeft: "auto", ...S.btn }}>{"✕"}</button>
+        </div>
+
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 14, lineHeight: 1.5 }}>
+          Pick an activity and the modifiers to enable in Custom Ops. Complete it in-game and it credits automatically. Up to 3 live challenges per member.
+        </div>
+
+        {myCreated.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={S.label}>Your challenges ({myCreated.length}/3)</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {myCreated.map(c => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 3 }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.85)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.definition?.title}</span>
+                  <button onClick={() => del(c.definition.id)} style={{ ...S.btn, fontSize: 11, padding: "3px 8px" }}>Delete</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={S.label}>Name (optional)</div>
+          <input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} placeholder="Auto-named from your picks" style={S.input} />
+        </div>
+
+        {steps.map((s, i) => (
+          <div key={i} style={{ marginBottom: 10, padding: 12, background: "rgba(255,255,255,.025)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: CB_ACCENT, textTransform: "uppercase" }}>Step {i + 1}</div>
+              {steps.length > 1 && <button onClick={() => removeStep(i)} style={{ marginLeft: "auto", ...S.btn, fontSize: 11, padding: "2px 8px" }}>Remove</button>}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={S.label}>Activity</div>
+                <select value={s.activity} onChange={e => setStep(i, { activity: e.target.value })} style={{ ...S.input, cursor: "pointer" }}>
+                  {CB_ACTIVITIES.map(a => <option key={a.v} value={a.v}>{a.label}</option>)}
+                </select>
+              </div>
+              <div style={{ width: 90 }}>
+                <div style={S.label}>How many</div>
+                <input type="number" min={1} max={10} value={s.count} onChange={e => setStep(i, { count: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) })} style={S.input} />
+              </div>
+            </div>
+            <div style={S.label}>Modifiers to turn on</div>
+            {groups.map(g => {
+              const items = catalog.filter(m => m.tab === g.tab);
+              if (!items.length) return null;
+              return (
+                <div key={g.tab} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,.4)", marginBottom: 4 }}>{g.label}</div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    {items.map(m => {
+                      const on = s.mods.includes(m.slug);
+                      return (
+                        <button key={m.slug} onClick={() => toggleMod(i, m.slug)} title={m.description} style={{
+                          display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 9px",
+                          background: on ? `${CB_ACCENT}28` : "rgba(255,255,255,.04)",
+                          border: `1px solid ${on ? CB_ACCENT : "rgba(255,255,255,.12)"}`,
+                          color: on ? "#fff" : "rgba(255,255,255,.7)",
+                          borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                        }}>
+                          <span>{m.icon || (on ? "☑" : "☐")}</span>{m.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {steps.length < 5 && <button onClick={addStep} style={{ ...S.btn, width: "100%", marginBottom: 12 }}>+ Add another step</button>}
+
+        <div style={{ padding: "10px 12px", background: "rgba(74,222,128,.07)", border: "1px solid rgba(74,222,128,.25)", borderRadius: 4, marginBottom: 12 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(134,239,172,.8)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>Preview</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.85)" }}>{"✓"} Complete {preview || "…"}</div>
+        </div>
+
+        {error && <div style={{ fontSize: 12, color: "#fca5a5", marginBottom: 10 }}>{error}</div>}
+
+        <button onClick={create} disabled={busy || atCap} style={{
+          width: "100%", padding: "11px", borderRadius: 3, border: `1px solid ${CB_ACCENT}`,
+          background: atCap ? "rgba(255,255,255,.06)" : `linear-gradient(135deg, ${CB_ACCENT}, #ff9a40)`,
+          color: atCap ? "rgba(255,255,255,.4)" : "#1a0e04", fontSize: 12, fontWeight: 800, letterSpacing: 1,
+          textTransform: "uppercase", cursor: atCap || busy ? "not-allowed" : "pointer",
+        }}>
+          {atCap ? "You have 3 live challenges — delete one" : busy ? "Creating…" : "Create Challenge"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   const [challenges, setChallenges] = useState<any[]>([]);
   const [myEnrollments, setMyEnrollments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<"active" | "mine" | "completed" | "leaderboard">("active");
   const [leaderboardId, setLeaderboardId] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
   const enrollmentsRef = useRef(myEnrollments);
   enrollmentsRef.current = myEnrollments;
 
@@ -1253,7 +1385,6 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Live WS updates ──
   useEffect(() => {
     function onChallengeEvent(e: Event) {
       const d = (e as CustomEvent).detail;
@@ -1287,26 +1418,26 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
     fetchAll();
   };
 
-  // Build enrollment map by instanceId
   const enrollMap = new Map<string, any>();
   for (const e of myEnrollments) enrollMap.set(e.instanceId, e);
 
   const activeChallenges = challenges.filter(c => c.status === "ACTIVE");
   const myChallenges = myEnrollments.filter(e => e.status === "ACTIVE");
   const completedChallenges = myEnrollments.filter(e => e.status === "COMPLETED");
+  const uid = currentUserId();
+  const myCreated = challenges.filter(c => c?.definition?.createdById && c.definition.createdById === uid);
 
-  // Find leaderboard title
   const lbChallenge = leaderboardId ? challenges.find(c => c.id === leaderboardId) : null;
 
   if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading challenges...</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Sub-tabs */}
+      {showBuilder && <ChallengeBuilder lobbyId={lobbyId} myCreated={myCreated} onClose={() => setShowBuilder(false)} onChanged={fetchAll} />}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {(["active", "mine", "completed", "leaderboard"] as const).map(t => (
           <button key={t} onClick={() => setSubTab(t)} style={{
-            padding: "5px 12px", borderRadius: 6,
+            padding: "5px 12px", borderRadius: 2,
             border: subTab === t ? "1px solid rgba(79,136,198,.4)" : "1px solid rgba(255,255,255,.08)",
             background: subTab === t ? "rgba(79,136,198,.12)" : "rgba(255,255,255,.03)",
             color: subTab === t ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.6)",
@@ -1318,9 +1449,9 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
              "🏆 Leaderboard"}
           </button>
         ))}
+        <button onClick={() => setShowBuilder(true)} style={{ marginLeft: "auto", padding: "5px 12px", borderRadius: 2, border: "1px solid rgba(245,130,32,.5)", background: "rgba(245,130,32,.14)", color: "#f7a64a", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Build a Challenge</button>
       </div>
 
-      {/* Challenge list */}
       {subTab === "active" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {activeChallenges.length === 0 ? (
@@ -1377,7 +1508,6 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
 
       {subTab === "leaderboard" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Challenge selector for leaderboard */}
           {!leaderboardId ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>Select a challenge to view its leaderboard:</div>
@@ -1416,8 +1546,6 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── Tournament Board ────────────────────────────────────────────────────────
-
 const FORMAT_LABELS: Record<string, string> = { LEADERBOARD: "Leaderboard", BRACKET: "Bracket", ROUND_ROBIN: "Round Robin" };
 const STATUS_COLORS: Record<string, string> = { REGISTRATION: "#22c55e", ACTIVE: "#3b82f6", COMPLETED: "#94a3b8", CANCELED: "#ef4444" };
 
@@ -1445,7 +1573,7 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
             <span style={{
               fontSize: 8, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
-              padding: "1px 6px", borderRadius: 4,
+              padding: "1px 6px", borderRadius: 2,
               background: `${statusColor}20`, color: statusColor,
             }}>
               {t.status}
@@ -1459,7 +1587,7 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
           {t.description && <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{t.description}</div>}
         </div>
         <div style={{
-          textAlign: "center", padding: "6px 10px", borderRadius: 8,
+          textAlign: "center", padding: "6px 10px", borderRadius: 2,
           background: "rgba(59,130,246,.1)", border: "1px solid rgba(59,130,246,.2)",
           flexShrink: 0,
         }}>
@@ -1470,21 +1598,19 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
         </div>
       </div>
 
-      {/* Timeline */}
       <div style={{ display: "flex", gap: 12, fontSize: 10, opacity: 0.4 }}>
         <span>Starts: {startsAt.toLocaleDateString()} {startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
         <span>Ends: {endsAt.toLocaleDateString()}</span>
       </div>
 
-      {/* Flair reward */}
       {(() => {
         const rewards = Array.isArray(t.rewards) ? t.rewards : [];
         const flair = rewards.find((r: any) => r?.kind === "FLAIR" && r?.rank === 1 && r?.item);
         if (!flair) return null;
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(124,58,237,.08)", border: "1px solid rgba(124,58,237,.22)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 2, background: "rgba(124,58,237,.08)", border: "1px solid rgba(124,58,237,.22)" }}>
             {flair.item.imageUrl
-              ? <img src={flair.item.imageUrl} alt={flair.item.name} style={{ width: 20, height: 20, borderRadius: 4, objectFit: "cover" }} />
+              ? <img src={flair.item.imageUrl} alt={flair.item.name} style={{ width: 20, height: 20, borderRadius: 2, objectFit: "cover" }} />
               : <span style={{ fontSize: 12 }}>🏷️</span>}
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".4px", color: "rgb(216,180,254)" }}>
               WINNER FLAIR
@@ -1499,7 +1625,6 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
         );
       })()}
 
-      {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
         <button onClick={onView} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>
           View Leaderboard
@@ -1516,7 +1641,7 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
           )}
           {isRegistered && (
             <span style={{
-              padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700,
+              padding: "4px 10px", borderRadius: 2, fontSize: 10, fontWeight: 700,
               background: "rgba(34,197,94,.12)", color: "#86efac",
             }}>Registered</span>
           )}
@@ -1551,7 +1676,7 @@ function TournamentLeaderboardView({ tournamentId, title, onBack }: { tournament
         <EmptyState compact title="No entries yet." />
       ) : rows.map((r: any) => (
         <div key={r.id} style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8,
+          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 2,
           background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
           borderLeft: r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
         }}>
@@ -1580,7 +1705,7 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
   const [viewId, setViewId] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    const res = await apiFetch(`/tournaments?lobbyId=${encodeURIComponent(lobbyId)}`);
+    const res = await apiFetch(`/tournaments?lobbyId=${encodeURIComponent(lobbyId)}&status=all`);
     if (res?.tournaments) setTournaments(res.tournaments);
     setLoading(false);
   }, [lobbyId]);
@@ -1629,8 +1754,6 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── Main Panel ───────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "streams",    label: "Live Streams",  icon: "📺" },
   { id: "lfg",        label: "Fireteams",     icon: "🔥" },
@@ -1663,43 +1786,18 @@ export default function LobbyModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px",
-              borderRadius: "8px 8px 0 0",
-              border: "none",
-              background: tab === t.id ? `${accentColor}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400,
-              fontSize: 12,
-              cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5,
-            }}
-          >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: tab === "myguardian" ? "hidden" : "auto", padding: tab === "myguardian" ? 0 : "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"    && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"        && <LfgBoard lobbyId={lobbyId} />}
         {tab === "challenges"  && <ChallengeBoard lobbyId={lobbyId} />}
-        {tab === "tournaments" && <TournamentBoard lobbyId={lobbyId} />}
+        {tab === "tournaments" && <TournamentsPanel lobbyId={lobbyId} currentUserId={currentUserId} isStaff={isStaff} />}
         {tab === "weekly"     && <BungieWeekly accentColor={accentColor} />}
         {tab === "guardian"   && <GuardianLookup />}
         {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}
       </div>
 
-      {/* Bungie required legal disclaimer */}
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
           Weered is not affiliated with, endorsed by, or sponsored by Bungie, Inc. Destiny, Destiny 2, and all related logos and trademarks are the property of Bungie, Inc.

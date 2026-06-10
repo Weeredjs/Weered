@@ -42,14 +42,6 @@ type ChampionItem = {
 
 type FeaturedItem = LiveMatchItem | TournamentRowItem | ChampionItem;
 
-/**
- * Featured slot above the modules panel. Renders rows for:
- *   - LIVE matches in any tournament for this lobby
- *   - ACTIVE tournaments (status ACTIVE, or REGISTRATION past startsAt, or featuredMode=ACTIVE)
- *   - UPCOMING tournaments (within 24h of startsAt or featuredMode=UPCOMING)
- *
- * Hides itself entirely when nothing is featured. Polls every 12s.
- */
 export default function TournamentLiveStrip({
   lobbyId,
   currentUserId,

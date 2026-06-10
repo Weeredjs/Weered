@@ -4,13 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-// Detect iOS Safari not running as installed PWA
 function isIosSafariNotPwa(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   const isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (!isIos) return false;
-  // Already installed as PWA (standalone mode)?
   if ((window.navigator as any).standalone === true) return false;
   if (window.matchMedia("(display-mode: standalone)").matches) return false;
   return true;
@@ -22,36 +20,71 @@ export default function PushPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+    if (Notification.permission !== "granted") return;
+    const token = localStorage.getItem("weered_token");
+    if (!token) return;
+
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          const vapidRes = await fetch(`${API}/push/vapid-key`);
+          const vapidData = await vapidRes.json();
+          if (!vapidData?.ok || !vapidData?.key) return;
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: vapidData.key,
+          } as any);
+        }
+        if (!sub) return;
+        await fetch(`${API}/push/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: arrayBufferToBase64(sub.getKey("p256dh")),
+              auth: arrayBufferToBase64(sub.getKey("auth")),
+            },
+          }),
+        });
+      } catch (e) {
+        console.warn("[push self-heal]", e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
     const token = localStorage.getItem("weered_token");
     if (!token) return;
 
     const visits = Number(localStorage.getItem("weered_visit_count") || "0") + 1;
     localStorage.setItem("weered_visit_count", String(visits));
-    if (visits < 3) return;
+    if (visits < 1) return;
 
-    // Check iOS Safari first
     if (isIosSafariNotPwa()) {
       const dismissed = localStorage.getItem("weered_ios_pwa_later");
       if (dismissed) {
         const ts = Number(dismissed);
-        if (Date.now() - ts < 14 * 24 * 60 * 60 * 1000) return; // 14-day cooldown
+        if (Date.now() - ts < 14 * 24 * 60 * 60 * 1000) return;
       }
       const timer = setTimeout(() => { setMode("ios"); setShow(true); }, 5000);
       return () => clearTimeout(timer);
     }
 
-    // Standard push prompt for non-iOS
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
     if (Notification.permission === "denied" || Notification.permission === "granted") return;
 
     const dismissed = localStorage.getItem("weered_push_later");
     if (dismissed) {
       const ts = Number(dismissed);
-      if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return; // 7-day cooldown
+      if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return;
     }
 
-    // Delay showing prompt by 5 seconds so it doesn't feel aggressive
     const timer = setTimeout(() => { setMode("push"); setShow(true); }, 5000);
     return () => clearTimeout(timer);
   }, []);
@@ -64,7 +97,6 @@ export default function PushPrompt() {
 
       const reg = await navigator.serviceWorker.ready;
 
-      // Fetch VAPID key from API
       const vapidRes = await fetch(`${API}/push/vapid-key`);
       const vapidData = await vapidRes.json();
       if (!vapidData.ok || !vapidData.key) return;
@@ -99,7 +131,6 @@ export default function PushPrompt() {
 
   if (!show) return null;
 
-  // iOS "Add to Home Screen" guidance
   if (mode === "ios") {
     return (
       <div style={{
@@ -120,7 +151,6 @@ export default function PushPrompt() {
               Pin it to your Home Screen. You'll get a ping for DMs, mentions, and crew moves.
             </div>
 
-            {/* Steps */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{
@@ -180,7 +210,6 @@ export default function PushPrompt() {
     );
   }
 
-  // Standard push prompt (Android/desktop)
   return (
     <div style={{
       position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)",

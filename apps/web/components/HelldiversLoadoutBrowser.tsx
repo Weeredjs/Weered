@@ -3,11 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import HelldiversLoadoutBuilder from "./HelldiversLoadoutBuilder";
 
-// ── Helldivers 2 — Loadout Browser ────────────────────────────────────────
-// Grid of dossier cards. Filters at top: faction chips, role chips, sort.
-// Click a card → expand into detail view with full breakdown + vote buttons.
-// Aesthetic: collectible trading card / dossier stack, faction-colored.
-
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders(): Record<string, string> {
@@ -85,7 +80,6 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
 
   return (
     <div style={{ padding: 14, background: "#0a0a0a", color: "#fff", minHeight: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Header bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 1.2, color: lobbyAccent, textTransform: "uppercase" }}>
@@ -107,7 +101,6 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
         >+ New Loadout</button>
       </div>
 
-      {/* Filters */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <span style={{
           fontFamily: "ui-monospace, monospace",
@@ -140,7 +133,6 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
         </form>
       </div>
 
-      {/* Detail panel (in-place) */}
       {selectedSlug && (
         <LoadoutDetail
           slug={selectedSlug}
@@ -149,7 +141,6 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
         />
       )}
 
-      {/* Grid */}
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: "#666", fontSize: 13 }}>Decrypting archive...</div>
       ) : loadouts.length === 0 ? (
@@ -255,7 +246,6 @@ function pillStyle(color: string): React.CSSProperties {
   };
 }
 
-// ── Detail panel (full dossier + vote) ────────────────────────────────────
 function LoadoutDetail({ slug, onClose, onDeleted }: { slug: string; onClose: () => void; onDeleted: () => void }) {
   const [data, setData]     = useState<{ loadout: Loadout; myVote: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -375,7 +365,6 @@ function LoadoutDetail({ slug, onClose, onDeleted }: { slug: string; onClose: ()
           </div>
         </div>
 
-        {/* Vote rail */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "stretch" }}>
           <div style={{
             border: `1px solid ${meta.color}`, borderRadius: 4, padding: 12, textAlign: "center",

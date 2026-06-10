@@ -19,7 +19,6 @@ export function wsUrl(): string {
     const isLocal = host === "localhost" || host === "127.0.0.1";
     if (isLocal) return "ws://127.0.0.1:4001";
     if (host.endsWith("weered.ca")) return "wss://ws.weered.ca";
-    // fallback: match current page scheme
     const scheme = window.location.protocol === "https:" ? "wss" : "ws";
     return `${scheme}://${host}`;
   }

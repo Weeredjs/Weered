@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// Fortnite vertical: stats, item shop, news, map, cosmetic search,
-// per-user wishlist (DB), and a 15-min shop-vs-wishlist push notifier.
-// Wraps fortnite-api.com (free tier rate-limited; FORTNITE_API_KEY
-// raises limits if set). All responses cached in-memory by domain.
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
   sendPush: (userId: string, payload: { title: string; body: string; url?: string; tag?: string }) => Promise<void>;
@@ -243,8 +239,6 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // ── Wishlist ─────────────────────────────────────────────────────────────
-
   app.get("/fortnite/wishlist", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -326,8 +320,6 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  // ── Background: shop vs wishlist push notifier ─────────────────────────
-
   let lastShopCheck = 0;
   const SHOP_CHECK_INTERVAL = 15 * 60 * 1000;
 
@@ -391,8 +383,6 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     lastShopCheck = now;
     checkFortniteShopWishlist();
   }, 60_000);
-
-  // ── Ranked stats ──────────────────────────────────────────────────────
 
   app.get("/fortnite/stats/:name/ranked", async (req, reply) => {
     const name = String((req as any).params?.name || "").trim();

@@ -1,13 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// Windrose vertical (Kraken Express, Steam appid 3041230) — the biggest
-// per-game vertical: live player count, public-server scrape, /hunter
-// dossier, unified activity feed, AI Operator weekly recap, news feed,
-// curated launch metrics, community-server directory, Bounty Board with
-// escrow + claim + settle + reject + cancel + auto-expire worker, and
-// the bounty Hall of Fame leaderboard. Background workers: server poll
-// every 90s, bounty sweep hourly + on boot.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
   sendPush: (userId: string, payload: { title: string; body: string; url?: string; tag?: string }) => Promise<void>;
@@ -32,7 +25,6 @@ function wrCacheSet(key: string, data: any, ttlMs: number) {
   wrCache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
-// GET /windrose/live-players — current concurrent players via Steam API
 app.get("/windrose/live-players", async (req, reply) => {
   const cacheKey = "wr:live";
   const cached = wrCacheGet(cacheKey);
@@ -45,7 +37,7 @@ app.get("/windrose/live-players", async (req, reply) => {
     const count = j?.response?.player_count;
     if (typeof count !== "number") return reply.send({ ok: false, error: "no_count" });
     const result = { ok: true, players: count, appid: WINDROSE_APPID, checkedAt: new Date().toISOString() };
-    wrCacheSet(cacheKey, result, 60 * 1000); // 60s
+    wrCacheSet(cacheKey, result, 60 * 1000);
     return reply.send(result);
   } catch (e) {
     console.error("[windrose/live-players]", e);
@@ -53,28 +45,20 @@ app.get("/windrose/live-players", async (req, reply) => {
   }
 });
 
-// GET /windrose/public-servers — auto-discovered public Windrose servers
-// Pulls from Steam's master server list (IGameServersService) filtered by
-// appid. No admin registration needed — any server advertising on Steam
-// Master appears here. Cached 60s so we don't hammer Steam.
 app.get("/windrose/public-servers", async (req, reply) => {
   const cacheKey = "wr:public-servers";
   const cached = wrCacheGet(cacheKey);
   if (cached) return reply.send(cached);
   try {
     if (!STEAM_API_KEY) return reply.send({ ok: false, error: "steam_key_missing", servers: [] });
-    // filter: \appid\<id> limits to Windrose; \gamedir\windrose double-filters
-    // if some entries lie about appid. Steam API caps at ~20k results.
     const filter = encodeURIComponent(`\\appid\\${WINDROSE_APPID}`);
     const url = `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${STEAM_API_KEY}&filter=${filter}&limit=200`;
     const res = await fetch(url);
     if (!res.ok) {
-      // Some keys get 403 on this endpoint — graceful degrade so UI shows manual registry only
       return reply.send({ ok: false, error: `steam_status_${res.status}`, servers: [] });
     }
     const j: any = await res.json();
     const raw: any[] = Array.isArray(j?.response?.servers) ? j.response.servers : [];
-    // Normalise + drop empties we can't use
     const servers = raw
       .filter(s => s && typeof s.addr === "string")
       .map((s: any) => ({
@@ -88,12 +72,11 @@ app.get("/windrose/public-servers", async (req, reply) => {
         gameType: String(s.gametype || "").trim(),
         version: String(s.version || "").trim(),
         dedicated: Boolean(s.dedicated),
-        os: String(s.os || "").trim(),     // "w" | "l" | "m"
+        os: String(s.os || "").trim(),
         secure: Boolean(s.secure),
         passworded: Boolean(s.passworded ?? false),
         region: Number.isFinite(s.region) ? Number(s.region) : null,
       }))
-      // Sort by populated first, then alphabetical
       .sort((a, b) => (b.players - a.players) || a.name.localeCompare(b.name));
     const result = { ok: true, count: servers.length, servers, checkedAt: new Date().toISOString() };
     wrCacheSet(cacheKey, result, 60 * 1000);
@@ -104,13 +87,6 @@ app.get("/windrose/public-servers", async (req, reply) => {
   }
 });
 
-// GET /windrose/captains-log — The Operator's weekly recap
-// Aggregates the past 7 days of Windrose lobby activity and has
-// Claude Haiku write it up as The Operator (GTA gold-robot persona).
-// Cached 6h so we don't burn tokens on every refresh.
-// GET /windrose/hunter/:userId — per-user bounty dossier
-// Derived entirely from existing bounty rows; no new storage. Ranks are
-// computed against the same hunter set we use on the Hall of Fame.
 app.get("/windrose/hunter/:userId", async (req, reply) => {
   const userId = String((req.params as any).userId || "");
   if (!userId) return reply.code(400).send({ ok: false, error: "userId_required" });
@@ -121,28 +97,23 @@ app.get("/windrose/hunter/:userId", async (req, reply) => {
     });
     if (!user) return reply.code(404).send({ ok: false, error: "not_found" });
 
-    // Pull every bounty in lobby once — volume is small enough that
-    // computing user dossiers in-memory is simpler than N queries.
     const all = await (prisma as any).windroseBounty.findMany({
       where: { lobbyId: "windrose" },
       take: 5000,
     });
 
-    // As hunter (claimant on SETTLED)
     const claimedSettled = all.filter((b: any) => b.claimantId === userId && b.status === "SETTLED");
     const claimedPending = all.filter((b: any) => b.claimantId === userId && b.status === "CLAIMED");
     const kills = claimedSettled.length;
     const totalEarned = claimedSettled.reduce((s: number, b: any) => s + (Number(b.amount) || 0), 0);
     const biggestHit = claimedSettled.reduce((m: any, b: any) => (!m || b.amount > m.amount) ? b : m, null);
 
-    // As poster
     const posted = all.filter((b: any) => b.posterId === userId);
     const postedCount = posted.length;
     const totalPosted = posted.reduce((s: number, b: any) => s + (Number(b.amount) || 0), 0);
     const postedOpen = posted.filter((b: any) => b.status === "OPEN" || b.status === "CLAIMED").length;
     const postedSettled = posted.filter((b: any) => b.status === "SETTLED").length;
 
-    // Rank among hunters (by totalEarned) — 0 means unranked
     const hunterMap = new Map<string, number>();
     for (const b of all) {
       if (b.status !== "SETTLED" || !b.claimantId) continue;
@@ -153,7 +124,6 @@ app.get("/windrose/hunter/:userId", async (req, reply) => {
     const hunterRank = rankIndex === -1 ? null : rankIndex + 1;
     const totalHunters = sortedHunters.length;
 
-    // Rank among posters (by totalPosted)
     const posterMap = new Map<string, number>();
     for (const b of all) {
       posterMap.set(b.posterId, (posterMap.get(b.posterId) || 0) + (Number(b.amount) || 0));
@@ -162,7 +132,6 @@ app.get("/windrose/hunter/:userId", async (req, reply) => {
     const posterRankIdx = sortedPosters.findIndex(([uid]) => uid === userId);
     const posterRank = posterRankIdx === -1 ? null : posterRankIdx + 1;
 
-    // Recent activity — last 5 of each side, trimmed for payload
     const recentKills = claimedSettled
       .sort((a: any, b: any) => new Date(b.settledAt || 0).getTime() - new Date(a.settledAt || 0).getTime())
       .slice(0, 5)
@@ -204,10 +173,6 @@ app.get("/windrose/hunter/:userId", async (req, reply) => {
   }
 });
 
-// GET /windrose/activity — unified event stream for the Flagship chaos bar
-// Stitches bounties, crew publications, community server listings, and LFG
-// flags into one time-sorted list so the Windrose tab feels alive without a
-// dedicated event-sourcing system. 30s cache keeps load light.
 app.get("/windrose/activity", async (_req, reply) => {
   const cacheKey = "wr:activity";
   const cached = wrCacheGet(cacheKey);
@@ -251,7 +216,6 @@ app.get("/windrose/activity", async (_req, reply) => {
     const events: Event[] = [];
 
     for (const b of bounties) {
-      // Post
       events.push({
         id: `b:post:${b.id}`,
         kind: "bounty_post",
@@ -260,7 +224,6 @@ app.get("/windrose/activity", async (_req, reply) => {
         subject: b.targetHandle,
         amount: b.amount,
       });
-      // Settle
       if (b.status === "SETTLED" && b.settledAt) {
         events.push({
           id: `b:settle:${b.id}`,
@@ -271,7 +234,6 @@ app.get("/windrose/activity", async (_req, reply) => {
           amount: b.amount,
         });
       }
-      // Cancel
       if (b.status === "CANCELLED" && b.cancelledAt) {
         events.push({
           id: `b:cancel:${b.id}`,
@@ -339,7 +301,6 @@ app.get("/windrose/captains-log", async (_req, reply) => {
     const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
     const since = new Date(Date.now() - WEEK_MS);
 
-    // ── Aggregate ─────────────────────────────────────────────────
     const [bountiesAll, crews, servers, lfg] = await Promise.all([
       (prisma as any).windroseBounty.findMany({
         where: { lobbyId: "windrose", createdAt: { gte: since } },
@@ -393,7 +354,6 @@ app.get("/windrose/captains-log", async (_req, reply) => {
       lfg: { posts: lfgCount, modes: lfgModes },
     };
 
-    // ── Ask The Operator ──────────────────────────────────────────
     const ai = await getAI();
     if (!ai) return reply.send({ ok: false, error: "ai_unavailable", summary: null });
 
@@ -437,7 +397,7 @@ Rules:
       },
       generatedAt: new Date().toISOString(),
     };
-    wrCacheSet(cacheKey, result, 6 * 60 * 60 * 1000); // 6h
+    wrCacheSet(cacheKey, result, 6 * 60 * 60 * 1000);
     return reply.send(result);
   } catch (e) {
     console.error("[windrose/captains-log]", e);
@@ -445,7 +405,6 @@ Rules:
   }
 });
 
-// GET /windrose/news — latest Steam news from Kraken Express
 app.get("/windrose/news", async (req, reply) => {
   const cacheKey = "wr:news";
   const cached = wrCacheGet(cacheKey);
@@ -467,7 +426,7 @@ app.get("/windrose/news", async (req, reply) => {
       tags: Array.isArray(n.tags) ? n.tags.slice(0, 6) : [],
     }));
     const result = { ok: true, news };
-    wrCacheSet(cacheKey, result, 10 * 60 * 1000); // 10 min
+    wrCacheSet(cacheKey, result, 10 * 60 * 1000);
     return reply.send(result);
   } catch (e) {
     console.error("[windrose/news]", e);
@@ -475,7 +434,6 @@ app.get("/windrose/news", async (req, reply) => {
   }
 });
 
-// GET /windrose/launch — curated launch milestone snapshot (static, editable)
 app.get("/windrose/launch", async (req, reply) => {
   return reply.send({
     ok: true,
@@ -490,11 +448,6 @@ app.get("/windrose/launch", async (req, reply) => {
   });
 });
 
-// ── Windrose Community Servers directory ───────────────────────────────
-// Any authenticated user can register a server (WindrosePlus-hosted or
-// otherwise). Owner manages lifecycle. Public GET shows live directory.
-
-// GET /windrose/servers — public directory
 app.get("/windrose/servers", async (req, reply) => {
   try {
     const servers = await (prisma as any).communityServer.findMany({
@@ -515,7 +468,6 @@ app.get("/windrose/servers", async (req, reply) => {
   }
 });
 
-// POST /windrose/servers — register a server
 app.post("/windrose/servers", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -530,7 +482,6 @@ app.post("/windrose/servers", async (req, reply) => {
   const framework    = (body.framework ? String(body.framework).trim().slice(0, 40) : null);
   const maxSlots     = body.maxSlots ? Math.max(1, Math.min(64, Number(body.maxSlots) || 8)) : null;
   const tags         = Array.isArray(body.tags) ? body.tags.map((t: any) => String(t).slice(0, 24)).slice(0, 10) : [];
-  // Cap per user: 5 servers
   const existing = await (prisma as any).communityServer.count({ where: { ownerId: u.id, lobbyId: "windrose" } });
   if (existing >= 5) return reply.code(400).send({ ok: false, error: "limit_reached", message: "Max 5 servers per user." });
   try {
@@ -544,7 +495,6 @@ app.post("/windrose/servers", async (req, reply) => {
   }
 });
 
-// PATCH /windrose/servers/:id — owner edits
 app.patch("/windrose/servers/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -574,7 +524,6 @@ app.patch("/windrose/servers/:id", async (req, reply) => {
   }
 });
 
-// DELETE /windrose/servers/:id — owner or staff
 app.delete("/windrose/servers/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -593,15 +542,10 @@ app.delete("/windrose/servers/:id", async (req, reply) => {
   }
 });
 
-// ── Windrose Bounty Board ──────────────────────────────────────────────
-// Players escrow Paper on an in-game target. A hunter submits proof, the
-// poster settles or rejects. Paper moves through awardPaper() so the
-// ledger stays coherent.
 const BOUNTY_MIN = 100;
 const BOUNTY_MAX = 500_000;
 const BOUNTY_CAP_OPEN_PER_USER = 10;
 
-// GET /windrose/bounties?status=OPEN&mine=1
 app.get("/windrose/bounties", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   const q: any = (req as any).query || {};
@@ -611,7 +555,6 @@ app.get("/windrose/bounties", async (req, reply) => {
   const where: any = { lobbyId: "windrose" };
   if (["OPEN","CLAIMED","SETTLED","CANCELLED"].includes(status)) where.status = status;
   if (mine && u) where.OR = [{ posterId: u.id }, { claimantId: u.id }];
-  // target filter: case-insensitive match on the in-game handle
   if (target) where.targetHandle = { equals: target, mode: "insensitive" };
   try {
     const rows = await (prisma as any).windroseBounty.findMany({
@@ -626,7 +569,6 @@ app.get("/windrose/bounties", async (req, reply) => {
   }
 });
 
-// GET /windrose/bounties/:id — single bounty, public (for shareable pages)
 app.get("/windrose/bounties/:id", async (req, reply) => {
   const id = String((req.params as any).id || "");
   if (!id) return reply.code(400).send({ ok: false, error: "id_required" });
@@ -640,7 +582,6 @@ app.get("/windrose/bounties/:id", async (req, reply) => {
   }
 });
 
-// POST /windrose/bounties — create. Escrows Paper from poster immediately.
 app.post("/windrose/bounties", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -653,7 +594,6 @@ app.post("/windrose/bounties", async (req, reply) => {
   if (amount < BOUNTY_MIN) return reply.code(400).send({ ok: false, error: "amount_too_low", message: `Minimum bounty is ${BOUNTY_MIN} Paper.` });
   if (amount > BOUNTY_MAX) return reply.code(400).send({ ok: false, error: "amount_too_high", message: `Maximum bounty is ${BOUNTY_MAX.toLocaleString()} Paper.` });
 
-  // Cap on simultaneous open posts per user — prevents locking up all their Paper
   const openCount = await (prisma as any).windroseBounty.count({
     where: { posterId: u.id, status: { in: ["OPEN","CLAIMED"] } },
   });
@@ -661,7 +601,6 @@ app.post("/windrose/bounties", async (req, reply) => {
     return reply.code(400).send({ ok: false, error: "limit_reached", message: `You already have ${BOUNTY_CAP_OPEN_PER_USER} bounties in flight. Settle or cancel one first.` });
   }
 
-  // Escrow: debit Paper now. awardPaper prevents going negative.
   const debit = await awardPaper(u.id, "SPEND_UNLOCK", -amount, `Bounty escrow · ${targetHandle}`);
   if (!debit) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
 
@@ -674,15 +613,10 @@ app.post("/windrose/bounties", async (req, reply) => {
         amount, reason, status: "OPEN",
       },
     });
-    // Bust the leaderboard + activity + captain's-log caches so the new
-    // bounty lands in each surface on the next refresh without a 5-min wait.
     wrCache.delete("wr:bounties:leaderboard");
     wrCache.delete("wr:activity");
     wrCache.delete("wr:captains-log");
 
-    // Most Wanted push — ring the bell on the whole Windrose lobby when a
-    // big bounty drops. Threshold is intentionally high so the ping stays
-    // event-worthy. Fires async; never blocks the response.
     const MOST_WANTED_THRESHOLD = 50_000;
     if (amount >= MOST_WANTED_THRESHOLD) {
       void (async () => {
@@ -692,7 +626,6 @@ app.post("/windrose/bounties", async (req, reply) => {
             select: { userId: true },
             take: 2000,
           });
-          // Skip pinging the poster themselves
           const memberIds = new Set<string>(members.map((m: any) => m.userId).filter((id: string) => id && id !== u.id));
           const body = `${amount.toLocaleString()} Paper on ${targetHandle}. ${reason ? `"${reason.slice(0, 80)}${reason.length > 80 ? "…" : ""}"` : "It's on the board."}`;
           const data = {
@@ -713,14 +646,12 @@ app.post("/windrose/bounties", async (req, reply) => {
     try { broadcastToLobby?.("windrose", { type: "windrose:bounty:posted", userId: u.id, lobbyId: "windrose", bountyId: created.id, amount: created.amount }); } catch {}
     return reply.send({ ok: true, bounty: created, balance: debit.balance });
   } catch (e) {
-    // Escrow was debited but DB write failed — refund so we don't eat user's Paper
     await awardPaper(u.id, "ADJUSTMENT", amount, `Bounty escrow refund (create failed)`);
     console.error("[windrose/bounties POST]", e);
     return reply.code(500).send({ ok: false, error: "create_failed" });
   }
 });
 
-// POST /windrose/bounties/:id/claim — hunter submits proof
 app.post("/windrose/bounties/:id/claim", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -749,7 +680,6 @@ app.post("/windrose/bounties/:id/claim", async (req, reply) => {
     });
     wrCache.delete("wr:activity");
     try { broadcastToLobby?.("windrose", { type: "windrose:bounty:claimed", userId: u.id, userName: claimantName, lobbyId: "windrose", bountyId: b.id, amount: b.amount }); } catch {}
-    // Ping the poster — someone's claimed your bounty
     sendPush(b.posterId, {
       title: "Claim on your bounty",
       body: `${claimantName} claims ${b.amount.toLocaleString()} Paper on ${b.targetHandle}. Review the proof.`,
@@ -763,7 +693,6 @@ app.post("/windrose/bounties/:id/claim", async (req, reply) => {
   }
 });
 
-// POST /windrose/bounties/:id/settle — poster confirms, releases Paper
 app.post("/windrose/bounties/:id/settle", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -772,7 +701,6 @@ app.post("/windrose/bounties/:id/settle", async (req, reply) => {
   if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
   if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
   if (b.status !== "CLAIMED" || !b.claimantId) return reply.code(400).send({ ok: false, error: "not_claimed" });
-  // Pay the hunter from escrow
   const credit = await awardPaper(b.claimantId, "EARN_GIFT", b.amount, `Bounty claim · ${b.targetHandle}`, b.id);
   if (!credit) return reply.code(500).send({ ok: false, error: "payout_failed" });
   try {
@@ -782,7 +710,6 @@ app.post("/windrose/bounties/:id/settle", async (req, reply) => {
     });
     wrCache.delete("wr:bounties:leaderboard");
     wrCache.delete("wr:activity");
-    // Ping the hunter — payout is yours
     if (b.claimantId) {
       sendPush(b.claimantId, {
         title: "Bounty paid",
@@ -798,7 +725,6 @@ app.post("/windrose/bounties/:id/settle", async (req, reply) => {
   }
 });
 
-// POST /windrose/bounties/:id/reject — poster rejects claim, returns to OPEN
 app.post("/windrose/bounties/:id/reject", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -814,7 +740,6 @@ app.post("/windrose/bounties/:id/reject", async (req, reply) => {
       data: { status: "OPEN", claimantId: null, claimantName: null, proofNote: null, proofImageUrl: null, claimedAt: null },
     });
     wrCache.delete("wr:activity");
-    // Ping the spurned hunter — back to the hunt
     if (rejectedClaimantId) {
       sendPush(rejectedClaimantId, {
         title: "Claim rejected",
@@ -830,7 +755,6 @@ app.post("/windrose/bounties/:id/reject", async (req, reply) => {
   }
 });
 
-// POST /windrose/bounties/:id/cancel — poster cancels OPEN bounty, refund
 app.post("/windrose/bounties/:id/cancel", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -839,7 +763,6 @@ app.post("/windrose/bounties/:id/cancel", async (req, reply) => {
   if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
   if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
   if (b.status !== "OPEN") return reply.code(400).send({ ok: false, error: "not_open", message: "Can only cancel while open (uncclaimed)." });
-  // Refund escrow
   const refund = await awardPaper(u.id, "ADJUSTMENT", b.amount, `Bounty cancelled · refund`, b.id);
   if (!refund) return reply.code(500).send({ ok: false, error: "refund_failed" });
   try {
@@ -856,11 +779,6 @@ app.post("/windrose/bounties/:id/cancel", async (req, reply) => {
   }
 });
 
-// ── Bounty auto-expire worker ─────────────────────────────────────────
-// Any OPEN bounty older than BOUNTY_EXPIRY_DAYS gets auto-cancelled and
-// the poster refunded, so the board doesn't silt up with zombie posts.
-// Safe to run on every instance because the sweep is idempotent — the
-// status guard on the update means a second runner just no-ops.
 const BOUNTY_EXPIRY_DAYS = 21;
 async function sweepExpiredBounties() {
   try {
@@ -871,7 +789,6 @@ async function sweepExpiredBounties() {
     });
     if (stale.length === 0) return;
     for (const b of stale) {
-      // Refund the poster's escrow
       const refund = await awardPaper(b.posterId, "ADJUSTMENT", b.amount, `Bounty expired · refund`, b.id);
       if (!refund) continue;
       try {
@@ -886,7 +803,6 @@ async function sweepExpiredBounties() {
           tag: `windrose:bounty:${b.id}:expired`,
         }).catch(() => {});
       } catch (e) {
-        // If the update failed, un-refund so we don't double-pay on the next sweep
         await awardPaper(b.posterId, "ADJUSTMENT", -b.amount, `Bounty expire rollback`, b.id).catch(() => {});
         console.error("[windrose/bounties expire]", e);
       }
@@ -898,25 +814,19 @@ async function sweepExpiredBounties() {
     console.error("[windrose/bounties sweep]", e);
   }
 }
-// Run hourly + on boot (after a short delay so the app is fully up)
 setInterval(() => { void sweepExpiredBounties(); }, 60 * 60 * 1000);
 setTimeout(() => { void sweepExpiredBounties(); }, 30 * 1000);
 
-// GET /windrose/bounties/leaderboard — hall-of-fame aggregates
-// Three boards + a stats strip. Cached 5 min to keep the query cheap.
 app.get("/windrose/bounties/leaderboard", async (_req, reply) => {
   const cacheKey = "wr:bounties:leaderboard";
   const cached = wrCacheGet(cacheKey);
   if (cached) return reply.send(cached);
   try {
-    // Fetch all bounties once, aggregate in memory — simpler than Prisma
-    // groupBy juggling, and the volume is small.
     const rows: any[] = await (prisma as any).windroseBounty.findMany({
       where: { lobbyId: "windrose" },
-      take: 5000, // plenty of headroom; revisit if the board ever gets huge
+      take: 5000,
     });
 
-    // Most Wanted — group OPEN + CLAIMED by targetHandle, sum amount
     const wantedMap = new Map<string, { count: number; amount: number }>();
     for (const r of rows) {
       if (r.status !== "OPEN" && r.status !== "CLAIMED") continue;
@@ -932,7 +842,6 @@ app.get("/windrose/bounties/leaderboard", async (_req, reply) => {
       .sort((a, b) => b.totalAmount - a.totalAmount)
       .slice(0, 10);
 
-    // Top Hunters — group SETTLED by claimantId, count + sum
     const hunterMap = new Map<string, { name: string; kills: number; earned: number }>();
     for (const r of rows) {
       if (r.status !== "SETTLED" || !r.claimantId) continue;
@@ -946,7 +855,6 @@ app.get("/windrose/bounties/leaderboard", async (_req, reply) => {
       .sort((a, b) => b.totalEarned - a.totalEarned)
       .slice(0, 10);
 
-    // Biggest Posters — group ALL posts by posterId
     const posterMap = new Map<string, { name: string; posted: number; total: number }>();
     for (const r of rows) {
       if (!r.posterId) continue;
@@ -960,7 +868,6 @@ app.get("/windrose/bounties/leaderboard", async (_req, reply) => {
       .sort((a, b) => b.totalPosted - a.totalPosted)
       .slice(0, 10);
 
-    // Stats strip
     const openCount = rows.filter(r => r.status === "OPEN" || r.status === "CLAIMED").length;
     const openTotal = rows.filter(r => r.status === "OPEN" || r.status === "CLAIMED")
       .reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -982,10 +889,6 @@ app.get("/windrose/bounties/leaderboard", async (_req, reply) => {
   }
 });
 
-// ── Windrose server polling worker ─────────────────────────────────────
-// Pings each registered server's queryUrl every 90s. Updates status +
-// lastState JSON blob. Tolerant of missing/unknown response shapes — we
-// just store what we get so the directory can render whatever's there.
 async function pollWindroseServers() {
   try {
     const servers = await (prisma as any).communityServer.findMany({

@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /friends, /recents, /blocks, /users/:userId/block, /reports —
-// user-facing social-graph and content-moderation endpoints. Mod-side
-// /staff/reports/* stays in main() and will move with the staff
-// extraction (more shared helpers there).
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   verifyToken: (token: string) => { id: string; name: string } | null;
@@ -16,8 +12,6 @@ type Opts = {
 export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, verifyToken, awardNotoriety, createNotification, rooms } = opts;
 
-  // ── Friends ─────────────────────────────────────────────────────────────
-
   app.get("/friends", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
@@ -28,7 +22,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true, pillAccentColor: true } as any })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true, pillAccentColor: true, statusText: true, statusEmoji: true, nameEffect: true, avatarFrame: true } as any })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string; isAway: boolean }>();
     for (const p of profiles) {
@@ -44,8 +38,6 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     const lobbySet = activeRoomIds.length
       ? new Set((await prisma.lobby.findMany({ where: { id: { in: activeRoomIds } }, select: { id: true } })).map(l => l.id))
       : new Set<string>();
-    // Primary crew per peer — earliest joined membership wins (their "main"
-    // crew). Surfaces the [TAG] insignia on friends-list rows.
     const memberships = peerIds.length
       ? await (prisma as any).crewMember.findMany({
           where: { userId: { in: peerIds } },
@@ -146,8 +138,6 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     await db.friendRequest.deleteMany({ where: { OR: [{ fromId: u.id, toId: peerId }, { fromId: peerId, toId: u.id }] } });
     return reply.send({ ok: true });
   });
-
-  // ── Recents ─────────────────────────────────────────────────────────────
 
   app.get("/recents", async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
@@ -261,7 +251,60 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // ── Blocks ─────────────────────────────────────────────────────────────
+  app.get("/me/favorites", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const me = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { favoriteLobbyIds: true } });
+    const ids: string[] = me?.favoriteLobbyIds ?? [];
+    const rows = ids.length
+      ? await prisma.lobby.findMany({
+          where: { id: { in: ids } },
+          select: {
+            id: true, name: true, description: true, logoUrl: true, bannerUrl: true,
+            accentColor: true, pinned: true, verified: true, moduleType: true,
+            _count: { select: { rooms: true, members: true } },
+          },
+        })
+      : [];
+    const map = new Map(rows.map((l) => [l.id, l]));
+    const lobbies = ids.map((id) => map.get(id)).filter(Boolean);
+    return reply.send({ ok: true, ids, lobbies });
+  });
+
+  app.post("/me/favorites/:id", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req.params as any).id || "").trim();
+    if (!id) return reply.code(400).send({ ok: false, error: "missing_id" });
+    const me = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { favoriteLobbyIds: true } });
+    const cur: string[] = me?.favoriteLobbyIds ?? [];
+    if (!cur.includes(id)) {
+      await (prisma as any).user.update({ where: { id: user.id }, data: { favoriteLobbyIds: [id, ...cur].slice(0, 200) } });
+    }
+    return reply.send({ ok: true });
+  });
+
+  app.delete("/me/favorites/:id", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const id = String((req.params as any).id || "").trim();
+    const me = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { favoriteLobbyIds: true } });
+    const cur: string[] = me?.favoriteLobbyIds ?? [];
+    await (prisma as any).user.update({ where: { id: user.id }, data: { favoriteLobbyIds: cur.filter((x: string) => x !== id) } });
+    return reply.send({ ok: true });
+  });
+
+  app.post("/me/favorites/merge", async (req, reply) => {
+    const user = authFromHeader((req as any).headers?.authorization);
+    if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body = (req as any).body || {};
+    const incoming: string[] = Array.isArray(body.ids) ? body.ids.filter((x: any) => typeof x === "string") : [];
+    const me = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { favoriteLobbyIds: true } });
+    const cur: string[] = me?.favoriteLobbyIds ?? [];
+    const union = Array.from(new Set([...incoming, ...cur])).slice(0, 200);
+    await (prisma as any).user.update({ where: { id: user.id }, data: { favoriteLobbyIds: union } });
+    return reply.send({ ok: true, ids: union });
+  });
 
   app.get("/blocks", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -314,8 +357,6 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(500).send({ ok: false, error: "unblock_failed" });
     }
   });
-
-  // ── Reports (user-side; staff/reports stays in main) ───────────────────
 
   const VALID_REPORT_REASONS = new Set(["SPAM", "HARASSMENT", "HATE_SPEECH", "THREATS", "NSFW", "MINOR_SAFETY", "IMPERSONATION", "SELF_HARM", "OTHER"]);
   const VALID_TARGET_TYPES = new Set(["MESSAGE", "USER", "ROOM", "LOBBY"]);

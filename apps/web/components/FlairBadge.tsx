@@ -17,7 +17,6 @@ export interface FlairData {
 export interface FlairBadgeProps {
   flair: FlairData | null | undefined;
   size?: "sm" | "md" | "lg";
-  // For NAMEPLATE: wrap this child name span and apply tinted color/glow.
   children?: React.ReactNode;
 }
 
@@ -40,7 +39,6 @@ export default function FlairBadge({ flair, size = "sm", children }: FlairBadgeP
   const tint = flair.color || "#a78bfa";
 
   if (flair.kind === "NAMEPLATE") {
-    // Wrap children name in tinted span. If no children, render a small dot.
     if (children) {
       return (
         <span
@@ -74,7 +72,6 @@ export default function FlairBadge({ flair, size = "sm", children }: FlairBadgeP
   }
 
   if (flair.kind === "BANNER") {
-    // Wide image block. Falls back to a tinted gradient strip.
     return (
       <div
         title={flair.name}
@@ -93,8 +90,6 @@ export default function FlairBadge({ flair, size = "sm", children }: FlairBadgeP
     );
   }
 
-  // BADGE — small chip. Emoji renders bare (the glyph IS the visual).
-  // Image renders inside a tinted ringed chip. Fallback dot when neither.
   const isEmoji = flair.imageUrl?.startsWith("emoji:");
   if (isEmoji) {
     return (

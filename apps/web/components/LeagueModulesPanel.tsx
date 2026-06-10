@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -16,19 +17,15 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(200,155,60,.35)", background: "rgba(200,155,60,.12)", fontSize: 12, cursor: "pointer", color: "rgb(200,155,60)", fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(200,155,60,.35)", background: "rgba(200,155,60,.12)", fontSize: 12, cursor: "pointer", color: "rgb(200,155,60)", fontWeight: 600 } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const ACCENT_LEAGUE = "#C89B3C";
-
-// ── Rank tier assets ─────────────────────────────────────────────────────────
 
 const TIER_COLORS: Record<string, string> = {
   IRON: "#5c4033", BRONZE: "#8c5a2e", SILVER: "#7c8389", GOLD: "#c89b3c",
@@ -81,8 +78,6 @@ function timeAgo(timestamp: number) {
   return `${days}d ago`;
 }
 
-// ── Twitch Streams (reused pattern) ──────────────────────────────────────────
-
 function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }: { gameName?: string; lobbyId?: string; accentColor?: string }) {
   const [streams, setStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +115,7 @@ function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }:
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {activeStream && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${ACCENT_LEAGUE}40`, background: "#000", marginBottom: 4 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${ACCENT_LEAGUE}40`, background: "#000", marginBottom: 4 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
@@ -139,7 +134,7 @@ function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }:
             border: activeStream === s.userLogin ? `1px solid ${ACCENT_LEAGUE}50` : "1px solid rgba(255,255,255,.08)",
             background: activeStream === s.userLogin ? `${ACCENT_LEAGUE}10` : "rgba(255,255,255,.03)",
           }}>
-            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 2, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.userName}</div>
             <div style={{ fontSize: 11, opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{s.title}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -155,8 +150,6 @@ function TwitchStreams({ gameName = "League of Legends", lobbyId, accentColor }:
     </div>
   );
 }
-
-// ── Team Finder (LFG) ────────────────────────────────────────────────────────
 
 const LOL_ACTIVITIES = [
   "Ranked Solo/Duo", "Ranked Flex", "Normal Draft", "ARAM",
@@ -254,7 +247,7 @@ function TeamFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, display: "flex", alignItems: "center", gap: 8 }}>
                   {p.activity}
-                  {isFull && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 999, background: `${accent}18`, border: `1px solid ${accent}35`, color: accent }}>FULL</span>}
+                  {isFull && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${accent}18`, border: `1px solid ${accent}35`, color: accent }}>FULL</span>}
                 </div>
                 {p.description && <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{p.description}</div>}
                 <div style={{ display: "flex", gap: 8, fontSize: 11, opacity: 0.5 }}>
@@ -264,7 +257,7 @@ function TeamFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                 {(p.playerNames || []).length > 0 && (
                   <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
                     {p.playerNames.map((n: string, i: number) => (
-                      <span key={i} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: `${accent}15`, border: `1px solid ${accent}30`, color: `${accent}dd` }}>{n}</span>
+                      <span key={i} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 2, background: `${accent}15`, border: `1px solid ${accent}30`, color: `${accent}dd` }}>{n}</span>
                     ))}
                   </div>
                 )}
@@ -283,8 +276,6 @@ function TeamFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     </div>
   );
 }
-
-// ── Summoner Lookup ──────────────────────────────────────────────────────────
 
 function SummonerLookup({ champions, accent }: { champions: any[]; accent: string }) {
   const [query, setQuery] = useState("");
@@ -308,7 +299,6 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Search bar */}
       <div style={{ display: "flex", gap: 8 }}>
         <input
           style={{ ...S.input, flex: 1 }}
@@ -326,13 +316,12 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
 
       {data && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Summoner Card */}
-          <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, border: `1px solid ${accent}30`, background: `${accent}08` }}>
+          <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, border: `1px solid ${accent}30`, borderLeft: `2px solid ${accent}`, background: `${accent}08` }}>
             <div style={{ position: "relative" }}>
-              <img src={data.summoner.profileIconUrl} alt={data.summoner.name + " summoner icon"} style={{ width: 56, height: 56, borderRadius: 10, border: `2px solid ${accent}50` }} />
+              <img src={data.summoner.profileIconUrl} alt={data.summoner.name + " summoner icon"} style={{ width: 56, height: 56, borderRadius: 2, border: `2px solid ${accent}50` }} />
               <div style={{
                 position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)",
-                background: "rgba(0,0,0,.85)", border: `1px solid ${accent}40`, borderRadius: 4,
+                background: "rgba(0,0,0,.85)", border: `1px solid ${accent}40`, borderRadius: 2,
                 padding: "0 5px", fontSize: 10, fontWeight: 800, color: accent,
               }}>
                 {data.summoner.summonerLevel}
@@ -346,13 +335,11 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
             </div>
           </div>
 
-          {/* Ranked Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <RankedCard label="Solo/Duo" data={data.ranked?.solo} accent={accent} />
             <RankedCard label="Flex" data={data.ranked?.flex} accent={accent} />
           </div>
 
-          {/* Top Champions */}
           {data.topChampions?.length > 0 && (
             <div>
               <div style={S.label}>Top Champions</div>
@@ -365,7 +352,7 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
                       ...S.card, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
                       border: `1px solid rgba(255,255,255,.06)`, minWidth: 130,
                     }}>
-                      {img && <img src={img} alt={name + " champion icon"} style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${accent}30` }} />}
+                      {img && <img src={img} alt={name + " champion icon"} style={{ width: 28, height: 28, borderRadius: 2, border: `1px solid ${accent}30` }} />}
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 11 }}>{name}</div>
                         <div style={{ fontSize: 10, opacity: 0.4 }}>
@@ -379,7 +366,6 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
             </div>
           )}
 
-          {/* Recent Matches */}
           {data.recentMatches?.length > 0 && (
             <div>
               <div style={S.label}>Recent Matches</div>
@@ -435,10 +421,8 @@ function MatchRow({ match: m, champions, version, accent }: { match: any; champi
       border: m.win ? "1px solid rgba(34,197,94,.15)" : "1px solid rgba(239,68,68,.15)",
       background: m.win ? "rgba(34,197,94,.04)" : "rgba(239,68,68,.04)",
     }}>
-      {/* Champion icon */}
-      <img src={champImg} alt={m.championName + " champion icon"} style={{ width: 32, height: 32, borderRadius: 6, border: m.win ? "1px solid rgba(34,197,94,.3)" : "1px solid rgba(239,68,68,.3)" }} />
+      <img src={champImg} alt={m.championName + " champion icon"} style={{ width: 32, height: 32, borderRadius: 2, border: m.win ? "1px solid rgba(34,197,94,.3)" : "1px solid rgba(239,68,68,.3)" }} />
 
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontWeight: 700, fontSize: 12, color: m.win ? "rgba(134,239,172,.9)" : "rgba(252,165,165,.9)" }}>
@@ -455,20 +439,16 @@ function MatchRow({ match: m, champions, version, accent }: { match: any; champi
         </div>
       </div>
 
-      {/* Items */}
       <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
         {m.items?.filter((id: number) => id > 0).slice(0, 6).map((id: number, i: number) => (
           <img key={i} src={itemImgUrl(id, version)} alt="Item icon" style={{ width: 22, height: 22, borderRadius: 3, border: "1px solid rgba(255,255,255,.08)" }} />
         ))}
       </div>
 
-      {/* Time ago */}
       <div style={{ fontSize: 10, opacity: 0.3, flexShrink: 0 }}>{timeAgo(m.gameCreation)}</div>
     </div>
   );
 }
-
-// ── Free Rotation ────────────────────────────────────────────────────────────
 
 function FreeRotation({ champions, accent }: { champions: any[]; accent: string }) {
   const [rotation, setRotation] = useState<any>(null);
@@ -495,7 +475,7 @@ function FreeRotation({ champions, accent }: { champions: any[]; accent: string 
               ...S.card, textAlign: "center", padding: 8,
               border: `1px solid ${accent}20`, background: `${accent}06`,
             }}>
-              {img && <img src={img} alt={name + " champion icon"} style={{ width: 40, height: 40, borderRadius: 8, margin: "0 auto 4px", display: "block", border: `1px solid ${accent}25` }} />}
+              {img && <img src={img} alt={name + " champion icon"} style={{ width: 40, height: 40, borderRadius: 2, margin: "0 auto 4px", display: "block", border: `1px solid ${accent}25` }} />}
               <div style={{ fontSize: 10, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
             </div>
           );
@@ -504,8 +484,6 @@ function FreeRotation({ champions, accent }: { champions: any[]; accent: string 
     </div>
   );
 }
-
-// ── Leaderboard (Challenger) ─────────────────────────────────────────────────
 
 function Leaderboard({ accent }: { accent: string }) {
   const [data, setData] = useState<any>(null);
@@ -528,7 +506,6 @@ function Leaderboard({ accent }: { accent: string }) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {/* Header */}
         <div style={{ display: "flex", padding: "4px 10px", fontSize: 10, fontWeight: 700, opacity: 0.35, gap: 8 }}>
           <span style={{ width: 30 }}>#</span>
           <span style={{ flex: 1 }}>Player</span>
@@ -541,7 +518,7 @@ function Leaderboard({ accent }: { accent: string }) {
         {data.entries?.map((e: any) => (
           <div key={e.rank} style={{
             display: "flex", alignItems: "center", padding: "6px 10px", gap: 8,
-            borderRadius: 6,
+            borderRadius: 2,
             background: e.rank <= 3 ? `${TIER_COLORS.CHALLENGER}08` : "transparent",
             border: e.rank <= 3 ? `1px solid ${TIER_COLORS.CHALLENGER}15` : "1px solid transparent",
           }}>
@@ -561,8 +538,6 @@ function Leaderboard({ accent }: { accent: string }) {
     </div>
   );
 }
-
-// ── Main Panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "streams",     label: "Live Streams",     icon: "📺" },
@@ -589,7 +564,6 @@ export default function LeagueModulesPanel({
   useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [champions, setChampions] = useState<any[]>([]);
 
-  // Load champion data on mount (needed for name/image resolution)
   useEffect(() => {
     apiFetch("/league/champions")
       .then(j => { if (j.ok) setChampions(j.champions || []); })
@@ -598,28 +572,8 @@ export default function LeagueModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto" }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-              background: tab === t.id ? `${accentColor}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "streams"     && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
         {tab === "lfg"         && <TeamFinder lobbyId={lobbyId} accent={accentColor} />}
@@ -628,7 +582,6 @@ export default function LeagueModulesPanel({
         {tab === "rotation"    && <FreeRotation champions={champions} accent={accentColor} />}
       </div>
 
-      {/* Riot Games required legal disclaimer */}
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
           Weered isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.

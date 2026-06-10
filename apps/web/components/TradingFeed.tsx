@@ -40,10 +40,6 @@ function fmtMoney(n: number): string {
   return n.toFixed(6);
 }
 
-// ── TradingFeed — chronological stream of trades across the lobby. ──
-// Initial pull from /trading/lobby-feed/:lobbyId; live additions arrive
-// through the existing trading:trade WS broadcast. Renders timeline-style
-// cards with avatar + verb + symbol + size + PnL where applicable.
 export default function TradingFeed({
   lobbyId,
   mode = "CASUAL",
@@ -69,8 +65,6 @@ export default function TradingFeed({
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
-  // Stitch live trade events on top so users on the Feed tab see new
-  // trades land in real time.
   useEffect(() => {
     const wc = getWeeredClient();
     const handler = (msg: any) => {

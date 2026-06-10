@@ -8,12 +8,10 @@ import SystemBroadcast from "./SystemBroadcast";
 import { weeredToast } from "../lib/toast";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
 const SETTINGS_KEY = "weered:settings:v0";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Role       = "owner" | "mod" | "member" | "none";
 type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
 type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system" | "poker" | "poker-winner"; meta?: any };
@@ -30,11 +28,10 @@ type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbn
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
-// MPlayer-style room launcher
 export type LaunchTarget = {
   appid: number;
-  connect: string;     // ip:port or ip:port/password — feeds steam://connect/
-  display: string;     // human-readable server name
+  connect: string;
+  display: string;
   note?: string;
   setBy: string;
   setAt: number;
@@ -42,7 +39,7 @@ export type LaunchTarget = {
 export type LaunchSnapshot = {
   target: LaunchTarget | null;
   slots: { userId: string; slot: "player" | "observer" }[];
-  ready: string[];     // userIds
+  ready: string[];
   firedAt: number | null;
   firedBy: string | null;
 };
@@ -94,7 +91,6 @@ type Ctx = {
   setAway: (away: boolean) => void;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function normalizeInbound(msg: any) {
   if (msg?.payload && typeof msg.payload === "object") return { ...msg, ...msg.payload };
   return msg;
@@ -103,10 +99,6 @@ function normalizeInbound(msg: any) {
 function applySettingsToDom(s: any) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  // Default theme is "press" until the vertical-picker / theme selector are
-  // re-enabled. If user-saved settings have a theme, honor it; otherwise
-  // fall back to press so we don't show whatever stale value the boot
-  // script left behind.
   root.setAttribute("data-weered-theme", String(s?.theme || "press"));
   root.setAttribute("data-weered-density",      String(s?.density      ?? "comfortable"));
   root.setAttribute("data-weered-reduce-motion", s?.reduceMotion ? "1" : "0");
@@ -119,10 +111,8 @@ function readSettings(): any {
   } catch { return null; }
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
 const WeeredContext = createContext<Ctx | null>(null);
 
-/* ─── Password Prompt (inline sub-component) ─────────────────────────────── */
 function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
   roomId: string; error: string; onSubmit: (pw: string) => void; onCancel: () => void;
 }) {
@@ -176,20 +166,23 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
 
-  // ── Auth state ──
-  const [token, setToken] = useState("");
-  const [me,    setMe   ] = useState<any>(null);
+  const [token, setToken] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try { return localStorage.getItem("weered_user") ? "authed" : ""; } catch { return ""; }
+  });
+  const [me,    setMe   ] = useState<any>(() => {
+    if (typeof window === "undefined") return null;
+    try { const u = localStorage.getItem("weered_user"); return u ? JSON.parse(u) : null; } catch { return null; }
+  });
   const [globalRole, setGlobalRole] = useState("");
 
-  // ── WS state ──
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
   const [wsReady, setWsReady] = useState(false);
   const wsRef            = useRef<WebSocket | null>(null);
   const lastAuthTokenRef = useRef("");
   const lastJoinedRidRef = useRef("");
-  const activeRoomIdRef  = useRef(""); // always-current ref to escape stale closures
+  const activeRoomIdRef  = useRef("");
 
-  // ── Room state ──
   const [activeRoomId,  setActiveRoomId ] = useState("");
   const [joinedRoomId,  setJoinedRoomId ] = useState("");
   const [currentLobbyId, setCurrentLobbyId] = useState("");
@@ -208,7 +201,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [passwordRoomId, setPasswordRoomId] = useState("");
   const [passwordError,  setPasswordError ] = useState("");
 
-  // ── Derived ──
   const authed     = useMemo(() => Boolean(token), [token]);
   const meta       = activeRoomId ? (metaByRoom[activeRoomId]   || null)    : null;
   const admin      = activeRoomId ? (adminByRoom[activeRoomId]  || null)    : null;
@@ -224,7 +216,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return "member";
   }, [meta, me]);
 
-  // ── Fetch globalRole when token changes ──
   useEffect(() => {
     if (!token) { setGlobalRole(""); return; }
     fetch(`${API}/staff/me`, { headers: { Authorization: `Bearer ${token}` } })
@@ -233,7 +224,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [token]);
 
-  // ── Settings: apply on mount and when changed ──
   useEffect(() => {
     const s = readSettings();
     if (s) applySettingsToDom(s);
@@ -245,35 +235,28 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("weered:settings:changed", onChanged as any);
   }, []);
 
-  // ── Boot: load persisted auth from localStorage ──
   useEffect(() => {
     try {
-      const tok  = localStorage.getItem("weered_token") || "";
       const uRaw = localStorage.getItem("weered_user")  || "";
-      if (tok) setToken(tok);
-      if (uRaw) { try { setMe(JSON.parse(uRaw)); } catch {} }
+      if (uRaw) { setToken("authed"); try { setMe(JSON.parse(uRaw)); } catch {} }
     } catch {}
   }, []);
 
-  // ── Sync auth from localStorage on navigation ──
   useEffect(() => {
     try {
-      const tok  = localStorage.getItem("weered_token") || "";
       const uRaw = localStorage.getItem("weered_user")  || "";
-      if (tok && tok !== token) {
-        setToken(tok);
-        try { setMe(uRaw ? JSON.parse(uRaw) : null); } catch { setMe(null); }
+      if (uRaw && !token) {
+        setToken("authed");
+        try { setMe(JSON.parse(uRaw)); } catch {}
       }
-      if (!tok && token) { setToken(""); setMe(null); }
+      if (!uRaw && token) { setToken(""); setMe(null); }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // ── Auto-set activeRoomId from path ──
   useEffect(() => {
     try {
       if (!pathname) return;
-      // Room path: /room/ROOMID or /room/ROOMID/...
       const roomMatch = pathname.match(/^\/room\/([^/]+)/);
       if (roomMatch) {
         const rid = decodeURIComponent(roomMatch[1]);
@@ -281,20 +264,14 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
     if (pathname.startsWith("/lobby")) {
       const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim();
-      // Skip static routes that aren't lobby IDs
       const staticRoutes = ["create", "admin", "settings"];
       if (seg && staticRoutes.includes(seg.split("/")[0])) return;
       const rid = seg ? decodeURIComponent(seg) : "lobby";
       activeRoomIdRef.current = rid;
       setActiveRoomId(rid);
-      // Set lobby context from path immediately (WS will confirm/override later)
       if (seg) setCurrentLobbyId(decodeURIComponent(seg));
       return;
     }
-    // /home is the merged Home Lobby — present users as being in room "lobby"
-    // so presence + chat align with the LobbyChatDrawer mounted on the page.
-    // The page joins "lobby" on mount; this just makes the path-driven
-    // activeRoomId agree from the first render.
     if (pathname === "/home" || pathname.startsWith("/home/")) {
       activeRoomIdRef.current = "lobby";
       setActiveRoomId("lobby");
@@ -304,22 +281,17 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // ── WebSocket lifecycle ──
   useEffect(() => {
     if (!token) return;
 
-    // If already open, just re-auth in-band — never spawn a new connection
     const existing = wsRef.current;
     if (existing?.readyState === WebSocket.OPEN) {
       if (token !== lastAuthTokenRef.current) {
         lastAuthTokenRef.current = token;
-        try { existing.send(JSON.stringify({ type: "auth:hello", token })); } catch {}
       }
       return;
     }
-    // If already connecting, don't create another
     if (existing?.readyState === WebSocket.CONNECTING) return;
-    // Close any dead socket before creating new one
     if (existing) { try { existing.close(); } catch {} wsRef.current = null; }
 
     const ws = new WebSocket(WS_URL);
@@ -327,15 +299,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
     ws.onopen = () => {
       setWsState(ws.readyState);
-      const tok = (() => { try { return localStorage.getItem("weered_token") || token; } catch { return token; } })();
-      lastAuthTokenRef.current = tok;
-      ws.send(JSON.stringify({ type: "auth:hello", token: tok }));
+      fetch(`${API}/auth/ws-ticket`).then(r => r.json()).then(j => {
+        const tk = j && j.ticket;
+        if (tk && wsRef.current === ws && ws.readyState === WebSocket.OPEN) {
+          lastAuthTokenRef.current = tk;
+          ws.send(JSON.stringify({ type: "auth:hello", token: tk }));
+        }
+      }).catch(() => {});
     };
 
     ws.onclose = () => {
       setWsState(WebSocket.CLOSED);
       setWsReady(false);
-      // Only clear ref if this is still the current socket
       if (wsRef.current === ws) wsRef.current = null;
     };
     ws.onerror = () => { setWsState(ws.readyState); };
@@ -345,9 +320,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       try { msg = JSON.parse(String(ev.data || "")); } catch { return; }
       msg = normalizeInbound(msg);
       if (!msg || typeof msg.type !== "string") return;
-      // Forward DM messages to DockShell via window event
       if (msg.type === "dm:message") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
+        try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
       }
       if (msg.type === "dm:edited") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:edited", { detail: msg })); } catch {}
@@ -358,20 +333,20 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "dm:reaction") {
         try { window.dispatchEvent(new CustomEvent("weered:dm:reaction", { detail: msg })); } catch {}
       }
-      // Forward group thread events to DOM. GroupsTab subscribes via
-      // window listeners for create / new message / edit / delete /
-      // rename / member add / member remove.
       if (msg.type === "group:created" || msg.type === "group:message" ||
           msg.type === "group:edited" || msg.type === "group:deleted" ||
           msg.type === "group:renamed" || msg.type === "group:members:added" ||
           msg.type === "group:members:removed") {
         try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
       }
-      // Forward notification events to DOM
       if (msg.type === "notification:new") {
+        console.log("[ws] notification:new received", msg.notification?.type);
         try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
+        try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
       }
-      // Forward crew chat messages to DOM
+      if (msg && msg.type && !msg.type.startsWith("presence:") && !msg.type.startsWith("chat:typing")) {
+        console.log("[ws] msg type:", msg.type);
+      }
       if (msg.type === "crew:message") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:message", { detail: { crewId: msg.crewId, message: msg.message } })); } catch {}
       }
@@ -384,15 +359,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "crew:reaction") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:reaction", { detail: msg })); } catch {}
       }
-      // Forward crew presence changes to DOM
       if (msg.type === "crew:presence") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:presence", { detail: { userId: msg.userId, name: msg.name, online: msg.online } })); } catch {}
       }
-      // Forward poker state to DOM
       if (msg.type === "poker:state") {
         try { window.dispatchEvent(new CustomEvent("weered:poker:state", { detail: msg })); } catch {}
       }
-      // Forward D&D events (initiative tracker + dice rolls) to DOM
       if (
         msg.type === "dnd:initiative" ||
         msg.type === "dnd:roll" ||
@@ -401,11 +373,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       ) {
         try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
       }
-      // Forward Tactical Map events (token-move, fog, token-add/update/remove, map:created/updated/deleted) to DOM
       if (msg.type?.startsWith("map:")) {
         try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
       }
-      // Forward all youtube sync events to RoomStage via DOM event + buffer state for late joiners
       if (msg.type?.startsWith("youtube:")) {
         const rid = String(msg.roomId || "");
         if (rid) {
@@ -421,7 +391,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         }
         try { window.dispatchEvent(new CustomEvent("weered:youtube", { detail: { ...msg, updatedAt: Date.now() } })); } catch {}
       }
-      // Generic rooms list payload
       if (Array.isArray(msg.rooms)) setRooms(msg.rooms);
 
       if (msg.type === "auth:ok") {
@@ -450,7 +419,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid  = String(msg.roomId || "");
         const list = Array.isArray(msg.users) ? msg.users : [];
         setUsersByRoom(prev => ({ ...prev, [rid]: list }));
-        // Track our own live game presence for the AFK timer skip.
         const myId = String(((): any => { try { return (JSON.parse(localStorage.getItem("weered_user") || "{}") || {}).id || ""; } catch { return ""; } })());
         if (myId) {
           const meEntry = list.find((u: any) => String(u?.id || "") === myId);
@@ -473,11 +441,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
-        // Extract active module state sent on join
         if (msg.activeModule) {
           setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule }));
         }
-        // Voice state on join
         if (msg.voiceMode || Array.isArray(msg.voiceQueue) || Array.isArray(msg.voiceSpeakers)) {
           setVoiceByRoom(prev => ({
             ...prev,
@@ -488,17 +454,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             },
           }));
         }
-        // Extract launch state if the room has one
         if (msg.launch !== undefined) {
           setLaunchByRoom(prev => ({ ...prev, [rid]: msg.launch as LaunchSnapshot | null }));
         }
-        // Initial pinned snapshot on join
         if (Array.isArray(msg.pinned)) {
           setPinnedByRoom(prev => ({ ...prev, [rid]: msg.pinned.map(String) }));
         }
-        // Track lobby context from the server's lobbyId field
         if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
-        // activeRoomId managed by path effect — no override needed here
         setJoinedRoomId(prev => {
           if (prev && prev !== rid) {
             try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
@@ -508,7 +470,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Pinned message set for this room changed — mod pinned/unpinned.
       if (msg.type === "chat:pins") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
@@ -517,20 +478,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Pin error feedback (e.g. limit reached) — surface a toast
       if (msg.type === "chat:pin:error") {
         try { weeredToast.error(String((msg as any).reason || "Pin failed.")); } catch {}
         return;
       }
 
-      // Chat typing indicator — someone in the same room is typing. We store
-      // the latest timestamp per user and let the UI (LobbyChatPanel)
-      // auto-expire stale entries after ~5s.
       if (msg.type === "chat:typing") {
         const rid = String(msg.roomId || "");
         const u = msg.user as { id: string; name: string } | undefined;
         if (!rid || !u?.id) return;
-        // Skip echoes of our own typing — no point showing ourselves
         if (me?.id && u.id === me.id) return;
         setTypingByRoom(prev => {
           const cur = prev[rid] ? prev[rid].filter(e => e.userId !== u.id) : [];
@@ -540,8 +496,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Room launcher state changed (target set, slot picked, ready toggled,
-      // countdown fired, auto-reset).
       if (msg.type === "launch:state") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
@@ -549,9 +503,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Another user joined this room (or had their in-memory state updated
-      // — role change, AFK flip, etc. all come through as presence:join
-      // re-broadcasts). Replace-or-append so updates take effect live.
       if (msg.type === "presence:join") {
         const rid  = String(msg.roomId || "");
         const user = msg.user as RoomUser | null;
@@ -567,7 +518,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Another user left this room
       if (msg.type === "presence:leave") {
         const rid    = String(msg.roomId || "");
         const userId = String(msg.userId || "");
@@ -591,12 +541,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             audit:   Array.isArray(msg.audit)   ? msg.audit                   : [],
           },
         }));
-        // Merge into existing meta — earlier this overwrote with a
-        // fresh object that lacked description / iconUrl / bannerUrl /
-        // accentColor / disabledModules, wiping owner-saved values
-        // every time a room:adminState event landed (which fires right
-        // after presence:state for owners/mods). Keep the previous
-        // fields and only update the bits adminState actually carries.
         setMetaByRoom(prev => ({
           ...prev,
           [rid]: {
@@ -635,14 +579,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const m   = msg.msg as ChatMsg;
         if (!m?.id) return;
         setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), m].slice(-200) }));
-        // Dispatch DOM event so closed chat drawers can track unread
         try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } })); } catch {}
         return;
       }
 
-      // ── Operator AI commentary on FakeOut trades. Synthesizes an
-      // operator-styled chat message in the active lobby room. Routing
-      // mirrors trading:trade — server already filtered by room.
       if (msg.type === "operator:commentary") {
         const rid = activeRoomIdRef.current || "";
         if (!rid) return;
@@ -659,10 +599,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── Trade events from FakeOut paper-trading: synthesize a system
-      // ChatMsg so witnesses-by-default show up directly in the lobby chat.
-      // The server already filters broadcast to sockets in this lobby room,
-      // so we route into whichever room key is currently active.
       if (msg.type === "trading:trade") {
         const rid = activeRoomIdRef.current || "";
         if (!rid) return;
@@ -685,9 +621,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── Dice rolls from the D&D Dice Tower public-broadcast: synthesize
-      // a system ChatMsg with kind="dice" so witnessed rolls show in the
-      // active lobby room. Mirrors the trading:trade pattern exactly.
       if (msg.type === "dice:roll") {
         const rid = activeRoomIdRef.current || "";
         if (!rid) return;
@@ -717,9 +650,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── Poker action chip — synthesize a system ChatMsg with kind="poker"
-      // so each action (call/raise/fold/check/bet/all-in) lands in the active
-      // table room as a compact chip. Mirrors dice/trade pattern exactly.
       if (msg.type === "poker:action-chip") {
         const rid = activeRoomIdRef.current || "";
         if (!rid) return;
@@ -741,8 +671,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── Poker winner chip — fired once per resolved hand, lists winners
-      // and pot. kind="poker-winner" gets a celebratory render in chat.
       if (msg.type === "poker:winner-chip") {
         const rid = activeRoomIdRef.current || "";
         if (!rid) return;
@@ -809,16 +737,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Server rejected a send (spam filter / rate limit)
       if (msg.type === "chat:rejected" || msg.type === "dm:rejected" || msg.type === "crew:rejected") {
         const reason = String(msg.reason || "Message blocked.");
         weeredToast.warn(reason);
         return;
       }
 
-
-      // room:locked: server sends locked:true for lock, locked:false for unlock (room behaviour).
-      // Lobby omits the field entirely, so default to true when absent.
       if (msg.type === "room:locked") {
         const rid = String(msg.roomId || "");
         const isLocked = typeof msg.locked === "boolean" ? msg.locked : true;
@@ -829,7 +753,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // room:unlocked fires when a room is unlocked
       if (msg.type === "room:unlocked") {
         const rid = String(msg.roomId || "");
         setMetaByRoom(prev => ({
@@ -904,24 +827,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── Challenge real-time progress / completion ──
       if (msg.type === "challenge:progress" || msg.type === "challenge:completed") {
         try { window.dispatchEvent(new CustomEvent("weered:challenge", { detail: msg })); } catch {}
         return;
       }
 
-      // ── Module state sync — another user changed the active module ──
       if (msg.type === "module:state") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
         setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule ?? null }));
-        // Dispatch DOM event so RoomCanvas can react immediately
         try { window.dispatchEvent(new CustomEvent("weered:module:state", { detail: { roomId: rid, activeModule: msg.activeModule ?? null } })); } catch {}
         return;
       }
 
-      // ── Owner toggled the room's disabled-modules list. Push the new
-      // list into RoomMeta so the picker UI updates without a refresh.
       if (msg.type === "room:settings") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
@@ -935,8 +853,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── A module:set was rejected (typically because the owner has
-      // disabled that module for the room). Toast the user.
       if (msg.type === "module:rejected") {
         const reason = String(msg.reason || "");
         const mode = String(msg.mode || "");
@@ -946,8 +862,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── Voice queue / hand-raise state. Mirror server state into
-      // voiceByRoom for UI to consume.
       if (msg.type === "voice:state") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
@@ -963,9 +877,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── A user's voice publish permission flipped. Their LiveKit
-      // token must be re-issued to take effect — VoiceContext listens
-      // to this DOM event and triggers a token refresh + reconnect.
       if (msg.type === "voice:permission") {
         const rid = String(msg.roomId || "");
         const userId = String(msg.userId || "");
@@ -973,13 +884,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ── System broadcast from staff ──
       if (msg.type === "system:broadcast") {
         try { window.dispatchEvent(new CustomEvent("weered:system:broadcast", { detail: { message: msg.message, level: msg.level, from: msg.from, ts: msg.ts } })); } catch {}
         return;
       }
 
-      // ── Staff banned — kicked from platform ──
       if (msg.type === "staff:banned") {
         try { window.dispatchEvent(new CustomEvent("weered:staff:banned", { detail: { reason: msg.reason } })); } catch {}
         setActiveRoomId("");
@@ -989,11 +898,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    return () => { /* do not close — guards at effect top handle re-auth in-band */ };
+    return () => { };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // ── Join room when activeRoomId changes ──
   useEffect(() => {
     if (!wsReady) return;
     const ws = wsRef.current;
@@ -1004,15 +912,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
   }, [activeRoomId, wsReady]);
 
-  // ── Request rooms list after WS auth ──
   useEffect(() => {
     if (!wsReady) return;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     requestRoomsList(ws);
-    // Re-trigger the join effect by clearing the last joined ref
     lastJoinedRidRef.current = "";
-    // If we already have an activeRoomId, join immediately
     const rid = activeRoomId.trim();
     if (rid) {
       try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
@@ -1020,13 +925,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsReady]);
 
-  // ─── Internal helpers ─────────────────────────────────────────────────────
   function sendJoin(ws: WebSocket) {
-    // Use ref to get current roomId — avoids stale closure from WS effect
     const ridRaw = activeRoomIdRef.current || joinedRoomId || activeRoomId;
     if (!ridRaw) return;
     let rid = ridRaw;
-    // Strip "room:" prefix for consistency
     if (rid.startsWith("room:")) rid = rid.slice(5);
     try { rid = decodeURIComponent(rid); } catch {}
     if (lastJoinedRidRef.current === rid) return;
@@ -1045,7 +947,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && statusByRoom[activeRoomId] === "joined");
   }
 
-  // Listen for weered:ws:send events from components that need to send WS messages
   useEffect(() => {
     const handler = (e: Event) => {
       const msg = (e as CustomEvent).detail;
@@ -1057,7 +958,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("weered:ws:send", handler);
   }, []);
 
-  // ─── Chat typing — auto-expire stale entries every second ────────────────
   useEffect(() => {
     const TYPING_TTL_MS = 5000;
     const t = setInterval(() => {
@@ -1077,17 +977,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(t);
   }, []);
 
-  // ─── Idle + manual-away presence ───────────────────────────────────────────
-  // Auto-idle fires "Lying low" after 5 min of no input. A manual toggle
-  // (via setAway below) pins the status and disables the auto timer until the
-  // user flips it back.
   const [isAway, setIsAwayState] = useState(false);
   const manualAwayRef = useRef(false);
   const lastSentAwayRef = useRef<boolean | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // True when we're currently shown as Online on Steam/Xbox/PSN/Twitch.
-  // Used to suppress auto "lying low" — if the user is playing a game, the
-  // idle Weered tab doesn't mean they're away.
   const myLivePresenceActiveRef = useRef(false);
 
   const sendAwayStatus = React.useCallback((away: boolean, force = false) => {
@@ -1104,11 +997,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       if (manualAwayRef.current) return;
-      // Skip auto-AFK when external presence shows the user is on a game
-      // platform. They might be playing on console with the Weered tab open
-      // in the background.
       if (myLivePresenceActiveRef.current) {
-        // Re-arm so we re-check after another idle window.
         armIdleTimer();
         return;
       }
@@ -1138,7 +1027,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     };
   }, [armIdleTimer, sendAwayStatus]);
 
-  // ─── Public API ───────────────────────────────────────────────────────────
   async function devLogin(username: string) {
     const r = await fetch(`${API}/auth/dev-login`, {
       method: "POST",
@@ -1151,14 +1039,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       wsRef.current = null;
       setWsReady(false);
       setWsState(WebSocket.CLOSED);
-      setToken(j.token);
+      setToken("authed");
       setMe(j.user || null);
-      try { localStorage.setItem("weered_token", j.token); document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
+      try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
       try { localStorage.setItem("weered_user",  JSON.stringify(j.user || null)); } catch {}
     }
   }
 
   function logout() {
+    try { fetch(`${API}/auth/logout`, { method: "POST" }).catch(() => {}); } catch {}
     try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
     try { router.replace("/"); } catch {}
     setToken(""); setMe(null);
@@ -1173,7 +1062,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   function join(roomId: string) {
     let id = roomId.trim();
     if (!id) return;
-    // Normalize: strip "room:" prefix so IDs are consistent with path-based activeRoomId
     if (id.startsWith("room:")) id = id.slice(5);
     setActiveRoomId(id);
     const ws = wsRef.current;
@@ -1238,9 +1126,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       ws.send(JSON.stringify({ type: "module:clear", roomId: rid }));
       setModuleByRoom(prev => ({ ...prev, [rid]: null }));
     } else {
-      // Client-side enforcement of disabledModules — server still rejects
-      // independently, but bailing here avoids a roundtrip and gives the
-      // user instant feedback.
       const meta = metaByRoom[rid];
       const disabled = Array.isArray(meta?.disabledModules) ? meta!.disabledModules! : [];
       if (disabled.includes(mode)) {
@@ -1248,7 +1133,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       ws.send(JSON.stringify({ type: "module:set", roomId: rid, mode, url: opts?.url, channel: opts?.channel }));
-      // Optimistic local update
       setModuleByRoom(prev => ({ ...prev, [rid]: { mode, url: opts?.url, channel: opts?.channel, setBy: me?.id, setAt: Date.now() } }));
     }
   }
@@ -1316,12 +1200,6 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     rooms,
     passwordRoomId, passwordError,
     sendRaw, isAway, setAway,
-    // Handlers must be in deps — they rebuild each render and close over
-    // current state via sendAdmin. Excluding them would risk stale closures.
-    // Net: this useMemo only saves allocations when WeeredProvider rerenders
-    // for a non-state-changing reason. The bigger structural win is splitting
-    // this into a stable HandlersContext + a hot StateContext so consumers
-    // only subscribe to what they read. That's a separate refactor.
     join, leave, knock, sendChat, renameRoom, lockRoom, unlockRoom,
     joinWithPassword, setPasswordRoomId, devLogin, logout,
     promote, demote, kick, ban, unban, mute, unmute, admit, deny,
@@ -1336,7 +1214,6 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
         {children}
         <NotorietyToast />
         <RankUpCelebration />
-        {/* Password prompt modal */}
         {passwordRoomId && (
           <div style={{
             position: "fixed", inset: 0, zIndex: 99999,

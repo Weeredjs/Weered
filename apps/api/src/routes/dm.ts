@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /dm/* — direct message threads. Conversation list, unread counts,
-// preview strip (top 5), thread fetch with read-receipt write-back,
-// REST send (the WS path delivers in-band; this is the fallback used
-// by the mobile app and by /tip), and explicit mark-read.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   resolveUserId: (raw: string) => Promise<string>;
@@ -17,7 +13,6 @@ type Opts = {
 export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, resolveUserId, fetchReactionsForTargets, dmDeliver, isUserOnline, sendPush } = opts;
 
-// GET /dm/conversations — all peers with message history
 app.get("/dm/conversations", async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -34,11 +29,10 @@ app.get("/dm/conversations", async (req, reply) => {
   }
   const peerIds = Array.from(peers.keys());
   const users = await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, usernameKey: true, avatar: true, avatarColor: true } as any });
-  const result = users.map(u => ({ ...u, online: isUserOnline(u.id), ...peers.get(u.id) }));
+  const result = users.map((u: any) => ({ ...u, online: isUserOnline(u.id), ...peers.get(u.id) }));
   return reply.send({ ok: true, conversations: result });
 });
 
-// GET /dm/unread — unread counts per peer
 app.get("/dm/unread", async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -57,12 +51,10 @@ app.get("/dm/unread", async (req, reply) => {
   }
 });
 
-// GET /dm/previews — 5 most recent DM conversations with last message preview
 app.get("/dm/previews", async (req, reply) => {
   const u = authFromHeader(req.headers.authorization);
   if (!u) return reply.code(401).send({ ok: false });
 
-  // Get most recent DM per conversation partner
   const recentDms = await (prisma as any).directMessage.findMany({
     where: { OR: [{ fromId: u.id }, { toId: u.id }] },
     orderBy: { createdAt: "desc" },
@@ -70,7 +62,6 @@ app.get("/dm/previews", async (req, reply) => {
     select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true },
   });
 
-  // Group by peer, keep latest per peer
   const byPeer = new Map<string, any>();
   for (const dm of recentDms) {
     const peerId = dm.fromId === u.id ? dm.toId : dm.fromId;
@@ -87,13 +78,12 @@ app.get("/dm/previews", async (req, reply) => {
 
   const peers = [...byPeer.values()].slice(0, 5);
 
-  // Resolve peer names
   const peerIds = peers.map((p: any) => p.peerId);
   const users = peerIds.length > 0 ? await (prisma as any).user.findMany({
     where: { id: { in: peerIds } },
     select: { id: true, name: true, avatar: true },
   }) : [];
-  const userMap = new Map(users.map((u: any) => [u.id, u]));
+  const userMap = new Map<string, any>(users.map((u: any) => [u.id, u]));
 
   const previews = peers.map(p => ({
     ...p,
@@ -104,7 +94,6 @@ app.get("/dm/previews", async (req, reply) => {
   return reply.send({ ok: true, previews });
 });
 
-// GET /dm/:peerId — fetch thread history (last 50, oldest first)
 app.get("/dm/:peerId", async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -112,9 +101,6 @@ app.get("/dm/:peerId", async (req, reply) => {
   if (!rawPeerId) return reply.code(400).send({ error: "Missing peerId" });
   const peerId = await resolveUserId(rawPeerId);
   try {
-    // Fetch the NEWEST 50 messages (desc) then reverse so the client gets
-    // them oldest-first. Using orderBy asc + take was silently dropping
-    // recent messages once a thread grew past 50 total.
     const latest = await prisma.directMessage.findMany({
       where: { OR: [{ fromId: viewer.id, toId: peerId }, { fromId: peerId, toId: viewer.id }] },
       orderBy: { createdAt: "desc" },
@@ -127,7 +113,7 @@ app.get("/dm/:peerId", async (req, reply) => {
       data: { readAt: new Date() },
     });
     const reactionsByMsg = await fetchReactionsForTargets("DIRECT_MESSAGE", messages.map(m => m.id));
-    return reply.send({ messages: messages.map(m => ({
+    return reply.send({ messages: messages.map((m: any) => ({
       ...m,
       createdAt: m.createdAt.toISOString(),
       readAt: m.readAt?.toISOString() ?? null,
@@ -141,7 +127,6 @@ app.get("/dm/:peerId", async (req, reply) => {
   }
 });
 
-// POST /dm/:peerId — send a DM (REST fallback)
 app.post("/dm/:peerId", async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -151,9 +136,6 @@ app.post("/dm/:peerId", async (req, reply) => {
   const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
   if (!text) return reply.code(400).send({ error: "Empty message" });
 
-  // Optional reply-to — snapshot parent metadata so the reply renders even
-  // if the parent is later edited or deleted. Only allowed within the same
-  // two-person thread.
   let replyData: any = {};
   const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
   if (rawReplyToId) {
@@ -181,20 +163,18 @@ app.post("/dm/:peerId", async (req, reply) => {
       data: { fromId: viewer.id, toId: peerId, body: text, ...replyData },
       select: { id: true, fromId: true, toId: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
     });
-    const payload = { type: "dm:message", message: { ...dm, createdAt: dm.createdAt.toISOString() } };
+    const payload = { type: "dm:message", message: { ...dm, createdAt: (dm as any).createdAt.toISOString() } };
     dmDeliver(peerId, payload);
-    // Push notification if peer is offline
     if (!isUserOnline(peerId)) {
       sendPush(peerId, { title: `DM from ${viewer.name}`, body: text.slice(0, 120), url: "/home", tag: `dm:${viewer.id}` }).catch(() => {});
     }
-    return reply.send({ ok: true, message: { ...dm, createdAt: dm.createdAt.toISOString() } });
+    return reply.send({ ok: true, message: { ...dm, createdAt: (dm as any).createdAt.toISOString() } });
   } catch (e) {
     console.error("[dm POST]", e);
     return reply.code(500).send({ error: "Server error" });
   }
 });
 
-// PATCH /dm/:peerId/read — mark thread as read
 app.patch("/dm/:peerId/read", async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });

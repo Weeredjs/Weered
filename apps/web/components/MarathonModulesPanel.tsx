@@ -4,8 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
-
-// ── Twitch Glitch icon ──────────────────────────────────────────────────────
+import ModuleTabBar from "./ModuleTabBar";
 
 function TwitchIcon({ size = 13, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
@@ -26,8 +25,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Marathon Design Tokens (derived from lobby accent) ───────────────────────
-
 const DEFAULT_ACCENT = "#C2FE0B";
 
 function makeTheme(accent: string) {
@@ -47,18 +44,15 @@ function makeTheme(accent: string) {
   };
 }
 
-// Static default for module-level styles that can't be dynamic
 const M = makeTheme(DEFAULT_ACCENT);
 
 const S = {
-  card: { borderRadius: 8, border: `1px solid ${M.border}`, background: M.card, padding: "10px 12px" } as React.CSSProperties,
+  card: { borderRadius: 2, border: `1px solid ${M.border}`, background: M.card, padding: "10px 12px" } as React.CSSProperties,
   label: { fontSize: 9, fontWeight: 800, opacity: 0.35, letterSpacing: "1.2px", textTransform: "uppercase" as const, marginBottom: 6, fontFamily: "monospace" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 6, border: `1px solid ${M.border}`, background: "rgba(255,255,255,0.04)", fontSize: 11, cursor: "pointer", color: M.textPri, fontFamily: "monospace" } as React.CSSProperties,
-  btnAccent: { padding: "6px 14px", borderRadius: 6, border: `1px solid ${M.accentMid}`, background: M.accentDim, fontSize: 11, cursor: "pointer", color: M.accent, fontWeight: 700, fontFamily: "monospace" } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid ${M.border}`, background: "rgba(0,0,0,.40)", fontSize: 12, color: M.textPri, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" },
+  btn: { padding: "6px 12px", borderRadius: 2, border: `1px solid ${M.border}`, background: "rgba(255,255,255,0.04)", fontSize: 11, cursor: "pointer", color: M.textPri, fontFamily: "monospace" } as React.CSSProperties,
+  btnAccent: { padding: "6px 14px", borderRadius: 2, border: `1px solid ${M.accentMid}`, background: M.accentDim, fontSize: 11, cursor: "pointer", color: M.accent, fontWeight: 700, fontFamily: "monospace" } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: `1px solid ${M.border}`, background: "rgba(0,0,0,.40)", fontSize: 12, color: M.textPri, outline: "none", boxSizing: "border-box" as const, fontFamily: "monospace" },
 };
-
-// ── Scan Line Effect ────────────────────────────────────────────────────────
 
 function ScanLines() {
   return (
@@ -68,8 +62,6 @@ function ScanLines() {
     }} />
   );
 }
-
-// ── Twitch Streams (reused, works now) ──────────────────────────────────────
 
 function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor?: string }) {
   const [streams, setStreams] = useState<any[]>([]);
@@ -104,7 +96,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {activeStream && (
-        <div style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${M.accentMid}`, background: "#000", marginBottom: 4 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${M.accentMid}`, background: "#000", marginBottom: 4 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
@@ -122,7 +114,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
             ...S.card, cursor: "pointer", transition: "border-color .15s, background .15s",
             border: activeStream === s.userLogin ? `1px solid ${M.accentMid}` : `1px solid ${M.border}`,
           }}>
-            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 4, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
+            {s.thumbnailUrl && <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 2, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />}
             <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>{s.userName}</div>
             <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>{s.title}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -141,8 +133,6 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
     </div>
   );
 }
-
-// ── Squad Finder (Marathon LFG — 3-player crews) ────────────────────────────
 
 const MARATHON_ZONES = ["Perimeter", "Dire Marsh", "Outpost", "Cryo Archive", "Any Zone"];
 const MARATHON_MODES = ["Extraction Run", "Ranked Queue", "Casual Run", "Contract Grind", "Zone Exploration", "Other"];
@@ -197,7 +187,7 @@ function SquadFinder({ lobbyId }: { lobbyId: string }) {
       {msg && <div style={{ marginBottom: 8, fontSize: 11, color: M.warning, fontFamily: "monospace" }}>{msg}</div>}
 
       {showForm && (
-        <div style={{ ...S.card, marginBottom: 14, border: `1px solid ${M.accentMid}`, background: M.accentDim, position: "relative", overflow: "hidden" }}>
+        <div style={{ ...S.card, marginBottom: 14, border: `1px solid ${M.accentMid}`, borderLeft: `2px solid ${M.accent}`, background: M.accentDim, position: "relative", overflow: "hidden" }}>
           <ScanLines />
           <div style={{ position: "relative", zIndex: 2 }}>
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -242,7 +232,6 @@ function SquadFinder({ lobbyId }: { lobbyId: string }) {
               border: isFull ? `1px solid rgba(255,176,32,.15)` : `1px solid ${M.border}`,
               opacity: isFull ? 0.6 : 1,
             }}>
-              {/* Slot indicators */}
               <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
                 {Array.from({ length: max }).map((_, i) => (
                   <div key={i} style={{
@@ -288,8 +277,6 @@ function SquadFinder({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── Zone Intel ──────────────────────────────────────────────────────────────
-
 const ZONES = [
   {
     name: "Perimeter",
@@ -331,11 +318,10 @@ function ZoneIntel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Zone selector */}
       <div style={{ display: "flex", gap: 4 }}>
         {ZONES.map((z, i) => (
           <button key={z.name} onClick={() => setSelected(i)} style={{
-            flex: 1, padding: "8px 6px", border: "none", cursor: "pointer", borderRadius: 6,
+            flex: 1, padding: "8px 6px", border: "none", cursor: "pointer", borderRadius: 2,
             background: selected === i ? M.accentDim : "transparent",
             borderBottom: selected === i ? `2px solid ${M.accent}` : "2px solid transparent",
             color: selected === i ? M.accent : M.textSec,
@@ -347,7 +333,6 @@ function ZoneIntel() {
         ))}
       </div>
 
-      {/* Zone detail */}
       <div style={{ ...S.card, position: "relative", overflow: "hidden" }}>
         <ScanLines />
         <div style={{ position: "relative", zIndex: 2 }}>
@@ -370,17 +355,17 @@ function ZoneIntel() {
           <div style={{ fontSize: 12, lineHeight: 1.6, opacity: 0.7, marginBottom: 14 }}>{zone.desc}</div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.02)", border: `1px solid ${M.border}` }}>
+            <div style={{ padding: "8px 10px", borderRadius: 2, background: "rgba(255,255,255,0.02)", border: `1px solid ${M.border}` }}>
               <div style={S.label}>LOOT TIER</div>
               <div style={{ fontSize: 12, fontWeight: 700, color: zone.threat >= 4 ? M.ranked : zone.threat >= 3 ? M.warning : M.accent, fontFamily: "monospace" }}>{zone.loot}</div>
             </div>
-            <div style={{ padding: "8px 10px", borderRadius: 6, background: "rgba(255,255,255,0.02)", border: `1px solid ${M.border}` }}>
+            <div style={{ padding: "8px 10px", borderRadius: 2, background: "rgba(255,255,255,0.02)", border: `1px solid ${M.border}` }}>
               <div style={S.label}>HOSTILES</div>
               <div style={{ fontSize: 11, opacity: 0.7 }}>{zone.enemies}</div>
             </div>
           </div>
 
-          <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 6, background: M.accentDim, border: `1px solid ${M.accentMid}` }}>
+          <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 2, background: M.accentDim, border: `1px solid ${M.accentMid}` }}>
             <div style={{ ...S.label, color: M.accent, opacity: 0.7 }}>INTEL</div>
             <div style={{ fontSize: 11, opacity: 0.65, lineHeight: 1.5 }}>{zone.tips}</div>
           </div>
@@ -389,8 +374,6 @@ function ZoneIntel() {
     </div>
   );
 }
-
-// ── Runner Database ─────────────────────────────────────────────────────────
 
 const RUNNERS = [
   { name: "Assassin", role: "Flanker", desc: "Silent and deadly. Built for aggressive flanking and catching enemies off-guard.", color: "#FF4466", icon: "🗡" },
@@ -417,7 +400,7 @@ function RunnerDatabase() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+              width: 36, height: 36, borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center",
               background: `${r.color}18`, border: `1px solid ${r.color}35`, fontSize: 18, flexShrink: 0,
             }}>{r.icon}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -437,32 +420,21 @@ function RunnerDatabase() {
   );
 }
 
-// ── My Runner (API placeholder) ─────────────────────────────────────────────
-
 function MyRunner({ accentColor }: { accentColor?: string }) {
   const accent = accentColor || M.accent;
-
-  // TODO: When Bungie opens Marathon API, this will:
-  // - Show linked Bungie account's Marathon stats
-  // - K/D ratio, extraction rate, total loot value
-  // - Match history with zone, loadout, outcome
-  // - Runner shell usage stats
-  // - Ranked tier and progression
-  // - Current loadout (weapons, mods, implants, cores)
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 20, height: "100%" }}>
       <div style={{ position: "relative" }}>
         <div style={{
-          width: 80, height: 80, borderRadius: 12,
+          width: 80, height: 80, borderRadius: 2,
           background: `linear-gradient(135deg, ${accent}15, ${accent}05)`,
           border: `1px solid ${accent}30`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 36,
         }}>🏃</div>
-        {/* Pulsing ring */}
         <div style={{
-          position: "absolute", inset: -4, borderRadius: 16,
+          position: "absolute", inset: -4, borderRadius: 2,
           border: `1px solid ${accent}20`,
           animation: "marathon-pulse 3s ease-in-out infinite",
         }} />
@@ -479,7 +451,6 @@ function MyRunner({ accentColor }: { accentColor?: string }) {
         Bungie has not yet released a public Marathon API. When they do, this tab will show your Runner stats, match history, loadout, ranked progression, and extraction data — all pulled live from your linked Bungie account.
       </div>
 
-      {/* Preview of what's coming */}
       <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
         <div style={S.label}>COMING WHEN API LAUNCHES</div>
         {[
@@ -492,7 +463,7 @@ function MyRunner({ accentColor }: { accentColor?: string }) {
         ].map((item, i) => (
           <div key={i} style={{
             display: "flex", alignItems: "center", gap: 10, padding: "6px 10px",
-            borderRadius: 6, background: "rgba(255,255,255,0.015)", border: `1px solid ${M.border}`,
+            borderRadius: 2, background: "rgba(255,255,255,0.015)", border: `1px solid ${M.border}`,
             opacity: 0.5,
           }}>
             <span style={{ fontSize: 14 }}>{item.icon}</span>
@@ -505,8 +476,6 @@ function MyRunner({ accentColor }: { accentColor?: string }) {
     </div>
   );
 }
-
-// ── Leaderboards (API placeholder) ──────────────────────────────────────────
 
 const RANK_TIERS = [
   { name: "Master", color: "#E8C547", icon: "👑" },
@@ -521,14 +490,13 @@ const RANK_TIERS = [
 function Leaderboards() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Ranked tiers preview */}
       <div>
         <div style={S.label}>RANKED TIERS</div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {RANK_TIERS.map(t => (
             <div key={t.name} style={{
               display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
-              borderRadius: 6, border: `1px solid ${t.color}25`, background: `${t.color}08`,
+              borderRadius: 2, border: `1px solid ${t.color}25`, background: `${t.color}08`,
             }}>
               <span style={{ fontSize: 12 }}>{t.icon}</span>
               <span style={{ fontSize: 10, fontWeight: 800, color: t.color, fontFamily: "monospace", letterSpacing: "0.5px" }}>{t.name.toUpperCase()}</span>
@@ -537,7 +505,6 @@ function Leaderboards() {
         </div>
       </div>
 
-      {/* Placeholder leaderboard */}
       <div style={{ ...S.card, position: "relative", overflow: "hidden" }}>
         <ScanLines />
         <div style={{ position: "relative", zIndex: 2 }}>
@@ -546,16 +513,15 @@ function Leaderboards() {
             <span style={{ fontSize: 9, opacity: 0.3, fontFamily: "monospace" }}>AWAITING API</span>
           </div>
 
-          {/* Fake leaderboard rows to show what it'll look like */}
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-              borderRadius: 6, background: i === 0 ? "rgba(232,197,71,0.04)" : "transparent",
+              borderRadius: 2, background: i === 0 ? "rgba(232,197,71,0.04)" : "transparent",
               border: `1px solid ${i === 0 ? "rgba(232,197,71,0.12)" : M.border}`,
               marginBottom: 4, opacity: 0.3,
             }}>
               <span style={{ fontWeight: 900, fontSize: 14, fontFamily: "monospace", width: 24, color: i === 0 ? M.ranked : M.textSec }}>{i + 1}</span>
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(255,255,255,0.04)", border: `1px solid ${M.border}` }} />
+              <div style={{ width: 28, height: 28, borderRadius: 2, background: "rgba(255,255,255,0.04)", border: `1px solid ${M.border}` }} />
               <div style={{ flex: 1 }}>
                 <div style={{ width: `${60 + Math.random() * 40}%`, height: 10, borderRadius: 3, background: "rgba(255,255,255,0.06)" }} />
                 <div style={{ width: `${30 + Math.random() * 30}%`, height: 7, borderRadius: 3, background: "rgba(255,255,255,0.03)", marginTop: 3 }} />
@@ -570,7 +536,6 @@ function Leaderboards() {
         </div>
       </div>
 
-      {/* Season info */}
       <div style={{ ...S.card, textAlign: "center" }}>
         <div style={{ fontWeight: 900, fontSize: 12, fontFamily: "monospace", letterSpacing: "1px", color: M.accent, marginBottom: 4 }}>SEASON 1 — DEATH IS THE FIRST STEP</div>
         <div style={{ fontSize: 11, opacity: 0.5 }}>March 2026 — June 2026</div>
@@ -579,8 +544,6 @@ function Leaderboards() {
     </div>
   );
 }
-
-// ── Zone Map (full-screen zoomable) ────────────────────────────────────────
 
 function ZoneMap() {
   const [fullscreen, setFullscreen] = useState(false);
@@ -629,7 +592,6 @@ function ZoneMap() {
 
   const resetView = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
 
-  // Thumbnail card (inline in tab)
   const thumbnail = (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ ...S.label, display: "flex", alignItems: "center", gap: 8 }}>
@@ -650,9 +612,8 @@ function ZoneMap() {
         <img
           src={MAP_SRC}
           alt="Marathon Zone Map by LordTT"
-          style={{ width: "100%", display: "block", borderRadius: 7 }}
+          style={{ width: "100%", display: "block", borderRadius: 2 }}
         />
-        {/* Overlay prompt */}
         <div style={{
           position: "absolute", inset: 0,
           background: "linear-gradient(transparent 60%, rgba(0,0,0,.7))",
@@ -660,7 +621,7 @@ function ZoneMap() {
           padding: 14,
         }}>
           <div style={{
-            padding: "8px 20px", borderRadius: 6,
+            padding: "8px 20px", borderRadius: 2,
             background: M.accentDim, border: `1px solid ${M.accentMid}`,
             fontFamily: "monospace", fontSize: 11, fontWeight: 800,
             color: M.accent, letterSpacing: "1px",
@@ -675,7 +636,6 @@ function ZoneMap() {
     </div>
   );
 
-  // Full-screen overlay
   const fullscreenOverlay = fullscreen ? (
     <div
       style={{
@@ -688,7 +648,6 @@ function ZoneMap() {
       onMouseLeave={handleMouseUp}
       onTouchEnd={() => setDragging(false)}
     >
-      {/* Toolbar */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "10px 16px",
@@ -721,7 +680,6 @@ function ZoneMap() {
         </div>
       </div>
 
-      {/* Map viewport */}
       <div
         style={{
           flex: 1, overflow: "hidden", cursor: dragging ? "grabbing" : "grab",
@@ -749,7 +707,6 @@ function ZoneMap() {
         />
       </div>
 
-      {/* Footer credit */}
       <div style={{
         padding: "6px 16px",
         background: "rgba(0,0,0,.5)",
@@ -770,13 +727,11 @@ function ZoneMap() {
   );
 }
 
-// ── Loading Pulse ───────────────────────────────────────────────────────────
-
 function LoadingPulse({ text }: { text: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, gap: 12 }}>
       <div style={{
-        width: 24, height: 24, borderRadius: 4,
+        width: 24, height: 24, borderRadius: 2,
         border: `2px solid ${M.accent}`,
         borderTopColor: "transparent",
         animation: "marathon-spin 0.8s linear infinite",
@@ -786,8 +741,6 @@ function LoadingPulse({ text }: { text: string }) {
     </div>
   );
 }
-
-// ── Main Panel ──────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "streams",     label: "FEEDS",         icon: "__twitch__" },
@@ -817,45 +770,17 @@ export default function MarathonModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, position: "relative", ...style }}>
-      {/* Tabs */}
-      <div style={{
-        display: "flex", gap: 1, padding: "6px 10px 0",
-        borderBottom: `1px solid ${T.border}`,
-        background: `${accent}06`,
-        flexShrink: 0, overflowX: "auto",
-      }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "6px 10px",
-              borderRadius: "6px 6px 0 0",
-              border: "none",
-              background: tab === t.id ? T.accentDim : "transparent",
-              color: tab === t.id ? accent : M.textSec,
-              fontWeight: tab === t.id ? 800 : 400,
-              fontSize: 10,
-              cursor: "pointer",
-              transition: "all .1s",
-              display: "flex", alignItems: "center", gap: 4,
-              whiteSpace: "nowrap", flexShrink: 0,
-              fontFamily: "monospace",
-              letterSpacing: "0.5px",
-              borderBottom: tab === t.id ? `2px solid ${accent}` : "2px solid transparent",
-            }}
-          >
-            {t.icon === "__twitch__" ? (
-              <TwitchIcon size={11} color={tab === t.id ? "#9146FF" : "rgba(148,163,184,.4)"} />
-            ) : (
-              <span style={{ fontSize: 11 }}>{t.icon}</span>
-            )}
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar
+        tabs={TABS.map(t => ({
+          id: t.id,
+          label: t.label,
+          icon: t.icon === "__twitch__" ? <TwitchIcon size={11} /> : t.icon,
+        }))}
+        active={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        accent={accent}
+      />
 
-      {/* Content */}
       <div style={{
         flex: 1, minHeight: 0,
         overflowY: tab === "myrunner" ? "hidden" : "auto",

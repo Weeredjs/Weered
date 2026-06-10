@@ -17,7 +17,7 @@ function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
     const n = sp?.get("next") || "";
     const next = n && n.startsWith("/") ? n : "/home";
     try {
-      const tok = localStorage.getItem("weered_token") || "";
+      const tok = localStorage.getItem("weered_user") || "";
       if (tok) router.replace(next);
       else onUnauthed(next);
     } catch {
@@ -29,20 +29,20 @@ function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
 }
 
 export default function Page() {
-  const [showLanding, setShowLanding] = useState(false);
   const [nextPath, setNextPath] = useState("/home");
 
   return (
     <>
       <Suspense fallback={null}>
-        <AuthRouter
-          onUnauthed={(next) => {
-            setNextPath(next);
-            setShowLanding(true);
-          }}
-        />
+        <AuthRouter onUnauthed={(next) => setNextPath(next)} />
       </Suspense>
-      {showLanding ? <Landing nextPath={nextPath} /> : <InitialSplash />}
+      <style>{`
+        .lp-authed-splash { display: none; }
+        html[data-weered-authed] .lp-authed-splash { display: grid; }
+        html[data-weered-authed] .lp-root { display: none; }
+      `}</style>
+      <div className="lp-authed-splash"><InitialSplash /></div>
+      <Landing nextPath={nextPath} />
     </>
   );
 }
@@ -269,7 +269,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           border-color: rgba(217,169,66,0.55);
           background: rgba(217,169,66,0.10);
         }
-
         .lp-section {
           position: relative;
           z-index: 2;
@@ -295,7 +294,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           max-width: 580px;
           line-height: 1.55;
         }
-
         .lp-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -345,7 +343,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           line-height: 1.55;
           margin: 0;
         }
-
         .lp-diff {
           display: flex;
           flex-direction: column;
@@ -388,7 +385,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           color: #e6bd6e;
           font-weight: 700;
         }
-
         .lp-foot-cta {
           position: relative;
           z-index: 2;
@@ -422,7 +418,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           margin: 0 0 26px;
           line-height: 1.55;
         }
-
         .lp-footer {
           position: relative;
           z-index: 2;
@@ -449,12 +444,10 @@ function Landing({ nextPath }: { nextPath: string }) {
         .lp-footer-sep {
           color: rgba(217,169,66,0.28);
         }
-
         @keyframes lpFade {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
         @media (max-width: 640px) {
           .lp-nav { padding: 16px 20px; }
           .lp-nav-links { display: none; }
@@ -463,8 +456,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           .lp-foot-cta { margin: 50px 20px 30px; padding: 36px 22px; }
           .lp-hero-cta { flex-direction: column; }
         }
-
-        /* ── Activity ticker ───────────────────────────────────── */
         .lp-ticker {
           position: relative;
           z-index: 2;
@@ -544,8 +535,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           font-style: italic;
           letter-spacing: 0.04em;
         }
-
-        /* ── Lobby wall ─────────────────────────────────────────── */
         .lp-wall {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -674,8 +663,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           color: var(--lp-card-accent, #D9A942);
           font-weight: 700;
         }
-
-        /* ── Preview modal ────────────────────────────────────── */
         .lp-modal-back {
           position: fixed; inset: 0; z-index: 1000;
           background: rgba(8,8,10,.78);
@@ -814,7 +801,6 @@ function Landing({ nextPath }: { nextPath: string }) {
           flex-wrap: wrap;
         }
         .lp-modal-cta { flex: 1; text-align: center; }
-
         @media (max-width: 640px) {
           .lp-ticker { padding: 8px 16px 0; }
           .lp-ticker-label { font-size: 9px; padding: 3px 8px; }
@@ -837,16 +823,16 @@ function Landing({ nextPath }: { nextPath: string }) {
         </nav>
 
         <section className="lp-hero">
-          <div className="lp-eyebrow">The platform that isn't a bot</div>
+          <div className="lp-eyebrow">Bringing back the game lobby</div>
           <h1 className="lp-headline">
-            More than chat.<br />A place.
+            Every game<br />deserves a lobby.
           </h1>
           <p className="lp-sub">
-            Lobbies, rooms, voice, video, and deep game integrations — all built in, not bolted on. Weered is where gamers, creators, and communities actually hang out.
+            Voice rooms, crews, and live game presence — built into a place that actually knows what you're playing. Weered is the game lobby reborn: more gamery than the launchers you already use, and free.
           </p>
           <div className="lp-hero-cta">
             <Link href={getIn} className="lp-btn-primary">get_in()</Link>
-            <a href="#inside" className="lp-btn-secondary">See the wall →</a>
+            <a href="#inside" className="lp-btn-secondary">See the lobbies →</a>
           </div>
         </section>
 
@@ -916,7 +902,6 @@ function Landing({ nextPath }: { nextPath: string }) {
     </>
   );
 }
-
 
 function LobbyWall({ loginHref }: { loginHref: string }) {
   const [lobbies, setLobbies] = useState<FeaturedLobby[] | null>(null);

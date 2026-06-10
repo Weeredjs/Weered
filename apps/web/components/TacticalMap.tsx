@@ -82,7 +82,6 @@ export default function TacticalMap({ roomId }: Props) {
 
   const fogKey = (x: number, y: number) => `${x},${y}`;
 
-  // Hydrate map state on mount + when roomId changes
   const reload = useCallback(async () => {
     try {
       const r = await fetch(`${API}/maps/${encodeURIComponent(roomId)}`, { headers: authHeaders() });
@@ -103,17 +102,15 @@ export default function TacticalMap({ roomId }: Props) {
 
   useEffect(() => { reload(); }, [reload]);
 
-  // Load image when map.imageUrl changes
   useEffect(() => {
     if (!map?.imageUrl) { setImgLoaded(false); return; }
     const img = new Image();
     img.onload = () => { imgRef.current = img; setImgLoaded(true); };
     img.onerror = () => { setImgLoaded(false); };
     img.src = map.imageUrl.startsWith("http") || map.imageUrl.startsWith("/") ? map.imageUrl : `/${map.imageUrl}`;
-    return () => { /* nothing */ };
+    return () => { };
   }, [map?.imageUrl]);
 
-  // ── WS event listeners ────────────────────────────────────────────────────
   useEffect(() => {
     function onCreated(ev: any) {
       const d = ev?.detail; if (!d || d.roomId !== roomId) return;
@@ -140,7 +137,6 @@ export default function TacticalMap({ roomId }: Props) {
       setTokens(prev => prev.filter(t => t.id !== d.tokenId));
     }
     function onTokenMove(ev: any) {
-      // WS-direct fast path; used between drag-end and REST confirmation
       const d = ev?.detail; if (!d || d.roomId !== roomId || !d.tokenId) return;
       setTokens(prev => prev.map(t => t.id === d.tokenId ? { ...t, x: Number(d.x), y: Number(d.y) } : t));
     }
@@ -187,7 +183,6 @@ export default function TacticalMap({ roomId }: Props) {
     };
   }, [roomId, reload]);
 
-  // Active-token pulse animation
   useEffect(() => {
     if (!activeCombatantId) return;
     let raf = 0;
@@ -196,7 +191,6 @@ export default function TacticalMap({ roomId }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [activeCombatantId]);
 
-  // ── Coordinate conversions ────────────────────────────────────────────────
   const pxToCell = useCallback((px: number, py: number) => {
     if (!map) return { x: 0, y: 0 };
     return { x: px / map.gridSize, y: py / map.gridSize };
@@ -210,7 +204,6 @@ export default function TacticalMap({ roomId }: Props) {
     return { x: cx, y: cy };
   }, [zoom, pan]);
 
-  // ── Render ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const c = canvasRef.current; if (!c) return;
     const wrap = wrapRef.current; if (!wrap) return;
@@ -226,7 +219,6 @@ export default function TacticalMap({ roomId }: Props) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    // Parchment background fallback
     ctx.fillStyle = "#1a1410";
     ctx.fillRect(0, 0, rect.width, rect.height);
 
@@ -236,7 +228,6 @@ export default function TacticalMap({ roomId }: Props) {
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
 
-    // Map image
     const img = imgRef.current;
     if (img && imgLoaded) {
       ctx.drawImage(img, 0, 0, map.widthPx, map.heightPx);
@@ -248,10 +239,8 @@ export default function TacticalMap({ roomId }: Props) {
     const cellsX = Math.ceil(map.widthPx / map.gridSize);
     const cellsY = Math.ceil(map.heightPx / map.gridSize);
 
-    // Fog of war
     if (map.fogEnabled) {
       if (isDM) {
-        // DM sees revealed area highlighted, unrevealed dimmed
         ctx.save();
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.fillRect(0, 0, map.widthPx, map.heightPx);
@@ -263,7 +252,6 @@ export default function TacticalMap({ roomId }: Props) {
         }
         ctx.restore();
       } else {
-        // Players see only revealed cells; rest is opaque black
         ctx.save();
         ctx.fillStyle = "#0a0806";
         for (let cy = 0; cy < cellsY; cy++) {
@@ -277,7 +265,6 @@ export default function TacticalMap({ roomId }: Props) {
       }
     }
 
-    // Grid
     if (map.gridEnabled) {
       ctx.save();
       ctx.strokeStyle = map.gridColor;
@@ -296,11 +283,9 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.restore();
     }
 
-    // Tokens (sorted by z; PCs on top)
     const drawTokens = [...tokens]
       .filter(t => isDM || !t.hidden)
       .filter(t => {
-        // Players: only draw tokens whose cells are in revealed fog (or fog disabled)
         if (isDM || !map.fogEnabled) return true;
         const tx = Math.floor(t.x), ty = Math.floor(t.y);
         for (let dy = 0; dy < t.sizeCells; dy++) {
@@ -317,7 +302,6 @@ export default function TacticalMap({ roomId }: Props) {
       const cy = (t.y + t.sizeCells / 2) * map.gridSize;
       const r = (t.sizeCells * map.gridSize) / 2 - 2;
 
-      // Pulse ring for active combatant
       if (t.combatantId && activeCombatantId && t.combatantId === activeCombatantId) {
         const ph = (Math.sin(pulse / 8) + 1) / 2;
         ctx.save();
@@ -330,7 +314,6 @@ export default function TacticalMap({ roomId }: Props) {
         ctx.restore();
       }
 
-      // Selection ring
       if (t.id === selectedTokenId) {
         ctx.save();
         ctx.strokeStyle = "#fff";
@@ -342,7 +325,6 @@ export default function TacticalMap({ roomId }: Props) {
         ctx.restore();
       }
 
-      // Body
       ctx.save();
       if (t.hidden) ctx.globalAlpha = 0.6;
       ctx.fillStyle = t.color;
@@ -354,7 +336,6 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.stroke();
       ctx.restore();
 
-      // Name
       ctx.save();
       ctx.font = `${Math.max(10, 12 / zoom)}px sans-serif`;
       ctx.fillStyle = "rgba(255,255,255,0.92)";
@@ -363,7 +344,6 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.fillText(t.name, cx, cy + r + 2);
       ctx.restore();
 
-      // HP bar (if visible & has max)
       if (t.hpVisible && t.hpMax > 0) {
         const ratio = Math.max(0, Math.min(1, t.hp / t.hpMax));
         const barW = r * 2;
@@ -378,7 +358,6 @@ export default function TacticalMap({ roomId }: Props) {
         ctx.restore();
       }
 
-      // Hidden marker (DM-only)
       if (t.hidden && isDM) {
         ctx.save();
         ctx.fillStyle = "rgba(0,0,0,0.7)";
@@ -390,7 +369,6 @@ export default function TacticalMap({ roomId }: Props) {
       }
     }
 
-    // Measurement
     if (measureA && measureB) {
       const ax = (measureA.x + 0.5) * map.gridSize;
       const ay = (measureA.y + 0.5) * map.gridSize;
@@ -402,7 +380,6 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.setLineDash([8 / zoom, 4 / zoom]);
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
       ctx.restore();
-      // 5e diagonal: every other diagonal counts as 10ft
       const dx = Math.abs(measureB.x - measureA.x);
       const dy = Math.abs(measureB.y - measureA.y);
       const diag = Math.min(dx, dy);
@@ -424,20 +401,16 @@ export default function TacticalMap({ roomId }: Props) {
     ctx.restore();
   });
 
-  // Resize observer to redraw on container size changes
   useEffect(() => {
     const wrap = wrapRef.current; if (!wrap) return;
     const ro = new ResizeObserver(() => {
-      // force a state nudge by toggling pulse — render runs every frame anyway when active
       setPulse(p => (p + 1) % 1000);
     });
     ro.observe(wrap);
     return () => ro.disconnect();
   }, []);
 
-  // ── Pointer interactions ──────────────────────────────────────────────────
   function tokenAtCell(cellX: number, cellY: number, sortedTokens: TokenData[]): TokenData | null {
-    // top-down hit test (highest z first)
     for (let i = sortedTokens.length - 1; i >= 0; i--) {
       const t = sortedTokens[i];
       if (cellX >= t.x && cellX < t.x + t.sizeCells && cellY >= t.y && cellY < t.y + t.sizeCells) {
@@ -455,7 +428,6 @@ export default function TacticalMap({ roomId }: Props) {
     const cellX = Math.floor(cell.x);
     const cellY = Math.floor(cell.y);
 
-    // Right click or middle = pan
     if (e.button === 2 || e.button === 1 || (e.button === 0 && e.shiftKey)) {
       panRef.current = { startX: e.clientX, startY: e.clientY, origX: pan.x, origY: pan.y };
       (e.target as Element).setPointerCapture(e.pointerId);
@@ -497,7 +469,6 @@ export default function TacticalMap({ roomId }: Props) {
       return;
     }
 
-    // Default: select. If there's a token under cursor, start drag (if movable)
     const hit = tokenAtCell(cellX + (cell.x - cellX), cellY + (cell.y - cellY), sortedTokens);
     if (hit) {
       const movable = isDM || hit.ownerId === me?.id;
@@ -534,7 +505,6 @@ export default function TacticalMap({ roomId }: Props) {
 
     if (fogPaintRef.current) {
       fogPaintRef.current.add(fogKey(cellX, cellY));
-      // Optimistic local update
       setFog(prev => {
         const next = new Set(prev);
         if (tool === "fogReveal") next.add(fogKey(cellX, cellY));
@@ -548,7 +518,6 @@ export default function TacticalMap({ roomId }: Props) {
       const drag = dragRef.current;
       const newX = cell.x - drag.offsetCx;
       const newY = cell.y - drag.offsetCy;
-      // snap to grid as it moves
       const snapX = Math.round(newX);
       const snapY = Math.round(newY);
       setTokens(prev => prev.map(t => t.id === drag.tokenId ? { ...t, x: snapX, y: snapY } : t));
@@ -601,7 +570,6 @@ export default function TacticalMap({ roomId }: Props) {
     setZoom(newZoom);
   }
 
-  // Center map on first load / when image loads
   useEffect(() => {
     if (!map || !wrapRef.current || !imgLoaded) return;
     const r = wrapRef.current.getBoundingClientRect();

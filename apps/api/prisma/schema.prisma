@@ -60,6 +60,9 @@ enum ModuleType {
   REDDIT
   HELLDIVERS2
   CHESS
+  EVE
+  MINECRAFT
+  MTG
 }
 
 model NewsArticle {
@@ -86,6 +89,10 @@ model Lobby {
   description String     @default("")
   verified    Boolean    @default(false)
   pinned      Boolean    @default(false)
+  // Featured = promoted placement on the home dashboard's curated cards
+  // (shows featured-first). The monetization hook: sell these slots later.
+  // Distinct from `pinned` (system/seeded) and the single hero featuredLobbyId.
+  featured    Boolean    @default(false)
   moduleType  ModuleType @default(FEED)
   moduleConfig Json?
 
@@ -115,6 +122,10 @@ model Lobby {
 
   // Revenue sharing — manual payout percentage for lobby owner (0-100)
   revenueSharePct Float @default(0)
+
+  // Per-lobby member perks shown in the Join overlay (max 5 enforced at API).
+  // Empty array = fall back to platform-default perk list. Owner-editable.
+  memberPerks   String[] @default([])
 
   // ── AutoMod-light ─────────────────────────────────────────────────────────
   // Owner-configurable per-lobby moderation. The chat WS handler checks these
@@ -393,11 +404,16 @@ model User {
   description String     @default("")
   equippedFlairId String?            // FlairItem currently displayed next to name
   bio         String?
+  statusText  String?    // custom status message (Discord-style vanity status)
+  statusEmoji String?    // emoji or short token shown beside statusText
+  avatarFrame String?    // equipped avatar decoration/frame key (none|gold|flames|crystal|neon|circuit)
+  nameEffect  String?    // username color/gradient effect key (none|gold|fire|ice|toxic|royal|rainbow)
   email       String?    @unique
   googleId    String?    @unique
   avatar      String?
   avatarColor String?
   bannerUrl   String?    // wide banner image for the right-rail ID card
+  favoriteLobbyIds String[] @default([])  // server-synced lobby favorites (cross-device)
 
   // ── Profile customization (Phase 1: colors only) ──────────────────────
   // panelBgColor + panelAccentColor drive the user's own ID badge in the
@@ -435,6 +451,10 @@ model User {
   chessComUsername String? // Chess.com username — drives chess activity polling
   livePresence Json?    // { source, activity, detail?, url?, updatedAt } or null
   presenceCheckedAt DateTime?
+
+  // Streamer overlay token — OBS browser-source URL is /overlay/<token>.
+  // Anyone with the URL can render the user's public live state; rotate to revoke.
+  overlayToken String?  @unique
 
   // GPS location (opt-in only)
   locationOptIn     Boolean    @default(false)
@@ -842,6 +862,8 @@ model Crew {
   publicInLobbies  String[]  @default([])  // lobbyIds where this profile appears
 
   members CrewMember[]
+  crewMessages CrewMessage[]
+  joinRequests CrewJoinRequest[]
 
   @@index([recruiting])
 }
@@ -849,6 +871,7 @@ model Crew {
 model CrewMessage {
   id        String    @id @default(cuid())
   crewId    String
+  crew      Crew      @relation(fields: [crewId], references: [id], onDelete: Cascade)
   userId    String
   userName  String    @default("")
   body      String
@@ -877,6 +900,32 @@ model CrewMember {
 
   @@unique([crewId, userId])
   @@index([userId])
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+// A user's request to join a crew (the apply→approve/decline flow). Distinct
+// from CrewMember invites: this is member-initiated. One live request per
+// (crew,user) — re-applying after a decline reuses the row (status reset).
+model CrewJoinRequest {
+  id        String            @id @default(cuid())
+  crewId    String
+  userId    String
+  userName  String            @default("")
+  note      String            @default("")
+  status    JoinRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  decidedAt DateTime?
+  decidedBy String?
+
+  crew Crew @relation(fields: [crewId], references: [id], onDelete: Cascade)
+
+  @@unique([crewId, userId])
+  @@index([crewId, status])
 }
 
 // ΓöÇΓöÇ Friends ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -1051,6 +1100,7 @@ enum LfgStatus {
   OPEN
   FULL
   CLOSED
+  COMPLETED   // host marked the group as having run + finished (feeds reliability/notoriety)
 }
 
 model LfgPost {
@@ -1070,6 +1120,17 @@ model LfgPost {
   region      String?   // e.g. "NAE", "NAW", "EU", "OCE", "ASIA", "BR"
   tags        String[]  @default([])  // ["casual", "competitive", "chill", "sweaty", "mic-required", "no-mic"]
   metadata    Json?     // extensible game-specific data
+  // Optional role slots (additive — flat boards like HD2/Windrose leave these
+  // empty and keep join/leave semantics). When roleSlots is non-empty the post
+  // is a role-based session: roleSlots[i] is the role name, roleClaims[i] is the
+  // userId in that slot ("" = open), roleClaimNames[i] the display name.
+  roleSlots      String[] @default([])
+  roleClaims     String[] @default([])
+  roleClaimNames String[] @default([])
+  // Optional scheduled start (The100.io-style "Thursday 8pm" sessions). null =
+  // "now / ASAP". timezone is a display label like "EST".
+  scheduledFor DateTime?
+  scheduledTz  String    @default("")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -2877,3 +2938,60 @@ model ForumAutoModRule {
   @@index([lobbyId, enabled])
 }
 
+// ── Minecraft pairing + presence ───────────────────────────────────────────
+// Short-lived device-code pairing flow used by the Weered Connect Fabric mod.
+// Mod POSTs /mc/pair/start to get a code, displays it to the player, polls
+// /mc/pair/poll until the user confirms in-browser at /connect/minecraft.
+
+model McPairingCode {
+  code         String    @id
+  userId       String?   // null until confirmed
+  token        String?   // null until confirmed
+  mcUuid       String?
+  mcUsername   String?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  consumedAt   DateTime?
+
+  @@index([expiresAt])
+}
+
+// Active in-game presence — "James is on this Realm right now". Refreshed
+// by the mod every ~60s while in-game; rows with stale lastSeenAt are
+// considered offline. Server keying: serverAddress = literal host:port for
+// public/direct servers, or "REALM:<ownerUUID>:<realmName>" for Realms.
+
+model McPresence {
+  id            String   @id @default(cuid())
+  userId        String
+  mcUuid        String
+  mcUsername    String
+  serverAddress String
+  serverName    String?
+  isRealm       Boolean  @default(false)
+  worldName     String?
+  lastSeenAt    DateTime @default(now())
+
+  @@unique([userId, serverAddress])
+  @@index([serverAddress, lastSeenAt])
+  @@index([userId])
+}
+
+// ── Announcements ───────────────────────────────────────────────────────────
+// Staff-authored system messages. Replaces the old single in-memory siteBanner.
+// pinned = shows as a banner; sticky = user can't dismiss it (e.g. Maintenance);
+// non-sticky pinned banners are dismissible per-browser. Unpinned rows are
+// history (re-pinnable). DB-backed so it survives restarts.
+model Announcement {
+  id          String   @id @default(cuid())
+  message     String
+  level       String   @default("info")   // info | warning | urgent
+  pinned      Boolean  @default(false)
+  sticky      Boolean  @default(false)     // pinned + sticky = can't dismiss
+  createdById String
+  createdByName String @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([pinned, createdAt])
+  @@index([createdAt])
+}

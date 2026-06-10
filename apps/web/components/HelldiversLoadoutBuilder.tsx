@@ -2,18 +2,11 @@
 
 import React, { useMemo, useState } from "react";
 
-// ── Helldivers 2 — Loadout Builder ────────────────────────────────────────
-// Form-style builder with a live preview "dossier card" on the right.
-// Aesthetic: Super Earth military propaganda — bold black/yellow chrome,
-// stamped headers, faction-colored accent strip, monospace labels.
-
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
-
-// Reference data — sourced from helldivers.fandom.com/wiki, not exhaustive.
 
 const PRIMARIES = [
   "AR-23 Liberator", "AR-23P Liberator Penetrator", "AR-23C Liberator Concussive",
@@ -67,7 +60,6 @@ const HELMETS = [
   "EX-00 Prototype Helmet", "Hero of the Federation Helmet",
 ];
 
-// Stratagems — names only. Grouped for the dropdown but flattened in use.
 const STRATAGEMS_SUPPLY = [
   "Reinforce", "SOS Beacon", "Resupply", "Eagle Rearm", "Hellbomb", "SSSD Delivery", "Seismic Probe",
 ];
@@ -184,7 +176,6 @@ export default function HelldiversLoadoutBuilder({ onSaved, onCancel }: Props) {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)", gap: 16, padding: 16, background: "#0a0a0a", color: "#fff" }}>
-      {/* ── FORM ──────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={stampHeader(factionMeta.color)}>SUPER EARTH // FIELD MANUAL // LOADOUT REGISTRY</div>
 
@@ -295,7 +286,6 @@ export default function HelldiversLoadoutBuilder({ onSaved, onCancel }: Props) {
         </div>
       </div>
 
-      {/* ── PREVIEW DOSSIER CARD ─────────────────────────────────────── */}
       <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
         <DossierPreview
           name={name || "[ UNCODENAMED OPERATION ]"}
@@ -360,7 +350,6 @@ function sectionHeader(accent: string): React.CSSProperties {
   };
 }
 
-// ── Dossier Preview ───────────────────────────────────────────────────────
 function DossierPreview(props: {
   name: string; description: string; faction: { id: string; label: string; color: string };
   role: string; difficulty: string;

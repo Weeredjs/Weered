@@ -1,17 +1,3 @@
-/**
- * Helldivers 2 — Slice D Worker
- *
- * Polls the community Helldivers 2 API every 10 minutes and:
- *   1. Spawns a pinned house room per active campaign in the helldivers2 lobby
- *      (auto-unpins rooms whose campaign has ended).
- *   2. Detects state transitions (planet liberated/lost, MO completed/failed,
- *      campaign won/lost) and fires Operator commentary into the lobby chat.
- *   3. Auto-creates a Weered Challenge whenever a brand-new Major Order
- *      appears, so users can self-report participation and earn Paper.
- *
- * The worker is intentionally independent of Slice A's polling — fetching
- * twice every 10 min is cheap and avoids cross-slice coupling.
- */
 
 import { PrismaClient } from "@prisma/client";
 
@@ -20,16 +6,12 @@ const prisma = new PrismaClient();
 const HD2_API = "https://api.helldivers2.dev/api/v1";
 const HD2_LOBBY_ID = "helldivers2";
 
-// ── In-memory state for transition detection ────────────────────────────────
-// We re-load this from DB on each tick (best-effort) so a worker restart
-// does not cause duplicate commentary on already-known events.
-
 type CampaignSnapshot = {
   planetId: number;
   planetName: string;
   faction: string;
-  health: number;       // 0..1
-  defense: boolean;     // true = defense, false = liberation
+  health: number;
+  defense: boolean;
 };
 
 type MajorOrderSnapshot = {
@@ -37,17 +19,11 @@ type MajorOrderSnapshot = {
   title: string;
   expiresAt: number;
   rewardMedals: number;
-  // Best-effort completion flag from the API. Some endpoints expose it via
-  // tasks[].progress vs. setting.tasks[].values; we conservatively mark
-  // completed when the order disappears from the active list AND was
-  // observed on the previous tick.
 };
 
 let lastCampaigns: Map<number, CampaignSnapshot> = new Map();
 let lastMajorOrders: Map<number, MajorOrderSnapshot> = new Map();
 let primed = false;
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 async function fetchJson<T = any>(url: string, timeoutMs = 8000): Promise<T | null> {
   try {
@@ -79,11 +55,6 @@ function truncate(s: string, n: number) {
   return s.length <= n ? s : s.slice(0, n - 1) + "…";
 }
 
-// ── Operator commentary on war events ───────────────────────────────────────
-// Mirrors the operatorCommentateOnTrade pattern in index.ts but with a
-// Super Earth Ministry of Truth voice. Throttled to one comment per 30s
-// per event-type to cap cost and avoid lobby spam.
-
 const _operatorWarLast = new Map<string, number>();
 let _operatorLobbyLastFiredAt = 0;
 const OPERATOR_LOBBY_COOLDOWN_MS = 60_000;
@@ -108,9 +79,7 @@ export async function operatorCommentateOnWarEvent(
   const now = Date.now();
   const last = _operatorWarLast.get(key) || 0;
   if (now - last < 30_000) return;
-  // Global lobby cooldown — even if many distinct keys, throttle the chat.
   if (now - _operatorLobbyLastFiredAt < OPERATOR_LOBBY_COOLDOWN_MS) return;
-  // Skip when the HD2 lobby is empty — don't broadcast to no one.
   if (deps.countLobbyActiveUsers && deps.countLobbyActiveUsers(HD2_LOBBY_ID) === 0) return;
   _operatorWarLast.set(key, now);
   _operatorLobbyLastFiredAt = now;
@@ -154,8 +123,6 @@ export async function operatorCommentateOnWarEvent(
   }
 }
 
-// ── Pinned room sync ────────────────────────────────────────────────────────
-
 function campaignRoomId(planetId: number) {
   return `helldivers2-campaign-${planetId}`;
 }
@@ -166,7 +133,6 @@ function campaignRoomName(c: CampaignSnapshot) {
 }
 
 async function syncCampaignRooms(active: Map<number, CampaignSnapshot>) {
-  // Ensure pinned rooms exist for active campaigns
   for (const [pid, c] of active) {
     const id = campaignRoomId(pid);
     const name = campaignRoomName(c);
@@ -184,12 +150,10 @@ async function syncCampaignRooms(active: Map<number, CampaignSnapshot>) {
         },
       });
     } catch (e) {
-      // Lobby may not exist yet (rare on a brand-new boot); just log.
       console.warn("[helldiversWorker] room upsert failed", id, (e as any)?.message);
     }
   }
 
-  // Unpin campaigns that ended (rooms exist with our prefix but planet not active)
   try {
     const existing = await prisma.room.findMany({
       where: { lobbyId: HD2_LOBBY_ID, pinned: true, id: { startsWith: "helldivers2-campaign-" } },
@@ -204,8 +168,6 @@ async function syncCampaignRooms(active: Map<number, CampaignSnapshot>) {
     }
   } catch {}
 }
-
-// ── Major Order → Challenge sync ────────────────────────────────────────────
 
 async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>, systemUserId: string | null) {
   if (!systemUserId) return;
@@ -249,7 +211,6 @@ async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>,
         },
       });
 
-      // Spawn an immediate ACTIVE instance bounded by the MO expiry
       const def = await (prisma as any).challengeDefinition.findFirst({
         where: { kind: "MAJOR_ORDER", externalRef },
       });
@@ -269,13 +230,10 @@ async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>,
   }
 }
 
-// ── Picking the system user (for createdById) ───────────────────────────────
-
 let _systemUserIdCache: string | null = null;
 async function getSystemUserId(): Promise<string | null> {
   if (_systemUserIdCache) return _systemUserIdCache;
   try {
-    // Prefer a global STAFF/ADMIN; fall back to oldest user.
     const u = await (prisma as any).user.findFirst({
       where: { OR: [{ globalRole: "ADMIN" }, { globalRole: "STAFF" }] },
       orderBy: { createdAt: "asc" },
@@ -290,15 +248,9 @@ async function getSystemUserId(): Promise<string | null> {
   }
 }
 
-// ── Tick ────────────────────────────────────────────────────────────────────
-
 export async function runHelldiversWorker(deps: {
   getAI: () => Promise<any | null>;
   broadcastToLobby: (lobbyId: string, event: any) => void;
-  // Required. Without this gate the worker fires AI calls on every war
-  // event whether or not anyone is listening — we paid 16 days of Haiku
-  // for an empty room thanks to a /tmp dev harness that omitted it.
-  // Keep this required so a future harness can't repeat that mistake.
   countLobbyActiveUsers: (lobbyId: string) => number;
 }) {
   const [campaignsRes, moRes] = await Promise.all([
@@ -306,7 +258,6 @@ export async function runHelldiversWorker(deps: {
     fetchJson<any[]>(`${HD2_API}/assignments`),
   ]);
 
-  // ── Build current campaign snapshot ────────────────────────────────
   const currentCampaigns = new Map<number, CampaignSnapshot>();
   if (Array.isArray(campaignsRes)) {
     for (const raw of campaignsRes) {
@@ -342,7 +293,6 @@ export async function runHelldiversWorker(deps: {
     }
   }
 
-  // ── Build current MO snapshot ──────────────────────────────────────
   const currentMOs = new Map<number, MajorOrderSnapshot>();
   if (Array.isArray(moRes)) {
     for (const raw of moRes) {
@@ -357,7 +307,6 @@ export async function runHelldiversWorker(deps: {
             if (Number.isFinite(t)) return t;
           }
           if (typeof e === "number") {
-            // Some payloads return seconds-from-now
             return Date.now() + e * 1000;
           }
           return Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -373,7 +322,6 @@ export async function runHelldiversWorker(deps: {
     }
   }
 
-  // ── Sync rooms and challenges ──────────────────────────────────────
   await syncCampaignRooms(currentCampaigns);
 
   if (currentMOs.size > 0) {
@@ -381,13 +329,7 @@ export async function runHelldiversWorker(deps: {
     await syncMajorOrderChallenges(currentMOs, sysId);
   }
 
-  // ── Detect transitions vs previous snapshot ────────────────────────
-  // Skip transition firing on the very first tick — without prior
-  // state, every active campaign would fire an event spuriously.
   if (primed) {
-    // Campaigns that disappeared from the active list = ended.
-    // Bucket transitions by event type so we can either fire individually
-    // (≤3 per type) or emit a single aggregate message (>3).
     const buckets: Record<string, any[]> = { defense_won: [], defense_lost: [], planet_liberated: [], planet_lost: [] };
     for (const [pid, prev] of lastCampaigns) {
       if (currentCampaigns.has(pid)) continue;
@@ -406,7 +348,6 @@ export async function runHelldiversWorker(deps: {
           await operatorCommentateOnWarEvent(eventType as any, prev, deps);
         }
       } else {
-        // Too many to narrate individually — emit one aggregate message.
         await operatorCommentateOnWarEvent(eventType as any, {
           planetId: "aggregate",
           planetName: `${list.length} sectors`,
@@ -416,12 +357,8 @@ export async function runHelldiversWorker(deps: {
       }
     }
 
-    // Major orders that disappeared
     for (const [moId, prev] of lastMajorOrders) {
       if (currentMOs.has(moId)) continue;
-      // Treat order ending past its expiration as failed; ending early as
-      // completed. (Best-effort heuristic — the API does not always
-      // surface the final completion flag.)
       const completed = Date.now() < prev.expiresAt - 60_000;
       await operatorCommentateOnWarEvent(completed ? "mo_completed" : "mo_failed", {
         moId,
@@ -434,9 +371,6 @@ export async function runHelldiversWorker(deps: {
   lastMajorOrders = currentMOs;
   primed = true;
 }
-
-// ── Steam concurrent player count (cached 60s) ──────────────────────────────
-// Public endpoint, no key required. Used by the lobby header pill.
 
 const STEAM_HD2_APPID = "553850";
 let _steamCache: { ts: number; count: number } | null = null;

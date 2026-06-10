@@ -3,11 +3,6 @@ import React from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-// Small "Link Bungie" pill that hides itself when the current user is already
-// linked. Renders nothing on the server / for unauthed users / after the user
-// has connected their Bungie account. Used in Destiny 2 lobby surfaces (tab
-// bar + room voice bar) so people don't have to dig into My Guardian to
-// authorize before joining a tournament.
 export default function BungieLinkPill({ size = "sm" }: { size?: "sm" | "xs" }) {
   const [state, setState] = React.useState<"loading" | "linked" | "unlinked" | "no-auth">("loading");
 
@@ -19,7 +14,6 @@ export default function BungieLinkPill({ size = "sm" }: { size?: "sm" | "xs" }) 
       .then(r => r.ok ? r.json() : null)
       .then(j => {
         if (cancelled) return;
-        // /bungie/me returns { ok, error: "not_linked" | "expired" } or character data
         if (j && j.ok && Array.isArray(j.characters)) setState("linked");
         else setState("unlinked");
       })

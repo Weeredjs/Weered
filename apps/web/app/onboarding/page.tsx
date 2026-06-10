@@ -14,26 +14,23 @@ function OnboardingForm() {
   const [busy, setBusy]         = useState(false);
   const [err, setErr]           = useState("");
 
-  // Grab token + user from URL on mount
   useEffect(() => {
     try {
       const t = sp?.get("token") || "";
       const userRaw = sp?.get("user") || "";
       if (t) {
         setToken(t);
-        localStorage.setItem("weered_token", t);
+        void 0;
         if (userRaw) {
           const user = JSON.parse(decodeURIComponent(userRaw));
           localStorage.setItem("weered_user", JSON.stringify(user));
         }
       } else {
-        // No token — redirect to login
         router.replace("/login");
       }
     } catch {}
   }, [sp, router]);
 
-  // Debounced availability check
   const checkUsername = useCallback(async (val: string) => {
     const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (clean.length < 2) { setStatus("invalid"); return; }
@@ -68,7 +65,7 @@ function OnboardingForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
-      localStorage.setItem("weered_token", data.token);
+      void 0;
       if (data.user) localStorage.setItem("weered_user", JSON.stringify(data.user));
       router.replace("/home");
     } catch (e: any) {
@@ -188,7 +185,6 @@ function OnboardingForm() {
 
       <div className="wo-root">
         <div className="wo-card">
-          {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
@@ -203,7 +199,6 @@ function OnboardingForm() {
             </div>
           </div>
 
-          {/* Heading */}
           <div style={{ marginBottom: 6 }}>
             <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 22, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
               Pick your handle.
@@ -214,7 +209,6 @@ function OnboardingForm() {
             </div>
           </div>
 
-          {/* Input */}
           <div style={{ marginTop: 24, position: "relative" }}>
             <div style={{
               position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
@@ -233,7 +227,6 @@ function OnboardingForm() {
             />
           </div>
 
-          {/* Status */}
           <div style={{
             height: 20,
             marginTop: 8,

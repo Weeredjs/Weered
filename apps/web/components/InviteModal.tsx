@@ -9,8 +9,12 @@ function authHeaders() {
 }
 
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
-  return r.json();
+  try {
+    const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+    return await r.json();
+  } catch {
+    return { ok: false, error: "Connection failed, try again." };
+  }
 }
 
 type InviteType = "PLATFORM" | "ROOM" | "LOBBY" | "CREW";
@@ -33,7 +37,7 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
   const [tab,      setTab]      = useState<"link" | "send">("link");
   const [link,     setLink]     = useState("");
   const [maxUses,  setMaxUses]  = useState(1);
-  const [ttl,      setTtl]      = useState(24); // hours, 0 = no expiry
+  const [ttl,      setTtl]      = useState(24);
   const [note,     setNote]     = useState("");
   const [username, setUsername] = useState("");
   const [loading,  setLoading]  = useState(false);
@@ -79,7 +83,6 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
     <div style={S.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={S.modal}>
 
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 16 }}>Invite to {TYPE_LABEL[type]}</div>
@@ -88,7 +91,6 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, opacity: 0.45, color: "inherit" }}>✕</button>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: "flex", gap: 4, borderBottom: "1px solid rgba(255,255,255,.08)", paddingBottom: 0 }}>
           {(["link", "send"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "7px 14px", borderRadius: "8px 8px 0 0", border: "none", background: tab === t ? "rgba(124,58,237,.15)" : "transparent", color: tab === t ? "rgb(216,180,254)" : "rgba(148,163,184,.65)", fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontSize: 13 }}>
@@ -97,7 +99,6 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
           ))}
         </div>
 
-        {/* Link tab */}
         {tab === "link" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -149,7 +150,6 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
           </div>
         )}
 
-        {/* Send tab */}
         {tab === "send" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ fontSize: 13, opacity: 0.55 }}>

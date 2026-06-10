@@ -3,16 +3,6 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 
-/**
- * Themed toast notifications. Fire-and-forget.
- *
- *   weeredToast("Copied to clipboard");
- *   weeredToast.error("Checkout failed");
- *   weeredToast.success("Profile saved");
- *
- * Stack up to 3. Auto-dismiss after 3.2s. Click to dismiss early.
- */
-
 export type ToastKind = "info" | "success" | "error" | "warn";
 export type ToastOptions = {
   kind?: ToastKind;

@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// /tenor/* — Giphy-backed proxy kept under the /tenor/* path for mobile-app
-// compatibility. Normalizes Giphy's response into the Tenor-like shape:
-//   results: [{ id, media_formats: { tinygif: { url, dims }, gif: { url } } }]
 export default async function tenorRoutes(app: FastifyInstance) {
   const GIPHY_KEY = process.env.GIPHY_API_KEY || "";
   const gifCache = new Map<string, { data: any; expiresAt: number }>();

@@ -12,13 +12,7 @@ function PresenceFlair({ userId }: { userId?: string }) {
 }
 import { avatarBg } from "../lib/avatarColor";
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Platform icons — minimal inline SVGs. Size prop default 13.
-// Only rendered when the user has that platform linked (earned flair).
-// ═══════════════════════════════════════════════════════════════════════════
-
 export function SteamIcon({ size = 14 }: { size?: number }) {
-  // Steam dark-navy + cream — true brand palette
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Steam">
       <circle cx="12" cy="12" r="11" fill="#1b2838" />
@@ -30,7 +24,6 @@ export function SteamIcon({ size = 14 }: { size?: number }) {
 }
 
 export function TwitchIcon({ size = 14 }: { size?: number }) {
-  // Official Twitch purple + white glitch
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-label="Twitch">
       <rect width="24" height="24" rx="4" fill="#9146ff" />
@@ -55,7 +48,6 @@ export function XboxIcon({ size = 14 }: { size?: number }) {
 }
 
 export function PlaystationIcon({ size = 14 }: { size?: number }) {
-  // Official PSN blue, "PS" wordmark
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-label="PlayStation">
       <circle cx="12" cy="12" r="11" fill="#003791" />
@@ -65,10 +57,6 @@ export function PlaystationIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PresenceRow — the platform's unified user-row primitive.
-// ═══════════════════════════════════════════════════════════════════════════
-
 export interface PresencePlatforms {
   steam?: boolean;
   twitch?: boolean;
@@ -77,48 +65,42 @@ export interface PresencePlatforms {
 }
 
 export interface LivePresence {
-  source?: string;           // "STEAM" | "TWITCH" | "XBOX" | "PSN"
-  activity?: string;         // "Playing Windrose" / "Streaming Warzone"
-  detail?: string;           // stream title / game detail
-  url?: string;              // profile / stream URL
+  source?: string;
+  activity?: string;
+  detail?: string;
+  url?: string;
   updatedAt?: string;
 }
 
 export interface PresenceRowProps {
-  // Identity
   name: string;
-  // Optional user id — when present, equipped flair will render next to the name.
   userId?: string;
   avatar?: string | null;
   avatarColor?: string | null;
 
-  // Role / tier — small icons next to name
-  globalRole?: string;       // STAFF | GOD | SUPPORT | MOD | USER
-  tier?: string;             // KINGPIN | FELON | INNOCENT | INDICTED etc.
+  globalRole?: string;
+  tier?: string;
 
-  // Activity
   online?: boolean;
   roomName?: string | null;
   livePresence?: LivePresence | null;
-  secondaryText?: React.ReactNode; // override for the bottom line if needed
-  isAway?: boolean;                // "Lying low" — online but idle
+  secondaryText?: React.ReactNode;
+  statusText?: string | null;
+  statusEmoji?: string | null;
+  nameEffect?: string | null;
+  avatarFrame?: string | null;
+  isAway?: boolean;
 
-  // Platforms (only linked platforms render)
   platforms?: PresencePlatforms;
 
-  // Interaction
   onClick?: () => void;
   href?: string;
-  action?: React.ReactNode;        // trailing action (e.g. "Join" button)
-  activeGlow?: string | null;      // accent color for an active/highlight state
+  action?: React.ReactNode;
+  activeGlow?: string | null;
 
-  // Sizing
-  compact?: boolean;               // denser row for rails
+  compact?: boolean;
 
-  // User-customizable pill background (#RRGGBB). Tints the row background.
   pillBgColor?: string | null;
-  // User-customizable left-edge stripe colour. Overrides the role/tier-
-  // derived stripe when set.
   pillAccentColor?: string | null;
 }
 
@@ -133,6 +115,10 @@ export default function PresenceRow({
   roomName,
   livePresence,
   secondaryText,
+  statusText,
+  statusEmoji,
+  nameEffect,
+  avatarFrame,
   isAway,
   platforms,
   onClick,
@@ -146,9 +132,6 @@ export default function PresenceRow({
   const validPillBg = pillBgColor && /^#[0-9a-f]{6}$/i.test(pillBgColor) ? pillBgColor : null;
   const validPillAccent = pillAccentColor && /^#[0-9a-f]{6}$/i.test(pillAccentColor) ? pillAccentColor : null;
 
-  // Viewer's chosen intensity (0-100). Lives in localStorage so it's a per-
-  // viewer preference — controls how strongly OTHER users' pillBgColors
-  // render in this user's interface.
   const [pillIntensity, setPillIntensity] = React.useState<number>(60);
   React.useEffect(() => {
     const read = () => {
@@ -177,8 +160,6 @@ export default function PresenceRow({
   const bg = avatar ? "rgba(255,255,255,0.08)" : (avatarColor || avatarBg(name || ""));
   const avatarSize = compact ? 30 : 36;
 
-  // Active platform key, if we have a live game/stream signal — drives the
-  // inline icon in the activity line AND dedup of the trailing pill group.
   const activePlatformKey =
     (livePresence?.activity && typeof livePresence?.source === "string")
       ? livePresence.source.toUpperCase()
@@ -196,11 +177,6 @@ export default function PresenceRow({
     }
   })();
 
-  // Secondary line content.
-  //
-  // Presence bar contract: if we see you in the list, we know you're with us
-  // on Weered — so the default line only speaks to *status*, not location.
-  // Hierarchy:  playing/streaming game  >  lying low  >  online  >  offline.
   const secondary = secondaryText ?? (() => {
     if (online && isAway) {
       return <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.85 }}>lying low</span>;
@@ -216,28 +192,33 @@ export default function PresenceRow({
         </span>
       );
     }
+    if (statusText || statusEmoji) {
+      return (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, opacity: 0.82 }}>
+          {statusEmoji && <span style={{ flexShrink: 0 }}>{statusEmoji}</span>}
+          {statusText && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: "italic" }}>{statusText}</span>}
+        </span>
+      );
+    }
     if (online) return <span style={{ opacity: 0.55, fontStyle: "italic" }}>online</span>;
     return <span style={{ opacity: 0.35, fontStyle: "italic" }}>offline</span>;
   })();
 
-  // Trailing platform pills — suppress the one that's already rendering
-  // inline in the activity line so the same icon doesn't appear twice.
   const showSteam  = !!platforms?.steam  && activePlatformKey !== "STEAM";
   const showTwitch = !!platforms?.twitch && activePlatformKey !== "TWITCH";
   const showXbox   = !!platforms?.xbox   && activePlatformKey !== "XBOX";
   const showPsn    = !!platforms?.psn    && activePlatformKey !== "PSN" && activePlatformKey !== "PLAYSTATION";
   const hasPlatforms = showSteam || showTwitch || showXbox || showPsn;
 
-  // Accent stripe color — user override > role > tier
   const accentStripe =
     validPillAccent ? validPillAccent
-    : globalRole === "GOD"     ? "#fcd34d"      // GOD: gold
-    : globalRole === "STAFF"   ? "#60a5fa"      // STAFF: blue
-    : globalRole === "SUPPORT" ? "#5800E5"      // SUPPORT: Weered purple
-    : globalRole === "MOD"     ? "#34d399"      // MOD: emerald
-    : tier === "KINGPIN"       ? "#fcd34d"      // KINGPIN: gold
-    : tier === "FELON"         ? "#f97316"      // FELON: orange
-    : tier === "INDICTED"      ? "#a78bfa"      // INDICTED: violet
+    : globalRole === "GOD"     ? "#fcd34d"
+    : globalRole === "STAFF"   ? "#60a5fa"
+    : globalRole === "SUPPORT" ? "#5800E5"
+    : globalRole === "MOD"     ? "#34d399"
+    : tier === "KINGPIN"       ? "#fcd34d"
+    : tier === "FELON"         ? "#f97316"
+    : tier === "INDICTED"      ? "#a78bfa"
     : null;
 
   const inner = (
@@ -255,7 +236,6 @@ export default function PresenceRow({
         } : {}),
       }}
     >
-      {/* Left accent stripe for role/tier (colored only) */}
       {accentStripe && (
         <span style={{
           position: "absolute", left: 0, top: 4, bottom: 4,
@@ -265,19 +245,14 @@ export default function PresenceRow({
         }} />
       )}
 
-      {/* Avatar with online pulse + role-tinted ring.
-          Wrapper has fixed dimensions (avatarSize × avatarSize) and
-          alignSelf: center so it doesn't stretch with the row's
-          alignItems:stretch — otherwise the absolute-positioned online
-          dot tracks the stretched wrapper instead of the avatar circle,
-          and rows with extra-tall content show the dot pushed down. */}
       <div style={{
         position: "relative", flexShrink: 0,
         width: avatarSize, height: avatarSize,
         alignSelf: "center",
       }}>
-        <div style={{
+        <div className={"weered-avatar" + (avatarFrame ? " weered-frame-" + avatarFrame : "")} style={{
           width: avatarSize, height: avatarSize, borderRadius: "50%",
+          ["--wa-bg" as any]: bg,
           background: bg,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 800, color: "#fff",
@@ -300,30 +275,28 @@ export default function PresenceRow({
         )}
       </div>
 
-      {/* Identity + activity */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{
+          <span className={nameEffect ? "weered-name-" + nameEffect : undefined} style={{
             fontWeight: 700, fontSize: compact ? 13 : 14,
             color: "var(--weered-text, rgba(243,244,246,.96))",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             minWidth: 0,
           }}>{name}</span>
-          {globalRole && globalRole !== "USER" && (
+          {globalRole && globalRole !== "USER" ? (
             <RoleIcon
               role={globalRole}
               size={compact ? 16 : 18}
               style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
             />
-          )}
-          {tier && tier !== "INNOCENT" && (
+          ) : tier && tier !== "INNOCENT" ? (
             <TierIcon
               tier={tier}
               size={compact ? 16 : 18}
               style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
             />
-          )}
-          {userId && <PresenceFlair userId={userId} />}
+          ) : null}
+
         </div>
         <div style={{
           fontSize: compact ? 11 : 12,
@@ -336,13 +309,8 @@ export default function PresenceRow({
         </div>
       </div>
 
-      {/* Action slot */}
       {action && <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>{action}</div>}
 
-      {/* Platform icon stack — 2-row grid that grows to additional columns
-          past two platforms, so a 4-icon stack stays compact (2×2). With
-          the avatar wrapper now pinned to a fixed height + alignSelf
-          center, the grid no longer drags the row taller. */}
       {hasPlatforms && (
         <div style={{
           display: "grid",
@@ -378,7 +346,6 @@ export default function PresenceRow({
 
 let _presenceRowStylesInjected = false;
 function PresenceRowStyles() {
-  // Inject once per page
   if (typeof document !== "undefined" && !_presenceRowStylesInjected) {
     _presenceRowStylesInjected = true;
   }

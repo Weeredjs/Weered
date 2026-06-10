@@ -10,7 +10,6 @@ import React, {
 } from "react";
 import { avatarBg } from "../lib/avatarColor";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
   try {
@@ -20,7 +19,6 @@ function getToken() {
   }
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 interface Card {
   rank: string;
   suit: string;
@@ -72,7 +70,6 @@ interface Props {
   myName: string;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
 const COLORS = {
   felt: "#0a5c36",
   feltLight: "#0e7a4a",
@@ -112,7 +109,6 @@ const SUIT_COLORS: Record<string, string> = {
   s: COLORS.black,
 };
 
-// 6 seats: TL, TR, ML, MR, BL, BR
 const SEAT_POSITIONS: {
   top: string;
   left: string;
@@ -120,15 +116,14 @@ const SEAT_POSITIONS: {
   right?: string;
   transform?: string;
 }[] = [
-  { top: "4%", left: "25%", transform: "translateX(-50%)" },       // 0: top-left
-  { top: "4%", left: "75%", transform: "translateX(-50%)" },       // 1: top-right
-  { top: "42%", left: "2%", transform: "translateY(-50%)" },       // 2: mid-left
-  { top: "42%", left: "88%", transform: "translateY(-50%)" },      // 3: mid-right
-  { top: "78%", left: "25%", transform: "translateX(-50%)" },      // 4: bottom-left
-  { top: "78%", left: "75%", transform: "translateX(-50%)" },      // 5: bottom-right
+  { top: "4%", left: "25%", transform: "translateX(-50%)" },
+  { top: "4%", left: "75%", transform: "translateX(-50%)" },
+  { top: "42%", left: "2%", transform: "translateY(-50%)" },
+  { top: "42%", left: "88%", transform: "translateY(-50%)" },
+  { top: "78%", left: "25%", transform: "translateX(-50%)" },
+  { top: "78%", left: "75%", transform: "translateX(-50%)" },
 ];
 
-// Where the bet chip appears relative to each seat (closer to table center)
 const BET_POSITIONS: { top: string; left: string }[] = [
   { top: "22%", left: "28%" },
   { top: "22%", left: "68%" },
@@ -147,7 +142,6 @@ const PHASE_LABELS: Record<string, string> = {
   showdown: "Showdown",
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 function wsSend(msg: Record<string, unknown>) {
   window.dispatchEvent(
     new CustomEvent("weered:ws:send", { detail: msg })
@@ -164,7 +158,6 @@ function nameInitial(name: string): string {
   return (name || "?").charAt(0).toUpperCase();
 }
 
-// ─── Keyframes (injected once) ───────────────────────────────────────────────
 let styleInjected = false;
 function injectKeyframes() {
   if (styleInjected || typeof document === "undefined") return;
@@ -208,7 +201,6 @@ function injectKeyframes() {
   document.head.appendChild(style);
 }
 
-// ─── CardView ────────────────────────────────────────────────────────────────
 function CardView({
   card,
   faceDown,
@@ -251,7 +243,6 @@ function CardView({
           overflow: "hidden",
         }}
       >
-        {/* Subtle cross-hatch pattern */}
         <div
           style={{
             position: "absolute",
@@ -290,7 +281,6 @@ function CardView({
         animation: flipping ? "pokerFlipIn .35s ease-out" : undefined,
       }}
     >
-      {/* Top-left rank/suit */}
       <div
         style={{
           position: "absolute",
@@ -303,9 +293,7 @@ function CardView({
         <div>{card.rank}</div>
         <div style={{ fontSize: fontSize + 2, marginTop: -2 }}>{symbol}</div>
       </div>
-      {/* Center suit */}
       <div style={{ fontSize: large ? 28 : 22, lineHeight: 1 }}>{symbol}</div>
-      {/* Bottom-right rank/suit (inverted) */}
       <div
         style={{
           position: "absolute",
@@ -323,7 +311,6 @@ function CardView({
   );
 }
 
-// ─── Dealer Button ───────────────────────────────────────────────────────────
 function DealerButton() {
   return (
     <div
@@ -351,7 +338,6 @@ function DealerButton() {
   );
 }
 
-// ─── ChipStack (bet display) ─────────────────────────────────────────────────
 function ChipStack({ amount }: { amount: number }) {
   if (!amount) return null;
   return (
@@ -387,7 +373,6 @@ function ChipStack({ amount }: { amount: number }) {
   );
 }
 
-// ─── SeatView ────────────────────────────────────────────────────────────────
 function SeatView({
   seat,
   seatIndex,
@@ -419,7 +404,6 @@ function SeatView({
     gap: 4,
   };
 
-  // Empty seat
   if (!seat) {
     return (
       <div style={container}>
@@ -460,7 +444,6 @@ function SeatView({
     );
   }
 
-  // Occupied seat
   const bg = avatarBg(seat.name, isMe);
   const folded = seat.folded;
   const allIn = seat.allIn;
@@ -504,7 +487,6 @@ function SeatView({
 
   return (
     <div style={seatStyle}>
-      {/* Cards behind avatar */}
       {cards && cards.length > 0 && (
         <div
           style={{
@@ -527,13 +509,11 @@ function SeatView({
         </div>
       )}
 
-      {/* Avatar circle */}
       <div style={{ position: "relative" }}>
         <div style={avatarStyle}>{nameInitial(seat.name)}</div>
         {isDealer && <DealerButton />}
       </div>
 
-      {/* Name */}
       <div
         style={{
           color: COLORS.text,
@@ -550,7 +530,6 @@ function SeatView({
         {seat.name}
       </div>
 
-      {/* Chip count */}
       <div
         style={{
           color: COLORS.gold,
@@ -562,7 +541,6 @@ function SeatView({
         {chipStr(seat.chips)}
       </div>
 
-      {/* Status badges */}
       {folded && (
         <div
           style={{
@@ -594,7 +572,6 @@ function SeatView({
   );
 }
 
-// ─── BuyInDialog ─────────────────────────────────────────────────────────────
 function BuyInDialog({
   min,
   max,
@@ -731,7 +708,6 @@ function BuyInDialog({
   );
 }
 
-// ─── WinnerOverlay ───────────────────────────────────────────────────────────
 function WinnerOverlay({ winners }: { winners: Winner[] }) {
   if (!winners || winners.length === 0) return null;
   return (
@@ -809,7 +785,6 @@ function WinnerOverlay({ winners }: { winners: Winner[] }) {
   );
 }
 
-// ─── ActionBar ───────────────────────────────────────────────────────────────
 function ActionBar({
   state,
   mySeat,
@@ -822,7 +797,7 @@ function ActionBar({
 
   const callAmount = Math.max(0, state.currentBet - mySeat.bet);
   const minRaise = Math.max(state.currentBet * 2, state.blinds.big);
-  const maxRaise = mySeat.chips + mySeat.bet; // total they can put in
+  const maxRaise = mySeat.chips + mySeat.bet;
 
   useEffect(() => {
     setRaiseAmount(Math.min(minRaise, maxRaise));
@@ -875,7 +850,6 @@ function ActionBar({
 
   return (
     <div style={bar}>
-      {/* Fold */}
       <button
         style={btnStyle("#fff", `linear-gradient(135deg, ${COLORS.red}, #b91c1c)`)}
         onClick={() => send("fold")}
@@ -883,7 +857,6 @@ function ActionBar({
         Fold
       </button>
 
-      {/* Check / Call */}
       {canCheck ? (
         <button
           style={btnStyle("#fff", "linear-gradient(135deg, #4b5563, #374151)")}
@@ -901,7 +874,6 @@ function ActionBar({
         </button>
       )}
 
-      {/* Raise */}
       {showRaiseInput ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input
@@ -964,7 +936,6 @@ function ActionBar({
         </button>
       )}
 
-      {/* All-In */}
       <button
         style={btnStyle("#000", `linear-gradient(135deg, ${COLORS.gold}, #b8860b)`)}
         onClick={() => send("allIn")}
@@ -975,7 +946,6 @@ function ActionBar({
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
 export default function PokerTable({ roomId, myId, myName }: Props) {
   const [state, setState] = useState<TableState | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -984,12 +954,10 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActionRef = useRef<string>("");
 
-  // Inject keyframes
   useEffect(() => {
     injectKeyframes();
   }, []);
 
-  // Fetch initial state
   useEffect(() => {
     const token = getToken();
     fetch(`${API}/poker/${roomId}`, {
@@ -1006,7 +974,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
       .catch(() => { setLoaded(true); });
   }, [roomId]);
 
-  // Listen for WS state updates
   useEffect(() => {
     function handleState(e: Event) {
       const detail = (e as CustomEvent).detail;
@@ -1018,7 +985,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     return () => window.removeEventListener("weered:poker:state", handleState);
   }, [roomId, state]);
 
-  // Toast for last action
   useEffect(() => {
     if (!state?.lastAction) return;
     const la = ts.lastAction;
@@ -1026,7 +992,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     if (key === lastActionRef.current) return;
     lastActionRef.current = key;
 
-    // Find the player name
     const seat = ts.seats?.find((s) => s && s.userId === la.userId);
     const name = seat?.name || "Player";
     let msg = `${name} ${la.action}`;
@@ -1037,7 +1002,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }, [state?.lastAction, state?.seats]);
 
-  // Default empty table state when no server state exists — ensures table always renders
   const ts: TableState = useMemo(() => state || {
     tableId: roomId,
     seats: [null, null, null, null, null, null],
@@ -1052,7 +1016,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     maxBuyin: 2000,
   }, [state, roomId]);
 
-  // Derived state
   const mySeat = useMemo(() => {
     return ts.seats?.find((s) => s && s.userId === myId) || null;
   }, [ts, myId]);
@@ -1063,7 +1026,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   const isShowdown = ts.phase === "showdown";
   const isSeated = !!mySeat;
 
-  // Actions
   const handleSitDown = useCallback((seatIndex: number) => {
     setBuyInSeat(seatIndex);
   }, []);
@@ -1088,8 +1050,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     });
   }, [state?.tableId, roomId]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────
-
   const tableOuter: CSSProperties = {
     position: "relative",
     width: "100%",
@@ -1103,7 +1063,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     userSelect: "none",
   };
 
-  // The green felt table (oval)
   const tableArea: CSSProperties = {
     position: "relative",
     flex: 1,
@@ -1133,7 +1092,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     boxShadow: "inset 0 2px 16px rgba(0,0,0,.3)",
   };
 
-  // Felt texture overlay
   const feltTexture: CSSProperties = {
     position: "absolute",
     inset: 0,
@@ -1143,7 +1101,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     pointerEvents: "none",
   };
 
-  // Rail stitching
   const feltStitch: CSSProperties = {
     position: "absolute",
     inset: 8,
@@ -1154,7 +1111,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
 
   return (
     <div style={tableOuter}>
-      {/* Top bar: phase + leave */}
       <div
         style={{
           display: "flex",
@@ -1172,7 +1128,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
             gap: 12,
           }}
         >
-          {/* Phase badge */}
           <div
             style={{
               padding: "4px 14px",
@@ -1189,7 +1144,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
             {PHASE_LABELS[ts.phase] || ts.phase}
           </div>
 
-          {/* Blinds */}
           <div
             style={{
               fontSize: 11,
@@ -1200,7 +1154,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
             Blinds {chipStr(ts.blinds.small)} / {chipStr(ts.blinds.big)}
           </div>
 
-          {/* Spectator label */}
           {!isSeated && (
             <div
               style={{
@@ -1217,7 +1170,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
           )}
         </div>
 
-        {/* Leave button */}
         {isSeated && (
           <button
             onClick={handleLeave}
@@ -1244,15 +1196,12 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
         )}
       </div>
 
-      {/* Table area */}
       <div style={tableArea}>
-        {/* Felt table */}
         <div style={feltOuter}>
           <div style={feltInner}>
             <div style={feltTexture} />
             <div style={feltStitch} />
 
-            {/* Pot */}
             {ts.pot > 0 && (
               <div
                 style={{
@@ -1306,7 +1255,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
               </div>
             )}
 
-            {/* Community cards */}
             <div
               style={{
                 position: "absolute",
@@ -1334,7 +1282,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
                     />
                   );
                 }
-                // Empty card slot
                 return (
                   <div
                     key={i}
@@ -1350,14 +1297,12 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
               })}
             </div>
 
-            {/* Winner overlay */}
             {isShowdown && ts.winners && ts.winners.length > 0 && (
               <WinnerOverlay winners={ts.winners} />
             )}
           </div>
         </div>
 
-        {/* Seats */}
         {ts.seats.map((seat, i) => (
           <SeatView
             key={i}
@@ -1371,7 +1316,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
           />
         ))}
 
-        {/* Bet chips in front of seats */}
         {ts.seats.map((seat, i) => {
           if (!seat || !seat.bet) return null;
           const pos = BET_POSITIONS[i];
@@ -1392,7 +1336,6 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
         })}
       </div>
 
-      {/* Toast */}
       {toast && (
         <div
           style={{
@@ -1416,12 +1359,10 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
         </div>
       )}
 
-      {/* Action bar */}
       {isSeated && mySeat && ts.phase !== "waiting" && ts.phase !== "showdown" && (
         <ActionBar state={ts} mySeat={mySeat} />
       )}
 
-      {/* Buy-in dialog */}
       {buyInSeat !== null && (
         <BuyInDialog
           min={ts.minBuyin}

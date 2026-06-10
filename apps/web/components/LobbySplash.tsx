@@ -6,34 +6,34 @@ import { createPortal } from "react-dom";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 export interface LobbySplashPalette {
-  accent: string;      // primary brand color (e.g. #e8c48a brass for Windrose, #f58220 solar for Destiny)
-  accentHi: string;    // brightened variant for button gradient top
-  accentLow: string;   // darkened variant for button gradient bottom
-  frame: string;       // card frame color (rgba usually)
-  frameGlow: string;   // glow around card
-  ink: string;         // button text color (usually near-black)
-  pillBg: string;      // live-count pill background
-  textDim: string;     // dimmer accent for labels
+  accent: string;
+  accentHi: string;
+  accentLow: string;
+  frame: string;
+  frameGlow: string;
+  ink: string;
+  pillBg: string;
+  textDim: string;
 }
 
 export interface LobbySplashLiveCount {
-  endpoint: string;                           // "/windrose/live-players" etc.
-  label: string;                              // "Sailing right now"
-  suffix: string;                             // "pirates · Steam live"
-  extractor?: (j: any) => number | null;      // default: j?.players
-  position?: { top: string; right: string };  // default { top: 15%, right: 5% }
+  endpoint: string;
+  label: string;
+  suffix: string;
+  extractor?: (j: any) => number | null;
+  position?: { top: string; right: string };
 }
 
 export interface LobbySplashProps {
   lobbyId: string;
-  ogImage: string;                // "/brand/lobbies/windrose-og-v3.png"
-  ariaLabel: string;              // "Welcome to the Windrose hub"
-  cooldownDays?: number;          // default 7
-  ctaLabel?: string;              // default "Enter the Hub →"
+  ogImage: string;
+  ariaLabel: string;
+  cooldownDays?: number;
+  ctaLabel?: string;
   liveCount?: LobbySplashLiveCount;
   palette: LobbySplashPalette;
-  storageKey?: string;            // defaults to weered:<lobbyId>:splash:lastShownAt
-  forceOpen?: boolean;            // preview/debug: bypass cooldown + don't persist dismiss
+  storageKey?: string;
+  forceOpen?: boolean;
 }
 
 const WINDROSE_DEFAULT_EXTRACT = (j: any) => (j?.ok && typeof j?.players === "number" ? j.players : null);
@@ -56,7 +56,6 @@ export default function LobbySplash({
   const key = storageKey || `weered:${lobbyId}:splash:lastShownAt`;
   const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
 
-  // Cooldown gate — skipped entirely when forceOpen is true
   useEffect(() => {
     if (forceOpen) { setOpen(true); return; }
     let cancelled = false;
@@ -69,7 +68,6 @@ export default function LobbySplash({
     return () => { cancelled = true; clearTimeout(t); };
   }, [key, cooldownMs, forceOpen]);
 
-  // Live count fetch
   useEffect(() => {
     if (!open || !liveCount) return;
     let cancelled = false;
@@ -90,7 +88,6 @@ export default function LobbySplash({
     setTimeout(() => setOpen(false), 260);
   }, [key, forceOpen]);
 
-  // ESC dismiss
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
@@ -98,7 +95,6 @@ export default function LobbySplash({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, handleClose]);
 
-  // External re-open trigger (e.g. clicking the lobby header logo)
   useEffect(() => {
     const onOpenEvent = (e: Event) => {
       const detail = (e as CustomEvent)?.detail;
@@ -113,9 +109,6 @@ export default function LobbySplash({
   if (!open) return null;
   if (typeof document === "undefined") return null;
 
-  // Portal to document.body so the splash escapes the .weered-shell flex
-  // layout. Without this the rail (sibling in the same stacking context)
-  // renders in front of the splash even at z-index 9999.
   return createPortal(
     <>
       <style>{`
@@ -171,7 +164,6 @@ export default function LobbySplash({
           overflow: "hidden",
         }}
       >
-        {/* Radial accent-colored glow behind the card — breathing pulse */}
         <div
           className="weered-lobby-splash-glow"
           aria-hidden
@@ -187,7 +179,6 @@ export default function LobbySplash({
           }}
         />
 
-        {/* Drifting particle/star layer */}
         <div
           className="weered-lobby-splash-particles"
           aria-hidden
@@ -206,7 +197,6 @@ export default function LobbySplash({
           }}
         />
 
-        {/* Slow-rotating conic ring behind the card */}
         <div
           className="weered-lobby-splash-ring"
           aria-hidden
@@ -246,7 +236,6 @@ export default function LobbySplash({
             />
           </div>
 
-          {/* Live count strip — sits between card and CTA, works for any card composition */}
           {count !== null && liveCount && (
             <div
               className="weered-lobby-splash-count"
@@ -320,7 +309,6 @@ export default function LobbySplash({
   );
 }
 
-// Shared palettes for known lobbies
 export const WINDROSE_SPLASH_PALETTE: LobbySplashPalette = {
   accent:    "#e8c48a",
   accentHi:  "#f2d4a1",
@@ -333,7 +321,7 @@ export const WINDROSE_SPLASH_PALETTE: LobbySplashPalette = {
 };
 
 export const DESTINY_SPLASH_PALETTE: LobbySplashPalette = {
-  accent:    "#f58220",  // solar orange
+  accent:    "#f58220",
   accentHi:  "#ffb066",
   accentLow: "#a3530f",
   frame:     "rgba(245,130,32,0.40)",

@@ -1,37 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /characters/* — Per-player D&D 5e character sheets.
-//
-// The model holds raw values (ability scores, HP, etc.) and stores
-// proficiencies as flat lists. Derived stats (modifiers, proficiency
-// bonus, save bonuses, skill bonuses) are computed on read so the
-// rules layer lives in one place. Server is authoritative; the client
-// never recomputes.
-//
-// Visibility:
-//   - owner sees their own characters
-//   - DM (room owner OR global staff) sees every character whose roomId
-//     matches their room
-//
-// Click-to-roll: the UI just opens the existing dice route at
-// POST /lobbies/:lobbyId/dice/roll with a prebuilt expression. The
-// character endpoints don't roll — they just hold the data.
-
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string>;
   canAccessStaff: (role: any) => boolean;
 };
 
-// 5e ability modifier — floor((score - 10) / 2). Math.floor handles
-// negatives correctly (Math.floor(-1.5) === -2), which is what we want.
 function abilityMod(score: number): number {
   const n = Number.isFinite(score) ? score : 10;
   return Math.floor((n - 10) / 2);
 }
 
-// 5e proficiency bonus by character level.
 function proficiencyBonus(level: number): number {
   const lv = Math.max(1, Math.min(20, Math.floor(Number(level) || 1)));
   if (lv >= 17) return 6;
@@ -44,7 +24,6 @@ function proficiencyBonus(level: number): number {
 const ABILITY_KEYS = ["STR", "DEX", "CON", "INT", "WIS", "CHA"] as const;
 type AbilityKey = typeof ABILITY_KEYS[number];
 
-// Skill -> ability mapping (PHB).
 const SKILL_ABILITY: Record<string, AbilityKey> = {
   acrobatics: "DEX",
   animalHandling: "WIS",
@@ -77,7 +56,6 @@ function abilityScore(c: any, k: AbilityKey): number {
   }
 }
 
-// Augment a stored character with computed fields for the client.
 function withDerived(c: any) {
   const pb = proficiencyBonus(c.level);
   const mods: Record<AbilityKey, number> = {} as any;
@@ -114,8 +92,6 @@ function withDerived(c: any) {
   };
 }
 
-// Did this user create the room this character lives in (or are they
-// global staff)? Used to gate DM-level reads/writes.
 async function isDMForCharacter(
   userId: string,
   c: { roomId: string | null; ownerUserId: string },
@@ -132,7 +108,6 @@ async function isDMForCharacter(
 export default async function characterRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
 
-  // ── Create ────────────────────────────────────────────────────────────
   app.post("/characters", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -179,9 +154,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, character: withDerived(c) });
   });
 
-  // ── List ─────────────────────────────────────────────────────────────
-  // Player call: list my characters (no roomId filter required).
-  // DM call:    pass roomId; gated to room owner / staff.
   app.get("/characters", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -215,7 +187,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, characters: chars.map(withDerived), asDM: false });
   });
 
-  // ── Read one ─────────────────────────────────────────────────────────
   app.get("/characters/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -231,7 +202,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, character: withDerived(c) });
   });
 
-  // ── Update (owner: full; DM: HP/AC + DM notes only) ──────────────────
   app.patch("/characters/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -279,7 +249,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
       if (b.roomId !== undefined)     data.roomId     = b.roomId ? String(b.roomId) : null;
     }
 
-    // Both owner and DM can adjust HP, AC, and DM notes.
     if (b.hpCurrent !== undefined) data.hpCurrent = clampInt(b.hpCurrent, 0, 999, c.hpCurrent);
     if (b.hpMax     !== undefined) data.hpMax     = clampInt(b.hpMax,     0, 999, c.hpMax);
     if (b.hpTemp    !== undefined) data.hpTemp    = clampInt(b.hpTemp,    0, 999, c.hpTemp);
@@ -294,7 +263,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, character: withDerived(updated) });
   });
 
-  // ── Delete (owner only) ──────────────────────────────────────────────
   app.delete("/characters/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -306,7 +274,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true });
   });
 
-  // ── HP delta helper (owner or DM) ────────────────────────────────────
   app.post("/characters/:id/hp", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -328,7 +295,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, character: withDerived(updated) });
   });
 
-  // ── Spell slot toggle (owner only) ───────────────────────────────────
   app.post("/characters/:id/spell-slot", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -366,8 +332,6 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, character: withDerived(updated) });
   });
 }
-
-// ── Sanitizers ──────────────────────────────────────────────────────────
 
 function clampInt(v: any, min: number, max: number, fallback: number): number {
   const n = parseInt(v);

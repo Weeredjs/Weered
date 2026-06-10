@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import EmptyState from "./EmptyState";
-
-// ── API helpers ─────────────────────────────────────────────────────────────
+import ModuleTabBar from "./ModuleTabBar";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -18,8 +17,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   });
   return r.json();
 }
-
-// ── Colors ──────────────────────────────────────────────────────────────────
 
 const CLR = {
   green:  "#22c55e",
@@ -36,17 +33,15 @@ const CLR = {
 
 const DEFAULT_ACCENT = "#3B82F6";
 
-// ── Shared styles ───────────────────────────────────────────────────────────
-
 const S = {
   card: {
-    borderRadius: 10,
+    borderRadius: 2,
     border: `1px solid rgba(255,255,255,.08)`,
     background: "rgba(255,255,255,.03)",
     padding: "12px 14px",
   } as React.CSSProperties,
   btn: {
-    padding: "6px 12px", borderRadius: 8,
+    padding: "6px 12px", borderRadius: 2,
     border: "1px solid rgba(255,255,255,.10)",
     background: "rgba(255,255,255,.05)",
     fontSize: 12, cursor: "pointer",
@@ -55,14 +50,14 @@ const S = {
     transition: "background .12s, border-color .12s",
   } as React.CSSProperties,
   input: {
-    width: "100%", padding: "8px 12px", borderRadius: 8,
+    width: "100%", padding: "8px 12px", borderRadius: 2,
     border: "1px solid rgba(255,255,255,.10)",
     background: "rgba(0,0,0,.30)", fontSize: 13,
     color: "rgba(243,244,246,.92)", outline: "none",
     boxSizing: "border-box" as const,
   } as React.CSSProperties,
   textarea: {
-    width: "100%", padding: "8px 12px", borderRadius: 8,
+    width: "100%", padding: "8px 12px", borderRadius: 2,
     border: "1px solid rgba(255,255,255,.10)",
     background: "rgba(0,0,0,.30)", fontSize: 13,
     color: "rgba(243,244,246,.92)", outline: "none",
@@ -76,8 +71,6 @@ const S = {
     marginBottom: 6,
   } as React.CSSProperties,
 };
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
   try {
@@ -116,8 +109,6 @@ function roleColor(role: string): string {
   return CLR.grey;
 }
 
-// ── Types ───────────────────────────────────────────────────────────────────
-
 type Room = { id: string; name: string; locked: boolean; onlineCount: number; hasPassword: boolean };
 type PresenceUser = { id: string; name: string; roomId: string; roomName: string };
 type Presence = { count: number; users: PresenceUser[] };
@@ -128,16 +119,12 @@ type Announcement = {
   createdAt: string;
 };
 
-// ── Tabs ────────────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "directory" as const, label: "Directory", icon: "🏢" },
   { id: "team" as const,      label: "Team",      icon: "👥" },
   { id: "announce" as const,  label: "Announcements", icon: "📢" },
 ];
 type TabId = typeof TABS[number]["id"];
-
-// ── Status Dot ──────────────────────────────────────────────────────────────
 
 function StatusDot({ color, pulse, size = 8 }: { color: string; pulse?: boolean; size?: number }) {
   return (
@@ -149,8 +136,6 @@ function StatusDot({ color, pulse, size = 8 }: { color: string; pulse?: boolean;
     }} />
   );
 }
-
-// ── Avatar circle ───────────────────────────────────────────────────────────
 
 function AvatarCircle({ name, size = 28, avatar }: { name: string; size?: number; avatar?: string }) {
   if (avatar) {
@@ -179,8 +164,6 @@ function AvatarCircle({ name, size = 28, avatar }: { name: string; size?: number
   );
 }
 
-// ── Office Status Logic ─────────────────────────────────────────────────────
-
 function officeStatus(room: Room): { color: string; label: string } {
   const occupied = room.onlineCount > 0;
   const locked = room.locked || room.hasPassword;
@@ -189,10 +172,6 @@ function officeStatus(room: Room): { color: string; label: string } {
   if (locked && occupied)    return { color: CLR.red,   label: "Busy" };
   return { color: CLR.grey, label: "Closed" };
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  TAB 1 — Directory
-// ═══════════════════════════════════════════════════════════════════════════
 
 function DirectoryTab({ lobbyId, accent, rooms, presence }: {
   lobbyId: string; accent: string; rooms: Room[]; presence: Presence;
@@ -211,12 +190,12 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Online status bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 12px", borderRadius: 8,
+        padding: "8px 12px", borderRadius: 2,
         background: "rgba(255,255,255,.02)",
         border: `1px solid rgba(255,255,255,.05)`,
+        borderLeft: `2px solid ${accent}`,
       }}>
         <StatusDot color={CLR.green} pulse size={8} />
         <span style={{ fontSize: 13, color: CLR.text, fontWeight: 600 }}>
@@ -224,7 +203,6 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
         </span>
       </div>
 
-      {/* Office grid */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
@@ -236,7 +214,7 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
           const locked = room.locked || room.hasPassword;
 
           return (
-            <div key={room.id} style={{
+            <div key={room.id} className="weered-hq-room-card" style={{
               ...S.card,
               display: "flex", flexDirection: "column", gap: 8,
               transition: "border-color .12s",
@@ -244,21 +222,18 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
               onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
             >
-              {/* Room header */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: CLR.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div className="weered-hq-room-head" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span className="weered-hq-room-name" style={{ fontSize: 14, fontWeight: 700, color: CLR.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {room.name}
                 </span>
                 {locked && <span style={{ fontSize: 12 }} title="Locked">🔒</span>}
               </div>
 
-              {/* Status */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div className="weered-hq-room-status" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <StatusDot color={status.color} size={7} />
                 <span style={{ fontSize: 11, color: CLR.dim, fontWeight: 500 }}>{status.label}</span>
               </div>
 
-              {/* People in room */}
               {people.length > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: -4, marginTop: 2 }}>
                   {people.slice(0, 4).map((p, i) => (
@@ -274,10 +249,10 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
                 </div>
               )}
 
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 6, marginTop: "auto" }}>
+              <div className="weered-hq-room-actions" style={{ display: "flex", gap: 6, marginTop: "auto" }}>
                 {!locked ? (
                   <button
+                    className="weered-hq-room-enter"
                     onClick={() => router.push(`/room/${room.id}`)}
                     style={{
                       ...S.btn, flex: 1,
@@ -312,7 +287,6 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
                       onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,.16)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,.08)"; }}
                       onClick={() => {
-                        // Knock sends a presence notification — navigate to room to trigger
                         router.push(`/room/${room.id}`);
                       }}
                     >
@@ -328,10 +302,6 @@ function DirectoryTab({ lobbyId, accent, rooms, presence }: {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  TAB 2 — Team
-// ═══════════════════════════════════════════════════════════════════════════
 
 function TeamTab({ members, presence, accent }: {
   members: Member[]; presence: Presence; accent: string;
@@ -350,7 +320,6 @@ function TeamTab({ members, presence, accent }: {
       const aOn = onlineSet.has(a.userId) ? 0 : 1;
       const bOn = onlineSet.has(b.userId) ? 0 : 1;
       if (aOn !== bOn) return aOn - bOn;
-      // Then sort by role weight: OWNER > MOD > MEMBER
       const roleWeight = (r: string) => r === "OWNER" ? 0 : r === "MOD" ? 1 : 2;
       const rw = roleWeight(a.role) - roleWeight(b.role);
       if (rw !== 0) return rw;
@@ -359,7 +328,6 @@ function TeamTab({ members, presence, accent }: {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Search */}
       <input
         type="text"
         placeholder="Search team members..."
@@ -368,7 +336,6 @@ function TeamTab({ members, presence, accent }: {
         style={S.input}
       />
 
-      {/* Member list */}
       {filtered.length === 0 && (
         <EmptyState compact title={search ? "Nobody matches that search." : "No team members yet."} />
       )}
@@ -382,7 +349,7 @@ function TeamTab({ members, presence, accent }: {
         return (
           <div key={m.userId} style={{
             display: "flex", alignItems: "center", gap: 10,
-            padding: "8px 10px", borderRadius: 8,
+            padding: "8px 10px", borderRadius: 2,
             background: "rgba(255,255,255,.02)",
             border: "1px solid rgba(255,255,255,.05)",
             transition: "border-color .12s",
@@ -390,7 +357,6 @@ function TeamTab({ members, presence, accent }: {
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}33`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.05)")}
           >
-            {/* Avatar */}
             <div style={{ position: "relative", flexShrink: 0 }}>
               <AvatarCircle name={m.name} size={32} avatar={m.avatar} />
               <div style={{
@@ -402,7 +368,6 @@ function TeamTab({ members, presence, accent }: {
               }} />
             </div>
 
-            {/* Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: CLR.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -410,7 +375,7 @@ function TeamTab({ members, presence, accent }: {
                 </span>
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "1px 6px",
-                  borderRadius: 4, letterSpacing: ".3px",
+                  borderRadius: 2, letterSpacing: ".3px",
                   background: `${rColor}18`,
                   color: rColor,
                   border: `1px solid ${rColor}30`,
@@ -435,10 +400,6 @@ function TeamTab({ members, presence, accent }: {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  TAB 3 — Announcements
-// ═══════════════════════════════════════════════════════════════════════════
-
 function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [posts, setPosts] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -453,7 +414,7 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
         `/forum/posts?lobbyId=${encodeURIComponent(lobbyId)}&category=ANNOUNCEMENT&sort=new&limit=10`
       );
       if (data?.ok) setPosts(data.posts || []);
-    } catch { /* silent */ }
+    } catch { }
     setLoading(false);
   }, [lobbyId]);
 
@@ -478,7 +439,7 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
         setBody("");
         load();
       }
-    } catch { /* silent */ }
+    } catch { }
     setSubmitting(false);
   }
 
@@ -492,7 +453,6 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Post button / Compose form */}
       {!composing ? (
         <button
           onClick={() => setComposing(true)}
@@ -558,7 +518,6 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
         </div>
       )}
 
-      {/* Posts list */}
       {posts.length === 0 && (
         <div style={{ padding: "30px 20px", textAlign: "center" }}>
           <div style={{ fontSize: 28, marginBottom: 10, opacity: 0.3 }}>📢</div>
@@ -598,10 +557,6 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
-
 type Props = {
   lobbyId: string;
   accentColor?: string;
@@ -612,25 +567,23 @@ export default function HeadquartersModulesPanel({ lobbyId, accentColor, style }
   const accent = accentColor || DEFAULT_ACCENT;
   const [tab, setTab] = useState<TabId>("directory");
 
-  // ── Data state ──────────────────────────────────────────────────────────
   const [rooms, setRooms] = useState<Room[]>([]);
   const [presence, setPresence] = useState<Presence>({ count: 0, users: [] });
   const [members, setMembers] = useState<Member[]>([]);
 
-  // ── Fetch functions ─────────────────────────────────────────────────────
   const fetchRooms = useCallback(async () => {
     try {
       const data = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/rooms`);
       if (Array.isArray(data)) setRooms(data);
       else if (data?.rooms) setRooms(data.rooms);
-    } catch { /* silent */ }
+    } catch { }
   }, [lobbyId]);
 
   const fetchPresence = useCallback(async () => {
     try {
       const data = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/presence`);
       if (data) setPresence({ count: data.count || 0, users: data.users || [] });
-    } catch { /* silent */ }
+    } catch { }
   }, [lobbyId]);
 
   const fetchMembers = useCallback(async () => {
@@ -638,31 +591,25 @@ export default function HeadquartersModulesPanel({ lobbyId, accentColor, style }
       const data = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/members`);
       if (data?.members) setMembers(data.members);
       else if (Array.isArray(data)) setMembers(data);
-    } catch { /* silent */ }
+    } catch { }
   }, [lobbyId]);
 
-  // ── Initial load ────────────────────────────────────────────────────────
   useEffect(() => {
     fetchRooms();
     fetchPresence();
     fetchMembers();
   }, [fetchRooms, fetchPresence, fetchMembers]);
 
-  // ── Auto-refresh rooms every 20s ────────────────────────────────────────
-  // WS broadcasts room create/delete; this is reconciliation only.
   useEffect(() => {
     const i = setInterval(fetchRooms, 20_000);
     return () => clearInterval(i);
   }, [fetchRooms]);
 
-  // ── Auto-refresh presence every 20s ─────────────────────────────────────
-  // WS push handles real-time presence; this is a reconciliation poll.
   useEffect(() => {
     const i = setInterval(fetchPresence, 20_000);
     return () => clearInterval(i);
   }, [fetchPresence]);
 
-  // ── Pulse keyframes (injected once) ─────────────────────────────────────
   const injectedRef = useRef(false);
   useEffect(() => {
     if (injectedRef.current) return;
@@ -676,37 +623,13 @@ export default function HeadquartersModulesPanel({ lobbyId, accentColor, style }
         }
       `;
       document.head.appendChild(styleEl);
-    } catch { /* SSR guard */ }
+    } catch { }
   }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tab bar */}
-      <div style={{
-        display: "flex", gap: 2, padding: "8px 12px 0",
-        borderBottom: "1px solid rgba(255,255,255,.07)",
-        flexShrink: 0,
-      }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-              background: tab === t.id ? `${accent}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accent} />
 
-      {/* Content area */}
       <div style={{
         flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px",
         display: "flex", flexDirection: "column",

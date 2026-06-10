@@ -28,6 +28,7 @@
         "visible": true,
         "skipTaskbar": false,
         "backgroundColor": "#0c0b0a",
+        "theme": "Dark",
         "titleBarStyle": "Visible",
         "windowEffects": {
           "effects": [],

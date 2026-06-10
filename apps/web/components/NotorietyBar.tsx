@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-// Rank titles and thresholds (mirrored from server)
 const RANKS = [
   { title: "Street Rat",   min: 0     },
   { title: "Corner Boy",   min: 100   },
@@ -28,8 +27,8 @@ function getRank(score: number) {
 }
 
 interface Props {
-  score?: number;      // If passed, uses this directly instead of fetching
-  compact?: boolean;   // Minimal version for tight spaces
+  score?: number;
+  compact?: boolean;
   onClick?: () => void;
 }
 
@@ -50,7 +49,6 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
       .catch(() => {});
   }, [propScore]);
 
-  // Listen for live XP updates
   useEffect(() => {
     function handleAward(e: Event) {
       const pts = (e as CustomEvent).detail?.points;
@@ -121,7 +119,6 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
         e.currentTarget.style.borderColor = "rgba(88,0,229,0.15)";
       }}
     >
-      {/* Rank + score */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{
@@ -143,7 +140,6 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
         </span>
       </div>
 
-      {/* Progress bar */}
       <div style={{
         height: 5, borderRadius: 3,
         background: "rgba(255,255,255,0.06)",
@@ -158,7 +154,6 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
         }} />
       </div>
 
-      {/* Next rank */}
       {rank.next && (
         <div style={{
           display: "flex", justifyContent: "space-between",

@@ -3,25 +3,17 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
-import { TierIcon } from "./RoleIcon";
+import RoleIcon, { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
 import FlairBadge from "./FlairBadge";
 import { useEquippedFlair } from "../lib/useEquippedFlair";
 
-// Auto-shrink text to fit. Walks `sizes` largest→smallest until the
-// element's scrollWidth fits within its clientWidth. Re-runs whenever
-// the text or size sequence changes.
 function useFitText(ref: any, text: string, sizes: number[]): number {
   const [size, setSize] = useState(sizes[0]);
-  // Reset to the largest size whenever the text changes so we always
-  // try the biggest fit first.
   useLayoutEffect(() => {
     setSize(sizes[0]);
   }, [text, sizes[0]]);
-  // After each render, if we still overflow and there's a smaller
-  // size available, step down. Stops when no overflow or we've hit
-  // the smallest size.
   useLayoutEffect(() => {
     const el = ref.current as HTMLElement | null;
     if (!el) return;
@@ -53,17 +45,14 @@ function normRole(x: string) {
   return s.slice(0, 14);
 }
 
-// Street hierarchy display names — defaults to GTA/mafia.
 const ROLE_DISPLAY: Record<string, string> = {
   GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "BACKUP",
   MOD: "CAPTAIN", OWNER: "FOUNDER", MEMBER: "MEMBER",
 };
-// Lobby-scoped overrides — Windrose speaks pirate.
 const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
   GOD: "ADMIRAL", ADMIN: "FIRST MATE", STAFF: "BOATSWAIN", SUPPORT: "LOOKOUT",
   MOD: "QUARTERMASTER", OWNER: "CAPTAIN", MEMBER: "CREWMATE",
 };
-// Helldivers 2 — Super Earth military hierarchy.
 const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
   GOD: "SUPREME COMMANDER", ADMIN: "GENERAL", STAFF: "COMMANDER", SUPPORT: "OFFICER",
   MOD: "DRILL SERGEANT", OWNER: "DIVE LEAD", MEMBER: "HELLDIVER",
@@ -81,7 +70,6 @@ const IconDock = () => (
   </svg>
 );
 
-
 function UserCornerFlair({ userId }: { userId?: string }) {
   const f = useEquippedFlair(userId || null);
   if (!f) return null;
@@ -98,7 +86,6 @@ export default function UserCorner() {
   const { me, role, globalRole, currentLobbyId, isAway, setAway } = useWeered() as any;
   const { openSheet } = useOverlay();
 
-  // Reactive lobby-theme detection for vocabulary swap
   const [lobbyTheme, setLobbyTheme] = useState<string | null>(null);
   useEffect(() => {
     const read = () => setLobbyTheme(document.documentElement.getAttribute("data-weered-lobby"));
@@ -109,7 +96,6 @@ export default function UserCorner() {
   }, []);
   const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : lobbyTheme === "destiny2" ? "Transmat" : lobbyTheme === "helldivers2" ? "Comms" : "Burner";
 
-  // ── Lobby branding: fetch logoUrl for current lobby ─────────────────────────
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
   const [lobbyLogo, setLobbyLogo] = React.useState<string | null>(null);
   const [lobbyAccent, setLobbyAccent] = React.useState<string | null>(null);
@@ -134,22 +120,10 @@ export default function UserCorner() {
   }, [currentLobbyId]);
 
   const name = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
-  const avatarUrl = me?.avatar || null;
+  const [profileAvatar, setProfileAvatar] = useState<string | null | undefined>(undefined);
+  const [profileColor, setProfileColor] = useState<string | null | undefined>(undefined);
+  const avatarUrl = (profileAvatar !== undefined ? profileAvatar : me?.avatar) || null;
 
-  // Re-render when avatar color changes
-  const [, forceUpdate] = React.useState(0);
-  React.useEffect(() => {
-    const handler = () => forceUpdate(n => n + 1);
-    window.addEventListener("weered:avatarColor", handler);
-    window.addEventListener("weered:profileColors", handler);
-    return () => {
-      window.removeEventListener("weered:avatarColor", handler);
-      window.removeEventListener("weered:profileColors", handler);
-    };
-  }, []);
-
-  // Live profile colour overrides — read from localStorage cache so changes
-  // from the settings sheet apply instantly without round-tripping the WS.
   const [colorOverrides, setColorOverrides] = React.useState<{
     panelBgColor?: string | null;
     panelAccentColor?: string | null;
@@ -172,25 +146,16 @@ export default function UserCorner() {
     return () => window.removeEventListener("weered:profileColors", onColors);
   }, []);
 
-  // Dock unread badge — two sources:
-  // 1. weered:dock:unread custom event (Dock fires this when count changes)
-  // 2. localStorage "weered:dock:unread" polled every 2s as fallback
-  //    (covers the case where the event fired before this component mounted)
-  // Dock should write: localStorage.setItem("weered:dock:unread", String(count))
   const [dockUnread, setDockUnread] = React.useState(() => {
     try { return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0); } catch { return 0; }
   });
 
   React.useEffect(() => {
-    // Event listener — instant when Dock dispatches
     const onUnread = (e: Event) => {
       const count = Math.max(0, Number((e as CustomEvent)?.detail?.count) || 0);
       setDockUnread(count);
       try { localStorage.setItem("weered:dock:unread", String(count)); } catch {}
     };
-    // Poll localStorage every 10s as fallback for missed events. 2s was
-    // overkill — the event listener catches changes instantly and this is
-    // only a safety net for cross-tab updates the listener missed.
     const poll = () => {
       try {
         const v = Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0);
@@ -205,7 +170,6 @@ export default function UserCorner() {
     };
   }, []);
 
-  // Clear badge when dock opens
   React.useEffect(() => {
     const handler = () => {
       setDockUnread(0);
@@ -225,13 +189,23 @@ export default function UserCorner() {
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
-  // Primary crew + notoriety rank — used to flesh out the identity card
-  // into something that actually feels like an ID badge.
   const [primaryCrew, setPrimaryCrew] = useState<{ id: string; name: string; tag: string; logoUrl: string | null; accentColor: string | null } | null>(null);
   const [notorietyRank, setNotorietyRank] = useState<string>("");
-  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [notorietyScore, setNotorietyScore] = useState<number | null>(null);
+  const [nameEffect, setNameEffect] = useState<string | null>(null);
+  const [avatarFrame, setAvatarFrame] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!me?.id) { setPrimaryCrew(null); setNotorietyRank(""); return; }
+    if (!avatarFrame) { document.documentElement.removeAttribute("data-uc-frame"); return; }
+    document.documentElement.setAttribute("data-uc-frame", avatarFrame);
+    return () => { document.documentElement.removeAttribute("data-uc-frame"); };
+  }, [avatarFrame]);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ text: string; emoji: string }>({ text: "", emoji: "" });
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<{ text: string; emoji: string }>({ text: "", emoji: "" });
+  const loadProfile = React.useCallback(() => {
+    if (!me?.id) { setPrimaryCrew(null); setNotorietyRank(""); setProfileAvatar(undefined); return () => {}; }
     let cancelled = false;
     const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
     fetch(`${API_BASE}/profile/${encodeURIComponent(me.id)}`, {
@@ -248,13 +222,39 @@ export default function UserCorner() {
         });
       } else { setPrimaryCrew(null); }
       if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
+      if (typeof j?.notoriety === "number") setNotorietyScore(j.notoriety);
+      setNameEffect(j?.nameEffect || null);
+      setAvatarFrame(j?.avatarFrame || null);
       if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl)); else setBannerUrl(null);
+      setStatus({ text: j?.statusText || "", emoji: j?.statusEmoji || "" });
+      setProfileAvatar(typeof j?.avatar === "string" && j.avatar ? j.avatar : (j && "avatar" in j ? null : undefined));
+      setProfileColor(typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [me?.id, API_BASE]);
 
-  // Accent color cascade for the ID card: user override > role color > crew accent > neutral.
-  // panelAccentColor is the user's own customization (settings sheet color picker).
+  useEffect(() => {
+    let cancel = loadProfile();
+    const reload = () => { cancel(); cancel = loadProfile(); };
+    window.addEventListener("weered:profile:updated", reload);
+    window.addEventListener("weered:profileColors", reload);
+    window.addEventListener("weered:avatarColor", reload);
+    return () => {
+      cancel();
+      window.removeEventListener("weered:profile:updated", reload);
+      window.removeEventListener("weered:profileColors", reload);
+      window.removeEventListener("weered:avatarColor", reload);
+    };
+  }, [loadProfile]);
+
+  const liveAvatarColor = profileColor || (me?.avatarColor as string | undefined);
+  const [stickyAvatarColor, setStickyAvatarColor] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (typeof liveAvatarColor === "string" && /^#[0-9a-f]{6}$/i.test(liveAvatarColor)) {
+      setStickyAvatarColor(liveAvatarColor);
+    }
+  }, [liveAvatarColor]);
+
   const rawPanelAccent = colorOverrides.panelAccentColor || me?.panelAccentColor;
   const rawPanelBg     = colorOverrides.panelBgColor     || me?.panelBgColor;
   const userPanelAccent = (rawPanelAccent && /^#[0-9a-f]{6}$/i.test(rawPanelAccent)) ? rawPanelAccent : null;
@@ -271,8 +271,30 @@ export default function UserCorner() {
   const crewAccentHex = primaryCrew?.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : null;
   const cardAccent = userPanelAccent || roleAccentHex || crewAccentHex || "#7C3AED";
 
-  // Short hash of the user's cuid for the ID badge line — reads "technical"
-  // without exposing raw internal IDs.
+  useEffect(() => {
+    const r = document.documentElement.style;
+    if (userPanelBg) r.setProperty("--weered-user-panel-bg", userPanelBg); else r.removeProperty("--weered-user-panel-bg");
+    if (userPanelAccent) r.setProperty("--weered-user-panel-accent", cardAccent); else r.removeProperty("--weered-user-panel-accent");
+    return () => {
+      r.removeProperty("--weered-user-panel-bg");
+      r.removeProperty("--weered-user-panel-accent");
+    };
+  }, [userPanelBg, userPanelAccent, cardAccent]);
+
+  const saveStatus = React.useCallback(async (text: string, emoji: string) => {
+    const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+    try {
+      const r = await fetch(`${API_BASE}/profile/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ statusText: text, statusEmoji: emoji }),
+      });
+      const j = await r.json();
+      if (j?.ok) setStatus({ text: j.statusText || "", emoji: j.statusEmoji || "" });
+    } catch {}
+    setEditingStatus(false);
+  }, [API_BASE]);
+
   const idHash = useMemo(() => {
     const raw = String(me?.id || "");
     if (!raw) return "";
@@ -282,9 +304,6 @@ export default function UserCorner() {
   return (
     <div
       className="weered-usercorner"
-      // Theme rules use !important on background / border, so we expose the
-      // user's pick via CSS variables that a high-specificity override in
-      // globals.css picks up. data-* flags toggle the override on/off.
       data-custom-bg={userPanelBg ? "1" : undefined}
       data-custom-accent={userPanelAccent ? "1" : undefined}
       style={{
@@ -292,11 +311,7 @@ export default function UserCorner() {
         borderRadius: 16,
         ...(userPanelBg     && { ["--weered-uc-bg" as any]:     userPanelBg }),
         ...(userPanelAccent && { ["--weered-uc-accent" as any]: cardAccent }),
-        // Border: 2px, stronger alpha when user-customized so the accent reads.
         border: `2px solid ${userPanelAccent ? `${cardAccent}aa` : `${cardAccent}30`}`,
-        // Background: when the user picks a panelBgColor, lay it down as a
-        // solid base — no dark overlay washing it out. When no override,
-        // fall back to the original glassy stack.
         background: userPanelBg
           ? `${userPanelBg}`
           : `
@@ -314,9 +329,6 @@ export default function UserCorner() {
         overflow: "hidden",
       }}
     >
-      {/* Technical scan-line overlay — very subtle, adds the "this is my
-          rig" feel without overpowering. Pure CSS, no image. Drop it when
-          the user picked a panel bg colour so we don't wash the choice out. */}
       {!userPanelBg && (
         <div
           aria-hidden
@@ -328,8 +340,6 @@ export default function UserCorner() {
           }}
         />
       )}
-      {/* Corner bracket marks — four L-shaped ticks in the accent color so
-          the card reads as a framed ID badge, not a generic box. */}
       {[
         { top: 6, left: 6, rotate: 0 },
         { top: 6, right: 6, rotate: 90 },
@@ -350,8 +360,6 @@ export default function UserCorner() {
           }}
         />
       ))}
-      {/* Make corner brackets a touch larger to match the new 2.5px stroke */}
-      {/* Lobby logo / brand watermark — small, anchored top-right of card */}
       {lobbyLogo ? (
         <div style={{
           position: "absolute", top: 6, right: 8,
@@ -369,13 +377,7 @@ export default function UserCorner() {
         </div>
       ) : null}
 
-      {/* ─────────────────────────────────────────────────────────────────
-          BANNER ZONE — image (user.bannerUrl) or tier-themed gradient.
-          Carries crew patch (top-right), tier watermark (bottom-left), and
-          embedded notoriety bar (bottom edge). Avatar overlaps the bottom
-          edge so the banner and the identity field below read as one card.
-          ───────────────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="weered-uc-banner" style={{
         position: "relative",
         height: 64,
         background: (() => {
@@ -391,17 +393,12 @@ export default function UserCorner() {
         })(),
         zIndex: 1,
       }}>
-        {/* Bottom shade gradient — guarantees text legibility no matter
-            what banner image the user picks. */}
         <div aria-hidden style={{
           position: "absolute", inset: 0,
           background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%)",
           pointerEvents: "none",
         }} />
 
-        {/* TOP-LEFT HEADER ROW — ID hash + tier stencil, single line.
-            Reads like the file-folder reference cover line. Merged so the
-            bottom edge is reserved for the embedded notoriety bar. */}
         <div style={{
           position: "absolute", top: 8, left: 12,
           display: "flex", alignItems: "center", gap: 8,
@@ -422,7 +419,7 @@ export default function UserCorner() {
               tier === "INDICTED" ? "rgba(216,180,254,.95)" :
               "rgba(243,244,246,.85)";
             return (
-              <>
+              <span className="weered-uc-banner-tier" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 {idHash && <span aria-hidden style={{ opacity: 0.4, color: "#fff" }}>·</span>}
                 <span style={{
                   display: "inline-flex", alignItems: "center", gap: 4,
@@ -432,13 +429,21 @@ export default function UserCorner() {
                   <TierIcon tier={tier as any} size={10} />
                   {tier}
                 </span>
-              </>
+              </span>
             );
           })()}
+          {notorietyScore != null && (
+            <span className="weered-uc-noto" data-tooltip="Notoriety — your reputation XP. Climbs through Innocent, Indicted, Felon, Made Man, Kingpin as you contribute." style={{
+              display: "inline-flex", alignItems: "center", gap: 3,
+              color: "#D4A017", letterSpacing: "0.06em",
+              pointerEvents: "auto", cursor: "help", position: "relative",
+            }}>
+              <span style={{ fontSize: 11 }}>★</span>
+              {notorietyScore.toLocaleString()}
+            </span>
+          )}
         </div>
 
-        {/* CREW PATCH — top-right of banner. Reads as a sewn-on insignia.
-            Sits left of the lobby logo so they don't collide. */}
         {primaryCrew?.tag && (() => {
           const ca = primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : cardAccent;
           return (
@@ -467,26 +472,16 @@ export default function UserCorner() {
           );
         })()}
 
-        {/* NOTORIETY BAR — embedded in the bottom edge of the banner like
-            a fuel gauge. Component handles its own data; we just wrap it
-            in a thin strip so it sits flush against the banner edge. */}
-        <div style={{
+        <div className="weered-uc-notoriety" style={{
           position: "absolute", left: 0, right: 0, bottom: 0,
           padding: "0 12px 6px",
-          paddingLeft: 78, // leave room for overlapping avatar
+          paddingLeft: 78,
         }}>
           <NotorietyBar compact />
         </div>
       </div>
 
-      {/* ─────────────────────────────────────────────────────────────────
-          IDENTITY FIELD — clean surface below the banner. Avatar is
-          absolutely positioned so the overlap is layout-stable across
-          async data loads (banner img, NotorietyBar mount, FittedName resize).
-          ───────────────────────────────────────────────────────────── */}
       <div style={{ position: "relative", padding: "12px 14px 10px 78px", zIndex: 1, minHeight: 56 }}>
-        {/* Avatar — absolute, overlaps the banner ↔ field boundary by 28px.
-            Sits in the 78px left padding gutter of the parent. */}
         <button
           type="button"
           onClick={() => openSheet("profile", { userId: profileUserId })}
@@ -497,9 +492,10 @@ export default function UserCorner() {
           }}
         >
           <div style={{ position: "relative" }}>
-            <div style={{
+            <div className="weered-avatar" style={{
               width: 56, height: 56, borderRadius: "50%",
-              background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true),
+              ["--wa-bg" as any]: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true, stickyAvatarColor),
+              background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true, stickyAvatarColor),
               boxShadow: `
                 0 0 0 3px rgba(10,10,18,.95),
                 0 0 0 4px ${cardAccent}80,
@@ -516,7 +512,6 @@ export default function UserCorner() {
                 initial
               )}
             </div>
-            {/* Status dot — bottom-right of avatar. Click toggles AFK. */}
             <span
               role="button"
               tabIndex={0}
@@ -537,10 +532,6 @@ export default function UserCorner() {
           </div>
         </button>
 
-        {/* Name + role/tier inline + crew name. Separate button so the text
-            column has its own click target (also opens profile) and flows
-            naturally inside the field's left padding gutter (78px) clear of
-            the absolutely-positioned avatar. */}
         <button
           type="button"
           onClick={() => openSheet("profile", { userId: profileUserId })}
@@ -551,11 +542,10 @@ export default function UserCorner() {
             minWidth: 0,
           }}
         >
-          <FittedName name={name} />
-          <UserCornerFlair userId={profileUserId} />
+          <FittedName name={name} effect={nameEffect} />
           {(() => {
             const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
-            if (!bestRole) return null;
+            if (!bestRole || bestRole === "MEMBER" || bestRole === "USER") return null;
             const roleColor =
               bestRole === "GOD"     ? "#fde68a" :
               bestRole === "ADMIN"   ? "#fca5a5" :
@@ -565,36 +555,107 @@ export default function UserCorner() {
               "rgba(243,244,246,.85)";
             return (
               <div style={{
-                marginTop: 4,
+                marginTop: 5, display: "flex", alignItems: "center", gap: 5,
                 fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                fontSize: 9, fontWeight: 900, letterSpacing: "1.5px",
-                textTransform: "uppercase",
-                color: roleColor,
+                fontSize: 9, fontWeight: 900, letterSpacing: "1.4px",
+                textTransform: "uppercase", color: roleColor,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>
+                <RoleIcon role={bestRole} size={11} />
                 {roleDisplay(bestRole, lobbyTheme)}
               </div>
             );
           })()}
+          {(() => {
+            const tierU = String(me?.tier || "").toUpperCase();
+            if (!tierU || tierU === "INNOCENT") return null;
+            const tierColor =
+              tierU === "KINGPIN"  ? "#fde68a" :
+              tierU === "MADE_MAN" || tierU === "MADEMAN" ? "#f0abfc" :
+              tierU === "FELON"    ? "#fdba74" :
+              tierU === "INDICTED" ? "rgba(216,180,254,.95)" :
+              "rgba(243,244,246,.85)";
+            return (
+              <div style={{
+                marginTop: 3, display: "flex", alignItems: "center", gap: 5,
+                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                fontSize: 9, fontWeight: 900, letterSpacing: "1.4px",
+                textTransform: "uppercase", color: tierColor,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                <TierIcon tier={tierU as any} size={11} />
+                {tierU.replace("_", " ")}
+              </div>
+            );
+          })()}
           {primaryCrew?.name && (
-            <div style={{
-              fontSize: 11, fontStyle: "italic",
-              color: "rgba(240,232,214,.62)",
-              marginTop: 3,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>
-              {primaryCrew.name}
+            <div
+              className="weered-uc-crew-line"
+              onClick={(e) => { e.stopPropagation(); try { window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`; } catch {} }}
+              title={`${primaryCrew.name} — open crew`}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                marginTop: 5, cursor: "pointer",
+                overflow: "hidden", whiteSpace: "nowrap",
+              }}
+            >
+              {primaryCrew.tag && (
+                <span style={{
+                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                  fontSize: 10, fontWeight: 900, letterSpacing: "1px",
+                  color: cardAccent,
+                  border: `1px solid ${cardAccent}55`,
+                  padding: "1px 5px", flexShrink: 0,
+                }}>[{primaryCrew.tag}]</span>
+              )}
+              <span style={{
+                fontSize: 12, fontStyle: "italic",
+                color: "rgba(240,232,214,.7)",
+                overflow: "hidden", textOverflow: "ellipsis",
+              }}>{primaryCrew.name}</span>
             </div>
           )}
         </button>
+
+        {editingStatus ? (
+          <div style={{ display: "flex", gap: 5, marginTop: 7, alignItems: "center" }}>
+            <input
+              value={draftStatus.emoji}
+              onChange={e => setDraftStatus(v => ({ ...v, emoji: e.target.value }))}
+              placeholder="\ud83e\udd5e"
+              maxLength={8}
+              style={{ width: 30, textAlign: "center", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.14)", borderRadius: 4, color: "#fff", fontSize: 13, padding: "4px 0" }}
+            />
+            <input
+              value={draftStatus.text}
+              onChange={e => setDraftStatus(v => ({ ...v, text: e.target.value }))}
+              onKeyDown={e => { if (e.key === "Enter") saveStatus(draftStatus.text, draftStatus.emoji); if (e.key === "Escape") setEditingStatus(false); }}
+              placeholder="What's the vibe?"
+              maxLength={80}
+              autoFocus
+              style={{ flex: 1, minWidth: 0, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.14)", borderRadius: 4, color: "#fff", fontSize: 12, padding: "4px 7px" }}
+            />
+            <button type="button" onClick={() => saveStatus(draftStatus.text, draftStatus.emoji)} style={{ background: "#3b0764", border: "none", color: "#fff", fontSize: 10, fontWeight: 800, letterSpacing: ".06em", padding: "5px 9px", cursor: "pointer", borderRadius: 0, flexShrink: 0 }}>SET</button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setDraftStatus(status); setEditingStatus(true); }}
+            style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit", textAlign: "left", maxWidth: "100%" }}
+            title="Set a status"
+          >
+            {status.emoji && <span style={{ fontSize: 13, flexShrink: 0 }}>{status.emoji}</span>}
+            <span style={{ fontSize: 11, fontStyle: "italic", color: status.text ? "rgba(240,232,214,.80)" : "rgba(148,163,184,.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {status.text || "Set a status\u2026"}
+            </span>
+          </button>
+        )}
       </div>
 
-      {/* Action strip — Burner only; settings/logout live in the W logo menu */}
       <div style={{
         display: "flex", gap: 6, padding: "6px 12px 10px",
         position: "relative", zIndex: 1,
       }}>
-        {/* BURNER PHONE — loud, unmissable */}
         <button
           type="button"
           onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
@@ -631,17 +692,11 @@ export default function UserCorner() {
             el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.40)" : "rgba(88,0,229,.35)";
           }}
         >
-          {/* Icon — phone by default; bottle for Windrose so the button
-              matches the "Bottle" label and the pirate aesthetic. */}
           {lobbyTheme === "windrose" ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
-              {/* bottle neck */}
               <rect x="10" y="2" width="4" height="5" strokeWidth="1.5" />
-              {/* bottle shoulder/body */}
               <path d="M9 7 Q7 9 7 11 L7 21 Q7 22 8 22 L16 22 Q17 22 17 21 L17 11 Q17 9 15 7 Z" strokeWidth="1.8" />
-              {/* label band */}
               <rect x="8" y="13" width="8" height="5" strokeWidth="1" opacity=".45" />
-              {/* cork top highlight */}
               <line x1="10" y1="2" x2="14" y2="2" strokeWidth="1.5" opacity=".65" />
             </svg>
           ) : (
@@ -659,9 +714,6 @@ export default function UserCorner() {
 
           <span>{burnerLabel}</span>
 
-          {/* Unread badge — absolute top-right, floats outside the button edge
-              like a classic app-icon notification dot. Doesn't fight the button's
-              text for space, so it works regardless of label length / padding. */}
           {dockUnread > 0 && (
             <span style={{
               position: "absolute",
@@ -684,12 +736,6 @@ export default function UserCorner() {
         </button>
       </div>
 
-      {/* Burner phone animations.
-          The hot-state glow used to animate box-shadow directly which is
-          CPU-bound (browsers can't GPU-composite shadow changes — esp.
-          inset shadows). Swapped to a pseudo-element with a static glow
-          + animated opacity, which composites cleanly on the GPU. Same
-          visual, fraction of the CPU. */}
       <style>{`
         @keyframes weered-burner-badge {
           0%, 100% { transform: scale(1); }
@@ -724,11 +770,7 @@ const actionBtn: React.CSSProperties = {
   transition: "color 0.12s, background 0.12s",
 };
 
-// Display name that auto-shrinks to fit its container. Steps from 22 →
-// 18 → 16 → 14 px; if the smallest size still overflows, ellipsis kicks
-// in as the hard safety net. Uppercase Barlow Condensed bold matches
-// the rest of the card chrome.
-function FittedName({ name }: { name: string }) {
+function FittedName({ name, effect }: { name: string; effect?: string | null }) {
   const ref = useRef<HTMLDivElement>(null);
   const sizes = useMemo(() => [22, 18, 16, 14], []);
   const fontSize = useFitText(ref, name, sizes);
@@ -744,7 +786,9 @@ function FittedName({ name }: { name: string }) {
         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
       }}
     >
-      {name}
+      {effect
+        ? <span className={"weered-name-" + effect} style={{ display: "inline-block", lineHeight: "inherit" }}>{name}</span>
+        : name}
     </div>
   );
 }

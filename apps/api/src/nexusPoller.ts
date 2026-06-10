@@ -1,8 +1,3 @@
-/**
- * Nexus Mods poller — cache Windrose mod metadata so the lobby
- * can render crew-scoped mod intel without hammering Nexus on
- * every request. Runs daily; no-ops if NEXUSMODS_API_KEY is unset.
- */
 
 import { PrismaClient } from "@prisma/client";
 
@@ -83,7 +78,6 @@ async function upsertMod(prisma: PrismaClient, m: NexusMod): Promise<void> {
 }
 
 async function runPollOnce(prisma: PrismaClient, apiKey: string): Promise<number> {
-  // Pull three feeds and dedupe — covers hot, fresh, and updated.
   const paths = [
     `/games/${GAME_SLUG}/mods/trending.json`,
     `/games/${GAME_SLUG}/mods/latest_added.json`,
@@ -122,14 +116,11 @@ export function startNexusPoller(prisma: PrismaClient): void {
     }
   };
 
-  // First run after 30s so the server can settle, then every 12h.
   setTimeout(() => { void tick(); }, 30_000);
   setInterval(() => { void tick(); }, 12 * 60 * 60 * 1000);
   console.log("[nexusPoller] started");
 }
 
-/** On-demand single-mod fetch (e.g., when a chat URL links to a mod
- *  we haven't seen). Resolves and upserts; returns the upserted row. */
 export async function fetchAndUpsertMod(
   prisma: PrismaClient,
   nexusModId: number,

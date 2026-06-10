@@ -1,14 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /chess/* + /profile/me/lichess|chess-com — manual username linking,
-// profile lookup, and activity log read for the chess lobby.
-//
-// No OAuth required: both Lichess and Chess.com expose public APIs that
-// only need the username string. The chess worker polls these APIs and
-// upserts ChessActivityLog rows. Verification works the same way Bungie
-// PGCRs do — we read what the API reports, no honor system.
-
 type Opts = {
   authFromHeader: (h?: string) => any;
 };
@@ -19,7 +11,6 @@ const CHESS_COM_USERNAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{2,24}$/;
 export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
 
-  // POST /profile/me/lichess  { username }
   app.post("/profile/me/lichess", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -38,7 +29,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
       });
     }
 
-    // Validate against live Lichess API so we don't store typos
     try {
       const r = await fetch(`https://lichess.org/api/user/${encodeURIComponent(raw)}`);
       if (r.status === 404) {
@@ -48,7 +38,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(502).send({ ok: false, error: "lichess_unreachable", message: "Couldn't reach Lichess just now. Try again in a sec." });
       }
       const data = await r.json();
-      // Canonicalize to the username Lichess returns (correct casing)
       const canonical = (data?.username || raw).trim();
       await prisma.user.update({ where: { id: u.id }, data: { lichessUsername: canonical } });
       return reply.send({ ok: true, lichessUsername: canonical });
@@ -57,7 +46,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // POST /profile/me/chess-com  { username }
   app.post("/profile/me/chess-com", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -76,7 +64,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
       });
     }
 
-    // Validate against live Chess.com API
     try {
       const r = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(raw.toLowerCase())}`, {
         headers: { "User-Agent": "Weered (https://weered.ca)" },
@@ -96,8 +83,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // GET /chess/me/profile — returns linked usernames + live profile pulls
-  // (rating, recent games count). Used by the chess lobby UI.
   app.get("/chess/me/profile", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -111,7 +96,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
 
     const result: any = { ok: true, lichessUsername, chessComUsername, lichess: null, chessCom: null };
 
-    // Live profile pulls — best-effort, don't block on either
     const ua = { "User-Agent": "Weered (https://weered.ca)" };
     if (lichessUsername) {
       try {
@@ -151,8 +135,6 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send(result);
   });
 
-  // GET /chess/me/activities?limit=20 — read recent ChessActivityLog rows
-  // for the authed user. Used by the chess audit panel.
   app.get("/chess/me/activities", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -168,24 +150,17 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, activities: rows });
   });
 
-  // GET /chess/leaderboard?lobbyId=chess&perf=blitz&limit=20
-  // Pull all linked users in this lobby and sort by their Lichess rating in
-  // the requested perf. Read-only, cheap, useful for a chess-lobby module.
   app.get("/chess/leaderboard", async (req, reply) => {
     const q: any = (req as any).query || {};
     const perf = String(q.perf || "blitz");
     const limit = Math.max(1, Math.min(50, Number(q.limit) || 20));
 
-    // Pull users with Lichess linked (chess.com would need separate iteration)
     const users = await prisma.user.findMany({
       where: { lichessUsername: { not: null } },
       select: { id: true, name: true, lichessUsername: true, usernameKey: true },
       take: 200,
     });
 
-    // Batch-fetch ratings (no Lichess bulk endpoint for arbitrary users; do
-    // individually with concurrency cap). For now, sequential — cheap enough
-    // at small scale and lets us cache for repeat calls later.
     const rows: any[] = [];
     for (const u of users) {
       try {

@@ -104,7 +104,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return false;
   }
 
-  // ── GET /flair-contests ───────────────────────────────────────────────────
   app.get("/flair-contests", async (req, reply) => {
     const q = (req as any).query || {};
     const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
@@ -120,7 +119,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       take: 100,
     });
 
-    // Sort: SUBMISSIONS/VOTING first by their relevant deadline, then COMPLETED by voteClosesAt desc.
     const order: Record<string, number> = { SUBMISSIONS: 0, VOTING: 1, COMPLETED: 2, CANCELED: 3 };
     contests.sort((a: any, b: any) => {
       const oa = order[a.status] ?? 9;
@@ -157,7 +155,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, contests: enriched });
   });
 
-  // ── GET /flair-contests/:id ───────────────────────────────────────────────
   app.get("/flair-contests/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
     const c = await (prisma as any).flairContest.findUnique({ where: { id } });
@@ -196,7 +193,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const submissionsOut = submissions.map((s: any) => ({
       ...s,
       author: uById[s.userId] || { id: s.userId, name: "Unknown" },
-      // Hide vote counts during SUBMISSIONS phase to avoid early-bias
       voteCount: c.status === "SUBMISSIONS" ? undefined : s.voteCount,
     }));
 
@@ -206,7 +202,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     });
   });
 
-  // ── POST /flair-contests ──────────────────────────────────────────────────
   app.post("/flair-contests", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -255,7 +250,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, contest });
   });
 
-  // ── PATCH /flair-contests/:id ─────────────────────────────────────────────
   app.patch("/flair-contests/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -281,7 +275,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
         data[k] = d;
       }
     }
-    // Re-validate ordering against the merged record
     const merged = { ...c, ...data };
     const ordered =
       new Date(merged.submissionOpensAt) < new Date(merged.submissionClosesAt) &&
@@ -293,7 +286,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, contest: updated });
   });
 
-  // ── DELETE /flair-contests/:id ────────────────────────────────────────────
   app.delete("/flair-contests/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -313,7 +305,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, deleted: true });
   });
 
-  // ── POST /flair-contests/:id/submissions ──────────────────────────────────
   app.post("/flair-contests/:id/submissions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -346,7 +337,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     let submission: any;
     if (existing) {
-      // Replace image: delete old file then update record
       const oldName = filenameFromUrl(existing.imageUrl);
       if (oldName) {
         try { unlinkSync(join(FLAIR_DIR, oldName)); } catch {}
@@ -368,7 +358,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, submission });
   });
 
-  // ── DELETE /flair-contests/:id/submissions/:submissionId ──────────────────
   app.delete("/flair-contests/:id/submissions/:submissionId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -391,7 +380,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
-  // ── POST /flair-contests/:id/votes ────────────────────────────────────────
   app.post("/flair-contests/:id/votes", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -414,7 +402,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     }
 
     if (existing) {
-      // Switch vote: decrement previous, increment new
       await prisma.$transaction([
         (prisma as any).flairVote.update({
           where: { id: existing.id },
@@ -447,7 +434,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, vote: v, changed: true });
   });
 
-  // ── DELETE /flair-contests/:id/votes ──────────────────────────────────────
   app.delete("/flair-contests/:id/votes", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -466,7 +452,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, removed: true });
   });
 
-  // ── POST /flair-contests/:id/finalize ─────────────────────────────────────
   app.post("/flair-contests/:id/finalize", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -482,7 +467,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, contest: result.contest, rewardFlair: result.rewardFlair });
   });
 
-  // ── GET /flair-contests-img/:filename — static-style image serving ────────
   app.get("/flair-contests-img/:filename", async (req, reply) => {
     const fn = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
     if (!fn) return reply.code(400).send("bad request");
@@ -494,7 +478,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send(data);
   });
 
-  // Helper used by finalize endpoint AND auto-tick
   async function finalizeContest(contestId: string): Promise<
     { ok: true; contest: any; rewardFlair: any } | { ok: false; error: string }
   > {
@@ -508,7 +491,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     });
 
     if (submissions.length === 0) {
-      // No submissions — mark CANCELED so we don't re-process
       const updated = await (prisma as any).flairContest.update({ where: { id: contestId }, data: { status: "CANCELED" } });
       return { ok: true, contest: updated, rewardFlair: null };
     }
@@ -532,7 +514,6 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       await grantFlairToUser(prisma as any, winner.userId, rewardFlair.id, `contest:${contestId}`);
     } catch (e: any) {
       console.error("[flair-contests] mint/grant failed:", e?.message || e);
-      // Fall through and still mark contest completed; admins can mint manually if needed
     }
 
     const updated = await (prisma as any).flairContest.update({
@@ -564,13 +545,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return { ok: true, contest: updated, rewardFlair };
   }
 
-  // Expose finalize helper for the tick worker (registered in index.ts)
   (opts as any).__finalizeContest = finalizeContest;
 }
 
-// ── Auto state-transition tick ─────────────────────────────────────────────
-// Flips SUBMISSIONS → VOTING when submissionClosesAt passes.
-// Auto-finalizes VOTING → COMPLETED once voteClosesAt passes.
 export async function tickContestStates(prismaClient: any, opts: {
   mintFlairItem: typeof mintFlairItem;
   grantFlairToUser: typeof grantFlairToUser;
@@ -578,7 +555,6 @@ export async function tickContestStates(prismaClient: any, opts: {
   broadcastToLobby?: (lobbyId: string, event: any) => void;
 }) {
   const now = new Date();
-  // 1) SUBMISSIONS → VOTING
   try {
     const ready = await prismaClient.flairContest.findMany({
       where: { status: "SUBMISSIONS", submissionClosesAt: { lte: now } },
@@ -598,7 +574,6 @@ export async function tickContestStates(prismaClient: any, opts: {
     console.error("[flair-contests] tick query (submissions) failed:", e?.message || e);
   }
 
-  // 2) VOTING → COMPLETED (auto-finalize)
   try {
     const ending = await prismaClient.flairContest.findMany({
       where: { status: "VOTING", voteClosesAt: { lte: now } },
@@ -676,7 +651,6 @@ export function startFlairContestTick(prismaClient: any, opts: {
   const t = setInterval(() => {
     tickContestStates(prismaClient, opts).catch((e) => console.error("[flair-contests] tick error:", e?.message || e));
   }, interval);
-  // Run once at start so we don't wait a full interval after a restart
   tickContestStates(prismaClient, opts).catch(() => {});
   return { stop: () => clearInterval(t) };
 }

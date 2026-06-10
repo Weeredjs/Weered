@@ -25,7 +25,6 @@ export interface ParticipantTile {
   isSpeaking: boolean;
   isMuted: boolean;
   isLocal: boolean;
-  // Video
   hasVideo: boolean;
   hasScreenShare: boolean;
   videoTrackSid: string | null;
@@ -40,11 +39,16 @@ interface VoiceContextValue {
   cameraOn:         boolean;
   screenShareOn:    boolean;
   errorMsg:         string;
+  mics:             { deviceId: string; label: string }[];
+  micId:            string | null;
+  inputLevel:       number;
   connect:          (roomId: string, opts?: { mic?: boolean }) => Promise<void>;
   disconnect:       () => void;
   toggleMute:       () => void;
   toggleCamera:     () => void;
   toggleScreenShare: () => void;
+  setMic:           (deviceId: string) => Promise<void>;
+  refreshMics:      () => Promise<void>;
   getVideoElement:  (trackSid: string) => HTMLVideoElement | null;
 }
 
@@ -62,6 +66,59 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [cameraOn,       setCameraOn      ] = useState(false);
   const [screenShareOn,  setScreenShareOn ] = useState(false);
   const [errorMsg,       setErrorMsg      ] = useState("");
+  const [mics,           setMics          ] = useState<{ deviceId: string; label: string }[]>([]);
+  const [micId,          setMicId         ] = useState<string | null>(null);
+  const [inputLevel,     setInputLevel    ] = useState(0);
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const meterRafRef = useRef<number | null>(null);
+
+  const stopLevelMeter = useCallback(() => {
+    if (meterRafRef.current != null) { cancelAnimationFrame(meterRafRef.current); meterRafRef.current = null; }
+    try { audioCtxRef.current?.close(); } catch {}
+    audioCtxRef.current = null;
+    setInputLevel(0);
+  }, []);
+
+  const startLevelMeter = useCallback((room: Room) => {
+    try {
+      stopLevelMeter();
+      const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+      const mst = (pub?.track as any)?.mediaStreamTrack as MediaStreamTrack | undefined;
+      if (!mst) return;
+      const AC = (window.AudioContext || (window as any).webkitAudioContext);
+      if (!AC) return;
+      const ctx: AudioContext = new AC();
+      audioCtxRef.current = ctx;
+      const src = ctx.createMediaStreamSource(new MediaStream([mst]));
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / data.length);
+        setInputLevel(Math.min(1, rms * 3.2));
+        meterRafRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {}
+  }, [stopLevelMeter]);
+
+  const refreshMics = useCallback(async () => {
+    try {
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const ins = devs
+        .filter(d => d.kind === "audioinput")
+        .map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Microphone ${i + 1}` }));
+      setMics(ins);
+      const room = roomRef.current;
+      const active = room ? (room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as any)?.mediaStreamTrack?.getSettings?.()?.deviceId : null;
+      if (active) setMicId(active);
+    } catch {}
+  }, []);
 
   const rebuildTiles = useCallback((room: Room) => {
     const next: ParticipantTile[] = [];
@@ -75,7 +132,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       const pubs = [...(p.trackPublications?.values() || [])] as TrackPublication[];
       for (const pub of pubs) {
         if (pub.kind === Track.Kind.Video) {
-          // Use track.sid if available (local tracks), fall back to pub.trackSid (remote)
           const sid = (pub as any).track?.sid || pub.trackSid || null;
           if (pub.source === Track.Source.Camera) {
             hasVideo = !pub.isMuted;
@@ -109,7 +165,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(async (roomId: string, opts?: { mic?: boolean }) => {
-    const enableMic = opts?.mic !== false; // default true for backward compat
+    const enableMic = opts?.mic !== false;
     if (connState === "connected" && activeRoomId === roomId) return;
     if (roomRef.current) {
       roomRef.current.disconnect();
@@ -174,7 +230,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           el.style.display = "none";
           document.body.appendChild(el);
 
-          // SID may not be assigned yet (server round-trip) — poll until available
           let attempts = 0;
           const storeBySid = () => {
             const sid = pub.track?.sid || pub.trackSid;
@@ -192,7 +247,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       });
       room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
         if (pub.kind === Track.Kind.Video) {
-          // Try both possible SID sources for cleanup
           const sids = [pub.track?.sid, pub.trackSid].filter(Boolean);
           for (const sid of sids) {
             const el = videoRefs.current.get(sid!);
@@ -204,14 +258,21 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       room.on(RoomEvent.Disconnected,            () => {
         setConnState("idle"); setActiveRoomId(null); setTiles([]);
         setCameraOn(false); setScreenShareOn(false);
+        stopLevelMeter();
         audioRefs.current.forEach(el => el.remove()); audioRefs.current.clear();
         videoRefs.current.forEach(el => el.remove()); videoRefs.current.clear();
       });
 
       await room.connect(url, token);
       if (enableMic) {
-        try { await room.localParticipant.setMicrophoneEnabled(true); }
-        catch (e: any) { console.warn("Mic unavailable:", e?.message); setMuted(true); }
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true);
+          let pref: string | null = null;
+          try { pref = localStorage.getItem("weered:micId"); } catch {}
+          if (pref) { try { await room.switchActiveDevice("audioinput", pref); setMicId(pref); } catch {} }
+          refreshMics();
+          startLevelMeter(room);
+        } catch (e: any) { console.warn("Mic unavailable:", e?.message); setMuted(true); }
       } else {
         setMuted(true);
       }
@@ -220,19 +281,17 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setConnState("error"); setErrorMsg(String(e?.message || e));
       setActiveRoomId(null);
     }
-  }, [connState, activeRoomId, rebuildTiles]);
+  }, [connState, activeRoomId, rebuildTiles, refreshMics, startLevelMeter]);
 
   const disconnect = useCallback(() => {
     roomRef.current?.disconnect(); roomRef.current = null;
+    stopLevelMeter();
     audioRefs.current.forEach(el => el.remove()); audioRefs.current.clear();
     videoRefs.current.forEach(el => el.remove()); videoRefs.current.clear();
     setTiles([]); setConnState("idle"); setActiveRoomId(null); setErrorMsg("");
     setCameraOn(false); setScreenShareOn(false);
-  }, []);
+  }, [stopLevelMeter]);
 
-  // ── Voice permission flipped — re-join with a fresh LiveKit token so
-  // the new canPublish grant takes effect. Triggered by WeeredProvider
-  // when the server broadcasts voice:permission for the current user.
   useEffect(() => {
     function handler(e: any) {
       const detail = (e as CustomEvent).detail || {};
@@ -253,7 +312,20 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const next = !muted;
     room.localParticipant.setMicrophoneEnabled(!next);
     setMuted(next); rebuildTiles(room);
-  }, [muted, rebuildTiles]);
+    if (next) stopLevelMeter(); else setTimeout(() => startLevelMeter(room), 200);
+  }, [muted, rebuildTiles, startLevelMeter, stopLevelMeter]);
+
+  const setMic = useCallback(async (deviceId: string) => {
+    setMicId(deviceId);
+    try { localStorage.setItem("weered:micId", deviceId); } catch {}
+    const room = roomRef.current;
+    if (room) {
+      try {
+        await room.switchActiveDevice("audioinput", deviceId);
+        setTimeout(() => startLevelMeter(room), 200);
+      } catch (e: any) { console.warn("switch mic failed:", e?.message); }
+    }
+  }, [startLevelMeter]);
 
   const toggleCamera = useCallback(async () => {
     const room = roomRef.current; if (!room) return;
@@ -281,14 +353,17 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => () => {
     roomRef.current?.disconnect();
+    stopLevelMeter();
     audioRefs.current.forEach(el => el.remove());
     videoRefs.current.forEach(el => el.remove());
-  }, []);
+  }, [stopLevelMeter]);
 
   return (
     <VoiceContext.Provider value={{
       connState, activeRoomId, tiles, muted, cameraOn, screenShareOn, errorMsg,
-      connect, disconnect, toggleMute, toggleCamera, toggleScreenShare, getVideoElement,
+      mics, micId, inputLevel,
+      connect, disconnect, toggleMute, toggleCamera, toggleScreenShare,
+      setMic, refreshMics, getVideoElement,
     }}>
       {children}
     </VoiceContext.Provider>

@@ -2,11 +2,6 @@
 
 import React from "react";
 
-/**
- * Shared loading state. Themed spinner + pulse label.
- * Use as: <LoadingState label="Tuning in" />  (don't include trailing ellipsis)
- * Compact variant for inline / tight spaces.
- */
 export default function LoadingState({
   label = "Loading",
   compact = false,

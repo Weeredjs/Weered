@@ -1,7 +1,3 @@
-/**
- * Shared tournament-completion payout logic. Used by the /complete route
- * and by the challengeWorker auto-complete on race win condition.
- */
 
 import type { PrismaClient } from "@prisma/client";
 import { grantFlairToUser } from "./flair";
@@ -120,7 +116,6 @@ export async function completeTournament(
       } catch {}
     }
 
-    // FLAIR reward — champion only
     if (t === "CHAMPION") {
       const rewardsArr: any[] = Array.isArray(tournament.rewards) ? tournament.rewards : [];
       for (const rw of rewardsArr) {

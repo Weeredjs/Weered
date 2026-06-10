@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
+import ModuleTabBar from "./ModuleTabBar";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -17,19 +18,15 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: (accent: string) => ({ padding: "6px 12px", borderRadius: 8, border: `1px solid ${accent}55`, background: `${accent}18`, fontSize: 12, cursor: "pointer", color: "#fff", fontWeight: 600 }) as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: (accent: string) => ({ padding: "6px 12px", borderRadius: 2, border: `1px solid ${accent}55`, background: `${accent}18`, fontSize: 12, cursor: "pointer", color: "#fff", fontWeight: 600 }) as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const MLB_RED = "#C41E3A";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -48,8 +45,6 @@ function fmtTime(iso: string): string {
 function headshot(playerId: number | string): string {
   return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${playerId}/headshot/67/current`;
 }
-
-// ── Scoreboard Tab ───────────────────────────────────────────────────────────
 
 function Scoreboard({ accentColor }: { accentColor: string }) {
   const accent = accentColor || MLB_RED;
@@ -98,20 +93,19 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
   function statusBadge(g: any) {
     const status = (g.status || g.gameStatus || "").toLowerCase();
     if (status.includes("final")) {
-      return <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 999, background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.5)" }}>FINAL</span>;
+      return <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 2, background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.5)" }}>FINAL</span>;
     }
     if (status.includes("live") || status.includes("progress") || status.includes("in progress")) {
       return (
-        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 999, background: `${accent}20`, color: accent, display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 2, background: `${accent}20`, color: accent, display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,.6)" }} />
           {g.inning ? `${g.inningHalf || ""} ${g.inning}` : "LIVE"}
         </span>
       );
     }
     if (status.includes("postpone")) {
-      return <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 999, background: "rgba(245,158,11,.12)", color: "rgb(253,230,138)" }}>PPD</span>;
+      return <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 2, background: "rgba(245,158,11,.12)", color: "rgb(253,230,138)" }}>PPD</span>;
     }
-    // Upcoming
     return <span style={{ fontSize: 10, opacity: 0.5 }}>{g.startTime ? fmtTime(g.startTime) : "TBD"}</span>;
   }
 
@@ -127,7 +121,6 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Date picker */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
         <button onClick={() => shiftDate(-1)} style={{ ...S.btn, padding: "4px 10px", fontSize: 16, lineHeight: 1 }} title="Previous day">&larr;</button>
         <div style={{ fontWeight: 800, fontSize: 14, minWidth: 140, textAlign: "center" }}>
@@ -142,7 +135,6 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
         <div style={{ fontSize: 10, textAlign: "center", opacity: 0.3 }}>Refreshing...</div>
       )}
 
-      {/* Game cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {games.map(g => {
           const gid = g.gamePk || g.id || g.gameId;
@@ -170,9 +162,7 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
                   )}
                 </div>
 
-                {/* Teams and scores */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {/* Away */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                       <span style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -184,7 +174,6 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
                       {g.awayScore ?? (isUpcoming(g) ? "" : "0")}
                     </span>
                   </div>
-                  {/* Home */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                       <span style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -198,7 +187,6 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
                   </div>
                 </div>
 
-                {/* Probable pitchers for upcoming */}
                 {isUpcoming(g) && (g.awayProbable || g.homeProbable) && (
                   <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,.05)", display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.45 }}>
                     <span>{g.awayProbable || "TBD"}</span>
@@ -208,13 +196,11 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
                 )}
               </div>
 
-              {/* Expanded boxscore */}
               {isExp && (
                 <div style={{ ...S.card, marginTop: 2, borderTop: "none", borderTopLeftRadius: 0, borderTopRightRadius: 0, border: `1px solid ${accent}25`, background: `${accent}05` }}>
                   {boxLoading && <div style={{ textAlign: "center", padding: 12, opacity: 0.4, fontSize: 12 }}>Loading boxscore...</div>}
                   {!boxLoading && boxscore && (
                     <div style={{ overflowX: "auto" }}>
-                      {/* Linescore */}
                       {boxscore.linescore && (
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                           <thead>
@@ -254,7 +240,6 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
                         </table>
                       )}
 
-                      {/* Winning/Losing/Save pitchers */}
                       {(boxscore.winningPitcher || boxscore.losingPitcher || boxscore.savePitcher) && (
                         <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 10, opacity: 0.5, flexWrap: "wrap" }}>
                           {boxscore.winningPitcher && <span><strong style={{ color: "#4ade80" }}>W:</strong> {boxscore.winningPitcher}</span>}
@@ -285,8 +270,6 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
   );
 }
 
-// ── Standings Tab ─────────────────────────────────────────────────────────────
-
 const DIVISION_ORDER = ["AL East", "AL Central", "AL West", "NL East", "NL Central", "NL West"];
 
 function Standings({ accentColor }: { accentColor: string }) {
@@ -308,7 +291,6 @@ function Standings({ accentColor }: { accentColor: string }) {
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading standings...</div>;
   if (error) return <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>;
 
-  // Sort divisions into standard order
   const sorted = [...divisions].sort((a, b) => {
     const ai = DIVISION_ORDER.indexOf(a.name || a.division);
     const bi = DIVISION_ORDER.indexOf(b.name || b.division);
@@ -319,17 +301,15 @@ function Standings({ accentColor }: { accentColor: string }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {sorted.map(div => (
         <div key={div.name || div.division}>
-          {/* Division header */}
           <div style={{
             fontWeight: 900, fontSize: 13, letterSpacing: ".5px", textTransform: "uppercase",
-            padding: "6px 10px", marginBottom: 4, borderRadius: 6,
+            padding: "6px 10px", marginBottom: 4, borderRadius: 2,
             background: `${accent}12`, borderLeft: `3px solid ${accent}`,
             color: "rgba(243,244,246,.88)",
           }}>
             {div.name || div.division}
           </div>
 
-          {/* Table */}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
@@ -379,8 +359,6 @@ function Standings({ accentColor }: { accentColor: string }) {
   );
 }
 
-// ── Leaders Tab ──────────────────────────────────────────────────────────────
-
 const BATTING_CATS = ["HR", "AVG", "RBI", "SB"];
 const PITCHING_CATS = ["ERA", "K", "W", "SV"];
 
@@ -426,7 +404,7 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
               key={p.id || p.playerId || i}
               onClick={() => (p.id || p.playerId) && onPlayerClick(p.id || p.playerId, p.name || p.playerName || "")}
               style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "3px 4px", borderRadius: 4,
+                display: "flex", alignItems: "center", gap: 6, padding: "3px 4px", borderRadius: 2,
                 cursor: (p.id || p.playerId) ? "pointer" : "default",
                 transition: "background .1s",
                 background: i === 0 ? `${accent}0A` : "transparent",
@@ -454,7 +432,6 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Batting */}
       <div>
         <div style={{ ...S.label, marginBottom: 8 }}>Batting Leaders</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
@@ -462,7 +439,6 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
         </div>
       </div>
 
-      {/* Pitching */}
       <div>
         <div style={{ ...S.label, marginBottom: 8 }}>Pitching Leaders</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
@@ -476,8 +452,6 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
     </div>
   );
 }
-
-// ── Player Search Tab ────────────────────────────────────────────────────────
 
 function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
   accentColor: string;
@@ -495,7 +469,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
   const [statsError, setStatsError] = useState("");
   const initialLoaded = useRef(false);
 
-  // Load a player from external trigger (e.g., Leaders tab click)
   useEffect(() => {
     if (initialPlayerId && !initialLoaded.current) {
       initialLoaded.current = true;
@@ -548,7 +521,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
     initialLoaded.current = false;
   }
 
-  // Player detail view
   if (selectedPlayer || statsLoading) {
     const pid = selectedPlayer?.id || selectedPlayer?.playerId || initialPlayerId;
     return (
@@ -562,15 +534,14 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
 
         {selectedPlayer && !statsLoading && (
           <>
-            {/* Player hero card */}
             <div style={{
               ...S.card,
               display: "flex", gap: 16, alignItems: "flex-start",
-              border: `1px solid ${accent}30`, background: `${accent}08`,
+              border: `1px solid ${accent}30`, borderLeft: `2px solid ${accent}`, background: `${accent}08`,
               padding: "16px 16px",
             }}>
               <div style={{
-                width: 80, height: 80, borderRadius: 12, overflow: "hidden", flexShrink: 0,
+                width: 80, height: 80, borderRadius: 2, overflow: "hidden", flexShrink: 0,
                 background: "rgba(0,0,0,.4)", border: `2px solid ${accent}40`,
               }}>
                 <img
@@ -586,14 +557,13 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 11, opacity: 0.6 }}>
                   {(selectedPlayer.position || selectedPlayer.primaryPosition) && (
-                    <span style={{ padding: "1px 6px", borderRadius: 4, background: `${accent}18`, border: `1px solid ${accent}30`, fontWeight: 700 }}>
+                    <span style={{ padding: "1px 6px", borderRadius: 2, background: `${accent}18`, border: `1px solid ${accent}30`, fontWeight: 700 }}>
                       {selectedPlayer.position || selectedPlayer.primaryPosition}
                     </span>
                   )}
                   {selectedPlayer.team && <span>{selectedPlayer.team}</span>}
                   {selectedPlayer.number && <span>#{selectedPlayer.number}</span>}
                 </div>
-                {/* Bio info */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 8, fontSize: 10, opacity: 0.4 }}>
                   {selectedPlayer.bats && <span>Bats: {selectedPlayer.bats}</span>}
                   {selectedPlayer.throws && <span>Throws: {selectedPlayer.throws}</span>}
@@ -606,10 +576,8 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
               </div>
             </div>
 
-            {/* Season stats */}
             {playerStats && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {/* Batting stats */}
                 {playerStats.batting && (
                   <div>
                     <div style={{ ...S.label, marginBottom: 6 }}>Batting Stats</div>
@@ -636,7 +604,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
                   </div>
                 )}
 
-                {/* Pitching stats */}
                 {playerStats.pitching && (
                   <div>
                     <div style={{ ...S.label, marginBottom: 6 }}>Pitching Stats</div>
@@ -663,7 +630,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
                   </div>
                 )}
 
-                {/* Fielding stats */}
                 {playerStats.fielding && (
                   <div>
                     <div style={{ ...S.label, marginBottom: 6 }}>Fielding Stats</div>
@@ -690,7 +656,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
                   </div>
                 )}
 
-                {/* Career / season label */}
                 {playerStats.season && (
                   <div style={{ textAlign: "center", fontSize: 10, opacity: 0.25, marginTop: 4 }}>
                     {playerStats.season} Season Stats
@@ -708,10 +673,8 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
     );
   }
 
-  // Search view
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Search input */}
       <div style={{ display: "flex", gap: 8 }}>
         <input
           style={{ ...S.input, flex: 1 }}
@@ -727,7 +690,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
 
       {error && <div style={{ fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>}
 
-      {/* Results */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {results.map((p, i) => {
           const pid = p.id || p.playerId;
@@ -750,7 +712,7 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
               }}
             >
               <div style={{
-                width: 48, height: 48, borderRadius: 10, overflow: "hidden", flexShrink: 0,
+                width: 48, height: 48, borderRadius: 2, overflow: "hidden", flexShrink: 0,
                 background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)",
               }}>
                 {pid && (
@@ -791,8 +753,6 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
   );
 }
 
-// ── Twitch Streams (MLB) ─────────────────────────────────────────────────────
-
 function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor?: string }) {
   const [streams, setStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -829,9 +789,8 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Embed player */}
       {activeStream && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accentColor || MLB_RED}40`, background: "#000", marginBottom: 4 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accentColor || MLB_RED}40`, background: "#000", marginBottom: 4 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%"
@@ -846,7 +805,6 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
         </div>
       )}
 
-      {/* Stream grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
         {streams.map(s => (
           <div
@@ -861,7 +819,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
             }}
           >
             {(s.thumbnailUrl || s.thumbnail_url) && (
-              <img src={s.thumbnailUrl || s.thumbnail_url} alt={(s.userName || s.user_name) + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img src={s.thumbnailUrl || s.thumbnail_url} alt={(s.userName || s.user_name) + " stream thumbnail"} style={{ width: "100%", borderRadius: 2, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
             )}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.userName || s.user_name}
@@ -894,8 +852,6 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
   );
 }
 
-// ── Highlights Tab ──────────────────────────────────────────────────────────
-
 function Highlights({ accentColor }: { accentColor: string }) {
   const [highlights, setHighlights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -912,14 +868,13 @@ function Highlights({ accentColor }: { accentColor: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Video player */}
       {playing && (
         <div style={{ ...S.card, padding: 0, overflow: "hidden", marginBottom: 4 }}>
           <video
             src={playing}
             controls
             autoPlay
-            style={{ width: "100%", borderRadius: 10, display: "block", maxHeight: 360, background: "#000" }}
+            style={{ width: "100%", borderRadius: 2, display: "block", maxHeight: 360, background: "#000" }}
           />
           <button
             onClick={() => setPlaying(null)}
@@ -930,7 +885,6 @@ function Highlights({ accentColor }: { accentColor: string }) {
         </div>
       )}
 
-      {/* Highlight grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
         {highlights.map((h: any) => (
           <div
@@ -945,7 +899,6 @@ function Highlights({ accentColor }: { accentColor: string }) {
               borderColor: playing === h.videoUrl ? accentColor : "rgba(255,255,255,.08)",
             }}
           >
-            {/* Thumbnail */}
             <div style={{ position: "relative", paddingTop: "56.25%", background: "rgba(0,0,0,.4)" }}>
               {h.thumbnailUrl && (
                 <img
@@ -954,7 +907,6 @@ function Highlights({ accentColor }: { accentColor: string }) {
                   style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
                 />
               )}
-              {/* Play button overlay */}
               <div style={{
                 position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
                 width: 36, height: 36, borderRadius: "50%", background: "rgba(0,0,0,.65)",
@@ -962,18 +914,16 @@ function Highlights({ accentColor }: { accentColor: string }) {
               }}>
                 <span style={{ fontSize: 16, marginLeft: 2 }}>▶</span>
               </div>
-              {/* Duration badge */}
               {h.duration && (
                 <div style={{
                   position: "absolute", bottom: 4, right: 4,
-                  background: "rgba(0,0,0,.75)", borderRadius: 4, padding: "1px 5px",
+                  background: "rgba(0,0,0,.75)", borderRadius: 2, padding: "1px 5px",
                   fontSize: 10, fontWeight: 600,
                 }}>
                   {h.duration}
                 </div>
               )}
             </div>
-            {/* Title */}
             <div style={{ padding: "8px 10px" }}>
               <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, color: "rgba(243,244,246,.92)" }}>
                 {h.headline}
@@ -990,8 +940,6 @@ function Highlights({ accentColor }: { accentColor: string }) {
     </div>
   );
 }
-
-// ── Matchups Tab (Gambling-Adjacent Intel) ──────────────────────────────────
 
 function Matchups({ accentColor }: { accentColor: string }) {
   const [matchups, setMatchups] = useState<any[]>([]);
@@ -1033,7 +981,6 @@ function Matchups({ accentColor }: { accentColor: string }) {
             }}
             onClick={() => setExpanded(isExpanded ? null : m.gameId)}
           >
-            {/* Header row */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {isLive && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />}
@@ -1053,7 +1000,7 @@ function Matchups({ accentColor }: { accentColor: string }) {
                   </span>
                 )}
                 <span style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+                  fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 2,
                   background: isLive ? "rgba(34,197,94,.15)" : isFinal ? "rgba(255,255,255,.06)" : `${accentColor}15`,
                   color: isLive ? "#22c55e" : isFinal ? "rgba(255,255,255,.4)" : accentColor,
                 }}>
@@ -1062,9 +1009,7 @@ function Matchups({ accentColor }: { accentColor: string }) {
               </div>
             </div>
 
-            {/* Pitching matchup preview - always visible */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
-              {/* Away pitcher */}
               <div style={{ textAlign: "center" }}>
                 {m.away?.probablePitcher ? (
                   <>
@@ -1078,7 +1023,6 @@ function Matchups({ accentColor }: { accentColor: string }) {
                 )}
               </div>
               <div style={{ fontSize: 10, opacity: 0.3, fontWeight: 700 }}>VS</div>
-              {/* Home pitcher */}
               <div style={{ textAlign: "center" }}>
                 {m.home?.probablePitcher ? (
                   <>
@@ -1093,11 +1037,9 @@ function Matchups({ accentColor }: { accentColor: string }) {
               </div>
             </div>
 
-            {/* Expanded detail */}
             {isExpanded && (
               <div style={{ marginTop: 10, borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 10 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                  {/* Away pitcher detail */}
                   {m.away?.probablePitcher && (
                     <div>
                       <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>{m.away.abbr} — {m.away.probablePitcher.name}</div>
@@ -1111,7 +1053,6 @@ function Matchups({ accentColor }: { accentColor: string }) {
                       {statRow("GS", m.away.probablePitcher.gamesStarted)}
                     </div>
                   )}
-                  {/* Home pitcher detail */}
                   {m.home?.probablePitcher && (
                     <div>
                       <div style={{ ...S.label, fontSize: 9, marginBottom: 4 }}>{m.home.abbr} — {m.home.probablePitcher.name}</div>
@@ -1127,7 +1068,6 @@ function Matchups({ accentColor }: { accentColor: string }) {
                   )}
                 </div>
 
-                {/* Weather & Venue */}
                 <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {m.venue && (
                     <div style={{ fontSize: 11, opacity: 0.45 }}>
@@ -1152,8 +1092,6 @@ function Matchups({ accentColor }: { accentColor: string }) {
   );
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "scoreboard", label: "Scoreboard", icon: "\u26be" },
   { id: "matchups",   label: "Matchups",   icon: "\ud83c\udfaf" },
@@ -1165,8 +1103,6 @@ const TABS = [
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
-
-// ── Main Component ───────────────────────────────────────────────────────────
 
 export default function MlbModulesPanel({
   lobbyId,
@@ -1186,7 +1122,6 @@ export default function MlbModulesPanel({
     setTab("player");
   }
 
-  // Reset jump-to-player when navigating away from player tab
   useEffect(() => {
     if (tab !== "player") {
       setJumpToPlayer(null);
@@ -1195,32 +1130,8 @@ export default function MlbModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px",
-              borderRadius: "8px 8px 0 0",
-              border: "none",
-              background: tab === t.id ? `${accentColor}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400,
-              fontSize: 12,
-              cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5,
-            }}
-          >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "scoreboard" && <Scoreboard accentColor={accentColor} />}
         {tab === "matchups"   && <Matchups accentColor={accentColor} />}

@@ -1,22 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 
-// chessWorker.ts — polls Lichess + Chess.com recent games for users with
-// linked accounts. Upserts each finished game into ChessActivityLog.
-//
-// Cadence: 5 minutes. Lichess is rate-limited at ~20 req/sec; Chess.com
-// asks for a reasonable User-Agent and isn't strict on rate. We don't
-// hammer either.
-//
-// Read-only — no OAuth, no tokens. Both providers expose public game
-// history via username.
-
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 const LICHESS_GAMES_PER_USER = 20;
-const CHESS_COM_MONTHS_BACK = 1; // fetch current month archive
+const CHESS_COM_MONTHS_BACK = 1;
 
-// Standard time-control buckets per Lichess perf naming convention.
 function timeControlBucket(initialSeconds: number, incrementSeconds: number): string {
-  // Lichess formula: estimated = initial + 40 * increment
   const est = initialSeconds + 40 * incrementSeconds;
   if (est < 30)   return "ultraBullet";
   if (est < 180)  return "bullet";
@@ -79,7 +67,6 @@ function parseLichessGame(g: any, myUsername: string): any | null {
 }
 
 async function fetchLichessGames(username: string): Promise<any[]> {
-  // NDJSON endpoint; one game per line, JSON-encoded.
   const url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${LICHESS_GAMES_PER_USER}&opening=true&clocks=false&evals=false&moves=false`;
   try {
     const r = await fetch(url, { headers: { Accept: "application/x-ndjson" } });
@@ -108,8 +95,6 @@ function parseChessComGame(g: any, myUsername: string): any | null {
   const me = isWhite ? g.white : g.black;
   const opp = isWhite ? g.black : g.white;
 
-  // Chess.com result codes: "win" | "checkmated" | "stalemate" | "agreed" | "repetition" |
-  // "timeout" | "resigned" | "lose" | "insufficient" | "50move" | "abandoned" | "kingofthehill" | etc.
   const myResult = String(me?.result || "");
   let result: "WIN" | "LOSS" | "DRAW";
   if (myResult === "win") result = "WIN";
@@ -144,7 +129,6 @@ function parseChessComGame(g: any, myUsername: string): any | null {
 }
 
 async function fetchChessComGames(username: string): Promise<any[]> {
-  // Pull current month's archive. One JSON blob with .games[].
   const now = new Date();
   const yyyy = now.getUTCFullYear();
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
@@ -154,7 +138,6 @@ async function fetchChessComGames(username: string): Promise<any[]> {
     if (!r.ok) return [];
     const data = await r.json();
     const games = Array.isArray(data?.games) ? data.games : [];
-    // Keep only the most recent N to match Lichess cap
     const recent = games.slice(-LICHESS_GAMES_PER_USER);
     const out: any[] = [];
     for (const g of recent) {
@@ -186,10 +169,9 @@ export function startChessWorker(prisma: PrismaClient) {
             await (prisma as any).chessActivityLog.upsert({
               where: { userId_externalGameId: { userId: u.id, externalGameId: g.externalGameId } },
               create: { userId: u.id, ...g },
-              update: {},  // dedupe-only; already-ingested games are immutable
+              update: {},
             });
           } catch (err: any) {
-            // P2002 unique race etc — ignore silently
           }
         }
       }

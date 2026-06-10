@@ -17,8 +17,6 @@ type StaffRoom  = { id: string; name: string; locked: boolean; members: number; 
 type StaffLobby = { id: string; name: string; description?: string; verified: boolean; pinned: boolean; moduleType: string; onlineCount: number };
 type SiteConfig = { featuredLobbyId: string; registrationOpen: boolean; maintenanceMode: boolean; defaultTier: UserTier; maxRoomsPerLobby: number; chatRateLimit: number };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
 }
@@ -61,8 +59,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style constants ───────────────────────────────────────────────────────────
-
 const S = {
   card:    { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "11px 14px" } as React.CSSProperties,
   cardHov: { borderRadius: 10, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.07)", padding: "11px 14px" } as React.CSSProperties,
@@ -75,8 +71,6 @@ const S = {
   label:   { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 },
   sectionTitle: { fontSize: 12, fontWeight: 700, opacity: 0.6, letterSpacing: ".5px", textTransform: "uppercase" as const, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,.07)" },
 };
-
-// ── Sidebar nav ───────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
   { id: "analytics", label: "Analytics",     icon: "📊", minRole: "STAFF" },
@@ -94,6 +88,7 @@ const NAV_ITEMS = [
   { id: "audit",     label: "Audit Log",     icon: "📋", minRole: "STAFF" },
   { id: "outreach",  label: "Outreach",      icon: "📧", minRole: "STAFF" },
   { id: "mods",      label: "Mods",          icon: "🪝", minRole: "SUPPORT" },
+  { id: "permissions", label: "Permissions", icon: "🔑", minRole: "SUPPORT" },
   { id: "files",     label: "Files",         icon: "🗂️", minRole: "GOD" },
   { id: "config",    label: "Config",        icon: "⚙️", minRole: "GOD" },
 ] as const;
@@ -106,7 +101,82 @@ function canSeeNav(myRole: GlobalRole, minRole: string) {
   return (ROLE_RANK[myRole] || 0) >= (ROLE_RANK[minRole] || 99);
 }
 
-// ── Presence sidebar ──────────────────────────────────────────────────────────
+type PermRow = { name: string; can: string };
+type PermBlockData = { title: string; subtitle: string; accent: string; rows: PermRow[] };
+
+const PERM_SCOPES: PermBlockData[] = [
+  { title: "Global Roles", subtitle: "Platform-wide authority", accent: "#a78bfa", rows: [
+    { name: "USER", can: "Baseline. Join lobbies, chat, voice, DMs, crews." },
+    { name: "SUPPORT", can: "View the Ops console (read). Handle reports, ban appeals, bug reports, mods." },
+    { name: "STAFF", can: "All Support powers + assign roles, manage rooms/lobbies/events/subscriptions, broadcast, view audit + analytics + outreach." },
+    { name: "ADMIN", can: "Same authority tier as Staff (assigns roles + all Staff sections). Reserved for senior operators." },
+    { name: "GOD", can: "Unrestricted. Files + Config sections. Protected from moderation actions by others." },
+  ]},
+  { title: "Lobby Roles", subtitle: "Per-lobby · 5-level ladder", accent: "#34d399", rows: [
+    { name: "1 · Member", can: "Participate in the lobby and its rooms." },
+    { name: "2 · Trusted", can: "View lobby admin panels (read)." },
+    { name: "3 · Moderator", can: "Moderate: kick, mute, clear chat within the lobby." },
+    { name: "4 · Admin", can: "Manage the lobby: rename, settings, rooms, events, modules." },
+    { name: "5 · Owner", can: "Full control: billing + paid tiers, transfer, destructive actions." },
+  ]},
+  { title: "Room Roles", subtitle: "Per-room", accent: "#60a5fa", rows: [
+    { name: "MEMBER", can: "Chat + voice in the room." },
+    { name: "MOD", can: "Kick, clear messages, lock the room." },
+    { name: "OWNER", can: "Full room control. (Global Staff+ overrides.)" },
+  ]},
+  { title: "Crew Roles", subtitle: "Per-crew", accent: "#fbbf24", rows: [
+    { name: "MEMBER", can: "Crew member." },
+    { name: "OFFICER", can: "Help run the crew." },
+    { name: "LEADER", can: "Full crew control." },
+  ]},
+];
+
+const PERM_TIERS: PermBlockData[] = [
+  { title: "Reputation Tier", subtitle: "Earned — standing / notoriety", accent: "#d4a017", rows: [
+    { name: "INNOCENT", can: "Starting standing." },
+    { name: "INDICTED", can: "Rising notoriety." },
+    { name: "FELON", can: "Established." },
+    { name: "KINGPIN", can: "Top reputation." },
+  ]},
+  { title: "Paid Tier", subtitle: "Billing — perks", accent: "#ec4899", rows: [
+    { name: "FREE", can: "Default. (Reputation: Innocent.)" },
+    { name: "INDICTED · $6/mo", can: "Colored username, video streaming, custom fonts." },
+    { name: "FELON · $14/mo", can: "Above + own up to 3 lobbies." },
+    { name: "KINGPIN · staff-granted", can: "Unlimited lobbies + all modules." },
+  ]},
+];
+
+function PermBlock({ s }: { s: PermBlockData }) {
+  return (
+    <div style={{ background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 12, overflow: "hidden", marginBottom: 14 }}>
+      <div style={{ padding: "10px 14px", borderLeft: `3px solid ${s.accent}`, background: `${s.accent}10` }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.95)", letterSpacing: ".3px" }}>{s.title}</div>
+        <div style={{ fontSize: 11, color: "rgba(148,163,184,.7)", marginTop: 1 }}>{s.subtitle}</div>
+      </div>
+      <div>
+        {s.rows.map((r, i) => (
+          <div key={r.name} style={{ display: "flex", gap: 12, padding: "9px 14px", borderTop: i ? "1px solid rgba(255,255,255,.04)" : "none", alignItems: "baseline" }}>
+            <div style={{ flex: "0 0 158px", fontSize: 12, fontWeight: 700, color: s.accent, fontFamily: "ui-monospace, monospace" }}>{r.name}</div>
+            <div style={{ flex: 1, fontSize: 12, color: "rgba(203,213,225,.85)", lineHeight: 1.45 }}>{r.can}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PermissionsTab() {
+  return (
+    <div style={{ maxWidth: 840 }}>
+      <div style={{ fontSize: 12, color: "rgba(148,163,184,.78)", lineHeight: 1.55, marginBottom: 16 }}>
+        Weered uses <strong style={{ color: "rgba(243,244,246,.9)" }}>hierarchical levels across four independent scopes</strong> &mdash; each level is a strict superset of the one below it (no &agrave;-la-carte permission flags like Discord). One user can hold a role in each scope at once: e.g. global <em>Support</em> + <em>Owner</em> of their own lobby + <em>Member</em> elsewhere. The two tier systems are separate axes that happen to share the crime-ladder naming.
+      </div>
+      {PERM_SCOPES.map(s => <PermBlock key={s.title} s={s} />)}
+      <div style={{ height: 6 }} />
+      {PERM_TIERS.map(s => <PermBlock key={s.title} s={s} />)}
+    </div>
+  );
+}
 
 function OpsPresence() {
   const ctx   = useWeered() as any;
@@ -133,8 +203,6 @@ function OpsPresence() {
     </div>
   );
 }
-
-// ── Users tab (with global ban/unban) ────────────────────────────────────────
 
 function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [q, setQ]               = useState("");
@@ -208,7 +276,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 16, alignItems: "start", height: "100%" }}>
-      {/* Left: list */}
       <div>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <input style={{ ...S.input, flex: 1 }} placeholder="Search by name or handle…" value={q}
@@ -235,10 +302,8 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
         </div>
       </div>
 
-      {/* Right: detail */}
       {selected ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Identity */}
           <div style={S.card}>
             <div style={S.sectionTitle}>Identity</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -266,7 +331,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
             )}
           </div>
 
-          {/* Role actions */}
           {canEdit && (
             <div style={S.card}>
               <div style={S.sectionTitle}>Role Actions</div>
@@ -281,7 +345,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
             </div>
           )}
 
-          {/* Global Ban */}
           {canBan && (
             <div style={S.card}>
               <div style={S.sectionTitle}>Global Ban</div>
@@ -313,7 +376,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
             </div>
           )}
 
-          {/* Staff notes */}
           <div style={S.card}>
             <div style={S.sectionTitle}>Staff Notes</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10, maxHeight: 180, overflowY: "auto" }}>
@@ -341,8 +403,6 @@ function UsersTab({ myRole }: { myRole: GlobalRole }) {
   );
 }
 
-// ── Subscriptions tab ─────────────────────────────────────────────────────────
-
 function SubsTab() {
   const [users, setUsers]     = useState<StaffUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -369,7 +429,6 @@ function SubsTab() {
 
   return (
     <div>
-      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
         {TIERS.map(t => {
           const c = tierColor(t);
@@ -382,7 +441,6 @@ function SubsTab() {
         })}
       </div>
 
-      {/* Filter */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
         {(["ALL", ...TIERS] as const).map(t => (
           <button key={t} onClick={() => setFilter(t)}
@@ -415,8 +473,6 @@ function SubsTab() {
     </div>
   );
 }
-
-// ── Rooms tab (with rename, pin, close, delete) ─────────────────────────────
 
 function RoomsTab({ myRole }: { myRole: GlobalRole }) {
   const [rooms, setRooms]       = useState<StaffRoom[]>([]);
@@ -519,8 +575,6 @@ function RoomsTab({ myRole }: { myRole: GlobalRole }) {
     </div>
   );
 }
-
-// ── Lobbies tab (with Set Featured) ──────────────────────────────────────────
 
 function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
   const [lobbies, setLobbies]         = useState<StaffLobby[]>([]);
@@ -627,8 +681,6 @@ function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
   );
 }
 
-// ── Reports tab ───────────────────────────────────────────────────────────────
-
 type ReportRow = {
   id: string;
   reporterId: string;
@@ -651,8 +703,6 @@ const REASON_LABELS: Record<string, string> = {
   THREATS: "Threats", NSFW: "NSFW", MINOR_SAFETY: "Minor safety",
   IMPERSONATION: "Impersonation", SELF_HARM: "Self-harm", OTHER: "Other",
 };
-
-// ── Ban Appeals tab ──────────────────────────────────────────────────────────
 
 type AppealRow = {
   id: string;
@@ -771,8 +821,6 @@ function AppealsTab() {
     </div>
   );
 }
-
-// ── Bug Reports tab ──────────────────────────────────────────────────────────
 
 type BugRow = {
   id: string;
@@ -921,6 +969,18 @@ function ReportsTab() {
     setBusyId("");
   }
 
+  async function clearBranding(lobbyId: string, reportId: string) {
+    setBusyId(reportId);
+    try {
+      const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(lobbyId)}/clear-branding`, { method: "POST" });
+      if (j?.ok) {
+        await apiFetch(`/staff/reports/${reportId}/action`, { method: "POST", body: JSON.stringify({ status: "ACTIONED" }) });
+        setReports(cur => cur.filter(r => r.id !== reportId));
+      }
+    } catch {}
+    setBusyId("");
+  }
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -998,10 +1058,17 @@ function ReportsTab() {
               </div>
             )}
             {r.status === "OPEN" && (
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button disabled={busyId === r.id} onClick={() => action(r.id, "ACTIONED")} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(34,197,94,.4)", background: "rgba(34,197,94,.1)", color: "rgb(134,239,172)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Actioned</button>
                 <button disabled={busyId === r.id} onClick={() => action(r.id, "REVIEWED")} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "rgba(255,255,255,.7)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Reviewed</button>
                 <button disabled={busyId === r.id} onClick={() => action(r.id, "DISMISSED")} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(255,255,255,.08)", background: "transparent", color: "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Dismiss</button>
+                {r.targetType === "LOBBY" && (
+                  <>
+                    <span style={{ flex: 1 }} />
+                    <a href={`/lobby/${r.targetId}`} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "rgba(255,255,255,.7)", fontSize: 11, fontWeight: 700, fontFamily: "inherit", textDecoration: "none" }}>View ↗</a>
+                    <button disabled={busyId === r.id} onClick={() => clearBranding(r.targetId, r.id)} title="Remove this lobby's logo + banner" style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,158,11,.45)", background: "rgba(245,158,11,.12)", color: "rgb(253,230,138)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Clear branding</button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1010,8 +1077,6 @@ function ReportsTab() {
     </div>
   );
 }
-
-// ── Audit tab ─────────────────────────────────────────────────────────────────
 
 function AuditTab() {
   const [logs, setLogs]       = useState<AuditLog[]>([]);
@@ -1055,119 +1120,150 @@ function AuditTab() {
   );
 }
 
-// ── Broadcast tab ─────────────────────────────────────────────────────────────
+type Announcement = { id: string; message: string; level: string; pinned: boolean; sticky: boolean; createdByName: string; createdAt: string };
+
+const ANN_PRESETS: { label: string; message: string; level: "info" | "warning" | "urgent" }[] = [
+  { label: "Maintenance", message: "Scheduled maintenance — Weered may be briefly unavailable. We'll be back shortly.", level: "warning" },
+  { label: "Beta notice", message: "Early access build — things may break. Report bugs in the Forum. New features ship daily. Type @operator in any chat for help.", level: "info" },
+  { label: "New feature", message: "New feature just shipped — check the Changelog in HQ to see what's new.", level: "info" },
+  { label: "Outage", message: "We're aware of an issue affecting parts of Weered and are on it. Thanks for your patience.", level: "urgent" },
+];
+
+const annLevelStyles: Record<string, { bg: string; border: string; color: string; label: string; emoji: string }> = {
+  info:    { bg: "rgba(88,0,229,.12)", border: "rgba(88,0,229,.35)", color: "rgb(216,180,254)", label: "Info", emoji: "📢" },
+  warning: { bg: "rgba(245,158,11,.10)", border: "rgba(245,158,11,.35)", color: "rgb(253,230,138)", label: "Warning", emoji: "⚠️" },
+  urgent:  { bg: "rgba(239,68,68,.10)", border: "rgba(239,68,68,.35)", color: "rgb(252,165,165)", label: "Urgent", emoji: "🚨" },
+};
 
 function BroadcastTab() {
   const [message, setMessage] = useState("");
   const [level, setLevel]     = useState<"info" | "warning" | "urgent">("info");
-  const [sending, setSending] = useState(false);
+  const [pin, setPin]         = useState(false);
+  const [sticky, setSticky]   = useState(false);
+  const [busy, setBusy]       = useState(false);
   const [result, setResult]   = useState("");
-  const [history, setHistory] = useState<Array<{ message: string; level: string; sent: number; ts: string }>>([]);
+  const [items, setItems]     = useState<Announcement[]>([]);
 
-  async function send() {
-    if (!message.trim()) return;
-    if (!confirm(`Broadcast "${message.trim()}" as ${level.toUpperCase()} to all connected users?`)) return;
-    setSending(true); setResult("");
-    try {
-      const j = await apiFetch("/staff/broadcast", { method: "POST", body: JSON.stringify({ message: message.trim(), level }) });
-      if (j.ok) {
-        setResult(`Sent to ${j.sent} user${j.sent !== 1 ? "s" : ""}.`);
-        setHistory(prev => [{ message: message.trim(), level, sent: j.sent, ts: new Date().toLocaleString() }, ...prev].slice(0, 10));
-        setMessage("");
-      } else {
-        setResult(j.error || "Failed.");
-      }
-    } catch { setResult("Request failed."); }
-    finally { setSending(false); }
+  const load = useCallback(async () => {
+    const j = await apiFetch("/staff/announcements");
+    if (j?.ok) setItems(j.announcements || []);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  function applyPreset(p: typeof ANN_PRESETS[number]) {
+    setMessage(p.message); setLevel(p.level);
   }
 
-  const levelStyles: Record<string, { bg: string; border: string; color: string; label: string }> = {
-    info:    { bg: "rgba(88,0,229,.12)", border: "rgba(88,0,229,.35)", color: "rgb(216,180,254)", label: "📢 Info" },
-    warning: { bg: "rgba(245,158,11,.10)", border: "rgba(245,158,11,.35)", color: "rgb(253,230,138)", label: "⚠️ Warning" },
-    urgent:  { bg: "rgba(239,68,68,.10)", border: "rgba(239,68,68,.35)", color: "rgb(252,165,165)", label: "🚨 Urgent" },
-  };
+  async function send() {
+    if (!message.trim() || busy) return;
+    setBusy(true); setResult("");
+    try {
+      const flash = await apiFetch("/staff/broadcast", { method: "POST", body: JSON.stringify({ message: message.trim(), level }) });
+      if (pin) {
+        await apiFetch("/staff/announcements", { method: "POST", body: JSON.stringify({ message: message.trim(), level, pinned: true, sticky }) });
+      } else {
+        await apiFetch("/staff/announcements", { method: "POST", body: JSON.stringify({ message: message.trim(), level, pinned: false }) });
+      }
+      setResult(flash?.ok ? `Sent to ${flash.sent} user${flash.sent !== 1 ? "s" : ""}${pin ? " · pinned" : ""}.` : "Saved.");
+      setMessage(""); setPin(false); setSticky(false);
+      await load();
+    } catch { setResult("Request failed."); }
+    finally { setBusy(false); }
+  }
+
+  async function togglePin(a: Announcement) {
+    await apiFetch(`/staff/announcements/${a.id}`, { method: "PATCH", body: JSON.stringify({ pinned: !a.pinned, sticky: !a.pinned ? a.sticky : false }) });
+    await load();
+  }
+  async function toggleSticky(a: Announcement) {
+    await apiFetch(`/staff/announcements/${a.id}`, { method: "PATCH", body: JSON.stringify({ sticky: !a.sticky, pinned: true }) });
+    await load();
+  }
+  async function del(a: Announcement) {
+    if (!confirm("Delete this announcement from history?")) return;
+    await apiFetch(`/staff/announcements/${a.id}`, { method: "DELETE" });
+    await load();
+  }
+
+  const pinnedItems = items.filter(a => a.pinned);
+  const historyItems = items.filter(a => !a.pinned);
 
   return (
-    <div style={{ maxWidth: 560 }}>
+    <div style={{ maxWidth: 620 }}>
       <div style={{ ...S.card, marginBottom: 16 }}>
-        <div style={S.sectionTitle}>Send System Broadcast</div>
+        <div style={S.sectionTitle}>Compose Announcement</div>
         <div style={{ fontSize: 11, opacity: 0.45, marginBottom: 12 }}>
-          Sends a persistent alert bar to all connected users. They must manually dismiss it.
+          Sends a toast to all connected users. Pin it to keep it as a banner — sticky banners can't be dismissed.
         </div>
 
-        {/* Message */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          {ANN_PRESETS.map(p => (
+            <button key={p.label} onClick={() => applyPreset(p)} style={{
+              padding: "5px 11px", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.03)", color: "rgba(203,213,225,.8)",
+            }}>{p.label}</button>
+          ))}
+        </div>
+
         <textarea
-          style={{ ...S.input, resize: "vertical", minHeight: 70, marginBottom: 10 }}
-          placeholder="Broadcast message…"
+          style={{ ...S.input, resize: "vertical", minHeight: 70, marginBottom: 6 }}
+          placeholder="Announcement message…"
           value={message}
           onChange={e => setMessage(e.target.value)}
           maxLength={500}
         />
         <div style={{ fontSize: 10, opacity: 0.3, textAlign: "right", marginBottom: 10 }}>{message.length}/500</div>
 
-        {/* Level selector */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           {(["info", "warning", "urgent"] as const).map(l => {
-            const ls = levelStyles[l];
-            const active = level === l;
+            const ls = annLevelStyles[l]; const active = level === l;
             return (
               <button key={l} onClick={() => setLevel(l)} style={{
-                flex: 1, padding: "10px", borderRadius: 9, textAlign: "center",
+                flex: 1, padding: "9px", borderRadius: 9, textAlign: "center",
                 border: `1px solid ${active ? ls.border : "rgba(255,255,255,.08)"}`,
                 background: active ? ls.bg : "rgba(255,255,255,.02)",
                 color: active ? ls.color : "rgba(243,244,246,.5)",
                 fontSize: 12, fontWeight: active ? 700 : 400, cursor: "pointer",
-                transition: "all .12s",
-              }}>
-                {ls.label}
-              </button>
+              }}>{ls.emoji} {ls.label}</button>
             );
           })}
         </div>
 
-        {/* Preview */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, cursor: "pointer", color: "rgba(203,213,225,.85)" }}>
+            <input type="checkbox" checked={pin} onChange={e => { setPin(e.target.checked); if (!e.target.checked) setSticky(false); }} /> Pin as banner
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, cursor: pin ? "pointer" : "default", color: pin ? "rgba(203,213,225,.85)" : "rgba(148,163,184,.35)" }}>
+            <input type="checkbox" checked={sticky} disabled={!pin} onChange={e => setSticky(e.target.checked)} /> Sticky (can't be dismissed)
+          </label>
+        </div>
+
         {message.trim() && (
-          <div style={{
-            marginBottom: 14, padding: "10px 14px", borderRadius: 9,
-            background: levelStyles[level].bg,
-            border: `1px solid ${levelStyles[level].border}`,
-            color: levelStyles[level].color,
-            fontSize: 13, fontWeight: 600,
-          }}>
-            <span style={{ marginRight: 8 }}>{level === "info" ? "📢" : level === "warning" ? "⚠️" : "🚨"}</span>
-            {message.trim()}
+          <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 9, background: annLevelStyles[level].bg, border: `1px solid ${annLevelStyles[level].border}`, color: annLevelStyles[level].color, fontSize: 13, fontWeight: 600 }}>
+            <span style={{ marginRight: 8 }}>{annLevelStyles[level].emoji}</span>{message.trim()}
           </div>
         )}
 
-        {/* Send */}
-        <button
-          onClick={send}
-          disabled={sending || !message.trim()}
-          style={{
-            ...S.btnPri, width: "100%", padding: "10px", fontSize: 13,
-            opacity: sending || !message.trim() ? 0.5 : 1,
-          }}
-        >
-          {sending ? "Sending…" : "Send Broadcast"}
+        <button onClick={send} disabled={busy || !message.trim()} style={{ ...S.btnPri, width: "100%", padding: "10px", fontSize: 13, opacity: busy || !message.trim() ? 0.5 : 1 }}>
+          {busy ? "Sending…" : pin ? "Send + Pin" : "Send Broadcast"}
         </button>
-
         {result && <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>{result}</div>}
       </div>
 
-      {/* Recent broadcasts */}
-      {history.length > 0 && (
+      {pinnedItems.length > 0 && (
+        <div style={{ ...S.card, marginBottom: 16 }}>
+          <div style={S.sectionTitle}>Pinned Banners ({pinnedItems.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {pinnedItems.map(a => <AnnRow key={a.id} a={a} onPin={togglePin} onSticky={toggleSticky} onDelete={del} />)}
+          </div>
+        </div>
+      )}
+
+      {historyItems.length > 0 && (
         <div style={S.card}>
-          <div style={S.sectionTitle}>Recent Broadcasts (this session)</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {history.map((h, i) => {
-              const ls = levelStyles[h.level] || levelStyles.info;
-              return (
-                <div key={i} style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)" }}>
-                  <div style={{ fontSize: 12, color: ls.color }}>{h.message}</div>
-                  <div style={{ fontSize: 10, opacity: 0.4, marginTop: 3 }}>{h.level.toUpperCase()} · {h.sent} users · {h.ts}</div>
-                </div>
-              );
-            })}
+          <div style={S.sectionTitle}>History</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {historyItems.map(a => <AnnRow key={a.id} a={a} onPin={togglePin} onSticky={toggleSticky} onDelete={del} />)}
           </div>
         </div>
       )}
@@ -1175,7 +1271,24 @@ function BroadcastTab() {
   );
 }
 
-// ── Events tab ────────────────────────────────────────────────────────────────
+function AnnRow({ a, onPin, onSticky, onDelete }: { a: Announcement; onPin: (a: Announcement) => void; onSticky: (a: Announcement) => void; onDelete: (a: Announcement) => void }) {
+  const ls = annLevelStyles[a.level] || annLevelStyles.info;
+  return (
+    <div style={{ padding: "9px 11px", borderRadius: 8, background: a.pinned ? ls.bg : "rgba(255,255,255,.02)", border: `1px solid ${a.pinned ? ls.border : "rgba(255,255,255,.06)"}` }}>
+      <div style={{ fontSize: 12, color: a.pinned ? ls.color : "rgba(243,244,246,.85)" }}>{ls.emoji} {a.message}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, opacity: 0.4 }}>{ls.label.toUpperCase()} · {a.createdByName || "staff"} · {new Date(a.createdAt).toLocaleString()}</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => onPin(a)} style={annBtn(a.pinned)}>{a.pinned ? "Unpin" : "Pin"}</button>
+        {a.pinned && <button onClick={() => onSticky(a)} style={annBtn(a.sticky)}>{a.sticky ? "Sticky ✓" : "Make sticky"}</button>}
+        <button onClick={() => onDelete(a)} style={{ ...annBtn(false), color: "rgba(252,165,165,.85)" }}>Delete</button>
+      </div>
+    </div>
+  );
+}
+function annBtn(active: boolean): React.CSSProperties {
+  return { padding: "3px 9px", fontSize: 10, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${active ? "rgba(124,58,237,.5)" : "rgba(255,255,255,.12)"}`, background: active ? "rgba(124,58,237,.15)" : "transparent", color: active ? "#c4b5fd" : "rgba(148,163,184,.85)" };
+}
 
 type StaffEvent = {
   id: string; title: string; description: string; category: string;
@@ -1224,7 +1337,6 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
   const [scopeFilter, setScopeFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Create form
   const [form, setForm] = useState({ title: "", description: "", category: "", coverImageUrl: "", startsAt: "", endsAt: "", timezone: "UTC", status: "DRAFT", broadcastOnPublish: false });
   const [creating, setCreating] = useState(false);
 
@@ -1289,7 +1401,6 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {msg && <div style={{ fontSize: 12, color: "rgba(167,243,208,.9)", padding: "8px 12px", borderRadius: 8, background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)" }}>{msg}</div>}
 
-      {/* View toggle */}
       <div style={{ display: "flex", gap: 8 }}>
         <button style={view === "all" ? S.btnPri : S.btn} onClick={() => setView("all")}>All Events</button>
         <button style={view === "promotions" ? S.btnPri : S.btn} onClick={() => setView("promotions")}>
@@ -1298,7 +1409,6 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
         <button style={{ ...S.success, marginLeft: "auto" }} onClick={() => setView("create")}>+ Create Global Event</button>
       </div>
 
-      {/* Create form */}
       {view === "create" && (
         <div style={{ ...S.card, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={S.sectionTitle}>Create Global Event</div>
@@ -1342,7 +1452,6 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
         </div>
       )}
 
-      {/* All events list */}
       {view === "all" && (
         <div>
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -1394,7 +1503,6 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
         </div>
       )}
 
-      {/* Promotion requests */}
       {view === "promotions" && (
         <div>
           <div style={S.sectionTitle}>Pending Promotion Requests</div>
@@ -1423,8 +1531,6 @@ function EventsTab({ myRole }: { myRole: GlobalRole }) {
     </div>
   );
 }
-
-// ── Roster tab ────────────────────────────────────────────────────────────────
 
 function RosterTab() {
   const [staff, setStaff] = useState<any[]>([]);
@@ -1475,8 +1581,6 @@ function RosterTab() {
   );
 }
 
-// ── Board tab ─────────────────────────────────────────────────────────────────
-
 function BoardTab({ myRole }: { myRole: GlobalRole }) {
   const [posts, setPosts]     = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1517,7 +1621,6 @@ function BoardTab({ myRole }: { myRole: GlobalRole }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* New post */}
       <div style={{ ...S.card, border: "1px solid rgba(124,58,237,.20)", background: "rgba(124,58,237,.04)" }}>
         <textarea
           value={body}
@@ -1535,7 +1638,6 @@ function BoardTab({ myRole }: { myRole: GlobalRole }) {
         {msg && <div style={{ fontSize: 11, color: "rgba(252,165,165,.8)", marginTop: 4 }}>{msg}</div>}
       </div>
 
-      {/* Posts */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {posts.map((p: any) => (
           <div key={p.id} style={{ ...S.card, borderLeft: p.pinned ? "3px solid rgba(245,158,11,.5)" : "3px solid transparent" }}>
@@ -1570,8 +1672,6 @@ function BoardTab({ myRole }: { myRole: GlobalRole }) {
   );
 }
 
-// ── Files tab ─────────────────────────────────────────────────────────────────
-
 function FilesTab() {
   return (
     <div>
@@ -1583,8 +1683,6 @@ function FilesTab() {
     </div>
   );
 }
-
-// ── Mods admin (catalog opt-out for authors) ─────────────────────────────────
 
 function ModsAdminTab() {
   const [mods, setMods]     = useState<any[]>([]);
@@ -1708,8 +1806,6 @@ function ModsAdminTab() {
   );
 }
 
-// ── Config tab (wired to real SiteConfig endpoints) ──────────────────────────
-
 function ConfigTab() {
   const [config, setConfig]   = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1785,8 +1881,6 @@ function ConfigTab() {
   );
 }
 
-// ── Outreach CRM ─────────────────────────────────────────────────────────────
-
 const OUTREACH_STATUSES = ["LEAD","CONTACTED","REPLIED","IN_PROGRESS","PARTNERED","DECLINED","STALE"] as const;
 const OUTREACH_CATEGORIES = ["GAME_STUDIO","ESPORTS_ORG","CONTENT_CREATOR","BRAND_SPONSOR","MEDIA","COMMUNITY","PLATFORM","OTHER"] as const;
 
@@ -1810,7 +1904,6 @@ function OutreachTab() {
   const [searchQ, setSearchQ]   = useState("");
   const [expandedContact, setExpandedContact] = useState<string | null>(null);
 
-  // Form state
   const [fName, setFName]       = useState("");
   const [fCompany, setFCompany] = useState("");
   const [fEmail, setFEmail]     = useState("");
@@ -1878,7 +1971,6 @@ function OutreachTab() {
 
   if (loading) return <div style={{ opacity: 0.4 }}>Loading outreach...</div>;
 
-  // Stats
   const total = contacts.length;
   const byStatus: Record<string, number> = {};
   contacts.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1; });
@@ -1891,7 +1983,6 @@ function OutreachTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Stats row */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {OUTREACH_STATUSES.map(s => (
           <button key={s} onClick={() => setFilter(filter === s ? "" : s)} style={{
@@ -1905,7 +1996,6 @@ function OutreachTab() {
         ))}
       </div>
 
-      {/* Category filter */}
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
           style={{ ...S.input, width: 180, fontSize: 11, cursor: "pointer" }}>
@@ -1922,7 +2012,6 @@ function OutreachTab() {
 
       {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
 
-      {/* Add / Edit form */}
       {showForm && (
         <div style={{ ...S.card, border: "1px solid rgba(124,58,237,.25)", background: "rgba(124,58,237,.04)" }}>
           <div style={{ ...S.label, marginBottom: 10 }}>{editing ? "Edit Contact" : "New Contact"}</div>
@@ -1986,7 +2075,6 @@ function OutreachTab() {
         </div>
       )}
 
-      {/* Search */}
       <input
         placeholder="Search contacts..."
         value={searchQ}
@@ -1994,9 +2082,7 @@ function OutreachTab() {
         style={{ ...S.input, fontSize: 12 }}
       />
 
-      {/* Compact table */}
       <div style={{ borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
-        {/* Table header */}
         <div style={{
           display: "grid", gridTemplateColumns: "2fr 1.2fr 90px 90px 40px",
           gap: 0, padding: "8px 12px",
@@ -2012,14 +2098,12 @@ function OutreachTab() {
           <span></span>
         </div>
 
-        {/* Rows */}
         {displayContacts.map(c => {
           const sColor = STATUS_COLORS[c.status] || "rgba(255,255,255,.5)";
           const overdue = c.nextFollowUp && new Date(c.nextFollowUp) < new Date();
           const isExpanded = expandedContact === c.id;
           return (
             <div key={c.id}>
-              {/* Compact row */}
               <div
                 onClick={() => setExpandedContact(isExpanded ? null : c.id)}
                 style={{
@@ -2056,7 +2140,6 @@ function OutreachTab() {
                 <span style={{ fontSize: 10, opacity: 0.2, textAlign: "center", transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform .15s" }}>&#9654;</span>
               </div>
 
-              {/* Expanded detail */}
               {isExpanded && (
                 <div style={{
                   padding: "10px 12px 12px", background: "rgba(88,0,229,.03)",
@@ -2096,8 +2179,6 @@ function OutreachTab() {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-
 export default function StaffPage() {
   const router = useRouter();
   const ctx    = useWeered() as any;
@@ -2134,7 +2215,6 @@ export default function StaffPage() {
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--weered-bg, #080810)", color: "rgba(243,244,246,.92)", fontFamily: "system-ui, sans-serif", overflow: "hidden" }}>
 
-      {/* Header */}
       <div style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 8, height: 8, borderRadius: 999, background: "rgba(16,185,129,.85)", boxShadow: "0 0 6px rgba(16,185,129,.5)" }} />
@@ -2150,7 +2230,6 @@ export default function StaffPage() {
         </div>
       </div>
 
-      {/* Mobile nav tabs — horizontal scrollable, hidden on desktop */}
       <div className="weered-ops-mobile-nav" style={{
         display: "none", overflowX: "auto", gap: 4, padding: "8px 10px",
         borderBottom: "1px solid rgba(255,255,255,.07)",
@@ -2172,10 +2251,8 @@ export default function StaffPage() {
         ))}
       </div>
 
-      {/* Body */}
       <div className="weered-ops-body" style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}>
 
-        {/* Left: nav + presence — hidden on mobile */}
         <div className="weered-ops-sidebar" style={{ borderRight: "1px solid rgba(255,255,255,.07)", padding: "14px 10px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Navigation</div>
           {visibleNav.map(item => (
@@ -2191,15 +2268,12 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {/* Center: content */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-          {/* Section header */}
           <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 15 }}>
               {visibleNav.find(n => n.id === nav)?.icon} {visibleNav.find(n => n.id === nav)?.label}
             </div>
           </div>
-          {/* Content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
             {nav === "users"   && <UsersTab myRole={myRole} />}
             {nav === "board"   && <BoardTab myRole={myRole} />}
@@ -2216,12 +2290,12 @@ export default function StaffPage() {
             {nav === "bugs"      && <BugsTab />}
             {nav === "outreach"  && <OutreachTab />}
             {nav === "mods"      && <ModsAdminTab />}
+            {nav === "permissions" && <PermissionsTab />}
             {nav === "files"     && <FilesTab />}
             {nav === "config"  && <ConfigTab />}
           </div>
         </div>
 
-        {/* Right: ops chat — hidden on mobile */}
         <div className="weered-ops-chat" style={{ borderLeft: "1px solid rgba(255,255,255,.07)", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 13 }}>Ops Chat</div>

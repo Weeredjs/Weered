@@ -188,7 +188,6 @@ export default function PostDetail({ postId }: { postId: string }) {
 
   return (
     <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 16px 60px", fontFamily: FONT, height: "100%", overflow: "auto" }}>
-      {/* Back link */}
       <button onClick={() => router.push("/forum")} style={{
         background: "none", border: "none", color: "rgba(167,139,250,.6)",
         fontSize: 12, cursor: "pointer", fontFamily: "inherit", padding: 0, marginBottom: 16,
@@ -196,14 +195,12 @@ export default function PostDetail({ postId }: { postId: string }) {
         &larr; Back to Forum
       </button>
 
-      {/* Post */}
       <div style={{
         display: "flex", gap: 12, padding: "16px 18px",
         borderRadius: 12, background: "rgba(255,255,255,.025)",
         border: `1px solid ${post.pinned ? "rgba(245,158,11,.2)" : "rgba(255,255,255,.06)"}`,
         marginBottom: 20,
       }}>
-        {/* Vote column */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, flexShrink: 0, width: 40 }}>
           <button onClick={() => handlePostVote(post.myVote === 1 ? 0 : 1)} style={{
             background: "none", border: "none", cursor: "pointer", padding: 4,
@@ -219,7 +216,6 @@ export default function PostDetail({ postId }: { postId: string }) {
           }}>&#9660;</button>
         </div>
 
-        {/* Post content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             {post.pinned && <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>&#128204; PINNED</span>}
@@ -245,7 +241,6 @@ export default function PostDetail({ postId }: { postId: string }) {
             style={{ fontSize: 13.5, lineHeight: 1.75, color: "rgba(229,231,235,.78)", wordBreak: "break-word" }}
           />
 
-          {/* Mod tools */}
           {(isMod || post.authorId === me?.id || me) && (
             <div style={{ display: "flex", gap: 6, marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,.06)", flexWrap: "wrap" }}>
               {isMod && (
@@ -271,12 +266,10 @@ export default function PostDetail({ postId }: { postId: string }) {
         </div>
       </div>
 
-      {/* Comments header */}
       <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.4, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 12 }}>
         {post.commentCount} Comment{post.commentCount !== 1 ? "s" : ""}
       </div>
 
-      {/* Comment compose */}
       {me && !post.locked ? (
         <div style={{
           display: "flex", gap: 10, marginBottom: 20, padding: "12px 14px",
@@ -323,7 +316,6 @@ export default function PostDetail({ postId }: { postId: string }) {
         </div>
       ) : null}
 
-      {/* Comments list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {comments.map(c => (
           <div key={c.id} style={{
@@ -331,7 +323,6 @@ export default function PostDetail({ postId }: { postId: string }) {
             borderRadius: 10, background: "rgba(255,255,255,.02)",
             border: "1px solid rgba(255,255,255,.04)",
           }}>
-            {/* Vote */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, width: 28 }}>
               <button onClick={() => handleCommentVote(c.id, c.myVote === 1 ? 0 : 1)} style={{
                 background: "none", border: "none", cursor: "pointer", padding: 2,
@@ -344,7 +335,6 @@ export default function PostDetail({ postId }: { postId: string }) {
               }}>&#9660;</button>
             </div>
 
-            {/* Comment content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                 <AuthorBadge name={c.authorName} author={c.author} size={18} authorId={c.authorId}

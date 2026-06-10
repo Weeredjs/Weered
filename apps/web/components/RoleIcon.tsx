@@ -1,13 +1,5 @@
-/* ── apps/web/components/RoleIcon.tsx ─────────────────────────────────────── */
 "use client";
 import React from "react";
-
-/**
- * Role icon — brand PNG icons from /brand/roles/
- * Usage: <RoleIcon role="GOD" size={14} />
- *
- * Also handles tier badges (INDICTED, FELON) for premium display.
- */
 
 const ROLE_MAP: Record<string, { file: string; color: string }> = {
   GOD:     { file: "godfather",   color: "#D4A017" },
@@ -19,14 +11,12 @@ const ROLE_MAP: Record<string, { file: string; color: string }> = {
   MEMBER:  { file: "member",      color: "#94A3B8" },
 };
 
-/* Tier badge icons (for premium chips in UserCorner/LeftRail) */
 const TIER_MAP: Record<string, { file: string; color: string }> = {
   KINGPIN:  { file: "kingpin",   color: "#D4A017" },
   FELON:    { file: "felon",     color: "#F97316" },
   INDICTED: { file: "indicted",  color: "#A78BFA" },
 };
 
-/* Display name mapping */
 const DISPLAY_NAMES: Record<string, string> = {
   GOD:     "Godfather",
   ADMIN:   "Lieutenant",
@@ -65,7 +55,6 @@ export default function RoleIcon({ role, size = 14, style, className }: RoleIcon
   );
 }
 
-/** Tier badge icon (for subscription tier display) */
 export function TierIcon({ tier, size = 14, style, className }: { tier: string; size?: number; style?: React.CSSProperties; className?: string }) {
   const info = TIER_MAP[tier.toUpperCase()];
   if (!info) return null;
@@ -86,12 +75,10 @@ export function TierIcon({ tier, size = 14, style, className }: { tier: string; 
   );
 }
 
-/** Get display name for a DB role */
 export function getRoleDisplayName(role: string): string {
   return DISPLAY_NAMES[role] || role;
 }
 
-/** Get role color */
 export function getRoleColor(role: string): string {
   return ROLE_MAP[role]?.color || TIER_MAP[role]?.color || "#888";
 }

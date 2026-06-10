@@ -1,9 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// /league/* — League of Legends vertical via Riot API. Summoner card,
-// champion rotation, challenger leaderboard, live spectator data, and
-// the Data Dragon static champion list. Riot dev keys expire every 24h
-// and a production key application is in queue.
 export default async function leagueRoutes(app: FastifyInstance) {
   const RIOT_API_KEY = process.env.RIOT_API_KEY || "";
   const RIOT_REGION  = "na1";

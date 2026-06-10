@@ -16,10 +16,6 @@ const TYPE_LABEL: Record<string, string> = {
   HIDEOUT: "Hideout", OUTPOST: "Outpost", BRIDGE: "Bridge", MISC: "Misc",
 };
 
-/**
- * Full-bleed build detail. Image carousel left, metadata + voting +
- * comments right. ESC to close, arrow keys to navigate carousel.
- */
 export default function WindroseBuildDetail({
   slug,
   onClose,
@@ -44,7 +40,6 @@ export default function WindroseBuildDetail({
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [voteAnimating, setVoteAnimating] = React.useState(0);
 
-  // Fetch build
   React.useEffect(() => {
     let alive = true;
     const tok = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
@@ -63,7 +58,6 @@ export default function WindroseBuildDetail({
   const images: any[] = Array.isArray(build?.images) ? build.images : [];
   const current = images[imgIdx] || null;
 
-  // Keyboard nav
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -78,7 +72,6 @@ export default function WindroseBuildDetail({
     const tok = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
     if (!tok) return;
     const newValue = myVote === value ? 0 : value;
-    // Optimistic
     const prevVote = myVote;
     setMyVote(newValue);
     setVoteAnimating(newValue || prevVote);
@@ -93,7 +86,7 @@ export default function WindroseBuildDetail({
       if (j?.ok) {
         setBuild((b: any) => b ? { ...b, upvotes: j.upvotes, downvotes: j.downvotes } : b);
       } else {
-        setMyVote(prevVote); // rollback
+        setMyVote(prevVote);
       }
     } catch {
       setMyVote(prevVote);
@@ -190,7 +183,6 @@ export default function WindroseBuildDetail({
           fontFamily: "inherit",
         }}
       >
-        {/* LEFT — image carousel */}
         <div style={{
           position: "relative",
           background: build.primaryColor || "#0a0804",
@@ -264,7 +256,6 @@ export default function WindroseBuildDetail({
           <button onClick={onClose} style={{ ...navBtnStyle("right"), top: 12, right: 12, bottom: "auto", transform: "none", width: 36, height: 36, fontSize: 18 }}>✕</button>
         </div>
 
-        {/* RIGHT — meta + voting + comments */}
         <div style={{ overflow: "auto", padding: 18, display: "flex", flexDirection: "column", maxHeight: "92vh" }}>
           <div style={{
             fontFamily: "var(--font-pirata, 'Pirata One'), serif",
@@ -274,7 +265,6 @@ export default function WindroseBuildDetail({
             marginBottom: 6,
           }}>{build.title}</div>
 
-          {/* Author */}
           <button
             type="button"
             onClick={() => openSheet("profile", { userId: build.author.id })}
@@ -306,7 +296,6 @@ export default function WindroseBuildDetail({
             </div>
           </button>
 
-          {/* Badges */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10, marginBottom: 14 }}>
             {build.biome && <Badge>{BIOME_LABEL[build.biome] || build.biome}</Badge>}
             {build.buildType && <Badge>{TYPE_LABEL[build.buildType] || build.buildType}</Badge>}
@@ -344,7 +333,6 @@ export default function WindroseBuildDetail({
             </div>
           )}
 
-          {/* Vote + save + share row */}
           <div style={{ display: "flex", gap: 6, marginBottom: 14, alignItems: "stretch" }}>
             <VoteBtn
               direction="up" active={myVote === 1}
@@ -388,7 +376,6 @@ export default function WindroseBuildDetail({
             )}
           </div>
 
-          {/* Comments */}
           <div style={{
             fontSize: 9, fontWeight: 800, letterSpacing: "1.4px",
             color: "rgba(232,196,138,.7)",
@@ -463,7 +450,6 @@ export default function WindroseBuildDetail({
         </div>
       </div>
 
-      {/* Report dialog */}
       {showReport && (
         <ReportDialog
           slug={slug}
@@ -471,7 +457,6 @@ export default function WindroseBuildDetail({
         />
       )}
 
-      {/* Delete confirm */}
       {confirmDelete && (
         <ConfirmDialog
           title="Delete this build?"

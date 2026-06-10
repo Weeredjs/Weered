@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 
-/* ── Auth helpers ──────────────────────────────────────────────────────────── */
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
   try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
 }
 
-/* ── Timezone + availability options ──────────────────────────────────────── */
 const TIMEZONES = ["EST", "CST", "MST", "PST", "GMT", "CET", "AEST", "Other"];
 const HOURS_OPTIONS = ["1-5", "5-10", "10-20", "20+"];
 
@@ -20,12 +18,10 @@ const REQUIREMENTS = [
   "Comfortable enforcing community guidelines",
 ];
 
-/* ── Component ────────────────────────────────────────────────────────────── */
 export default function ApplyPage() {
   const [visible, setVisible] = useState(false);
   const [authed, setAuthed] = useState<boolean | null>(null);
 
-  /* form fields */
   const [username, setUsername] = useState("");
   const [age, setAge] = useState("");
   const [timezone, setTimezone] = useState("EST");
@@ -35,12 +31,10 @@ export default function ApplyPage() {
   const [whyMod, setWhyMod] = useState("");
   const [extra, setExtra] = useState("");
 
-  /* submission state */
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  /* fade-in + auth check + page title */
   useEffect(() => {
     document.title = "Apply to Moderate \u2014 Weered";
     const meta = document.querySelector('meta[name="description"]');
@@ -56,7 +50,6 @@ export default function ApplyPage() {
     setAuthed(!!token);
   }, []);
 
-  /* ── submit handler ─────────────────────────────────────────────────────── */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -117,12 +110,10 @@ export default function ApplyPage() {
     }
   }
 
-  /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
-
         .mod-root {
           height: 100%;
           overflow-y: auto;
@@ -164,7 +155,6 @@ export default function ApplyPage() {
           transition: opacity 0.7s ease, transform 0.7s ease;
         }
         .mod-inner.visible { opacity: 1; transform: translateY(0); }
-
         .mod-eyebrow {
           font-size: 10px;
           letter-spacing: 0.25em;
@@ -190,8 +180,6 @@ export default function ApplyPage() {
           line-height: 1.7;
           margin-bottom: 36px;
         }
-
-        /* ── cards ─────────────────────────────────── */
         .mod-card {
           background: rgba(12,12,20,0.90);
           border: 1px solid rgba(88,0,229,0.18);
@@ -209,8 +197,6 @@ export default function ApplyPage() {
           margin-bottom: 16px;
           letter-spacing: -0.3px;
         }
-
-        /* ── requirements list ─────────────────────── */
         .mod-req-list {
           list-style: none;
           padding: 0;
@@ -234,8 +220,6 @@ export default function ApplyPage() {
           background: rgba(88,0,229,0.45);
           box-shadow: 0 0 8px rgba(88,0,229,0.25);
         }
-
-        /* ── form inputs ───────────────────────────── */
         .mod-label {
           display: block;
           font-size: 10px;
@@ -248,7 +232,6 @@ export default function ApplyPage() {
         .mod-label:first-child { margin-top: 0; }
         .mod-label .mod-req { color: rgba(88,0,229,0.6); margin-left: 4px; }
         .mod-label .mod-opt { color: rgba(148,163,184,0.3); margin-left: 4px; font-style: italic; text-transform: none; letter-spacing: 0; }
-
         .mod-input,
         .mod-select,
         .mod-textarea {
@@ -290,8 +273,6 @@ export default function ApplyPage() {
           resize: vertical;
           min-height: 80px;
         }
-
-        /* ── error / success ───────────────────────── */
         .mod-err {
           margin-top: 16px;
           padding: 10px 14px;
@@ -322,8 +303,6 @@ export default function ApplyPage() {
           color: rgba(255,255,255,0.35);
           line-height: 1.7;
         }
-
-        /* ── button ────────────────────────────────── */
         .mod-btn {
           width: 100%;
           margin-top: 24px;
@@ -344,8 +323,6 @@ export default function ApplyPage() {
           transform: translateY(-1px);
         }
         .mod-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-        /* ── login prompt ──────────────────────────── */
         .mod-login-card {
           text-align: center;
           padding: 40px 24px;
@@ -373,8 +350,6 @@ export default function ApplyPage() {
           box-shadow: 0 4px 28px rgba(88,0,229,0.4);
           transform: translateY(-1px);
         }
-
-        /* ── footer ────────────────────────────────── */
         .mod-footer {
           margin-top: 32px;
           display: flex;
@@ -409,7 +384,6 @@ export default function ApplyPage() {
             Global Moderators are the backbone of our community.
           </div>
 
-          {/* ── Auth gate ──────────────────────────────────────────────── */}
           {authed === false && (
             <div className="mod-card">
               <div className="mod-login-card">
@@ -421,10 +395,8 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* ── Requirements + Form ────────────────────────────────────── */}
           {authed === true && (
             <>
-              {/* Requirements */}
               <div className="mod-card">
                 <div className="mod-card-title">What we expect</div>
                 <ul className="mod-req-list">
@@ -434,7 +406,6 @@ export default function ApplyPage() {
                 </ul>
               </div>
 
-              {/* Application form */}
               <div className="mod-card">
                 {submitted ? (
                   <div className="mod-success">
@@ -449,7 +420,6 @@ export default function ApplyPage() {
                   <form onSubmit={handleSubmit}>
                     <div className="mod-card-title">Your application</div>
 
-                    {/* Username */}
                     <label className="mod-label">
                       Username on Weered<span className="mod-req">*</span>
                     </label>
@@ -462,7 +432,6 @@ export default function ApplyPage() {
                       required
                     />
 
-                    {/* Age */}
                     <label className="mod-label">
                       Age<span className="mod-req">*</span>
                     </label>
@@ -476,7 +445,6 @@ export default function ApplyPage() {
                       required
                     />
 
-                    {/* Timezone */}
                     <label className="mod-label">Timezone</label>
                     <select
                       className="mod-select"
@@ -488,7 +456,6 @@ export default function ApplyPage() {
                       ))}
                     </select>
 
-                    {/* Hours per week */}
                     <label className="mod-label">Hours available per week</label>
                     <select
                       className="mod-select"
@@ -500,7 +467,6 @@ export default function ApplyPage() {
                       ))}
                     </select>
 
-                    {/* Active lobbies */}
                     <label className="mod-label">
                       Which lobbies/games are you most active in?
                     </label>
@@ -512,7 +478,6 @@ export default function ApplyPage() {
                       rows={3}
                     />
 
-                    {/* Prior moderation */}
                     <label className="mod-label">
                       Have you moderated before? If so, where?
                     </label>
@@ -524,7 +489,6 @@ export default function ApplyPage() {
                       rows={3}
                     />
 
-                    {/* Why moderate */}
                     <label className="mod-label">
                       Why do you want to moderate Weered?<span className="mod-req">*</span>
                     </label>
@@ -537,7 +501,6 @@ export default function ApplyPage() {
                       required
                     />
 
-                    {/* Anything else */}
                     <label className="mod-label">
                       Anything else you want us to know?<span className="mod-opt">(optional)</span>
                     </label>
@@ -560,7 +523,6 @@ export default function ApplyPage() {
             </>
           )}
 
-          {/* ── Footer ─────────────────────────────────────────────────── */}
           <div className="mod-footer">
             <span>&copy; weered.ca</span>
             <nav className="mod-nav">

@@ -165,9 +165,48 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
+  const ACTIONABLE_TYPES = new Set([
+    "DM_RECEIVED", "FRIEND_REQUEST", "FRIEND_ACCEPTED", "CREW_INVITE",
+  ]);
+  const isActionable = (n: Notif) =>
+    ACTIONABLE_TYPES.has(n.type) ||
+    (!!n.actionUrl && n.actionUrl !== "/home" && n.actionUrl !== "/");
+
   const handleClick = (notif: Notif) => {
     if (!notif.read) markOneRead(notif.id);
-    if (notif.actionUrl) {
+
+    const dispatch = (detail: any) => {
+      try { window.dispatchEvent(new CustomEvent("weered:dock:open", { detail })); } catch {}
+    };
+
+    switch (notif.type) {
+      case "DM_RECEIVED": {
+        const peerId = notif.actorId || notif.meta?.fromId || "";
+        const peerName = notif.actorName || "";
+        if (peerId || peerName) dispatch({ mode: "dm", peer: { id: peerId, name: peerName } });
+        else dispatch({ tab: "dms" });
+        return;
+      }
+      case "FRIEND_REQUEST":
+      case "FRIEND_ACCEPTED":
+        dispatch({ tab: "friends" });
+        return;
+      case "CREW_INVITE": {
+        const crewId = notif.meta?.crewId;
+        if (notif.actionUrl && notif.actionUrl.startsWith("/crew/")) {
+          try { window.location.href = notif.actionUrl; } catch {}
+        } else if (crewId) {
+          try { window.location.href = `/crew/${crewId}`; } catch {}
+        } else {
+          dispatch({ tab: "crew" });
+        }
+        return;
+      }
+      default:
+        break;
+    }
+
+    if (notif.actionUrl && notif.actionUrl !== "/home" && notif.actionUrl !== "/") {
       try { window.location.href = notif.actionUrl; } catch {}
     }
   };
@@ -231,7 +270,7 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
               onClick={() => handleClick(n)}
               style={{
                 display: "flex", gap: 10, padding: "10px 14px",
-                cursor: n.actionUrl ? "pointer" : "default",
+                cursor: isActionable(n) ? "pointer" : "default",
                 background: n.read ? "transparent" : "rgba(88,0,229,.06)",
                 borderLeft: n.read ? "3px solid transparent" : "3px solid rgba(88,0,229,.5)",
                 transition: "background 0.12s",

@@ -3,18 +3,13 @@ import { prisma } from "../lib/prisma";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
-// /maps/* — D&D tactical battle maps. Map upload + grid config, token
-// CRUD, fog-of-war reveal/clear. Token moves and fog edits are also
-// broadcast over the global wss; this layer is REST-of-truth so a
-// late-joiner can hydrate the current state.
-
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   broadcastToRoom: (roomId: string, event: any) => void;
 };
 
 const MAP_PUBLIC_DIR = join(process.cwd(), "..", "web", "public", "maps");
-const MAP_MAX_BYTES = 8 * 1024 * 1024; // 8MB
+const MAP_MAX_BYTES = 8 * 1024 * 1024;
 const PUBLIC_BASE = "/maps";
 
 function ensureDir() {
@@ -40,7 +35,6 @@ async function isRoomMember(roomId: string, userId: string): Promise<boolean> {
 export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, broadcastToRoom } = opts;
 
-  // Allow up to ~12MB JSON to absorb the base64-encoded 8MB image safely
   app.addContentTypeParser("application/json", { bodyLimit: 12 * 1024 * 1024 }, (_req: any, body: any, done: any) => {
     try {
       const txt = typeof body === "string" ? body : body.toString("utf8");
@@ -48,8 +42,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     } catch (e) { done(e as Error, undefined); }
   });
 
-  // POST /maps/:roomId/upload — DM uploads a map image (base64 data URL),
-  // creates the TacticalMap row, returns the full map with empty tokens/fog
   app.post("/maps/:roomId/upload", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -95,7 +87,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, map: updated, tokens: [], fogReveals: [] });
   });
 
-  // GET /maps/:roomId — current active map for the room (latest), with tokens + fog
   app.get("/maps/:roomId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -119,7 +110,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, map, tokens, fogReveals, isDM });
   });
 
-  // PATCH /maps/:mapId — DM updates grid/fog flags/name
   app.patch("/maps/:mapId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -142,7 +132,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, map: updated });
   });
 
-  // DELETE /maps/:mapId — DM removes a map
   app.delete("/maps/:mapId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -159,9 +148,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // ── Tokens ───────────────────────────────────────────────────────────────
-
-  // POST /maps/:mapId/tokens — DM adds a token
   app.post("/maps/:mapId/tokens", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -196,7 +182,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, token });
   });
 
-  // PATCH /maps/tokens/:tokenId — update a token (DM full, owner can move own)
   app.patch("/maps/tokens/:tokenId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -212,10 +197,8 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
 
     const b: any = (req as any).body || {};
     const data: any = {};
-    // Anyone with access (DM or owner) can move
     if (Number.isFinite(b.x)) data.x = Number(b.x);
     if (Number.isFinite(b.y)) data.y = Number(b.y);
-    // Only DM can edit non-positional fields
     if (isDM) {
       if (typeof b.name === "string") data.name = b.name.slice(0, 40);
       if (typeof b.color === "string" && /^#[0-9a-fA-F]{6}$/.test(b.color)) data.color = b.color;
@@ -234,7 +217,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, token: updated });
   });
 
-  // DELETE /maps/tokens/:tokenId — DM removes a token
   app.delete("/maps/tokens/:tokenId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -251,9 +233,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // ── Fog of war ───────────────────────────────────────────────────────────
-
-  // POST /maps/:mapId/fog/reveal — DM paints reveal cells (array of {x,y})
   app.post("/maps/:mapId/fog/reveal", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
@@ -282,7 +261,6 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, added: clean.length });
   });
 
-  // POST /maps/:mapId/fog/clear — DM removes reveal cells (or all)
   app.post("/maps/:mapId/fog/clear", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });

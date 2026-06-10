@@ -2,11 +2,6 @@
 
 import React from "react";
 
-/**
- * Shared empty-state component. Themed via CSS vars, with Weered voice.
- * Use as: <EmptyState title="Quiet in here." hint="Drop a line." />
- * Optional: icon (emoji or ReactNode), action (button/link)
- */
 export default function EmptyState({
   title,
   hint,

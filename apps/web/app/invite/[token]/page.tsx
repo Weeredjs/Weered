@@ -62,7 +62,6 @@ export default function InvitePage() {
     setState("accepting");
     const tok = localStorage.getItem("weered_token");
     if (!tok) {
-      // Not logged in — send to login with return URL
       router.push(`/login?next=/invite/${token}`);
       return;
     }
@@ -107,7 +106,6 @@ export default function InvitePage() {
     boxShadow: "0 24px 80px rgba(0,0,0,.6)",
   };
 
-  // Logo/wordmark
   const Logo = () => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
       <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(124,58,237,.30)", border: "1px solid rgba(124,58,237,.40)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900 }}>w</div>
@@ -181,7 +179,6 @@ export default function InvitePage() {
       <div style={cardStyle}>
         <Logo />
 
-        {/* Type icon + label */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
           <div style={{ fontSize: 52 }}>{TYPE_ICON[invite.type] || "🔗"}</div>
           <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>
@@ -189,7 +186,6 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* Target */}
         <div style={{ textAlign: "center" }}>
           <div style={{ fontWeight: 900, fontSize: 22, letterSpacing: "-.3px", marginBottom: 4 }}>
             {invite.type === "PLATFORM" ? "Join Weered" : invite.targetName || invite.targetId || "Unknown"}
@@ -204,13 +200,11 @@ export default function InvitePage() {
           )}
         </div>
 
-        {/* Meta */}
         <div style={{ display: "flex", gap: 16, fontSize: 12, opacity: 0.45 }}>
           {invite.maxUses > 1 && <span>{usesLeft} use{usesLeft !== 1 ? "s" : ""} left</span>}
           {expiry && <span>Expires {expiry.toLocaleDateString()}</span>}
         </div>
 
-        {/* CTA */}
         <button
           onClick={accept}
           disabled={state === "accepting"}

@@ -1,9 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /groups/* — Discord-style group message threads. Any member can read or
-// post; OWNER can rename and remove others. Membership rows hold per-user
-// lastReadAt so unread counts stay scoped per viewer.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   resolveUserId: (raw: string) => Promise<string>;
@@ -14,14 +11,13 @@ type Opts = {
   createNotification?: (opts: any) => Promise<void>;
 };
 
-const MAX_MEMBERS = 24;       // viewer + 23 others
+const MAX_MEMBERS = 24;
 const MAX_BODY    = 2000;
 const MAX_NAME    = 60;
 
 export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, dmDeliver, isUserOnline, sendPush, resolveMentions, createNotification } = opts;
 
-  // Helper: fetch active member IDs for a thread. Excludes left members.
   async function activeMemberIds(threadId: string): Promise<string[]> {
     const rows = await (prisma as any).groupMember.findMany({
       where: { threadId, leftAt: null },
@@ -30,7 +26,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     return rows.map((r: any) => r.userId);
   }
 
-  // Helper: ensure viewer is an active member, return membership row
   async function requireMember(threadId: string, userId: string) {
     const m = await (prisma as any).groupMember.findUnique({
       where: { threadId_userId: { threadId, userId } },
@@ -45,8 +40,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   }
 
-  // GET /groups — list threads where the viewer is an active member, with
-  // last message preview, member previews, and the viewer's unread count.
   app.get("/groups", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -73,8 +66,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      // Compute unread per thread (messages newer than membership.lastReadAt
-      // that the viewer didn't send themselves).
       const threadIds = memberships.map((m: any) => m.threadId);
       const unreadCounts: Record<string, number> = {};
       if (threadIds.length) {
@@ -88,9 +79,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
           },
           _count: { id: true },
         }).catch(() => [] as any[]);
-        // groupBy with per-row "createdAt > lastReadAt" isn't directly expressible,
-        // so fall back to per-thread counts where each thread's lastReadAt gates.
-        // Simpler approach: per thread count.
         for (const m of memberships) {
           const c = await (prisma as any).groupMessage.count({
             where: {
@@ -139,8 +127,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // POST /groups — create a thread. Body: { name?, memberIds: string[] }.
-  // Viewer auto-included as OWNER. Empty memberIds is rejected (use DMs).
   app.post("/groups", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -154,7 +140,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      // Verify member ids resolve to real users
       const users = await (prisma as any).user.findMany({
         where: { id: { in: memberIds } },
         select: { id: true },
@@ -210,7 +195,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // GET /groups/:id/messages — thread history (last 50). Marks read on fetch.
   app.get("/groups/:id/messages", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -248,8 +232,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // POST /groups/:id/messages — send. Broadcasts to all online members and
-  // pushes to offline ones.
   app.post("/groups/:id/messages", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -261,7 +243,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     const m = await requireMember(id, viewer.id);
     if (!m) return reply.code(403).send({ error: "Not a member" });
 
-    // Reply snapshot — only allowed to a message in the same thread.
     let replyData: any = {};
     const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
     if (rawReplyToId) {
@@ -312,7 +293,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       };
       deliverToMembers(memberIds, payload);
 
-      // Push to offline members (skip sender).
       const offlinePushes = memberIds
         .filter(uid => uid !== viewer.id && !isUserOnline(uid))
         .map(uid => sendPush(uid, {
@@ -323,8 +303,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         }).catch(() => {}));
       Promise.all(offlinePushes).catch(() => {});
 
-      // @mention notifications — only ping mentioned users who are
-      // active members of this thread.
       if (resolveMentions && createNotification) {
         (async () => {
           try {
@@ -356,7 +334,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // PATCH /groups/:id/messages/:msgId — edit own message within 15 min.
   app.patch("/groups/:id/messages/:msgId", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -397,8 +374,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // DELETE /groups/:id/messages/:msgId — soft delete (own message, or any
-  // for OWNER).
   app.delete("/groups/:id/messages/:msgId", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -433,7 +408,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // PATCH /groups/:id/read — mark thread read up to now.
   app.patch("/groups/:id/read", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -452,7 +426,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // PATCH /groups/:id — rename (OWNER only).
   app.patch("/groups/:id", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -477,7 +450,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // POST /groups/:id/members — add members (OWNER only).
   app.post("/groups/:id/members", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -491,7 +463,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     if (cleaned.length === 0) return reply.code(400).send({ error: "No members to add" });
 
     try {
-      // Existing rows including soft-left
       const existing = await (prisma as any).groupMember.findMany({
         where: { threadId: id, userId: { in: cleaned } },
       });
@@ -532,7 +503,6 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // DELETE /groups/:id/members/:userId — kick (OWNER) or leave (self).
   app.delete("/groups/:id/members/:userId", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import LobbyBranding, { type BrandingValue } from "../../../components/LobbyBranding";
 import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -38,7 +39,6 @@ function slugify(s: string): string {
 export default function CreateLobbyPage() {
   const router = useRouter();
 
-  // Auth + tier check
   const [me, setMe] = useState<any>(null);
   const [tier, setTier] = useState("INNOCENT");
   const [loading, setLoading] = useState(true);
@@ -52,30 +52,37 @@ export default function CreateLobbyPage() {
       setLoading(false);
     }).catch(() => { setLoading(false); router.replace("/subscribe"); });
 
-    // Also get user from localStorage as fallback
     try {
       const u = JSON.parse(localStorage.getItem("weered_user") || "null");
       if (u) { setMe(u); setTier(String(u?.tier || "INNOCENT").toUpperCase()); }
     } catch {}
   }, []);
 
-  // Form state
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugManual, setSlugManual] = useState(false);
   const [description, setDescription] = useState("");
-  const [accent, setAccent] = useState("#5800E5");
+  const [accent, setAccent] = useState("#7c3aed");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
+
+  const branding: BrandingValue = { name, description, accentColor: accent, logoUrl, bannerUrl };
+  const patchBranding = (p: Partial<BrandingValue>) => {
+    if (p.name !== undefined) setName(p.name);
+    if (p.description !== undefined) setDescription(p.description);
+    if (p.accentColor !== undefined) setAccent(p.accentColor);
+    if (p.logoUrl !== undefined) setLogoUrl(p.logoUrl);
+    if (p.bannerUrl !== undefined) setBannerUrl(p.bannerUrl);
+  };
   const [moduleType, setModuleType] = useState("NONE");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "reserved">("idle");
 
-  // Auto-generate slug from name unless manually edited
   useEffect(() => {
     if (!slugManual && name) setSlug(slugify(name));
   }, [name, slugManual]);
 
-  // Debounced slug availability check
   useEffect(() => {
     if (!slug || slug.length < 2) { setSlugStatus("idle"); return; }
     setSlugStatus("checking");
@@ -106,6 +113,8 @@ export default function CreateLobbyPage() {
         name: name.trim(),
         description: description.trim(),
         accentColor: accent,
+        logoUrl: logoUrl || undefined,
+        bannerUrl: bannerUrl || undefined,
         moduleType,
       }),
     });
@@ -159,9 +168,8 @@ export default function CreateLobbyPage() {
 
   return (
     <div style={{ height: "100%", overflowY: "auto", background: "#050810", color: "rgba(243,244,246,.92)", padding: "40px 20px 80px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+      <div style={{ maxWidth: 880, margin: "0 auto" }}>
 
-        {/* Header */}
         <div style={{ marginBottom: 40 }}>
           <button
             onClick={() => router.push("/home")}
@@ -177,29 +185,10 @@ export default function CreateLobbyPage() {
           </div>
         </div>
 
-        {/* Name */}
         <div style={{ marginBottom: 28 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "rgba(255,255,255,.35)", marginBottom: 8 }}>
-            Lobby Name
-          </label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Night Shift Gaming"
-            maxLength={50}
-            style={{
-              width: "100%", padding: "12px 16px", borderRadius: 10,
-              background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.10)",
-              color: "rgba(243,244,246,.92)", fontSize: 15, fontWeight: 600,
-              outline: "none", fontFamily: "inherit", boxSizing: "border-box",
-              transition: "border-color .15s",
-            }}
-            onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(88,0,229,.4)"}
-            onBlur={e => (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.10)"}
-          />
+          <LobbyBranding value={branding} onChange={patchBranding} />
         </div>
 
-        {/* Slug */}
         <div style={{ marginBottom: 28 }}>
           <label style={{ display: "block", fontSize: 11, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "rgba(255,255,255,.35)", marginBottom: 8 }}>
             URL Slug
@@ -231,58 +220,6 @@ export default function CreateLobbyPage() {
           </div>
         </div>
 
-        {/* Description */}
-        <div style={{ marginBottom: 28 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "rgba(255,255,255,.35)", marginBottom: 8 }}>
-            Description <span style={{ fontWeight: 400, opacity: 0.5 }}>optional</span>
-          </label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="What's this lobby about?"
-            maxLength={200}
-            rows={3}
-            style={{
-              width: "100%", padding: "12px 16px", borderRadius: 10,
-              background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.10)",
-              color: "rgba(243,244,246,.92)", fontSize: 13,
-              outline: "none", fontFamily: "inherit", boxSizing: "border-box",
-              resize: "vertical", minHeight: 72,
-              transition: "border-color .15s",
-            }}
-            onFocus={e => (e.target as HTMLTextAreaElement).style.borderColor = "rgba(88,0,229,.4)"}
-            onBlur={e => (e.target as HTMLTextAreaElement).style.borderColor = "rgba(255,255,255,.10)"}
-          />
-          <div style={{ fontSize: 10, color: "rgba(148,163,184,.3)", marginTop: 4, textAlign: "right" }}>
-            {description.length}/200
-          </div>
-        </div>
-
-        {/* Accent Color */}
-        <div style={{ marginBottom: 28 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "rgba(255,255,255,.35)", marginBottom: 10 }}>
-            Accent Color
-          </label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {ACCENT_PRESETS.map(c => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setAccent(c)}
-                style={{
-                  width: 32, height: 32, borderRadius: 8, border: "none", cursor: "pointer",
-                  background: c,
-                  outline: accent === c ? `2px solid ${c}` : "2px solid transparent",
-                  outlineOffset: 2,
-                  transition: "outline .12s, transform .1s",
-                  transform: accent === c ? "scale(1.1)" : "scale(1)",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Module Type */}
         <div style={{ marginBottom: 36 }}>
           <label style={{ display: "block", fontSize: 11, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "rgba(255,255,255,.35)", marginBottom: 10 }}>
             Primary Module
@@ -316,7 +253,6 @@ export default function CreateLobbyPage() {
           </div>
         </div>
 
-        {/* Preview Card */}
         {name && (
           <div style={{ marginBottom: 32 }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 800, letterSpacing: ".5px", textTransform: "uppercase", color: "rgba(255,255,255,.35)", marginBottom: 10 }}>
@@ -360,7 +296,6 @@ export default function CreateLobbyPage() {
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div style={{
             marginBottom: 16, padding: "12px 16px", borderRadius: 10,
@@ -371,7 +306,6 @@ export default function CreateLobbyPage() {
           </div>
         )}
 
-        {/* Create Button */}
         <button
           type="button"
           onClick={handleCreate}

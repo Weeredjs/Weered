@@ -1,13 +1,7 @@
-﻿/**
- * Shared Bungie activity polling ? used by both challengeWorker and
- * tournament auto-detect. Single source of truth for rate-limiting,
- * activity fetch shape, and BungieActivityLog upsert behavior.
- */
+﻿
 
 import type { PrismaClient } from "@prisma/client";
 import { resolveActivity } from "../manifest";
-
-// ?? Rate Limiter ????????????????????????????????????????????????????????????
 
 class BungieRateLimiter {
   private tokens: number;
@@ -44,8 +38,6 @@ class BungieRateLimiter {
 
 const rateLimiter = new BungieRateLimiter(20);
 
-// ?? Bungie API helper ???????????????????????????????????????????????????????
-
 let _bungieApiKey = "";
 const BUNGIE_ROOT = "https://www.bungie.net/Platform";
 
@@ -57,10 +49,9 @@ export async function bungieGet(path: string): Promise<any> {
   const res = await fetch(`${BUNGIE_ROOT}${path}`, {
     headers: { "X-API-Key": _bungieApiKey },
   });
-  return res.json();
+  const _t = await res.text();
+  try { return JSON.parse(_t); } catch { return null; }
 }
-
-// ?? Mode names ??????????????????????????????????????????????????????????????
 
 export const MODE_NAMES: Record<number, string> = {
   0: "None", 2: "Story", 3: "Strike", 4: "Raid", 5: "PvP", 6: "Patrol",
@@ -71,8 +62,6 @@ export const MODE_NAMES: Record<number, string> = {
   75: "Dares", 84: "Quickplay",
 };
 
-// ?? Types ???????????????????????????????????????????????????????????????????
-
 export type ActivityEntry = {
   activityInstanceId: string;
   activityHash: string;
@@ -82,13 +71,11 @@ export type ActivityEntry = {
   deaths: number;
   assists: number;
   score: number;
-  standing: number; // 0=Victory
+  standing: number;
   completed: boolean;
   duration: number;
   weaponKills: { hash: string; kills: number }[];
 };
-
-// ?? Fetch: activity history ?????????????????????????????????????????????????
 
 export async function fetchRecentActivities(
   membershipType: string | number,
@@ -119,16 +106,12 @@ export async function fetchRecentActivities(
   });
 }
 
-// ?? Fetch: PGCR weapon kills ????????????????????????????????????????????????
-
 export type PgcrDetail = {
   weaponKills: { hash: string; kills: number }[];
   selectedSkullHashes: string[];
   activityDifficultyTier: number | null;
 };
 
-// Backward-compatible: returns weapon kills as before. Use fetchPGCRDetail
-// when callers need skull hashes / difficulty tier from the same call.
 export async function fetchPGCR(
   activityInstanceId: string,
   membershipId: string,
@@ -159,8 +142,7 @@ export async function fetchPGCRDetail(
     const skulls = Array.isArray(r.selectedSkullHashes)
       ? r.selectedSkullHashes.map((h: any) => String(h)).filter((h: string) => h && h !== "0")
       : [];
-    // Dedupe (PGCR often repeats the same hash)
-    const uniqueSkulls = Array.from(new Set(skulls));
+    const uniqueSkulls = Array.from(new Set(skulls)) as string[];
     return {
       weaponKills,
       selectedSkullHashes: uniqueSkulls,
@@ -168,16 +150,6 @@ export async function fetchPGCRDetail(
     };
   } catch { return empty; }
 }
-
-// ?? High-level: poll a user, upsert activity log, return entries ????????????
-//
-// Used by:
-// - challengeWorker (objective evaluation)
-// - tournamentAutoDetect (match outcome lookup)
-//
-// `force=true` skips no-op short-circuits and always pulls fresh from Bungie.
-// Returns the raw ActivityEntry[] (newest first) for the most recently played
-// character. Side effect: upserts each entry into BungieActivityLog.
 
 export async function pollAndStoreActivities(
   prisma: PrismaClient,
@@ -196,7 +168,6 @@ export async function pollAndStoreActivities(
   const charIds: string[] = profileRes?.Response?.profile?.data?.characterIds || [];
   if (charIds.length === 0) return [];
 
-  // Sort characters by dateLastPlayed desc ? most recently played first.
   const charData = profileRes?.Response?.characters?.data || {};
   const sortedCharIds = charIds.slice().sort((a, b) => {
     const da = new Date(charData[a]?.dateLastPlayed || 0).getTime();
@@ -208,7 +179,6 @@ export async function pollAndStoreActivities(
     acct.platform, acct.externalId, sortedCharIds[0], opts.count ?? 25
   );
 
-  // Upsert into log so the JOIN-based detector can find this match.
   for (const act of activities) {
     if (!act.activityInstanceId) continue;
     const actDef = resolveActivity(act.activityHash);

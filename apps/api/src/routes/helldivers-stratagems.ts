@@ -1,28 +1,18 @@
 import type { FastifyInstance } from "fastify";
 
-// /helldivers/stratagems/* — Stratagem reference list for the Helldivers 2
-// lobby. Hardcoded so we never depend on flaky community APIs; the stratagem
-// catalog changes infrequently (only on warbond drops). Arrow codes use
-// unicode arrows ↑↓←→ which render BIG and bold in the panel UI — these
-// are iconic to HD2 and players input them via WASD on PC.
-//
-// Categories: Eagle, Orbital, Defensive, Supply, Mech, Backpack, Mission.
-// usageType: "Offensive" | "Defensive" | "Supply" | "Vehicle" | "Mission".
-
 type Stratagem = {
   slug: string;
   name: string;
-  code: string;          // e.g. "↑→↓↓↓"
-  category: string;      // Eagle, Orbital, Defensive, Supply, Mech, Backpack, Mission
-  usageType: string;     // Offensive | Defensive | Supply | Vehicle | Mission
-  cooldown: number;      // seconds
-  uses: number;          // -1 = unlimited
-  unlockLevel: number;   // 0 = starter
+  code: string;
+  category: string;
+  usageType: string;
+  cooldown: number;
+  uses: number;
+  unlockLevel: number;
   description: string;
 };
 
 const STRATAGEMS: Stratagem[] = [
-  // ── Mission stratagems (always equipped, free) ─────────────────────────
   { slug: "reinforce", name: "Reinforce", code: "↑↓→←↑", category: "Mission", usageType: "Mission", cooldown: 0, uses: -1, unlockLevel: 0, description: "Drop a fresh Helldiver from orbit. The backbone of every operation — reinforcements are the only way the squad stays alive." },
   { slug: "sos-beacon", name: "SOS Beacon", code: "↑↓→↑", category: "Mission", usageType: "Mission", cooldown: 0, uses: -1, unlockLevel: 0, description: "Deploy a beacon that requests reinforcement from any nearby Helldivers in the galaxy." },
   { slug: "resupply", name: "Resupply", code: "↓↓↑→", category: "Mission", usageType: "Supply", cooldown: 180, uses: -1, unlockLevel: 0, description: "Drop a resupply pod with ammo, grenades, and stims for the whole squad." },
@@ -30,7 +20,6 @@ const STRATAGEMS: Stratagem[] = [
   { slug: "seismic-probe", name: "Seismic Probe", code: "↑↑←→↓↓", category: "Mission", usageType: "Mission", cooldown: 0, uses: -1, unlockLevel: 0, description: "Mission-specific seismic survey device. Calls in a probe that must be defended while it scans." },
   { slug: "upload-data", name: "Upload Data", code: "←→↑↑↑", category: "Mission", usageType: "Mission", cooldown: 0, uses: -1, unlockLevel: 0, description: "Initiates a data upload at a designated terminal. Mission-specific objective." },
 
-  // ── Eagle Stratagems (call-in airstrikes) ──────────────────────────────
   { slug: "eagle-strafing-run", name: "Eagle Strafing Run", code: "↑→→", category: "Eagle", usageType: "Offensive", cooldown: 8, uses: 3, unlockLevel: 2, description: "Eagle-1 makes a low strafing pass with autocannon fire. Quick to deploy, devastating to light enemies in a line." },
   { slug: "eagle-airstrike", name: "Eagle Airstrike", code: "↑→↓→", category: "Eagle", usageType: "Offensive", cooldown: 8, uses: 2, unlockLevel: 4, description: "Eagle-1 drops a stick of bombs across a designated line. The all-purpose airstrike for clearing groups and fortifications." },
   { slug: "eagle-cluster-bomb", name: "Eagle Cluster Bomb", code: "↑→↓↓→", category: "Eagle", usageType: "Offensive", cooldown: 8, uses: 4, unlockLevel: 6, description: "Eagle-1 drops cluster munitions over a wide area. Excellent for scattered light enemies, terrible for friendly Helldivers." },
@@ -39,7 +28,6 @@ const STRATAGEMS: Stratagem[] = [
   { slug: "eagle-110mm-rocket-pods", name: "Eagle 110MM Rocket Pods", code: "↑→↑←", category: "Eagle", usageType: "Offensive", cooldown: 8, uses: 3, unlockLevel: 13, description: "Eagle-1 fires a salvo of guided 110mm rockets at a designated target. Strong against single armored targets." },
   { slug: "eagle-500kg-bomb", name: "Eagle 500KG Bomb", code: "↑→↓↓↓", category: "Eagle", usageType: "Offensive", cooldown: 8, uses: 1, unlockLevel: 15, description: "Eagle-1 drops a single colossal 500kg bomb. The signature payload — small blast radius, massive damage at the epicenter." },
 
-  // ── Orbital Stratagems (call-in from Super Destroyer) ──────────────────
   { slug: "orbital-precision-strike", name: "Orbital Precision Strike", code: "→→↑", category: "Orbital", usageType: "Offensive", cooldown: 100, uses: -1, unlockLevel: 0, description: "A single high-velocity tungsten round dropped from orbit. The starter orbital — accurate and reliable against single targets." },
   { slug: "orbital-gatling-barrage", name: "Orbital Gatling Barrage", code: "→↓←↑↑", category: "Orbital", usageType: "Offensive", cooldown: 80, uses: -1, unlockLevel: 2, description: "Sustained autocannon fire from orbit over a small area. Great anti-infantry, modest cooldown." },
   { slug: "orbital-airburst-strike", name: "Orbital Airburst Strike", code: "→→→", category: "Orbital", usageType: "Offensive", cooldown: 120, uses: -1, unlockLevel: 4, description: "Three airburst rounds detonate above the target zone, raining shrapnel. Ideal against tightly packed light infantry." },
@@ -52,7 +40,6 @@ const STRATAGEMS: Stratagem[] = [
   { slug: "orbital-ems-strike", name: "Orbital EMS Strike", code: "→→←↓", category: "Orbital", usageType: "Defensive", cooldown: 75, uses: -1, unlockLevel: 5, description: "An EMP burst that stuns enemies in the impact zone. Doesn't damage but buys precious seconds." },
   { slug: "orbital-smoke-strike", name: "Orbital Smoke Strike", code: "→→↓↑", category: "Orbital", usageType: "Defensive", cooldown: 100, uses: -1, unlockLevel: 5, description: "Deploys smoke from orbit to obscure line of sight across a wide area." },
 
-  // ── Defensive (sentries, mines, emplacements) ──────────────────────────
   { slug: "machine-gun-sentry", name: "A/MG-43 Machine Gun Sentry", code: "↓↑→→↑", category: "Defensive", usageType: "Defensive", cooldown: 180, uses: -1, unlockLevel: 2, description: "An automated sentry that lays down medium-machine-gun fire on detected hostiles. The starter turret." },
   { slug: "gatling-sentry", name: "A/GL-18 Gatling Sentry", code: "↓↑→←", category: "Defensive", usageType: "Defensive", cooldown: 180, uses: -1, unlockLevel: 5, description: "Higher rate of fire than the MG sentry, shorter ammo supply. Shreds Terminid swarms." },
   { slug: "mortar-sentry", name: "A/M-12 Mortar Sentry", code: "↓↑→→↓", category: "Defensive", usageType: "Defensive", cooldown: 180, uses: -1, unlockLevel: 9, description: "Indirect-fire sentry that lobs explosive rounds at distant targets. Will absolutely kill the squad if used carelessly." },
@@ -65,7 +52,6 @@ const STRATAGEMS: Stratagem[] = [
   { slug: "tesla-tower", name: "Tesla Tower", code: "↓↑→↑←→", category: "Defensive", usageType: "Defensive", cooldown: 240, uses: -1, unlockLevel: 16, description: "Stationary tesla coil that arcs lightning to nearby enemies. Will zap the squad — keep your distance." },
   { slug: "hmg-emplacement", name: "HMG Emplacement", code: "↓↑←→→←", category: "Defensive", usageType: "Defensive", cooldown: 180, uses: -1, unlockLevel: 8, description: "Manned heavy machine gun emplacement. Massive damage output but you're locked in place." },
 
-  // ── Supply / Backpack / Weapon ─────────────────────────────────────────
   { slug: "machine-gun", name: "MG-43 Machine Gun", code: "↓←↓↑→", category: "Supply", usageType: "Supply", cooldown: 480, uses: -1, unlockLevel: 0, description: "Belt-fed medium machine gun. The bread-and-butter support weapon for Terminid sweeps." },
   { slug: "anti-materiel-rifle", name: "APW-1 Anti-Materiel Rifle", code: "↓←→↑↓", category: "Supply", usageType: "Supply", cooldown: 480, uses: -1, unlockLevel: 2, description: "Bolt-action high-velocity rifle. Pierces medium armor — ideal against Devastators and Brood Commanders." },
   { slug: "stalwart", name: "M-105 Stalwart", code: "↓←↓↑↑←", category: "Supply", usageType: "Supply", cooldown: 480, uses: -1, unlockLevel: 2, description: "Lightweight machine gun you can reload while moving. Higher rate of fire than the MG-43." },
@@ -80,7 +66,6 @@ const STRATAGEMS: Stratagem[] = [
   { slug: "arc-thrower", name: "ARC-3 Arc Thrower", code: "↓→↓↑←←", category: "Supply", usageType: "Supply", cooldown: 480, uses: -1, unlockLevel: 17, description: "Chain-lightning weapon with infinite ammo. Arcs between enemies; will arc to teammates if they're close." },
   { slug: "quasar-cannon", name: "LAS-99 Quasar Cannon", code: "↓↓↑←→", category: "Supply", usageType: "Supply", cooldown: 480, uses: -1, unlockLevel: 18, description: "Charge-up energy anti-tank weapon. Infinite ammo, long charge time per shot. The everyman's spear." },
 
-  // ── Backpack ───────────────────────────────────────────────────────────
   { slug: "guard-dog", name: "AX/LAS-5 Guard Dog (Rover)", code: "↓↑←↑→→", category: "Backpack", usageType: "Defensive", cooldown: 480, uses: -1, unlockLevel: 7, description: "An autonomous laser drone backpack that engages nearby light enemies. Don't forget it's there — it can shoot allies." },
   { slug: "guard-dog-bullet", name: "AX/AR-23 Guard Dog", code: "↓↑←↑→↓", category: "Backpack", usageType: "Defensive", cooldown: 480, uses: -1, unlockLevel: 10, description: "Ballistic version of the Guard Dog — ammo-fed, harder hitting than the laser version." },
   { slug: "shield-generator-pack", name: "SH-32 Shield Generator Pack", code: "↓↑→→←→", category: "Backpack", usageType: "Defensive", cooldown: 480, uses: -1, unlockLevel: 13, description: "Personal shield bubble backpack. Recharges over time. Lifesaver against Automaton ranged fire." },
@@ -88,21 +73,16 @@ const STRATAGEMS: Stratagem[] = [
   { slug: "ballistic-shield", name: "SH-20 Ballistic Shield Backpack", code: "↓←↓↓↑←", category: "Backpack", usageType: "Defensive", cooldown: 480, uses: -1, unlockLevel: 9, description: "A deployable ballistic shield carried on the back. Switch to one-handed sidearm to use it." },
   { slug: "jump-pack", name: "LIFT-850 Jump Pack", code: "↓↑↑↓↑", category: "Backpack", usageType: "Vehicle", cooldown: 480, uses: -1, unlockLevel: 8, description: "Single-charge jetpack that boosts the user upward. Cooldown between jumps. Don't aim into a wall." },
 
-  // ── Mech / Exosuit ─────────────────────────────────────────────────────
   { slug: "exosuit-emancipator", name: "EXO-49 Emancipator Exosuit", code: "↓←↓↑→→", category: "Mech", usageType: "Vehicle", cooldown: 600, uses: 2, unlockLevel: 25, description: "Twin-autocannon exosuit. Heavy armor, devastating firepower, no reload between drops." },
   { slug: "exosuit-patriot", name: "EXO-45 Patriot Exosuit", code: "↓←↓↑→↓", category: "Mech", usageType: "Vehicle", cooldown: 600, uses: 2, unlockLevel: 18, description: "Minigun + rocket-pod exosuit. The original Helldivers mech, balanced for general combat." },
 ];
 
-// Index by slug for fast lookup
 const BY_SLUG = new Map<string, Stratagem>();
 STRATAGEMS.forEach(s => BY_SLUG.set(s.slug, s));
 
-// Build category list once at module load (cheap)
 const CATEGORIES = Array.from(new Set(STRATAGEMS.map(s => s.category)));
 
 export default async function helldiversStratagemsRoutes(app: FastifyInstance) {
-  // GET /helldivers/stratagems — full list, optionally filtered.
-  // Query: ?category=Eagle&usage=Offensive&maxLevel=15&search=eagle
   app.get("/helldivers/stratagems", async (req, reply) => {
     const q: any = (req as any).query || {};
     const category = q.category ? String(q.category) : null;
@@ -129,7 +109,6 @@ export default async function helldiversStratagemsRoutes(app: FastifyInstance) {
     });
   });
 
-  // GET /helldivers/stratagems/:slug — single stratagem detail.
   app.get("/helldivers/stratagems/:slug", async (req, reply) => {
     const slug = String((req as any).params?.slug || "").toLowerCase();
     const s = BY_SLUG.get(slug);

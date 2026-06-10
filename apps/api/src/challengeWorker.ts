@@ -1,9 +1,3 @@
-/**
- * Destiny Meta-Game Launcher — Challenge Tracking Worker
- *
- * Polls Bungie API for enrolled players' activity history,
- * evaluates objectives, updates progress, and awards rewards.
- */
 
 import { PrismaClient } from "@prisma/client";
 import { resolveActivity, resolveItem } from "./manifest";
@@ -18,11 +12,7 @@ import {
 } from "./lib/bungieActivities";
 import { completeTournament } from "./lib/tournamentComplete";
 
-// Re-export so existing import sites (index.ts) keep working.
 export const setBungieApiKey = _setBungieApiKey;
-
-
-// ── Types ───────────────────────────────────────────────────────────────────
 
 type ObjectiveSpec = {
   id: string;
@@ -32,10 +22,10 @@ type ObjectiveSpec = {
   filters: {
     modes?: number[];
     activityHashes?: string[];
+    requiredModifiers?: string[];
     weaponSubTypes?: number[];
     weaponHashes?: string[];
     requireCompletion?: boolean;
-    activityHashes?: string[];
     requireWin?: boolean;
     maxDuration?: number;
     minKills?: number;
@@ -48,20 +38,9 @@ type ObjProgress = {
   current: number;
   target: number;
   completed: boolean;
-  // For streak tracking
   currentStreak?: number;
 };
 
-
-
-
-// ── Objective evaluator ─────────────────────────────────────────────────────
-
-// Skull/modifier hashes that signal Master+ tier (Difficult Combatants /
-// Deadly Combatants / Deadly element Threats). Used as a fallback when
-// activityDifficultyTier is unreliable across activity types — matchmade
-// Ultimate Ops can report tier=2 even though gameplay difficulty is Ultimate.
-// Source: skulls manifest scan, 2026-05-08. See project_d2_skull_system.md.
 const HIGH_TIER_MARKER_HASHES = new Set<string>([
   "1288529377", "3273465074", "510222748", "3237237808", "3237237809", "3237237811", "518782643", "3352453709", "1282797377", "1282797378", "1282797379", "1282797380", "1282797381", "3649914542", "1957676549", "426853779", "3191180704", "3191180705", "3191180706", "3191180710", "3191180711", "56643583", "3272021286", "1288529376", "1806613733", "198058552", "198058553", "198058554", "3103802699", "567947480", "2735568802", "173444685", "2084001784", "2084001786", "2084001787", "2084001788", "2084001789", "3168893556", "2419549505", "2419549506", "2419549507", "2419549508", "2419549509", "2907154606", "2284069897", "3350802550", "307925599", "431730392", "3514038500", "320183569", "3870674195"
 ]);
@@ -73,9 +52,6 @@ function hasHighTierMarker(modifierHashes: string[]): boolean {
 
 function matchesFilters(activity: ActivityEntry, filters: ObjectiveSpec["filters"]): boolean {
   if (filters.modes?.length && !filters.modes.includes(activity.mode)) return false;
-  // Activity-hash whitelist — when present, the run\'s activityHash must be
-  // in the set. Lets staff curate "Hand-Picked GM Strikes" challenges scoped
-  // to specific maps. Empty array == no filter.
   if (filters.activityHashes && filters.activityHashes.length > 0) {
     if (!filters.activityHashes.includes(String(activity.activityHash))) return false;
   }
@@ -88,12 +64,16 @@ function matchesFilters(activity: ActivityEntry, filters: ObjectiveSpec["filters
     const kd = activity.deaths > 0 ? activity.kills / activity.deaths : activity.kills;
     if (kd < filters.minKd) return false;
   }
+  if (filters.requiredModifiers && filters.requiredModifiers.length > 0) {
+    const mods: string[] = ((activity as any).modifierHashes as string[]) || [];
+    const have = new Set(mods.map(String));
+    for (const req of filters.requiredModifiers) {
+      if (!have.has(String(req))) return false;
+    }
+  }
   return true;
 }
 
-// Definition-level modifier + tier check. Applied AFTER per-objective filters
-// pass — the activity's modifier set must include all required modifier
-// hashes and meet the difficulty tier. Empty/null requirements always pass.
 function definitionRequirementsMet(
   activityModifierHashes: string[],
   activityDifficultyTier: number | null,
@@ -101,11 +81,7 @@ function definitionRequirementsMet(
   requireDifficultyTier: number | null,
 ): boolean {
   if (requireDifficultyTier != null) {
-    // Primary path: trust the integer tier when it's a sensible value.
     const tierOk = activityDifficultyTier != null && activityDifficultyTier >= requireDifficultyTier;
-    // Fallback path: when requiring Master+ (tier 4+), accept activities that
-    // carry a Difficult/Deadly Combatants or Deadly Threat skull, since those
-    // are reliable across activity types where tier integers vary.
     const markerOk = requireDifficultyTier >= 4 && hasHighTierMarker(activityModifierHashes || []);
     if (!tierOk && !markerOk) return false;
   }
@@ -131,7 +107,6 @@ function evaluateObjective(
 
   for (const act of activities) {
     if (!matchesFilters(act, objective.filters)) {
-      // Reset streak on non-matching if streak-based
       if (objective.type === "win_streak") currentStreak = 0;
       continue;
     }
@@ -148,13 +123,11 @@ function evaluateObjective(
           if (weaponHashes.size > 0 && weaponHashes.has(w.hash)) {
             current += w.kills;
           } else if (weaponSubTypes.size > 0) {
-            // Resolve weapon hash against manifest to check itemSubType
             const wDef = resolveItem(w.hash);
             if (wDef && weaponSubTypes.has(wDef.itemSubType)) {
               current += w.kills;
             }
           } else if (weaponHashes.size === 0 && weaponSubTypes.size === 0) {
-            // No filter — count all weapon kills
             current += w.kills;
           }
         }
@@ -207,9 +180,6 @@ function evaluateObjective(
   };
 }
 
-
-
-// Check if any enrollments need weapon kill data (lazy — only fetch PGCR when needed)
 function needsModifierData(enrollments: any[]): boolean {
   for (const e of enrollments) {
     const def = e.instance?.definition;
@@ -217,6 +187,11 @@ function needsModifierData(enrollments: any[]): boolean {
     const reqs = (def.requiredModifiers as string[]) || [];
     if (reqs.length > 0) return true;
     if (def.requireDifficultyTier != null) return true;
+    const objectives = (def.objectives as any[]) || [];
+    for (const o of objectives) {
+      const om = (o?.filters?.requiredModifiers as string[]) || [];
+      if (om.length > 0) return true;
+    }
   }
   return false;
 }
@@ -231,12 +206,8 @@ function needsWeaponData(enrollments: any[]): boolean {
   return false;
 }
 
-// ── Main worker ─────────────────────────────────────────────────────────────
-
-const BATCH_SIZE = 50; // Enrollments per cycle
-const WORKER_INTERVAL = 30_000; // 30 seconds
-
-// ── WS notification callback type ──────────────────────────────────────────
+const BATCH_SIZE = 50;
+const WORKER_INTERVAL = 30_000;
 
 type ChallengeNotify = (userId: string, event: {
   type: "challenge:progress" | "challenge:completed";
@@ -249,12 +220,6 @@ type ChallengeNotify = (userId: string, event: {
   badgeId?: string | null;
 }) => void;
 
-// ── Race-credit hook ────────────────────────────────────────────────────────
-// Called from the cycle when an enrollment first transitions to COMPLETED.
-// For each active CHALLENGE_RACE tournament the user is registered in where
-// this challenge def is in the pool (or pool empty + lobby matches), bump
-// the entry score by pointsPerCompletion. Then check win condition; if met,
-// flip to COMPLETED and run payouts.
 async function creditChallengeRace(
   prisma: PrismaClient,
   userId: string,
@@ -276,8 +241,6 @@ async function creditChallengeRace(
     const pool: string[] = Array.isArray(t.challengePoolIds) ? t.challengePoolIds : [];
     const poolEmpty = pool.length === 0;
     const inPool = pool.includes(defId);
-    // Pool-empty rule: only count if the challenge def's lobby matches the
-    // tournament's lobby (so a destiny2 race doesn't credit windrose challenges).
     if (!inPool && !(poolEmpty && t.lobbyId && defLobbyId && t.lobbyId === defLobbyId)) continue;
 
     const entry = await (prisma as any).tournamentEntry.findFirst({
@@ -291,7 +254,6 @@ async function creditChallengeRace(
       data: { score: { increment: points } },
     });
 
-    // Notify entrant
     if (createNotification) {
       createNotification({
         userId,
@@ -303,14 +265,12 @@ async function creditChallengeRace(
       }).catch(() => {});
     }
 
-    // Win-condition check
     const wc = String(t.raceWinCondition || "DEADLINE").toUpperCase();
     let shouldComplete = false;
 
     if (wc === "THRESHOLD" && t.pointsToWin && updated.score >= t.pointsToWin) {
       shouldComplete = true;
     } else if (wc === "ALL_COMPLETED") {
-      // All challenges in pool cleared by this user. Pool must be non-empty.
       if (pool.length > 0) {
         const completedCount = await (prisma as any).challengeEnrollment.count({
           where: {
@@ -322,7 +282,6 @@ async function creditChallengeRace(
         if (completedCount >= pool.length) shouldComplete = true;
       }
     }
-    // DEADLINE win condition is handled by the tournament-cycle expiry path.
 
     if (shouldComplete) {
       console.log(`[tournaments] CHALLENGE_RACE "${t.title}" auto-completing (winner: ${userId})`);
@@ -347,7 +306,6 @@ export function startChallengeWorker(
 
   async function cycle() {
     try {
-      // 1. Find active enrollments needing check
       const enrollments = await prisma.challengeEnrollment.findMany({
         where: {
           status: "ACTIVE",
@@ -362,7 +320,6 @@ export function startChallengeWorker(
 
       if (enrollments.length === 0) return;
 
-      // 2. Group by userId to batch API calls
       const byUser = new Map<string, typeof enrollments>();
       for (const e of enrollments) {
         const list = byUser.get(e.userId) || [];
@@ -370,16 +327,13 @@ export function startChallengeWorker(
         byUser.set(e.userId, list);
       }
 
-      // 3. Process each user
       for (const [userId, userEnrollments] of byUser) {
         try {
-          // Get Bungie account
           const acct = await prisma.userGameAccount.findFirst({
             where: { userId, gameType: "BUNGIE" },
             select: { externalId: true, platform: true },
           });
           if (!acct?.externalId || !acct.platform) {
-            // No Bungie account — skip but update timestamp
             await prisma.challengeEnrollment.updateMany({
               where: { id: { in: userEnrollments.map(e => e.id) } },
               data: { lastCheckedAt: new Date() },
@@ -387,15 +341,12 @@ export function startChallengeWorker(
             continue;
           }
 
-          // Get character IDs
           const profileRes = await bungieGet(
             `/Destiny2/${acct.platform}/Profile/${acct.externalId}/?components=100`
           );
           const charIds = profileRes?.Response?.profile?.data?.characterIds || [];
           if (charIds.length === 0) continue;
 
-          // Fetch activity history for most recent character
-          // (sort characters by dateLastPlayed from component 200 would be better, use first for now)
           const activities = await fetchRecentActivities(
             acct.platform, acct.externalId, charIds[0], 25
           );
@@ -408,20 +359,13 @@ export function startChallengeWorker(
             continue;
           }
 
-          // 3.5 PGCR fetch — broaden when challenges need weapons OR modifiers/tier
-          //   Custom Ops player-picked modifiers come back in PGCR.selectedSkullHashes;
-          //   they're not on the activity definition itself, so we MUST hit the PGCR
-          //   to populate them. Cache via existing log row to avoid re-pulling.
           const wantWeapons = needsWeaponData(userEnrollments);
           const wantMods    = needsModifierData(userEnrollments);
-          // Per-activity cache of skull hashes + tier so we can stuff them into
-          // the upsert below without a second lookup.
           const skullByInstance = new Map<string, string[]>();
           const tierByInstance = new Map<string, number | null>();
           if (wantWeapons || wantMods) {
             for (const act of activities) {
               if (!act.activityInstanceId) continue;
-              // If we already logged this run with skull data, reuse it.
               const existing = await prisma.bungieActivityLog.findUnique({
                 where: { userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId } },
                 select: { weaponKills: true, modifierHashes: true, difficultyTier: true },
@@ -436,7 +380,6 @@ export function startChallengeWorker(
                 tierByInstance.set(act.activityInstanceId, existing!.difficultyTier);
                 continue;
               }
-              // Pull fresh from Bungie. One PGCR call gives us all three.
               const detail = await fetchPGCRDetail(act.activityInstanceId, acct.externalId);
               if (detail.weaponKills.length > 0) act.weaponKills = detail.weaponKills as any;
               skullByInstance.set(act.activityInstanceId, detail.selectedSkullHashes);
@@ -444,18 +387,13 @@ export function startChallengeWorker(
             }
           }
 
-          // 4. Store activities in log (dedupe by instanceId)
-          //   modifierHashes blends two sources:
-          //     a) static activity definition (Bungie-curated rotational mods)
-          //     b) PGCR.selectedSkullHashes (player-picked Custom Ops skulls)
-          //   The matcher just does set-membership against requiredModifiers,
-          //   so combining them is safe and lets challenges require either kind.
           for (const act of activities) {
             if (!act.activityInstanceId) continue;
             const actDef = resolveActivity(act.activityHash);
             const staticMods = ((actDef?.modifierHashes || []) as any[]).map(String);
             const skulls = skullByInstance.get(act.activityInstanceId) || [];
             const merged = Array.from(new Set([...staticMods, ...skulls]));
+            (act as any).modifierHashes = merged;
             const pgcrTier = tierByInstance.get(act.activityInstanceId);
             const tier = pgcrTier != null ? pgcrTier : (actDef?.difficultyTier ?? null);
             await (prisma as any).bungieActivityLog.upsert({
@@ -488,22 +426,19 @@ export function startChallengeWorker(
             }).catch(() => {});
           }
 
-          // 5. Evaluate each enrollment against new activities
           for (const enrollment of userEnrollments) {
             const def = enrollment.instance.definition;
             const objectives = (def.objectives as any[]) || [];
             const progress = (enrollment.progress as Record<string, ObjProgress>) || {};
 
-            // Filter: only activities after the challenge instance started
             const instanceStart = new Date(enrollment.instance.startsAt).getTime();
             let newActivities = activities.filter(a => new Date(a.period).getTime() >= instanceStart);
 
-            // Further filter by watermark (avoid double-counting)
             const watermark = enrollment.lastActivityInstanceId;
             if (watermark) {
               const wmIdx = newActivities.findIndex(a => a.activityInstanceId === watermark);
               if (wmIdx >= 0) {
-                newActivities = newActivities.slice(0, wmIdx); // Activities are newest-first
+                newActivities = newActivities.slice(0, wmIdx);
               }
             }
 
@@ -515,21 +450,15 @@ export function startChallengeWorker(
               continue;
             }
 
-            // Definition-level modifier + tier requirements (filter out
-            // activities that don't satisfy them BEFORE per-objective evaluation).
             const reqMods = ((def as any).requiredModifiers as string[]) || [];
             const reqTier = (def as any).requireDifficultyTier as number | null;
             const minPS = (def as any).minPartySize as number | null;
             const maxPS = (def as any).maxPartySize as number | null;
             const filteredActivities = newActivities.filter((act: any) => {
               const actDef = resolveActivity(act.activityHash);
-              // Modifier set = static activity-def modifiers UNION PGCR skull hashes.
-              // Skull hashes carry the player's Custom Ops choices; without them
-              // the matcher would miss every Custom Ops run.
               const staticMods = ((actDef?.modifierHashes || []) as any[]).map(String);
               const skullMods = skullByInstance.get(act.activityInstanceId) || [];
               const mods = Array.from(new Set([...staticMods, ...skullMods]));
-              // Tier from PGCR if available; else activity definition's static tier.
               const pgcrTier = tierByInstance.get(act.activityInstanceId);
               const tier = pgcrTier != null ? pgcrTier : (actDef?.difficultyTier ?? null);
               if (!definitionRequirementsMet(mods, tier, reqMods, reqTier)) return false;
@@ -541,18 +470,16 @@ export function startChallengeWorker(
               return true;
             });
 
-            // Evaluate each objective
             let allCompleted = true;
             let completedCount = 0;
             for (const obj of objectives as ObjectiveSpec[]) {
               const existing = progress[obj.id] || { current: 0, target: obj.target, completed: false };
-              const updated = evaluateObjective(obj, filteredActivities.reverse(), existing); // Oldest first for streak logic
+              const updated = evaluateObjective(obj, filteredActivities.reverse(), existing);
               progress[obj.id] = updated;
               if (updated.completed) completedCount++;
               else allCompleted = false;
             }
 
-            // Check completion
             const isComplete = def.requireAll
               ? allCompleted
               : completedCount >= (def.requireCount || objectives.length);
@@ -560,11 +487,6 @@ export function startChallengeWorker(
             const updateData: any = {
               progress: progress as any,
               lastCheckedAt: new Date(),
-              // Only advance the watermark to activities we've actually
-              // evaluated this cycle. Using activities[0] here would mark
-              // even time-filtered or modifier-rejected runs as "counted",
-              // which previously prevented the next-cycle re-evaluation
-              // from ever firing. (See: K1 Logistics watermark trap, 2026-05-08.)
               lastActivityInstanceId:
                 newActivities[0]?.activityInstanceId
                 ?? enrollment.lastActivityInstanceId,
@@ -574,7 +496,6 @@ export function startChallengeWorker(
               updateData.status = "COMPLETED";
               updateData.completedAt = new Date();
 
-              // Award rewards
               if (def.notorietyReward > 0) {
                 awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
               }
@@ -582,16 +503,14 @@ export function startChallengeWorker(
                 awardPaper(userId, "EARN_CHALLENGE", (def as any).paperReward, `Challenge completed: ${def.title}`, enrollment.instanceId).catch(() => {});
               }
 
-              // Award badge if one is configured
               if (def.badgeId) {
                 prisma.userBadge.create({
                   data: { userId, badgeId: def.badgeId },
-                }).catch(() => {}); // Ignore dupes
+                }).catch(() => {});
               }
 
               console.log(`[challenges] ${userId} completed "${def.title}"`);
 
-              // Notify via WebSocket
               if (notify) {
                 notify(userId, {
                   type: "challenge:completed",
@@ -604,9 +523,6 @@ export function startChallengeWorker(
                   badgeId: def.badgeId,
                 });
               }
-              // Broadcast lobby-wide so the public activity feed surfaces
-              // challenge completions. Only fires when the def is scoped to
-              // a lobby (LOBBY scope, with lobbyId set).
               if (broadcastToLobby && (def as any).lobbyId) {
                 broadcastToLobby((def as any).lobbyId, {
                   type: "challenge:completed",
@@ -616,18 +532,12 @@ export function startChallengeWorker(
                 });
               }
 
-              // ── CHALLENGE_RACE credit ─────────────────────────────────
-              // For every active CHALLENGE_RACE tournament where this user
-              // has a registered entry AND this challenge def is in the
-              // pool (or pool empty + lobby matches), increment score by
-              // pointsPerCompletion. Then evaluate the win condition.
               try {
                 await creditChallengeRace(prisma, userId, def.id, (def as any).lobbyId, createNotification, awardPaper);
               } catch (err: any) {
                 console.warn("[challenges] race credit failed:", err?.message || err);
               }
             } else if (newActivities.length > 0 && notify) {
-              // Progress updated but not complete — send progress event
               notify(userId, {
                 type: "challenge:progress",
                 enrollmentId: enrollment.id,
@@ -651,15 +561,8 @@ export function startChallengeWorker(
     }
   }
 
-  // ── Tournament scoring cycle ──────────────────────────────────────────────
-  // Runs every 60s, scores active LEADERBOARD tournaments
-  // scoringRule JSON: { type: "challenge_completions", definitionIds?: string[] }
-  //   or: { type: "total_kills" }, { type: "total_activities" }, { type: "fastest_clear" }
-
   async function tournamentCycle() {
     try {
-      // Handle deadline-expiry for CHALLENGE_RACE separately — runs the
-      // shared completeTournament helper so payouts/flair fire.
       const expiredRace = await prisma.tournament.findMany({
         where: { status: "ACTIVE", format: "CHALLENGE_RACE", endsAt: { lt: new Date() } },
         select: { id: true, title: true },
@@ -680,7 +583,6 @@ export function startChallengeWorker(
       if (active.length === 0) return;
 
       for (const tourney of active) {
-        // Auto-complete expired tournaments
         if (new Date(tourney.endsAt).getTime() < Date.now()) {
           const ranked = tourney.entries.sort((a, b) => b.score - a.score);
           for (let i = 0; i < ranked.length; i++) {
@@ -705,7 +607,6 @@ export function startChallengeWorker(
           let score = 0;
 
           if (rule.type === "challenge_completions") {
-            // Count completed challenge enrollments, optionally filtered by definitionId
             const where: any = { userId: entry.userId, status: "COMPLETED" };
             if (rule.definitionIds?.length) {
               where.instance = { definitionId: { in: rule.definitionIds } };
@@ -713,7 +614,6 @@ export function startChallengeWorker(
             score = await prisma.challengeEnrollment.count({ where });
 
           } else if (rule.type === "total_kills") {
-            // Sum all kills from activity log during tournament window
             const logs = await prisma.bungieActivityLog.findMany({
               where: {
                 userId: entry.userId,
@@ -733,7 +633,6 @@ export function startChallengeWorker(
             });
 
           } else if (rule.type === "fastest_clear") {
-            // Lowest duration for matching activities
             const actHash = rule.activityHash;
             if (actHash) {
               const fastest = await prisma.bungieActivityLog.findFirst({
@@ -746,7 +645,6 @@ export function startChallengeWorker(
                 orderBy: { duration: "asc" },
                 select: { duration: true },
               });
-              // Invert: lower duration = higher score (max seconds minus actual)
               score = fastest ? Math.max(0, 86400 - fastest.duration) : 0;
             }
           }
@@ -764,17 +662,11 @@ export function startChallengeWorker(
     }
   }
 
-  // Run immediately, then on interval
   setTimeout(cycle, 5000);
   setInterval(cycle, WORKER_INTERVAL);
 
-  // Tournament scoring — every 60s
   setTimeout(tournamentCycle, 15000);
   setInterval(tournamentCycle, 60_000);
-
-  // ── Recurring challenge instantiation ──────────────────────────────────────
-  // Checks every 5 minutes for recurring definitions that need a new instance.
-  // recurSchedule values: "daily", "weekly_tuesday", "weekly_friday", etc.
 
   async function recurringCycle() {
     try {
@@ -801,17 +693,16 @@ export function startChallengeWorker(
         const hoursSinceLast = (now.getTime() - lastStart) / 3600000;
 
         let shouldCreate = false;
-        let durationHours = 24; // default: 1 day
+        let durationHours = 24;
 
         if (schedule === "daily") {
-          shouldCreate = hoursSinceLast >= 20; // allow 4h overlap
+          shouldCreate = hoursSinceLast >= 20;
           durationHours = 24;
         } else if (schedule.startsWith("weekly_")) {
           const targetDay = schedule.replace("weekly_", "");
-          shouldCreate = todayName === targetDay && hoursSinceLast >= 144; // ~6 days
-          durationHours = 168; // 7 days
+          shouldCreate = todayName === targetDay && hoursSinceLast >= 144;
+          durationHours = 168;
         } else if (schedule === "weekly") {
-          // Default to Tuesday reset (Destiny weekly reset)
           shouldCreate = todayName === "tuesday" && hoursSinceLast >= 144;
           durationHours = 168;
         }
@@ -820,14 +711,12 @@ export function startChallengeWorker(
           const startsAt = new Date();
           const endsAt = new Date(startsAt.getTime() + durationHours * 3600000);
 
-          // Close previous instance
           if (lastInstance && lastInstance.status === "ACTIVE") {
             await prisma.challengeInstance.update({
               where: { id: lastInstance.id },
               data: { status: "COMPLETED" },
             }).catch(() => {});
 
-            // Mark any active enrollments on old instance as FAILED (didn't finish in time)
             await prisma.challengeEnrollment.updateMany({
               where: { instanceId: lastInstance.id, status: "ACTIVE" },
               data: { status: "FAILED" },
@@ -851,7 +740,6 @@ export function startChallengeWorker(
     }
   }
 
-  // Recurring — every 5 minutes
   setTimeout(recurringCycle, 20000);
   setInterval(recurringCycle, 300_000);
 }

@@ -5,7 +5,6 @@ import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-// Palette mirrored from WindroseModulesPanel so the page feels like a Windrose surface
 const PAL = {
   abyss:     "#0e1826",
   stormDeep: "#19283e",
@@ -82,7 +81,6 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Re-fetch on mount (server render might be stale); do it async
   useEffect(() => {
     let cancelled = false;
     fetch(`${API}/windrose/hunter/${encodeURIComponent(userId)}`)
@@ -117,7 +115,6 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
       fontFamily: WR_SERIF,
     }}>
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
-        {/* Back link */}
         <Link href="/lobby/windrose" style={{
           display: "inline-flex", alignItems: "center", gap: 6,
           color: PAL.parchDim, textDecoration: "none", fontFamily: WR_MONO,
@@ -127,7 +124,6 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
           ← Windrose Hub
         </Link>
 
-        {/* Header plaque */}
         <div style={{
           padding: "26px 30px 24px",
           background: `radial-gradient(ellipse 80% 60% at 20% 0%, ${PAL.brass}18 0%, transparent 60%), linear-gradient(180deg, ${PAL.stormMid} 0%, ${PAL.stormDeep} 100%)`,
@@ -189,10 +185,8 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
           ) : null}
         </div>
 
-        {/* Body */}
         {d && (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {/* Hunter side */}
             <Section title="As Hunter" glyph="⚔" glyphColor="#5db765">
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
                 <Stat label="Delivered" value={d.hunter.kills.toLocaleString()} />
@@ -224,7 +218,6 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
               )}
             </Section>
 
-            {/* Poster side */}
             <Section title="As Poster" glyph="☠" glyphColor={PAL.blood}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
                 <Stat label="Posted" value={d.poster.postedCount.toLocaleString()} />
@@ -269,7 +262,6 @@ export default function HunterDossierView({ userId, initial }: { userId: string;
           </div>
         )}
 
-        {/* Footer brand */}
         <div style={{ textAlign: "center", marginTop: 36, fontSize: 10, color: PAL.parchDim, fontFamily: WR_MONO, letterSpacing: "2px", textTransform: "uppercase", opacity: 0.7 }}>
           Weered · Windrose community hub
         </div>

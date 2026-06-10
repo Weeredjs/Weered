@@ -4,11 +4,6 @@ import React, { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-/**
- * Renders an OG-card preview for a URL by hitting the API's /unfurl
- * endpoint. Returns null while loading or if the unfurl yields nothing
- * useful (no title and no description) so we never push a blank card.
- */
 export default function LinkPreviewCard({ url }: { url: string }) {
   const [data, setData] = useState<any>(null);
   useEffect(() => {

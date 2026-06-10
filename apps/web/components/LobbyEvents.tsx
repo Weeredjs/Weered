@@ -48,13 +48,11 @@ export default function LobbyEvents({ lobbyId, accent }: { lobbyId: string; acce
         const isFeatured = ev.promotionStatus === "APPROVED";
         return (
           <div key={ev.id} style={{ display: "flex", gap: 14, padding: "14px 16px", borderRadius: 10, border: `1px solid ${isFeatured ? color + "44" : "rgba(255,255,255,.08)"}`, background: isFeatured ? color + "0A" : "rgba(255,255,255,.03)" }}>
-            {/* Date block */}
             <div style={{ width: 48, flexShrink: 0, textAlign: "center", paddingTop: 2 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".6px", color: color, opacity: 0.8 }}>{month}</div>
               <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{day}</div>
               <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>{time}</div>
             </div>
-            {/* Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{ev.title}</div>

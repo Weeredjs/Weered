@@ -44,7 +44,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
     }
   }, [item]);
 
-  // Keyboard dismiss
   useEffect(() => {
     if (!item) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
@@ -72,12 +71,18 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
     setTimeout(() => router.push(`/lobby/${encodeURIComponent(domainLobbyId(item.domain))}`), 270);
   }
 
+  function goExternal() {
+    if (!item) return;
+    const url = item.url;
+    handleClose();
+    setTimeout(() => { try { window.open(url, "_blank", "noopener,noreferrer"); } catch {} }, 270);
+  }
+
   if (!item || phase === "idle") return null;
 
   const color   = CAT_COLORS[item.category] || "#7C3AED";
   const exiting = phase === "exit";
 
-  // Transform origin — zoom from card position
   const ox = originRect ? ((originRect.left + originRect.width  / 2) / window.innerWidth  * 100).toFixed(1) : "50";
   const oy = originRect ? ((originRect.top  + originRect.height / 2) / window.innerHeight * 100).toFixed(1) : "50";
 
@@ -136,7 +141,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
         .sim-lobby:hover .sim-arrow { transform: translateX(3px); }
       `}</style>
 
-      {/* Backdrop */}
       <div
         onClick={handleClose}
         style={{
@@ -147,7 +151,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
         }}
       />
 
-      {/* Modal */}
       <div style={{
         position: "fixed",
         top: "50%", left: "50%",
@@ -170,16 +173,13 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
           `,
         }}>
 
-          {/* ── Hero thumbnail strip ── */}
           <div style={{ position: "relative", height: 160, overflow: "hidden" }}>
             {item.thumbnail
               ? <img src={item.thumbnail} alt={item.title + " thumbnail"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.35) saturate(0.7)" }} />
               : <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, ${color}22, rgba(0,0,0,0.8))` }} />
             }
-            {/* Gradient fade to card bg */}
             <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to bottom, rgba(8,8,16,0) 0%, rgba(8,8,16,0.6) 60%, rgba(8,8,16,0.98) 100%)` }} />
 
-            {/* Top badges */}
             <div style={{ position: "absolute", top: 14, left: 16, display: "flex", gap: 7, alignItems: "center" }}>
               <span style={{
                 padding: "4px 10px", borderRadius: 6,
@@ -197,7 +197,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
               }}>{item.domain}</span>
             </div>
 
-            {/* Close button */}
             <button onClick={handleClose} style={{
               position: "absolute", top: 12, right: 12,
               width: 30, height: 30, borderRadius: 8,
@@ -210,7 +209,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
               transition: "all 0.15s",
             }}>✕</button>
 
-            {/* Title pinned at bottom of hero */}
             <div style={{
               position: "absolute", bottom: 14, left: 16, right: 16,
               fontSize: 15, fontWeight: 800,
@@ -224,10 +222,8 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
             </div>
           </div>
 
-          {/* ── Body ── */}
           <div style={{ padding: "22px 20px 24px" }}>
 
-            {/* User identity block */}
             <div style={{ marginBottom: 18 }}>
               <div style={{
                 display: "flex", alignItems: "center", gap: 14,
@@ -239,7 +235,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                 position: "relative",
                 overflow: "hidden",
               }}>
-                {/* Subtle bg glow behind avatar */}
                 <div style={{
                   position: "absolute", left: -10, top: -10,
                   width: 70, height: 70, borderRadius: "50%",
@@ -248,7 +243,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                   pointerEvents: "none",
                 }} />
 
-                {/* Avatar */}
                 <div style={{
                   width: 44, height: 44, borderRadius: 12, flexShrink: 0,
                   background: user?.avatarColor || color,
@@ -258,7 +252,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                   position: "relative",
                 }}>
                   {(user?.name || "?")[0].toUpperCase()}
-                  {/* Online dot */}
                   <div style={{
                     position: "absolute", bottom: -2, right: -2,
                     width: 12, height: 12, borderRadius: "50%",
@@ -268,7 +261,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                   }} />
                 </div>
 
-                {/* Name + badges */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 15, fontWeight: 800, color: "rgba(243,244,246,0.97)", letterSpacing: "-0.2px" }}>
@@ -300,7 +292,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                   </div>
                 </div>
 
-                {/* Right: online indicator */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
@@ -309,7 +300,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                 </div>
               </div>
 
-              {/* Heading */}
               <div style={{ textAlign: "center" }}>
                 <div style={{
                   fontSize: 20, fontWeight: 800,
@@ -321,13 +311,10 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
               </div>
             </div>
 
-            {/* Divider */}
             <div style={{ height: 1, background: "rgba(255,255,255,0.05)", marginBottom: 16 }} />
 
-            {/* Options */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
-              {/* Live Discussion */}
               <button className="sim-discuss" onClick={goDiscussion}>
                 <div className="sim-icon" style={{ background: `${color}22`, border: `1px solid ${color}44` }}>
                   💬
@@ -345,7 +332,6 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                 <span className="sim-arrow" style={{ color: color }}>→</span>
               </button>
 
-              {/* Domain Lobby */}
               <button className="sim-lobby" onClick={goLobby}>
                 <div className="sim-icon" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
                   🏛️
@@ -360,9 +346,23 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
                 </div>
                 <span className="sim-arrow" style={{ color: "rgba(148,163,184,0.4)" }}>→</span>
               </button>
+
+              <button className="sim-lobby" onClick={goExternal}>
+                <div className="sim-icon" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                  📄
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(226,232,240,0.88)", marginBottom: 3 }}>
+                    Read the full article
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", lineHeight: 1.4 }}>
+                    Opens {item.domain} in a new tab
+                  </div>
+                </div>
+                <span className="sim-arrow" style={{ color: "rgba(148,163,184,0.4)" }}>↗</span>
+              </button>
             </div>
 
-            {/* Dismiss hint */}
             <div style={{ marginTop: 18, textAlign: "center", fontSize: 10, color: "rgba(100,116,139,0.28)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Esc or click outside to dismiss
             </div>

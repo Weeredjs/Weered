@@ -8,16 +8,11 @@ export type RailState = "full" | "icons" | "hidden";
 export interface RailMode {
   left: RailState;
   right: RailState;
-  /** Which rail overlay panel is currently open (null = none) */
   overlay: "left" | "right" | null;
   setOverlay: (v: "left" | "right" | null) => void;
-  /** Current viewport tier */
   tier: "wide" | "mid" | "narrow";
 }
 
-// ── Context-aware priority ──────────────────────────────────────────────────
-// Lobby/Room → right rail is primary (controls, rooms, members)
-// Home/Browse/Settings/Ops → left rail is primary (nav, presence)
 function routePriority(pathname: string): "left" | "right" {
   if (pathname.startsWith("/lobby") || pathname.startsWith("/room")) return "right";
   return "left";
@@ -43,10 +38,8 @@ export function useRailMode(): RailMode {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Close overlay on route change
   useEffect(() => { setOverlay(null); }, [pathname]);
 
-  // Before mount, always return "full" for both rails to match SSR
   if (!mounted) {
     return { left: "full", right: "full", overlay: null, setOverlay, tier: "wide" };
   }
@@ -58,11 +51,9 @@ export function useRailMode(): RailMode {
   let right: RailState = "full";
 
   if (tier === "wide") {
-    // Both rails fully open — big desktop
     left = "full";
     right = "full";
   } else if (tier === "mid") {
-    // Priority rail stays full, other collapses to icon strip
     if (priority === "right") {
       left = "icons";
       right = "full";
@@ -71,7 +62,6 @@ export function useRailMode(): RailMode {
       right = "icons";
     }
   } else {
-    // Narrow — both collapse to icon strips
     left = "icons";
     right = "icons";
   }

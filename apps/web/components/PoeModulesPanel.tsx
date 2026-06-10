@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -16,20 +17,16 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// ── Style ────────────────────────────────────────────────────────────────────
-
 const ACCENT_POE = "#AF6025";
 
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(175,96,37,.35)", background: "rgba(175,96,37,.12)", fontSize: 12, cursor: "pointer", color: "rgb(175,96,37)", fontWeight: 600, fontFamily: "inherit" } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" },
-  select: { padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
+  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(175,96,37,.35)", background: "rgba(175,96,37,.12)", fontSize: 12, cursor: "pointer", color: "rgb(175,96,37)", fontWeight: 600, fontFamily: "inherit" } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" },
+  select: { padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties,
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
-
-// ── POE Constants ──────────────────────────────────────────────────────────
 
 const DEFAULT_LEAGUE = "Mirage";
 
@@ -51,10 +48,8 @@ const ITEM_CATEGORIES = [
 const POE_REGIONS = ["Any", "NA", "EU", "Asia", "Oceania"];
 const POE_ACTIVITIES = ["Mapping", "Bossing", "Delve", "Heist", "Lab Runs", "Leveling", "Trading", "Crafting", "Other"];
 
-// ── poe.ninja Cache ────────────────────────────────────────────────────────
-
 const ninjaCache = new Map<string, { data: any; ts: number }>();
-const NINJA_TTL = 120000; // 2 min
+const NINJA_TTL = 120000;
 
 async function ninjaFetch(url: string) {
   const cached = ninjaCache.get(url);
@@ -65,8 +60,6 @@ async function ninjaFetch(url: string) {
   ninjaCache.set(url, { data: j, ts: Date.now() });
   return j;
 }
-
-// ── Sparkline SVG ──────────────────────────────────────────────────────────
 
 function MiniSparkline({ data, width = 60, height = 20, color }: { data: number[]; width?: number; height?: number; color: string }) {
   if (!data || data.length < 2) return null;
@@ -101,21 +94,17 @@ function trendPercent(sparkline: number[] | null | undefined): string {
   return `${sign}${pct.toFixed(1)}%`;
 }
 
-// ── Tabs ─────────────────────────────────────────────────────────────────────
-
 const TABS = [
   { id: "economy" as const, label: "Economy",    icon: "\u{1FA99}" },
   { id: "items" as const,   label: "Items",       icon: "\u{2694}" },
   { id: "divcards" as const,label: "Div Cards",   icon: "\u{1F0CF}" },
   { id: "gems" as const,    label: "Gems",        icon: "\u{1F48E}" },
+  { id: "ladder" as const,  label: "Ladder",      icon: "\u{1F3C6}" },
   { id: "streams" as const, label: "Live Streams", icon: "\u{1F4FA}" },
   { id: "lfg" as const,     label: "Find Team",   icon: "\u{1F465}" },
+  { id: "account" as const, label: "My Account",  icon: "\u{1FAAA}" },
 ];
 type TabId = typeof TABS[number]["id"];
-
-// ═══════════════════════════════════════════════════════════════════════════
-// ECONOMY TAB
-// ═══════════════════════════════════════════════════════════════════════════
 
 function EconomyTab({ league, accent }: { league: string; accent: string }) {
   const [currency, setCurrency] = useState<any[]>([]);
@@ -150,7 +139,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
 
   return (
     <div>
-      {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <button onClick={() => setView("currency")} style={{
           ...S.btn, fontSize: 11, padding: "5px 10px",
@@ -168,7 +156,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
         }}>Fragments ({fragments.length})</button>
       </div>
 
-      {/* Search */}
       <input
         style={{ ...S.input, marginBottom: 10 }}
         placeholder="Search currency..."
@@ -176,7 +163,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
         onChange={e => setSearch(e.target.value)}
       />
 
-      {/* Currency grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         {filtered.map(item => {
           const spark = item.receiveSparkLine?.data || item.paySparkLine?.data || null;
@@ -185,7 +171,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
           const iconUrl = item.currencyTypeName
             ? `https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvQ3VycmVuY3lEdXBsaWNhdGUiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MX1d/7111ac5c4e/CurrencyDuplicate.png`
             : null;
-          // poe.ninja provides icon via currencyDetails or we use the detailsId
           const detailIcon = item.detailsId
             ? `https://poe.ninja/image/currency/${item.detailsId}.png`
             : null;
@@ -197,9 +182,8 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
               onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
             >
-              {/* Icon */}
               <div style={{
-                width: 32, height: 32, borderRadius: 6,
+                width: 32, height: 32, borderRadius: 2,
                 background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 overflow: "hidden",
               }}>
@@ -212,7 +196,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
                 )}
               </div>
 
-              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {item.currencyTypeName}
@@ -228,7 +211,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
                 </div>
               </div>
 
-              {/* Sparkline */}
               {spark && spark.length >= 2 && (
                 <MiniSparkline data={spark} color={clr} width={50} height={18} />
               )}
@@ -243,10 +225,6 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// ITEMS TAB
-// ═══════════════════════════════════════════════════════════════════════════
 
 function ItemsTab({ league, accent }: { league: string; accent: string }) {
   const [items, setItems] = useState<any[]>([]);
@@ -279,7 +257,6 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
 
   return (
     <div>
-      {/* Category pills */}
       <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
         {ITEM_CATEGORIES.map(c => (
           <button key={c.id} onClick={() => setCategory(c.id)} style={{
@@ -292,7 +269,6 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
         ))}
       </div>
 
-      {/* Search + Sort */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search items..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={S.select} value={sortBy} onChange={e => setSortBy(e.target.value as any)}>
@@ -321,9 +297,8 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
                 >
-                  {/* Icon */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 6,
+                    width: 36, height: 36, borderRadius: 2,
                     background: "rgba(0,0,0,.30)", display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, overflow: "hidden",
                   }}>
@@ -336,7 +311,6 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
                     )}
                   </div>
 
-                  {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.name}
@@ -355,7 +329,6 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
                     </div>
                   </div>
 
-                  {/* Sparkline */}
                   {spark && spark.length >= 2 && (
                     <MiniSparkline data={spark} color={clr} width={44} height={16} />
                   )}
@@ -373,10 +346,6 @@ function ItemsTab({ league, accent }: { league: string; accent: string }) {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// DIVINATION CARDS TAB
-// ═══════════════════════════════════════════════════════════════════════════
 
 function DivCardsTab({ league, accent }: { league: string; accent: string }) {
   const [cards, setCards] = useState<any[]>([]);
@@ -407,7 +376,6 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
 
   return (
     <div>
-      {/* Search + Sort */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search divination cards..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={S.select} value={sortBy} onChange={e => setSortBy(e.target.value as any)}>
@@ -436,9 +404,8 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = (card.chaosValue || 0) >= 100 ? `${accent}30` : "rgba(255,255,255,.06)")}
                 >
-                  {/* Icon */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 6,
+                    width: 36, height: 36, borderRadius: 2,
                     background: "rgba(0,0,0,.30)", display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, overflow: "hidden",
                   }}>
@@ -451,7 +418,6 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
                     )}
                   </div>
 
-                  {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {card.name}
@@ -473,7 +439,6 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
                     )}
                   </div>
 
-                  {/* Sparkline */}
                   {spark && spark.length >= 2 && (
                     <MiniSparkline data={spark} color={clr} width={44} height={16} />
                   )}
@@ -491,10 +456,6 @@ function DivCardsTab({ league, accent }: { league: string; accent: string }) {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SKILL GEMS TAB
-// ═══════════════════════════════════════════════════════════════════════════
 
 function GemsTab({ league, accent }: { league: string; accent: string }) {
   const [gems, setGems] = useState<any[]>([]);
@@ -543,7 +504,6 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
 
   return (
     <div>
-      {/* Search + Sort */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input style={{ ...S.input, flex: "1 1 200px" }} placeholder="Search skill gems..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={S.select} value={sortBy} onChange={e => setSortBy(e.target.value as any)}>
@@ -552,7 +512,6 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
         </select>
       </div>
 
-      {/* Filter pills */}
       <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
         {(["all", "corrupted", "quality"] as const).map(f => (
           <button key={f} onClick={() => setGemFilter(f)} style={{
@@ -587,9 +546,8 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${gc}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
                 >
-                  {/* Icon */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 6,
+                    width: 36, height: 36, borderRadius: 2,
                     background: `${gc}12`, display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, overflow: "hidden",
                   }}>
@@ -602,7 +560,6 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
                     )}
                   </div>
 
-                  {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {gem.name}
@@ -636,7 +593,6 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
                     </div>
                   </div>
 
-                  {/* Sparkline */}
                   {spark && spark.length >= 2 && (
                     <MiniSparkline data={spark} color={clr} width={40} height={14} />
                   )}
@@ -654,10 +610,6 @@ function GemsTab({ league, accent }: { league: string; accent: string }) {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// FIND TEAM (LFG)
-// ═══════════════════════════════════════════════════════════════════════════
 
 function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [posts, setPosts] = useState<any[]>([]);
@@ -718,7 +670,6 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={S.label}>PARTY FINDER ({openPosts.length} open)</div>
         <button
@@ -731,17 +682,16 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
       {msg && (
         <div style={{
-          marginBottom: 10, fontSize: 12, padding: "6px 10px", borderRadius: 8,
+          marginBottom: 10, fontSize: 12, padding: "6px 10px", borderRadius: 2,
           background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.2)",
           color: "rgba(252,165,165,.8)",
         }}>{msg}</div>
       )}
 
-      {/* Create Form */}
       {showForm && (
         <div style={{
           ...S.card, marginBottom: 16, display: "flex", flexDirection: "column", gap: 10,
-          border: `1px solid ${accent}33`, background: `${accent}06`,
+          border: `1px solid ${accent}33`, borderLeft: `2px solid ${accent}`, background: `${accent}06`,
         }}>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1 }}>
@@ -779,7 +729,6 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
         </div>
       )}
 
-      {/* Posts List */}
       {posts.length === 0 ? (
         <EmptyState icon="👥" title="No parties posted yet." hint="Drop one up top — someone's looking." />
       ) : (
@@ -802,14 +751,13 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                     {p.description && <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 3 }}>{p.description}</div>}
                   </div>
                   <span style={{
-                    fontSize: 9, padding: "2px 6px", borderRadius: 4,
+                    fontSize: 9, padding: "2px 6px", borderRadius: 2,
                     background: isFull ? "rgba(239,68,68,.10)" : `${accent}12`,
                     color: isFull ? "#ef4444" : accent,
                     fontWeight: 700,
                   }}>{isFull ? "FULL" : "OPEN"}</span>
                 </div>
 
-                {/* Slot dots */}
                 <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                   {slots.map((filled, i) => (
                     <div key={i} style={{
@@ -821,7 +769,6 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                   <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginLeft: 4 }}>{playerCount}/{maxP}</span>
                 </div>
 
-                {/* Host info */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 10, color: "rgba(148,163,184,.35)" }}>
                     Host: {p.hostName || "Unknown"}
@@ -840,10 +787,6 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TWITCH STREAMS
-// ═══════════════════════════════════════════════════════════════════════════
 
 function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
@@ -892,7 +835,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
   return (
     <>
       {activeStream && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 8 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 8 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
@@ -916,7 +859,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
             {s.thumbnailUrl && (
               <img
                 src={(s.thumbnailUrl || "").replace("{width}", "80").replace("{height}", "45")}
-                alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
+                alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 2, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }}
               />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -939,15 +882,204 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 interface Props {
   lobbyId: string;
   gameName?: string;
   accentColor?: string;
   style?: React.CSSProperties;
+}
+
+const POE_FRAME_COLOR: Record<number, string> = { 0: "#c8c8c8", 1: "#8888ff", 2: "#ffff77", 3: "#af6025", 4: "#1ba29b", 9: "#aa9e82" };
+const POE_SLOT_ORDER = ["Weapon", "Offhand", "Helm", "BodyArmour", "Gloves", "Boots", "Belt", "Amulet", "Ring", "Ring2"];
+
+function GearGrid({ items, accent }: { items: any[]; accent: string }) {
+  const equip = items.filter(i => POE_SLOT_ORDER.includes(i.slot)).sort((a, b) => POE_SLOT_ORDER.indexOf(a.slot) - POE_SLOT_ORDER.indexOf(b.slot));
+  const flasks = items.filter(i => i.slot === "Flask");
+  if (equip.length === 0 && flasks.length === 0) return <div style={{ fontSize: 11, opacity: 0.5, padding: 8 }}>No equipped items.</div>;
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+        {equip.map((it, i) => (
+          <div key={i} title={`${it.name || it.typeLine}\n${it.typeLine}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: "rgba(0,0,0,.28)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 4, minWidth: 0 }}>
+            {it.icon ? <img src={it.icon} alt="" style={{ width: 30, height: 30, objectFit: "contain", flexShrink: 0 }} /> : <div style={{ width: 30, height: 30, flexShrink: 0 }} />}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: POE_FRAME_COLOR[it.frame] || "#c8c8c8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name || it.typeLine}{it.corrupted && <span style={{ color: "#d20000", marginLeft: 4 }}>{"⊘"}</span>}</div>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,.4)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name ? it.typeLine : it.slot}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {flasks.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,.4)", marginBottom: 4, letterSpacing: 0.6 }}>FLASKS</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {flasks.map((it, i) => it.icon ? <img key={i} src={it.icon} alt={it.typeLine} title={it.name || it.typeLine} style={{ width: 28, height: 28, objectFit: "contain", border: `1px solid ${(POE_FRAME_COLOR[it.frame] || "#555")}55`, borderRadius: 3, background: "rgba(0,0,0,.28)" }} /> : null)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PoeAccountTab({ accent }: { accent: string }) {
+  const [me, setMe] = useState<any>(null);
+  const [chars, setChars] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unlinking, setUnlinking] = useState(false);
+  const [flash, setFlash] = useState("");
+  const [selChar, setSelChar] = useState<string | null>(null);
+  const [gear, setGear] = useState<any>(null);
+  const [gearLoading, setGearLoading] = useState(false);
+  async function openChar(c: any) {
+    if (selChar === c.name) { setSelChar(null); return; }
+    setSelChar(c.name); setGear(null); setGearLoading(true);
+    const j = await apiFetch(`/poe/character?name=${encodeURIComponent(c.name)}&realm=${encodeURIComponent(c.realm || "pc")}`);
+    setGear(j); setGearLoading(false);
+  }
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const j = await apiFetch("/poe/me");
+    setMe(j);
+    if (j?.linked) {
+      const c = await apiFetch("/poe/me/characters");
+      setChars(c?.characters || []);
+    }
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("poe");
+      if (!p) return;
+      if (p === "success") setFlash("Account linked.");
+      else if (p === "denied") setFlash("Link cancelled.");
+      else setFlash("Link failed — please try again.");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("poe");
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+  }, []);
+
+  const token = typeof window !== "undefined" ? (localStorage.getItem("weered_token") || "") : "";
+  const linkHref = `${API}/auth/poe?token=${encodeURIComponent(token)}`;
+
+  async function unlink() {
+    setUnlinking(true);
+    await apiFetch("/poe/me", { method: "DELETE" });
+    setMe({ linked: false }); setChars([]); setUnlinking(false);
+  }
+
+  if (loading) return <div style={{ padding: 20, opacity: 0.5, fontSize: 12 }}>Loading…</div>;
+
+  if (!me?.linked) {
+    return (
+      <div style={{ maxWidth: 460, margin: "0 auto", textAlign: "center", paddingTop: 28 }}>
+        {flash && <div style={{ marginBottom: 12, fontSize: 12, color: accent }}>{flash}</div>}
+        <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Link your Path of Exile account</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", marginBottom: 20, lineHeight: 1.6 }}>
+          Connect through Grinding Gear Games to surface your characters and league in your Weered profile. Read-only — Weered only requests profile and character access, and you can unlink anytime.
+        </div>
+        <a href={linkHref} style={{ display: "inline-block", padding: "11px 22px", borderRadius: 4, background: `linear-gradient(135deg, ${accent}, #b8860b)`, color: "#1a1206", fontWeight: 800, fontSize: 13, textDecoration: "none", letterSpacing: 0.5, textTransform: "uppercase" }}>
+          Link PoE Account
+        </a>
+      </div>
+    );
+  }
+
+  const a = me.account || {};
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {flash && <div style={{ fontSize: 12, color: accent }}>{flash}</div>}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, background: `${accent}10`, border: `1px solid ${accent}33`, borderRadius: 6 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 8, background: `${accent}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{"\u{1F3AD}"}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{a.name || "Exile"}</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>{String(a.realm || "pc").toUpperCase()} · linked</div>
+        </div>
+        <button onClick={unlink} disabled={unlinking} style={{ padding: "5px 12px", borderRadius: 3, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.7)", fontSize: 11, cursor: "pointer" }}>{unlinking ? "…" : "Unlink"}</button>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: accent, textTransform: "uppercase", marginBottom: 8 }}>Characters ({chars.length})</div>
+        {chars.length === 0 ? (
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", padding: 12 }}>No characters returned (private profile, or the token expired — re-link to refresh).</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {chars.map((c: any) => {
+              const open = selChar === c.name;
+              return (
+                <div key={c.id || c.name}>
+                  <div onClick={() => openChar(c)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: open ? `${accent}14` : "rgba(255,255,255,.03)", border: `1px solid ${open ? accent + "44" : "rgba(255,255,255,.07)"}`, borderRadius: 4, cursor: "pointer" }}>
+                    <span style={{ width: 10, color: "rgba(255,255,255,.4)", fontSize: 10 }}>{open ? "▾" : "▸"}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{c.name}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>{c.class}{c.league ? ` · ${c.league}` : ""}{c.realm ? ` · ${String(c.realm).toUpperCase()}` : ""}</div>
+                    </div>
+                    {typeof c.level !== "undefined" && <div style={{ fontSize: 13, fontWeight: 800, color: accent }}>Lv {c.level}</div>}
+                  </div>
+                  {open && (
+                    <div style={{ padding: "10px 4px 6px" }}>
+                      {gearLoading ? <div style={{ fontSize: 11, opacity: 0.5, padding: 8 }}>Loading gear…</div>
+                        : gear && gear.items && gear.items.length ? <GearGrid items={gear.items} accent={accent} />
+                        : <div style={{ fontSize: 11, opacity: 0.5, padding: 8 }}>{gear && gear.error === "private" ? "Items hidden — enable the Stash/Items privacy on pathofexile.com." : "No gear data."}</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LadderTab({ league, accent }: { league: string; accent: string }) {
+  const [data, setData] = useState<{ total: number; entries: any[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    apiFetch(`/poe/ladder?league=${encodeURIComponent(league)}`).then((j: any) => {
+      if (!alive) return;
+      setData({ total: j?.total || 0, entries: j?.entries || [] });
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [league]);
+
+  if (loading) return <div style={{ padding: 20, opacity: 0.5, fontSize: 12 }}>Loading ladder…</div>;
+  const entries = data?.entries || [];
+  if (entries.length === 0) return <div style={{ padding: 24, textAlign: "center", opacity: 0.45, fontSize: 13 }}>No ladder available for {league}.</div>;
+
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", marginBottom: 10 }}>
+        Top {entries.length} of {(data?.total || 0).toLocaleString()} · {league}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {entries.map((e: any) => (
+          <div key={e.rank} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", background: e.rank % 2 ? "rgba(255,255,255,.02)" : "transparent", borderRadius: 3 }}>
+            <div style={{ width: 34, textAlign: "right", fontWeight: 800, fontSize: 13, color: e.rank === 1 ? "#fbbf24" : e.rank <= 3 ? "#cbd5e1" : "rgba(255,255,255,.45)" }}>{e.rank}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {e.name}{e.dead && <span style={{ color: "#f87171", fontSize: 10, marginLeft: 6, fontWeight: 700 }}>DEAD</span>}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {e.account}{e.twitch ? ` · twitch.tv/${e.twitch}` : ""}
+              </div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: accent }}>Lv {e.level}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,.45)" }}>{e.cls}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function PoeModulesPanel({
@@ -960,56 +1092,50 @@ export default function PoeModulesPanel({
   const [tab, setTab] = useState<TabId>("economy");
   useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [league, setLeague] = useState(DEFAULT_LEAGUE);
+  const [leagues, setLeagues] = useState<{ id: string; current?: boolean }[]>([]);
+  useEffect(() => {
+    apiFetch("/poe/leagues").then((j: any) => { const ls = j?.leagues || []; if (ls.length) setLeagues(ls); });
+  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
       <div style={{
-        display: "flex", gap: 2, padding: "8px 12px 0",
+        display: "flex", gap: 2,
         borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, overflowX: "auto",
         alignItems: "center",
       }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: "7px 12px", borderRadius: "8px 8px 0 0", border: "none",
-            background: tab === t.id ? `${accent}20` : "transparent",
-            color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-            fontWeight: tab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer",
-            transition: "background .1s, color .1s",
-            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-            fontFamily: "inherit",
-          }}>
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
+        <ModuleTabBar
+          tabs={TABS.map(t => ({ id: t.id, label: t.label, icon: <span style={{ fontSize: 13 }}>{t.icon}</span> }))}
+          active={tab}
+          onSelect={(id) => setTab(id as TabId)}
+          accent={accent}
+        />
 
-        {/* League selector */}
-        {(tab === "economy" || tab === "items" || tab === "divcards" || tab === "gems") && (
+        {(tab === "economy" || tab === "items" || tab === "divcards" || tab === "gems" || tab === "ladder") && (
           <select
             value={league}
             onChange={e => setLeague(e.target.value)}
             style={{
-              ...S.select, marginLeft: "auto", fontSize: 11, padding: "4px 8px",
+              ...S.select, marginLeft: "auto", marginRight: 12, fontSize: 11, padding: "4px 8px",
               border: `1px solid ${accent}33`, background: `${accent}08`,
             }}
           >
-            {LEAGUES.map(l => <option key={l} value={l}>{l}</option>)}
+            {(leagues.length ? leagues.map(l => l.id) : LEAGUES).map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         )}
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "economy"  && <EconomyTab league={league} accent={accent} />}
         {tab === "items"    && <ItemsTab league={league} accent={accent} />}
         {tab === "divcards" && <DivCardsTab league={league} accent={accent} />}
         {tab === "gems"     && <GemsTab league={league} accent={accent} />}
+        {tab === "ladder"   && <LadderTab league={league} accent={accent} />}
         {tab === "streams"  && <TwitchStreams lobbyId={lobbyId} accent={accent} />}
         {tab === "lfg"      && <FindTeam lobbyId={lobbyId} accent={accent} />}
+        {tab === "account"  && <PoeAccountTab accent={accent} />}
       </div>
 
-      {/* GGG legal disclaimer */}
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
           Weered is not affiliated with, endorsed by, or sponsored by Grinding Gear Games. Path of Exile is a registered trademark of Grinding Gear Games. Economy data provided by poe.ninja.

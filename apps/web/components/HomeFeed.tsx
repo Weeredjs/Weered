@@ -7,7 +7,6 @@ import StoryInterceptModal from "./StoryInterceptModal";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 export interface FeedItem {
   id: string;
   url: string;
@@ -16,12 +15,11 @@ export interface FeedItem {
   domain: string;
   sourceName: string;
   category: "gaming" | "ufc" | "news" | "sports" | "tech" | "podcasts";
-  heat: number;       // 0–100
+  heat: number;
   usersInRoom: number;
   postedAt: Date;
 }
 
-// ─── Live feed hook ───────────────────────────────────────────────────────────
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 function useLiveFeed(category: Category, sort: "hot" | "new", domain?: string) {
@@ -59,7 +57,6 @@ function useLiveFeed(category: Category, sort: "hot" | "new", domain?: string) {
   return { items, loading, updatedAt };
 }
 
-
 const CATEGORIES = ["all", "gaming", "ufc", "news", "sports", "tech", "podcasts"] as const;
 type Category = typeof CATEGORIES[number];
 
@@ -77,14 +74,12 @@ const CAT_COLORS: Record<string, string> = {
   podcasts:"#DB2777",
 };
 
-// Verified lobbies — will eventually be DB-driven
 const VERIFIED_DOMAINS = new Set([
   "ign.com", "espn.com", "techcrunch.com", "bbc.com", "nba.com",
   "nfl.com", "kotaku.com", "theverge.com", "wired.com", "reuters.com",
   "theguardian.com", "spotify.com",
 ]);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(date: Date): string {
   const mins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (mins < 1)  return "just now";
@@ -95,7 +90,6 @@ function timeAgo(date: Date): string {
 }
 
 function roomIdFromUrl(url: string): string {
-  // Deterministic room ID from URL — matches what the backend will generate
   let hash = 0;
   for (let i = 0; i < url.length; i++) {
     hash = ((hash << 5) - hash) + url.charCodeAt(i);
@@ -108,7 +102,6 @@ function lobbyIdFromDomain(domain: string): string {
   return domain.replace(/^www\./, "");
 }
 
-// ─── Heat Bar ─────────────────────────────────────────────────────────────────
 function HeatBar({ heat, color }: { heat: number; color: string }) {
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -139,7 +132,6 @@ function HeatBar({ heat, color }: { heat: number; color: string }) {
   );
 }
 
-// ─── Feed Row ─────────────────────────────────────────────────────────────────
 function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEnter: (item: FeedItem, rect: DOMRect) => void }) {
   const [hovered, setHovered] = useState(false);
   const color = CAT_COLORS[item.category] || "#7C3AED";
@@ -163,7 +155,6 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         animation: `feedRowIn 0.3s ${index * 0.03}s both`,
       }}
     >
-      {/* Rank */}
       <div style={{
         fontSize: 11,
         fontWeight: 700,
@@ -174,7 +165,6 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         {index + 1}
       </div>
 
-      {/* Thumbnail */}
       <div style={{
         width: 88, height: 56, borderRadius: 8, overflow: "hidden", flexShrink: 0,
         background: "rgba(255,255,255,0.05)",
@@ -193,7 +183,6 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
             unoptimized={item.thumbnail.startsWith("/")}
           />
         )}
-        {/* Category pip */}
         <div style={{
           position: "absolute", top: 4, left: 4,
           padding: "2px 5px", borderRadius: 3,
@@ -205,7 +194,6 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         </div>
       </div>
 
-      {/* Title + source */}
       <div style={{ minWidth: 0 }}>
         <div style={{
           fontSize: 13,
@@ -248,10 +236,8 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         </div>
       </div>
 
-      {/* Heat bar */}
       <HeatBar heat={item.heat} color={color} />
 
-      {/* Users in room */}
       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
         <div style={{
           width: 6, height: 6, borderRadius: "50%",
@@ -264,7 +250,6 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
         </span>
       </div>
 
-      {/* Time */}
       <div style={{ fontSize: 10, color: "rgba(100,116,139,0.4)", textAlign: "right" }}>
         {timeAgo(item.postedAt)}
       </div>
@@ -272,7 +257,6 @@ function FeedRow({ item, index, onEnter }: { item: FeedItem; index: number; onEn
   );
 }
 
-// ─── Column Header ─────────────────────────────────────────────────────────────
 function ColHeader({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
   return (
     <div style={{
@@ -285,7 +269,6 @@ function ColHeader({ children, align = "left" }: { children: React.ReactNode; al
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function HomeFeed({ domain, defaultCategory }: { domain?: string; defaultCategory?: string } = {}) {
   const router = useRouter();
   const initialCat = (defaultCategory && CATEGORIES.includes(defaultCategory as Category)) ? defaultCategory as Category : "all";
@@ -313,7 +296,6 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
 
       <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
 
-        {/* Toolbar */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "8px 12px",
@@ -321,7 +303,6 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
           flexShrink: 0,
           gap: 10,
         }}>
-          {/* Category tabs */}
           <div style={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
             {CATEGORIES.map(cat => {
               const active = activeCategory === cat;
@@ -348,7 +329,6 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
             })}
           </div>
 
-          {/* Sort toggle */}
           <div style={{ display: "flex", gap: 1, background: "rgba(255,255,255,0.04)", borderRadius: 7, padding: 2, flexShrink: 0 }}>
             {(["hot", "new"] as const).map(s => (
               <button
@@ -373,7 +353,6 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
           </div>
         </div>
 
-        {/* Column headers */}
         <div style={{
           display: "grid",
           gridTemplateColumns: "28px 88px 1fr 80px 90px 70px",
@@ -390,7 +369,6 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
           <ColHeader align="right">Posted</ColHeader>
         </div>
 
-        {/* Rows */}
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {loading && items.length === 0 && (
             <LoadingState label="Pulling the feed" />
@@ -403,7 +381,6 @@ export default function HomeFeed({ domain, defaultCategory }: { domain?: string;
             <EmptyState title="Nothing's hot right now." hint="The feed updates every minute. Check back soon." />
           )}
 
-          {/* Footer hint */}
           <div style={{ padding: "16px 12px", fontSize: 10, color: "rgba(100,116,139,0.3)", textAlign: "center", letterSpacing: "0.06em", display: "flex", justifyContent: "center", gap: 16 }}>
             <span>CLICK ANY STORY TO ENTER ITS ROOM</span>
             {updatedAt && <span style={{ color: "rgba(100,116,139,0.2)" }}>UPDATED {timeAgo(updatedAt)}</span>}

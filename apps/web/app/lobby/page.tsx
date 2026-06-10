@@ -10,7 +10,6 @@ function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type LobbyCard = {
   id: string; name: string; description: string;
   verified: boolean; pinned: boolean;
@@ -25,21 +24,18 @@ type UpcomingEvent = {
   lobby?: { id: string; name: string; logoUrl?: string | null } | null;
 };
 
-// ─── Announcements (hardcoded for now — will be DB-backed later) ──────────────
 const ANNOUNCEMENTS = [
   { id: "1", title: "Tournaments Are Live", body: "Create leaderboard tournaments in your lobby. Challenge your members and award badges to top performers.", icon: "🏆", color: "#F59E0B" },
   { id: "2", title: "Paid Tiers & Monetization", body: "Lobby owners can now create subscription tiers with Stripe. Set up paid roles with custom perks and revenue sharing.", icon: "💎", color: "#7C3AED" },
   { id: "3", title: "Video Chat & Screen Share", body: "Full LiveKit-powered video rooms with camera grids, screen sharing, and presenter view. Built into every lobby.", icon: "📹", color: "#0EA5E9" },
 ];
 
-// ─── Platform Tiers ───────────────────────────────────────────────────────────
 const PLATFORM_TIERS = [
   { name: "Innocent", price: "Free", color: "#64748B", features: ["Join any lobby", "Chat & forums", "Basic profile", "Browse rooms"] },
   { name: "Indicted", price: "$6/mo", color: "#7C3AED", features: ["Colored username", "Video streaming", "Custom fonts", "Create 1 lobby", "Challenge participation"] },
   { name: "Felon", price: "$14/mo", color: "#DC2626", features: ["Everything in Indicted", "Own up to 3 lobbies", "Paid tier creation", "Revenue sharing", "Priority support"] },
 ];
 
-// ─── Admin Toolkit Features ───────────────────────────────────────────────────
 const TOOLKIT_SECTIONS = [
   {
     title: "Rooms & Modules",
@@ -85,7 +81,6 @@ const TOOLKIT_SECTIONS = [
   },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeUntil(dateStr: string): string {
   const diff = new Date(dateStr).getTime() - Date.now();
   if (diff < 0) return "now";
@@ -95,7 +90,6 @@ function timeUntil(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d`;
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
 function SectionHeader({ title, icon }: { title: string; icon: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
@@ -109,7 +103,6 @@ function SectionHeader({ title, icon }: { title: string; icon: string }) {
   );
 }
 
-// ─── Announcement Card ────────────────────────────────────────────────────────
 function AnnouncementCard({ a }: { a: typeof ANNOUNCEMENTS[0] }) {
   return (
     <div style={{
@@ -128,7 +121,6 @@ function AnnouncementCard({ a }: { a: typeof ANNOUNCEMENTS[0] }) {
   );
 }
 
-// ─── Event Card ───────────────────────────────────────────────────────────────
 function EventCard({ ev }: { ev: UpcomingEvent }) {
   const ac = "#7C3AED";
   return (
@@ -161,7 +153,6 @@ function EventCard({ ev }: { ev: UpcomingEvent }) {
   );
 }
 
-// ─── Lobby Card ───────────────────────────────────────────────────────────────
 function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boolean }) {
   const [hovered, setHovered] = useState(false);
   const ac = lobby.accentColor || "#7C3AED";
@@ -183,7 +174,6 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
           display: "flex", gap: 12, alignItems: "center",
         }}
       >
-        {/* Logo */}
         <div style={{
           width: 44, height: 44, borderRadius: 10, flexShrink: 0,
           background: lobby.logoUrl ? "none" : `${ac}22`,
@@ -198,7 +188,6 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
           )}
         </div>
 
-        {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,0.95)" }}>{lobby.name}</span>
@@ -217,7 +206,6 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
           </div>
         </div>
 
-        {/* Stats */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <div style={{
@@ -238,7 +226,6 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
   );
 }
 
-// ─── Toolkit Feature Section ──────────────────────────────────────────────────
 function ToolkitCard({ section }: { section: typeof TOOLKIT_SECTIONS[0] }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -303,7 +290,6 @@ function ToolkitCard({ section }: { section: typeof TOOLKIT_SECTIONS[0] }) {
   );
 }
 
-// ─── Tier Column ──────────────────────────────────────────────────────────────
 function TierColumn({ tier }: { tier: typeof PLATFORM_TIERS[0] }) {
   const isFree = tier.price === "Free";
   return (
@@ -348,10 +334,6 @@ function TierColumn({ tier }: { tier: typeof PLATFORM_TIERS[0] }) {
   );
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ═══════════════════════════════════════════════════════════════════════════════
 export default function LobbyPage() {
   const [allLobbies, setAllLobbies] = useState<LobbyCard[]>([]);
   const [myLobbies, setMyLobbies] = useState<LobbyCard[]>([]);
@@ -374,10 +356,6 @@ export default function LobbyPage() {
   const loggedIn = myLobbies.length > 0;
 
   return (
-    // Wrap in a position:relative host so the absolute-filled inner
-    // wrapper resolves against *this* element (not the body). Using
-    // explicit 100vh on the host bypasses the flex/padding chain that
-    // was leaving a dead zone at the bottom of the panel.
     <div style={{ position: "relative", width: "100%", height: "100vh", minHeight: 0 }}>
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, bottom: 28,
@@ -394,7 +372,6 @@ export default function LobbyPage() {
         overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}>
-        {/* Scrollable content */}
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "20px 24px 40px" }}>
           <style>{`
             @keyframes lobbyFadeIn {
@@ -422,7 +399,6 @@ export default function LobbyPage() {
             </div>
           ) : (
             <>
-              {/* ── What's Happening ─────────────────────────────────── */}
               <div className="lobby-section">
                 <SectionHeader title="What's Happening" icon="📢" />
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: events.length > 0 ? 16 : 0 }}>
@@ -441,7 +417,6 @@ export default function LobbyPage() {
                 )}
               </div>
 
-              {/* ── Your Lobbies ─────────────────────────────────────── */}
               {loggedIn && (
                 <div className="lobby-section">
                   <SectionHeader title="Your Lobbies" icon="⭐" />
@@ -451,7 +426,6 @@ export default function LobbyPage() {
                 </div>
               )}
 
-              {/* ── Active Lobbies ────────────────────────────────────── */}
               <div className="lobby-section">
                 <SectionHeader title={loggedIn ? "Discover Lobbies" : "Active Lobbies"} icon="🌐" />
                 {allLobbies.length === 0 ? (
@@ -468,7 +442,6 @@ export default function LobbyPage() {
                 )}
               </div>
 
-              {/* ── Build Your Lobby ──────────────────────────────────── */}
               <div className="lobby-section">
                 <SectionHeader title="Build Your Lobby" icon="🔧" />
 
@@ -478,7 +451,6 @@ export default function LobbyPage() {
                   </p>
                 </div>
 
-                {/* Tier comparison */}
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.45)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>
                     PLATFORM TIERS
@@ -488,7 +460,6 @@ export default function LobbyPage() {
                   </div>
                 </div>
 
-                {/* Toolkit walkthrough */}
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.45)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>
                     THE OWNER TOOLKIT

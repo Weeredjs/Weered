@@ -4,7 +4,6 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
-// Don't show on login/register/staff
 const HIDE_ON = ["/login", "/register", "/staff"];
 
 export default function SiteFooter() {
@@ -73,6 +72,8 @@ export default function SiteFooter() {
           <span>© weered.ca</span>
         </div>
         <nav className="site-footer-nav">
+          <Link href="/explore">explore</Link>
+          <div className="site-footer-divider" />
           <Link href="/about">about</Link>
           <div className="site-footer-divider" />
           <Link href="/desktop">desktop app</Link>

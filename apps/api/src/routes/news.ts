@@ -1,14 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /news/* — read-only endpoints over the prisma.newsArticle table that
-// the news ingestion worker (still in main()) populates from RSS every
-// 15 minutes. Plus /news/reader: server-side article extraction so we
-// can render a clean reader view without iframing third-party HTML.
-//
-// The route-side cache is independent of the worker's cache (the
-// worker's writes go straight to DB; routes always read from DB). The
-// 5-min TTL just shaves the per-request DB hit on bursty traffic.
 export default async function newsRoutes(app: FastifyInstance) {
   const newsCache = new Map<string, { articles: any[]; cachedAt: number }>();
   const NEWS_CACHE_TTL = 5 * 60 * 1000;
@@ -16,14 +8,15 @@ export default async function newsRoutes(app: FastifyInstance) {
   app.get("/news/feed", async (req, reply) => {
     const category = String((req as any).query?.category || "top").toLowerCase();
     const limit = Math.min(Number((req as any).query?.limit) || 30, 60);
-    const cacheKey = `feed:${category}:${limit}`;
+    const source = String((req as any).query?.source || "").trim();
+    const cacheKey = `feed:${category}:${source}:${limit}`;
     const cached = newsCache.get(cacheKey);
     if (cached && Date.now() - cached.cachedAt < NEWS_CACHE_TTL) {
       return reply.send({ ok: true, articles: cached.articles, updatedAt: new Date(cached.cachedAt).toISOString() });
     }
     const articles = await prisma.newsArticle.findMany({
-      where: { category },
-      orderBy: { heat: "desc" },
+      where: source ? { category, source } : { category },
+      orderBy: source ? { publishedAt: "desc" } : { heat: "desc" },
       take: limit,
     });
     newsCache.set(cacheKey, { articles, cachedAt: Date.now() });
@@ -43,10 +36,6 @@ export default async function newsRoutes(app: FastifyInstance) {
     return reply.send({ ok: true, articles });
   });
 
-  // /news/reader — server-side article extraction (reader mode).
-  // Pulls the page, extracts OpenGraph metadata + article body via tag
-  // matching (article > main > paragraph blocks), filters out tracker
-  // pixels and tiny images, returns markdown-ish body for the reader UI.
   const readerCache = new Map<string, { data: any; cachedAt: number }>();
   const READER_CACHE_TTL = 30 * 60 * 1000;
 

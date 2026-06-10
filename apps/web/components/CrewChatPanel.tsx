@@ -6,13 +6,11 @@ import EmptyState from "./EmptyState";
 import { useWeered } from "./WeeredProvider";
 import { weeredConfirm } from "../lib/confirm";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
   try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 type CrewReaction = { emoji: string; count: number; users: string[] };
 interface CrewMessage {
   id: string;
@@ -36,7 +34,6 @@ interface Props {
   myName: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 function timeStr(iso: string): string {
   const d = new Date(iso);
   const h = d.getHours();
@@ -63,7 +60,6 @@ function isSameDay(a: string, b: string): boolean {
   return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
 export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props) {
   const [messages, setMessages] = useState<CrewMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,14 +86,12 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
   const inputRef = useRef<HTMLInputElement>(null);
   const ctx = useWeered() as any;
 
-  // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     });
   }, []);
 
-  // Fetch messages on mount
   useEffect(() => {
     const tok = getToken();
     if (!tok) { setLoading(false); return; }
@@ -116,7 +110,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
       .finally(() => {
         if (!cancelled) {
           setLoading(false);
-          // Scroll after DOM paint
           requestAnimationFrame(() => {
             bottomRef.current?.scrollIntoView({ behavior: "instant" as any });
           });
@@ -126,7 +119,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
     return () => { cancelled = true; };
   }, [crewId]);
 
-  // Listen for incoming crew messages via custom event
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -178,12 +170,10 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
     };
   }, [crewId, scrollToBottom]);
 
-  // Scroll when messages change
   useEffect(() => {
     if (messages.length > 0) scrollToBottom();
   }, [messages.length, scrollToBottom]);
 
-  // Send message
   const handleSend = useCallback(() => {
     const body = input.trim();
     if (!body) return;
@@ -191,10 +181,8 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
     const envelope: any = { type: "crew:send", crewId, body };
     if (replyingTo?.id) envelope.replyToId = replyingTo.id;
 
-    // Dispatch through WS bridge
     window.dispatchEvent(new CustomEvent("weered:ws:send", { detail: envelope }));
 
-    // Optimistic add
     const optimistic: CrewMessage = {
       id: `opt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       userId: myId,
@@ -224,7 +212,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
       display: "flex", flexDirection: "column", height: "100%",
       background: "rgba(10,10,15,.95)",
     }}>
-      {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "12px 16px",
@@ -255,7 +242,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
         </span>
       </div>
 
-      {/* Message list */}
       <div
         ref={scrollRef}
         style={{
@@ -287,7 +273,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
 
           return (
             <React.Fragment key={msg.id}>
-              {/* Date separator */}
               {showDateSep && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 10,
@@ -305,7 +290,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                 </div>
               )}
 
-              {/* Message row */}
               {(() => {
                 const isDeleted = !!msg.deletedAt;
                 const isEdited = !!msg.editedAt && !isDeleted;
@@ -341,7 +325,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                       position: "relative",
                     }}
                   >
-                    {/* Avatar */}
                     <div style={{
                       width: 28, height: 28, minWidth: 28, borderRadius: "50%",
                       background: `${bg}33`,
@@ -355,7 +338,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                       {msg.userName.charAt(0).toUpperCase()}
                     </div>
 
-                    {/* Bubble */}
                     <div style={{ maxWidth: "75%", minWidth: 0 }}>
                       <div style={{
                         display: "flex", alignItems: "baseline", gap: 6,
@@ -477,7 +459,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
         <div ref={bottomRef} />
       </div>
 
-      {/* Reply banner */}
       {replyingTo && (
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
@@ -493,7 +474,6 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
         </div>
       )}
 
-      {/* Input bar */}
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
         padding: "10px 12px",

@@ -9,8 +9,6 @@ function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 
-/* ── NPC Presets ──────────────────────────────────────────────────────────── */
-
 const NPC_PRESETS = [
   { name: "Tavern Keeper", portrait: "🍺", personality: "Warm and gossipy. Knows everyone in town. Speaks with a hearty laugh and offers advice over ale.", knowledge: "Local rumors, town history, who's been causing trouble, directions to nearby landmarks.", secrets: "Has a hidden cellar with contraband goods. Knows the location of an old treasure map.", greeting: "Welcome, traveler! Pull up a chair — what'll it be?", appearance: "A stout, ruddy-faced human with a stained apron and a booming voice." },
   { name: "Mysterious Stranger", portrait: "🗡️", personality: "Cloaked and cryptic. Speaks in riddles and half-truths. Knows far more than they should.", knowledge: "Ancient prophecies, forgotten lore, the movements of shadowy organizations.", secrets: "Is a disguised celestial on a reconnaissance mission. Has been watching the party for weeks.", greeting: "Ah... I've been expecting someone like you.", appearance: "A hooded figure in dark travelling clothes, face obscured by shadow." },
@@ -23,8 +21,6 @@ const PORTRAIT_OPTIONS = ["🍺", "🗡️", "💰", "🛡️", "📚", "🧙", 
 
 const ACCENT = "#C4A55A";
 
-/* ── Styles ──────────────────────────────────────────────────────────────── */
-
 const S = {
   card: { borderRadius: 12, border: `1px solid ${ACCENT}22`, background: `${ACCENT}08`, padding: "14px 16px" } as React.CSSProperties,
   btn: { padding: "6px 14px", borderRadius: 8, border: `1px solid ${ACCENT}33`, background: `${ACCENT}12`, color: "rgba(243,244,246,.85)", fontSize: 11, fontWeight: 700 as const, cursor: "pointer", transition: "all .15s" } as React.CSSProperties,
@@ -33,8 +29,6 @@ const S = {
   textarea: { width: "100%", padding: "8px 12px", borderRadius: 8, border: `1px solid ${ACCENT}22`, background: "rgba(0,0,0,.3)", color: "rgba(243,244,246,.9)", fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, resize: "vertical" as const, minHeight: 60 } as React.CSSProperties,
   label: { fontSize: 11, fontWeight: 600 as const, color: "rgba(148,163,184,.6)", letterSpacing: "0.03em" } as React.CSSProperties,
 };
-
-/* ── Types ──────────────────────────────────────────────────────────────── */
 
 interface NpcConfig {
   personality?: string;
@@ -64,12 +58,9 @@ interface NpcMsg {
   createdAt: string;
 }
 
-/* ── TTS Helper ──────────────────────────────────────────────────────────── */
-
 function speak(text: string, pitch = 1, rate = 0.95) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  // Strip *action* markers for cleaner speech
   const clean = text.replace(/\*[^*]+\*/g, "").trim();
   if (!clean) return;
   const utt = new SpeechSynthesisUtterance(clean);
@@ -80,8 +71,6 @@ function speak(text: string, pitch = 1, rate = 0.95) {
   if (preferred) utt.voice = preferred;
   window.speechSynthesis.speak(utt);
 }
-
-/* ── Main Component ──────────────────────────────────────────────────────── */
 
 export default function DndNpcPanel({ roomId }: { roomId: string }) {
   const [view, setView] = useState<"gallery" | "chat" | "create">("gallery");
@@ -94,7 +83,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
   const [loadingNpcs, setLoadingNpcs] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // ── Create form state ──
   const [cName, setCName] = useState("");
   const [cPortrait, setCPortrait] = useState("🧙");
   const [cPersonality, setCPersonality] = useState("");
@@ -109,7 +97,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
 
   useEffect(() => { loadNpcs(); }, [roomId]);
 
-  // Pre-load browser voices
   useEffect(() => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.getVoices();
@@ -145,7 +132,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
     setInput("");
     setSending(true);
 
-    // Optimistic user bubble
     const tempId = `tmp-${Date.now()}`;
     setMessages(prev => [...prev, { id: tempId, npcId: activeNpc.id, userId: "me", userName: "You", role: "user", content: text, createdAt: new Date().toISOString() }]);
     setTimeout(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight), 60);
@@ -219,9 +205,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
     setCPitch(1); setCRate(0.95);
   }
 
-  /* ═════════════════════════════════════════════════════════════════════════
-     GALLERY
-     ═════════════════════════════════════════════════════════════════════════ */
   if (view === "gallery") {
     return (
       <div style={{ padding: "14px 12px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
@@ -280,13 +263,9 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
     );
   }
 
-  /* ═════════════════════════════════════════════════════════════════════════
-     CHAT
-     ═════════════════════════════════════════════════════════════════════════ */
   if (view === "chat" && activeNpc) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${ACCENT}15`, flexShrink: 0 }}>
           <button onClick={() => setView("gallery")} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>←</button>
           <span style={{ fontSize: 22 }}>{activeNpc.portrait}</span>
@@ -311,7 +290,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
           </button>
         </div>
 
-        {/* Messages */}
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           {messages.length === 0 && !sending && (
             <div style={{ textAlign: "center", padding: "40px 20px", color: "rgba(148,163,184,.3)", fontSize: 12 }}>
@@ -357,7 +335,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
           )}
         </div>
 
-        {/* Input */}
         <div style={{ padding: "10px 12px", borderTop: `1px solid ${ACCENT}15`, display: "flex", gap: 8, flexShrink: 0 }}>
           <input
             value={input}
@@ -387,18 +364,13 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
     );
   }
 
-  /* ═════════════════════════════════════════════════════════════════════════
-     CREATE / EDIT
-     ═════════════════════════════════════════════════════════════════════════ */
   return (
     <div style={{ padding: "14px 12px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <button onClick={() => { resetForm(); setView("gallery"); }} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>←</button>
         <span style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.85)" }}>{editId ? "Edit NPC" : "Summon NPC"}</span>
       </div>
 
-      {/* Presets */}
       {!editId && (
         <div>
           <div style={S.label}>Quick Presets</div>
@@ -412,13 +384,11 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* Name */}
       <div>
         <div style={S.label}>Name</div>
         <input value={cName} onChange={e => setCName(e.target.value)} placeholder="e.g. Gundren Rockseeker" maxLength={64} style={{ ...S.input, marginTop: 4 }} />
       </div>
 
-      {/* Portrait */}
       <div>
         <div style={S.label}>Portrait</div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
@@ -435,37 +405,31 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* Personality */}
       <div>
         <div style={S.label}>Personality</div>
         <textarea value={cPersonality} onChange={e => setCPersonality(e.target.value)} placeholder="How does this NPC act, speak, and treat strangers?" style={{ ...S.textarea, marginTop: 4 }} />
       </div>
 
-      {/* Knowledge */}
       <div>
         <div style={S.label}>Knowledge <span style={{ fontWeight: 400, opacity: 0.5 }}>— what they know</span></div>
         <textarea value={cKnowledge} onChange={e => setCKnowledge(e.target.value)} placeholder="What does this NPC know about? Local rumors, quest info, world lore..." style={{ ...S.textarea, marginTop: 4 }} />
       </div>
 
-      {/* Secrets */}
       <div>
         <div style={S.label}>Secrets <span style={{ fontWeight: 400, opacity: 0.5 }}>— hard to extract</span></div>
         <textarea value={cSecrets} onChange={e => setCSecrets(e.target.value)} placeholder="What does this NPC hide? They'll be evasive — players have to work for it." style={{ ...S.textarea, marginTop: 4 }} />
       </div>
 
-      {/* Appearance */}
       <div>
         <div style={S.label}>Appearance</div>
         <input value={cAppearance} onChange={e => setCAppearance(e.target.value)} placeholder="What do they look like?" maxLength={200} style={{ ...S.input, marginTop: 4 }} />
       </div>
 
-      {/* Greeting */}
       <div>
         <div style={S.label}>Greeting <span style={{ fontWeight: 400, opacity: 0.5 }}>— first thing they say</span></div>
         <input value={cGreeting} onChange={e => setCGreeting(e.target.value)} placeholder="e.g. Welcome, traveler! What brings you to these parts?" maxLength={300} style={{ ...S.input, marginTop: 4 }} />
       </div>
 
-      {/* Voice */}
       <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
         <div style={{ flex: 1 }}>
           <div style={S.label}>Voice Pitch <span style={{ fontWeight: 400, opacity: 0.5 }}>{cPitch.toFixed(1)}</span></div>
@@ -489,7 +453,6 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
         </button>
       </div>
 
-      {/* Save */}
       <button onClick={handleSave} disabled={creating || !cName.trim()} style={{
         ...S.btnPri, width: "100%", marginTop: 4,
         opacity: creating || !cName.trim() ? 0.4 : 1,

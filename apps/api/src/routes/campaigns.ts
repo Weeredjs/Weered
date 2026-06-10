@@ -1,15 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /rooms/:roomId/campaign — D&D campaign state ledger.
-// Persistent state per campaign: party gold, loot ledger, XP, session log,
-// NPC encounter index, plot threads, world-note wiki. The DM (campaign
-// creator) is the only user who can mutate; members read.
-//
-// Campaign is anchored 1:1 to a Room for now. Multi-room parties will
-// later route through a lookup table; for now `campaignId` is resolved
-// from the room id on every call.
-
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   broadcastToLobby: (lobbyId: string, event: any) => void;
@@ -22,7 +13,6 @@ async function getCampaignByRoom(roomId: string) {
 export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, broadcastToLobby } = opts;
 
-  // ── Resolve / create the campaign for a room ────────────────────────────
   app.get("/rooms/:roomId/campaign", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -57,14 +47,15 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, campaign });
   });
 
-  async function loadCampaignForMutate(roomId: string, userId: string) {
+  async function loadCampaignForMutate(roomId: string, userId: string): Promise<
+    { error: string; code: number } | { campaign: any }
+  > {
     const campaign = await getCampaignByRoom(roomId);
-    if (!campaign) return { error: "no_campaign", code: 404 } as const;
-    if (campaign.dmUserId !== userId) return { error: "not_dm", code: 403 } as const;
-    return { campaign } as const;
+    if (!campaign) return { error: "no_campaign", code: 404 };
+    if (campaign.dmUserId !== userId) return { error: "not_dm", code: 403 };
+    return { campaign };
   }
 
-  // ── Members ─────────────────────────────────────────────────────────────
   app.post("/rooms/:roomId/campaign/members", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -93,7 +84,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true });
   });
 
-  // ── Ledger (gold / item / xp) ───────────────────────────────────────────
   app.get("/rooms/:roomId/campaign/ledger", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -160,7 +150,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, partyGold });
   });
 
-  // ── XP totals per character (derived from ledger XP entries) ───────────
   app.get("/rooms/:roomId/campaign/xp", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -176,7 +165,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, totals });
   });
 
-  // ── Session log ────────────────────────────────────────────────────────
   app.get("/rooms/:roomId/campaign/sessions", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -236,7 +224,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true });
   });
 
-  // ── NPC encounters ─────────────────────────────────────────────────────
   app.get("/rooms/:roomId/campaign/npcs", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -311,7 +298,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true });
   });
 
-  // ── Plot threads ───────────────────────────────────────────────────────
   app.get("/rooms/:roomId/campaign/threads", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -379,9 +365,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true });
   });
 
-  // ── Party (campaign characters with derived XP totals) ─────────────────
-  // Returns the Character rows attached to this campaign plus per-character
-  // XP summed from LedgerEntry XP rows (matched by ownerUserId/awardedToUserId).
   app.get("/rooms/:roomId/campaign/party", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -408,9 +391,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, party });
   });
 
-  // ── XP distribution — one ledger entry per party character ─────────────
-  // Body: { delta: number, description?: string, characterIds?: string[] }
-  // If characterIds is empty/omitted, distributes to all campaign characters.
   app.post("/rooms/:roomId/campaign/ledger/distribute", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -448,7 +428,6 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, awarded: entries.length, entries });
   });
 
-  // ── World notes (hierarchical wiki) ────────────────────────────────────
   app.get("/rooms/:roomId/campaign/notes", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });

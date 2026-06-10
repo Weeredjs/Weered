@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -17,17 +18,13 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-// -- Style --------------------------------------------------------------------
-
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: (accent: string) => ({ padding: "6px 12px", borderRadius: 8, border: `1px solid ${accent}55`, background: `${accent}18`, fontSize: 12, cursor: "pointer", color: "#fff", fontWeight: 600 }) as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  btnPri: (accent: string) => ({ padding: "6px 12px", borderRadius: 2, border: `1px solid ${accent}55`, background: `${accent}18`, fontSize: 12, cursor: "pointer", color: "#fff", fontWeight: 600 }) as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
-
-// -- Helpers ------------------------------------------------------------------
 
 function relativeTime(iso: string): string {
   try {
@@ -49,22 +46,19 @@ function relativeTime(iso: string): string {
   }
 }
 
-/** Format score-to-par for display. Negative = under par (red), positive = over (green), E = even */
 function formatScore(score: string | number | null | undefined): { text: string; color: string } {
   if (score === null || score === undefined || score === "" || score === "—") return { text: "—", color: "rgba(255,255,255,.5)" };
   const s = String(score).trim();
   if (s === "E" || s === "0" || s === "Even") return { text: "E", color: "rgba(255,255,255,.85)" };
   const num = parseInt(s, 10);
   if (isNaN(num)) return { text: s, color: "rgba(255,255,255,.7)" };
-  if (num < 0) return { text: s, color: "#ef4444" }; // Under par = red (good in golf)
-  return { text: `+${num}`, color: "#22c55e" }; // Over par = green
+  if (num < 0) return { text: s, color: "#ef4444" };
+  return { text: `+${num}`, color: "#22c55e" };
 }
 
-/** Country code to flag emoji */
 function countryFlag(code: string | undefined): string {
   if (!code) return "";
   const c = code.toUpperCase().trim();
-  // Common PGA abbreviations
   const map: Record<string, string> = {
     USA: "\u{1F1FA}\u{1F1F8}", US: "\u{1F1FA}\u{1F1F8}",
     CAN: "\u{1F1E8}\u{1F1E6}", GBR: "\u{1F1EC}\u{1F1E7}", UK: "\u{1F1EC}\u{1F1E7}", ENG: "\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}",
@@ -78,14 +72,11 @@ function countryFlag(code: string | undefined): string {
     NZL: "\u{1F1F3}\u{1F1FF}", PHI: "\u{1F1F5}\u{1F1ED}", TAI: "\u{1F1F9}\u{1F1FC}",
   };
   if (map[c]) return map[c];
-  // Fallback: try to build flag from 2-letter ISO
   if (c.length === 2) {
     return String.fromCodePoint(...[...c].map(ch => 0x1f1e6 + ch.charCodeAt(0) - 65));
   }
   return c;
 }
-
-// -- Leaderboard Tab ----------------------------------------------------------
 
 function HoleByHole({ holes, accentColor }: { holes: any[]; accentColor: string }) {
   if (!holes?.length) return <div style={{ fontSize: 11, opacity: 0.35, padding: "4px 0" }}>No hole-by-hole data yet</div>;
@@ -167,22 +158,21 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
     const status = (event.status || "").toLowerCase();
     if (status.includes("final") || status.includes("complete") || status.includes("official")) {
       return (
-        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.5)" }}>
+        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 2, background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.5)" }}>
           FINAL
         </span>
       );
     }
     if (status.includes("progress") || status.includes("active")) {
       return (
-        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: `${accent}20`, color: accent, display: "inline-flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 2, background: `${accent}20`, color: accent, display: "inline-flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,.6)" }} />
           {event.round ? `ROUND ${event.round} LIVE` : "LIVE"}
         </span>
       );
     }
-    // Default: show round info
     return (
-      <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: `${accent}15`, color: accent }}>
+      <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 2, background: `${accent}15`, color: accent }}>
         {event.round ? `ROUND ${event.round}` : event.status || "UPCOMING"}
       </span>
     );
@@ -190,11 +180,11 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Tournament header */}
       {event && (
         <div style={{
           ...S.card,
           border: `1px solid ${accent}30`,
+          borderLeft: `2px solid ${accent}`,
           background: `${accent}08`,
           padding: "14px 16px",
         }}>
@@ -226,13 +216,12 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
               </span>
             )}
           </div>
-          {/* Broadcast info */}
           {event.broadcasts?.length > 0 && (
             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <span style={{ fontSize: 9, fontWeight: 700, opacity: 0.4, letterSpacing: ".5px", textTransform: "uppercase" }}>WATCH ON</span>
               {event.broadcasts.map((b: string, i: number) => (
                 <span key={i} style={{
-                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 2,
                   background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.08)",
                 }}>
                   {b}
@@ -252,7 +241,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
         <div style={{ fontSize: 10, textAlign: "center", opacity: 0.3 }}>Refreshing...</div>
       )}
 
-      {/* Leaderboard table */}
       {players.length > 0 && (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
@@ -285,7 +273,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
 
                 return (
                   <React.Fragment key={p.name + "-" + i}>
-                    {/* Cut line indicator */}
                     {isCutLine && (
                       <tr>
                         <td colSpan={8} style={{ padding: 0 }}>
@@ -310,7 +297,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                       transition: "background .1s",
                       cursor: "pointer",
                     }}>
-                      {/* POS */}
                       <td style={{
                         textAlign: "center", padding: "7px 6px", fontWeight: 800, fontSize: 12,
                         color: isTop3 ? accent : "rgba(255,255,255,.6)",
@@ -321,7 +307,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                         {pos || "—"}
                       </td>
 
-                      {/* PLAYER */}
                       <td style={{ padding: "7px 6px", fontWeight: isTop3 ? 700 : 500, fontSize: 12, whiteSpace: "nowrap", minWidth: 140 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.country && (
@@ -335,7 +320,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                         </div>
                       </td>
 
-                      {/* SCORE (to par) */}
                       <td style={{
                         textAlign: "center", padding: "7px 6px",
                         fontWeight: 900, fontSize: 13,
@@ -345,7 +329,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                         {scoreInfo.text}
                       </td>
 
-                      {/* R1-R4 */}
                       {[0, 1, 2, 3].map(ri => (
                         <td key={ri} style={{
                           textAlign: "center", padding: "7px 4px",
@@ -357,7 +340,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
                         </td>
                       ))}
 
-                      {/* THRU */}
                       <td style={{
                         textAlign: "center", padding: "7px 6px",
                         fontSize: 10, fontWeight: 600,
@@ -396,8 +378,6 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
   );
 }
 
-// -- Field Intel Tab (DFS / Gambling Adjacent) --------------------------------
-
 type FieldSort = "position" | "today" | "name";
 
 function FieldIntel({ accentColor }: { accentColor: string }) {
@@ -425,14 +405,12 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading field intel...</div>;
   if (error) return <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>;
 
-  // Compute today's score for each player
   const enriched = field.map(p => {
     const todayScore = p.today ? parseInt(String(p.today), 10) : NaN;
     const rounds = p.roundScores || p.rounds || [];
     return { ...p, todayNum: todayScore, rounds };
   });
 
-  // Sort
   const sorted = [...enriched].sort((a, b) => {
     if (sort === "name") return (a.name || "").localeCompare(b.name || "");
     if (sort === "today") {
@@ -440,23 +418,20 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
       const bt = isNaN(b.todayNum) ? 999 : b.todayNum;
       return at - bt;
     }
-    // position
     const ap = parseInt(String(a.position), 10) || 999;
     const bp = parseInt(String(b.position), 10) || 999;
     return ap - bp;
   });
 
-  // Summary stats
   const todayScores = enriched.filter(p => !isNaN(p.todayNum)).map(p => p.todayNum);
   const fieldAvg = todayScores.length > 0 ? (todayScores.reduce((s, v) => s + v, 0) / todayScores.length).toFixed(1) : "—";
   const lowestRound = todayScores.length > 0 ? Math.min(...todayScores) : null;
-  const underPar = todayScores.filter(s => s < 72).length; // typically par 72
+  const underPar = todayScores.filter(s => s < 72).length;
 
   function roundCircle(score: string | number | undefined, idx: number) {
     if (!score && score !== 0) return <span key={idx} style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(255,255,255,.08)", display: "inline-block" }} />;
     const num = typeof score === "number" ? score : parseInt(String(score), 10);
     if (isNaN(num)) return <span key={idx} style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(255,255,255,.08)", display: "inline-block" }} />;
-    // Under 72 = green, over 72 = red, 72 = gray
     let color = "rgba(255,255,255,.15)";
     if (num < 72) color = "rgba(34,197,94,.6)";
     else if (num > 72) color = "rgba(239,68,68,.5)";
@@ -476,14 +451,12 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Event name */}
       {event && (
         <div style={{ fontWeight: 800, fontSize: 14, opacity: 0.7 }}>
           {event.name} {event.round ? `\u2014 Round ${event.round}` : ""}
         </div>
       )}
 
-      {/* Summary stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         <div style={{ ...S.card, textAlign: "center", padding: "10px 8px" }}>
           <div style={{ ...S.label, marginBottom: 4 }}>Field Avg Today</div>
@@ -503,7 +476,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
         </div>
       </div>
 
-      {/* Sort controls */}
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         <span style={{ ...S.label, marginBottom: 0, marginRight: 4 }}>Sort:</span>
         {(["position", "today", "name"] as FieldSort[]).map(s => (
@@ -517,7 +489,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
         ))}
       </div>
 
-      {/* Player cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {sorted.map((p, i) => {
           const scoreInfo = formatScore(p.score);
@@ -530,7 +501,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
               display: "flex", alignItems: "center", gap: 12,
               padding: "10px 12px",
             }}>
-              {/* Position */}
               <div style={{
                 minWidth: 32, textAlign: "center", fontWeight: 800, fontSize: 13,
                 color: "rgba(255,255,255,.45)", fontVariantNumeric: "tabular-nums",
@@ -538,7 +508,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
                 {p.position || "—"}
               </div>
 
-              {/* Name + country + badges */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                   {p.country && (
@@ -551,18 +520,17 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
                   </span>
                   {isHot && (
                     <span style={{
-                      fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 4,
+                      fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 2,
                       background: "rgba(34,197,94,.15)", color: "#22c55e", letterSpacing: ".5px",
                     }}>HOT</span>
                   )}
                   {isCold && (
                     <span style={{
-                      fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 4,
+                      fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 2,
                       background: "rgba(239,68,68,.15)", color: "#ef4444", letterSpacing: ".5px",
                     }}>COLD</span>
                   )}
                 </div>
-                {/* Round-by-round trend dots */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   {[0, 1, 2, 3].map(ri => roundCircle(p.rounds[ri], ri))}
                   {p.rounds.length > 0 && (
@@ -573,7 +541,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
                 </div>
               </div>
 
-              {/* Score to par */}
               <div style={{
                 fontWeight: 900, fontSize: 16,
                 color: scoreInfo.color,
@@ -583,7 +550,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
                 {scoreInfo.text}
               </div>
 
-              {/* Today */}
               <div style={{
                 minWidth: 36, textAlign: "right",
                 fontSize: 11, fontWeight: 600,
@@ -602,8 +568,6 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
     </div>
   );
 }
-
-// -- News Tab -----------------------------------------------------------------
 
 function PgaNews({ accentColor }: { accentColor: string }) {
   const accent = accentColor;
@@ -649,10 +613,9 @@ function PgaNews({ accentColor }: { accentColor: string }) {
               (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)";
             }}
           >
-            {/* Thumbnail */}
             {a.image && (
               <div style={{
-                width: 100, height: 68, borderRadius: 6, overflow: "hidden", flexShrink: 0,
+                width: 100, height: 68, borderRadius: 2, overflow: "hidden", flexShrink: 0,
                 background: "rgba(0,0,0,.4)",
               }}>
                 <img
@@ -664,7 +627,6 @@ function PgaNews({ accentColor }: { accentColor: string }) {
               </div>
             )}
 
-            {/* Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                 <span style={{
@@ -690,7 +652,7 @@ function PgaNews({ accentColor }: { accentColor: string }) {
                 {a.published && <span>{relativeTime(a.published)}</span>}
                 {a.premium && (
                   <span style={{
-                    fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 4,
+                    fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 2,
                     background: "rgba(245,158,11,.15)", color: "rgb(253,230,138)",
                     letterSpacing: ".5px", textTransform: "uppercase",
                   }}>
@@ -709,8 +671,6 @@ function PgaNews({ accentColor }: { accentColor: string }) {
     </div>
   );
 }
-
-// -- Twitch Streams (Golf) ----------------------------------------------------
 
 function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor?: string }) {
   const accent = accentColor || "#003B2F";
@@ -749,9 +709,8 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Embed player */}
       {activeStream && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 4 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 4 }}>
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%"
@@ -766,7 +725,6 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
         </div>
       )}
 
-      {/* Stream grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
         {streams.map(s => (
           <div
@@ -781,7 +739,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
             }}
           >
             {(s.thumbnailUrl || s.thumbnail_url) && (
-              <img src={s.thumbnailUrl || s.thumbnail_url} alt={(s.userName || s.user_name) + " stream thumbnail"} style={{ width: "100%", borderRadius: 6, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img src={s.thumbnailUrl || s.thumbnail_url} alt={(s.userName || s.user_name) + " stream thumbnail"} style={{ width: "100%", borderRadius: 2, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
             )}
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {s.userName || s.user_name}
@@ -814,9 +772,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
   );
 }
 
-// -- YouTube ------------------------------------------------------------------
-
-const PGA_YOUTUBE_CHANNEL = "UCKwGZZMrhNYKzucCtTPY2Nw"; // PGA TOUR official
+const PGA_YOUTUBE_CHANNEL = "UCKwGZZMrhNYKzucCtTPY2Nw";
 
 function YouTubeIcon({ size = 14, color = "#FF0000" }: { size?: number; color?: string }) {
   return (
@@ -842,9 +798,8 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Inline player */}
       {activeId && (
-        <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 4 }}>
+        <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 4 }}>
           <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
             <iframe
               src={`https://www.youtube.com/embed/${activeId}?autoplay=1&rel=0`}
@@ -862,7 +817,6 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
         </div>
       )}
 
-      {/* Video grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
         {videos.map(v => {
           const isActive = activeId === v.videoId;
@@ -885,7 +839,6 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
             >
               <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
                 <img src={v.thumbnailHq || v.thumbnail} alt={(v.title || "Video") + " thumbnail"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                {/* Play overlay */}
                 <div style={{
                   position: "absolute", inset: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -902,12 +855,11 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
                   </div>
                 </div>
-                {/* Views badge */}
                 {v.views > 0 && (
                   <div style={{
                     position: "absolute", bottom: 5, right: 5,
                     fontSize: 10, fontWeight: 700, padding: "2px 7px",
-                    borderRadius: 5, background: "rgba(0,0,0,0.78)",
+                    borderRadius: 2, background: "rgba(0,0,0,0.78)",
                     color: "rgba(255,255,255,0.88)", backdropFilter: "blur(4px)",
                   }}>
                     {v.views >= 1000000 ? `${(v.views / 1000000).toFixed(1)}M` : v.views >= 1000 ? `${(v.views / 1000).toFixed(0)}K` : v.views} views
@@ -942,8 +894,6 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
   );
 }
 
-// -- Tabs ---------------------------------------------------------------------
-
 const TABS = [
   { id: "leaderboard", label: "Leaderboard", icon: "\u{1F3CC}" },
   { id: "field",       label: "Props & Picks", icon: "\u{1F3AF}" },
@@ -953,8 +903,6 @@ const TABS = [
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
-
-// -- Main Component -----------------------------------------------------------
 
 export default function PgaModulesPanel({
   lobbyId,
@@ -970,32 +918,13 @@ export default function PgaModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px",
-              borderRadius: "8px 8px 0 0",
-              border: "none",
-              background: tab === t.id ? `${accentColor}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400,
-              fontSize: 12,
-              cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5,
-            }}
-          >
-            <span style={{ fontSize: 13 }}>{t.icon === "yt" ? <YouTubeIcon size={13} color={tab === t.id ? "#FF0000" : "rgba(148,163,184,.5)"} /> : t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar
+        tabs={TABS.map(t => ({ id: t.id, label: t.label, icon: t.icon === "yt" ? <YouTubeIcon size={13} color={tab === t.id ? "#FF0000" : "rgba(148,163,184,.5)"} /> : <span style={{ fontSize: 13 }}>{t.icon}</span> }))}
+        active={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        accent={accentColor}
+      />
 
-      {/* Content */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
         {tab === "leaderboard" && <Leaderboard accentColor={accentColor} />}
         {tab === "field"       && <FieldIntel accentColor={accentColor} />}

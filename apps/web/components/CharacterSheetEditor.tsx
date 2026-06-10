@@ -2,11 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 
-// Modal CRUD form for a Character. Used both for create (target=null) and
-// edit (target=existing). Keeps the data layout flat — every section the
-// sheet renders has a corresponding editor block here, but rendered as
-// plain inputs (parchment/Cormorant) instead of the warm-tavern read view.
-
 type Character = {
   id: string;
   name: string;
@@ -152,7 +147,6 @@ export default function CharacterSheetEditor({
           </button>
         </div>
 
-        {/* Identity */}
         <Section label="Identity">
           <Row>
             <Field label="Name" flex={2}>
@@ -171,7 +165,6 @@ export default function CharacterSheetEditor({
           </Row>
         </Section>
 
-        {/* Ability scores */}
         <Section label="Ability Scores">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
             {ABILITY_KEYS.map(k => (
@@ -184,7 +177,6 @@ export default function CharacterSheetEditor({
           </div>
         </Section>
 
-        {/* Vitals */}
         <Section label="Vitals">
           <Row>
             <Field label="HP Current"><input className="dnd-parchment-input" type="number" value={draft.hpCurrent} onChange={e => patch("hpCurrent", parseInt(e.target.value) || 0)} /></Field>
@@ -198,7 +190,6 @@ export default function CharacterSheetEditor({
           </Row>
         </Section>
 
-        {/* Saves */}
         <Section label="Saving Throw Proficiencies">
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {ABILITY_KEYS.map(k => {
@@ -214,7 +205,6 @@ export default function CharacterSheetEditor({
           </div>
         </Section>
 
-        {/* Skills */}
         <Section label="Skill Proficiencies">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 4 }}>
             {SKILLS.map(skill => {
@@ -237,7 +227,6 @@ export default function CharacterSheetEditor({
           </div>
         </Section>
 
-        {/* Attacks */}
         <ListEditor
           label="Attacks"
           rows={draft.attacks}
@@ -253,7 +242,6 @@ export default function CharacterSheetEditor({
           )}
         />
 
-        {/* Spell slots */}
         <Section label="Spell Slots">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 6 }}>
             {Array.from({ length: 9 }).map((_, i) => {
@@ -279,7 +267,6 @@ export default function CharacterSheetEditor({
           </div>
         </Section>
 
-        {/* Spells */}
         <ListEditor
           label="Spells"
           rows={draft.spells}
@@ -299,7 +286,6 @@ export default function CharacterSheetEditor({
           )}
         />
 
-        {/* Coin */}
         <Section label="Coin">
           <Row>
             {(["pp","gp","ep","sp","cp"] as const).map(k => (
@@ -311,7 +297,6 @@ export default function CharacterSheetEditor({
           </Row>
         </Section>
 
-        {/* Inventory */}
         <ListEditor
           label="Inventory"
           rows={draft.inventory}
@@ -332,7 +317,6 @@ export default function CharacterSheetEditor({
           )}
         />
 
-        {/* Features */}
         <ListEditor
           label="Features & Traits"
           rows={draft.features}
@@ -354,7 +338,6 @@ export default function CharacterSheetEditor({
           )}
         />
 
-        {/* Notes */}
         <Section label="Notes">
           <Field label="Player Notes (private to you)">
             <textarea className="dnd-parchment-input" rows={3} value={draft.notesPlayer}

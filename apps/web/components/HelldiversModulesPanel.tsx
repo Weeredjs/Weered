@@ -1,11 +1,5 @@
 "use client";
 
-// Unified tabbed wrapper for the Helldivers 2 lobby module zone. Pairs
-// the four feature panels (war map, squad finder, stratagems, loadouts)
-// with a sticky Major Order banner at the top and a permanent Dispatches
-// sidebar on the right. Replaces the prior vertical stack so the lobby
-// reads as one war room instead of five stacked sections.
-
 import React, { useState } from "react";
 import HelldiversMajorOrderPanel from "./HelldiversMajorOrderPanel";
 import LobbyPlayingNowPanel from "./LobbyPlayingNowPanel";
@@ -43,10 +37,6 @@ export default function HelldiversModulesPanel({
   const [tab, setTab] = useState<TabId>("war");
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Drop the Dispatches sidebar when the chat drawer slides in — they
-  // share the right edge and the drawer's z-index wins, leaving dispatches
-  // half-covered. Better to swap them cleanly: chat takes the right rail,
-  // tab content reflows to full width, MO banner stays sticky on top.
   React.useEffect(() => {
     function onDrawer(e: Event) {
       const detail = (e as CustomEvent)?.detail;
@@ -69,16 +59,11 @@ export default function HelldiversModulesPanel({
         ...style,
       }}
     >
-      {/* LEFT: MO banner + tab strip + active tab content */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, minHeight: 0 }}>
-        {/* Sticky Major Order — always visible across tabs */}
         <HelldiversMajorOrderPanel />
 
-        {/* Helldivers playing right now per Steam Rich Presence. Hides
-            when nobody's in service. */}
         <LobbyPlayingNowPanel appId="553850" lobbyId="helldivers2" accentColor={accent} gameLabel="Helldivers 2" />
 
-        {/* Tab strip */}
         <div
           role="tablist"
           aria-label="Helldivers 2 modules"
@@ -123,7 +108,6 @@ export default function HelldiversModulesPanel({
           })}
         </div>
 
-        {/* Active tab content */}
         <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           {tab === "war"        && <HelldiversWarMapPanel />}
           {tab === "squad"      && <HelldiversSquadFinder lobbyId={lobbyId} accentColor={accent} currentUserId={currentUserId} />}
@@ -132,9 +116,6 @@ export default function HelldiversModulesPanel({
         </div>
       </div>
 
-      {/* RIGHT: Dispatches sidebar — visible when chat drawer is closed.
-          When chat is open, drop the column entirely so the chat panel
-          (which slides over the right edge) doesn't half-cover dispatches. */}
       {!chatOpen && (
         <div style={{ minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <HelldiversDispatchesPanel style={{ flex: 1, minHeight: 0, maxHeight: "none" }} limit={20} />

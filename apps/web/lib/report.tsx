@@ -3,13 +3,6 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 
-/**
- * Themed report dialog. Opens a modal with a reason picker + optional note,
- * submits to POST /reports on confirm, returns the JSON response (or null).
- *
- *   await weeredReport({ targetType: "MESSAGE", targetId: m.id, context: roomId });
- */
-
 const REASONS: { id: string; label: string; hint: string }[] = [
   { id: "SPAM", label: "Spam", hint: "Repeated messages, links, advertising." },
   { id: "HARASSMENT", label: "Harassment", hint: "Targeted abuse, bullying, stalking." },

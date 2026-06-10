@@ -34,8 +34,6 @@ function isExternalUrl(url?: string) {
   try { return !new URL(url).hostname.includes("reddit.com"); } catch { return false; }
 }
 
-// Shared state across list+preview via a module-level store
-// (avoids prop drilling / context for this simple case)
 const listeners = new Set<(p: RedditPost | null) => void>();
 const sortListeners = new Set<(s: string) => void>();
 let sharedPosts: RedditPost[] = [];
@@ -63,14 +61,12 @@ export default function SubredditBrowser({ subreddit, view = "both" }: { subredd
   const [err, setErr]         = useState("");
   const loadedFor             = useRef("");
 
-  // Subscribe to shared selected
   useEffect(() => {
     const fn = (p: RedditPost | null) => setSelected(p);
     listeners.add(fn);
     return () => { listeners.delete(fn); };
   }, []);
 
-  // Subscribe to shared sort
   useEffect(() => {
     const fn = (s: any) => setSort(s);
     sortListeners.add(fn);
@@ -107,10 +103,8 @@ export default function SubredditBrowser({ subreddit, view = "both" }: { subredd
     loadFeed(s);
   }
 
-  // ── List view ──────────────────────────────────────────────────────────────
   if (view === "list") return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      {/* Header */}
       <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--weered-border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
           <div>
@@ -132,7 +126,6 @@ export default function SubredditBrowser({ subreddit, view = "both" }: { subredd
         </div>
       </div>
 
-      {/* Feed */}
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         {loading && <LoadingState compact label="Loading posts" />}
         {!loading && !posts.length && <EmptyState compact title="No posts." />}
@@ -165,7 +158,6 @@ export default function SubredditBrowser({ subreddit, view = "both" }: { subredd
     </div>
   );
 
-  // ── Preview view ───────────────────────────────────────────────────────────
   if (view === "preview") return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--weered-border)", flexShrink: 0, fontWeight: 800, fontSize: 13 }}>
@@ -216,7 +208,6 @@ export default function SubredditBrowser({ subreddit, view = "both" }: { subredd
     </div>
   );
 
-  // ── Both (fallback, original layout) ──────────────────────────────────────
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 12, height: "100%" }}>
       <SubredditBrowser subreddit={subreddit} view="list" />

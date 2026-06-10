@@ -6,7 +6,7 @@
 // hashes arrive together with the HTML that references them. Earlier
 // versions pre-cached /home and /lobby and used cache-fallback navigation
 // — that caused soft-refresh to serve stale HTML pointing at dead chunks.
-const CACHE = "weered-v8";
+const CACHE = "weered-v10";
 
 // ── Install: take over immediately; nothing to pre-cache.
 self.addEventListener("install", () => {
@@ -54,15 +54,27 @@ self.addEventListener("fetch", (event) => {
 // ── Push notification handler ────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  event.waitUntil(
-    self.registration.showNotification(data.title || "Weered", {
+  event.waitUntil((async () => {
+    // If any client window for this origin is focused, suppress the loud
+    // browser notification — postMessage to all clients so they bump the
+    // tab title / favicon / play chime instead. Quiet UX when the user
+    // is already looking at us; full notification only when they aren't.
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const anyFocused = clients.some((c) => c.focused);
+    if (anyFocused) {
+      for (const c of clients) {
+        try { c.postMessage({ type: "weered:push-suppressed", data }); } catch {}
+      }
+      return;
+    }
+    await self.registration.showNotification(data.title || "Weered", {
       body: data.body || "",
       icon: "/brand/logo/weered-logo-128.png",
       badge: "/brand/logo/weered-logo-128.png",
       tag: data.tag || "weered",
       data: { url: data.url || "/home" },
-    })
-  );
+    });
+  })());
 });
 
 // ── Notification click — focus or open window ────────────────────────────

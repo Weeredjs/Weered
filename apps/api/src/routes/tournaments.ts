@@ -1,9 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /tournaments/* — admin-created competitions (LEADERBOARD format only
-// today; BRACKET + ROUND_ROBIN are on the roadmap). Registration gates
-// on Bungie account link. On complete, top-3 receive notoriety.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
@@ -20,22 +17,15 @@ type Opts = {
 export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, awardNotoriety, awardPaper, createNotification, getGlobalRole, canAccessStaff } = opts;
 
-  // Helper: check the DB at request time. The JWT only carries { sub, name }
-  // so any check against u.globalRole was always undefined → forbidden.
   async function isStaffUser(userId: string): Promise<boolean> {
     if (getGlobalRole && canAccessStaff) {
       const role = await getGlobalRole(userId);
       return canAccessStaff(role);
     }
-    // Fallback: direct DB query if helpers weren't passed
     const u = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
     return ["GOD", "ADMIN", "STAFF"].includes(String(u?.globalRole || ""));
   }
 
-
-  // Resolve FLAIR rewards to include StoreItem details so the UI doesn't
-  // need a follow-up call. Stored shape is { kind: "FLAIR", itemId, rank };
-  // we add an inline { item: { id, name, imageUrl, category, rarity } }.
   async function enrichRewards(rows: any[]): Promise<void> {
     const ids = new Set<string>();
     for (const t of rows) {
@@ -64,7 +54,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     const { lobbyId, status } = req.query as any;
     const where: any = {};
     if (lobbyId) where.lobbyId = lobbyId;
-    if (status === "all") { /* no filter */ }
+    if (status === "all") { }
     else if (status) where.status = status;
     else where.status = { in: ["REGISTRATION", "ACTIVE"] };
     const tournaments = await prisma.tournament.findMany({
@@ -94,10 +84,33 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.post("/tournaments", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!(await isStaffUser(u.id))) {
-      return reply.code(403).send({ ok: false, error: "forbidden" });
-    }
     const body = req.body as any;
+    const lobbyId = body.lobbyId || null;
+    const staff = await isStaffUser(u.id);
+
+    if (!staff) {
+      if (!lobbyId) {
+        return reply.code(403).send({ ok: false, error: "forbidden", message: "Create tournaments from inside a lobby." });
+      }
+      const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, select: { name: true, ownerId: true } });
+      if (lobby && lobby.ownerId !== u.id) {
+        const member = await prisma.lobbyMember.findUnique({
+          where: { lobbyId_userId: { lobbyId, userId: u.id } },
+          select: { roleLevel: true },
+        });
+        if (!member) {
+          return reply.code(403).send({ ok: false, error: "not_a_member", message: `Join the ${lobby?.name || "lobby"} to create a tournament here.` });
+        }
+      }
+      const liveCount = await prisma.tournament.count({
+        where: { createdById: u.id, status: { in: ["REGISTRATION", "ACTIVE"] } },
+      });
+      if (liveCount >= 1) {
+        return reply.code(400).send({ ok: false, error: "active_limit", message: "You already have a live tournament. Finish or remove it before starting another." });
+      }
+    }
+
+    const isRace = body.format === "CHALLENGE_RACE";
     const tournament = await prisma.tournament.create({
       data: {
         title: String(body.title || "").trim(),
@@ -105,7 +118,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         iconUrl: body.iconUrl || null,
         format: body.format || "LEADERBOARD",
         entryType: body.entryType || "SOLO",
-        lobbyId: body.lobbyId || null,
+        lobbyId,
         createdById: u.id,
         scoringRule: body.scoringRule || {},
         registrationOpensAt: new Date(body.registrationOpensAt || Date.now()),
@@ -114,7 +127,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         maxEntries: parseInt(body.maxEntries) || 100,
         minEntries: parseInt(body.minEntries) || 2,
         rewards: body.rewards || [],
-      },
+        featuredMode: body.featuredMode || null,
+        pointsPerCompletion: isRace ? (parseInt(body.pointsPerCompletion) || 100) : 100,
+        pointsToWin: isRace && body.pointsToWin != null ? Number(body.pointsToWin) : null,
+        raceWinCondition: isRace ? (body.raceWinCondition || "DEADLINE") : null,
+        challengePoolIds: isRace && Array.isArray(body.challengePoolIds) ? body.challengePoolIds : [],
+      } as any,
     });
     return reply.send({ ok: true, tournament });
   });
@@ -128,6 +146,25 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       include: { _count: { select: { entries: true } } },
     });
     if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    if (tournament.lobbyId) {
+      const lobby = await prisma.lobby.findUnique({
+        where: { id: tournament.lobbyId },
+        select: { name: true, ownerId: true },
+      });
+      if (lobby && lobby.ownerId !== u.id) {
+        const member = await prisma.lobbyMember.findUnique({
+          where: { lobbyId_userId: { lobbyId: tournament.lobbyId, userId: u.id } },
+          select: { roleLevel: true },
+        });
+        if (!member) {
+          return reply.code(403).send({
+            ok: false, error: "not_a_member",
+            message: `Join the ${lobby.name} lobby to enter this tournament.`,
+          });
+        }
+      }
+    }
     if (tournament.status !== "REGISTRATION" && tournament.status !== "ACTIVE") {
       return reply.code(400).send({ ok: false, error: "registration_closed" });
     }
@@ -135,8 +172,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       return reply.code(400).send({ ok: false, error: "tournament_full" });
     }
 
-    // Conditional Bungie gate: only Destiny 2 tournaments require linked
-    // Bungie account. Other lobbies (Helldivers, Windrose, etc.) skip.
     if (tournament.lobbyId === "destiny2") {
       const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "BUNGIE" } });
       if (!acct) return reply.code(400).send({ ok: false, error: "bungie_not_linked", message: "Link your Bungie account in Settings before registering." });
@@ -180,6 +215,106 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, leaderboard: ranked });
   });
 
+  app.get("/tournaments/:id/race-leaderboard", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    const id = String((req as any).params?.id || "");
+    const tournament: any = await prisma.tournament.findUnique({
+      where: { id },
+      include: { _count: { select: { entries: true } } },
+    });
+    if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
+
+    const poolIds: string[] = Array.isArray(tournament.challengePoolIds)
+      ? (tournament.challengePoolIds as string[])
+      : [];
+
+    const poolDefs = poolIds.length
+      ? await prisma.challengeDefinition.findMany({
+          where: { id: { in: poolIds } },
+          select: { id: true, title: true, iconUrl: true, category: true, difficulty: true },
+        })
+      : [];
+    const defById: Record<string, any> = {};
+    for (const d of poolDefs) defById[d.id] = d;
+    const pool = poolIds.map((pid) => defById[pid]).filter(Boolean);
+
+    const entries = await prisma.tournamentEntry.findMany({
+      where: { tournamentId: id },
+      orderBy: { score: "desc" },
+      take: 100,
+    });
+
+    const userIds = entries.map((e) => e.userId).filter(Boolean) as string[];
+    const lookupIds = u ? Array.from(new Set([...userIds, u.id])) : userIds;
+    const completedByUser: Record<string, string[]> = {};
+    if (lookupIds.length && poolIds.length) {
+      const enrolls = await prisma.challengeEnrollment.findMany({
+        where: {
+          userId: { in: lookupIds },
+          status: "COMPLETED",
+          instance: { definitionId: { in: poolIds } },
+        },
+        select: { userId: true, instance: { select: { definitionId: true } } },
+      });
+      for (const en of enrolls) {
+        const uid = en.userId;
+        const did = (en as any).instance?.definitionId;
+        if (!uid || !did) continue;
+        const arr = completedByUser[uid] || (completedByUser[uid] = []);
+        if (!arr.includes(did)) arr.push(did);
+      }
+    }
+
+    const leaderboard = entries.map((e, i) => {
+      const done = completedByUser[e.userId as string] || [];
+      return {
+        rank: i + 1,
+        entryId: e.id,
+        userId: e.userId,
+        displayName: e.displayName || "Unknown",
+        score: e.score,
+        completions: done.length,
+        completedDefinitionIds: done,
+      };
+    });
+
+    let me: any = null;
+    if (u) {
+      const myEntry =
+        entries.find((e) => e.userId === u.id) ||
+        (await prisma.tournamentEntry.findFirst({ where: { tournamentId: id, userId: u.id } }));
+      const myDone = completedByUser[u.id] || [];
+      const statusOk = tournament.status === "REGISTRATION" || tournament.status === "ACTIVE";
+      const full = tournament._count.entries >= tournament.maxEntries;
+      me = {
+        userId: u.id,
+        isRegistered: !!myEntry,
+        entryId: myEntry?.id || null,
+        score: myEntry?.score ?? null,
+        completions: myDone.length,
+        completedDefinitionIds: myDone,
+        canRegister: statusOk && !full,
+      };
+    }
+
+    return reply.send({
+      ok: true,
+      tournament: {
+        id: tournament.id,
+        lobbyId: tournament.lobbyId,
+        status: tournament.status,
+        pointsPerCompletion: tournament.pointsPerCompletion,
+        pointsToWin: tournament.pointsToWin ?? null,
+        raceWinCondition: tournament.raceWinCondition ?? null,
+        maxEntries: tournament.maxEntries,
+        entryCount: tournament._count.entries,
+      },
+      pool,
+      me,
+      leaderboard,
+    });
+  });
+
   app.post("/tournaments/:id/activate", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -194,8 +329,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, tournament });
   });
 
-  // Set the rewards array on a tournament. Today supports flair items only:
-  // { kind: "FLAIR", itemId, rank }. Validates itemId exists in StoreItem.
   app.post("/tournaments/:id/rewards", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -231,8 +364,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       return reply.code(400).send({ ok: false, error: "already_finalized" });
     }
 
-    // Final ranking. For BRACKET / BRACKET_DOUBLE, use the standings
-    // endpoint logic (W/L/diff). For LEADERBOARD, use score (existing).
     let entries: any[];
     if (tournament.format === "LEADERBOARD") {
       entries = await prisma.tournamentEntry.findMany({
@@ -265,7 +396,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         });
     }
 
-    // Assign rank
     for (let i = 0; i < entries.length; i++) {
       await prisma.tournamentEntry.update({
         where: { id: entries[i].id },
@@ -273,8 +403,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       });
     }
 
-    // Tier payouts. Reward keys read from tournament.rewards JSON if set,
-    // otherwise sensible defaults scaled to entry count.
     const tier = (rank: number, total: number) => {
       if (rank === 1) return "CHAMPION";
       if (rank <= 3) return "PODIUM";
@@ -283,8 +411,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       return null;
     };
     const defaultPayout = (t: string, total: number) => {
-      // Bigger pots scale, but capped so a 200-person event isn't a fortune.
-      const scale = Math.min(1.0, Math.log2(Math.max(2, total)) / 4); // 2→0.25, 4→0.5, 8→0.75, 16+→1.0
+      const scale = Math.min(1.0, Math.log2(Math.max(2, total)) / 4);
       switch (t) {
         case "CHAMPION": return { paper: Math.round(2000 * scale), notoriety: Math.round(500 * scale) };
         case "PODIUM":   return { paper: Math.round(1000 * scale), notoriety: Math.round(250 * scale) };
@@ -302,12 +429,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       if (!t || !e.userId) continue;
       const p = defaultPayout(t, total);
       payouts.push({ userId: e.userId, displayName: e.displayName, rank: i + 1, tier: t, ...p });
-      // Pay out
       if (awardPaper && p.paper > 0) {
         await awardPaper(e.userId, "TOURNAMENT_PRIZE", p.paper, `${tournament.title} · ${t}`, id).catch(() => {});
       }
       if (p.notoriety > 0) {
-        // Use generic CHALLENGE_COMPLETED action plus a custom event for visibility
         try {
           await (prisma as any).notorietyEvent.create({
             data: { userId: e.userId, action: `TOURNAMENT_${t}`, points: p.notoriety, refId: id },
@@ -319,15 +444,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         } catch {}
       }
 
-      // Permanent badge for CHAMPION + PODIUM. ChallengeBadge is the
-      // badge TEMPLATE (one row per (tournament, rank)); UserBadge links
-      // a user to the template they earned. Templates are upserted so a
-      // re-run of complete reuses the same badge id.
       if (t === "CHAMPION" || t === "PODIUM") {
         try {
           const rankLabel = i + 1 === 1 ? "Champion" : i + 1 === 2 ? "Runner-Up" : "3rd Place";
           const badgeName = `${tournament.title} · ${rankLabel}`;
-          // Check for existing badge of this name to avoid duplicates
           let badge = await (prisma as any).challengeBadge.findFirst({ where: { name: badgeName } });
           if (!badge) {
             badge = await (prisma as any).challengeBadge.create({
@@ -348,7 +468,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         }
       }
 
-      // Notification
       if (createNotification) {
         await createNotification({
           userId: e.userId,
@@ -361,15 +480,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           body: p.paper > 0 || p.notoriety > 0
             ? `Awarded ${p.paper > 0 ? `${p.paper}P` : ""}${p.paper > 0 && p.notoriety > 0 ? " + " : ""}${p.notoriety > 0 ? `${p.notoriety} Notoriety` : ""}.`
             : "Honor only — no payout.",
-          actionUrl: tournament.lobbyId ? `/lobby/${encodeURIComponent(tournament.lobbyId)}` : null,
+          actionUrl: tournament.lobbyId ? `/lobby/${encodeURIComponent(tournament.lobbyId)}` : undefined,
           meta: { kind: "tournament_complete", tournamentId: id, rank: i + 1, tier: t },
         }).catch(() => {});
       }
     }
 
-    // Flair item grants — configured per-tournament. Idempotent via
-    // acquiredFrom marker ("tournament:<id>"), so a re-run of /complete
-    // won't double-mint.
     const flairRewards = Array.isArray((tournament as any).rewards) ? (tournament as any).rewards as any[] : [];
     for (const r of flairRewards) {
       if (!r || r.kind !== "FLAIR" || !r.itemId) continue;
@@ -400,8 +516,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, tournament: updated, payouts });
   });
 
-  // GET /tournaments/archive?lobbyId=destiny2
-  // Hall of Fame: completed tournaments for a lobby with their top finishers.
   app.get("/tournaments/archive", async (req, reply) => {
     const q = (req as any).query || {};
     const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
@@ -415,7 +529,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       select: { id: true, title: true, description: true, format: true, lobbyId: true, startsAt: true, endsAt: true, updatedAt: true, _count: { select: { entries: true } } },
     });
 
-    // For each, pull top 3 entries
     const archive = await Promise.all(tournaments.map(async (t: any) => {
       const top = await prisma.tournamentEntry.findMany({
         where: { tournamentId: t.id, rank: { lte: 3 } },
@@ -428,22 +541,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, archive });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // BRACKET ROUTES (single-elim, Phase 1)
-  // ────────────────────────────────────────────────────────────────────────
-
   function isStaff(role?: string | null) {
     return ["GOD", "ADMIN", "STAFF"].includes(String(role || ""));
   }
 
-  // Standard tournament seeding pattern. For nextPow2 size N, returns an
-  // array of (seed1, seed2) pairs for the first round such that #1 and #2
-  // can only meet in the final. Byes encoded as null.
-  // e.g. for size=8 entries: [[1,8],[4,5],[3,6],[2,7]]
   function buildSeedPairs(numEntries: number): Array<[number | null, number | null]> {
     let size = 1; while (size < numEntries) size <<= 1;
     if (size < 2) size = 2;
-    // Generate the standard seed order recursively
     function order(n: number): number[] {
       if (n === 1) return [1];
       const prev = order(n / 2);
@@ -464,10 +568,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return pairs;
   }
 
-  // POST /tournaments/:id/bracket/start
-  // Admin: generates the bracket / round-robin schedule from registered
-  // entries. Handles all three competitive formats: BRACKET (single-elim),
-  // BRACKET_DOUBLE (double-elim), ROUND_ROBIN (all-vs-all).
   app.post("/tournaments/:id/bracket/start", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -492,41 +592,35 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       return reply.code(400).send({ ok: false, error: "not_enough_entries", count: entries.length, min: tourney.minEntries });
     }
 
-    // Seeding: random | rank | manual
     const seedingMode = String(body.seeding || "random");
     if (seedingMode === "random") {
       entries.sort(() => Math.random() - 0.5);
     } else if (seedingMode === "rank") {
-      // Sort by user notoriety (high first) — works as a generic skill proxy.
       const userIds = entries.map((e: any) => e.userId).filter(Boolean);
       const users = userIds.length
         ? await (prisma as any).user.findMany({ where: { id: { in: userIds } }, select: { id: true, notoriety: true } })
         : [];
-      const notMap = new Map(users.map((u: any) => [u.id, u.notoriety || 0]));
+      const notMap = new Map<string, number>(users.map((u: any) => [u.id, u.notoriety || 0]));
       entries.sort((a: any, b: any) => (notMap.get(b.userId) || 0) - (notMap.get(a.userId) || 0));
     } else if (seedingMode === "manual" && Array.isArray(body.entryOrder)) {
-      // body.entryOrder is an array of entry IDs in seed order (1st = top seed)
       const idx = new Map<string, number>();
       body.entryOrder.forEach((eid: string, i: number) => idx.set(String(eid), i));
       entries.sort((a: any, b: any) => (idx.get(a.id) ?? 999) - (idx.get(b.id) ?? 999));
     }
 
-    // ── ROUND_ROBIN ──────────────────────────────────────────────────────
     if (tourney.format === "ROUND_ROBIN") {
-      // Generate all distinct pairs; round = "leg" (1..N-1 if even N, else N).
       const pairs: Array<[string, string]> = [];
       for (let i = 0; i < entries.length; i++) {
         for (let j = i + 1; j < entries.length; j++) {
           pairs.push([entries[i].id, entries[j].id]);
         }
       }
-      // For round-robin, set every match status to READY (no dependencies).
       let pos = 0;
       for (const [aId, bId] of pairs) {
         await (prisma as any).tournamentMatch.create({
           data: {
             tournamentId: id,
-            round: 1, // single-leg round-robin
+            round: 1,
             bracketPosition: pos++,
             entryAId: aId,
             entryBId: bId,
@@ -538,14 +632,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       return reply.send({ ok: true, format: "ROUND_ROBIN", totalMatches: pairs.length });
     }
 
-    // ── BRACKET / BRACKET_DOUBLE ─────────────────────────────────────────
     const N = entries.length;
     let bracketSize = 1; while (bracketSize < N) bracketSize <<= 1;
     if (bracketSize < 2) bracketSize = 2;
     const numWinnerRounds = Math.log2(bracketSize);
     const seedPairs = buildSeedPairs(N);
 
-    // Build winners-bracket round skeletons.
     const wb: any[][] = [];
     for (let r = 1; r <= numWinnerRounds; r++) {
       const matchesInRound = bracketSize / Math.pow(2, r);
@@ -557,7 +649,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         bracketSide: tourney.format === "BRACKET_DOUBLE" ? "WINNERS" : null,
       })));
     }
-    // Fill WB round 1 with seed pairs + auto-byes
     for (let pos = 0; pos < seedPairs.length; pos++) {
       const [aSeed, bSeed] = seedPairs[pos];
       const m = wb[0][pos];
@@ -570,14 +661,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         m.confirmedAt = new Date();
       }
     }
-    // Insert WB matches
     const wbCreated: any[][] = [];
     for (const round of wb) {
       const created: any[] = [];
       for (const m of round) created.push(await (prisma as any).tournamentMatch.create({ data: m }));
       wbCreated.push(created);
     }
-    // Wire WB nextMatchId
     for (let r = 0; r < wbCreated.length - 1; r++) {
       for (let pos = 0; pos < wbCreated[r].length; pos++) {
         const next = wbCreated[r + 1][Math.floor(pos / 2)];
@@ -591,24 +680,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     let lbCreated: any[][] = [];
     let grandFinal: any = null;
 
-    // ── BRACKET_DOUBLE: build losers bracket + grand final ───────────────
     if (tourney.format === "BRACKET_DOUBLE") {
-      // Losers bracket has 2*(numWinnerRounds-1) rounds total.
-      // Pattern (for size M = 2^k):
-      //   LB R1: receives losers from WB R1 (M/4 matches)
-      //   LB R2: winner of LB R1 vs loser from WB R2 (M/4 matches)
-      //   LB R3: winner of LB R2 vs loser of LB R2 — wait no.
-      // Cleaner pattern (standard double-elim layout):
-      //   LB has 2*(K-1) rounds where K = log2(M)
-      //   "Drop rounds" alternate with "consolidation rounds"
-      // For each WB round r in [1..K-1]:
-      //   Drop round at LB index = 2r - 1 has M/2^(r+1) matches
-      // Consolidation rounds between drops have same count as the prior drop round.
       const numLoserRounds = 2 * (numWinnerRounds - 1);
       const lb: any[][] = [];
       for (let lr = 1; lr <= numLoserRounds; lr++) {
-        // Compute matches in this LB round
-        const wbRoundContrib = Math.ceil(lr / 2); // which WB round drops here
+        const wbRoundContrib = Math.ceil(lr / 2);
         const matchesInRound = bracketSize / Math.pow(2, wbRoundContrib + 1);
         if (matchesInRound < 1) break;
         lb.push(Array.from({ length: matchesInRound }, (_, pos) => ({
@@ -619,19 +695,14 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           bracketSide: "LOSERS",
         })));
       }
-      // Insert LB matches
       for (const round of lb) {
         const created: any[] = [];
         for (const m of round) created.push(await (prisma as any).tournamentMatch.create({ data: m }));
         lbCreated.push(created);
       }
-      // Wire LB nextMatchId (winner advances within LB)
       for (let lr = 0; lr < lbCreated.length - 1; lr++) {
         const cur = lbCreated[lr];
         const next = lbCreated[lr + 1];
-        // Drop rounds (odd 1-indexed lr=0,2,4...) and consolidation rounds (lr=1,3,5...)
-        // alternate. For both, winner of cur[pos] feeds next[floor(pos/k)] where k
-        // depends on whether sizes match. Simple rule: pos floored to next-length.
         for (let pos = 0; pos < cur.length; pos++) {
           const targetPos = Math.min(Math.floor(pos / (cur.length / next.length)), next.length - 1);
           await (prisma as any).tournamentMatch.update({
@@ -641,7 +712,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         }
       }
 
-      // Grand final
       grandFinal = await (prisma as any).tournamentMatch.create({
         data: {
           tournamentId: id,
@@ -651,13 +721,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           bracketSide: "GRAND",
         },
       });
-      // WB final → grand final (winner advances)
       const wbFinal = wbCreated[wbCreated.length - 1][0];
       await (prisma as any).tournamentMatch.update({
         where: { id: wbFinal.id },
         data: { nextMatchId: grandFinal.id },
       });
-      // LB final → grand final
       if (lbCreated.length > 0) {
         const lbFinal = lbCreated[lbCreated.length - 1][0];
         await (prisma as any).tournamentMatch.update({
@@ -666,18 +734,8 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         });
       }
 
-      // Wire WB → LB drop edges (loserMatchId).
-      // WB R1 losers drop into LB R1.
-      // WB R2 losers drop into LB R2 (consolidation).
-      // ...
-      // WB R(k) losers drop into LB R(2k-2) for k >= 2.
       for (let wr = 0; wr < wbCreated.length - 1; wr++) {
         const wbRound = wbCreated[wr];
-        // The LB round that receives drops from WB round (wr+1):
-        //   wr=0 (WB R1): LB R1 (lbIdx=0)
-        //   wr=1 (WB R2): LB R2 (lbIdx=1)
-        //   wr=2 (WB R3): LB R4 (lbIdx=3)
-        //   wr=k (WB R(k+1)): LB R(2k) for k>=1, R1 for k=0
         const lbIdx = wr === 0 ? 0 : 2 * wr;
         const lbRound = lbCreated[lbIdx];
         if (!lbRound) continue;
@@ -691,7 +749,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       }
     }
 
-    // Cascade auto-byes (WB round 1 byes feed WB round 2)
     for (let pos = 0; pos < wbCreated[0].length; pos++) {
       const m = wbCreated[0][pos];
       if (m.status === "CONFIRMED" && m.winnerEntryId && wbCreated.length > 1) {
@@ -703,7 +760,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         });
       }
     }
-    // Recompute status for WB round 2
     if (wbCreated.length > 1) {
       for (const m of wbCreated[1]) {
         const fresh = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.id } });
@@ -719,10 +775,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, format: tourney.format, bracketSize, numWinnerRounds, totalMatches });
   });
 
-  // GET /tournaments/:id/standings
-  // For ROUND_ROBIN, computes wins/losses/point-diff from confirmed matches
-  // and returns a ranked entry list. For BRACKET formats, returns entries
-  // with wins-so-far + still-alive flag (lost === eliminated).
   app.get("/tournaments/:id/standings", async (req, reply) => {
     const id = String((req as any).params?.id || "");
     const tourney = await (prisma as any).tournament.findUnique({ where: { id } });
@@ -741,7 +793,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         stats[loserId].losses++;
         if (tourney.format === "BRACKET") stats[loserId].alive = false;
       }
-      // Point differential (if scores reported)
       if (m.scoreA != null && m.scoreB != null) {
         if (stats[m.entryAId!]) {
           stats[m.entryAId!].pointsFor += m.scoreA;
@@ -768,19 +819,16 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         if (b.diff !== a.diff) return b.diff - a.diff;
         return a.losses - b.losses;
       });
-    // Assign rank
     ranked.forEach((e: any, i: number) => { e.rank = i + 1; });
     return reply.send({ ok: true, format: tourney.format, standings: ranked });
   });
 
-  // GET /tournaments/:id/matches
   app.get("/tournaments/:id/matches", async (req, reply) => {
     const id = String((req as any).params?.id || "");
     const matches = await (prisma as any).tournamentMatch.findMany({
       where: { tournamentId: id },
       orderBy: [{ round: "asc" }, { bracketPosition: "asc" }],
     });
-    // Pull entries to enrich names
     const entryIds = new Set<string>();
     for (const m of matches) {
       if (m.entryAId) entryIds.add(m.entryAId);
@@ -799,14 +847,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, matches: enriched });
   });
 
-  // Helper: advance the winner into its nextMatch slot. In double-elim,
-  // also drop the LOSER into loserMatch's slot.
   async function advanceWinner(matchId: string) {
     const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
     if (!m || !m.winnerEntryId) return;
     const loserId = m.winnerEntryId === m.entryAId ? m.entryBId : m.entryAId;
 
-    // Advance winner
     if (m.nextMatchId) {
       const next = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.nextMatchId } });
       if (next) {
@@ -821,11 +866,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       }
     }
 
-    // Drop loser to losers bracket (BRACKET_DOUBLE only)
     if (m.loserMatchId && loserId) {
       const lm = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.loserMatchId } });
       if (lm) {
-        // Pick the open slot (A first, then B)
         const slot = !lm.entryAId ? "entryAId" : !lm.entryBId ? "entryBId" : null;
         if (slot) {
           const update: any = { [slot]: loserId };
@@ -838,7 +881,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     }
   }
 
-  // Notify both participants that their match is ready to play.
   async function notifyMatchReady(matchId: string) {
     if (!createNotification) return;
     try {
@@ -865,16 +907,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           type: "LOBBY_EVENT",
           title: `Your ${m.tournament.title} match is ready`,
           body: `vs. ${opponentName(e.userId)} — Round ${m.round}${m.bracketSide ? ` (${m.bracketSide})` : ""}.`,
-          actionUrl: m.tournament.lobbyId ? `/lobby/${encodeURIComponent(m.tournament.lobbyId)}` : null,
+          actionUrl: m.tournament.lobbyId ? `/lobby/${encodeURIComponent(m.tournament.lobbyId)}` : undefined,
           meta: { kind: "tournament_match_ready", tournamentId: m.tournament.id, matchId },
         });
       }
     } catch {}
   }
 
-  // POST /tournaments/:id/matches/:matchId/report
-  // Body: { winnerEntryId, scoreA, scoreB }
-  // Allowed: any participant in the match, or staff
   app.post("/tournaments/:id/matches/:matchId/report", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -886,7 +925,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     if (m.status === "CONFIRMED" || m.status === "CANCELED") {
       return reply.code(400).send({ ok: false, error: "match_closed" });
     }
-    // Permission: participant or staff
     const participantIds = await (prisma as any).tournamentEntry.findMany({
       where: { id: { in: [m.entryAId, m.entryBId].filter(Boolean) } },
       select: { userId: true },
@@ -912,7 +950,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       },
     });
 
-    // Staff reports auto-confirm (no double-step)
     if (staffOk) {
       await (prisma as any).tournamentMatch.update({
         where: { id: matchId },
@@ -924,8 +961,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, autoConfirmed: staffOk });
   });
 
-  // POST /tournaments/:id/matches/:matchId/confirm
-  // Allowed: the opposing player from the reporter, or staff
   app.post("/tournaments/:id/matches/:matchId/confirm", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -935,7 +970,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     if (m.status !== "REPORTED") return reply.code(400).send({ ok: false, error: "not_reported" });
 
     if (!(await isStaffUser(u.id))) {
-      // Must be the participant who DIDN'T report
       if (u.id === m.reportedById) return reply.code(403).send({ ok: false, error: "self_confirm", message: "Opponent must confirm." });
       const participantIds = await (prisma as any).tournamentEntry.findMany({
         where: { id: { in: [m.entryAId, m.entryBId].filter(Boolean) } },
@@ -953,7 +987,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true });
   });
 
-  // POST /tournaments/:id/matches/:matchId/dispute — opponent disputes report
   app.post("/tournaments/:id/matches/:matchId/dispute", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -968,7 +1001,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true });
   });
 
-  // POST /tournaments/:id/matches/:matchId/live — mark match as live
   app.post("/tournaments/:id/matches/:matchId/live", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -983,8 +1015,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true });
   });
 
-  // PATCH /tournaments/:id/matches/:matchId — admin update
-  // Body: { scheduledAt?, twitchLogin?, notes? }
   app.patch("/tournaments/:id/matches/:matchId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -1000,8 +1030,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, match: updated });
   });
 
-  // POST /tournaments/:id/matches/:matchId/admin-set — admin override
-  // Body: { winnerEntryId, scoreA, scoreB } — sets + confirms in one step
   app.post("/tournaments/:id/matches/:matchId/admin-set", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });

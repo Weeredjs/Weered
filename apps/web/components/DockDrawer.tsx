@@ -3,7 +3,6 @@
 import React from "react";
 import DockShell from "./DockShell";
 
-/** Hook: swipe right → close */
 function useSwipeClose(ref: React.RefObject<HTMLDivElement | null>, onClose: () => void, enabled: boolean) {
   const touch = React.useRef<{ x: number; y: number; t: number } | null>(null);
   const offset = React.useRef(0);
@@ -23,7 +22,6 @@ function useSwipeClose(ref: React.RefObject<HTMLDivElement | null>, onClose: () 
       if (!touch.current) return;
       const dx = e.touches[0].clientX - touch.current.x;
       const dy = e.touches[0].clientY - touch.current.y;
-      // Only track horizontal swipes (right)
       if (Math.abs(dy) > Math.abs(dx) && offset.current === 0) {
         touch.current = null;
         return;
@@ -39,17 +37,15 @@ function useSwipeClose(ref: React.RefObject<HTMLDivElement | null>, onClose: () 
       if (!touch.current) return;
       const dx = offset.current;
       const dt = Date.now() - touch.current.t;
-      const velocity = dx / Math.max(1, dt); // px/ms
+      const velocity = dx / Math.max(1, dt);
 
       el.style.transition = "transform 220ms ease, opacity 180ms ease";
 
       if (dx > 100 || velocity > 0.4) {
-        // Swipe far enough or fast enough → close
         el.style.transform = "translateX(100%)";
         el.style.opacity = "0";
         setTimeout(onClose, 200);
       } else {
-        // Snap back
         el.style.transform = "translateX(0)";
         el.style.opacity = "1";
       }
@@ -98,7 +94,6 @@ export default function DockDrawer() {
     };
   }, []);
 
-  // Close on ESC
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     if (!open) return;
@@ -107,7 +102,6 @@ export default function DockDrawer() {
     return () => window.removeEventListener("keydown", onKeyDown as any);
   }, [open]);
 
-  // Reset inline transform/opacity when reopened
   React.useEffect(() => {
     if (open && panelRef.current) {
       panelRef.current.style.transition = "transform 220ms ease, opacity 180ms ease";

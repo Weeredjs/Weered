@@ -6,8 +6,6 @@ import { useWeered } from "./WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-/* ── Types ───────────────────────────────────────────────────────────────── */
-
 interface RoomUser {
   id?: string;
   name?: string;
@@ -29,8 +27,6 @@ interface RoomData {
   bannerUrl?: string | null;
   accentColor?: string | null;
 }
-
-/* ── Helpers ──────────────────────────────────────────────────────────────── */
 
 function authHeaders() {
   try {
@@ -54,7 +50,6 @@ function SailMark({ size = 22 }: { size?: number }) {
 
 function roomIcon(name: string, moduleType?: string): React.ReactNode {
   const n = name.toLowerCase();
-  // Windrose-specific pirate vocabulary
   if (moduleType === "WINDROSE") {
     if (n.includes("helm") || n.includes("wheel"))   return "⚓";
     if (n.includes("crew") || n.includes("mate"))    return "🏴‍☠️";
@@ -102,7 +97,6 @@ function roomSubtitle(name: string): string {
   return "Text channel";
 }
 
-/* Avatar color from name hash */
 const AV_COLORS = ["#5800E5", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308", "#ec4899", "#14b8a6"];
 function avColor(name: string): string {
   let h = 0;
@@ -110,16 +104,11 @@ function avColor(name: string): string {
   return AV_COLORS[Math.abs(h) % AV_COLORS.length];
 }
 
-/* Deterministic mesh angle per card */
 function meshAngle(id: string): number {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 17 + id.charCodeAt(i)) & 0xffffff;
   return (h % 360);
 }
-
-/* ── Component ────────────────────────────────────────────────────────────── */
-
-/* ── Themed labels per module type ──────────────────────────────────────── */
 
 const CREATE_LABELS: Record<string, { btn: string; title: string; placeholder: string; icon: string }> = {
   DND:   { btn: "Open a Table",   title: "Open a Table",    placeholder: "e.g. Curse of Strahd — Session 4",  icon: "🎲" },
@@ -128,9 +117,6 @@ const CREATE_LABELS: Record<string, { btn: string; title: string; placeholder: s
 };
 const DEFAULT_LABEL = { btn: "Create Room", title: "Create Room", placeholder: "Room name…", icon: "+" };
 
-// Which default-module options to surface in the create form, per lobby moduleType.
-// The room canvas already enforces what's allowed at runtime; this is only the
-// "what does the room open with" hint for the creator.
 const MODULE_OPTIONS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
   POKER:    [{ value: "voice", label: "Voice" }, { value: "poker", label: "Poker Table" }],
   TRADING:  [{ value: "voice", label: "Voice" }, { value: "fakeout", label: "FakeOut Trading" }, { value: "video", label: "Video" }, { value: "screen", label: "Screen Share" }],
@@ -174,7 +160,6 @@ export default function LobbyRoomDirectory({
   const [loading, setLoading] = useState(true);
   const [lobbyBanner, setLobbyBanner] = useState<string | null>(bannerUrl || null);
 
-  /* ── Create room state ─────────────────────────────────────────────────── */
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -225,7 +210,6 @@ export default function LobbyRoomDirectory({
       if (j.ok) {
         setNewName("");
         setShowCreate(false);
-        // Navigate into the new room
         try { join?.(`room:${j.id}`); } catch {}
         router.push(`/room/${encodeURIComponent(j.id)}`);
       } else {
@@ -238,7 +222,6 @@ export default function LobbyRoomDirectory({
     }
   }
 
-  /* ── Loading ───────────────────────────────────────────────────────────── */
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 80, position: "relative", ...style }}>
@@ -254,7 +237,6 @@ export default function LobbyRoomDirectory({
     );
   }
 
-  /* ── Empty ─────────────────────────────────────────────────────────────── */
   if (rooms.length === 0) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 14, position: "relative", ...style }}>
@@ -321,8 +303,6 @@ export default function LobbyRoomDirectory({
               </select>
             </div>
 
-            {/* Advanced: disable specific modules. Mods picked here can't be
-                opened in the room. Owner can edit later from room settings. */}
             <div>
               <button
                 type="button"
@@ -375,11 +355,9 @@ export default function LobbyRoomDirectory({
     );
   }
 
-  /* ── Room grid ─────────────────────────────────────────────────────────── */
   return (
     <div style={{ flex: 1, overflowY: "auto", position: "relative", ...style }}>
 
-      {/* ── Blurred banner backdrop ──────────────────────────────────────── */}
       {lobbyBanner && (
         <div style={{
           position: "absolute", inset: 0, zIndex: 0, overflow: "hidden",
@@ -393,12 +371,10 @@ export default function LobbyRoomDirectory({
             opacity: 0.5,
             transform: "scale(1.1)",
           }} />
-          {/* Vignette */}
           <div style={{
             position: "absolute", inset: 0,
             background: "radial-gradient(ellipse at center, transparent 20%, rgba(0,0,0,.7) 100%)",
           }} />
-          {/* Bottom fade */}
           <div style={{
             position: "absolute", left: 0, right: 0, bottom: 0, height: "40%",
             background: "linear-gradient(to top, var(--weered-panel2, #0f1117), transparent)",
@@ -408,7 +384,6 @@ export default function LobbyRoomDirectory({
 
       <div style={{ position: "relative", zIndex: 1, padding: "20px 22px 32px" }}>
 
-        {/* Section header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{
             width: 3, height: 18, borderRadius: 2,
@@ -449,7 +424,6 @@ export default function LobbyRoomDirectory({
           </button>
         </div>
 
-        {/* ── Create room form ─────────────────────────────────────────── */}
         {showCreate && (
           <div className="weered-rooms-create-form" style={{
             marginBottom: 18, padding: "14px 16px", borderRadius: 12,
@@ -490,16 +464,12 @@ export default function LobbyRoomDirectory({
           </div>
         )}
 
-        {/* Grid */}
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
           gap: 14,
         }}>
           {rooms.map(room => {
-            // Owner-set iconUrl takes priority over the name-based emoji
-            // fallback. Same for accentColor — owner gradient wins, then
-            // live state, then lobby accent.
             const customIcon = room.iconUrl ? String(room.iconUrl) : null;
             const customBanner = room.bannerUrl ? String(room.bannerUrl) : null;
             const icon: React.ReactNode = customIcon
@@ -511,13 +481,11 @@ export default function LobbyRoomDirectory({
             const isLive = liveCount > 0;
             const onlineUsers: RoomUser[] = room.onlineUsers ?? [];
 
-            // Color strategy: owner accent > live green > lobby accent.
             const cardColor = (room.accentColor && /^#[0-9a-f]{6}$/i.test(room.accentColor))
               ? room.accentColor
               : (isLive ? LIVE_COLOR : accent);
             const angle = meshAngle(room.id);
 
-            // CSS custom props for hover styles
             const cssVars = {
               "--card-glow": isLive ? "rgba(34,197,94,.15)" : `${accent}18`,
               "--card-border-hover": isLive ? "rgba(34,197,94,.40)" : `${accent}40`,
@@ -543,7 +511,6 @@ export default function LobbyRoomDirectory({
                   ...cssVars,
                 }}
               >
-                {/* ── Owner banner (renders behind gradient mesh) ───────── */}
                 {customBanner && (
                   <div aria-hidden style={{
                     position: "absolute", inset: 0, zIndex: 0,
@@ -559,7 +526,6 @@ export default function LobbyRoomDirectory({
                   }} />
                 )}
 
-                {/* ── Gradient mesh background ──────────────────────────── */}
                 <div style={{
                   position: "absolute", inset: 0, zIndex: 0,
                   background: [
@@ -571,7 +537,6 @@ export default function LobbyRoomDirectory({
                   opacity: customBanner ? 0.4 : 1,
                 }} />
 
-                {/* ── Glass layer ───────────────────────────────────────── */}
                 <div style={{
                   position: "absolute", inset: 0, zIndex: 0,
                   borderRadius: 14,
@@ -580,7 +545,6 @@ export default function LobbyRoomDirectory({
                   WebkitBackdropFilter: customBanner ? "blur(2px)" : "blur(12px)",
                 }} />
 
-                {/* Accent top bar */}
                 <div style={{
                   position: "relative", zIndex: 1,
                   height: 2,
@@ -591,10 +555,8 @@ export default function LobbyRoomDirectory({
 
                 <div style={{ position: "relative", zIndex: 1, padding: "16px 18px 18px" }}>
 
-                  {/* ── Row 1: Icon + Name + Status ──────────────────────── */}
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
 
-                    {/* Icon box */}
                     <div style={{
                       width: 48, height: 48, borderRadius: 12, flexShrink: 0,
                       background: customIcon ? "rgba(0,0,0,.25)" : `linear-gradient(135deg, ${cardColor}1a, ${cardColor}0a)`,
@@ -607,7 +569,6 @@ export default function LobbyRoomDirectory({
                       {icon}
                     </div>
 
-                    {/* Name + subtitle */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="weered-room-card-name" style={{
                         fontWeight: 800, fontSize: 15, lineHeight: 1.25,
@@ -635,7 +596,6 @@ export default function LobbyRoomDirectory({
                       </div>
                     </div>
 
-                    {/* Status badge */}
                     {isLive ? (
                       <div style={{
                         display: "flex", alignItems: "center", gap: 5,
@@ -666,14 +626,12 @@ export default function LobbyRoomDirectory({
                     ) : null}
                   </div>
 
-                  {/* ── Row 2: Avatar stack + member count + join ────────── */}
                   <div style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     paddingTop: 12,
                     borderTop: "1px solid rgba(255,255,255,.04)",
                   }}>
 
-                    {/* Avatar stack + count */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 
                       {onlineUsers.length > 0 && (
@@ -733,7 +691,6 @@ export default function LobbyRoomDirectory({
                       </span>
                     </div>
 
-                    {/* Join button */}
                     <span className="weered-room-join" style={{
                       fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 8,
                       background: `${cardColor}12`, border: `1px solid ${cardColor}25`,
@@ -751,7 +708,6 @@ export default function LobbyRoomDirectory({
         </div>
       </div>
 
-      {/* Animations + hover styles */}
       <style>{`
         @keyframes weered-room-spin { to { transform: rotate(360deg); } }
         @keyframes weered-room-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }

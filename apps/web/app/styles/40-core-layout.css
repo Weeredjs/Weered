@@ -1,0 +1,1490 @@
+/* =============================================
+   PRESS THEME — editorial charcoal + brass
+   Fresh but old: layered depth, amber topper strips,
+   crosshatch paper texture, bold condensed caps
+   ============================================= */
+html[data-weered-theme="press"] {
+  --weered-bg:       #1a1a1c;
+  --weered-panel:    rgba(32, 32, 34, 0.96);
+  --weered-panel2:   rgba(22, 22, 24, 0.97);
+  --weered-border:   rgba(217, 169, 66, 0.16);
+  --weered-border2:  rgba(217, 169, 66, 0.30);
+  --weered-text:     rgba(240, 232, 214, 0.96);
+  --weered-muted:    rgba(198, 188, 168, 0.65);
+
+  --weered-accent-1:    #d9a942;
+  --weered-accent-2:    #b78a28;
+  --weered-accent-bg:   rgba(217, 169, 66, 0.14);
+  --weered-accent-ring: rgba(217, 169, 66, 0.32);
+  --weered-accent-grad: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
+}
+
+html[data-weered-theme="press"] body {
+  background: #1a1a1c !important;
+  color: rgba(240,232,214,0.96);
+}
+
+/* PANELS — charcoal with crosshatch paper texture + layered depth */
+html[data-weered-theme="press"] .weered-panel,
+html[data-weered-theme="press"] .weered-panel2,
+html[data-weered-theme="press"] .weered-presence,
+html[data-weered-theme="press"] .weered-left,
+html[data-weered-theme="press"] .weered-right,
+html[data-weered-theme="press"] .weered-overlay-panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.97) 100%) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.18),
+    0 2px 0 rgba(0,0,0,0.25),
+    0 6px 18px rgba(0,0,0,0.45) !important;
+}
+
+/* SECTION TITLES — bold condensed caps with editorial slash accent */
+html[data-weered-theme="press"] .weered-left-title,
+html[data-weered-theme="press"] .weered-presence-title,
+html[data-weered-theme="press"] .weered-rr-section-title {
+  color: rgba(240,232,214,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', 'Arial Narrow', ui-sans-serif, sans-serif !important;
+  font-weight: 900 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  opacity: 1 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Editorial slash before section titles */
+html[data-weered-theme="press"] .weered-left-title::before,
+html[data-weered-theme="press"] .weered-presence-title::before,
+html[data-weered-theme="press"] .weered-rr-section-title::before {
+  content: '/' !important;
+  display: inline-block !important;
+  color: rgba(217,169,66,1) !important;
+  font-weight: 900 !important;
+  font-size: 15px !important;
+  margin-right: 4px !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.6), 0 0 6px rgba(217,169,66,0.35) !important;
+  animation: none !important;
+  vertical-align: baseline !important;
+}
+
+/* Horizontal rule under titles — editorial weight */
+html[data-weered-theme="press"] .weered-left-title::after,
+html[data-weered-theme="press"] .weered-presence-title::after,
+html[data-weered-theme="press"] .weered-rr-section-title::after {
+  content: '' !important;
+  flex: 1;
+  height: 1px !important;
+  background: linear-gradient(90deg, rgba(217,169,66,0.35) 0%, rgba(217,169,66,0.08) 100%) !important;
+  display: block !important;
+  margin-left: 4px;
+}
+
+/* LEFT RAIL LINKS — layered flat cards */
+html[data-weered-theme="press"] .weered-left-link {
+  position: relative;
+  background: linear-gradient(180deg, #222224 0%, #18181a 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.80) !important;
+  font-family: 'Segoe UI Variable', 'Segoe UI', Inter, system-ui, -apple-system, sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  padding: 8px 12px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 0 rgba(0,0,0,0.3),
+    0 2px 4px rgba(0,0,0,0.3) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="press"] .weered-left-link:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #26262a 0%, #1c1c1e 100%) !important;
+  color: rgba(245,238,220,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(217,169,66,0.30),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* ACTIVE STATE — amber topper strip + lifted */
+html[data-weered-theme="press"] .weered-left-link-active,
+html[data-weered-theme="press"] .weered-dock-tab-active,
+html[data-weered-theme="press"] .weered-rr-module-btn-active,
+html[data-weered-theme="press"] .weered-rr-room-card-active,
+html[data-weered-theme="press"] .weered-lobby-tab-active {
+  position: relative;
+  background: linear-gradient(180deg, #2a2a2c 0%, #1e1e20 100%) !important;
+  color: rgba(245,238,220,0.98) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.10),
+    0 0 0 1px rgba(217,169,66,0.50),
+    0 0 12px rgba(217,169,66,0.18),
+    0 4px 8px rgba(0,0,0,0.5) !important;
+  animation: none !important;
+}
+/* The signature amber topper strip */
+html[data-weered-theme="press"] .weered-left-link-active::before,
+html[data-weered-theme="press"] .weered-dock-tab-active::before,
+html[data-weered-theme="press"] .weered-rr-module-btn-active::before,
+html[data-weered-theme="press"] .weered-rr-room-card-active::before,
+html[data-weered-theme="press"] .weered-lobby-tab-active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%);
+  box-shadow: 0 0 8px rgba(217,169,66,0.6);
+  border-radius: 3px 3px 0 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* BUTTONS — editorial keys */
+html[data-weered-theme="press"] .weered-btn {
+  background: linear-gradient(180deg, #222224 0%, #18181a 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.88) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  padding: 8px 16px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 0 rgba(0,0,0,0.3),
+    0 2px 4px rgba(0,0,0,0.35) !important;
+  transition: all 0.12s !important;
+}
+html[data-weered-theme="press"] .weered-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 0 1px rgba(217,169,66,0.40),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+html[data-weered-theme="press"] .weered-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+
+/* USER CORNER — editorial pull quote box */
+html[data-weered-theme="press"] .weered-usercorner {
+  background:
+    linear-gradient(180deg, rgba(36,36,38,0.96) 0%, rgba(22,22,24,0.98) 100%) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.28),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 6px 14px rgba(0,0,0,0.4) !important;
+}
+
+html[data-weered-theme="press"] .weered-uc-action {
+  background: linear-gradient(180deg, #222224 0%, #18181a 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.85) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.22) !important;
+}
+html[data-weered-theme="press"] .weered-uc-action:hover {
+  color: rgba(230,190,110,0.95) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.50),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* LOBBY TABS */
+html[data-weered-theme="press"] .weered-lobby-tabs {
+  background: linear-gradient(180deg, #141416, #1c1c1e) !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  padding: 3px !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.18) !important;
+}
+html[data-weered-theme="press"] .weered-lobby-tab {
+  background: transparent !important;
+  color: rgba(198,188,168,0.60) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+}
+html[data-weered-theme="press"] .weered-lobby-tab:hover {
+  color: rgba(230,190,110,0.85) !important;
+}
+
+/* BURNER DOCK */
+html[data-weered-theme="press"] .weered-dock {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(36,36,38,0.97) 0%, rgba(20,20,22,0.98) 100%) !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.06),
+    0 0 0 1px rgba(217,169,66,0.28),
+    0 0 0 2px rgba(0,0,0,0.4),
+    0 8px 20px rgba(0,0,0,0.6) !important;
+}
+html[data-weered-theme="press"] .weered-dock::before,
+html[data-weered-theme="press"] .weered-dock::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Dock title — editorial masthead */
+html[data-weered-theme="press"] .weered-dock-title {
+  color: rgba(240,232,214,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', 'Arial Narrow', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.16em !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.7);
+}
+
+/* Dock tabs */
+html[data-weered-theme="press"] .weered-dock-tabs {
+  background: linear-gradient(180deg, #141416, #1c1c1e) !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.18) !important;
+}
+html[data-weered-theme="press"] .weered-dock-tab {
+  background: transparent !important;
+  color: rgba(198,188,168,0.60) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+  font-size: 11px !important;
+}
+html[data-weered-theme="press"] .weered-dock-tab:hover {
+  color: rgba(230,190,110,0.85) !important;
+}
+
+/* Dock bubbles — clean editorial blocks */
+html[data-weered-theme="press"] .weered-dock-bubble {
+  background: linear-gradient(180deg, #1e1e20, #16161a) !important;
+  border: 0 !important;
+  border-radius: 3px 3px 3px 1px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 0 1px rgba(217,169,66,0.14) !important;
+}
+html[data-weered-theme="press"] .weered-dock-bubble div {
+  color: rgba(240,232,214,0.92) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  text-shadow: none;
+}
+html[data-weered-theme="press"] .weered-dock-bubble-me {
+  background: linear-gradient(180deg, #3a2e12, #241c08) !important;
+  border-radius: 3px 3px 1px 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,140,0.10),
+    0 0 0 1px rgba(217,169,66,0.38) !important;
+}
+html[data-weered-theme="press"] .weered-dock-bubble-me div {
+  color: rgba(242,222,180,0.95) !important;
+}
+
+html[data-weered-theme="press"] .weered-dock-close,
+html[data-weered-theme="press"] .weered-dock-compose,
+html[data-weered-theme="press"] .weered-dock-send {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(217,169,66,0.85) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.28) !important;
+}
+html[data-weered-theme="press"] .weered-dock-compose:hover,
+html[data-weered-theme="press"] .weered-dock-send:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  color: rgba(20,14,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.50),
+    0 0 0 1px rgba(217,169,66,0.60),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* Dock conversation header */
+html[data-weered-theme="press"] .weered-dock-conv-header {
+  background: linear-gradient(180deg, rgba(48,40,16,0.3), rgba(22,22,24,0.25)) !important;
+  border-bottom: 1px solid rgba(217,169,66,0.20) !important;
+}
+
+/* RIGHT RAIL ID CHIP */
+html[data-weered-theme="press"] .weered-rr-id-chip {
+  background: linear-gradient(180deg, #141418, #1c1c20) !important;
+  border: 0 !important;
+  color: rgba(217,169,66,0.85) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+
+/* RIGHT RAIL primary + join */
+html[data-weered-theme="press"] .weered-rr-primary,
+html[data-weered-theme="press"] .weered-rr-join {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(230,190,110,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.32) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="press"] .weered-rr-primary:hover,
+html[data-weered-theme="press"] .weered-rr-join:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  color: rgba(20,14,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.50),
+    0 0 0 1px rgba(217,169,66,0.55),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+}
+html[data-weered-theme="press"] .weered-rr-primary-solid {
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  color: rgba(20,14,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.55),
+    0 0 0 1px rgba(217,169,66,0.55),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* RIGHT RAIL create panel */
+html[data-weered-theme="press"] .weered-rr-create-panel {
+  background: linear-gradient(180deg, #1a1a1e, #12121a) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+html[data-weered-theme="press"] .weered-rr-create-title {
+  color: rgba(240,232,214,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  padding: 0 !important;
+}
+
+/* Module buttons */
+html[data-weered-theme="press"] .weered-rr-module-btn {
+  background: linear-gradient(180deg, #1a1a1e, #12121a) !important;
+  border: 0 !important;
+  color: rgba(198,188,168,0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    0 0 0 1px rgba(217,169,66,0.16) !important;
+}
+html[data-weered-theme="press"] .weered-rr-module-btn:hover {
+  color: rgba(230,190,110,0.90) !important;
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.38) !important;
+}
+
+/* RIGHT RAIL cards + rows */
+html[data-weered-theme="press"] .weered-rr-room-card,
+html[data-weered-theme="press"] .weered-rr-friend-row,
+html[data-weered-theme="press"] .weered-rr-crew-row,
+html[data-weered-theme="press"] .weered-dock-thread {
+  background: linear-gradient(180deg, #1e1e22, #16161a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 1px 0 rgba(0,0,0,0.25),
+    0 0 0 1px rgba(217,169,66,0.14) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="press"] .weered-rr-room-card:hover,
+html[data-weered-theme="press"] .weered-rr-friend-row:hover,
+html[data-weered-theme="press"] .weered-rr-crew-row:hover,
+html[data-weered-theme="press"] .weered-dock-thread:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #22222a, #1a1a1e) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(217,169,66,0.38),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+
+/* Mod panel */
+html[data-weered-theme="press"] .weered-rr-mod-panel {
+  background: linear-gradient(180deg, #1a1a1e, #12121a) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.26) !important;
+}
+html[data-weered-theme="press"] .weered-rr-mod-panel button {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(230,190,110,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.30) !important;
+}
+html[data-weered-theme="press"] .weered-rr-status-chip {
+  background: linear-gradient(180deg, #3a2e12, #241c08) !important;
+  border: 0 !important;
+  color: rgba(230,190,110,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.14em !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,140,0.12),
+    0 0 0 1px rgba(217,169,66,0.42) !important;
+}
+
+/* INPUTS */
+html[data-weered-theme="press"] input,
+html[data-weered-theme="press"] textarea,
+html[data-weered-theme="press"] .weered-input,
+html[data-weered-theme="press"] .weered-presence-search {
+  background: linear-gradient(180deg, #141418, #1c1c20) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,232,214,0.95) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(217,169,66,0.26) !important;
+}
+html[data-weered-theme="press"] input:focus,
+html[data-weered-theme="press"] textarea:focus {
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(217,169,66,0.58),
+    0 0 10px rgba(217,169,66,0.20) !important;
+}
+html[data-weered-theme="press"] input::placeholder,
+html[data-weered-theme="press"] textarea::placeholder {
+  color: rgba(198,188,168,0.40) !important;
+}
+
+/* Icon strip */
+html[data-weered-theme="press"] .weered-icon-strip-btn {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(217,169,66,0.20) !important;
+}
+html[data-weered-theme="press"] .weered-icon-strip-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.48),
+    0 3px 6px rgba(0,0,0,0.4) !important;
+}
+html[data-weered-theme="press"] .weered-icon-strip-btn-active {
+  background: linear-gradient(180deg, #e6bd6e 0%, #d9a942 50%, #a87a1c 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,200,0.55),
+    0 0 0 1px rgba(217,169,66,0.55),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* LOBBY CARDS — editorial tiles */
+html[data-weered-theme="press"] .weered-lobby-grid > * {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(36,36,38,0.95) 0%, rgba(22,22,24,0.98) 100%) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(217,169,66,0.20),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 6px 14px rgba(0,0,0,0.4) !important;
+  transition: all 0.2s !important;
+}
+html[data-weered-theme="press"] .weered-lobby-grid > *:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,248,220,0.08),
+    0 0 0 1px rgba(217,169,66,0.48),
+    0 2px 0 rgba(0,0,0,0.3),
+    0 8px 20px rgba(0,0,0,0.5) !important;
+}
+
+/* FEATURED HERO — transparent, only the amber topper strip on top */
+html[data-weered-theme="press"] .weered-hero-content {
+  position: relative;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+html[data-weered-theme="press"] .weered-hero-content::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #d9a942 20%, #e6bd6e 50%, #d9a942 80%, transparent 100%);
+  box-shadow: 0 0 10px rgba(217,169,66,0.6);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* SCROLLBAR */
+html[data-weered-theme="press"] *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(217,169,66,0.42), rgba(130,90,20,0.52)) !important;
+}
+html[data-weered-theme="press"] *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(230,190,110,0.62), rgba(170,115,40,0.68)) !important;
+}
+html[data-weered-theme="press"] *::-webkit-scrollbar-track {
+  background: rgba(14,14,16,0.6) !important;
+}
+
+/* TEXT links */
+html[data-weered-theme="press"] a {
+  color: rgba(230,190,110,0.92);
+  transition: color 0.15s;
+}
+html[data-weered-theme="press"] a:hover {
+  color: rgba(255,222,160,1);
+}
+
+/* Retints — purple/green/pink → brass */
+html[data-weered-theme="press"] *[style*="rgba(88,0,229"],
+html[data-weered-theme="press"] *[style*="rgba(124,58,237"],
+html[data-weered-theme="press"] *[style*="rgba(139,92,246"],
+html[data-weered-theme="press"] *[style*="rgba(167,139,250"],
+html[data-weered-theme="press"] *[style*="rgba(216,180,254"],
+html[data-weered-theme="press"] *[style*="#5800E5"],
+html[data-weered-theme="press"] *[style*="#5800e5"],
+html[data-weered-theme="press"] *[style*="#7C3AED"],
+html[data-weered-theme="press"] *[style*="#7c3aed"] {
+  color: rgba(230,190,110,0.95) !important;
+  border-color: rgba(217,169,66,0.32) !important;
+}
+html[data-weered-theme="press"] *[style*="background: rgba(88,0,229"],
+html[data-weered-theme="press"] *[style*="background:rgba(88,0,229"],
+html[data-weered-theme="press"] *[style*="background: rgba(124,58,237"],
+html[data-weered-theme="press"] *[style*="background:rgba(124,58,237"] {
+  background: rgba(217,169,66,0.12) !important;
+}
+html[data-weered-theme="press"] button[style*="rgba(88,0,229"] {
+  background: linear-gradient(180deg, #222224, #18181a) !important;
+  color: rgba(230,190,110,0.95) !important;
+  border: 0 !important;
+  box-shadow:
+    0 0 0 1px rgba(217,169,66,0.32),
+    0 1px 2px rgba(0,0,0,0.3) !important;
+}
+/* Green → brass */
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.16"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.18"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.20"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.10"],
+html[data-weered-theme="press"] *[style*="rgba(34,197,94,.08"] {
+  background: rgba(217,169,66,0.14) !important;
+  border-color: rgba(217,169,66,0.38) !important;
+  color: rgba(230,190,110,0.95) !important;
+}
+html[data-weered-theme="press"] *[style*="background: #22c55e"],
+html[data-weered-theme="press"] *[style*="background:#22c55e"],
+html[data-weered-theme="press"] *[style*="background: #22C55E"],
+html[data-weered-theme="press"] *[style*="background:#22C55E"] {
+  background: rgba(217,169,66,0.95) !important;
+  box-shadow: 0 0 4px rgba(217,169,66,0.6) !important;
+}
+/* Pink/magenta → brass */
+html[data-weered-theme="press"] *[style*="#EC4899"],
+html[data-weered-theme="press"] *[style*="#ec4899"],
+html[data-weered-theme="press"] *[style*="#DB2777"],
+html[data-weered-theme="press"] *[style*="#db2777"],
+html[data-weered-theme="press"] *[style*="rgba(236,72,153"],
+html[data-weered-theme="press"] *[style*="rgba(244,114,182"] {
+  color: rgba(217,169,66,0.95) !important;
+}
+
+/* =============================================
+   EVENT ROOM SIGNATURE — theme-agnostic
+   Purple→magenta gradient reads "special" across
+   every theme's amber/gold/neutral accent system
+   ============================================= */
+
+@keyframes weeredEventShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes weeredEventTopperPulse {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+
+/* Right-rail event room card */
+.weered-rr-room-card-event {
+  position: relative !important;
+  background:
+    linear-gradient(135deg,
+      rgba(139,92,246,0.18) 0%,
+      rgba(180,80,180,0.10) 50%,
+      rgba(236,72,153,0.18) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 0 20px rgba(139,92,246,0.10),
+    0 0 0 1px rgba(180,100,210,0.45),
+    0 0 14px rgba(180,100,210,0.20) !important;
+}
+.weered-rr-room-card-event::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    #8b5cf6 20%,
+    #d946ef 50%,
+    #ec4899 80%,
+    transparent 100%);
+  background-size: 100% 100%;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.weered-rr-room-card-event:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 0 24px rgba(139,92,246,0.16),
+    0 0 0 1px rgba(200,120,220,0.65),
+    0 0 20px rgba(180,100,210,0.35) !important;
+  transform: translateY(-1px);
+}
+
+/* LobbyRoomDirectory event card */
+.weered-room-card-event {
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(180,100,210,0.45),
+    0 0 18px rgba(180,100,210,0.18) !important;
+}
+.weered-room-card-event::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    #8b5cf6 20%,
+    #d946ef 50%,
+    #ec4899 80%,
+    transparent 100%);
+  background-size: 100% 100%;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 14px 14px 0 0;
+}
+.weered-room-card-event::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.14) 0%, transparent 60%),
+    radial-gradient(ellipse at 100% 100%, rgba(236,72,153,0.10) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 14px;
+}
+.weered-room-card-event:hover {
+  box-shadow:
+    0 0 0 1px rgba(200,120,220,0.70),
+    0 0 28px rgba(180,100,210,0.35),
+    0 6px 20px rgba(0,0,0,0.45) !important;
+}
+
+/* Event badge — gentle pulse */
+.weered-event-badge {
+  animation: weeredEventTopperPulse 2.6s ease-in-out infinite;
+}
+
+/* Broadcast/Ishimura/Press — preserve event treatment even under themes */
+html[data-weered-theme="ishimura"] .weered-rr-room-card-event,
+html[data-weered-theme="broadcast"] .weered-rr-room-card-event,
+html[data-weered-theme="press"] .weered-rr-room-card-event {
+  background:
+    linear-gradient(135deg,
+      rgba(139,92,246,0.22) 0%,
+      rgba(180,80,180,0.14) 50%,
+      rgba(236,72,153,0.22) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 0 1px rgba(200,120,220,0.55),
+    0 0 16px rgba(180,100,210,0.28) !important;
+}
+
+/* =============================================
+   GLOBAL POLISH — focus ring, selection, loaders
+   Theme-aware so every surface inherits without
+   per-component plumbing.
+   ============================================= */
+
+/* Focus ring — subtle, themed, visible on keyboard nav only */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--weered-accent-ring, rgba(124, 58, 237, 0.55));
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--weered-bg, #0c0b0a),
+    0 0 0 4px var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+}
+
+/* Selection — themed highlight */
+::selection {
+  background: var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+  color: var(--weered-text, #f3f4f6);
+}
+::-moz-selection {
+  background: var(--weered-accent-ring, rgba(124, 58, 237, 0.45));
+  color: var(--weered-text, #f3f4f6);
+}
+
+/* Global scrollbars — themed, applies to every theme by default.
+   Character themes (ishimura/broadcast/press) override with their own
+   gradient treatment further down. */
+* { scrollbar-width: thin; scrollbar-color: var(--weered-scrollbar-thumb, rgba(255,255,255,0.14)) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track {
+  background: var(--weered-scrollbar-track, rgba(255, 255, 255, 0.04));
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--weered-scrollbar-thumb, rgba(255, 255, 255, 0.14));
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.15s;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--weered-scrollbar-thumb-hover, rgba(255, 255, 255, 0.22));
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* Branded spinner — themed, used by <LoadingState/> */
+@keyframes weeredSpin { to { transform: rotate(360deg); } }
+@keyframes weeredPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.weered-spinner {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid transparent;
+  border-top-color: var(--weered-accent-text, rgba(167, 139, 250, 0.9));
+  border-right-color: var(--weered-accent-text, rgba(167, 139, 250, 0.45));
+  border-radius: 50%;
+  animation: weeredSpin 0.85s linear infinite;
+}
+.weered-loading-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--weered-muted, rgba(148, 163, 184, 0.7));
+  animation: weeredPulse 1.6s ease-in-out infinite;
+}
+
+/* =============================================
+   BASE RESET
+   ============================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background: var(--weered-bg);
+  color: var(--weered-text);
+  /* Default UI font — Rajdhani, the Destiny lobby chrome font. Crisp,
+     condensed, slightly futuristic. Per-lobby themes (Windrose, etc.)
+     still override via more specific selectors. */
+  font-family: var(--font-rajdhani), 'Rajdhani', 'Bank Gothic', 'Arial Narrow', ui-sans-serif, sans-serif;
+}
+/* Bare pages (terms / privacy / guidelines) don't use the shell's
+   internal scroll containers, so the platform-wide html/body height: 100%
+   above would clip their content. Override on bare-page bodies so they
+   scroll normally on desktop. The :has() probe targets the .legal-root
+   marker that all three legal pages share. */
+html:has(.legal-root), body:has(.legal-root) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+a {
+  color: rgba(226, 232, 240, 0.96);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+a:hover { color: rgba(88, 0, 229, 0.98); }
+
+h1, h2, h3, h4, strong, legend, label {
+  color: rgba(243, 244, 246, 0.98);
+}
+
+button, input, textarea, select {
+  font-family: var(--font-rajdhani), 'Rajdhani', 'Bank Gothic', 'Arial Narrow', ui-sans-serif, sans-serif;
+}
+
+input, textarea, select {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--weered-text);
+  border: 1px solid var(--weered-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  max-width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(88, 0, 229, 0.55);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+}
+::placeholder { color: rgba(203, 213, 225, 0.60); }
+
+button, [role="button"] {
+  border-radius: 12px;
+  color: rgba(243, 244, 246, 0.98);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.30);
+  font-weight: 900;
+  cursor: pointer;
+}
+button:hover, [role="button"]:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(148, 163, 184, 0.38);
+  filter: brightness(1.06);
+}
+
+/* =============================================
+   3-COLUMN APP SHELL
+   ============================================= */
+/* Pin the shell to the viewport edges with absolute offsets. When the
+   SiteFooter is rendered, reserve a 28px slot at the bottom via the
+   `bottom` offset rather than padding — this keeps a hard ceiling on
+   children regardless of how % heights cascade through nested flex
+   contexts. */
+.weered-shell {
+  display: flex;
+  gap: 16px;
+  padding: 16px 16px 0 16px;
+  align-items: stretch;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh; /* fallback when a more specific rule forces position: relative */
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.weered-shell.has-footer {
+  bottom: 28px;
+  height: calc(100vh - 28px);
+}
+
+.weered-left  { width: 320px; flex: 0 0 320px; }
+.weered-right { width: 320px; flex: 0 0 320px; position: relative; }
+.weered-center {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  position: relative; /* anchor for child absolute layouts */
+}
+
+/* Chat fullscreen CTA — the "Dial In" button. Subtle breathing glow
+   to make it look like an invitation, not a hidden toggle. */
+@keyframes weered-chat-fullscreen-cta-pulse {
+  0%, 100% { opacity: 0.92; }
+  50%      { opacity: 1; }
+}
+.weered-chat-fullscreen-cta {
+  animation: weered-chat-fullscreen-cta-pulse 3.4s ease-in-out infinite;
+}
+.weered-chat-fullscreen-cta:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(124,58,237,0.35), rgba(167,139,250,0.18)) !important;
+  border-color: rgba(167,139,250,0.70) !important;
+  color: #fff !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-chat-fullscreen-cta { animation: none; }
+}
+
+/* Chat fullscreen overlay — covers everything except the left rail.
+   Left offset matches shell padding + left-rail width + gap at each
+   breakpoint, so the chat tucks right up against the rail and stops. */
+.weered-chat-fullscreen {
+  /* widescreen: 16 padding + 320 rail + 16 gap = 352 */
+  left: 352px !important;
+}
+@media (max-width: 1399px) {
+  /* mid: left rail hidden; icon strip 48 + 10 padding + 10 gap = 68 */
+  .weered-chat-fullscreen { left: 68px !important; }
+}
+@media (max-width: 1099px) {
+  /* narrow: shell padding 0, icon strip 48 flush; chat covers the rest */
+  .weered-chat-fullscreen { left: 48px !important; }
+}
+@media (max-width: 767px) {
+  /* mobile: left rail + icon strip both gone; overlay covers full viewport */
+  .weered-chat-fullscreen { left: 0 !important; }
+}
+
+/* ── Chat member rail (Pass 3c) ────────────────────────────
+   The right-hand member list is hidden by default — the docked
+   chat panels are too narrow for it. When the chat is promoted
+   to fullscreen ("Dial In"), we unlock the rail so the room
+   feels like a real Discord-style channel. */
+.weered-chat-members {
+  display: none;
+}
+.weered-chat-fullscreen .weered-chat-members {
+  display: flex !important;
+  flex-direction: column;
+  width: 240px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(124, 58, 237, 0.18);
+  background: rgba(10, 10, 18, 0.35);
+  overflow-y: auto;
+  padding: 14px 12px;
+  gap: 2px;
+}
+@media (max-width: 899px) {
+  /* On narrow screens the member rail eats too much of the chat column;
+     hide it even in fullscreen and let the chat breathe. */
+  .weered-chat-fullscreen .weered-chat-members { display: none !important; }
+}
+
+/* Rails: sticky, panel-styled. backdrop-filter intentionally omitted —
+   blur on always-visible viewport-sized elements is the single biggest
+   idle-CPU sink on WebView2. The rails sit over a static page background
+   so a slightly more opaque solid panel reads identically. */
+.weered-left,
+.weered-right {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  border: 1px solid var(--weered-border);
+  border-radius: 16px;
+  background: var(--weered-panel);
+  overflow-x: hidden;
+}
+
+/* ── Icon strips — hidden by default (wide screens) ────────── */
+.weered-icon-strip {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0;
+  width: 48px;
+  flex: 0 0 48px;
+  background: var(--weered-panel);
+  border: 1px solid var(--weered-border);
+  border-radius: 16px;
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+}
+
+.weered-icon-strip-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none !important;
+  padding: 0 !important;
+  background: transparent;
+  color: rgba(167,139,250,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.weered-icon-strip-btn:hover {
+  background: rgba(124,58,237,.1);
+  color: rgba(167,139,250,.85);
+}
+.weered-icon-strip-btn-active {
+  background: rgba(124,58,237,.18) !important;
+  color: rgba(167,139,250,.95) !important;
+}
+
+/* Force-show icon strip when user manually collapsed right rail */
+.weered-icon-strip-forced {
+  display: flex !important;
+}
+
+/* ── Right rail collapse tab — glowing edge tab ──────────── */
+/* Stack container that holds rail-side quick buttons + the Panel tab.
+   Lives in the collapsed right-rail slot. */
+.weered-rail-stack {
+  width: 48px;
+  flex: 0 0 48px;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 14px 0 14px;
+}
+.weered-rail-logo {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+  background: transparent;
+  border: none;
+  transition: transform 0.15s;
+}
+.weered-rail-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.45));
+  transition: filter 0.18s;
+}
+.weered-rail-logo:hover {
+  transform: translateY(-1px);
+}
+.weered-rail-logo:hover img {
+  filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.75));
+}
+/* Panel tab sits flush under the DMs button — no auto-margin push to bottom. */
+.weered-rail-stack .weered-rail-tab {
+  width: 32px;
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: 260px;
+}
+
+/* Rail-side quick-launch buttons — colorful, square-ish, stacked above
+   the Panel tab. Writing-mode-vertical label matches the tab underneath. */
+.weered-rail-quick {
+  width: 44px;
+  height: 72px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 0;
+  border-width: 1px;
+  border-style: solid;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), filter 0.18s, box-shadow 0.18s;
+}
+.weered-rail-quick:hover {
+  transform: translateX(-2px) scale(1.03);
+  filter: brightness(1.12) saturate(1.15);
+}
+.weered-rail-quick:active {
+  transform: translateX(-1px) scale(0.98);
+}
+.weered-rail-quick-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
+}
+.weered-rail-quick-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  opacity: 0.92;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Hide the rail stack on narrow/mobile widths where the mobile bottom
+   nav already provides friend/DM/crew access. */
+@media (max-width: 1099px) {
+  .weered-rail-stack { display: none !important; }
+}
+
+.weered-rail-tab {
+  width: 32px;
+  flex: 0 0 32px;
+  /* Anchor it centered vertically at roughly the same latitude as the
+     CHAT tab on the chat panel, so the two side-tabs visually line up. */
+  align-self: center;
+  height: auto;
+  min-height: 420px;
+  max-height: 640px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: var(--weered-panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  color: rgba(255,255,255,.4);
+  transition: all 0.2s;
+  padding: 28px 0;
+  font-family: inherit;
+}
+/* A bit more prominent label at larger size so it reads like a tab, not a chip. */
+.weered-rail-tab .weered-rail-tab-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  opacity: 0.7;
+}
+.weered-rail-tab:hover {
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.8);
+  border-color: var(--weered-accent-ring, rgba(88,0,229,.45));
+  box-shadow: 0 0 20px var(--weered-accent-bg, rgba(88,0,229,.25));
+}
+.weered-rail-tab-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+.weered-rail-tab:hover .weered-rail-tab-label {
+  opacity: 0.9;
+  color: var(--weered-accent-text, rgba(167,139,250,.9));
+}
+.weered-rail-tab-glow {
+  border-color: var(--weered-accent-ring, rgba(88,0,229,.25));
+  box-shadow: 0 0 12px var(--weered-accent-bg, rgba(88,0,229,.15)), inset 0 0 8px var(--weered-accent-bg, rgba(88,0,229,.08));
+  animation: railPulse 3s ease-in-out infinite;
+}
+@keyframes railPulse {
+  0%, 100% { opacity: 0.88; }
+  50%      { opacity: 1; }
+}
+
+/* ── Right rail close button — inside the rail ────────────── */
+.weered-rail-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(167,139,250,.45);
+  background: linear-gradient(180deg, rgba(124,58,237,.22) 0%, rgba(88,0,229,.18) 100%);
+  color: rgba(216,202,255,.95);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  box-shadow: 0 0 10px rgba(124,58,237,.18), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.weered-rail-close:hover {
+  background: linear-gradient(180deg, rgba(124,58,237,.32) 0%, rgba(88,0,229,.26) 100%);
+  color: #fff;
+  border-color: rgba(167,139,250,.7);
+  box-shadow: 0 0 14px rgba(124,58,237,.30), inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+/* Overlay close button — always visible so panel can be dismissed */
+.weered-overlay-close {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 8px 8px 0 auto;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  color: rgba(167,139,250,.6);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.weered-overlay-close:hover {
+  background: rgba(124,58,237,.15);
+  color: rgba(167,139,250,.95);
+  border-color: rgba(124,58,237,.3);
+}
+
+/* ── Overlay panels (slide-in from icon strip click) ───────── */
+.weered-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+  animation: weeredFadeIn 0.15s ease-out;
+}
+
+.weered-overlay-panel {
+  position: fixed;
+  top: 12px;
+  bottom: 12px;
+  z-index: 1000;
+  background: var(--weered-panel);
+  border: 1px solid var(--weered-border);
+  border-radius: 16px;
+  overflow: auto;
+  overflow-x: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,.55);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.weered-overlay-panel-left {
+  left: 60px;
+  width: 320px;
+  animation: weeredSlideInLeft 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+.weered-overlay-panel-right {
+  right: 60px;
+  width: 340px;
+  animation: weeredSlideInRight 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+
+@keyframes weeredFadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes weeredSlideInLeft {
+  from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); }
+}
+@keyframes weeredSlideInRight {
+  from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Mid breakpoint: 1100–1399px — hide left rail, shrink right ── */
+@media (max-width: 1399px) {
+  .weered-shell { gap: 10px; padding: 10px 10px 0 10px; }
+  .weered-left  { display: none; }
+  .weered-right { width: 280px; flex: 0 0 280px; }
+  .weered-icon-strip { display: flex; }
+}
+
+/* ── Narrow breakpoint: <1100px — hide left, shrink right further ──────── */
+@media (max-width: 1099px) {
+  .weered-shell { gap: 0; padding: 0; }
+  .weered-left       { display: none; }
+  .weered-right      { width: 260px; flex: 0 0 260px; }
+  .weered-icon-strip { display: flex; }
+  .weered-center     { width: 100%; padding: 12px; }
+}
+
+/* ── Mobile: hide right rail entirely, use overlay system ──────── */
+@media (max-width: 767px) {
+  .weered-right    { display: none !important; }
+  .weered-rail-tab { display: none !important; }
+}
+
+/* ── Mobile bottom nav — hidden by default ──────────────────────────────── */
+.weered-mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 56px;
+  z-index: 900;
+  background: var(--weered-panel);
+  border-top: 1px solid var(--weered-border);
+  backdrop-filter: blur(12px);
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+}
+.weered-mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 56px;
+  height: 48px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(167,139,250,.45);
+  font-size: 9px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.weered-mobile-nav-btn:active {
+  background: rgba(255,255,255,.06);
+  transform: scale(0.95);
+}
+.weered-mobile-nav-btn-active {
+  color: rgba(167,139,250,.95) !important;
+  background: rgba(124,58,237,.12);
+}
+
+/* ── Mobile breakpoint: <768px — bottom nav, full-width overlays ─────── */
+@media (max-width: 767px) {
+  .weered-shell { padding: 0; gap: 0; }
+  .weered-center { padding: 6px 6px 64px 6px; }
+  .weered-icon-strip { display: none; }
+  .weered-mobile-nav { display: flex; }
+
+  /* Overlay panels go full-width on mobile */
+  .weered-overlay-panel {
+    top: 0; bottom: 60px;
+    width: 100% !important;
+    border-radius: 0;
+  }
+  .weered-overlay-panel-left  { left: 0; animation: weeredSlideUp 0.2s cubic-bezier(0.22,1,0.36,1); }
+  .weered-overlay-panel-right { right: 0; animation: weeredSlideUp 0.2s cubic-bezier(0.22,1,0.36,1); }
+
+  /* Hero bar: stack vertically, hide stream preview */
+  .weered-hero-content { flex-direction: column !important; min-height: auto !important; padding: 14px 12px !important; gap: 10px !important; }
+  .weered-hero-stream { display: none !important; }
+
+  /* Lobby grid: 2 columns on mobile */
+  .weered-lobby-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+
+  /* Ops/staff page: horizontal tabs, hide sidebar + chat */
+  .weered-ops-mobile-nav { display: flex !important; }
+  .weered-ops-sidebar { display: none !important; }
+  .weered-ops-chat { display: none !important; }
+  .weered-ops-body { grid-template-columns: 1fr !important; }
+
+  /* Touch-friendly targets */
+  .weered-icon-strip-btn { width: 44px; height: 44px; }
+
+  /* Allow lobby/room pages to scroll on mobile */
+  .weered-center { overflow: auto !important; height: auto !important; }
+
+  /* Lobby pages: remove fixed height, allow natural scroll */
+  .weered-lobby-page {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .weered-lobby-body {
+    overflow: auto !important;
+    min-height: 60vh;
+    flex: none !important;
+  }
+
+  /* Lobby header: compact on mobile */
+  .weered-lobby-header-row {
+    gap: 6px !important;
+    padding: 6px 8px !important;
+  }
+  .weered-lobby-header-row > div[style*="minWidth"] {
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+    order: 10;
+  }
+
+  /* Allow bare (non-shell) pages to scroll on mobile */
+  html, body {
+    height: auto !important;
+    overflow: auto !important;
+    overflow-x: hidden !important;
+  }
+  /* Re-contain the shell so it still manages its own scroll */
+  .weered-shell {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+@keyframes weeredSlideUp {
+  from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }
+}
+
+/* Center content padding */
+main {
+  width: 100%;
+  max-width: none;
+  padding: var(--weered-pad-y) var(--weered-pad-x) 80px;
+}
+

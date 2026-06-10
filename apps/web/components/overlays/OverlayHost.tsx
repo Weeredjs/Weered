@@ -30,7 +30,7 @@ function SheetBody({
     case "profile":
       return <ProfileSheet userId={p.userId ?? "unknown"} />;
     case "settings":
-      return <SettingsSheet />;
+      return <SettingsSheet initialTab={p.tab} />;
     case "dock":
       return <DockSheet payload={p} onClose={onClose} />;
     default:
@@ -61,7 +61,7 @@ export default function OverlayHost() {
     <div className="fixed inset-0 z-[1000]">
       <div className="absolute inset-0 bg-black/50" onClick={() => closeSheet()} />
 
-      <div className="absolute right-0 top-0 h-full w-[420px] max-w-[92vw] border-l border-white/10 bg-[var(--weered-bg,#0f1117)] shadow-2xl">
+      <div className={`absolute right-0 top-0 h-full ${top.type === "settings" ? "w-[640px]" : "w-[420px]"} max-w-[92vw] border-l border-white/10 bg-[var(--weered-bg,#0f1117)] shadow-2xl`}>
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             {stack.length > 1 ? (

@@ -68,7 +68,6 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
       room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind !== Track.Kind.Audio) return;
         const el = track.attach();
-        // allow autoplay after user gesture (connect button)
         (el as HTMLMediaElement).autoplay = true;
         (el as HTMLMediaElement).controls = false;
         audioRootRef.current?.appendChild(el);
@@ -90,7 +89,6 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
 
       await room.connect(url, livekitToken);
 
-      // default: enable microphone
       await room.localParticipant.setMicrophoneEnabled(true);
       setMicOn(true);
 
@@ -175,10 +173,8 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
         </div>
       </div>
 
-      {/* remote audio elements get attached here */}
       <div ref={audioRootRef} />
     </div>
   );
 }
-
 

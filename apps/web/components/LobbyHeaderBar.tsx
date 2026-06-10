@@ -7,6 +7,8 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { ui } from "./weeredUi";
+import { weeredReport } from "../lib/report";
+import { weeredToast } from "../lib/toast";
 
 type Mode = "rooms" | "people";
 
@@ -112,7 +114,6 @@ export default function LobbyHeaderBar({
           setRoomResults(Array.isArray(data.rooms) ? data.rooms : []);
         }
       } catch {
-        // silently fail
       } finally {
         setSearching(false);
       }
@@ -183,11 +184,8 @@ export default function LobbyHeaderBar({
       style={{
         position: "relative", flexShrink: 0,
         padding: 0,
-        // overflow intentionally visible so the search dropdown can escape
-        // the header bar's bounds (it renders at top: 100% + 6px)
       }}
     >
-      {/* Accent top line */}
       {accent && (
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, height: 2, zIndex: 2,
@@ -196,15 +194,11 @@ export default function LobbyHeaderBar({
         }} />
       )}
 
-      {/* Single row: logo + name + search + actions */}
       <div className="weered-lobby-header-row" style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "8px 14px", flexWrap: "wrap",
       }}>
-        {/* Tier-2 lobbies (those with a registered splash overlay) get a clickable
-            logo that replays the splash. Event is namespaced and fires into the
-            void for non-Tier-2 — no-op by design. */}
-        {(() => { /* helper closure to keep the JSX scope clean */
+        {(() => {
           const HAS_SPLASH = new Set(["windrose", "destiny2"]);
           const isTier2 = HAS_SPLASH.has(lobbyId);
           const replaySplash = () => {
@@ -242,7 +236,6 @@ export default function LobbyHeaderBar({
 
           return (
             <>
-              {/* Logo or initial — clickable on Tier 2 */}
               {logoUrl ? (
                 <div
                   onClick={isTier2 ? replaySplash : undefined}
@@ -279,7 +272,6 @@ export default function LobbyHeaderBar({
                 </div>
               )}
 
-            {/* Name + verified */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
               <span style={{
                 fontSize: 14, fontWeight: 900, letterSpacing: "-0.3px",
@@ -308,7 +300,6 @@ export default function LobbyHeaderBar({
           );
         })()}
 
-        {/* Mode tabs */}
         <div className="weered-lobby-tabs flex gap-1 rounded-xl border border-white/10 bg-white/5 p-0.5" style={{ flexShrink: 0 }}>
           {(["rooms", "people"] as Mode[]).map(m => (
             <button
@@ -326,7 +317,6 @@ export default function LobbyHeaderBar({
           ))}
         </div>
 
-        {/* Search input */}
         <div style={{ position: "relative", flex: "1 1 120px", minWidth: 0 }}>
           <input
             className="weered-input w-full"
@@ -347,7 +337,6 @@ export default function LobbyHeaderBar({
             </div>
           )}
 
-          {/* ── Search dropdown ───────────────────────────────────────── */}
             {showDropdown && (
               <div style={{
                 position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 200,
@@ -366,7 +355,6 @@ export default function LobbyHeaderBar({
                   </div>
                 )}
 
-                {/* Pinned lobbies */}
                 {pinnedResults.length > 0 && (
                   <>
                     <SectionLabel label="LOBBIES" />
@@ -391,7 +379,6 @@ export default function LobbyHeaderBar({
                             transition: "background 0.1s",
                           }}
                         >
-                          {/* Logo or initial */}
                           <div style={{
                             width: 30, height: 30, borderRadius: 8, flexShrink: 0,
                             background: lobby.logoUrl ? "rgba(0,0,0,0.3)" : `${la}28`,
@@ -441,7 +428,6 @@ export default function LobbyHeaderBar({
                   </>
                 )}
 
-                {/* Rooms */}
                 {roomResults.length > 0 && (
                   <>
                     <SectionLabel label="ROOMS" />
@@ -493,7 +479,6 @@ export default function LobbyHeaderBar({
                   </>
                 )}
 
-                {/* People */}
                 {peopleResults.length > 0 && (
                   <>
                     <SectionLabel label="PEOPLE" />
@@ -540,13 +525,28 @@ export default function LobbyHeaderBar({
             )}
           </div>
 
-        {/* Action buttons */}
         <button type="button" className="weered-btn" style={{ padding: "5px 10px", fontSize: 11 }} onClick={openBrowse}>
           Browse
         </button>
         <button type="button" className="weered-btn" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => setShowLobbyInvite(true)}>
           Invite
         </button>
+        {lobbyId && lobbyId !== "lobby" && (
+          <button
+            type="button"
+            className="weered-btn"
+            title="Report this lobby"
+            aria-label="Report this lobby"
+            style={{ padding: "5px 8px", fontSize: 11, opacity: 0.6 }}
+            onClick={async () => {
+              const res = await weeredReport({ targetType: "LOBBY", targetId: lobbyId });
+              if (res?.ok) weeredToast.success("Report submitted. Staff will review.");
+              else if (res && !res.ok) weeredToast.error(res.error === "report_rate_limit" ? "You're reporting too fast. Try again shortly." : "Report failed.");
+            }}
+          >
+            ⚐
+          </button>
+        )}
       </div>
 
       {showLobbyInvite && (

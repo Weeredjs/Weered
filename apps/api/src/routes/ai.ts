@@ -1,17 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /ai/* — natural-language search ("answer + recommended lobbies + action")
-// and quiz generation. Routes through Anthropic via the getAI helper that
-// stays in main() (it lazy-loads the SDK so the API can boot without an
-// Anthropic key set).
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
   isAIAvailable: () => boolean;
   getAI: () => Promise<any | null>;
-  // Live rooms map from WS handler — used to derive an "X users online" stat
-  // for the AI search system prompt. Kept loose (any) since the structure is
-  // owned by index.ts and isn't exported.
   rooms: Map<string, { users: Map<string, any> }>;
 };
 

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useRef } from "react";
 
-// Extend window for the beforeinstallprompt event
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -14,28 +13,22 @@ export default function InstallPrompt() {
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Don't show if already installed (standalone mode)
     if (window.matchMedia("(display-mode: standalone)").matches) return;
     if ((navigator as any).standalone) return;
 
-    // Check if dismissed recently (7 days)
     const dismissed = localStorage.getItem("weered:install:dismissed");
     if (dismissed && Date.now() - parseInt(dismissed, 10) < 7 * 24 * 60 * 60 * 1000) return;
 
-    // Check if already installed
     const installed = localStorage.getItem("weered:install:done");
     if (installed) return;
 
-    // iOS detection — no beforeinstallprompt, need manual instructions
     const ua = navigator.userAgent;
     const isiOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     if (isiOS) {
-      // Show after a short delay on iOS
       const timer = setTimeout(() => { setIsIOS(true); setShow(true); }, 3000);
       return () => clearTimeout(timer);
     }
 
-    // Android / Chrome — catch the install prompt
     function onBeforeInstall(e: Event) {
       e.preventDefault();
       deferredPrompt.current = e as BeforeInstallPromptEvent;
@@ -43,7 +36,6 @@ export default function InstallPrompt() {
     }
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
 
-    // If app gets installed
     function onInstalled() {
       setShow(false);
       localStorage.setItem("weered:install:done", "1");

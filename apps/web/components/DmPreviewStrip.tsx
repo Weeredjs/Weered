@@ -3,13 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { avatarBg } from "../lib/avatarColor";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
   try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 interface DmPreview {
   peerId: string;
   peerName: string;
@@ -20,7 +18,6 @@ interface DmPreview {
   unread: boolean;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
@@ -33,7 +30,6 @@ function timeAgo(iso: string): string {
   return `${d}d`;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
 export default function DmPreviewStrip() {
   const [previews, setPreviews] = useState<DmPreview[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -62,7 +58,6 @@ export default function DmPreviewStrip() {
 
   return (
     <div style={{ padding: "0 0 4px" }}>
-      {/* Section header */}
       <div style={{
         display: "flex", alignItems: "center", gap: 7,
         padding: "0 4px 10px",
@@ -78,7 +73,6 @@ export default function DmPreviewStrip() {
         </span>
       </div>
 
-      {/* Horizontal scroll strip */}
       <div style={{
         display: "flex", gap: 10, overflowX: "auto", overflowY: "hidden",
         paddingBottom: 4,
@@ -100,7 +94,6 @@ export default function DmPreviewStrip() {
   );
 }
 
-// ─── Card ────────────────────────────────────────────────────────────────────
 function DmCard({ preview }: { preview: DmPreview }) {
   const [hovered, setHovered] = useState(false);
   const bg = avatarBg(preview.peerName);
@@ -128,7 +121,6 @@ function DmCard({ preview }: { preview: DmPreview }) {
         display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
       }}
     >
-      {/* Unread dot */}
       {preview.unread && (
         <div style={{
           position: "absolute", top: 10, right: 10,
@@ -138,7 +130,6 @@ function DmCard({ preview }: { preview: DmPreview }) {
         }} />
       )}
 
-      {/* Avatar */}
       {preview.peerAvatar ? (
         <img
           src={preview.peerAvatar}
@@ -161,7 +152,6 @@ function DmCard({ preview }: { preview: DmPreview }) {
         </div>
       )}
 
-      {/* Name */}
       <div style={{
         fontSize: 12, fontWeight: 700,
         color: "rgba(243,244,246,.95)",
@@ -172,7 +162,6 @@ function DmCard({ preview }: { preview: DmPreview }) {
         {preview.peerName}
       </div>
 
-      {/* Last message preview */}
       <div style={{
         fontSize: 11, lineHeight: 1.35,
         color: "rgba(243,244,246,.45)",
@@ -186,7 +175,6 @@ function DmCard({ preview }: { preview: DmPreview }) {
         {preview.isFromMe ? "You: " : ""}{preview.lastMessage}
       </div>
 
-      {/* Time */}
       <div style={{
         fontSize: 10, color: "rgba(243,244,246,.25)",
         fontVariantNumeric: "tabular-nums",

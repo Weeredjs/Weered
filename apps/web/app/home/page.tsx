@@ -13,8 +13,10 @@ import EmptyState from "../../components/EmptyState";
 import VerticalPicker from "../../components/VerticalPicker";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
+import FirstTimePrompt from "../../components/FirstTimePrompt";
+import HomePinnedNews from "../../components/HomePinnedNews";
+import LobbySearch from "../../components/LobbySearch";
 
-/* ─── helpers ────────────────────────────────────────────── */
 function pickFirst(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
   return "";
@@ -25,12 +27,9 @@ function onlineCount(r: any): number {
 function roomId(r: any): string {
   return pickFirst(r?.id, r?.roomId, "");
 }
-/** Display name: prefer .name, then fall back to cleaned ID */
 function roomName(r: any): string {
-  // Prefer explicit name field from API/WS
   const name = pickFirst(r?.name, "");
   if (name) return name;
-  // Fallback: strip room: prefix from ID
   const id = roomId(r);
   return id.startsWith("room:") ? id.slice(5) : id;
 }
@@ -45,11 +44,6 @@ function isPrivateRoom(r: any): boolean {
 function isPinned(r: any): boolean {
   return Boolean(r?.pinned);
 }
-// True only for top-level Lobby records (no parent lobbyId). Pinned house
-// rooms (The Tavern, Vanguard Intel, etc.) inherit `pinned: true` from
-// being seeded house rooms, but they have a `lobbyId` pointing at their
-// parent lobby — they are NOT lobbies themselves and shouldn't show up in
-// the lobby grid.
 function isLobby(r: any): boolean {
   return !r?.lobbyId;
 }
@@ -73,7 +67,6 @@ function timeAgo(ts: number | string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// Heat color based on online count
 function heatColor(count: number): string {
   if (count >= 10) return "#ef4444";
   if (count >= 5)  return "#f97316";
@@ -90,31 +83,22 @@ function heatLabel(count: number): string {
   return "quiet";
 }
 
-// Determine if an accent color is too light for white text
 function isLightAccent(hex: string): boolean {
   const h = hex.replace("#", "");
   if (h.length < 6) return false;
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  // Relative luminance
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return lum > 0.65;
 }
 
-// Lobby accent or fallback
 function lobbyAccent(r: any, idx: number): string {
   if (r?.accentColor) return r.accentColor;
   const fallbacks = ["#5800E5", "#22c55e", "#f97316", "#60a5fa", "#ef4444", "#eab308", "#5800E5", "#06b6d4"];
   return fallbacks[idx % fallbacks.length];
 }
 
-/* ─── LivePulse dot ──────────────────────────────────────────
-   Originally had a `weered-ripple` infinite scale+opacity animation
-   on every dot. With ~30 lobby cards on /home each rendering one,
-   that's 30+ promoted layers churning Layerize/Pre-paint every
-   frame — caught in a perf recording on 2026-04-29. Static dot with
-   a box-shadow glow reads identically as "live" without the cost. */
 function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
   return (
     <span style={{
@@ -126,7 +110,6 @@ function PulseDot({ color, size = 6 }: { color: string; size?: number }) {
   );
 }
 
-/* ─── HeroBanner ─────────────────────────────────────────── */
 function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned: boolean) => void }) {
   if (!lobby) return null;
   const name = roomName(lobby);
@@ -143,9 +126,10 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
       onClick={() => onJoin(roomId(lobby), Boolean(lobby?.pinned))}
       className="weered-featured-card"
       style={{
-        position: "relative", borderRadius: 16, overflow: "hidden",
+        position: "relative", borderRadius: 2, overflow: "hidden",
         minHeight: 200, cursor: "pointer",
         border: `1px solid ${accent}22`,
+        borderLeft: "2px solid rgba(124,58,237,.55)",
         background: banner
           ? `linear-gradient(135deg, rgba(10,10,15,.7) 0%, rgba(10,10,15,.4) 50%, rgba(10,10,15,.7) 100%)`
           : `linear-gradient(135deg, ${accent}15 0%, rgba(10,10,15,.95) 40%, ${accent}08 100%)`,
@@ -154,7 +138,6 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.borderColor = `${accent}44`; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = `${accent}22`; }}
     >
-      {/* Banner image */}
       {banner && (
         <Image
           src={banner}
@@ -167,7 +150,6 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         />
       )}
 
-      {/* Ambient effects (only when no banner) */}
       {!banner && (
         <>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(ellipse at 25% 50%, ${accent}20 0%, transparent 55%), radial-gradient(ellipse at 85% 20%, ${accent}10 0%, transparent 40%)` }} />
@@ -175,15 +157,14 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         </>
       )}
 
-      {/* Top bar — wraps on narrow viewports so pills don't collide */}
       <div style={{ position: "absolute", top: 14, left: 18, right: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", zIndex: 2 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          {logo && <img src={logo} alt={`${roomName(lobby)} logo`} style={{ width: 22, height: 22, borderRadius: 6, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />}
+          {logo && <img src={logo} alt={`${roomName(lobby)} logo`} style={{ width: 22, height: 22, borderRadius: 2, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />}
           <span style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
             border: `1px solid ${accent}35`,
-            borderRadius: 99, padding: "3px 11px",
+            borderRadius: 2, padding: "3px 11px",
             fontSize: 10, fontWeight: 800, color: accent, letterSpacing: ".3px",
             whiteSpace: "nowrap",
           }}>
@@ -193,7 +174,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         </div>
         <div style={{
           background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
-          border: "1px solid rgba(255,255,255,.08)", borderRadius: 8,
+          border: "1px solid rgba(255,255,255,.08)", borderRadius: 2,
           padding: "4px 10px", fontSize: 11, fontFamily: "monospace",
           color: "rgba(255,255,255,.6)", display: "flex", alignItems: "center", gap: 5,
           whiteSpace: "nowrap", flexShrink: 0,
@@ -203,10 +184,8 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         </div>
       </div>
 
-      {/* Spacer so the absolute top bar never overlaps body content when card grows */}
       <div aria-hidden style={{ height: 52 }} />
 
-      {/* Bottom content — flows in normal layout so the card grows to fit */}
       <div style={{ padding: "8px 22px 18px", zIndex: 2, position: "relative", background: "linear-gradient(transparent, rgba(0,0,0,.75))" }}>
         <div style={{ fontWeight: 900, fontSize: 26, lineHeight: 1.1, marginBottom: desc ? 6 : 14, letterSpacing: "-0.5px", textShadow: banner ? "0 2px 8px rgba(0,0,0,.6)" : "none" }}>{name}</div>
         {desc && (
@@ -224,7 +203,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
             background: lightAccent ? "#fff" : accent,
             color: btnText,
             border: lightAccent ? "1px solid rgba(255,255,255,.3)" : "none",
-            borderRadius: 10,
+            borderRadius: 2,
             padding: "10px 20px", fontWeight: 800, fontSize: 13,
             cursor: "pointer", fontFamily: "inherit",
             boxShadow: `0 4px 16px ${accent}44`,
@@ -238,10 +217,6 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   );
 }
 
-/* ─── LiveRoomCard ───────────────────────────────────────── */
-// Right-column card on the home Live Now section. Shows the lobby's
-// logo + accent stripe, the room's name + activity, a stack of up to
-// four user avatars from the room, and the live headcount.
 function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned: boolean) => void }) {
   const accent = (room?.lobbyAccentColor && /^#[0-9a-f]{6}$/i.test(room.lobbyAccentColor)) ? room.lobbyAccentColor : "#7C3AED";
   const visibleAvatars = (room.avatars || []).slice(0, 4);
@@ -254,7 +229,7 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
       style={{
         display: "grid", gridTemplateColumns: "auto 1fr auto", gridTemplateRows: "auto auto",
         gap: "2px 10px", alignItems: "center",
-        padding: "8px 12px", borderRadius: 10,
+        padding: "8px 12px", borderRadius: 2,
         background: `${accent}08`, border: `1px solid ${accent}24`,
         color: "inherit", cursor: "pointer", fontFamily: "inherit",
         transition: "all .15s",
@@ -263,10 +238,7 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}55`; (e.currentTarget as HTMLElement).style.background = `${accent}14`; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}24`; (e.currentTarget as HTMLElement).style.background = `${accent}08`; }}
     >
-      {/* Lobby logo, spans both rows. Falls back to the Weered W mark for
-          unbranded lobbies (e.g. "home") so every card has a real glyph. */}
-      <div style={{ gridRow: "1 / span 2", width: 38, height: 38, borderRadius: 8, overflow: "hidden", border: `1px solid ${accent}55`, background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div style={{ gridRow: "1 / span 2", width: 38, height: 38, borderRadius: 2, overflow: "hidden", border: `1px solid ${accent}55`, background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <img
           src={room.lobbyLogoUrl || "/brand/logo/weered-logo-64.png"}
           alt=""
@@ -274,7 +246,6 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
         />
       </div>
 
-      {/* Top row: room name + count */}
       <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.96)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
           {room.name}
@@ -285,7 +256,6 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
         {room.onlineCount}
       </span>
 
-      {/* Bottom row: lobby name · activity + avatar stack */}
       <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "rgba(255,255,255,.5)" }}>
         {room.lobbyName && (
           <>
@@ -296,9 +266,6 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
         <span style={{ fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.activity}</span>
       </div>
 
-      {/* Avatar stack — right side of bottom row, larger so the room reads
-          as "people are here" rather than just a count. Avatars without an
-          uploaded image fall back to their avatarColor + initial. */}
       <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
         {visibleAvatars.map((a: any, i: number) => (
           <div
@@ -339,29 +306,15 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
   );
 }
 
-/* ─── FeaturedStreamCard ─────────────────────────────────── */
-// Lead card for the Live Now section. Pulled from /live/featured which
-// runs a cascade: Weered users currently live → top stream of the
-// featured lobby's game → League of Legends fallback (always populated).
-// Click the thumbnail or Watch button to play the Twitch embed inline.
 function FeaturedStreamCard({ stream }: { stream: any }) {
   const router = useRouter();
   const [playing, setPlaying] = React.useState(false);
   const [muted, setMuted] = React.useState(true);
 
-  // Stop playback when the underlying stream changes (e.g. /live/featured
-  // poll returns a different streamer) so we don't render an iframe for a
-  // user who's no longer being shown.
   React.useEffect(() => { setPlaying(false); }, [stream?.userLogin]);
 
   if (!stream) return null;
 
-  // Click Join Room → stash the channel under a dedicated key the lobby
-  // page reads on mount, then navigate. Using a separate key means the
-  // lobby's existing clearPendingStream call (which wipes the regular
-  // __weeredPendingStream stash on every lobby change) doesn't eat our
-  // hand-off. The lobby re-fires the watchhere event after its own
-  // effects settle, which flips view → modules and plays the channel.
   const handleJoinRoom = () => {
     if (!stream.joinLobbyId) return;
     const login = stream.userLogin || "";
@@ -387,8 +340,6 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
   const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
   const embedUrl = `https://player.twitch.tv/?channel=${encodeURIComponent(stream.userLogin || "")}&parent=${encodeURIComponent(parentHost)}&autoplay=true&muted=${muted ? "true" : "false"}`;
 
-  // 16:9 thumbnail at 320×180 — big enough to actually watch in-place
-  // without taking over the page.
   const thumbWidth = 320;
   const thumbHeight = 180;
 
@@ -399,14 +350,13 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
         gap: 14, padding: 0,
         background: "rgba(255,255,255,.02)",
         border: `1px solid ${sourceColor}24`,
-        borderRadius: 12, overflow: "hidden",
+        borderRadius: 2, overflow: "hidden",
         color: "inherit",
         transition: "border-color .15s, transform .15s",
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}66`; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `${sourceColor}24`; }}
     >
-      {/* Thumbnail / inline player */}
       <div style={{ position: "relative", width: thumbWidth, height: thumbHeight, background: "rgba(0,0,0,.6)", flexShrink: 0 }}>
         {playing ? (
           <>
@@ -423,7 +373,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
               title="Stop"
               style={{
                 position: "absolute", top: 6, right: 6,
-                width: 24, height: 24, borderRadius: 4,
+                width: 24, height: 24, borderRadius: 2,
                 border: "1px solid rgba(255,255,255,.18)",
                 background: "rgba(0,0,0,.7)", color: "#fff",
                 cursor: "pointer", fontFamily: "inherit",
@@ -438,7 +388,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
               title={muted ? "Unmute" : "Mute"}
               style={{
                 position: "absolute", top: 6, right: 36,
-                width: 24, height: 24, borderRadius: 4,
+                width: 24, height: 24, borderRadius: 2,
                 border: "1px solid rgba(255,255,255,.18)",
                 background: "rgba(0,0,0,.7)", color: "#fff",
                 cursor: "pointer", fontFamily: "inherit",
@@ -463,7 +413,6 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={stream.thumbnailUrl} alt={stream.title || ""} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             )}
-            {/* Big play overlay so it reads as clickable */}
             <span
               aria-hidden
               style={{
@@ -479,23 +428,21 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
           </button>
         )}
 
-        {/* LIVE pip — always visible */}
         <div style={{
           position: "absolute", top: 6, left: 6,
           display: "flex", alignItems: "center", gap: 4,
-          padding: "2px 6px", borderRadius: 4,
+          padding: "2px 6px", borderRadius: 2,
           background: "rgba(220,38,38,.92)", color: "#fff",
           fontSize: 9, fontWeight: 900, letterSpacing: "1px", textTransform: "uppercase",
           pointerEvents: "none", zIndex: 1,
         }}>
-          <span style={{ width: 4, height: 4, borderRadius: 999, background: "#fff" }} />
+          <span style={{ width: 4, height: 4, borderRadius: 2, background: "#fff" }} />
           Live
         </div>
-        {/* Viewer count — hidden once playing so it doesn't cover the player UI */}
         {!playing && (
           <div style={{
             position: "absolute", bottom: 6, right: 6,
-            padding: "2px 6px", borderRadius: 4,
+            padding: "2px 6px", borderRadius: 2,
             background: "rgba(0,0,0,.75)", color: "#fff",
             fontSize: 10, fontWeight: 700, fontFamily: "monospace",
             pointerEvents: "none",
@@ -505,7 +452,6 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
         )}
       </div>
 
-      {/* Body */}
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "12px 14px 12px 0", minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "1.6px", textTransform: "uppercase", color: sourceColor, marginBottom: 4 }}>
@@ -525,7 +471,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
             onClick={() => setPlaying(p => !p)}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "6px 13px", borderRadius: 6,
+              padding: "6px 13px", borderRadius: 2,
               background: playing ? `${sourceColor}26` : `${sourceColor}14`,
               border: `1px solid ${sourceColor}66`,
               color: sourceColor,
@@ -542,10 +488,11 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
               onClick={handleJoinRoom}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
-                padding: "6px 11px", borderRadius: 6,
-                border: "1px solid rgba(34,197,94,.45)",
-                background: "rgba(34,197,94,.08)",
-                color: "rgba(187,247,208,.95)",
+                padding: "6px 15px 6px 11px", borderRadius: 0,
+                clipPath: "polygon(0 0, 100% 0, 88% 100%, 0 100%)",
+                border: "1px solid rgba(124,58,237,.55)",
+                background: "rgba(124,58,237,.12)",
+                color: "rgba(216,202,255,.95)",
                 fontSize: 10, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase",
                 fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
                 cursor: "pointer",
@@ -560,10 +507,6 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
   );
 }
 
-/* ─── LiveTicker ─────────────────────────────────────────── */
-// Two-column layout: featured stream card on the left (capped width so
-// it doesn't span the page), active room chips stacked on the right
-// filling the rest of the row. Wraps on narrow viewports.
 function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: (id: string, pinned: boolean) => void; apiBase: string }) {
   const [stream, setStream] = useState<any>(null);
   const [liveRooms, setLiveRooms] = useState<any[]>([]);
@@ -614,7 +557,6 @@ function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: 
             flex: "1 1 280px",
             display: "flex", flexDirection: "column",
             gap: 8, minWidth: 0,
-            // Match the stream card's height so the column fills its space.
             maxHeight: 220, overflowY: "auto",
           }}>
             {liveRooms.map(r => (
@@ -627,7 +569,6 @@ function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: 
   );
 }
 
-/* ─── LobbyCard (redesigned) ─────────────────────────────── */
 function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id: string) => void }) {
   const name = roomName(room);
   const cnt = onlineCount(room);
@@ -641,54 +582,53 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
     <div
       onClick={() => onJoin(roomId(room))}
       style={{
-        background: "rgba(255,255,255,.02)",
+        background: "#14161A",
         border: "1px solid rgba(255,255,255,.06)",
-        borderRadius: 14, padding: 0, cursor: "pointer",
+        borderRadius: 0, padding: 0, cursor: "pointer",
         position: "relative", overflow: "hidden",
         transition: "border-color .2s, transform .15s",
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}35`; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
     >
-      {/* Banner background */}
       {banner && (
-        <Image
-          src={banner}
-          alt={`${roomName(room)} banner`}
-          fill
-          sizes="(max-width: 768px) 100vw, 400px"
-          loading="lazy"
-          style={{ objectFit: "cover", opacity: 0.12, pointerEvents: "none" }}
-          unoptimized={banner.startsWith("/")}
-        />
+        <>
+          <Image
+            src={banner}
+            alt={`${roomName(room)} banner`}
+            fill
+            sizes="(max-width: 768px) 100vw, 400px"
+            loading="lazy"
+            style={{ objectFit: "cover", opacity: 0.5, pointerEvents: "none" }}
+            unoptimized={banner.startsWith("/")}
+          />
+          <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", background: "linear-gradient(180deg, rgba(18,20,24,.36) 0%, rgba(18,20,24,.72) 100%)" }} />
+        </>
       )}
 
-      {/* Accent top bar */}
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}55, ${accent})`, borderRadius: "14px 14px 0 0", position: "relative", zIndex: 1 }} />
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}55, ${accent})`, borderRadius: 0, position: "relative", zIndex: 1 }} />
 
-      {/* Card body */}
-      <div style={{ padding: "14px 16px 16px", position: "relative", zIndex: 1 }}>
-        {/* Header row */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ padding: "10px 12px 11px", position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             {logo ? (
-              <img src={logo} alt={`${roomName(room)} logo`} style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />
+              <img src={logo} alt={`${roomName(room)} logo`} style={{ width: 28, height: 28, borderRadius: 0, objectFit: "contain", background: "rgba(0,0,0,.3)" }} />
             ) : (
               <div style={{
-                width: 32, height: 32, borderRadius: 8,
+                width: 28, height: 28, borderRadius: 0,
                 background: `${accent}15`, border: `1px solid ${accent}22`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 15, fontWeight: 900, color: accent,
+                fontSize: 14, fontWeight: 900, color: accent,
               }}>
                 {name.slice(0, 1).toUpperCase()}
               </div>
             )}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.2, letterSpacing: "-0.2px" }}>{name}</span>
+                <span style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", textTransform: "uppercase", fontWeight: 800, fontSize: 15, lineHeight: 1.1, letterSpacing: "0.02em" }}>{name}</span>
                 {room?.verified && (
                   <span style={{
-                    fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
+                    fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 0,
                     background: `${accent}18`, border: `1px solid ${accent}30`,
                     color: accent, letterSpacing: "0.05em", flexShrink: 0,
                   }}>
@@ -700,28 +640,26 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
             </div>
           </div>
 
-          {/* Online badge */}
           <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: heatColor(cnt), flexShrink: 0 }}>
             <PulseDot color={heatColor(cnt)} size={4} />
             {cnt}
           </div>
         </div>
 
-        {/* Heat bar */}
-        <div style={{ height: 2, background: "rgba(255,255,255,.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+        <div style={{ height: 2, background: "rgba(255,255,255,.05)", borderRadius: 0, overflow: "hidden", marginBottom: 8 }}>
           <div style={{
             height: "100%", width: `${Math.min(100, cnt * 10)}%`,
             background: `linear-gradient(90deg, ${accent}66, ${accent})`,
-            borderRadius: 99, transition: "width 1s ease",
+            borderRadius: 0, transition: "width 1s ease",
           }} />
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{
-            fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 5,
+            fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 0,
             background: `${accent}12`, border: `1px solid ${accent}20`,
             color: accent, textTransform: "uppercase", letterSpacing: ".5px",
+            fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif",
           }}>
             {!room?.lobbyId ? "lobby" : "room"}
           </span>
@@ -736,7 +674,6 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   );
 }
 
-/* ─── FriendStrip (compact horizontal) ───────────────────── */
 function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any) => void; onJoin: (u: any) => void }) {
   if (friends.length === 0) return null;
   return (
@@ -756,7 +693,7 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
               onClick={() => onDm(u)}
               style={{
                 flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
-                gap: 5, padding: "10px 14px", borderRadius: 12,
+                gap: 5, padding: "10px 14px", borderRadius: 2,
                 background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)",
                 cursor: "pointer", transition: "all .15s", minWidth: 72,
               }}
@@ -792,7 +729,6 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
   );
 }
 
-/* ─── RecentRow ──────────────────────────────────────────── */
 function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: boolean) => void }) {
   const name = roomName(room);
   const cnt = onlineCount(room);
@@ -805,17 +741,17 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
       style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "9px 12px", background: "rgba(255,255,255,.02)",
-        border: "1px solid rgba(255,255,255,.06)", borderRadius: 10,
+        border: "1px solid rgba(255,255,255,.06)", borderRadius: 2,
         cursor: "pointer", transition: "all .15s",
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
     >
       {logo ? (
-        <img src={logo} alt={`${name} logo`} style={{ width: 30, height: 30, borderRadius: 8, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
+        <img src={logo} alt={`${name} logo`} style={{ width: 30, height: 30, borderRadius: 2, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
       ) : (
         <div style={{
-          width: 30, height: 30, borderRadius: 8,
+          width: 30, height: 30, borderRadius: 2,
           background: `${accent}12`, border: `1px solid ${accent}18`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 13, fontWeight: 900, color: accent, flexShrink: 0,
@@ -837,7 +773,7 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
           </span>
         )}
         <span style={{
-          fontSize: 10, padding: "3px 8px", borderRadius: 6,
+          fontSize: 10, padding: "3px 8px", borderRadius: 2,
           background: "rgba(124,106,247,.1)", border: "1px solid rgba(124,106,247,.2)",
           color: "#5800E5", fontWeight: 700, cursor: "pointer",
         }}>
@@ -848,7 +784,40 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
   );
 }
 
-/* ─── SectionHeader ──────────────────────────────────────── */
+function LobbyRow({ room, onJoin }: { room: any; onJoin: (id: string) => void }) {
+  const name = roomName(room);
+  const cnt = onlineCount(room);
+  const accent = lobbyAccent(room, 0);
+  const logo = room?.logoUrl;
+  return (
+    <div
+      onClick={() => onJoin(roomId(room))}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "7px 10px", background: "rgba(255,255,255,.02)",
+        border: "1px solid rgba(255,255,255,.06)", borderRadius: 2,
+        cursor: "pointer", transition: "all .15s",
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
+    >
+      {logo ? (
+        <img src={logo} alt="" style={{ width: 24, height: 24, borderRadius: 2, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
+      ) : (
+        <div style={{ width: 24, height: 24, borderRadius: 2, background: `${accent}12`, border: `1px solid ${accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: accent, flexShrink: 0 }}>
+          {name.slice(0, 1).toUpperCase()}
+        </div>
+      )}
+      <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", textTransform: "uppercase", fontWeight: 700, fontSize: 13, letterSpacing: "0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+      {cnt > 0 && (
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e", flexShrink: 0 }}>
+          <PulseDot color="#22c55e" size={4} />{cnt}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function SectionHeader({ icon, label, count, sub }: { icon: string; label: string; count?: number; sub?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -859,7 +828,7 @@ function SectionHeader({ icon, label, count, sub }: { icon: string; label: strin
           <span style={{
             fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.3)",
             background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.07)",
-            borderRadius: 99, padding: "1px 8px",
+            borderRadius: 2, padding: "1px 8px",
           }}>{count}</span>
         )}
       </div>
@@ -868,31 +837,23 @@ function SectionHeader({ icon, label, count, sub }: { icon: string; label: strin
   );
 }
 
-/* ─── HomePage ───────────────────────────────────────────── */
 export default function HomePage() {
   const router = useRouter();
   const { rooms, usersByRoom, me, join, joinedRoomId, joinStatus } = useWeered() as any;
 
-  // /home is the merged Home Lobby — share presence + chat with /lobby by
-  // joining the same shared "lobby" room. Lands on the same activeRoomId the
-  // path effect sets in WeeredProvider so joinedStrict resolves true.
   useEffect(() => {
     if (!me?.id) return;
     if (joinedRoomId === "lobby" && joinStatus === "joined") return;
     try { join?.("lobby"); } catch {}
   }, [me?.id, joinedRoomId, joinStatus, join]);
 
-  const [search, setSearch] = useState("");
   const [showShowcase, setShowShowcase] = useState(false);
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
-  // Aggregated lobby presence counts (live users across all rooms)
   const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
 
-  // Featured lobby from staff config
   const [featuredLobby, setFeaturedLobby] = React.useState<any>(null);
 
-  // Server-side recents
   const [serverRecents, setServerRecents] = React.useState<any[]>([]);
 
   React.useEffect(() => {
@@ -918,17 +879,14 @@ export default function HomePage() {
       });
       setFetchedRooms(merged);
 
-      // Set featured lobby from API config
       if (featuredData?.ok && featuredData?.lobby) {
         setFeaturedLobby({ ...featuredData.lobby, pinned: true });
       }
 
-      // Set server-side recents
       if (Array.isArray(recentsData?.recents)) {
         setServerRecents(recentsData.recents);
       }
 
-      // Fetch aggregated presence for all lobbies
       const lobbyIds = lobbies.map((l: any) => l.id).filter(Boolean);
       if (lobbyIds.length) {
         Promise.all(
@@ -956,10 +914,7 @@ export default function HomePage() {
       const brandingMap = new Map(fetchedRooms.map((r: any) => [r.id, r]));
       base = ws.map((r: any) => {
         const branding = brandingMap.get(r.id) ?? brandingMap.get(r.roomId) ?? {};
-        // Merge: branding is base, WS overrides counts/presence,
-        // but preserve branding's name if WS doesn't have one
         const merged = { ...branding, ...r };
-        // If WS name is just the ID, prefer branding name
         if (branding.name && (!r.name || r.name === r.id || r.name === r.roomId)) {
           merged.name = branding.name;
         }
@@ -968,7 +923,6 @@ export default function HomePage() {
     } else {
       base = ws.length > 0 ? ws : fetchedRooms;
     }
-    // Override online counts with aggregated lobby presence where available
     if (Object.keys(lobbyPresenceCounts).length > 0) {
       return base.map((r: any) => {
         const id = r.id ?? r.roomId;
@@ -997,15 +951,20 @@ export default function HomePage() {
     return out;
   }, [usersByRoom]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return allRooms;
-    const q = search.toLowerCase();
-    return allRooms.filter(r => roomName(r).toLowerCase().includes(q));
-  }, [allRooms, search]);
+  const filtered = useMemo(() => allRooms, [allRooms]);
 
   const lobbies = useMemo(() => {
-    const sorted = filtered.filter(r => isPinned(r) && isLobby(r)).sort((a, b) => onlineCount(b) - onlineCount(a));
-    // Pin destiny2 to top of grid
+    const sorted = filtered.filter(r => isPinned(r) && isLobby(r)).sort((a, b) => {
+      const oa = onlineCount(a), ob = onlineCount(b);
+      if (ob !== oa) return ob - oa;
+      const ma = (a._count?.members ?? a.memberCount ?? 0);
+      const mb = (b._count?.members ?? b.memberCount ?? 0);
+      if (mb !== ma) return mb - ma;
+      const va = Boolean(a.verified) ? 1 : 0;
+      const vb = Boolean(b.verified) ? 1 : 0;
+      if (vb !== va) return vb - va;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
     const d2idx = sorted.findIndex(r => roomId(r) === "destiny2" || roomName(r) === "destiny2");
     if (d2idx > 0) { const [d2] = sorted.splice(d2idx, 1); sorted.unshift(d2); }
     return sorted;
@@ -1021,33 +980,26 @@ export default function HomePage() {
     [filtered]
   );
 
-  // Hero: use staff-configured featured lobby, then fallback to highest-traffic lobby
   const featured = useMemo(() => {
-    // Use the featured lobby from staff config if available
     if (featuredLobby) {
       const id = featuredLobby.id;
       const liveCount = lobbyPresenceCounts[id] ?? onlineCount(featuredLobby);
       return { ...featuredLobby, pinned: true, onlineCount: liveCount };
     }
-    // Fallback: highest-traffic lobby
     return lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null;
   },
     [lobbies, popularRooms, featuredLobby, lobbyPresenceCounts]
   );
 
-  // Hide featured lobby from the grid to avoid duplication
   const featuredId = featured ? roomId(featured) : "";
 
-  // Recents: server-side, enriched with live data from allRooms
   const recentRooms = useMemo(() => {
     if (serverRecents.length === 0) return [];
     return serverRecents
       .map(rec => {
-        // Try to find live data for this room/lobby
         const targetId = rec.lobbyId || rec.roomId;
         const live = allRooms.find(r => roomId(r) === targetId);
         if (live) return { ...live, ...rec, id: targetId, onlineCount: onlineCount(live) };
-        // Fallback to the stored data
         return { ...rec, id: targetId, name: rec.name || targetId, pinned: Boolean(rec.lobbyId) };
       })
       .filter((r: any) => !isPrivateRoom(r))
@@ -1074,7 +1026,6 @@ export default function HomePage() {
       else router.push(`/lobby/${encodeURIComponent(clean)}`);
       return;
     }
-    // Record visit server-side
     const token = localStorage.getItem("weered_token") ?? "";
     if (token) {
       fetch("https://api.weered.ca/recents", {
@@ -1088,7 +1039,6 @@ export default function HomePage() {
     router.push(`/room/${encodeURIComponent(clean)}`);
   }
 
-  // Also record lobby visits
   function handleLobbyVisit(lobbyId: string) {
     const token = localStorage.getItem("weered_token") ?? "";
     if (token && lobbyId) {
@@ -1109,95 +1059,146 @@ export default function HomePage() {
   }
 
   return (
-    // Pin to weered-center via absolute positioning so the home page
-    // doesn't depend on a percentage-height cascade through flex
-    // ancestors. weered-center is position: relative — this fills it.
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* TOP BAR — wraps to two rows on narrow viewports; secondary
-          buttons hide via .home-topbar-secondary under 600px so the
-          search row stays usable at iPhone width. */}
       <div className="home-topbar" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, flexWrap: "wrap" }}>
-        <div className="home-topbar-greet" style={{ flex: "1 1 200px", minWidth: 0 }}>
+        <div className="home-topbar-greet" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
           <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
-        <Link
-          href="/desktop"
-          className="home-topbar-secondary"
-          style={{
-            background: "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))",
-            border: "1px solid rgba(245,183,0,0.25)", borderRadius: 8, padding: "7px 12px",
-            color: "#f5b700", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-            letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", textDecoration: "none",
-            display: "inline-flex", alignItems: "center", gap: 6,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.22), rgba(245,183,0,0.08))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.45)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.25)"; }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-          Desktop app
-        </Link>
-        <button
-          onClick={() => setShowShowcase(true)}
-          className="home-topbar-secondary"
-          style={{
-            background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
-            border: "1px solid rgba(124,58,237,0.25)", borderRadius: 8, padding: "7px 14px",
-            color: "#a78bfa", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-            letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit",
-          }}
-          onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.15))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.4)"; }}
-          onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.25)"; }}
-        >
-          What can you do here?
-        </button>
-        <div className="home-topbar-search" style={{ position: "relative" }}>
-          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,.25)", fontSize: 14, pointerEvents: "none" }}>&#8981;</span>
-          <input data-weered-search value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a room or lobby... ( / )"
+
+        <div className="home-topbar-search" style={{ flex: "1 1 auto", display: "flex", justifyContent: "center", minWidth: 0, maxWidth: 600 }}>
+          <LobbySearch hero width={560} />
+        </div>
+
+        <div className="home-topbar-actions" style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+          <Link
+            href="/desktop"
+            className="home-topbar-secondary"
             style={{
-              background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)",
-              borderRadius: 10, padding: "9px 14px 9px 34px",
-              color: "#e8e8ec", fontSize: 13, width: 220, outline: "none", fontFamily: "inherit",
-              transition: "border-color .15s",
+              background: "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))",
+              border: "1px solid rgba(245,183,0,0.25)", borderRadius: 2, padding: "7px 12px",
+              color: "#f5b700", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+              letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", textDecoration: "none",
+              display: "inline-flex", alignItems: "center", gap: 6,
             }}
-            onFocus={e => (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.15)"}
-            onBlur={e => (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.07)"}
-          />
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.22), rgba(245,183,0,0.08))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.45)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.25)"; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+            Desktop app
+          </Link>
+          <button
+            onClick={() => setShowShowcase(true)}
+            className="home-topbar-secondary"
+            style={{
+              background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
+              border: "1px solid rgba(124,58,237,0.25)", borderRadius: 2, padding: "7px 14px",
+              color: "#a78bfa", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+              letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit",
+            }}
+            onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.15))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.4)"; }}
+            onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.25)"; }}
+          >
+            What can you do here?
+          </button>
         </div>
       </div>
 
-      {/* SCROLL AREA — small bottom breath; the shell already reserves
-          28px below for the SiteFooter via .weered-shell.has-footer, so
-          we just need a tiny gap above the footer line. */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
 
-        {/* LIVE TICKER — real handles, clickable lobby names */}
+        <FirstTimePrompt />
+
         <div style={{ paddingTop: 14 }}>
           <HomeActivityTicker />
         </div>
 
-        {/* HERO BANNER */}
         <div style={{ paddingTop: 14 }}>
           <HeroBanner lobby={featured} onJoin={handleJoin} />
         </div>
 
-        {/* UPGRADE BANNER — only for Innocent (free) users */}
+        <LiveTicker rooms={allRooms} onJoin={handleJoin} apiBase="https://api.weered.ca" />
+
+        {lobbies.length > 0 && (() => {
+          const visibleLobbies = lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true);
+          const FEATURED_PRIORITY = ["eve", "destiny2", "poe", "helldivers2", "league-of-legends", "fakeout", "fortnite", "windrose", "counter-strike-2", "dota-2", "pubg", "mlb", "pga", "chess"];
+          const pri = (r: any) => { const i = FEATURED_PRIORITY.indexOf(roomId(r)); return i === -1 ? 999 : i; };
+          const ordered = [...visibleLobbies].sort((a, b) => {
+            const pa = pri(a), pb = pri(b);
+            if (pa !== pb) return pa - pb;
+            return (b?.featured ? 1 : 0) - (a?.featured ? 1 : 0);
+          });
+          const cardLobbies = ordered.slice(0, 7);
+          const canCreate = String(me?.tier || "INNOCENT").toUpperCase() !== "INNOCENT";
+          return (
+            <div style={{ marginTop: 24 }}>
+              <SectionHeader icon="&#10022;" label="Featured Lobbies" sub="verified communities" />
+              <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {cardLobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
+
+                <div
+                  onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} }}
+                  style={{
+                    background: "linear-gradient(135deg, rgba(124,58,237,.10), rgba(255,255,255,.02))",
+                    border: "1px solid rgba(124,58,237,.3)",
+                    borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
+                    transition: "border-color .2s, transform .15s",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    minHeight: 112, gap: 4,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.3)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                >
+                  <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🧭</div>
+                  <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(243,244,246,.95)" }}>
+                    Browse all {lobbies.length} lobbies
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>Search · discover · find your community</div>
+                </div>
+
+                <div
+                  onClick={() => router.push(canCreate ? "/lobby/create" : "/subscribe")}
+                  style={{
+                    background: "linear-gradient(135deg, rgba(245,183,0,.12), rgba(88,0,229,.10))",
+                    border: "1px solid rgba(245,183,0,.30)",
+                    borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
+                    transition: "border-color .2s, transform .15s",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    minHeight: 112, gap: 4,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.30)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                >
+                  <div style={{ fontSize: 30, marginBottom: 2, opacity: 0.9, color: "#f5b700", fontWeight: 300, lineHeight: 1 }}>+</div>
+                  <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "#f5d27a" }}>
+                    Build your lobby
+                  </div>
+                  <div style={{ fontSize: 10, color: "rgba(245,210,122,.55)" }}>
+                    {canCreate ? "Your game · your rules · your brand" : "Get Indicted to host your own"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        <HomePinnedNews />
+
         {me && String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" && (
           <div
             onClick={() => router.push("/subscribe")}
             style={{
               marginTop: 14, padding: "14px 20px",
-              borderRadius: 14, cursor: "pointer",
+              borderRadius: 2, cursor: "pointer",
               background: "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)",
               border: "1px solid rgba(88,0,229,.18)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               gap: 16, transition: "all .2s",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.35)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.12) 0%, rgba(167,139,250,.08) 50%, rgba(249,115,22,.06) 100%)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.35)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
@@ -1212,59 +1213,14 @@ export default function HomePage() {
             </div>
             <span style={{
               flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 14px",
-              borderRadius: 8, background: "rgba(88,0,229,.15)", border: "1px solid rgba(88,0,229,.30)",
+              borderRadius: 2, background: "rgba(88,0,229,.15)", border: "1px solid rgba(88,0,229,.30)",
               color: "rgba(167,139,250,.9)", letterSpacing: ".2px",
-              transition: "all .15s",
             }}>
               Upgrade
             </span>
           </div>
         )}
 
-        {/* LIVE TICKER */}
-        <LiveTicker rooms={allRooms} onJoin={handleJoin} apiBase="https://api.weered.ca" />
-
-        {/* LOBBIES */}
-        {lobbies.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="&#10022;" label="Lobbies" count={lobbies.length} sub="verified communities" />
-            <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true).map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
-
-              {/* Create Your Lobby CTA card */}
-              {me && (
-                <div
-                  onClick={() => {
-                    const tier = String(me?.tier || "INNOCENT").toUpperCase();
-                    if (tier === "INNOCENT") router.push("/subscribe");
-                    else router.push("/lobby/create");
-                  }}
-                  style={{
-                    background: "rgba(255,255,255,.02)",
-                    border: "1px dashed rgba(88,0,229,.25)",
-                    borderRadius: 14, padding: 0, cursor: "pointer",
-                    position: "relative", overflow: "hidden",
-                    transition: "border-color .2s, transform .15s",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                    minHeight: 140,
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.45)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.background = "rgba(88,0,229,.04)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.25)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
-                >
-                  <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.7, color: '#5800E5' }}>+</div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
-                    Create Your Lobby
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginTop: 4 }}>
-                    {String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" ? "Indicted+ required" : "Start your community"}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* POPULAR ROOMS */}
         {popularRooms.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#128293;" label="Popular Rooms" count={popularRooms.length} sub="active right now" />
@@ -1274,30 +1230,25 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ACTIVE FRIENDS */}
         <FriendStrip friends={onlineFriends} onDm={handleDm} onJoin={u => { const rid = pickFirst(u?.room, u?.roomId, ""); if (rid) handleJoin(rid); }} />
 
-        {/* DM PREVIEWS */}
         <div style={{ marginTop: 24 }}>
           <DmPreviewStrip />
         </div>
 
-        {/* ACTIVITY FEED */}
         <div style={{ marginTop: 24 }}>
-          <ActivityFeed />
+          <ActivityFeed initialCount={5} />
         </div>
 
-        {/* RECENTLY VISITED */}
         {recentRooms.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <SectionHeader icon="&#128339;" label="Recently Visited" count={recentRooms.length} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {recentRooms.map((r, i) => <RecentRow key={roomId(r) || i} room={r} onJoin={handleJoin} />)}
+              {recentRooms.slice(0, 5).map((r, i) => <RecentRow key={roomId(r) || i} room={r} onJoin={handleJoin} />)}
             </div>
           </div>
         )}
 
-        {/* EMPTY STATE */}
         {lobbies.length === 0 && popularRooms.length === 0 && (
           <EmptyState
             icon={<img src="/brand/logo/weered-shieldlogo-512.png" alt="" style={{ width: 72, height: 72, opacity: 0.45 }} />}
@@ -1311,13 +1262,7 @@ export default function HomePage() {
       <style>{`div::-webkit-scrollbar{display:none}`}</style>
 
       <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
-      {/* VerticalPicker disabled for now — Press is the default theme until
-          we re-enable per-vertical theme selection. Restore by uncommenting:
-          <VerticalPicker /> */}
 
-      {/* Shared lobby chat — same room:lobby as /lobby uses, so
-          announcements + active chat persist across both surfaces.
-          Frees up the broadcast banner for time-sensitive pushes. */}
       <LobbyChatDrawer roomId="room:lobby" title="Lobby Chat" />
     </div>
   );

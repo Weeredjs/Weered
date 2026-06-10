@@ -2,25 +2,17 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-// HelldiversStratagemsPanel — searchable, filterable stratagem reference
-// for the Helldivers 2 lobby. Pulls from /helldivers/stratagems on the
-// API. Aesthetic: Super Earth military — gold accent, dark background,
-// arrow codes BIG and bold (these are iconic to HD2).
-//
-// Bonus: trainer mode at the bottom — random stratagem, type the code via
-// arrow keys or WASD, hit/miss + speed score.
-
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#FFD700";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Eagle:     "#FFD700", // gold — air strikes
-  Orbital:   "#4FC3F7", // sky blue — orbital beams
-  Defensive: "#81C784", // green — sentries
-  Supply:    "#FFB74D", // amber — weapons
-  Backpack:  "#BA68C8", // purple — gear
-  Mech:      "#EF5350", // red — heavy
-  Mission:   "#90A4AE", // grey — utility
+  Eagle:     "#FFD700",
+  Orbital:   "#4FC3F7",
+  Defensive: "#81C784",
+  Supply:    "#FFB74D",
+  Backpack:  "#BA68C8",
+  Mech:      "#EF5350",
+  Mission:   "#90A4AE",
 };
 
 const USAGE_TYPES = ["All", "Offensive", "Defensive", "Supply", "Vehicle", "Mission"];
@@ -62,14 +54,9 @@ async function apiFetch(path: string) {
   return r.json();
 }
 
-// Format the arrow code with consistent spacing for big-bold display.
 function formatCode(code: string): string {
   return code.split("").join(" ");
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Trainer Mode
-// ─────────────────────────────────────────────────────────────────────────────
 
 const ARROW_KEYS: Record<string, string> = {
   ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→",
@@ -107,7 +94,6 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
       const expected = target.code.slice(0, next.length);
       if (next === expected) {
         if (next === target.code) {
-          // Hit
           const elapsed = (Date.now() - (startedAt ?? Date.now())) / 1000;
           setLastTime(elapsed);
           setLastHit("hit");
@@ -117,7 +103,6 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
           setProgress(next);
         }
       } else {
-        // Miss
         setLastHit("miss");
         setScore(s => ({ ...s, misses: s.misses + 1 }));
         setProgress("");
@@ -172,10 +157,6 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Panel
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function HelldiversStratagemsPanel({
   lobbyId, accentColor, style,
 }: {
@@ -188,7 +169,7 @@ export default function HelldiversStratagemsPanel({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [usage, setUsage] = useState<string>("All");
-  const [tier, setTier] = useState<number>(0); // index into UNLOCK_TIERS
+  const [tier, setTier] = useState<number>(0);
   const [selected, setSelected] = useState<Stratagem | null>(null);
   const [showTrainer, setShowTrainer] = useState(false);
 
@@ -219,7 +200,6 @@ export default function HelldiversStratagemsPanel({
 
   return (
     <div style={{ padding: "14px 16px", overflow: "auto", color: "rgba(243,244,246,.92)", ...style }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 1.2, color: accent, textTransform: "uppercase" }}>
@@ -240,7 +220,6 @@ export default function HelldiversStratagemsPanel({
 
       {showTrainer && stratagems.length > 0 && <TrainerMode pool={filtered.length ? filtered : stratagems} />}
 
-      {/* Search */}
       <div style={{ marginTop: showTrainer ? 16 : 0, marginBottom: 12 }}>
         <input
           value={search}
@@ -250,7 +229,6 @@ export default function HelldiversStratagemsPanel({
         />
       </div>
 
-      {/* Filters */}
       <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
         <div>
           <div style={S.label}>Category</div>
@@ -287,12 +265,10 @@ export default function HelldiversStratagemsPanel({
         </div>
       </div>
 
-      {/* Result count */}
       <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 8, letterSpacing: ".3px" }}>
         {loading ? "Loading..." : `${filtered.length} stratagem${filtered.length === 1 ? "" : "s"} match`}
       </div>
 
-      {/* List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.map(s => {
           const catColor = CATEGORY_COLORS[s.category] || accent;
@@ -310,7 +286,6 @@ export default function HelldiversStratagemsPanel({
               onClick={() => setSelected(isOpen ? null : s)}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                {/* Big arrow code — iconic to HD2, render LOUD. */}
                 <div style={{
                   flex: "0 0 auto",
                   fontSize: 30,
@@ -325,7 +300,6 @@ export default function HelldiversStratagemsPanel({
                   {formatCode(s.code)}
                 </div>
 
-                {/* Name + meta */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3, color: "rgba(243,244,246,.96)" }}>
                     {s.name}

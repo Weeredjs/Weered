@@ -75,6 +75,13 @@ const nextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
+          // HSTS: 1yr + subdomains. 'preload' intentionally omitted — it's a
+          // hard-to-reverse commitment; flip it on deliberately later.
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          // CSP shipped Report-Only first: observe field violations before
+          // enforcing so a missed source can't break the app. Promote the key
+          // to 'Content-Security-Policy' once the report stream is clean.
+          { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://js.stripe.com https://embed.twitch.tv https://player.twitch.tv; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' blob: https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://player.twitch.tv https://embed.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" },
         ],
       },
       {

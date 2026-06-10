@@ -2,26 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 
-/**
- * GDPR / ePrivacy cookie consent banner.
- *
- * Weered uses localStorage for auth + settings + theme (classified as
- * "strictly necessary" under ePrivacy — no consent needed for those).
- * Anything beyond that (analytics, push prefs cached client-side,
- * future third-party embeds) gets gated behind explicit consent.
- *
- * Banner shows on first visit. Stores decision in weered_cookie_consent
- * with a version field so we can re-prompt if the policy materially changes.
- */
-
 const STORAGE_KEY = "weered_cookie_consent";
 const CURRENT_VERSION = 1;
 
 type Consent = {
   version: number;
-  essential: true;         // always true — can't opt out
-  functional: boolean;     // theme prefs, density, reduced-motion preference
-  analytics: boolean;      // none live yet, but future-proofed
+  essential: true;
+  functional: boolean;
+  analytics: boolean;
   acceptedAt: string;
 };
 

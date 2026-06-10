@@ -2,14 +2,10 @@
 
 import React, { useCallback, useRef, useState } from "react";
 
-// ── Config ──────────────────────────────────────────────────────────────────
-
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#6366F1";
 const GREEN = "#22C55E";
 const RED = "#EF4444";
-
-// ── Types ───────────────────────────────────────────────────────────────────
 
 interface Question {
   type: "multiple_choice" | "true_false" | "fill_blank";
@@ -21,8 +17,6 @@ interface Question {
 
 type Step = "upload" | "quiz" | "results";
 type QuestionType = "mixed" | "multiple_choice" | "true_false";
-
-// ── Styles ──────────────────────────────────────────────────────────────────
 
 const S = {
   wrap: {
@@ -208,8 +202,6 @@ const S = {
   }) as React.CSSProperties,
 };
 
-// ── Keyframe injection ──────────────────────────────────────────────────────
-
 const KEYFRAMES_ID = "study-quiz-keyframes";
 function ensureKeyframes() {
   if (typeof document === "undefined") return;
@@ -241,8 +233,6 @@ function ensureKeyframes() {
   `;
   document.head.appendChild(style);
 }
-
-// ── Score Ring SVG ──────────────────────────────────────────────────────────
 
 function ScoreRing({ score, total }: { score: number; total: number }) {
   const pct = total > 0 ? score / total : 0;
@@ -277,8 +267,6 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
   );
 }
 
-// ── Loading dots ────────────────────────────────────────────────────────────
-
 function LoadingDots() {
   return (
     <span style={S.loadingDots}>
@@ -294,12 +282,9 @@ function LoadingDots() {
   );
 }
 
-// ── Main Component ──────────────────────────────────────────────────────────
-
 export default function StudyQuiz() {
   ensureKeyframes();
 
-  // -- state --
   const [step, setStep] = useState<Step>("upload");
   const [content, setContent] = useState("");
   const [numQuestions, setNumQuestions] = useState(10);
@@ -319,7 +304,6 @@ export default function StudyQuiz() {
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // -- helpers --
   const currentQ = questions[currentIdx] || null;
   const isLastQuestion = currentIdx === questions.length - 1;
 
@@ -329,7 +313,6 @@ export default function StudyQuiz() {
     return selectedAnswer;
   }, [currentQ, fillAnswer, selectedAnswer]);
 
-  // -- file upload --
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -339,11 +322,9 @@ export default function StudyQuiz() {
       if (text) setContent(text);
     };
     reader.readAsText(file);
-    // Reset so same file can be re-selected
     e.target.value = "";
   }, []);
 
-  // -- generate quiz --
   const generateQuiz = useCallback(async () => {
     if (content.trim().length < 50) {
       setError("Please provide at least 50 characters of study content.");
@@ -380,7 +361,6 @@ export default function StudyQuiz() {
     }
   }, [content, numQuestions, questionType]);
 
-  // -- check answer --
   const checkAnswer = useCallback(() => {
     if (!currentQ) return;
     const given = getSelectedForCheck();
@@ -394,7 +374,6 @@ export default function StudyQuiz() {
     setResults(prev => { const n = [...prev]; n[currentIdx] = isCorrect; return n; });
   }, [currentQ, currentIdx, getSelectedForCheck]);
 
-  // -- next question --
   const nextQuestion = useCallback(() => {
     if (isLastQuestion) {
       setStep("results");
@@ -406,7 +385,6 @@ export default function StudyQuiz() {
     setChecked(false);
   }, [isLastQuestion]);
 
-  // -- retry (same quiz, shuffled) --
   const retryQuiz = useCallback(() => {
     const shuffled = [...questions].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
@@ -419,7 +397,6 @@ export default function StudyQuiz() {
     setStep("quiz");
   }, [questions]);
 
-  // -- new quiz --
   const newQuiz = useCallback(() => {
     setStep("upload");
     setContent("");
@@ -427,7 +404,6 @@ export default function StudyQuiz() {
     setError("");
   }, []);
 
-  // -- option state --
   const getOptionState = (option: string): "default" | "selected" | "correct" | "wrong" => {
     if (!checked) return selectedAnswer === option ? "selected" : "default";
     const isCorrectAnswer = option.toLowerCase() === currentQ?.answer.trim().toLowerCase();
@@ -446,8 +422,6 @@ export default function StudyQuiz() {
 
   const score = results.filter(Boolean).length;
 
-  // ── Upload Step ─────────────────────────────────────────────────────────
-
   if (step === "upload") {
     return (
       <div style={S.wrap}>
@@ -455,7 +429,6 @@ export default function StudyQuiz() {
           <div style={S.heading}>Practice Test Generator</div>
           <div style={S.sub}>Paste study material and let AI create a quiz for you</div>
 
-          {/* Textarea */}
           <textarea
             style={S.textarea}
             value={content}
@@ -481,7 +454,6 @@ export default function StudyQuiz() {
           </div>
         </div>
 
-        {/* Number of questions */}
         <div style={S.card}>
           <div style={S.label}>Number of Questions</div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -493,7 +465,6 @@ export default function StudyQuiz() {
           </div>
         </div>
 
-        {/* Question type */}
         <div style={S.card}>
           <div style={S.label}>Question Type</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -505,14 +476,12 @@ export default function StudyQuiz() {
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div style={{ fontSize: 12, color: RED, padding: "8px 12px", borderRadius: 8, background: `${RED}10` }}>
             {error}
           </div>
         )}
 
-        {/* Generate button */}
         <button
           style={S.btnPrimary(loading || content.trim().length < 50)}
           disabled={loading || content.trim().length < 50}
@@ -530,8 +499,6 @@ export default function StudyQuiz() {
     );
   }
 
-  // ── Quiz Step ───────────────────────────────────────────────────────────
-
   if (step === "quiz" && currentQ) {
     const progress = ((currentIdx + (checked ? 1 : 0)) / questions.length) * 100;
     const canCheck = currentQ.type === "fill_blank"
@@ -540,7 +507,6 @@ export default function StudyQuiz() {
 
     return (
       <div style={{ ...S.wrap, animation: "fadeIn .3s ease" }}>
-        {/* Progress */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: ACCENT }}>
@@ -556,14 +522,12 @@ export default function StudyQuiz() {
           </div>
         </div>
 
-        {/* Question */}
         <div style={{ ...S.card, paddingTop: 20, paddingBottom: 20 }}>
           <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6 }}>
             {currentQ.question}
           </div>
         </div>
 
-        {/* Options */}
         {currentQ.type === "fill_blank" ? (
           <div>
             <input
@@ -624,7 +588,6 @@ export default function StudyQuiz() {
           </div>
         )}
 
-        {/* Explanation (after check) */}
         {checked && currentQ.explanation && (
           <div style={S.explanationBox(results[currentIdx])}>
             <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: ".5px" }}>
@@ -634,7 +597,6 @@ export default function StudyQuiz() {
           </div>
         )}
 
-        {/* Action buttons */}
         <div style={{ display: "flex", gap: 10 }}>
           {!checked ? (
             <button
@@ -657,8 +619,6 @@ export default function StudyQuiz() {
     );
   }
 
-  // ── Results Step ────────────────────────────────────────────────────────
-
   if (step === "results") {
     const pct = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     const encouragement =
@@ -669,13 +629,11 @@ export default function StudyQuiz() {
 
     return (
       <div style={{ ...S.wrap, animation: "fadeIn .4s ease" }}>
-        {/* Score ring */}
         <div style={{ ...S.card, textAlign: "center", paddingTop: 24, paddingBottom: 24 }}>
           <ScoreRing score={score} total={questions.length} />
           <div style={{ fontSize: 13, opacity: 0.6, marginTop: 12 }}>{encouragement}</div>
         </div>
 
-        {/* Question review */}
         <div style={S.card}>
           <div style={S.label}>Question Review</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -739,7 +697,6 @@ export default function StudyQuiz() {
           </div>
         </div>
 
-        {/* Actions */}
         <div style={{ display: "flex", gap: 10 }}>
           <button style={S.btnSecondary} onClick={retryQuiz}>
             Try Again
@@ -752,6 +709,5 @@ export default function StudyQuiz() {
     );
   }
 
-  // Fallback
   return null;
 }

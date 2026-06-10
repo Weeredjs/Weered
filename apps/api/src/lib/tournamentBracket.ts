@@ -1,9 +1,3 @@
-/**
- * Bracket-advance helpers, shared between the tournaments route handler
- * and the Bungie auto-detect worker. Both need to advance a winner into
- * the next slot (and drop a loser to the losers bracket for double-elim)
- * and fire match-ready notifications.
- */
 
 import type { PrismaClient } from "@prisma/client";
 
@@ -67,7 +61,6 @@ export async function advanceWinner(
   if (!m || !m.winnerEntryId) return;
   const loserId = m.winnerEntryId === m.entryAId ? m.entryBId : m.entryAId;
 
-  // Advance winner into next match slot
   if (m.nextMatchId) {
     const next = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.nextMatchId } });
     if (next) {
@@ -82,7 +75,6 @@ export async function advanceWinner(
     }
   }
 
-  // Drop loser into losers bracket (double-elim only)
   if (m.loserMatchId && loserId) {
     const lm = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.loserMatchId } });
     if (lm) {

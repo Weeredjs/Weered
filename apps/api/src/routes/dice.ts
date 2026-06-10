@@ -1,14 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /lobbies/:lobbyId/dice/roll — server-authoritative dice rolls broadcast
-// to the active lobby room as a `dice:roll` WS event. The client (chat
-// panel) renders these as inline chips, parallel to FakeOut trade chips.
-//
-// Server rolls (not client rolls) are what makes the rolls *witnessed* —
-// nobody can fake a nat 20 because the random source lives here. Rate
-// limited to keep the chat from getting flooded.
-
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   broadcastToLobby: (lobbyId: string, event: any) => void;
@@ -54,9 +46,6 @@ function rollDice(parsed: Parsed): Rolled {
   return { rolls, kept: rolls, dropped: [], modifier: parsed.modifier, total: sum + parsed.modifier, sides: parsed.sides, isNat20, isNat1 };
 }
 
-// Sliding-window rate limiter: 12 public rolls / 60s / user / lobby.
-// Tighter than chat (chat is naturally self-throttled by typing speed;
-// dice is one-tap and a kid can spam it). Keys are pruned lazily.
 const ROLL_WINDOW_MS = 60_000;
 const ROLL_MAX_PER_WINDOW = 12;
 const rollWindow = new Map<string, number[]>();
@@ -89,11 +78,6 @@ export default async function diceRoutes(app: FastifyInstance, opts: Opts) {
     const parsed = parseDice(expr);
     if (!parsed) return reply.code(400).send({ ok: false, error: "invalid_expression", message: "Try 1d20, d6+3, 2d8, 4d6, d20adv, etc." });
 
-    // Optional integration metadata. "intent" tags the roll origin so the
-    // chat dice chip can render the correct follow-up affordance:
-    //   attack  → "Roll Damage" (uses damageExpression)
-    //   damage  → "Apply to Target" (uses damage total)
-    //   save | skill | check | (default) → no follow-up
     const intent = (() => {
       const v = String(body.intent || "").toLowerCase();
       return ["attack", "damage", "save", "skill", "check"].includes(v) ? v : "";

@@ -43,6 +43,24 @@ probe200 "$PUB/lobby/destiny2"               "/lobby/destiny2"
 probe200 "$PUB/lobby/poker"                  "/lobby/poker"
 probe200 "$PUB/why-not-discord"              "/why-not-discord"
 
+hdr "TIER 1b — SHELL ROUTING (bare vs app-shell)"
+# Bare pages (legal + auth flows) must NOT render the app shell, or they get
+# trapped in the viewport-locked .weered-shell and never scroll (the /terms
+# regression, fixed 2026-05-31 via NO_SHELL_ROUTES). App pages MUST render it.
+_shell_marker="weered-center"
+check_bare() {
+  local body=$(curl -sS --max-time 10 "$PUB$1")
+  if echo "$body" | grep -q "$_shell_marker"; then fail "$1 renders app shell (would NOT scroll) — should be bare"
+  else ok "$1 is bare (scrolls)"; fi
+}
+check_shell() {
+  local body=$(curl -sS --max-time 10 "$PUB$1")
+  if echo "$body" | grep -q "$_shell_marker"; then ok "$1 renders app shell (expected)"
+  else fail "$1 missing app shell"; fi
+}
+for p in /terms /privacy /guidelines /forgot-password /reset-password /verify-email; do check_bare "$p"; done
+check_shell /home
+
 hdr "TIER 1 — API ENDPOINTS"
 probeJson "$API/lobbies"                     '.ok and (.lobbies | length) > 0'                "GET /lobbies (full list)"
 probeJson "$API/lobbies/windrose"            '.ok and .lobby.id == "windrose"'                 "GET /lobbies/windrose"
@@ -108,6 +126,7 @@ TOKEN_RES=$(curl -sS --max-time 10 -X POST "$API/auth/dev-login" \
 TOKEN=$(echo "$TOKEN_RES" | jq -r '.token // empty')
 USER_ID=$(echo "$TOKEN_RES" | jq -r '.user.id // empty')
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then ok "dev-login → token issued for $DEV_USER ($USER_ID)"
+elif echo "$TOKEN_RES" | grep -q "not_found"; then warn "dev-login disabled in prod (expected since 2026-05-29 hardening) — auth round-trip skipped"
 else fail "dev-login failed: $TOKEN_RES"; fi
 
 # Auth-gated /notoriety/me with token (validates token is accepted)

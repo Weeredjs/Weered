@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// PUBG vertical: player stats lookup, single match details, season
-// leaderboard. Wraps PUBG's official API (api.pubg.com), which requires
-// PUBG_API_KEY. Tight rate limits → aggressive in-memory caching.
 export default async function pubgRoutes(app: FastifyInstance) {
   const PUBG_API_BASE = "https://api.pubg.com";
   const PUBG_API_KEY  = process.env.PUBG_API_KEY || "";
@@ -104,8 +101,6 @@ export default async function pubgRoutes(app: FastifyInstance) {
 
       const MODES = ["solo", "solo-fpp", "duo", "duo-fpp", "squad", "squad-fpp"];
 
-      // NOTE preserved-as-is: original code references undeclared `currentSeason`;
-      // expression always evaluates to the cached seasonId. Don't fix here.
       const result: any = {
         ok: true,
         account: { id: accountId, name: playerName, platform },

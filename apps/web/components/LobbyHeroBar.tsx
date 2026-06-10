@@ -48,9 +48,17 @@ export default function LobbyHeroBar({
   const accent  = accentColor || "#7C3AED";
   const initial = (lobbyName || lobbyId || "L").charAt(0).toUpperCase();
 
-  // Banner rotation for STUDY / NHL pool lobbies. Only kicks in when the
-  // lobby has no manual bannerUrl saved. A manually set banner is always
-  // authoritative so admin uploads aren't trampled by the rotating pool.
+  const FLAGSHIP = "#7C3AED";
+  const [chromeMin, setChromeMin] = useState(false);
+  useEffect(() => {
+    const read = () => setChromeMin(document.documentElement.getAttribute("data-weered-chrome") === "min");
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-weered-chrome"] });
+    return () => obs.disconnect();
+  }, []);
+  const heroAccent = chromeMin ? FLAGSHIP : accent;
+
   const ROTATING_BANNERS: Record<string, string[]> = {
     STUDY: ["/brand/lobbies/study-banner-1.png", "/brand/lobbies/study-banner-2.png", "/brand/lobbies/study-banner-3.png", "/brand/lobbies/study-banner-4.png"],
     NHL: ["/brand/lobbies/nhl-banner-1.png", "/brand/lobbies/nhl-banner-2.png", "/brand/lobbies/nhl-banner-3.png", "/brand/lobbies/nhl-banner-4.png"],
@@ -108,58 +116,60 @@ export default function LobbyHeroBar({
   return (
     <div style={{ position: "relative", flexShrink: 0, overflow: "hidden", minHeight: hasFeatured ? 196 : 78 }}>
 
-      {/* Background */}
       {effectiveBanner ? (
         <>
           <div className="weered-hero-bg" style={{ position: "absolute", inset: 0, backgroundImage: `url(${effectiveBanner})`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.55, transition: "background-image 1s ease" }} />
           <div className="weered-hero-scrim" style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,18,0.25) 0%, rgba(10,10,18,0.75) 100%)" }} />
         </>
-      ) : (
+      ) : !chromeMin ? (
         <>
-          <div style={{ position: "absolute", top: -60, left: -40, width: 280, height: 280, borderRadius: "50%", background: `radial-gradient(circle, ${accent}20 0%, transparent 65%)`, pointerEvents: "none" }} />
-          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${accent}12 0%, transparent 55%, ${accent}07 100%)` }} />
-          <div style={{ position: "absolute", inset: 0, opacity: 0.10, backgroundImage: `radial-gradient(circle, ${accent} 1px, transparent 1px)`, backgroundSize: "26px 26px", pointerEvents: "none" }} />
+          <div data-hero-fx="1" style={{ position: "absolute", top: -60, left: -40, width: 280, height: 280, borderRadius: "50%", background: `radial-gradient(circle, ${accent}20 0%, transparent 65%)`, pointerEvents: "none" }} />
+          <div data-hero-fx="1" style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${accent}12 0%, transparent 55%, ${accent}07 100%)` }} />
+          <div data-hero-fx="1" style={{ position: "absolute", inset: 0, opacity: 0.10, backgroundImage: `radial-gradient(circle, ${accent} 1px, transparent 1px)`, backgroundSize: "26px 26px", pointerEvents: "none" }} />
+        </>
+      ) : null}
+
+      {chromeMin && (
+        <>
+          <style>{`@keyframes weeredHeroBloom{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.09)}}@keyframes weeredHeroBloom2{0%,100%{opacity:.35}50%{opacity:.72}}`}</style>
+          <div aria-hidden style={{ position: "absolute", top: -130, right: 30, width: 480, height: 480, borderRadius: "50%", background: `radial-gradient(circle, ${FLAGSHIP}66 0%, ${FLAGSHIP}2e 38%, transparent 70%)`, pointerEvents: "none", animation: "weeredHeroBloom 7s ease-in-out infinite", filter: "blur(10px)" }} />
+          <div aria-hidden style={{ position: "absolute", bottom: -110, left: -50, width: 340, height: 340, borderRadius: "50%", background: `radial-gradient(circle, ${FLAGSHIP}45 0%, transparent 68%)`, pointerEvents: "none", animation: "weeredHeroBloom2 9s ease-in-out infinite", filter: "blur(9px)" }} />
+          <div aria-hidden style={{ position: "absolute", top: 0, bottom: 0, left: "44%", width: 96, transform: "skewX(-20deg)", background: `linear-gradient(90deg, transparent, ${FLAGSHIP}33 45%, ${FLAGSHIP}5e 50%, ${FLAGSHIP}33 55%, transparent)`, pointerEvents: "none", mixBlendMode: "screen" }} />
         </>
       )}
 
-      {/* Bottom edge line */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${accent}55, transparent)` }} />
+      <div data-hero-fx="1" style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${heroAccent}aa, transparent)` }} />
 
-      {/* Content */}
       <div className="weered-hero-content" style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "stretch", padding: "18px 16px", gap: 16, minHeight: hasFeatured ? 196 : 78 }}>
 
-        {/* Left: identity */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 12 }}>
 
-          {/* Logo + name. Lobbies whose logo art already includes its own
-              frame (D&D shield, etc.) opt out of the inner padding + dark
-              backdrop so the art fills the chip cleanly. */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: 14, flexShrink: 0,
-              background: logoUrl ? (lobbyId === "dnd" ? "transparent" : "rgba(0,0,0,0.35)") : `${accent}28`,
-              border: `2px solid ${accent}60`,
+            <div className="weered-hero-logo" style={{
+              width: 56, height: 56, borderRadius: 3, flexShrink: 0,
+              background: logoUrl ? (lobbyId === "dnd" ? "transparent" : "rgba(0,0,0,0.35)") : `${heroAccent}28`,
+              border: `2px solid ${heroAccent}60`,
               display: "flex", alignItems: "center", justifyContent: "center",
               overflow: "hidden",
-              boxShadow: `0 0 28px ${accent}38, 0 4px 14px rgba(0,0,0,0.5)`,
+              boxShadow: `0 0 34px ${heroAccent}5e, 0 4px 14px rgba(0,0,0,0.5)`,
             }}>
               {logoUrl
                 ? <img src={logoUrl} alt={lobbyName} style={{ width: "100%", height: "100%", objectFit: "cover", padding: lobbyId === "dnd" ? 0 : 7 }} />
-                : <span style={{ fontSize: 24, fontWeight: 900, color: accent, letterSpacing: "-1px" }}>{initial}</span>
+                : <span style={{ fontSize: 24, fontWeight: 900, color: heroAccent, letterSpacing: "-1px" }}>{initial}</span>
               }
             </div>
 
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                <div style={{ fontSize: 19, fontWeight: 900, lineHeight: 1.15, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.3px" }}>
+                <div className="weered-hero-name" style={{ fontSize: 19, fontWeight: 900, lineHeight: 1.15, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.3px" }}>
                   {lobbyName}
                 </div>
                 {verified && (
                   <span style={{
                     display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0,
                     fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
-                    padding: "2px 8px", borderRadius: 999,
-                    background: `${accent}22`, border: `1px solid ${accent}50`, color: accent,
+                    padding: "2px 8px", borderRadius: 2,
+                    background: `${heroAccent}22`, border: `1px solid ${heroAccent}50`, color: heroAccent,
                   }}>✓ VERIFIED</span>
                 )}
               </div>
@@ -175,7 +185,6 @@ export default function LobbyHeroBar({
             </div>
           </div>
 
-          {/* Stats */}
           {(typeof roomCount === "number" || typeof memberCount === "number") && (
             <div style={{ display: "flex", gap: 6 }}>
               {typeof roomCount === "number" && <StatChip value={roomCount} label="rooms" />}
@@ -184,7 +193,6 @@ export default function LobbyHeroBar({
           )}
         </div>
 
-        {/* Right: featured stream — hidden on mobile */}
         {hasFeatured && (
           <div className="weered-hero-stream" style={{ width: 215, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             {streamLoading
@@ -215,7 +223,6 @@ export default function LobbyHeroBar({
         accentColor={accent}
         onClose={() => setInterceptStream(null)}
         onWatchHere={() => {
-          // Dispatch event so the modules panel can pick it up and open inline
           if (interceptStream) {
             window.dispatchEvent(new CustomEvent("weered:stream:watchhere", {
               detail: { channel: interceptStream.userLogin },
@@ -229,7 +236,7 @@ export default function LobbyHeroBar({
 
 function StatChip({ value, label }: { value: number; label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 2, background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.07)" }}>
       <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,0.90)" }}>{value.toLocaleString()}</span>
       <span style={{ fontSize: 10, opacity: 0.42, textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</span>
     </div>
@@ -244,7 +251,6 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
     return () => clearInterval(t);
   }, []);
 
-  // Twitch thumbnails support {width}x{height} — append cache bust to force refresh
   const thumb = (stream.thumbnail || "")
     .replace("{width}", "440").replace("{height}", "248");
   const src = thumb ? `${thumb}${thumb.includes("?") ? "&" : "?"}t=${tick}` : "";
@@ -252,7 +258,7 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
   return (
     <div
       style={{
-        borderRadius: 10, overflow: "hidden",
+        borderRadius: 3, overflow: "hidden",
         border: `1px solid ${accent}33`,
         background: "rgba(0,0,0,0.4)",
         boxShadow: `0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px ${accent}1a`,
@@ -278,8 +284,8 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
             <span style={{ fontSize: 28, opacity: 0.25 }}>▶</span>
           </div>
         )}
-        <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: "#ef4444", color: "#fff", letterSpacing: "0.06em" }}>LIVE</div>
-        <div style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)" }}>
+        <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 2, background: "#ef4444", color: "#fff", letterSpacing: "0.06em" }}>LIVE</div>
+        <div style={{ position: "absolute", bottom: 6, right: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 2, background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)" }}>
           {stream.viewers.toLocaleString()} viewers
         </div>
       </div>
@@ -293,7 +299,7 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
 
 function StreamSkeleton({ accent }: { accent: string }) {
   return (
-    <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${accent}20`, background: "rgba(0,0,0,0.3)" }}>
+    <div style={{ borderRadius: 3, overflow: "hidden", border: `1px solid ${accent}20`, background: "rgba(0,0,0,0.3)" }}>
       <style>{`@keyframes shimmer{0%,100%{opacity:.6}50%{opacity:.3}}`}</style>
       <div style={{ aspectRatio: "16/9", background: `${accent}10`, animation: "shimmer 1.4s ease-in-out infinite" }} />
       <div style={{ padding: "8px 10px" }}>

@@ -1,10 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /crews/* + /lobbies/:lobbyId/crews(+leaderboard) — crew lifecycle
-// (create, invite, leave, delete), public profile + leader edit, lobby-
-// scoped published-crew listings with bounty enrichment, and crew chat
-// history. Crew chat WS broadcast lives in main() with the rest of WS.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   verifyToken: (token: string) => { id: string; name: string } | null;
@@ -17,8 +13,6 @@ type Opts = {
 
 export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, verifyToken, awardNotoriety, createNotification, rooms, fetchReactionsForTargets, getNotorietyRank } = opts;
-
-  // ── Crews leaderboard (global) ──────────────────────────────────────────
 
   app.get("/crews/leaderboard", async (req, reply) => {
     const limit = Math.min(Number((req as any).query?.limit || 25), 50);
@@ -52,8 +46,6 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, leaders: ranked });
   });
 
-  // ── My crews / membership ───────────────────────────────────────────────
-
   app.get("/crews/mine", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
@@ -70,7 +62,6 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         : [];
       const avatarMap = new Map(userAvatars.map((u: any) => [u.id, u]));
 
-      // First pass: resolve each member's WS room (if online).
       type Pres = { userId: string; name: any; role: any; online: boolean; roomId: string | null; roomName: string | null };
       const pres: Pres[] = (m.crew.members || []).map((cm: any) => {
         let roomId: string | null = null; let roomName: string | null = null;
@@ -78,9 +69,6 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         return { userId: cm.userId, name: cm.name, role: cm.role, online: roomId !== null, roomId, roomName };
       });
 
-      // Batch-resolve which of those room IDs are actually lobbies. Mirrors
-      // the /friends route — without this, the right-rail "join" link routes
-      // to /room/<id> even when the member is in a top-level lobby.
       const activeRoomIds = [...new Set(pres.map(p => p.roomId).filter(Boolean))] as string[];
       const lobbySet = activeRoomIds.length
         ? new Set((await prisma.lobby.findMany({ where: { id: { in: activeRoomIds } }, select: { id: true } })).map(l => l.id))
@@ -142,6 +130,97 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
+  app.post("/crews/:crewId/requests", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const { crewId } = req.params as any;
+    const note = String((req.body as any)?.note || "").slice(0, 280);
+    const db = prisma as any;
+    const crew = await db.crew.findUnique({ where: { id: crewId }, select: { id: true, name: true, recruiting: true, ownerId: true } });
+    if (!crew) return reply.code(404).send({ error: "Crew not found" });
+    const existingMember = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    if (existingMember) return reply.code(409).send({ error: "Already a member" });
+    await db.crewJoinRequest.upsert({
+      where: { crewId_userId: { crewId, userId: u.id } },
+      update: { status: "PENDING", note, createdAt: new Date(), decidedAt: null, decidedBy: null, userName: u.name },
+      create: { crewId, userId: u.id, userName: u.name, note, status: "PENDING" },
+    });
+    const staff = await db.crewMember.findMany({ where: { crewId, role: { in: ["LEADER", "OFFICER"] } }, select: { userId: true } });
+    for (const s of staff) {
+      createNotification({ userId: s.userId, type: "CREW_INVITE", title: `${u.name} wants to join ${crew.name}`, body: note || "Tap to review the request.", actorId: u.id, actorName: u.name, actionUrl: `/crew/${crewId}`, meta: { crewId, kind: "join_request" } }).catch(() => {});
+    }
+    return reply.send({ ok: true, status: "PENDING" });
+  });
+
+  app.get("/crews/:crewId/requests", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const { crewId } = req.params as any;
+    const db = prisma as any;
+    const myMembership = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    if (!myMembership || myMembership.role === "MEMBER") return reply.code(403).send({ error: "Not an officer" });
+    const requests = await db.crewJoinRequest.findMany({
+      where: { crewId, status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, userId: true, userName: true, note: true, createdAt: true },
+    });
+    return reply.send({ ok: true, requests });
+  });
+
+  app.post("/crews/:crewId/requests/:userId/:decision", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const { crewId, userId, decision } = req.params as any;
+    if (decision !== "approve" && decision !== "decline") return reply.code(400).send({ error: "Bad decision" });
+    const db = prisma as any;
+    const myMembership = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    if (!myMembership || myMembership.role === "MEMBER") return reply.code(403).send({ error: "Not an officer" });
+    const reqRow = await db.crewJoinRequest.findUnique({ where: { crewId_userId: { crewId, userId } } });
+    if (!reqRow || reqRow.status !== "PENDING") return reply.code(404).send({ error: "No pending request" });
+    const crew = await db.crew.findUnique({ where: { id: crewId }, select: { name: true } });
+    if (decision === "approve") {
+      const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true } });
+      await db.crewMember.upsert({
+        where: { crewId_userId: { crewId, userId } },
+        update: {},
+        create: { crewId, userId, name: target?.name || reqRow.userName, role: "MEMBER" },
+      });
+      awardNotoriety(userId, "CREW_JOINED").catch(() => {});
+      createNotification({ userId, type: "CREW_INVITE", title: `You're in — ${crew?.name || "the crew"}`, body: `${u.name} approved your request`, actorId: u.id, actorName: u.name, actionUrl: `/crew/${crewId}`, meta: { crewId } }).catch(() => {});
+    } else {
+      createNotification({ userId, type: "CREW_INVITE", title: `Request to ${crew?.name || "the crew"} declined`, body: "", actorId: u.id, actorName: u.name, actionUrl: "/home", meta: { crewId } }).catch(() => {});
+    }
+    await db.crewJoinRequest.update({
+      where: { crewId_userId: { crewId, userId } },
+      data: { status: decision === "approve" ? "APPROVED" : "DECLINED", decidedAt: new Date(), decidedBy: u.id },
+    });
+    return reply.send({ ok: true });
+  });
+
+  app.post("/crews/:crewId/members/:userId/role", async (req, reply) => {
+    const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
+    const u = verifyToken(token);
+    if (!u) return reply.code(401).send({ error: "Unauthorized" });
+    const { crewId, userId } = req.params as any;
+    const newRole = String((req.body as any)?.role || "").toUpperCase();
+    if (newRole !== "OFFICER" && newRole !== "MEMBER") return reply.code(400).send({ error: "Role must be OFFICER or MEMBER" });
+    const db = prisma as any;
+    const crew = await db.crew.findUnique({ where: { id: crewId }, select: { ownerId: true, name: true } });
+    if (!crew) return reply.code(404).send({ error: "Crew not found" });
+    const myMembership = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    const isLeader = myMembership?.role === "LEADER" || crew.ownerId === u.id;
+    if (!isLeader) return reply.code(403).send({ error: "Leader only" });
+    if (userId === crew.ownerId) return reply.code(400).send({ error: "Can't change the owner's role" });
+    const target = await db.crewMember.findUnique({ where: { crewId_userId: { crewId, userId } } });
+    if (!target) return reply.code(404).send({ error: "Not a member" });
+    await db.crewMember.update({ where: { crewId_userId: { crewId, userId } }, data: { role: newRole } });
+    createNotification({ userId, type: "CREW_INVITE", title: newRole === "OFFICER" ? `Promoted to Officer in ${crew.name}` : `Role changed in ${crew.name}`, body: newRole === "OFFICER" ? "You can now manage members and requests." : "You're now a Member.", actorId: u.id, actorName: u.name, actionUrl: `/crew/${crewId}`, meta: { crewId } }).catch(() => {});
+    return reply.send({ ok: true, role: newRole });
+  });
+
   app.delete("/crews/:crewId/members/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
@@ -169,8 +248,6 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     await db.crew.delete({ where: { id: crewId } });
     return reply.send({ ok: true });
   });
-
-  // ── Crew published profile ──────────────────────────────────────────────
 
   app.get("/crews/:crewId", async (req, reply) => {
     const { crewId } = req.params as any;
@@ -237,8 +314,6 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(500).send({ ok: false, error: "update_failed" });
     }
   });
-
-  // ── Lobby-scoped crew listings ──────────────────────────────────────────
 
   app.get("/lobbies/:lobbyId/crews", async (req, reply) => {
     const { lobbyId } = req.params as any;
@@ -378,8 +453,6 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(500).send({ ok: false, error: "fetch_failed" });
     }
   });
-
-  // ── Crew chat history ───────────────────────────────────────────────────
 
   app.get("/crews/:crewId/messages", async (req, reply) => {
     const u = authFromHeader(req.headers.authorization);

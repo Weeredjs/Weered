@@ -1,10 +1,4 @@
-﻿/**
- * Weered WebSocket Client (singleton + fan-out subscribers)
- * - SSR-safe
- * - One WS per tab (HMR-safe global cache)
- * - Dev login bootstrap LOCKED to POST /auth/dev-login (per API logs)
- * - Queues join until auth:ok
- */
+﻿
 
 export type WsInbound = { type: string; [k: string]: any };
 export type WsOutbound = { type: string; [k: string]: any };
@@ -127,7 +121,7 @@ export class WeeredClient {
     this.token = token;
     if (typeof window !== "undefined") {
       try {
-        if (token) localStorage.setItem("weered_token", token);
+        if (token) void 0;
         else localStorage.removeItem("weered_token");
       } catch {}
     }
@@ -147,7 +141,6 @@ export class WeeredClient {
     if (typeof window === "undefined") return;
     if (this.devLoginInFlight) return this.devLoginInFlight;
 
-    // LOCKED per your logs: POST /auth/dev-login (200)
     this.devLoginInFlight = (async () => {
       try {
         const res = await fetch(`${API_BASE}/auth/dev-login`, {
@@ -248,8 +241,6 @@ export class WeeredClient {
     this.sendRaw({ type, ...payload });
   }
 
-  // -------- internals --------
-
   private loadTokenFromStorage() {
     if (typeof window === "undefined") return;
     if (this.token) return;
@@ -282,8 +273,6 @@ export class WeeredClient {
   }
 
   private sendRaw(msg: WsOutbound) {
-        /* __WEERED_SEND_GUARD__ */
-    // Never send presence/chat messages before auth is established.
     if (!this.authed && (msg.type?.startsWith("presence:") || msg.type?.startsWith("chat:"))) {
       return;
     }
@@ -359,10 +348,6 @@ export const weeredClient: WeeredClient =
   globalThis.__WEERED_CLIENT__ ?? (globalThis.__WEERED_CLIENT__ = new WeeredClient(String(WS_URL)));
 
 export function getWeeredClient() { return weeredClient; }
-/**
- * Back-compat for older login page code.
- * Accepts payloads containing a token field and installs it into the singleton client.
- */
 export function applyAuthPayload(payload: any): boolean {
   const t =
     payload?.token ??

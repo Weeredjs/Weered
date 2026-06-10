@@ -3,21 +3,11 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 
-/**
- * Themed confirm dialog — drop-in for window.confirm, returns a Promise<boolean>.
- *
- *   const ok = await weeredConfirm({ title: "Delete post?", body: "This can't be undone." });
- *   if (!ok) return;
- *
- * Short call: weeredConfirm("Leave this lobby?")
- */
-
 export type ConfirmOptions = {
   title?: string;
   body?: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** If true, the confirm button gets a red destructive treatment. */
   destructive?: boolean;
 };
 
@@ -44,7 +34,6 @@ export function weeredConfirm(input: string | ConfirmOptions): Promise<boolean> 
     typeof input === "string" ? { title: input } : input;
 
   return new Promise<boolean>((resolve) => {
-    // Clean any previous confirm before mounting
     cleanup();
 
     const container = document.createElement("div");

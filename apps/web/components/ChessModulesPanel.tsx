@@ -1,13 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import TournamentsPanel from "./TournamentsPanel";
-
-// Chess modules panel — five tabs covering the essentials:
-//   STREAMS      — Twitch chess streamers (Hikaru, GothamChess, etc)
-//   CHALLENGES   — chess-specific challenges from /challenges?lobbyId=chess
-//   TOURNAMENTS  — reuses TournamentsPanel (templates already chess-aware)
-//   PROFILE      — linked Lichess + Chess.com usernames + live ratings
-//   AUDIT        — recent ChessActivityLog rows with full metadata
+import ModuleTabBar from "./ModuleTabBar";
 
 const ACCENT_CHESS = "#7C3AED";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -50,30 +44,7 @@ export default function ChessModulesPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      <div style={{ display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0, flexWrap: "wrap" }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: "7px 12px",
-              borderRadius: "8px 8px 0 0",
-              border: "none",
-              background: tab === t.id ? `${ACCENT_CHESS}20` : "transparent",
-              color: tab === t.id ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.65)",
-              fontWeight: tab === t.id ? 700 : 400,
-              fontSize: 12,
-              cursor: "pointer",
-              transition: "background .1s, color .1s",
-              display: "flex", alignItems: "center", gap: 5,
-              fontFamily: "inherit",
-            }}
-          >
-            <span style={{ fontSize: 13 }}>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={ACCENT_CHESS} />
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px" }}>
         {tab === "streams"     && <ChessStreams />}
@@ -86,7 +57,6 @@ export default function ChessModulesPanel({
   );
 }
 
-// ── Streams (Twitch chess directory) ─────────────────────────────────────────
 function ChessStreams() {
   const [streams, setStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +77,7 @@ function ChessStreams() {
       {streams.map((s: any) => (
         <a key={s.id || s.user_name} href={`https://twitch.tv/${s.user_login || s.user_name}`} target="_blank" rel="noreferrer" style={{
           textDecoration: "none", color: "inherit", border: "1px solid rgba(124,58,237,.25)",
-          borderRadius: 6, overflow: "hidden", background: "rgba(255,255,255,.03)",
+          borderRadius: 2, overflow: "hidden", background: "rgba(255,255,255,.03)",
         }}>
           {s.thumbnail_url && (
             <img src={String(s.thumbnail_url).replace("{width}", "320").replace("{height}", "180")} alt="" style={{ width: "100%", display: "block" }} />
@@ -123,7 +93,6 @@ function ChessStreams() {
   );
 }
 
-// ── Challenges (chess lobby's challenges) ────────────────────────────────────
 function ChessChallenges({ lobbyId }: { lobbyId: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +128,7 @@ function ChessChallenges({ lobbyId }: { lobbyId: string }) {
           <div key={c.id || def.id} style={{
             padding: 12, background: done ? "rgba(34,197,94,.06)" : "rgba(255,255,255,.03)",
             border: `1px solid ${done ? "rgba(34,197,94,.30)" : "rgba(124,58,237,.20)"}`,
-            borderRadius: 6,
+            borderRadius: 2,
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,.95)" }}>{def.title}</div>
@@ -189,7 +158,6 @@ function ChessChallenges({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-// ── My Chess (profile + ratings) ─────────────────────────────────────────────
 function ChessProfile() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -219,7 +187,7 @@ function ChessProfile() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {data.lichess && (
-        <div style={{ padding: 14, background: "rgba(124,58,237,.05)", border: "1px solid rgba(124,58,237,.25)", borderRadius: 6 }}>
+        <div style={{ padding: 14, background: "rgba(124,58,237,.05)", border: "1px solid rgba(124,58,237,.25)", borderLeft: `2px solid ${ACCENT_CHESS}`, borderRadius: 2 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(196,181,253,.95)" }}>Lichess</div>
             <a href={data.lichess.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "rgba(124,58,237,.85)" }}>@{data.lichess.username}</a>
@@ -227,7 +195,7 @@ function ChessProfile() {
           {data.lichess.perfs && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
               {Object.entries(data.lichess.perfs).map(([perf, v]: any) => (
-                <div key={perf} style={{ padding: 8, background: "rgba(255,255,255,.04)", borderRadius: 4 }}>
+                <div key={perf} style={{ padding: 8, background: "rgba(255,255,255,.04)", borderRadius: 2 }}>
                   <div style={{ fontSize: 9, color: "rgba(255,255,255,.55)", textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>{perf}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(255,255,255,.92)", marginTop: 2 }}>{v.rating}</div>
                   <div style={{ fontSize: 9, color: "rgba(255,255,255,.45)", marginTop: 2 }}>{v.games} games · {v.prog >= 0 ? "+" : ""}{v.prog}</div>
@@ -239,14 +207,14 @@ function ChessProfile() {
       )}
 
       {data.chessCom && (
-        <div style={{ padding: 14, background: "rgba(34,197,94,.05)", border: "1px solid rgba(34,197,94,.25)", borderRadius: 6 }}>
+        <div style={{ padding: 14, background: "rgba(34,197,94,.05)", border: "1px solid rgba(34,197,94,.25)", borderRadius: 2 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(134,239,172,.95)" }}>Chess.com</div>
             <a href={data.chessCom.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "rgba(34,197,94,.85)" }}>@{data.chessCom.username}</a>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
             {Object.entries(data.chessCom.ratings).map(([k, v]: any) => v != null && (
-              <div key={k} style={{ padding: 8, background: "rgba(255,255,255,.04)", borderRadius: 4 }}>
+              <div key={k} style={{ padding: 8, background: "rgba(255,255,255,.04)", borderRadius: 2 }}>
                 <div style={{ fontSize: 9, color: "rgba(255,255,255,.55)", textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>{k}</div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(255,255,255,.92)", marginTop: 2 }}>{v}</div>
               </div>
@@ -258,7 +226,6 @@ function ChessProfile() {
   );
 }
 
-// ── Game Audit (recent ChessActivityLog) ─────────────────────────────────────
 function ChessAudit() {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,7 +254,7 @@ function ChessAudit() {
           <div key={g.id || g.externalGameId} style={{
             padding: 8, background: "rgba(255,255,255,.03)",
             border: `1px solid ${win ? "rgba(34,197,94,.25)" : loss ? "rgba(239,68,68,.20)" : "rgba(255,255,255,.08)"}`,
-            borderRadius: 4,
+            borderRadius: 2,
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: win ? "rgba(134,239,172,.95)" : loss ? "rgba(252,165,165,.85)" : "rgba(255,255,255,.85)" }}>

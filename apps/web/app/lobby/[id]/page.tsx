@@ -6,6 +6,7 @@ import { useWeered } from "../../../components/WeeredProvider";
 import { weeredConfirm } from "../../../lib/confirm";
 import LobbyContent from "../../../components/LobbyContent";
 import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
+import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import LobbyModulesPanel from "../../../components/LobbyModulesPanel";
@@ -24,7 +25,9 @@ import Dota2ModulesPanel from "../../../components/Dota2ModulesPanel";
 import StudyModulesPanel from "../../../components/StudyModulesPanel";
 import PubgModulesPanel from "../../../components/PubgModulesPanel";
 import DndModulesPanel from "../../../components/DndModulesPanel";
+import MtgModulesPanel from "../../../components/MtgModulesPanel";
 import PoeModulesPanel from "../../../components/PoeModulesPanel";
+import EveModulesPanel from "../../../components/EveModulesPanel";
 import WindroseModulesPanel from "../../../components/WindroseModulesPanel";
 import HelldiversWarMapPanel from "../../../components/HelldiversWarMapPanel";
 import HelldiversMajorOrderPanel from "../../../components/HelldiversMajorOrderPanel";
@@ -40,6 +43,11 @@ import TradingFeed from "../../../components/TradingFeed";
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
+import GtaLfgBoard from "../../../components/GtaLfgBoard";
+import RedditFeedTab from "../../../components/RedditFeedTab";
+
+const LFG_BOARD_LOBBIES = new Set(["gta6"]);
+const REDDIT_TAB_LOBBIES: Record<string, string> = { gta6: "gta6" };
 import BungieLinkPill from "../../../components/BungieLinkPill";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
 
@@ -48,8 +56,6 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
-
-// ── Twitch Glitch icon (official shape, used per Twitch brand guidelines) ──
 
 function TwitchIcon({ size = 12, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
@@ -81,6 +87,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   DND: "Dungeons & Dragons",
   POE: "Path of Exile",
   WINDROSE: "Windrose",
+  EVE: "EVE Online",
 };
 
 type LobbyInfo = {
@@ -97,12 +104,12 @@ type LobbyInfo = {
   joinMode?: string;
   _count?: { rooms: number; members: number };
   tiers?: { id: string; name: string; priceMonthly: number; color: string | null; grantLevel: number }[];
+  memberPerks?: string[];
 };
 
 type Membership = { role: string; roleLevel: number } | null;
 type JoinRequestStatus = { status: string; createdAt: string; denyReason?: string | null } | null;
 
-// ── Join Gate Component ───────────────────────────────────────────────────────
 function LobbyJoinGate({
   lobbyId, lobbyInfo, joinRequest, onJoined, accent,
 }: {
@@ -152,12 +159,11 @@ function LobbyJoinGate({
 
   const cardStyle: React.CSSProperties = {
     maxWidth: 420, margin: "0 auto", padding: "32px 28px",
-    borderRadius: 16, border: `1px solid ${accent}33`,
+    borderRadius: 3, border: `1px solid ${accent}33`,
     background: `${accent}08`,
     textAlign: "center",
   };
 
-  // PAID mode — show tiers
   if (mode === "PAID") {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -173,7 +179,6 @@ function LobbyJoinGate({
     );
   }
 
-  // APPROVAL — pending state
   if (pendingState === "pending") {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -188,7 +193,6 @@ function LobbyJoinGate({
     );
   }
 
-  // APPROVAL — denied (can re-request)
   if (pendingState === "denied") {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -289,9 +293,6 @@ function LobbyJoinGate({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ═══════════════════════════════════════════════════════════════════════════════
 export default function LobbyIdPage() {
   const params  = useParams();
   const lobbyId = decodeURIComponent(String(params?.id ?? "lobby"));
@@ -302,25 +303,12 @@ export default function LobbyIdPage() {
   const [membership, setMembership] = useState<Membership>(null);
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
   const [memberChecked, setMemberChecked] = useState(false);
-  const [view, setView] = useState<"rooms" | "feed" | "modules" | "events">("rooms");
+  const [view, setView] = useState<"rooms" | "feed" | "modules" | "events" | "lfg" | "reddit">("rooms");
 
-  // Banner "Watch Here" click → flip to the Modules tab so the inline player
-  // can mount. The active modules panel listens to the same event to switch
-  // its own sub-tab to Streams and pre-load the channel.
   useWatchHere(React.useCallback(() => { setView("modules"); }, []));
 
-  // Drop any leftover pending stream when entering a different lobby so a
-  // banner click on one lobby doesn't auto-play in a lobby the user
-  // navigates to a few seconds later.
   useEffect(() => { clearPendingStream(); }, [lobbyId]);
 
-  // Auto-play a streamer handed off from the home page's "Join Room"
-  // click. The home page stashes { channel, ts } on window under a
-  // dedicated key (so the clearPendingStream wipe above doesn't touch
-  // it), then navigates here. We read it on mount, fire the existing
-  // watchhere event after a longer delay so all child effects have
-  // committed, and the lobby tab + modules panel chain takes care of
-  // the rest. Also accept ?stream= as a URL fallback for direct links.
   const searchParams = useSearchParams();
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -345,7 +333,6 @@ export default function LobbyIdPage() {
   }, [searchParams, lobbyId]);
   const [feedHasNew, setFeedHasNew] = useState(false);
 
-  // Check for new feed posts
   useEffect(() => {
     const key = `weered:feedSeen:${lobbyId}`;
     fetch(`${API}/forum/posts?lobbyId=${encodeURIComponent(lobbyId)}&sort=new&limit=1`, { headers: authHeaders() })
@@ -361,7 +348,6 @@ export default function LobbyIdPage() {
       .catch(() => {});
   }, [lobbyId]);
 
-  // Mark feed as seen when viewing
   useEffect(() => {
     if (view === "feed") {
       setFeedHasNew(false);
@@ -393,11 +379,7 @@ export default function LobbyIdPage() {
             _count:         j.lobby._count,
             tiers:          j.lobby.tiers || [],
           });
-          // Auto-open Modules for any lobby that has them (mirrors the
-          // hasModules check below). Without this, the data fetch race
-          // would override view → rooms a few hundred ms after a Watch
-          // Here / Join Room dispatch set it to modules.
-          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE" || j.lobby.moduleType === "HELLDIVERS2" || j.lobby.moduleType === "CHESS") {
+          if (j.lobby.moduleType === "BUNGIE" || j.lobby.moduleType === "TWITCH" || j.lobby.moduleType === "MARATHON" || j.lobby.moduleType === "MLB" || j.lobby.moduleType === "PGA" || j.lobby.moduleType === "NEWS" || j.lobby.moduleType === "RIOT" || j.lobby.moduleType === "FORTNITE" || j.lobby.moduleType === "TRADING" || j.lobby.moduleType === "POKER" || j.lobby.moduleType === "HEADQUARTERS" || j.lobby.moduleType === "CS2" || j.lobby.moduleType === "DOTA2" || j.lobby.moduleType === "STUDY" || j.lobby.moduleType === "PUBG" || j.lobby.moduleType === "DND" || j.lobby.moduleType === "POE" || j.lobby.moduleType === "WINDROSE" || j.lobby.moduleType === "HELLDIVERS2" || j.lobby.moduleType === "CHESS" || j.lobby.moduleType === "EVE" || j.lobby.moduleType === "MTG") {
             setView("modules");
           } else {
             setView("rooms");
@@ -410,31 +392,98 @@ export default function LobbyIdPage() {
       .catch(() => { setMemberChecked(true); });
   }
 
-  useEffect(() => { loadLobby(); }, [lobbyId]);
+  useEffect(() => { setLobbyInfo(null); loadLobby(); }, [lobbyId]);
 
-  // Lobby-specific theme takeover — applies a data attribute to <html>
-  // that scoped CSS (see globals.css) can hook into for full chrome reskin.
+  const THEMEABLE_LOBBIES = ["windrose", "destiny2", "dnd", "helldivers2"];
+  const [keepDefaultTheme, setKeepDefaultTheme] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const raw = localStorage.getItem("weered:settings:v0");
+      const s = raw ? JSON.parse(raw) : null;
+      return s?.keepDefaultThemeInLobbies !== false;
+    } catch { return true; }
+  });
+  useEffect(() => {
+    const read = () => {
+      try {
+        const raw = localStorage.getItem("weered:settings:v0");
+        const s = raw ? JSON.parse(raw) : null;
+        setKeepDefaultTheme(s?.keepDefaultThemeInLobbies !== false);
+      } catch {}
+    };
+    read();
+    window.addEventListener("weered:settings", read);
+    return () => window.removeEventListener("weered:settings", read);
+  }, []);
+
+  const wantLobbyTheme = THEMEABLE_LOBBIES.includes(lobbyId) && memberChecked && isMember && !keepDefaultTheme;
+
   useEffect(() => {
     if (!lobbyId) return;
-    const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd", "helldivers2"]);
-    if (THEMEABLE.has(lobbyId)) {
+    if (wantLobbyTheme) {
       document.documentElement.setAttribute("data-weered-lobby", lobbyId);
       return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
     }
-  }, [lobbyId]);
+  }, [lobbyId, wantLobbyTheme]);
 
-  // Only join WS room if member (or staff/owner)
+  useEffect(() => {
+    if (!lobbyId) return;
+    const params = new URLSearchParams(window.location.search);
+    const forceMin = params.get("chrome") === "min";
+    const forceFull = params.get("chrome") === "full";
+    const known = !THEMEABLE_LOBBIES.includes(lobbyId) || (!!lobbyInfo && memberChecked);
+    if (!known && !forceMin && !forceFull) return;
+    const DENSE_CHROME = new Set<string>([
+      "BUNGIE", "TWITCH", "MARATHON", "MLB", "PGA", "NEWS", "RIOT", "FORTNITE",
+      "TRADING", "POKER", "CS2", "DOTA2", "STUDY", "PUBG", "DND", "POE",
+      "WINDROSE", "HELLDIVERS2", "CHESS", "EVE", "MTG",
+    ]);
+    const mt = lobbyInfo?.moduleType || "";
+    void DENSE_CHROME; void mt;
+    const wantMin = forceMin || (!forceFull && !wantLobbyTheme);
+    const d = document.documentElement;
+    if (wantMin) d.setAttribute("data-weered-chrome", "min");
+    else d.removeAttribute("data-weered-chrome");
+  }, [lobbyId, lobbyInfo?.moduleType, lobbyInfo, wantLobbyTheme, memberChecked]);
+
   useEffect(() => {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
-  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE" || lobbyInfo?.moduleType === "HELLDIVERS2" || lobbyInfo?.moduleType === "CHESS";
-  const accent     = lobbyInfo?.accentColor || undefined;
+  const hasModules = lobbyInfo?.moduleType === "BUNGIE" || lobbyInfo?.moduleType === "TWITCH" || lobbyInfo?.moduleType === "MARATHON" || lobbyInfo?.moduleType === "MLB" || lobbyInfo?.moduleType === "PGA" || lobbyInfo?.moduleType === "NEWS" || lobbyInfo?.moduleType === "RIOT" || lobbyInfo?.moduleType === "FORTNITE" || lobbyInfo?.moduleType === "TRADING" || lobbyInfo?.moduleType === "POKER" || lobbyInfo?.moduleType === "HEADQUARTERS" || lobbyInfo?.moduleType === "CS2" || lobbyInfo?.moduleType === "DOTA2" || lobbyInfo?.moduleType === "STUDY" || lobbyInfo?.moduleType === "PUBG" || lobbyInfo?.moduleType === "DND" || lobbyInfo?.moduleType === "POE" || lobbyInfo?.moduleType === "WINDROSE" || lobbyInfo?.moduleType === "HELLDIVERS2" || lobbyInfo?.moduleType === "CHESS" || lobbyInfo?.moduleType === "EVE" || lobbyInfo?.moduleType === "MTG";
+  const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
+  const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
+  const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
+  const accent     = lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
   const gameName   = lobbyInfo?.moduleConfig?.twitchCategory || MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] || lobbyId;
   const showAdmin  = isStaff || isOwner || (membership && membership.roleLevel >= 3);
 
   return (
     <>
+    {memberChecked && !isMember && lobbyInfo && (
+      <JoinLobbyOverlay
+        lobbyId={lobbyId}
+        lobbyName={lobbyInfo.name || lobbyId}
+        themeable={["windrose","destiny2","dnd","helldivers2"].includes(lobbyId)}
+        memberPerks={Array.isArray(lobbyInfo.memberPerks) ? lobbyInfo.memberPerks : []}
+        accentColor={lobbyInfo.accentColor || undefined}
+        joinMode={lobbyInfo.joinMode || "OPEN"}
+        onJoin={async () => {
+          try {
+            const r = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/join`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...authHeaders() },
+              body: JSON.stringify({}),
+            });
+            const j = await r.json();
+            if (j.ok && j.membership) {
+              setMembership(j.membership);
+              setMemberChecked(true);
+            }
+          } catch {}
+        }}
+      />
+    )}
     {lobbyId === "windrose" && isMember && (
       <LobbySplash
         lobbyId="windrose"
@@ -476,7 +525,7 @@ export default function LobbyIdPage() {
       <div className="weered-lobby-body" style={{
         flex: 1, minHeight: 0, position: "relative",
         border: `1px solid ${accent ? `${accent}33` : "var(--weered-border)"}`,
-        borderRadius: 16,
+        borderRadius: 3,
         background: "var(--weered-panel2)",
         overflow: "hidden",
         display: "flex", flexDirection: "column",
@@ -503,10 +552,6 @@ export default function LobbyIdPage() {
           gameName={hasModules ? gameName : undefined}
         />
 
-        {/* Gate: force the join screen only for lobbies that truly require
-            an access decision (password, approval, paid). OPEN lobbies are
-            now browseable without joining — membership is opt-in via the
-            Join button in the tab bar. */}
         {memberChecked && !isMember && lobbyInfo && lobbyInfo.joinMode && lobbyInfo.joinMode !== "OPEN" ? (
           <LobbyJoinGate
             lobbyId={lobbyId}
@@ -517,14 +562,19 @@ export default function LobbyIdPage() {
           />
         ) : (
           <>
-            {/* Tab bar — always visible */}
             <div style={{
               display: "flex", gap: 2, padding: "6px 14px",
               borderBottom: "1px solid rgba(255,255,255,.06)",
               background: accent ? `${accent}08` : "transparent",
               flexShrink: 0,
             }}>
-              <TabBtn active={view === "rooms"} accent={accent} onClick={() => setView("rooms")}>Rooms</TabBtn>
+              <TabBtn active={view === "rooms"} accent={accent} anchor onClick={() => setView("rooms")}>Rooms</TabBtn>
+              {hasLfgBoard && (
+                <TabBtn active={view === "lfg"} accent={accent} onClick={() => setView("lfg")}>LFG</TabBtn>
+              )}
+              {redditSub && (
+                <TabBtn active={view === "reddit"} accent={accent} onClick={() => setView("reddit")}>r/{REDDIT_TAB_LOBBIES[lobbyId] === "gta6" ? "GTA6" : redditSub}</TabBtn>
+              )}
               {hasModules && (
                 <ModulesTab
                   active={view === "modules"}
@@ -545,10 +595,6 @@ export default function LobbyIdPage() {
                 </div>
               )}
 
-              {/* Join button — opt-in membership for browseable (OPEN) lobbies.
-                  Hidden once you're a member (Leave replaces it). Also hidden
-                  for gated modes (PASSWORD/APPROVAL/PAID) — those use the
-                  full gate screen instead. */}
               {memberChecked && !membership && !isStaff && !isOwner && (!lobbyInfo?.joinMode || lobbyInfo.joinMode === "OPEN") && me?.id && (
                 <button
                   onClick={async () => {
@@ -576,7 +622,6 @@ export default function LobbyIdPage() {
                 </button>
               )}
 
-              {/* Leave button */}
               {membership && membership.roleLevel < 5 && (
                 <button
                   onClick={async () => {
@@ -620,8 +665,7 @@ export default function LobbyIdPage() {
               )}
             </div>
 
-            {/* Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: view === "modules" ? "visible" : "auto", display: "flex", flexDirection: "column" }}>
               {view === "modules" && hasModules ? (
                 lobbyInfo?.moduleType === "MARATHON" ? (
                   <MarathonModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
@@ -664,6 +708,10 @@ export default function LobbyIdPage() {
                     isStaff={["GOD","ADMIN","STAFF"].includes(globalRole || "")}
                     style={{ flex: 1, minHeight: 0 }}
                   />
+                ) : lobbyInfo?.moduleType === "EVE" ? (
+                  <EveModulesPanel lobbyId={lobbyId} gameName={gameName} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+                ) : lobbyInfo?.moduleType === "MTG" ? (
+                  <MtgModulesPanel lobbyId={lobbyId} style={{ flex: 1, minHeight: 0 }} />
                 ) : lobbyInfo?.moduleType === "BUNGIE" ? (
                   <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
                     <TournamentLiveStrip lobbyId={lobbyId} currentUserId={me?.id} />
@@ -682,10 +730,13 @@ export default function LobbyIdPage() {
                 )
               ) : view === "rooms" ? (
                 <LobbyRoomDirectory lobbyId={lobbyId} accentColor={accent} bannerUrl={lobbyInfo?.bannerUrl} moduleType={lobbyInfo?.moduleType} style={{ flex: 1, minHeight: 0 }} />
+              ) : view === "lfg" && hasLfgBoard ? (
+                <GtaLfgBoard lobbyId={lobbyId} accent={accent} currentUserId={me?.id} />
+              ) : view === "reddit" && redditSub ? (
+                <RedditFeedTab sub={redditSub} accent={accent} />
               ) : view === "events" ? (
                 <LobbyEvents lobbyId={lobbyId} accent={accent} />
               ) : view === "feed" && lobbyInfo?.moduleType === "TRADING" ? (
-                /* FakeOut feed = live trade tape, not the forum. */
                 <TradingFeed lobbyId={lobbyId} accent={accent} />
               ) : (
                 <ForumPage lobbyId={lobbyId} lobbyName={lobbyInfo?.name} />
@@ -706,11 +757,11 @@ export default function LobbyIdPage() {
   );
 }
 
-function TabBtn({ active, accent, onClick, children }: { active: boolean; accent?: string; onClick: () => void; children: React.ReactNode }) {
+function TabBtn({ active, accent, onClick, anchor, children }: { active: boolean; accent?: string; onClick: () => void; anchor?: boolean; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
-      className={`weered-tab-btn${active ? " is-active" : ""}`}
+      className={`weered-tab-btn${active ? " is-active" : ""}${anchor ? " is-anchor" : ""}`}
       style={active && accent ? { borderBottomColor: accent } : undefined}
     >
       {children}

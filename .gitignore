@@ -65,3 +65,6 @@ pnpm-debug.log*
 Thumbs.db
 
 apps/api/manifest-cache/
+apps/api/uploads/
+seo-tools/venv/
+*.prebak

@@ -2,11 +2,6 @@
 
 import React, { useState } from "react";
 
-/**
- * Copy-to-clipboard button with built-in visual feedback.
- * Swaps label to "Copied" for 1.4s after click, then reverts.
- * Drop-in replacement for any ad-hoc copy button.
- */
 export default function CopyButton({
   value,
   label = "Copy",
@@ -31,7 +26,6 @@ export default function CopyButton({
       onCopy?.();
       setTimeout(() => setCopied(false), 1400);
     } catch {
-      // fallback: best-effort execCommand
       try {
         const ta = document.createElement("textarea");
         ta.value = value;
@@ -45,7 +39,6 @@ export default function CopyButton({
         onCopy?.();
         setTimeout(() => setCopied(false), 1400);
       } catch {
-        // Silently fail — we can't copy, but at least don't crash.
       }
     }
   }

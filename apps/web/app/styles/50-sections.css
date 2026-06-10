@@ -1,0 +1,458 @@
+/* =============================================
+   LEFT RAIL INTERNALS
+   ============================================= */
+.weered-left-inner {
+  padding: 14px 8px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+}
+
+.weered-left-section {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+}
+/* Left-rail section title bars (CLANS / PRESENCE / FAVORITES / RECENT)
+   all share these dimensions so the three titles visually line up at
+   the same horizontal inset and vertical height, regardless of whether
+   the title is a single block (left-title) or a flex row with a sub
+   caption (presence-head). */
+.weered-left-title,
+.weered-presence-head {
+  padding: 16px 16px 14px !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+  box-sizing: border-box;
+  min-height: 46px;
+}
+.weered-left-title {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.85;
+}
+
+/* Right-rail section container gets breathing room at top + horizontal inset
+   so the section title bar isn't pressed against the box edges. Existing
+   inner lists ride inside this pad cleanly. */
+.weered-rr-section {
+  padding: 10px 12px 6px;
+}
+.weered-left-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--weered-text);
+  font-weight: 850;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.weered-left-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.32);
+}
+.weered-left-link-active {
+  background: rgba(124, 58, 237, 0.16) !important;
+  border-color: rgba(88, 0, 229, 0.34) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+.weered-left-hint {
+  padding: 10px 12px;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* =============================================
+   USER CORNER
+   ============================================= */
+.weered-usercorner {
+  /* Layout handled inline by UserCorner component - class is for theming hook only */
+  color: var(--weered-text);
+  text-decoration: none;
+}
+.weered-usercorner:hover {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(88, 0, 229, 0.34);
+}
+.weered-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 1000;
+  background: var(--weered-accent-grad);
+  box-shadow: 0 0 20px rgba(88, 0, 229, 0.22);
+  flex: 0 0 auto;
+}
+.weered-chip {
+  font-size: 11px;
+  font-weight: 950;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(243, 244, 246, 0.95);
+}
+.weered-chip-purple {
+  border-color: rgba(88, 0, 229, 0.34);
+  background: rgba(124, 58, 237, 0.20);
+}
+.weered-chip-green {
+  border-color: rgba(34, 197, 94, 0.38);
+  background: rgba(34, 197, 94, 0.14);
+  color: rgba(187, 247, 208, 0.98);
+}
+.weered-chip-amber {
+  border-color: rgba(249, 115, 22, 0.38);
+  background: rgba(249, 115, 22, 0.14);
+  color: rgba(255, 237, 213, 0.98);
+}
+
+/* =============================================
+   PRESENCE LIST
+   ============================================= */
+.weered-presence {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  overflow: hidden;
+  /* No fill — matches .weered-left-section visual language so Favorites /
+     Recents / Presence sections are consistent. Rows handle their own
+     hover tints. */
+}
+.weered-presence-head {
+  /* padding + border + min-height set by the shared rule above.
+     Flex layout positions the title (left) and sub caption (right)
+     within the padded container. Baseline-align keeps both titles on
+     the same baseline as their left-title counterparts.
+     Shift the left padding a few px inward so the PRESENCE wordmark
+     sits a smidge left of where the shared rule would place it — the
+     flex gap + sub caption on the right made it read heavier on the
+     right side than the other section titles. */
+  padding-left: 12px !important;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.weered-presence-title {
+  font-weight: 950;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+.weered-presence-sub {
+  font-size: 11px;
+  color: var(--weered-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.weered-presence-search {
+  width: calc(100% - 24px);
+  margin: 10px 12px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(243, 244, 246, 0.98);
+}
+.weered-presence-list {
+  max-height: 276px; /* ~6 user rows */
+  overflow-y: auto;
+  padding: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.weered-presence-list::-webkit-scrollbar {
+  width: 4px;
+}
+.weered-presence-list::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.weered-presence-list::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,.2);
+  border-radius: 99px;
+}
+.weered-presence-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(148,163,184,.38);
+}
+.weered-presence-row {
+  /* PresenceRow component renders its own layout/padding/hover.
+     Keep the class hook for lobby-theme overrides (Ishimura/Windrose/Destiny)
+     but strip baseline decoration so we don't double up borders. */
+  border-radius: 8px;
+}
+.weered-presence-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.weered-presence-namewrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+.weered-presence-name {
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+  line-height: 1.15;
+}
+.weered-presence-subline {
+  font-size: 11px;
+  opacity: 0.62;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weered-presence-foot {
+  padding: 8px 10px 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.10);
+  font-size: 11px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.weered-legend { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.weered-legend-item { display: flex; align-items: center; gap: 5px; opacity: 0.75; font-size: 10px; }
+.weered-legend-item svg { flex-shrink: 0; }
+.weered-you { font-size: 10px; font-weight: 700; opacity: 0.55; margin-left: 2px; }
+.weered-flairicon { display: inline-flex; align-items: center; margin-left: 4px; opacity: 0.88; line-height: 1; }
+
+/* =============================================
+   FLAIR DOTS
+   ============================================= */
+.weered-mark {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(203, 213, 225, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.28);
+  flex: 0 0 auto;
+}
+.weered-mark-none    { background: rgba(203, 213, 225, 0.12); }
+.weered-mark-paid    { background: var(--weered-accent-grad); border-color: rgba(88,0,229,.38); box-shadow: 0 0 16px rgba(88,0,229,.22); }
+.weered-mark-owner   { background: rgba(167,139,250,.95); border-color: rgba(167,139,250,.45); box-shadow: 0 0 16px rgba(167,139,250,.18); }
+.weered-mark-mod     { background: rgba(34,197,94,.90);  border-color: rgba(34,197,94,.42);  box-shadow: 0 0 16px rgba(34,197,94,.18); }
+.weered-mark-admin   { background: rgba(249,115,22,.92); border-color: rgba(249,115,22,.42); box-shadow: 0 0 16px rgba(249,115,22,.18); }
+.weered-mark-staff   { background: rgba(56,189,248,.92); border-color: rgba(56,189,248,.42); box-shadow: 0 0 16px rgba(56,189,248,.18); }
+.weered-mark-god     { background: var(--weered-accent-grad); border-color: rgba(88,0,229,.50); box-shadow: 0 0 20px rgba(88,0,229,.28); }
+
+/* Name tints */
+.weered-name-paid   { color: rgba(232,213,255,.98); }
+.weered-name-owner  { color: rgba(233,213,255,.98); }
+.weered-name-mod    { color: rgba(187,247,208,.98); }
+.weered-name-admin  { color: rgba(255,237,213,.98); }
+.weered-name-staff  { color: rgba(186,230,253,.98); }
+.weered-name-god    { color: rgba(243,244,246,.98); }
+
+/* Flair badges */
+.weered-badge {
+  font-size: 11px;
+  font-weight: 1000;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,.22);
+  background: rgba(255,255,255,.06);
+  color: rgba(243,244,246,.96);
+  flex: 0 0 auto;
+}
+.weered-badge-owner { border-color: rgba(167,139,250,.40); background: rgba(167,139,250,.14); }
+.weered-badge-mod   { border-color: rgba(34,197,94,.38);   background: rgba(34,197,94,.14); }
+.weered-badge-admin { border-color: rgba(249,115,22,.38);  background: rgba(249,115,22,.14); }
+.weered-badge-staff { border-color: rgba(56,189,248,.38);  background: rgba(56,189,248,.14); }
+.weered-badge-god   { border-color: rgba(88,0,229,.44);  background: rgba(124,58,237,.20); }
+
+/* =============================================
+   PANEL / CARD COMPONENTS
+   ============================================= */
+.weered-panel {
+  background: var(--weered-panel);
+  border: 1px solid var(--weered-border);
+  border-radius: var(--weered-radius);
+  padding: 12px;
+}
+.weered-panel2 {
+  background: var(--weered-panel2);
+  border: 1px solid var(--weered-border);
+  border-radius: var(--weered-radius);
+  padding: 12px;
+}
+.weered-panel *,
+.weered-panel2 * { min-width: 0; }
+.weered-panel,
+.weered-panel2 { overflow-x: hidden; }
+
+.weered-muted { color: var(--weered-muted); }
+
+.weered-row {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,.14);
+  background: rgba(255,255,255,.03);
+  transition: background 0.12s, border-color 0.12s;
+}
+.weered-row:hover {
+  background: rgba(124,58,237,.10);
+  border-color: rgba(88,0,229,.28);
+}
+.weered-row-active {
+  background: rgba(124,58,237,.16) !important;
+  border-color: rgba(88,0,229,.38) !important;
+}
+
+/* =============================================
+   FORM ELEMENTS (component classes)
+   ============================================= */
+.weered-input {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--weered-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--weered-text);
+  outline: none;
+  width: 100%;
+}
+.weered-input:focus {
+  border-color: rgba(88,0,229,.55);
+  box-shadow: 0 0 0 3px rgba(124,58,237,.18);
+}
+.weered-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--weered-border);
+  background: rgba(255,255,255,.06);
+  color: var(--weered-text);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.weered-btn:hover {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(148,163,184,.32);
+}
+.weered-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.weered-btnX {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,.24);
+  background: rgba(255,255,255,.06);
+  color: var(--weered-text);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+/* =============================================
+   ROOM LINKS
+   ============================================= */
+a[href^="/room/"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--weered-radius);
+  border: 1px solid var(--weered-border);
+  background: rgba(255,255,255,.03);
+}
+a[href^="/room/"]:hover {
+  border-color: rgba(88,0,229,.55);
+  background: rgba(124,58,237,.10);
+}
+
+/* =============================================
+   CHAT MESSAGES
+   ============================================= */
+[data-chat-message] {
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+[data-chat-message]:hover { background: rgba(255,255,255,.035); }
+[data-chat-username] {
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 0.85;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  margin-bottom: 2px;
+}
+[data-chat-body] {
+  font-size: 14px;
+  line-height: 1.35;
+  opacity: 0.95;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* =============================================
+   SCROLLBAR THEME
+   ============================================= */
+* {
+  scrollbar-color: var(--weered-scrollbar-thumb) var(--weered-scrollbar-track);
+  scrollbar-width: thin;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--weered-scrollbar-track); border-radius: 999px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--weered-scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--weered-scrollbar-thumb-hover);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+
+
+/* =============================================
+   TRADEMARK FOOTER
+   ============================================= */
+.weered-trademark-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+  text-align: center;
+  padding: 4px 16px;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(148, 163, 184, 0.12);
+  line-height: 1.3;
+}
+.weered-trademark-footer a {
+  pointer-events: all;
+  color: rgba(148, 163, 184, 0.25);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.weered-trademark-footer a:hover {
+  color: rgba(148, 163, 184, 0.45);
+}
+

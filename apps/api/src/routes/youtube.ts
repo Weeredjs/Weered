@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
 
-// /youtube/search — wraps the YouTube Data API v3 search endpoint.
-// If YOUTUBE_API_KEY is not configured, returns an empty result set with
-// a hint so the caller can degrade gracefully.
 export default async function youtubeRoutes(app: FastifyInstance) {
   app.get("/youtube/search", async (req, reply) => {
     const q = String((req.query as any).q || "").trim();

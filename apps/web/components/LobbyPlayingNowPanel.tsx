@@ -15,14 +15,6 @@ type PlayingItem = {
   since: string | null;
 };
 
-/**
- * "Playing now" panel — Weered users currently playing the lobby's game
- * (per Steam Rich Presence). Lives in the HD2 modules zone above the war
- * map; clicking a user opens their profile (later: invite-to-squad).
- *
- * Auto-hides when nobody is playing or no app id is configured. Polls
- * /steam/playing/:appId every 60s; the route caches 30s server-side.
- */
 export default function LobbyPlayingNowPanel({
   appId,
   lobbyId,

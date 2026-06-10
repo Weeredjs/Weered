@@ -39,9 +39,8 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact", "/mods", "/why-not-discord", "/alternatives", "/tournaments", "/play"];
+const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact", "/mods", "/apply", "/desktop", "/why-not-discord", "/alternatives", "/tournaments", "/play", "/compare", "/lfg", "/explore", "/overlay", "/terms", "/privacy", "/guidelines", "/forgot-password", "/reset-password", "/verify-email"];
 
-// ── Icon strip SVGs (sharp, bold, 20×20 on 24-viewBox) ──────────────────────
 const ICO_NAV = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
     <path d="M4 7h16M4 12h12M4 17h16" />
@@ -90,7 +89,6 @@ const RIGHT_ICONS = [
   { id: "friends",  icon: ICO_FRIENDS,   label: "Friends" },
 ];
 
-// ── Icon Strip ───────────────────────────────────────────────────────────────
 function IconStrip({
   side,
   icons,
@@ -119,7 +117,6 @@ function IconStrip({
   );
 }
 
-// ── Overlay Panel (with swipe-to-close) ─────────────────────────────────────
 function OverlayPanel({
   side,
   open,
@@ -152,7 +149,6 @@ function OverlayPanel({
       const moveX = e.touches[0].clientX - start.x;
       const moveY = e.touches[0].clientY - start.y;
       if (Math.abs(moveY) > Math.abs(moveX) && dx === 0) { start = null; return; }
-      // Left panel: swipe left to close (negative dx). Right panel: swipe right (positive dx).
       const dismiss = side === "left" ? -moveX : moveX;
       if (dismiss > 0) {
         dx = dismiss;
@@ -193,7 +189,6 @@ function OverlayPanel({
     <>
       <div className="weered-overlay-backdrop" onClick={onClose} />
       <div ref={panelRef} className={`weered-overlay-panel weered-overlay-panel-${side}`}>
-        {/* Close button — visible on mobile where backdrop is covered */}
         <button
           type="button"
           onClick={onClose}
@@ -208,7 +203,6 @@ function OverlayPanel({
   );
 }
 
-// ── Mobile bottom nav (shown <768px) ─────────────────────────────────────
 const MOB_ICO_HOME = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2V10z" />
@@ -274,7 +268,6 @@ function MobileNav({
   );
 }
 
-// ── Collapse toggle chevron ──────────────────────────────────────────────
 const ICO_COLLAPSE_RIGHT = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
 );
@@ -282,7 +275,6 @@ const ICO_EXPAND_LEFT = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
 );
 
-// ── ShellGate ────────────────────────────────────────────────────────────────
 export default function ShellGate({
   left,
   right,
@@ -297,14 +289,19 @@ export default function ShellGate({
     r => pathname === r || pathname.startsWith(r + "/") || pathname.startsWith(r + "?")
   );
 
+  useEffect(() => {
+    const parts = pathname.split("/").filter(Boolean);
+    const isLobbyView = parts[0] === "lobby" && parts.length === 2 && parts[1] !== "create";
+    if (isLobbyView) return;
+    const forceFull = new URLSearchParams(window.location.search).get("chrome") === "full";
+    const d = document.documentElement;
+    if (!bare && !forceFull) d.setAttribute("data-weered-chrome", "min");
+    else d.removeAttribute("data-weered-chrome");
+  }, [pathname, bare]);
+
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
-  // Default the right rail to collapsed so new users see the chat sidebar
-  // strip, not the wide panel. They can expand via the Panel button.
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
-  // Rail-stack DMs button reflects DM + group activity. DockShell publishes
-  // weered:dock:unread (DM threads). GroupsTab publishes weered:groups:unread.
-  // localStorage stores the DM half so the badge survives reloads.
   const [dmUnreadOnly, setDmUnreadOnly] = useState<number>(() => {
     try { return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0); }
     catch { return 0; }
@@ -326,10 +323,6 @@ export default function ShellGate({
     };
   }, []);
 
-  // Poll /groups for unread counts independent of the GroupsTab being mounted.
-  // Without this, the rail badge only updates when the user actually opens
-  // the Groups dock tab — meaning a fresh group DM goes uncounted in the rail
-  // until the user pokes around. 30s cadence is enough for a presence cue.
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
     let cancelled = false;
@@ -350,12 +343,10 @@ export default function ShellGate({
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  // Persist right rail collapse state
   useEffect(() => {
     const saved = localStorage.getItem("weered_right_collapsed");
     if (saved === "0") setRightCollapsed(false);
     else if (saved === "1") setRightCollapsed(true);
-    // saved === null → keep default (true) for first-time visitors
   }, []);
   const toggleRight = () => {
     setRightCollapsed(v => {
@@ -364,12 +355,16 @@ export default function ShellGate({
     });
   };
 
-  if (bare) return (
-    <>
-      {children}
-      <SiteFooter />
-    </>
-  );
+  if (bare) {
+    const isOverlay = pathname.startsWith("/overlay");
+    return (
+      <>
+        <div className="legal-root" aria-hidden="true" style={{ display: "none" }} />
+        {children}
+        {!isOverlay && <SiteFooter />}
+      </>
+    );
+  }
 
   const NO_FOOTER_ROUTES = ["/room/", "/lobby/"];
   const hideFooter = NO_FOOTER_ROUTES.some(r => pathname.startsWith(r));
@@ -377,10 +372,8 @@ export default function ShellGate({
   return (
     <>
       <div className={`weered-shell${hideFooter ? "" : " has-footer"}`}>
-        {/* Full left rail — hidden by CSS at mid/narrow breakpoints */}
         <LeftRailScroll>{left}</LeftRailScroll>
 
-        {/* Left icon strip — shown by CSS at mid/narrow breakpoints */}
         <IconStrip
           side="left"
           icons={LEFT_ICONS}
@@ -390,15 +383,8 @@ export default function ShellGate({
 
         <main className="weered-center">{children}</main>
 
-        {/* Collapse/expand tab — always visible on the right edge, with a
-            vertical stack of quick-launch buttons above it that each open
-            a specific Burner tab. Hidden when the rail is expanded. */}
         {rightCollapsed ? (
           <div className="weered-rail-stack">
-            {/* Logo at the top of the collapsed rail — also the menu anchor
-                for profile / settings / status / notifications / log out.
-                Notifications live behind the W's badge ring (no separate
-                bell). DM unread count rides on the DMs button below. */}
             <LogoMenu />
             <RailQuickButton
               kind="crew"
@@ -437,7 +423,6 @@ export default function ShellGate({
           </div>
         ) : (
           <aside className="weered-right">
-            {/* Collapse button — prominent, top-right */}
             <button
               type="button"
               title="Hide panel"
@@ -452,7 +437,6 @@ export default function ShellGate({
         )}
       </div>
 
-      {/* Overlay panels — triggered by icon strip clicks */}
       <OverlayPanel side="left" open={overlay === "left"} onClose={() => setOverlay(null)}>
         {left}
       </OverlayPanel>
@@ -460,7 +444,6 @@ export default function ShellGate({
         {right}
       </OverlayPanel>
 
-      {/* Mobile bottom nav — shown <768px by CSS */}
       <MobileNav overlay={overlay} setOverlay={setOverlay} />
 
       {!hideFooter && <SiteFooter />}
@@ -468,10 +451,6 @@ export default function ShellGate({
   );
 }
 
-// ── Rail-side quick-launch buttons ──────────────────────────────────────────
-// Stacked above the collapsed Panel tab. Each fires weered:dock:open with a
-// specific tab so the Burner comes up pre-targeted. Hidden on mobile/narrow
-// where the mobile nav already serves this role.
 type QuickKind = "crew" | "friends" | "dms";
 
 function RailQuickButton({
@@ -516,13 +495,11 @@ function RailQuickButton({
       <span className="weered-rail-quick-icon">
         {kind === "crew" ? (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {/* shield crest */}
             <path d="M12 3 L20 6 V12 C20 16.5 16.5 20 12 21 C7.5 20 4 16.5 4 12 V6 Z" />
             <path d="M9 11 L11 13 L15 9" />
           </svg>
         ) : kind === "friends" ? (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {/* two people */}
             <circle cx="9" cy="8" r="3.2" />
             <path d="M3.5 20 C4 16.5 6 15 9 15 C12 15 14 16.5 14.5 20" />
             <circle cx="16.5" cy="9" r="2.4" />
@@ -530,7 +507,6 @@ function RailQuickButton({
           </svg>
         ) : (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {/* message bubble */}
             <path d="M4 6 C4 4.9 4.9 4 6 4 H18 C19.1 4 20 4.9 20 6 V15 C20 16.1 19.1 17 18 17 H11 L7 21 V17 H6 C4.9 17 4 16.1 4 15 Z" />
             <line x1="8" y1="9" x2="16" y2="9" opacity=".6" />
             <line x1="8" y1="12" x2="14" y2="12" opacity=".6" />

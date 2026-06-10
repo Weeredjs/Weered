@@ -5,7 +5,6 @@ import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";
 
-// ── helpers ─────────────────────────────────────────────────────────────────
 function fmtRel(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
@@ -59,9 +58,18 @@ function threadDisplayName(t: Thread, meId: string): string {
   return `${others.slice(0, 3).join(", ")} +${others.length - 3}`;
 }
 
-export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; token: string; meId: string }) {
+export default function GroupsTab({
+  apiBase, token, meId, initialThreadId, initialCreate, onExitToInbox,
+}: {
+  apiBase: string;
+  token: string;
+  meId: string;
+  initialThreadId?: string;
+  initialCreate?: boolean;
+  onExitToInbox?: () => void;
+}) {
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [activeId, setActiveId] = useState<string>("");
+  const [activeId, setActiveId] = useState<string>(initialThreadId || "");
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
@@ -70,7 +78,19 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
   const [hoveredId, setHoveredId] = useState<string>("");
   const [loadingList, setLoadingList] = useState(false);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [view, setView] = useState<"list" | "thread" | "create" | "settings">("list");
+  const [view, setView] = useState<"list" | "thread" | "create" | "settings">(
+    initialThreadId ? "thread" : initialCreate ? "create" : "list"
+  );
+
+  useEffect(() => {
+    if (initialThreadId) { setActiveId(initialThreadId); setView("thread"); }
+    else if (initialCreate) { setView("create"); }
+  }, [initialThreadId, initialCreate]);
+
+  const exitTop = useCallback(() => {
+    if (onExitToInbox) { onExitToInbox(); return; }
+    setView("list"); setActiveId("");
+  }, [onExitToInbox]);
   const inputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -108,8 +128,6 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
     if (!activeId) setMessages([]);
   }, [activeId, view, reloadMessages]);
 
-  // Broadcast total unread to the rail. ShellGate folds this into the
-  // DMs-button badge so the rail-stack reflects group activity too.
   useEffect(() => {
     const total = threads.reduce((s, t) => s + (t.unread || 0), 0);
     try { window.dispatchEvent(new CustomEvent("weered:groups:unread", { detail: { count: total } })); } catch {}
@@ -119,7 +137,6 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
     if (view === "thread") try { endRef.current?.scrollIntoView({ block: "end" }); } catch {}
   }, [messages, view]);
 
-  // ── WS handlers ────────────────────────────────────────────────────────────
   useEffect(() => {
     const onMsg = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -192,7 +209,6 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
     };
   }, [activeId, meId, reloadThreads]);
 
-  // ── actions ────────────────────────────────────────────────────────────────
   const send = async () => {
     const body = draft.trim();
     if (!body || !activeId) return;
@@ -241,13 +257,12 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
 
   const active = threads.find(t => t.id === activeId) || null;
 
-  // ── views ──────────────────────────────────────────────────────────────────
   if (view === "create") {
     return (
       <CreateGroupView
         apiBase={apiBase}
         token={token}
-        onCancel={() => setView("list")}
+        onCancel={() => exitTop()}
         onCreated={(t) => {
           setView("thread");
           setActiveId(t.id);
@@ -266,9 +281,8 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
         thread={active}
         onClose={() => setView("thread")}
         onLeft={() => {
-          setView("list");
-          setActiveId("");
           setThreads(cur => cur.filter(t => t.id !== active.id));
+          exitTop();
         }}
       />
     );
@@ -279,7 +293,7 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
     return (
       <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%" }}>
         <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--weered-bd)", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, background: "rgba(255,255,255,.02)" }}>
-          <button onClick={() => { setView("list"); setActiveId(""); }} style={{ background: "none", border: "none", color: "var(--weered-muted)", cursor: "pointer", padding: "0 4px", display: "flex", alignItems: "center" }}>
+          <button onClick={() => exitTop()} style={{ background: "none", border: "none", color: "var(--weered-muted)", cursor: "pointer", padding: "0 4px", display: "flex", alignItems: "center" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -448,7 +462,6 @@ export default function GroupsTab({ apiBase, token, meId }: { apiBase: string; t
     );
   }
 
-  // List view
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%" }}>
       <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--weered-bd)", flexShrink: 0, display: "flex", gap: 8 }}>

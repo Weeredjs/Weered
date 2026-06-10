@@ -1,22 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-// ── Session Zero ──────────────────────────────────────────────────────────
-// First-time onboarding for the D&D lobby. Eight panels written in The
-// Innkeeper's voice (warm, gossipy, hospitable — same character as the
-// Tavern Keeper AI NPC). Auto-opens once per user; localStorage flag
-// prevents replays. Always-on access lives in the D&D module panel header
-// so anyone can re-summon it.
-//
-// Pattern mirrors TheBrief (FakeOut walkthrough). Reuse the same
-// rhythm — inline SVG/CSS visuals, 8-panel arc, action-CTA on the last
-// step, esc/arrow keyboard nav.
-
 const STORAGE_KEY = "weered:dnd:session-zero:seen";
-const ACCENT = "#C4A55A";        // parchment gold (D&D lobby accentColor)
-const FIRE = "#D4602A";          // hearth orange
-const FOREST = "#7A853B";        // druid green
-const ARCANE = "#7B469B";        // warlock purple
+const ACCENT = "#C4A55A";
+const FIRE = "#D4602A";
+const FOREST = "#7A853B";
+const ARCANE = "#7B469B";
 
 type PanelDef = {
   label: string;
@@ -24,8 +13,6 @@ type PanelDef = {
   body: React.ReactNode;
   visual: React.ReactNode;
 };
-
-// ── Visual aids — small inline mocks/diagrams. SVG + CSS only. ──────────
 
 function VisualWordmark() {
   return (
@@ -290,28 +277,21 @@ function VisualMap() {
             <stop offset="100%" stopColor="rgba(232,160,74,0)" />
           </radialGradient>
         </defs>
-        {/* Floor */}
         <rect x="0" y="0" width="320" height="160" fill="rgba(58,28,14,0.4)" />
         <rect x="0" y="0" width="320" height="160" fill="url(#szmap-grid)" />
-        {/* Fog (right side, partially revealed) */}
         <rect x="220" y="0" width="100" height="160" fill="rgba(0,0,0,0.65)" />
         <text x="270" y="86" textAnchor="middle" fontSize="9" fill="rgba(201,168,120,0.55)" fontFamily="monospace" letterSpacing="0.5">FOG</text>
-        {/* Active token glow */}
         <circle cx="100" cy="80" r="22" fill="url(#szmap-glow)" />
-        {/* Player tokens */}
         <circle cx="100" cy="80" r="11" fill="#3B82F6" stroke="#F5D58A" strokeWidth="2" />
         <text x="100" y="84" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" fontWeight="700">V</text>
         <circle cx="140" cy="60" r="11" fill="#22C55E" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
         <text x="140" y="64" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" fontWeight="700">K</text>
         <circle cx="60" cy="100" r="11" fill="#A855F7" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
         <text x="60" y="104" textAnchor="middle" fontSize="9" fill="#fff" fontFamily="monospace" fontWeight="700">M</text>
-        {/* Monster tokens */}
         <circle cx="180" cy="80" r="13" fill="#9B281E" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
         <text x="180" y="85" textAnchor="middle" fontSize="10" fill="#fff" fontFamily="monospace" fontWeight="800">B</text>
-        {/* Distance line */}
         <line x1="100" y1="80" x2="180" y2="80" stroke={ACCENT} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
         <text x="140" y="76" textAnchor="middle" fontSize="9" fill={ACCENT} fontFamily="monospace" fontWeight="700">20ft</text>
-        {/* Active turn label */}
         <text x="100" y="40" textAnchor="middle" fontSize="8" fill={ACCENT} fontFamily="monospace" fontWeight="800" letterSpacing="0.5">▼ VEX'S TURN</text>
       </svg>
     </div>
@@ -549,7 +529,6 @@ export default function SessionZero({
           fontFamily: "var(--font-barlow), system-ui, sans-serif",
         }}
       >
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
@@ -583,7 +562,6 @@ export default function SessionZero({
           >×</button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "22px 24px 18px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div>{panel.visual}</div>
           <div>
@@ -599,7 +577,6 @@ export default function SessionZero({
           </div>
         </div>
 
-        {/* Step indicator */}
         <div style={{ display: "flex", justifyContent: "center", gap: 5, padding: "0 24px" }}>
           {PANELS.map((_, i) => (
             <button
@@ -618,7 +595,6 @@ export default function SessionZero({
           ))}
         </div>
 
-        {/* Footer controls */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 18px" }}>
           <button
             type="button"
@@ -665,7 +641,6 @@ export default function SessionZero({
   );
 }
 
-// ── Hook for first-time auto-open + a stable open/reopen handle ──────────
 export function useSessionZero(): { open: boolean; show: () => void; hide: () => void } {
   const [open, setOpen] = useState(false);
   useEffect(() => {

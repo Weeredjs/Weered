@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
-// Action labels for human-readable toast messages
 const ACTION_LABELS: Record<string, string> = {
   DAILY_ACTIVE:      "Daily login bonus",
   CHAT_MESSAGE:      "Chat activity",
@@ -35,12 +34,10 @@ export default function NotorietyToast() {
     const id = `nt-${++counterRef.current}`;
     setToasts(prev => [...prev.slice(-4), { id, action, points, fadeOut: false }]);
 
-    // Start fade after 2.5s
     setTimeout(() => {
       setToasts(prev => prev.map(t => t.id === id ? { ...t, fadeOut: true } : t));
     }, 2500);
 
-    // Remove after 3.2s
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 3200);
@@ -61,48 +58,47 @@ export default function NotorietyToast() {
 
   return (
     <div style={{
-      position: "fixed", top: 16, right: 16, zIndex: 9999,
-      display: "flex", flexDirection: "column", gap: 8,
+      position: "fixed", bottom: 64, left: "50%", transform: "translateX(-50%)", zIndex: 9999,
+      display: "flex", flexDirection: "column-reverse", alignItems: "center", gap: 8,
       pointerEvents: "none",
     }}>
       {toasts.map((t) => (
         <div
           key={t.id}
           style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "10px 16px", borderRadius: 12,
+            display: "flex", alignItems: "center", gap: 9,
+            padding: "8px 14px", borderRadius: 11,
             background: "rgba(10,10,18,0.92)",
             border: "1px solid rgba(88,0,229,0.4)",
             boxShadow: "0 0 20px rgba(88,0,229,0.25), 0 8px 24px rgba(0,0,0,0.5)",
             backdropFilter: "blur(12px)",
             opacity: t.fadeOut ? 0 : 1,
-            transform: t.fadeOut ? "translateX(20px)" : "translateX(0)",
+            transform: t.fadeOut ? "translateY(10px)" : "translateY(0)",
             transition: "opacity 0.5s ease, transform 0.5s ease",
             animation: t.fadeOut ? undefined : "notorietySlideIn 0.3s ease-out",
           }}
         >
-          {/* XP icon */}
           <div style={{
-            width: 32, height: 32, borderRadius: 8,
+            width: 28, height: 28, borderRadius: 7,
             background: "linear-gradient(135deg, rgba(88,0,229,0.3), rgba(212,160,23,0.3))",
             border: "1px solid rgba(212,160,23,0.4)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14, fontWeight: 900, color: "#D4A017",
-            fontFamily: "monospace",
+            fontSize: 13, fontWeight: 900, color: "#D4A017",
+            fontFamily: "monospace", flexShrink: 0,
           }}>
             ★
           </div>
 
           <div style={{ minWidth: 0 }}>
             <div style={{
-              fontSize: 13, fontWeight: 800, color: "#D4A017",
-              letterSpacing: "-0.2px",
+              fontSize: 12, fontWeight: 800, color: "#D4A017",
+              letterSpacing: "-0.2px", lineHeight: 1.2,
             }}>
               +{t.points} XP
             </div>
             <div style={{
               fontSize: 10, color: "rgba(148,163,184,0.6)",
-              letterSpacing: "0.02em",
+              letterSpacing: "0.02em", lineHeight: 1.2,
             }}>
               {ACTION_LABELS[t.action] || t.action}
             </div>
@@ -112,8 +108,8 @@ export default function NotorietyToast() {
 
       <style>{`
         @keyframes notorietySlideIn {
-          from { opacity: 0; transform: translateX(30px) scale(0.95); }
-          to   { opacity: 1; transform: translateX(0) scale(1); }
+          from { opacity: 0; transform: translateY(16px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
     </div>

@@ -1,10 +1,5 @@
 import Link from "next/link";
 
-/**
- * Minimal top nav for SEO marketing pages (/alternatives/*, /tournaments/*, /play/*).
- * Server-rendered, no client JS. Brand on the left, primary CTA on the right.
- * The slim SiteFooter is auto-injected by ShellGate's bare-route path.
- */
 export default function MarketingHeader({
   ctaHref = "/lobby",
   ctaLabel = "Open Weered",

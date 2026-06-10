@@ -48,7 +48,6 @@ export default async function WindroseModsPublicPage() {
         fontFamily: "var(--font-barlow), 'Barlow Condensed', system-ui, sans-serif",
       }}
     >
-      {/* Header band */}
       <header
         style={{
           padding: "32px 24px 24px",
@@ -76,7 +75,6 @@ export default async function WindroseModsPublicPage() {
                 color: "inherit",
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/brand/logo/weered-logo-32.png"
                 alt="Weered"
@@ -176,7 +174,6 @@ export default async function WindroseModsPublicPage() {
         </div>
       </header>
 
-      {/* Catalog grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px 80px" }}>
         {mods.length === 0 ? (
           <div

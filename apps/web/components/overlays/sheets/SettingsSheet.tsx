@@ -2,11 +2,13 @@
 
 import React from "react";
 import { openConsentBanner } from "../../CookieConsent";
+import PresenceSection from "./PresenceSection";
 
 type Settings = {
   theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press";
   density: "comfortable" | "compact";
   reduceMotion: boolean;
+  keepDefaultThemeInLobbies: boolean;
 
   dockDefaultTab: "room" | "dms";
   enterToSend: boolean;
@@ -14,6 +16,11 @@ type Settings = {
 
   showOnline: boolean;
   allowDMs: boolean;
+
+  notifyDMs: boolean;
+  notifyMentions: boolean;
+  notifySound: boolean;
+  notifyDesktop: boolean;
 
   debugOverlays: boolean;
 };
@@ -24,6 +31,7 @@ const DEFAULTS: Settings = {
   theme: "press",
   density: "comfortable",
   reduceMotion: false,
+  keepDefaultThemeInLobbies: true,
 
   dockDefaultTab: "dms",
   enterToSend: true,
@@ -31,6 +39,11 @@ const DEFAULTS: Settings = {
 
   showOnline: true,
   allowDMs: true,
+
+  notifyDMs: true,
+  notifyMentions: true,
+  notifySound: false,
+  notifyDesktop: false,
 
   debugOverlays: false,
 };
@@ -50,6 +63,7 @@ function loadSettings(): Settings {
 function saveSettings(s: Settings) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
+    window.dispatchEvent(new Event("weered:settings"));
   } catch {}
 }
 
@@ -116,7 +130,17 @@ function Toggle({
   );
 }
 
-export default function SettingsSheet() {
+const THEME_OPTIONS: { id: Settings["theme"]; name: string; sw: string }[] = [
+  { id: "press",     name: "Press",     sw: "#7C3AED" },
+  { id: "ishimura",  name: "Ishimura",  sw: "#22d3ee" },
+  { id: "broadcast", name: "Broadcast", sw: "#22c55e" },
+  { id: "slate",     name: "Slate",     sw: "#64748b" },
+  { id: "stone",     name: "Stone",     sw: "#78716c" },
+  { id: "zinc",      name: "Zinc",      sw: "#71717a" },
+  { id: "gray",      name: "Gray",      sw: "#6b7280" },
+];
+
+export default function SettingsSheet({ initialTab }: { initialTab?: string } = {}) {
   const [s, setS] = React.useState<Settings>(DEFAULTS);
   const [copied, setCopied] = React.useState(false);
 
@@ -129,7 +153,6 @@ export default function SettingsSheet() {
     setS((cur) => {
       const n = { ...cur, ...next };
       saveSettings(n);
-      // broadcast for anyone who wants to react (theme, density, etc.)
       try {
         window.dispatchEvent(new CustomEvent("weered:settings:changed", { detail: n }));
       } catch {}
@@ -157,95 +180,215 @@ export default function SettingsSheet() {
     } catch {}
   }
 
+  const TABS = [
+    { id: "account",    label: "Account",       icon: "◆" },
+    { id: "appearance", label: "Appearance",    icon: "◐" },
+    { id: "behavior",   label: "Behavior",      icon: "▸" },
+    { id: "privacy",    label: "Privacy & Safety", icon: "⛉" },
+    { id: "notifs",     label: "Notifications", icon: "◔" },
+    { id: "developer",  label: "Developer",     icon: "⚙" },
+  ] as const;
+  type TabId = typeof TABS[number]["id"];
+  const [tab, setTab] = React.useState<TabId>(
+    (TABS.some(t => t.id === initialTab) ? initialTab : "account") as TabId
+  );
+
   return (
     <div style={{ padding: 16, color: "var(--weered-text, rgba(243,244,246,.95))" }}>
       <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.02em" }}>Settings</div>
-      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
-        How Weered behaves. Theme + avatar live in your Profile.
+      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4, marginBottom: 14 }}>
+        How Weered behaves and how you appear.
       </div>
 
-      {/* Appearance */}
-      <Section title="Appearance">
-        <Row label="Density" hint="Compact tightens rails and lists.">
-          <select
-            style={selectStyle}
-            value={s.density}
-            onChange={(e) => patch({ density: e.target.value as any })}
-          >
-            <option value="comfortable">Comfortable</option>
-            <option value="compact">Compact</option>
-          </select>
-        </Row>
-        <Row label="Reduce motion" hint="Drops animations and transitions.">
-          <Toggle checked={s.reduceMotion} onChange={(v) => patch({ reduceMotion: v })} />
-        </Row>
-      </Section>
+      <div className="weered-settings-shell" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+        <nav className="weered-settings-nav" style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0, width: 150 }}>
+          {TABS.map(t => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 9,
+                  padding: "8px 11px", borderRadius: 7, width: "100%",
+                  textAlign: "left", cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 13, fontWeight: active ? 700 : 600,
+                  border: "1px solid transparent",
+                  background: active ? "var(--weered-accent-bg, rgba(124,58,237,.16))" : "transparent",
+                  color: active ? "var(--weered-text, rgba(243,244,246,.98))" : "var(--weered-muted, rgba(148,163,184,.8))",
+                  transition: "background .12s, color .12s",
+                }}
+                onMouseOver={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
+                onMouseOut={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              >
+                <span style={{ width: 16, textAlign: "center", opacity: 0.85, color: active ? "var(--weered-accent-text, rgba(196,181,253,.95))" : "inherit" }}>{t.icon}</span>
+                {t.label}
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* Profile customization — colors users pick to personalize their card + pill */}
-      <ProfileCustomizationSection />
+        <div className="weered-settings-panel" style={{ flex: 1, minWidth: 0 }}>
+          {tab === "account" && (
+            <>
+              <PresenceSection />
+            </>
+          )}
 
-      {/* Behavior */}
-      <Section title="Behavior">
-        <Row label="Burner default tab" hint="Which tab opens first when you hit Burner.">
-          <select
-            style={selectStyle}
-            value={s.dockDefaultTab}
-            onChange={(e) => patch({ dockDefaultTab: e.target.value as any })}
-          >
-            <option value="dms">Messages</option>
-            <option value="room">Room</option>
-          </select>
-        </Row>
-        <Row label="Enter sends" hint="Off = Enter adds a newline instead.">
-          <Toggle checked={s.enterToSend} onChange={(v) => patch({ enterToSend: v })} />
-        </Row>
-        <Row label="Confirm destructive actions" hint="Deletes and clears ask before running.">
-          <Toggle checked={s.confirmDestructive} onChange={(v) => patch({ confirmDestructive: v })} />
-        </Row>
-      </Section>
+          {tab === "appearance" && (
+            <>
+              <Section title="Display" onReset={() => patch({ density: DEFAULTS.density, reduceMotion: DEFAULTS.reduceMotion, keepDefaultThemeInLobbies: DEFAULTS.keepDefaultThemeInLobbies })}>
+                <Row label="Density" hint="Compact tightens rails and lists.">
+                  <select style={selectStyle} value={s.density} onChange={(e) => patch({ density: e.target.value as any })}>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="compact">Compact</option>
+                  </select>
+                </Row>
+                <Row label="Reduce motion" hint="Drops animations and transitions.">
+                  <Toggle checked={s.reduceMotion} onChange={(v) => patch({ reduceMotion: v })} />
+                </Row>
+                <Row label="Keep default theme in themed lobbies" hint="Themed lobbies (Windrose, Destiny 2, D&D, etc.) show the default minimal theme instead of their custom skin.">
+                  <Toggle checked={s.keepDefaultThemeInLobbies} onChange={(v) => patch({ keepDefaultThemeInLobbies: v })} />
+                </Row>
+              </Section>
 
-      {/* Privacy */}
-      <Section title="Privacy">
-        <Row label="Show online status" hint="Broadcast presence in lobbies and crews.">
-          <Toggle checked={s.showOnline} onChange={(v) => patch({ showOnline: v })} />
-        </Row>
-        <Row label="Allow DMs" hint="Let anyone send you a direct message.">
-          <Toggle checked={s.allowDMs} onChange={(v) => patch({ allowDMs: v })} />
-        </Row>
-        <Row label="Cookies & storage" hint="Revisit what Weered stores on your device.">
-          <button
-            type="button"
-            onClick={() => openConsentBanner()}
-            style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}
-          >
-            Manage
-          </button>
-        </Row>
-      </Section>
+              <Section title="Theme" onReset={() => { patch({ theme: DEFAULTS.theme }); try { document.documentElement.setAttribute("data-weered-theme", DEFAULTS.theme); } catch {} }}>
+                <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 9 }}>The platform skin. Applies everywhere except lobbies running their own theme.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 8 }}>
+                  {THEME_OPTIONS.map(t => {
+                    const active = s.theme === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => { patch({ theme: t.id }); try { document.documentElement.setAttribute("data-weered-theme", t.id); } catch {} }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", cursor: "pointer",
+                          borderRadius: 3, fontFamily: "inherit", fontSize: 12, fontWeight: 700, textAlign: "left",
+                          color: active ? "#fff" : "rgba(226,232,240,.72)",
+                          background: active ? "rgba(124,58,237,.16)" : "rgba(255,255,255,.03)",
+                          border: active ? "1px solid rgba(167,139,250,.7)" : "1px solid rgba(255,255,255,.08)",
+                          transition: "background .12s, border-color .12s, color .12s",
+                        }}
+                      >
+                        <span style={{ width: 14, height: 14, borderRadius: "50%", background: t.sw, boxShadow: `0 0 8px ${t.sw}99`, flexShrink: 0 }} />
+                        {t.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Section>
 
-      {/* Rich presence (Steam + Twitch) */}
-      <PresenceSection />
+              <ProfileCustomizationSection />
+            </>
+          )}
 
-      {/* Blocked users */}
-      <BlockedUsersSection />
+          {tab === "behavior" && (
+            <Section title="Behavior" onReset={() => patch({ dockDefaultTab: DEFAULTS.dockDefaultTab, enterToSend: DEFAULTS.enterToSend, confirmDestructive: DEFAULTS.confirmDestructive })}>
+              <Row label="Burner default tab" hint="Which tab opens first when you hit Burner.">
+                <select style={selectStyle} value={s.dockDefaultTab} onChange={(e) => patch({ dockDefaultTab: e.target.value as any })}>
+                  <option value="dms">Messages</option>
+                  <option value="room">Room</option>
+                </select>
+              </Row>
+              <Row label="Enter sends" hint="Off = Enter adds a newline instead.">
+                <Toggle checked={s.enterToSend} onChange={(v) => patch({ enterToSend: v })} />
+              </Row>
+              <Row label="Confirm destructive actions" hint="Deletes and clears ask before running.">
+                <Toggle checked={s.confirmDestructive} onChange={(v) => patch({ confirmDestructive: v })} />
+              </Row>
+            </Section>
+          )}
 
-      {/* Danger zone — account deletion */}
-      <DangerZoneSection />
+          {tab === "privacy" && (
+            <>
+              <Section title="Privacy" onReset={() => patch({ showOnline: DEFAULTS.showOnline, allowDMs: DEFAULTS.allowDMs })}>
+                <Row label="Show online status" hint="Broadcast presence in lobbies and crews.">
+                  <Toggle checked={s.showOnline} onChange={(v) => patch({ showOnline: v })} />
+                </Row>
+                <Row label="Allow DMs" hint="Let anyone send you a direct message.">
+                  <Toggle checked={s.allowDMs} onChange={(v) => patch({ allowDMs: v })} />
+                </Row>
+                <Row label="Cookies & storage" hint="Revisit what Weered stores on your device.">
+                  <button type="button" onClick={() => openConsentBanner()} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>
+                    Manage
+                  </button>
+                </Row>
+              </Section>
 
-      {/* Developer */}
-      <Section title="Developer">
-        <Row label="Debug overlays" hint="Surface extra diagnostic labels.">
-          <Toggle checked={s.debugOverlays} onChange={(v) => patch({ debugOverlays: v })} />
-        </Row>
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button type="button" style={btnStyle} onClick={copyDiagnostics}>
-            {copied ? "Copied" : "Copy diagnostics"}
-          </button>
-          <button type="button" style={btnStyle} onClick={resetLocal}>
-            Reset settings
-          </button>
+              <BlockedUsersSection />
+              <DangerZoneSection />
+            </>
+          )}
+
+          {tab === "notifs" && (
+            <Section title="Notifications" onReset={() => patch({ notifyDMs: DEFAULTS.notifyDMs, notifyMentions: DEFAULTS.notifyMentions, notifySound: DEFAULTS.notifySound, notifyDesktop: DEFAULTS.notifyDesktop })}>
+              <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 8 }}>
+                What pings you, and how. These are stored on this device.
+              </div>
+              <Row label="Direct messages" hint="Get notified when someone DMs you.">
+                <Toggle checked={s.notifyDMs} onChange={(v) => patch({ notifyDMs: v })} />
+              </Row>
+              <Row label="Mentions" hint="Get notified when someone @mentions you in a room.">
+                <Toggle checked={s.notifyMentions} onChange={(v) => patch({ notifyMentions: v })} />
+              </Row>
+              <Row label="Notification sound" hint="Play a sound on new pings.">
+                <Toggle checked={s.notifySound} onChange={(v) => patch({ notifySound: v })} />
+              </Row>
+              <Row label="Desktop notifications" hint="Show OS notifications when Weered isn't focused. Requires browser permission.">
+                <DesktopNotifyToggle enabled={s.notifyDesktop} onChange={(v) => patch({ notifyDesktop: v })} />
+              </Row>
+            </Section>
+          )}
+
+          {tab === "developer" && (
+            <Section title="Developer">
+              <Row label="Debug overlays" hint="Surface extra diagnostic labels.">
+                <Toggle checked={s.debugOverlays} onChange={(v) => patch({ debugOverlays: v })} />
+              </Row>
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <button type="button" style={btnStyle} onClick={copyDiagnostics}>
+                  {copied ? "Copied" : "Copy diagnostics"}
+                </button>
+                <button type="button" style={btnStyle} onClick={resetLocal}>
+                  Reset all settings
+                </button>
+              </div>
+            </Section>
+          )}
         </div>
-      </Section>
+      </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .weered-settings-shell { flex-direction: column !important; }
+          .weered-settings-nav {
+            flex-direction: row !important; width: 100% !important;
+            overflow-x: auto; gap: 4px !important; padding-bottom: 4px;
+          }
+          .weered-settings-nav button { white-space: nowrap; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function DesktopNotifyToggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  const [denied, setDenied] = React.useState(false);
+  async function handle(v: boolean) {
+    if (!v) { onChange(false); return; }
+    if (typeof Notification === "undefined") { setDenied(true); return; }
+    if (Notification.permission === "granted") { onChange(true); return; }
+    if (Notification.permission === "denied") { setDenied(true); return; }
+    const res = await Notification.requestPermission();
+    if (res === "granted") { onChange(true); setDenied(false); }
+    else { onChange(false); setDenied(true); }
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Toggle checked={enabled} onChange={handle} />
+      {denied && <span style={{ fontSize: 10, color: "rgba(252,165,165,.9)" }}>Blocked in browser</span>}
     </div>
   );
 }
@@ -262,7 +405,7 @@ const selectStyle: React.CSSProperties = {
   outline: "none",
 };
 
-const btnStyle: React.CSSProperties = {
+export const btnStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
   background: "var(--weered-panel2, rgba(0,0,0,.2))",
@@ -275,7 +418,7 @@ const btnStyle: React.CSSProperties = {
   transition: "background 0.12s, border-color 0.12s",
 };
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children, onReset }: { title: string; children: React.ReactNode; onReset?: () => void }) {
   return (
     <div
       style={{
@@ -286,33 +429,47 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         padding: 14,
       }}
     >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: "0.10em",
-          textTransform: "uppercase",
-          color: "var(--weered-accent-text, rgba(167,139,250,.85))",
-          opacity: 0.85,
-          marginBottom: 8,
-        }}
-      >
-        {title}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.10em",
+            textTransform: "uppercase",
+            color: "var(--weered-accent-text, rgba(167,139,250,.85))",
+            opacity: 0.85,
+          }}
+        >
+          {title}
+        </div>
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            style={{
+              background: "transparent", border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.04em", textTransform: "uppercase",
+              color: "var(--weered-muted, rgba(148,163,184,.6))",
+              padding: "2px 4px",
+            }}
+            title={`Reset ${title} to defaults`}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.9))"; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.6))"; }}
+          >
+            Reset ⟲
+          </button>
+        )}
       </div>
       {children}
     </div>
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// Profile customization — panel bg/accent + pill bg
-// ───────────────────────────────────────────────────────────────────────────
-
 function ProfileCustomizationSection() {
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
   function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
 
-  // Hydrate from cached `me` (auth:ok payload includes these)
   const [panelBgColor, setPanelBgColor] = React.useState<string>("");
   const [panelAccentColor, setPanelAccentColor] = React.useState<string>("");
   const [pillBgColor, setPillBgColor] = React.useState<string>("");
@@ -332,7 +489,6 @@ function ProfileCustomizationSection() {
     } catch {}
   }, []);
 
-  // Debounced save — fires 400ms after the last colour change
   const saveTimer = React.useRef<any>(null);
   function scheduleSave(field: "panelBgColor" | "panelAccentColor" | "pillBgColor" | "pillAccentColor", value: string) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -346,7 +502,6 @@ function ProfileCustomizationSection() {
           body: JSON.stringify({ [field]: value }),
         });
         if (r.ok) {
-          // Update cached `me` so UserCorner picks it up on next mount
           try {
             const raw = localStorage.getItem("weered_user");
             if (raw) {
@@ -355,8 +510,8 @@ function ProfileCustomizationSection() {
               localStorage.setItem("weered_user", JSON.stringify(u));
             }
           } catch {}
-          // Tell UserCorner / others to re-render
           try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { field, value } })); } catch {}
+          try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
           setSavedMsg("Saved");
           setTimeout(() => setSavedMsg(""), 1200);
         }
@@ -369,35 +524,84 @@ function ProfileCustomizationSection() {
     scheduleSave(field, "");
   }
 
+  function resetColors() {
+    clearField("panelBgColor", setPanelBgColor);
+    clearField("panelAccentColor", setPanelAccentColor);
+    clearField("pillBgColor", setPillBgColor);
+    clearField("pillAccentColor", setPillAccentColor);
+  }
+
+  const ACCENT_PRESETS: { label: string; value: string }[] = [
+    { label: "Purple", value: "#5b21b6" },
+    { label: "Gold",   value: "#b8860b" },
+    { label: "Crimson", value: "#9f1239" },
+    { label: "Teal",   value: "#0d7a6f" },
+    { label: "Slate",  value: "#3b4a6b" },
+  ];
+
   return (
-    <Section title="Profile customization">
-      <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 8 }}>
-        Personalize how you appear in lobbies and on your right-rail card.
+    <Section title="Your colors" onReset={resetColors}>
+      <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 10 }}>
+        Personalize how you appear in lobbies and on your right-rail ID card. Changes save automatically.
       </div>
-      <ColorPickerRow
-        label="ID badge background"
-        hint="Tints the panel behind your name + role chips."
-        value={panelBgColor}
-        onChange={(v) => { setPanelBgColor(v); scheduleSave("panelBgColor", v); }}
-        onClear={() => clearField("panelBgColor", setPanelBgColor)}
+
+      <ColorPreview
+        accent={panelAccentColor || "#5b21b6"}
+        panelBg={panelBgColor || "#14161A"}
+        pillBg={pillBgColor}
+        pillStripe={pillAccentColor}
       />
+
+      <div style={{ margin: "12px 0 4px", fontSize: 11, fontWeight: 700, color: "var(--weered-muted, rgba(148,163,184,.8))" }}>Quick accent</div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+        {ACCENT_PRESETS.map(p => {
+          const active = panelAccentColor.toLowerCase() === p.value.toLowerCase();
+          return (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => { setPanelAccentColor(p.value); scheduleSave("panelAccentColor", p.value); }}
+              title={p.label}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "5px 10px", borderRadius: 999, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 11, fontWeight: 700,
+                border: active ? `1px solid ${p.value}` : "1px solid var(--weered-border, rgba(255,255,255,.12))",
+                background: active ? `${p.value}22` : "transparent",
+                color: "var(--weered-text, rgba(243,244,246,.9))",
+              }}
+            >
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: p.value, border: "1px solid rgba(255,255,255,.2)" }} />
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
       <ColorPickerRow
-        label="ID badge accent"
-        hint="Border, brackets, and avatar ring colour."
+        label="Accent color"
+        hint="The purple used on every header bar, banner, ID bracket, and avatar ring in calm-mode lobbies. This is the platform accent — change it and the whole theme follows."
         value={panelAccentColor}
         onChange={(v) => { setPanelAccentColor(v); scheduleSave("panelAccentColor", v); }}
         onClear={() => clearField("panelAccentColor", setPanelAccentColor)}
       />
       <ColorPickerRow
-        label="Presence pill"
-        hint="How your row appears in friends lists and rails."
+        label="Panel background"
+        hint="Tints the grey surfaces behind your rail sections and ID card body."
+        value={panelBgColor}
+        onChange={(v) => { setPanelBgColor(v); scheduleSave("panelBgColor", v); }}
+        onClear={() => clearField("panelBgColor", setPanelBgColor)}
+      />
+      <ColorPickerRow
+        label="Your row tint"
+        hint="The background color of your name-row as it appears in other people's friends lists and rails."
         value={pillBgColor}
         onChange={(v) => { setPillBgColor(v); scheduleSave("pillBgColor", v); }}
         onClear={() => clearField("pillBgColor", setPillBgColor)}
       />
       <ColorPickerRow
-        label="Pill accent stripe"
-        hint="The vertical bar on the left edge of your row. Default uses your role/tier color."
+        label="Row stripe"
+        hint="The vertical bar on the left edge of your row. Leave default to use your role/tier color."
         value={pillAccentColor}
         onChange={(v) => { setPillAccentColor(v); scheduleSave("pillAccentColor", v); }}
         onClear={() => clearField("pillAccentColor", setPillAccentColor)}
@@ -413,6 +617,36 @@ function ProfileCustomizationSection() {
   );
 }
 
+function ColorPreview({ accent, panelBg, pillBg, pillStripe }: { accent: string; panelBg: string; pillBg: string; pillStripe: string }) {
+  const stripe = pillStripe || accent;
+  return (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ flex: "1 1 180px", minWidth: 160, borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: panelBg }}>
+        <div style={{
+          height: 26, background: accent,
+          clipPath: "polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
+          display: "flex", alignItems: "center", padding: "0 10px",
+          fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
+        }}>Your ID card</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px" }}>
+          <div style={{ width: 26, height: 26, borderRadius: 999, border: `2px solid ${accent}`, background: "rgba(255,255,255,.08)", flexShrink: 0 }} />
+          <div style={{ fontSize: 12, fontWeight: 700 }}>You</div>
+        </div>
+      </div>
+      <div style={{ flex: "1 1 180px", minWidth: 160, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ fontSize: 9, opacity: 0.5, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>In a friends list</div>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, overflow: "hidden",
+          background: pillBg ? `linear-gradient(90deg, ${pillBg}99, ${pillBg}33 60%, transparent)` : "rgba(255,255,255,.03)",
+          border: "1px solid rgba(255,255,255,.06)" }}>
+          <span style={{ position: "absolute", left: 0, top: 4, bottom: 4, width: 3, borderRadius: "0 2px 2px 0", background: stripe }} />
+          <div style={{ width: 24, height: 24, borderRadius: 999, background: "rgba(255,255,255,.1)", flexShrink: 0, marginLeft: 2 }} />
+          <div style={{ fontSize: 12, fontWeight: 700 }}>You</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BannerUploadRow() {
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
   function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
@@ -422,7 +656,6 @@ function BannerUploadRow() {
   const [err, setErr] = React.useState<string>("");
   const fileRef = React.useRef<HTMLInputElement>(null);
 
-  // Hydrate from /profile/me on mount
   React.useEffect(() => {
     const tok = token();
     if (!tok) return;
@@ -467,6 +700,7 @@ function BannerUploadRow() {
       } else {
         setBannerUrl(String(j.bannerUrl));
         try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { bannerUrl: j.bannerUrl } })); } catch {}
+        try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
       }
     } catch (ex: any) {
       setErr(ex?.message || "Upload failed.");
@@ -488,6 +722,7 @@ function BannerUploadRow() {
       if (r.ok) {
         setBannerUrl("");
         try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { bannerUrl: null } })); } catch {}
+        try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
       }
     } finally { setBusy(false); }
   }
@@ -539,8 +774,6 @@ function BannerUploadRow() {
 }
 
 function PillIntensityRow() {
-  // Local-only preference: how strongly OTHER users' pill colours render in
-  // this user's view of friends/presence lists. 0 = off, 100 = solid.
   const [val, setVal] = React.useState<number>(60);
   React.useEffect(() => {
     try {
@@ -688,390 +921,6 @@ function BlockedUsersSection() {
   );
 }
 
-function PresenceSection() {
-  const [steamId, setSteamId] = React.useState("");
-  const [twitchLogin, setTwitchLogin] = React.useState("");
-  const [xboxGamertag, setXboxGamertag] = React.useState("");
-  const [psnAccountId, setPsnAccountId] = React.useState("");
-  const [lichessUsername, setLichessUsername] = React.useState("");
-  const [chessComUsername, setChessComUsername] = React.useState("");
-  const [saving, setSaving] = React.useState<"" | "steam" | "twitch" | "xbox" | "psn" | "lichess" | "chesscom">("");
-  const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
-  const [linkedSteam, setLinkedSteam] = React.useState<string | null>(null);
-  const [linkedTwitch, setLinkedTwitch] = React.useState<string | null>(null);
-  const [linkedXbox, setLinkedXbox] = React.useState<string | null>(null);
-  const [linkedPsn, setLinkedPsn] = React.useState<string | null>(null);
-  const [linkedLichess, setLinkedLichess] = React.useState<string | null>(null);
-  const [linkedChessCom, setLinkedChessCom] = React.useState<string | null>(null);
-  const [livePresence, setLivePresence] = React.useState<any>(null);
-  const [presenceCheckedAt, setPresenceCheckedAt] = React.useState<string | null>(null);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
-
-  const loadPresence = React.useCallback(async () => {
-    try {
-      const r = await fetch(`${apiBase}/profile/me/presence`, { headers: { Authorization: `Bearer ${token()}` } });
-      const j = await r.json();
-      if (j?.ok) {
-        setLinkedSteam(j.steamId ?? null);
-        setLinkedTwitch(j.twitchLogin ?? null);
-        setLinkedXbox(j.xboxGamertag ?? null);
-        setLinkedPsn(j.psnAccountId ?? null);
-        setLinkedLichess(j.lichessUsername ?? null);
-        setLinkedChessCom(j.chessComUsername ?? null);
-        setLivePresence(j.livePresence ?? null);
-        setPresenceCheckedAt(j.presenceCheckedAt ?? null);
-      }
-    } catch {}
-  }, [apiBase]);
-
-  React.useEffect(() => { loadPresence(); }, [loadPresence]);
-
-  async function refreshNow() {
-    setRefreshing(true);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/presence/refresh`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token()}` },
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        setLivePresence(j.livePresence ?? null);
-        setPresenceCheckedAt(j.presenceCheckedAt ?? null);
-      }
-    } catch {}
-    setRefreshing(false);
-  }
-
-  async function saveSteam(clear?: boolean) {
-    setSaving("steam"); setMsg(null);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/steam-id`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ steamId: clear ? "" : steamId.trim() }),
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        const resolvedNote = j?.resolvedFrom ? ` (resolved "${j.resolvedFrom}" → ${j.steamId})` : "";
-        setMsg({ ok: true, text: clear ? "Steam disconnected." : `Steam linked${resolvedNote}. Polling your activity now…` });
-        if (clear) setSteamId("");
-        await loadPresence();
-        if (!clear) { void refreshNow(); }
-      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-    } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving("");
-  }
-
-  async function saveTwitch(clear?: boolean) {
-    setSaving("twitch"); setMsg(null);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/twitch-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ twitchLogin: clear ? "" : twitchLogin.trim().toLowerCase() }),
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        setMsg({ ok: true, text: clear ? "Twitch disconnected." : "Twitch linked. You'll show as streaming when live." });
-        if (clear) setTwitchLogin("");
-        await loadPresence();
-        if (!clear) { void refreshNow(); }
-      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-    } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving("");
-  }
-
-  async function savePsn(clear?: boolean) {
-    setSaving("psn"); setMsg(null);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/psn-account-id`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ psnAccountId: clear ? "" : psnAccountId.trim() }),
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        setMsg({ ok: true, text: clear ? "PSN unlinked." : `PSN linked as ${j.psnAccountId}.` });
-        if (clear) setPsnAccountId("");
-        await loadPresence();
-      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-    } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving("");
-  }
-
-  async function saveLichess(clear?: boolean) {
-    setSaving("lichess"); setMsg(null);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/lichess`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ username: clear ? "" : lichessUsername.trim() }),
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        setMsg({ ok: true, text: clear ? "Lichess unlinked." : `Lichess linked as ${j.lichessUsername}. Polling your games now.` });
-        if (clear) setLichessUsername("");
-        await loadPresence();
-      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-    } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving("");
-  }
-
-  async function saveChessCom(clear?: boolean) {
-    setSaving("chesscom"); setMsg(null);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/chess-com`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ username: clear ? "" : chessComUsername.trim() }),
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        setMsg({ ok: true, text: clear ? "Chess.com unlinked." : `Chess.com linked as ${j.chessComUsername}. Polling your games now.` });
-        if (clear) setChessComUsername("");
-        await loadPresence();
-      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-    } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving("");
-  }
-
-  async function saveXbox(clear?: boolean) {
-    setSaving("xbox"); setMsg(null);
-    try {
-      const r = await fetch(`${apiBase}/profile/me/xbox-gamertag`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ gamertag: clear ? "" : xboxGamertag.trim() }),
-      });
-      const j = await r.json();
-      if (j?.ok) {
-        setMsg({ ok: true, text: clear ? "Xbox disconnected." : `Xbox linked as ${j.xboxGamertag}. Polling your activity now…` });
-        if (clear) setXboxGamertag("");
-        await loadPresence();
-        if (!clear) { void refreshNow(); }
-      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
-    } catch { setMsg({ ok: false, text: "Network error." }); }
-    setSaving("");
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: 220, padding: "6px 10px", borderRadius: 8,
-    border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
-    background: "var(--weered-panel2, rgba(0,0,0,.3))",
-    color: "var(--weered-text, rgba(243,244,246,.95))",
-    fontFamily: "ui-monospace, monospace", fontSize: 12, outline: "none",
-  };
-
-  const stackedInputStyle: React.CSSProperties = {
-    flex: 1, minWidth: 0,
-    padding: "8px 12px",
-    borderRadius: 8,
-    border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
-    background: "var(--weered-panel2, rgba(0,0,0,.3))",
-    color: "var(--weered-text, rgba(243,244,246,.95))",
-    fontFamily: "ui-monospace, monospace",
-    fontSize: 13, outline: "none",
-  };
-
-  return (
-    <Section title="Rich Presence">
-      {/* Steam ID — stacked: label + hint on top, input row below */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Steam ID</span>
-          {linkedSteam && (
-            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,.12)", border: "1px solid rgba(34,197,94,.3)", color: "rgba(134,239,172,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Paste your 17-digit SteamID64, your Steam vanity URL name, or your full profile URL.
-        </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={steamId} onChange={e => setSteamId(e.target.value.replace(/\s/g, ""))} placeholder={linkedSteam || "weeredjs  or  76561198000000000"} style={stackedInputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveSteam(false)} disabled={saving === "steam" || steamId.trim().length < 2}>
-            {saving === "steam" ? "Saving…" : "Link"}
-          </button>
-          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveSteam(true)} disabled={saving === "steam"}>Clear</button>
-        </div>
-      </div>
-
-      {/* Twitch login */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Twitch login</span>
-          {linkedTwitch && (
-            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(139,92,246,.14)", border: "1px solid rgba(139,92,246,.32)", color: "rgba(196,181,253,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Your Twitch username — friends see a live stream badge when you&apos;re on air.
-        </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={twitchLogin} onChange={e => setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder={linkedTwitch || "your_twitch_login"} style={stackedInputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveTwitch(false)} disabled={saving === "twitch" || !/^[a-z0-9_]{3,25}$/.test(twitchLogin.trim())}>
-            {saving === "twitch" ? "Saving…" : "Link"}
-          </button>
-          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveTwitch(true)} disabled={saving === "twitch"}>Clear</button>
-        </div>
-      </div>
-
-      {/* Xbox gamertag */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Xbox gamertag</span>
-          {linkedXbox && (
-            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(16,124,16,.14)", border: "1px solid rgba(16,124,16,.36)", color: "rgba(134,239,172,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Your Xbox gamertag — friends see what you&apos;re playing on Xbox. Resolved via OpenXBL.
-        </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={xboxGamertag} onChange={e => setXboxGamertag(e.target.value.slice(0, 20))} placeholder={linkedXbox || "YourGamertag"} style={stackedInputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveXbox(false)} disabled={saving === "xbox" || xboxGamertag.trim().length < 3}>
-            {saving === "xbox" ? "Saving…" : "Link"}
-          </button>
-          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveXbox(true)} disabled={saving === "xbox"}>Clear</button>
-        </div>
-      </div>
-
-      {/* PSN online ID — identity only, no live integration */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>PSN online ID</span>
-          {linkedPsn && (
-            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(0,112,243,.16)", border: "1px solid rgba(0,112,243,.40)", color: "rgba(147,197,253,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Your PSN online ID — shown as a chip so friends know to find you on PS5. Identity only — Sony has no third-party API for live presence.
-        </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input
-            type="text"
-            value={psnAccountId}
-            onChange={e => setPsnAccountId(e.target.value.slice(0, 16))}
-            placeholder={linkedPsn || "YourPsnId"}
-            style={stackedInputStyle}
-          />
-          <button
-            type="button"
-            style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }}
-            onClick={() => savePsn(false)}
-            disabled={saving === "psn" || !/^[A-Za-z][A-Za-z0-9_-]{2,15}$/.test(psnAccountId.trim())}
-          >
-            {saving === "psn" ? "Saving…" : "Link"}
-          </button>
-          <button
-            type="button"
-            style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }}
-            onClick={() => savePsn(true)}
-            disabled={saving === "psn"}
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      {/* Lichess */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Lichess username</span>
-          {linkedLichess && (
-            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(124,58,237,.16)", border: "1px solid rgba(124,58,237,.40)", color: "rgba(196,181,253,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Your Lichess username. We poll your recent games and credit Weered chess tournaments. Public API, no OAuth, no token. Validated against Lichess on save.
-        </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={lichessUsername} onChange={e => setLichessUsername(e.target.value.slice(0, 29))} placeholder={linkedLichess || "yourname"} style={stackedInputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveLichess(false)} disabled={saving === "lichess" || lichessUsername.trim().length < 2}>
-            {saving === "lichess" ? "Saving…" : "Link"}
-          </button>
-          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveLichess(true)} disabled={saving === "lichess"}>Clear</button>
-        </div>
-      </div>
-
-      {/* Chess.com */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Chess.com username</span>
-          {linkedChessCom && (
-            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,.14)", border: "1px solid rgba(34,197,94,.40)", color: "rgba(134,239,172,.95)", letterSpacing: ".04em", fontWeight: 700 }}>LINKED</span>
-          )}
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.6, color: "var(--weered-muted, rgba(148,163,184,.75))", lineHeight: 1.4 }}>
-          Your Chess.com username. Same deal — we poll your recent games for tournament credit. Public API. Validated on save.
-        </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-          <input type="text" value={chessComUsername} onChange={e => setChessComUsername(e.target.value.slice(0, 25))} placeholder={linkedChessCom || "yourname"} style={stackedInputStyle} />
-          <button type="button" style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }} onClick={() => saveChessCom(false)} disabled={saving === "chesscom" || chessComUsername.trim().length < 3}>
-            {saving === "chesscom" ? "Saving…" : "Link"}
-          </button>
-          <button type="button" style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }} onClick={() => saveChessCom(true)} disabled={saving === "chesscom"}>Clear</button>
-        </div>
-      </div>
-
-      {/* Current detected state */}
-      {(linkedSteam || linkedTwitch || linkedXbox) && (
-        <div style={{
-          marginTop: 12,
-          padding: "12px 14px",
-          borderRadius: 8,
-          background: "rgba(124,58,237,0.06)",
-          border: "1px solid rgba(124,58,237,0.18)",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--weered-muted, rgba(148,163,184,.7))" }}>
-                Detected now
-              </div>
-              <div style={{ marginTop: 4, fontSize: 13, color: "var(--weered-text, rgba(243,244,246,.95))" }}>
-                {livePresence?.activity ? (
-                  <>
-                    <span style={{ fontWeight: 700, color: "rgba(196,181,253,.98)" }}>{livePresence.activity}</span>
-                    {livePresence.detail && (
-                      <span style={{ opacity: 0.75, marginLeft: 6, fontSize: 12, fontStyle: "italic" }}>— {String(livePresence.detail).slice(0, 80)}</span>
-                    )}
-                    <span style={{ marginLeft: 8, fontSize: 10, opacity: 0.5, fontFamily: "ui-monospace, monospace" }}>via {livePresence.source || "?"}</span>
-                  </>
-                ) : (
-                  <span style={{ opacity: 0.6, fontStyle: "italic" }}>Nothing detected yet. Go live on Twitch or open a Steam game and refresh.</span>
-                )}
-              </div>
-              {presenceCheckedAt && (
-                <div style={{ marginTop: 3, fontSize: 10, opacity: 0.45, fontFamily: "ui-monospace, monospace" }}>
-                  last checked {new Date(presenceCheckedAt).toLocaleTimeString()}
-                </div>
-              )}
-            </div>
-            <button type="button" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }} onClick={refreshNow} disabled={refreshing}>
-              {refreshing ? "Checking…" : "Refresh"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {msg && (
-        <div style={{ marginTop: 6, fontSize: 11, color: msg.ok ? "rgba(134,239,172,.85)" : "rgba(252,165,165,.85)" }}>
-          {msg.text}
-        </div>
-      )}
-      <div style={{ marginTop: 10, fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.55))", lineHeight: 1.5 }}>
-        Find your SteamID64 at{" "}
-        <a href="https://steamdb.info/calculator/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline" }}>
-          steamdb.info/calculator
-        </a>
-        . Steam requires your game activity to be public. Twitch uses your login from{" "}
-        <a href="https://twitch.tv" target="_blank" rel="noopener noreferrer" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline" }}>twitch.tv</a>.
-      </div>
-    </Section>
-  );
-}
-
 function DangerZoneSection() {
   const [open, setOpen] = React.useState(false);
   const [confirmText, setConfirmText] = React.useState("");
@@ -1090,7 +939,6 @@ function DangerZoneSection() {
       });
       const j = await r.json();
       if (j?.ok) {
-        // Wipe local session then bounce to login
         try { localStorage.clear(); } catch {}
         try { sessionStorage.clear(); } catch {}
         window.location.href = "/login?deleted=1";

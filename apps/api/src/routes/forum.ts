@@ -19,11 +19,6 @@ function decodeForumDataUrl(dataUrl: string): Buffer | null {
   return Buffer.from(m[2], "base64");
 }
 
-// /forum/* — community discussion threads. Posts (BUG_REPORT, FEATURE_REQUEST,
-// DISCUSSION, ANNOUNCEMENT) with reddit-style hot/new/top sort, comments,
-// up/downvotes, and lobby-scoped or global threads. Mod controls (pin/lock/
-// delete) check global staff role + lobby owner/mod tier. ANNOUNCEMENT is
-// gated to staff or lobby owner; everyone else gets demoted to DISCUSSION.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
@@ -47,14 +42,11 @@ async function enrichForumAuthors(authorIds: string[]): Promise<Record<string, a
   return map;
 }
 
-// Forum mod check: global staff OR lobby owner/mod
 async function canModForumPost(userId: string, post: { lobbyId: string | null; authorId: string }): Promise<{ canDelete: boolean; canLock: boolean; canPin: boolean; canAnnounce: boolean }> {
   const globalRole = await getGlobalRole(userId);
   if (canAccessStaff(globalRole)) return { canDelete: true, canLock: true, canPin: true, canAnnounce: true };
-  // Author can delete own posts
   const isAuthor = post.authorId === userId;
   if (!post.lobbyId) return { canDelete: isAuthor, canLock: false, canPin: false, canAnnounce: false };
-  // Check lobby role
   const lobbyRole = await getLobbyRole(userId, post.lobbyId);
   const isOwner = lobbyRole === LobbyRole.OWNER;
   const isMod = lobbyRole === LobbyRole.MOD || isOwner;
@@ -66,10 +58,6 @@ async function canModForumPost(userId: string, post: { lobbyId: string | null; a
   };
 }
 
-// GET /forum/posts — list posts (paginated, sorted, filtered)
-// Slice A: supports sectionId filter; "hot" uses Reddit's classic formula
-// over the last 30 days with up to 200 candidates, sorted in JS (option (a)
-// from the Slice A brief — no hotScore column or recalc worker).
 app.get("/forum/posts", async (req, reply) => {
   const sort = String((req as any).query?.sort || "hot").toLowerCase();
   const cat = String((req as any).query?.category || "").toUpperCase();
@@ -87,11 +75,8 @@ app.get("/forum/posts", async (req, reply) => {
   if (cat && ["BUG_REPORT", "FEATURE_REQUEST", "DISCUSSION", "ANNOUNCEMENT"].includes(cat)) {
     where.category = cat;
   }
-  // Hot recomputes a candidate window each call, so cursor is only meaningful for new/top.
   if (cursor && sort !== "hot") where.createdAt = { lt: new Date(cursor) };
 
-  // Moderation lens: non-mod viewers don't see removed posts. Mods see them
-  // with body redacted further down so the queue is inline-visible.
   let viewerIsMod = false;
   if (u) {
     const role = await getGlobalRole(u.id);
@@ -109,7 +94,6 @@ app.get("/forum/posts", async (req, reply) => {
   } else if (sort === "new") {
     posts = await prisma.forumPost.findMany({ where, orderBy: [{ pinned: "desc" }, { createdAt: "desc" }], take: limit });
   } else {
-    // Reddit hot: log10(max(|net|,1)) * sign(net) + (epoch_seconds - 1134028003) / 45000
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const hotWhere = { ...where, createdAt: { gte: thirtyDaysAgo } };
     const candidates = await prisma.forumPost.findMany({ where: hotWhere, orderBy: [{ createdAt: "desc" }], take: 200 });
@@ -152,7 +136,6 @@ app.get("/forum/posts", async (req, reply) => {
   return reply.send({ ok: true, posts: out, nextCursor });
 });
 
-// POST /forum/posts — create post
 app.post("/forum/posts", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -161,15 +144,11 @@ app.post("/forum/posts", async (req, reply) => {
   if (title.trim().length > 200) return reply.code(400).send({ error: "Title too long" });
   if (body.trim().length > 10000) return reply.code(400).send({ error: "Body too long" });
 
-  // Normalize user-supplied tags (max 8, each <=24 chars). Auto-mod tagsPatch
-  // (Slice C) overrides this if present.
   let cleanTags: string[] = [];
   if (Array.isArray(tags)) {
     cleanTags = tags.filter((t: any) => typeof t === "string").map((t: string) => t.trim()).filter(Boolean).slice(0, 8).map(t => t.slice(0, 24));
   }
 
-  // Validate sectionId if provided. Section must belong to the post's lobby.
-  // postsOnly sections require staff or lobby OWNER/MOD.
   let validSectionId: string | null = null;
   if (sectionId) {
     const sec = await prisma.forumSection.findUnique({ where: { id: String(sectionId) } });
@@ -202,7 +181,6 @@ app.post("/forum/posts", async (req, reply) => {
   const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
   const validLobbyId = lobbyId ? String(lobbyId).trim() : null;
 
-  // Auto-mod gate: pre-commit check
   const automod = await applyAutoModSideEffects(validLobbyId, { kind: "POST", title: title.trim(), body: body.trim(), authorId: u.id });
   if (automod.blocked) return reply.code(400).send({ error: "automod_blocked", reason: automod.reason, rule: automod.ruleName });
 
@@ -219,11 +197,9 @@ app.post("/forum/posts", async (req, reply) => {
   if (automod.action === "REPORT") {
     fileAutoModReport({ kind: "POST", id: post.id }, automod.ruleName, automod.reason).catch(() => {});
   }
-  // Auto-subscribe author to their post
   try {
     await (prisma as any).forumSubscription.create({ data: { userId: u.id, postId: post.id } });
   } catch {}
-  // @mentions in post body
   (async () => {
     try {
       const mentioned = await resolveMentions(String(body || ""), u.id);
@@ -243,7 +219,6 @@ app.post("/forum/posts", async (req, reply) => {
   return reply.send({ ok: true, post });
 });
 
-// GET /forum/posts/:postId — single post + threaded comments
 app.get("/forum/posts/:postId", async (req, reply) => {
   const postId = String((req as any).params?.postId || "");
   const u = authFromHeader((req as any).headers?.authorization);
@@ -281,8 +256,6 @@ app.get("/forum/posts/:postId", async (req, reply) => {
   const modPerms = u ? await canModForumPost(u.id, post) : { canDelete: false, canLock: false, canPin: false, canAnnounce: false };
   const isMod = modPerms.canLock || modPerms.canPin;
 
-  // Build threaded tree. Removed comments return as { id, removed, depth, path, children }
-  // so the structure stays intact. Mods (and the author themselves) still see the body.
   type CNode = any;
   const map = new Map<string, CNode>();
   for (const c of comments) {
@@ -324,7 +297,6 @@ app.get("/forum/posts/:postId", async (req, reply) => {
   }
   sortTree(roots);
 
-  // Post-body redaction (mod or author still sees original)
   const postBody = post.removedAt && !isMod && post.authorId !== u?.id ? "[removed by mod]" : post.body;
 
   return reply.send({
@@ -344,7 +316,6 @@ app.get("/forum/posts/:postId", async (req, reply) => {
   });
 });
 
-// POST /forum/posts/:postId/vote — upvote/downvote post
 app.post("/forum/posts/:postId/vote", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -371,7 +342,6 @@ app.post("/forum/posts/:postId/vote", async (req, reply) => {
   return reply.send({ ok: true, score: post?.score || 0 });
 });
 
-// POST /forum/posts/:postId/comments — add threaded comment (optional parentId)
 app.post("/forum/posts/:postId/comments", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -398,7 +368,6 @@ app.post("/forum/posts/:postId/comments", async (req, reply) => {
 
   const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
 
-  // Auto-mod gate on comments
   const automod = await applyAutoModSideEffects(post.lobbyId, { kind: "COMMENT", body: body.trim(), authorId: u.id });
   if (automod.blocked) return reply.code(400).send({ error: "automod_blocked", reason: automod.reason, rule: automod.ruleName });
 
@@ -417,7 +386,6 @@ app.post("/forum/posts/:postId/comments", async (req, reply) => {
     fileAutoModReport({ kind: "COMMENT", id: comment.id }, automod.ruleName, automod.reason).catch(() => {});
   }
 
-  // Subscriber fan-out + @mentions
   (async () => {
     try {
       const notifiedIds = new Set<string>();
@@ -473,7 +441,6 @@ app.post("/forum/posts/:postId/comments", async (req, reply) => {
   });
 });
 
-// POST /forum/comments/:commentId/vote — upvote/downvote comment
 app.post("/forum/comments/:commentId/vote", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -500,7 +467,6 @@ app.post("/forum/comments/:commentId/vote", async (req, reply) => {
   return reply.send({ ok: true, score: comment?.score || 0 });
 });
 
-// PATCH /forum/posts/:postId — pin/lock (lobby mod/owner or global staff)
 app.patch("/forum/posts/:postId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -525,7 +491,6 @@ app.patch("/forum/posts/:postId", async (req, reply) => {
   return reply.send({ ok: true, post });
 });
 
-// DELETE /forum/posts/:postId — delete post (mod or author)
 app.delete("/forum/posts/:postId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -540,7 +505,6 @@ app.delete("/forum/posts/:postId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// DELETE /forum/comments/:commentId — soft-remove comment (mod, lobby mod/owner, or author)
 app.delete("/forum/comments/:commentId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -554,7 +518,6 @@ app.delete("/forum/comments/:commentId", async (req, reply) => {
   const perms = await canModForumPost(u.id, { lobbyId: parentPost?.lobbyId || null, authorId: comment.authorId });
   if (!perms.canDelete) return reply.code(403).send({ error: "Forbidden" });
 
-  // Soft-remove so the threaded tree structure stays intact
   await prisma.forumComment.update({
     where: { id: commentId },
     data: { removedAt: new Date(), removedById: u.id, removeReason: reason || null },
@@ -563,9 +526,6 @@ app.delete("/forum/comments/:commentId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// ── BOOKMARKS ──────────────────────────────────────────────────────────────
-
-// POST /forum/posts/:postId/bookmark — idempotent upsert
 app.post("/forum/posts/:postId/bookmark", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -582,7 +542,6 @@ app.post("/forum/posts/:postId/bookmark", async (req, reply) => {
   return reply.send({ ok: true, bookmarked: true });
 });
 
-// DELETE /forum/posts/:postId/bookmark — idempotent remove
 app.delete("/forum/posts/:postId/bookmark", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -591,7 +550,6 @@ app.delete("/forum/posts/:postId/bookmark", async (req, reply) => {
   return reply.send({ ok: true, bookmarked: false });
 });
 
-// GET /forum/me/bookmarks — current user's bookmarked posts
 app.get("/forum/me/bookmarks", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -633,9 +591,6 @@ app.get("/forum/me/bookmarks", async (req, reply) => {
   return reply.send({ ok: true, posts: out, total });
 });
 
-// ── SUBSCRIPTIONS ──────────────────────────────────────────────────────────
-
-// POST /forum/posts/:postId/subscribe
 app.post("/forum/posts/:postId/subscribe", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -653,7 +608,6 @@ app.post("/forum/posts/:postId/subscribe", async (req, reply) => {
   return reply.send({ ok: true, subscribed: true, subscriberCount: count });
 });
 
-// DELETE /forum/posts/:postId/subscribe
 app.delete("/forum/posts/:postId/subscribe", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -663,7 +617,6 @@ app.delete("/forum/posts/:postId/subscribe", async (req, reply) => {
   return reply.send({ ok: true, subscribed: false, subscriberCount: count });
 });
 
-// GET /forum/me/subscriptions
 app.get("/forum/me/subscriptions", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -694,9 +647,6 @@ app.get("/forum/me/subscriptions", async (req, reply) => {
   return reply.send({ ok: true, posts: out });
 });
 
-// ── IMAGE UPLOAD ────────────────────────────────────────────────────────────
-
-// POST /forum/uploads — JSON data-URL image upload (mirrors flair-contests pattern)
 app.post("/forum/uploads", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -725,7 +675,6 @@ app.post("/forum/uploads", async (req, reply) => {
   }
 });
 
-// GET /forum-img/:filename — serve uploaded forum images
 app.get("/forum-img/:filename", async (req, reply) => {
   const fn = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
   if (!fn) return reply.code(400).send("bad request");
@@ -737,9 +686,6 @@ app.get("/forum-img/:filename", async (req, reply) => {
   return reply.send(data);
 });
 
-// ── ForumSection CRUD (Slice A) ───────────────────────────────────────────
-// Sections are per-lobby; managed by global staff or lobby OWNER/MOD.
-
 const SLUG_RE = /^[a-z0-9-]{1,30}$/;
 
 async function canModSectionLobby(userId: string, lobbyId: string): Promise<boolean> {
@@ -749,7 +695,6 @@ async function canModSectionLobby(userId: string, lobbyId: string): Promise<bool
   return lr === LobbyRole.OWNER || lr === LobbyRole.MOD;
 }
 
-// GET /forum/sections?lobbyId=xxx — public, ordered, includes non-removed post counts
 app.get("/forum/sections", async (req, reply) => {
   const lobbyId = String((req as any).query?.lobbyId || "").trim();
   if (!lobbyId) return reply.code(400).send({ error: "lobbyId required" });
@@ -779,7 +724,6 @@ app.get("/forum/sections", async (req, reply) => {
   return reply.send({ ok: true, sections: out });
 });
 
-// POST /forum/sections — staff or lobby owner/mod
 app.post("/forum/sections", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -808,7 +752,6 @@ app.post("/forum/sections", async (req, reply) => {
   return reply.send({ ok: true, section });
 });
 
-// PATCH /forum/sections/:id — staff or lobby mod (partial update)
 app.patch("/forum/sections/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -839,8 +782,6 @@ app.patch("/forum/sections/:id", async (req, reply) => {
   return reply.send({ ok: true, section });
 });
 
-// DELETE /forum/sections/:id?force=true — posts get sectionId=null via onDelete: SetNull.
-// If section has posts, require ?force=true.
 app.delete("/forum/sections/:id", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -859,7 +800,6 @@ app.delete("/forum/sections/:id", async (req, reply) => {
   return reply.send({ ok: true, postCount });
 });
 
-// POST /forum/sections/reorder — bulk update positions. Body: { lobbyId, order: [{ id, order }] }
 app.post("/forum/sections/reorder", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -881,10 +821,6 @@ app.post("/forum/sections/reorder", async (req, reply) => {
   return reply.send({ ok: true, updated: ownedSet.size });
 });
 
-// ── Full-text search (Slice A) ───────────────────────────────────────────
-// GET /forum/search?q=...&lobbyId=...&type=posts|comments|all&limit=20
-// Uses tsvector + GIN; ranks with ts_rank; plainto_tsquery is forgiving of
-// raw user input. Excludes removed posts/comments.
 app.get("/forum/search", async (req, reply) => {
   const q = String((req as any).query?.q || "").trim();
   if (!q || q.length < 2) return reply.send({ ok: true, query: q, results: { posts: [], comments: [] } });

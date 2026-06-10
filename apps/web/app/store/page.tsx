@@ -5,7 +5,6 @@ import { useWeered } from "../../components/WeeredProvider";
 import LoadingState from "../../components/LoadingState";
 import { weeredToast } from "../../lib/toast";
 
-/* ─── Constants ──────────────────────────────────────────────────────────── */
 const GOLD = "#F5C518";
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -31,7 +30,6 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 type Tab = "store" | "inventory" | "market";
 
-/* ─── Styles ─────────────────────────────────────────────────────────────── */
 const S = {
   page: {
     maxWidth: 960,
@@ -137,7 +135,6 @@ const S = {
   } as React.CSSProperties),
 };
 
-/* ─── Hook: API fetch helper ─────────────────────────────────────────────── */
 function useApi() {
   const { apiBase, token } = useWeered();
   const headers = useCallback(() => ({
@@ -162,9 +159,6 @@ function useApi() {
   return { get, post };
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/* ─── Main Page ──────────────────────────────────────────────────────────── */
-/* ═══════════════════════════════════════════════════════════════════════════ */
 export default function StorePage() {
   const { me, authed } = useWeered();
   const { get, post } = useApi();
@@ -174,29 +168,23 @@ export default function StorePage() {
   const [dailyClaimed, setDailyClaimed] = useState(false);
   const [dailyNextAt, setDailyNextAt] = useState<string | null>(null);
 
-  // Store state
   const [storeItems, setStoreItems] = useState<any[]>([]);
   const [storeLoading, setStoreLoading] = useState(false);
 
-  // Inventory state
   const [inventory, setInventory] = useState<any[]>([]);
   const [invLoading, setInvLoading] = useState(false);
 
-  // Market state
   const [listings, setListings] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketSearch, setMarketSearch] = useState("");
   const [marketRarity, setMarketRarity] = useState("");
   const [marketSort, setMarketSort] = useState("newest");
 
-  // Listing modal
   const [listingItem, setListingItem] = useState<any>(null);
   const [listingPrice, setListingPrice] = useState("");
 
-  // Busy states
   const [busy, setBusy] = useState<string | null>(null);
 
-  // ── Fetch wallet balance ──
   const fetchWallet = useCallback(async () => {
     try {
       const d = await get("/paper/wallet");
@@ -204,7 +192,6 @@ export default function StorePage() {
     } catch {}
   }, [get]);
 
-  // ── Fetch store items ──
   const fetchStore = useCallback(async () => {
     setStoreLoading(true);
     try {
@@ -214,7 +201,6 @@ export default function StorePage() {
     setStoreLoading(false);
   }, [get]);
 
-  // ── Fetch inventory ──
   const fetchInventory = useCallback(async () => {
     setInvLoading(true);
     try {
@@ -224,7 +210,6 @@ export default function StorePage() {
     setInvLoading(false);
   }, [get]);
 
-  // ── Fetch marketplace ──
   const fetchMarket = useCallback(async () => {
     setMarketLoading(true);
     try {
@@ -238,21 +223,18 @@ export default function StorePage() {
     setMarketLoading(false);
   }, [get, marketSearch, marketRarity, marketSort]);
 
-  // ── Initial load ──
   useEffect(() => {
     if (!authed) return;
     fetchWallet();
     fetchStore();
   }, [authed, fetchWallet, fetchStore]);
 
-  // ── Tab change triggers ──
   useEffect(() => {
     if (!authed) return;
     if (tab === "inventory") fetchInventory();
     if (tab === "market") fetchMarket();
   }, [tab, authed, fetchInventory, fetchMarket]);
 
-  // ── Daily claim ──
   async function claimDaily() {
     if (dailyClaimed) return;
     const d = await post("/paper/daily");
@@ -265,13 +247,11 @@ export default function StorePage() {
     }
   }
 
-  // Check daily status on mount via wallet transactions
   useEffect(() => {
     if (!authed) return;
     get("/paper/wallet").then(d => {
       if (!d.ok && d.ok !== undefined) return;
       setBalance(d.balance ?? 0);
-      // Check if any EARN_DAILY transaction in last 24h
       const txns = d.transactions || [];
       const daily = txns.find((t: any) => t.type === "EARN_DAILY");
       if (daily) {
@@ -284,7 +264,6 @@ export default function StorePage() {
     }).catch(() => {});
   }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Store: buy ──
   async function buyItem(itemId: string) {
     setBusy(itemId);
     const d = await post(`/store/buy/${itemId}`);
@@ -298,7 +277,6 @@ export default function StorePage() {
     setBusy(null);
   }
 
-  // ── Inventory: equip ──
   async function equipItem(userItemId: string) {
     setBusy(userItemId);
     const d = await post(`/inventory/equip/${userItemId}`);
@@ -306,7 +284,6 @@ export default function StorePage() {
     setBusy(null);
   }
 
-  // ── Inventory: consume ──
   async function consumeItem(userItemId: string) {
     setBusy(userItemId);
     const d = await post(`/inventory/consume/${userItemId}`);
@@ -317,7 +294,6 @@ export default function StorePage() {
     setBusy(null);
   }
 
-  // ── Market: list item for sale ──
   async function listForSale() {
     if (!listingItem || !listingPrice) return;
     setBusy("listing");
@@ -333,7 +309,6 @@ export default function StorePage() {
     setBusy(null);
   }
 
-  // ── Market: buy listing ──
   async function buyListing(listingId: string) {
     setBusy(listingId);
     const d = await post(`/market/buy/${listingId}`);
@@ -347,7 +322,6 @@ export default function StorePage() {
     setBusy(null);
   }
 
-  // ── Market: cancel listing ──
   async function cancelListing(listingId: string) {
     setBusy(listingId);
     const d = await post(`/market/cancel/${listingId}`);
@@ -364,7 +338,6 @@ export default function StorePage() {
 
   return (
     <div style={S.page}>
-      {/* ── Header: title + wallet ── */}
       <div style={S.header}>
         <div>
           <div style={S.title}>Paper</div>
@@ -384,7 +357,6 @@ export default function StorePage() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
       <div style={S.tabs}>
         {(["store", "inventory", "market"] as Tab[]).map(t => (
           <button
@@ -410,7 +382,6 @@ export default function StorePage() {
         ))}
       </div>
 
-      {/* ── Store Tab ── */}
       {tab === "store" && (
         <div>
           {storeLoading ? (
@@ -461,7 +432,6 @@ export default function StorePage() {
         </div>
       )}
 
-      {/* ── Inventory Tab ── */}
       {tab === "inventory" && (
         <div>
           {invLoading ? (
@@ -530,10 +500,8 @@ export default function StorePage() {
         </div>
       )}
 
-      {/* ── Market Tab ── */}
       {tab === "market" && (
         <div>
-          {/* Filters */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
             <input
               placeholder="Search items..."
@@ -642,7 +610,6 @@ export default function StorePage() {
         </div>
       )}
 
-      {/* ── Listing Modal ── */}
       {listingItem && (
         <div
           style={{
@@ -721,7 +688,6 @@ export default function StorePage() {
   );
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
 function timeLeft(dateStr: string): string {
   if (!dateStr) return "";
   const ms = new Date(dateStr).getTime() - Date.now();

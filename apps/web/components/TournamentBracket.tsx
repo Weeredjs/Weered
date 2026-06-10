@@ -33,13 +33,8 @@ type Tournament = {
   lobbyId: string | null;
 };
 
-const ACCENT = "#f58220"; // Destiny solar orange
+const ACCENT = "#f58220";
 
-/**
- * Bracket visualization. Renders each round as a column, with matches
- * stacked vertically. Connector lines drawn via SVG overlays. Click a
- * match to open the detail card with reporting UI + Twitch embed.
- */
 export default function TournamentBracket({
   tournament,
   matches,
@@ -55,8 +50,6 @@ export default function TournamentBracket({
   onMatchClick: (matchId: string) => void;
   onRefresh: () => void;
 }) {
-  // Group matches by bracketSide first (for double-elim), then by round.
-  // Single-elim has all matches with bracketSide=null and renders as one bracket.
   const sections = React.useMemo(() => {
     const isDouble = matches.some(m => m.bracketSide === "WINNERS" || m.bracketSide === "LOSERS");
     function buildRounds(ms: Match[]) {

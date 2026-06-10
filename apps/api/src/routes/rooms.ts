@@ -3,11 +3,6 @@ import { prisma } from "../lib/prisma";
 import { LobbyRole, RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-// /rooms/* — room CRUD, owner appearance edits, and the AI-NPC subsystem
-// (D&D-flavored characters that chat via Claude Haiku). Rooms are tightly
-// coupled to the WS layer in main(): live presence, message broadcast,
-// and the rooms Map are passed in via opts. The NPC routes use Anthropic
-// directly with a small per-user cooldown.
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   verifyToken: (token: string) => { id: string; name: string; globalRole?: string } | null;
@@ -29,9 +24,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
     broadcastToLobby,
   } = opts;
 
-// GET /rooms — all rooms (lobbies + active user rooms) for Home page
 app.get("/rooms", async () => {
-  // Lobbies from DB
   const lobbyList = await prisma.lobby.findMany({
     where: { pinned: true },
     select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
@@ -43,7 +36,6 @@ app.get("/rooms", async () => {
     locked: false,
   }));
 
-  // Active user-created rooms (non-lobby)
   const lobbyIds = new Set(lobbyList.map(l => l.id));
   const roomList = await prisma.room.findMany({
     orderBy: { updatedAt: "desc" },
@@ -62,13 +54,11 @@ app.get("/rooms", async () => {
   return { ok: true, rooms: [...lobbyOut, ...roomOut] };
 });
 
-// ── Room creation rate limit (anti-spam) ────────────────────────────
-// Sliding window per user + active-room ceiling.
 const roomCreateWindow = new Map<string, number[]>();
-const ROOM_CREATE_WINDOW_MS   = 60 * 60 * 1000; // 1h window
-const ROOM_CREATE_MAX_PER_HR  = 8;              // 8 rooms / user / hour
-const ROOM_USER_ACTIVE_CAP    = 25;             // 25 active user-owned rooms
-const ROOM_LOBBY_CEILING      = 500;            // hard ceiling per lobby (excl. pinned)
+const ROOM_CREATE_WINDOW_MS   = 60 * 60 * 1000;
+const ROOM_CREATE_MAX_PER_HR  = 8;
+const ROOM_USER_ACTIVE_CAP    = 25;
+const ROOM_LOBBY_CEILING      = 500;
 
 app.post("/rooms", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
@@ -80,12 +70,10 @@ app.post("/rooms", async (req, reply) => {
   if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
   if (!lobbyId) return reply.code(400).send({ ok: false, error: "lobbyId_required" });
 
-  // Staff bypass all rate/count limits
   const actorRole = await getGlobalRole(u.id);
   const isStaff = canAccessStaff(actorRole);
 
   if (!isStaff) {
-    // 1. Sliding-window rate limit
     const now = Date.now();
     const userWindow = (roomCreateWindow.get(u.id) || []).filter(t => now - t < ROOM_CREATE_WINDOW_MS);
     if (userWindow.length >= ROOM_CREATE_MAX_PER_HR) {
@@ -98,7 +86,6 @@ app.post("/rooms", async (req, reply) => {
       });
     }
 
-    // 2. Active-room ceiling per user (counts only user-owned, non-pinned)
     const activeCount = await prisma.room.count({
       where: { ownerId: u.id, pinned: false },
     });
@@ -109,7 +96,6 @@ app.post("/rooms", async (req, reply) => {
       });
     }
 
-    // 3. Per-lobby ceiling
     const lobbyCount = await prisma.room.count({
       where: { lobbyId, pinned: false },
     });
@@ -124,11 +110,22 @@ app.post("/rooms", async (req, reply) => {
     roomCreateWindow.set(u.id, userWindow);
   }
 
-  // Verify lobby exists
   const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
   if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
 
-  // Enforce unique name within lobby
+  if (!isStaff && lobby.ownerId !== u.id) {
+    const member = await prisma.lobbyMember.findUnique({
+      where: { lobbyId_userId: { lobbyId, userId: u.id } },
+      select: { roleLevel: true },
+    });
+    if (!member) {
+      return reply.code(403).send({
+        ok: false, error: "not_a_member",
+        message: `Join the ${lobby.name} lobby to create rooms here.`,
+      });
+    }
+  }
+
   const existing = await prisma.room.findFirst({ where: { lobbyId, name: { equals: name, mode: "insensitive" } } });
   if (existing) return reply.code(409).send({ ok: false, error: "room_name_taken", message: `A room named "${name}" already exists in this lobby.` });
 
@@ -146,7 +143,6 @@ app.post("/rooms", async (req, reply) => {
   const rawPassword = typeof body.password === "string" ? body.password.trim() : "";
   const passwordHash = rawPassword ? await bcrypt.hash(rawPassword, 10) : null;
 
-  // Event rooms: only staff or lobby owner may create
   let isEvent = Boolean(body.isEvent);
   if (isEvent) {
     const actorRole = u ? await getGlobalRole(u.id) : "USER";
@@ -155,13 +151,9 @@ app.post("/rooms", async (req, reply) => {
     if (!isStaff && !isLobbyOwner) isEvent = false;
   }
 
-  // Optional: creator can pre-pick which stage module the room opens with.
   const VALID_MODULES = ["voice", "youtube", "twitch", "browser", "article", "video", "screen", "fakeout", "poker", "destiny", "league", "fortnite", "pubg", "hq", "cs2", "dota2", "study", "dnd"];
   const rawDM = typeof body.defaultModule === "string" ? body.defaultModule.trim().toLowerCase() : "";
   const defaultModule = VALID_MODULES.includes(rawDM) ? rawDM : null;
-  // Owner-curated module disable list — module:set events for these
-  // modes will be rejected by the WS handler. Filtered to known modules
-  // and never includes the chosen default.
   const rawDisabled = Array.isArray(body.disabledModules) ? body.disabledModules : [];
   const disabledModules = Array.from(new Set(
     rawDisabled
@@ -170,7 +162,6 @@ app.post("/rooms", async (req, reply) => {
   ));
   await prisma.room.create({ data: { id, name, locked: false, ownerId, lobbyId, isEvent, defaultModule, disabledModules } as any });
 
-  // Make creator the owner in RoomMember
   if (ownerId) {
     await prisma.roomMember.upsert({
       where: { roomId_userId: { roomId: id, userId: ownerId } },
@@ -195,8 +186,6 @@ app.get("/rooms/:roomId", async (req, reply) => {
   const roomId = String((req as any).params?.roomId || "");
   const r: any = await prisma.room.findUnique({ where: { id: roomId } });
   if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
-  // Surface the parent lobby's moduleType so mobile can gate game-specific
-  // surfaces (NPCs panel for DND rooms, etc.) without a follow-up fetch.
   let lobbyModuleType: string | null = null;
   if (r.lobbyId) {
     const lob: any = await prisma.lobby.findUnique({
@@ -227,9 +216,6 @@ app.get("/rooms/:roomId", async (req, reply) => {
   });
 });
 
-// PATCH /rooms/:roomId — owner / staff edit room appearance + description.
-// Kept narrow on purpose: name / password / lobby moves stay with the
-// existing room admin flow. This is just "make the room look yours".
 app.patch("/rooms/:roomId", async (req, reply) => {
   const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
   const u = verifyToken(token);
@@ -239,8 +225,6 @@ app.patch("/rooms/:roomId", async (req, reply) => {
   if (!r) return reply.code(404).send({ ok: false, error: "not_found" });
 
   const isOwner = r.ownerId && r.ownerId === u.id;
-  // Token doesn't carry globalRole — look it up. Otherwise GOD/STAFF/SUPPORT
-  // get blocked here even though they should always be able to edit any room.
   const globalRole = String((await getGlobalRole(u.id)) || "USER").toUpperCase();
   const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(globalRole);
   if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "not_authorized" });
@@ -267,8 +251,6 @@ app.patch("/rooms/:roomId", async (req, reply) => {
 
   const updated: any = await (prisma as any).room.update({ where: { id: roomId }, data });
 
-  // Push the new appearance into any live in-memory room state and
-  // rebroadcast so every connected socket sees the change immediately.
   const live: any = rooms.get(normalizeRoomId(roomId));
   if (live) {
     if ("description" in data) live.description = updated.description || undefined;
@@ -277,13 +259,11 @@ app.patch("/rooms/:roomId", async (req, reply) => {
     if ("accentColor" in data) live.accentColor = updated.accentColor || undefined;
     if ("disabledModules" in data) {
       live.disabledModules = Array.isArray(updated.disabledModules) ? updated.disabledModules : [];
-      // If the currently-active module just got disabled, clear it.
       if (live.activeModule && live.disabledModules.includes(live.activeModule.mode)) {
         live.activeModule = null;
         live.ytState = null;
         for (const sock of live.sockets) send(sock as any, { type: "module:state", roomId: live.roomId, activeModule: null });
       }
-      // Push a settings update so clients refresh their picker.
       for (const sock of live.sockets) send(sock as any, { type: "room:settings", roomId: live.roomId, disabledModules: live.disabledModules });
     }
     const payload = buildStatePayload(live);
@@ -304,8 +284,6 @@ app.patch("/rooms/:roomId", async (req, reply) => {
   });
 });
 
-// ── NPC API (AI-driven NPCs in rooms) ───────────────────────────────────────
-
 function buildNpcSystemPrompt(name: string, cfg: any): string {
   return [
     `You are ${name}, a character in a Dungeons & Dragons world.`,
@@ -325,14 +303,12 @@ function buildNpcSystemPrompt(name: string, cfg: any): string {
   ].join("\n");
 }
 
-// List NPCs in a room
 app.get("/rooms/:roomId/npcs", async (req, reply) => {
   const roomId = String((req as any).params?.roomId || "");
   const npcs = await prisma.roomNpc.findMany({ where: { roomId }, orderBy: { createdAt: "asc" } });
   return reply.send({ ok: true, npcs });
 });
 
-// Create NPC
 app.post("/rooms/:roomId/npcs", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -346,14 +322,10 @@ app.post("/rooms/:roomId/npcs", async (req, reply) => {
     data: { roomId, name, portrait: (typeof body.portrait === "string" ? body.portrait : "🧙").slice(0, 10), config, createdBy: u.id },
   });
 
-  // Save greeting as the first message
   if (config.greeting) {
     await prisma.npcMessage.create({ data: { npcId: npc.id, role: "assistant", content: config.greeting } });
   }
 
-  // Cross-system glue: if this room has a Campaign Ledger, auto-create an
-  // NpcEncounter row so the DM gets a "we've met this character" entry
-  // without having to double-enter them in the ledger UI. Idempotent on name.
   try {
     const campaign = await prisma.campaign.findFirst({ where: { roomId } });
     if (campaign) {
@@ -376,7 +348,6 @@ app.post("/rooms/:roomId/npcs", async (req, reply) => {
   return reply.send({ ok: true, npc });
 });
 
-// Update NPC
 app.put("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -390,7 +361,6 @@ app.put("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
   return reply.send({ ok: true, npc });
 });
 
-// Delete NPC
 app.delete("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -399,18 +369,12 @@ app.delete("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-// Get NPC chat history
 app.get("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
   const npcId = String((req as any).params?.npcId || "");
   const messages = await prisma.npcMessage.findMany({ where: { npcId }, orderBy: { createdAt: "asc" }, take: 100 });
   return reply.send({ ok: true, messages });
 });
 
-// Chat with NPC — sends to Claude, returns AI response.
-// Per-user daily cap protects the Anthropic bill from a runaway client or
-// test loop. 100/day is generous for real play (a 4-hour session with
-// chatty NPCs rarely exceeds ~40 messages per player) and tight enough
-// that a stuck retry loop self-throttles before draining credits.
 const NPC_DAILY_CAP_PER_USER = 100;
 const npcCooldowns = new Map<string, number>();
 const npcDailyCounts = new Map<string, { date: string; n: number }>();
@@ -418,7 +382,6 @@ app.post("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-  // Daily per-user AI cap (resets at UTC midnight).
   const today = new Date().toISOString().slice(0, 10);
   const cur = npcDailyCounts.get(u.id);
   if (cur && cur.date === today && cur.n >= NPC_DAILY_CAP_PER_USER) {
@@ -426,7 +389,6 @@ app.post("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
   }
   npcDailyCounts.set(u.id, cur && cur.date === today ? { date: today, n: cur.n + 1 } : { date: today, n: 1 });
 
-  // Rate limit: 1 msg per 3s per user
   const cdKey = u.id;
   const now = Date.now();
   if ((npcCooldowns.get(cdKey) || 0) > now - 3000) return reply.code(429).send({ ok: false, error: "slow_down" });
@@ -442,10 +404,8 @@ app.post("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
 
   const cfg = (npc.config as any) || {};
 
-  // Save user message
   await prisma.npcMessage.create({ data: { npcId, userId: u.id, userName: u.name || "", role: "user", content } });
 
-  // Get recent conversation (last 30 messages for context window)
   const history = await prisma.npcMessage.findMany({ where: { npcId }, orderBy: { createdAt: "asc" }, take: 30 });
   const claudeMessages = history.map((m: any) => ({
     role: m.role as "user" | "assistant",

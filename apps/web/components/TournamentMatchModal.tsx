@@ -26,11 +26,6 @@ type Match = {
   entryB: { id: string; displayName: string; userId: string | null } | null;
 };
 
-/**
- * Per-match modal: live Twitch embed if a caster is set, score reporting
- * for participants, confirm/dispute for opponents, full admin overrides
- * for staff. Auto-polls match state every 8s while open.
- */
 export default function TournamentMatchModal({
   tournamentId,
   matchId,
@@ -132,7 +127,6 @@ export default function TournamentMatchModal({
         color: "rgba(255,255,255,.92)",
         fontFamily: "inherit",
       }}>
-        {/* Header */}
         <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(245,130,32,.18)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: 11, color: ACCENT, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 800 }}>
@@ -145,7 +139,6 @@ export default function TournamentMatchModal({
           <button onClick={onClose} style={{ width: 32, height: 32, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 4, color: "rgba(255,255,255,.7)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
         </div>
 
-        {/* Live status banner */}
         {isLive && (
           <div style={{
             padding: "10px 18px",
@@ -196,7 +189,6 @@ export default function TournamentMatchModal({
           </a>
         )}
 
-        {/* Twitch embed */}
         {match.twitchLogin && isLive && (
           <div style={{ padding: 12, background: "#000" }}>
             <iframe
@@ -214,7 +206,6 @@ export default function TournamentMatchModal({
           </div>
         )}
 
-        {/* Body */}
         <div style={{ padding: 18 }}>
           {match.status === "PENDING" && (
             <div style={{ padding: 20, background: "rgba(255,255,255,.03)", borderRadius: 4, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 13 }}>
@@ -222,7 +213,6 @@ export default function TournamentMatchModal({
             </div>
           )}
 
-          {/* Score reporting */}
           {canReport && (
             <div style={{ padding: 14, background: "rgba(20,14,8,.6)", border: "1px solid rgba(245,130,32,.25)", borderRadius: 4, marginBottom: 12 }}>
               <Label>Report Score</Label>
@@ -277,7 +267,6 @@ export default function TournamentMatchModal({
             </button>
           )}
 
-          {/* Admin tools */}
           {isStaff && (
             <details style={{ marginTop: 14, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 4, padding: 10 }}>
               <summary style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", color: ACCENT, cursor: "pointer" }}>Admin Tools</summary>

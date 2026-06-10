@@ -50,8 +50,6 @@ export default function LandingLobbyCard({
       onClick={() => onOpen(lobby)}
       className="lp-wall-card"
       style={{
-        // Inline tilt — keeps the heavy stuff in the stylesheet, only
-        // transform varies per pointer move so paints stay cheap.
         transform: `perspective(900px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
         ["--lp-card-accent" as any]: accent,
         ["--lp-card-px" as any]: `${tilt.px}%`,

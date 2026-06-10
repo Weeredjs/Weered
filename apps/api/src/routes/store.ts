@@ -1,23 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
-// /store + /inventory + /market — closed-loop Paper economy storefront.
-// Store sells items (with optional max-supply mints, weekly rotations).
-// Inventory lists owned items, equip/unequip, consume.
-// Marketplace lets users list and trade owned items P2P with a 7-day
-// expiry. The 5-min sweeper here flips expired ACTIVE listings to EXPIRED.
-//
-// Note: store/market do their own paper $transaction blocks (rather than
-// going through awardPaper) because they need atomic item + balance
-// updates in a single transaction.
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
 };
 
 export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
-
-  // ── Store ─────────────────────────────────────────────────────────────
 
   app.get("/store", async (req, reply) => {
     const q: any = (req as any).query || {};
@@ -111,8 +100,6 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  // ── Inventory ─────────────────────────────────────────────────────────
-
   app.get("/inventory", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -188,8 +175,6 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, consumed: true, unlockTarget: ui.item.unlockTarget });
   });
 
-  // ── Marketplace ───────────────────────────────────────────────────────
-
   app.get("/market", async (req, reply) => {
     const q: any = (req as any).query || {};
     const where: any = { status: "ACTIVE" };
@@ -222,7 +207,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       ok: true,
       listings: listings.map((l: any) => {
         const seller = sellerMap.get(l.sellerId) as any;
-        const item = itemMap.get(l.itemId);
+        const item = itemMap.get(l.itemId) as any;
         return {
           ...l,
           sellerName: seller?.name || "Unknown",
@@ -332,7 +317,6 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  // Sweeper: flip expired ACTIVE listings to EXPIRED every 5 min.
   setInterval(async () => {
     try {
       await (prisma as any).marketListing.updateMany({

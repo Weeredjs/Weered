@@ -1,0 +1,798 @@
+/* =============================================
+   BROADCAST THEME — matte console + amber tally
+   Idle = matte black; Active = backlit amber key
+   ============================================= */
+html[data-weered-theme="broadcast"] {
+  --weered-bg:       #0e0e10;
+  --weered-panel:    rgba(20, 20, 22, 0.95);
+  --weered-panel2:   rgba(14, 14, 16, 0.96);
+  --weered-border:   rgba(232, 168, 60, 0.18);
+  --weered-border2:  rgba(232, 168, 60, 0.32);
+  --weered-text:     rgba(240, 234, 216, 0.96);
+  --weered-muted:    rgba(200, 190, 170, 0.65);
+
+  --weered-accent-1:    #e8a83c;
+  --weered-accent-2:    #b8801c;
+  --weered-accent-bg:   rgba(232, 168, 60, 0.14);
+  --weered-accent-ring: rgba(232, 168, 60, 0.35);
+  --weered-accent-grad: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%);
+}
+
+@keyframes broadcastTallyPulse {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+
+/* Body base */
+html[data-weered-theme="broadcast"] body {
+  background: #0e0e10 !important;
+  color: rgba(240,234,216,0.96);
+}
+
+/* PANELS — matte with grain overlay */
+html[data-weered-theme="broadcast"] .weered-panel,
+html[data-weered-theme="broadcast"] .weered-panel2,
+html[data-weered-theme="broadcast"] .weered-presence,
+html[data-weered-theme="broadcast"] .weered-left,
+html[data-weered-theme="broadcast"] .weered-right,
+html[data-weered-theme="broadcast"] .weered-overlay-panel {
+  position: relative;
+  background:
+    url('/themes/broadcast/panel-grain.png') repeat,
+    linear-gradient(180deg, rgba(22,22,24,0.96) 0%, rgba(14,14,16,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.22),
+    0 2px 6px rgba(0,0,0,0.5) !important;
+}
+
+/* DYMO LABEL STRIP — section titles */
+html[data-weered-theme="broadcast"] .weered-left-title,
+html[data-weered-theme="broadcast"] .weered-presence-title,
+html[data-weered-theme="broadcast"] .weered-rr-section-title {
+  display: inline-block !important;
+  background: linear-gradient(180deg, #0a0a0a 0%, #181818 100%) !important;
+  color: rgba(245,238,220,0.95) !important;
+  padding: 4px 12px !important;
+  border-radius: 3px !important;
+  font-family: 'Barlow Condensed', 'Oswald', 'Arial Narrow', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.18em !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  opacity: 1 !important;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.14),
+    0 -1px 0 rgba(0,0,0,0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.24),
+    0 1px 2px rgba(0,0,0,0.6);
+  transform: rotate(-0.3deg);
+  margin-bottom: 4px;
+}
+
+/* Kill any Ishimura LED dots carrying over */
+html[data-weered-theme="broadcast"] .weered-left-title::before,
+html[data-weered-theme="broadcast"] .weered-presence-title::before,
+html[data-weered-theme="broadcast"] .weered-rr-section-title::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* LEFT RAIL LINKS — matte keys */
+html[data-weered-theme="broadcast"] .weered-left-link {
+  background: linear-gradient(180deg, #18181a 0%, #0e0e10 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,234,216,0.82) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  padding: 7px 12px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.55),
+    0 0 0 1px rgba(232,168,60,0.16),
+    0 1px 2px rgba(0,0,0,0.5) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="broadcast"] .weered-left-link:hover {
+  background: linear-gradient(180deg, #1c1c1e 0%, #141416 100%) !important;
+  color: rgba(245,238,220,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.55),
+    0 0 0 1px rgba(232,168,60,0.42),
+    0 0 10px rgba(232,168,60,0.15) !important;
+}
+
+/* ACTIVE "LIT" STATE — backlit amber key */
+html[data-weered-theme="broadcast"] .weered-left-link-active,
+html[data-weered-theme="broadcast"] .weered-dock-tab-active,
+html[data-weered-theme="broadcast"] .weered-rr-module-btn-active,
+html[data-weered-theme="broadcast"] .weered-rr-room-card-active {
+  background: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%) !important;
+  color: rgba(20,10,4,0.95) !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,180,0.55),
+    inset 0 -1px 0 rgba(0,0,0,0.25),
+    inset 0 0 16px rgba(255,210,120,0.25),
+    0 0 0 1px rgba(232,168,60,0.65),
+    0 0 14px rgba(232,168,60,0.32) !important;
+  text-shadow: 0 1px 0 rgba(255,230,170,0.4);
+  animation: broadcastTallyPulse 2.8s ease-in-out infinite;
+}
+
+/* BUTTONS — matte console keys */
+html[data-weered-theme="broadcast"] .weered-btn {
+  background: linear-gradient(180deg, #1a1a1c 0%, #0e0e10 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,234,216,0.88) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  padding: 7px 14px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.25),
+    0 1px 2px rgba(0,0,0,0.5) !important;
+  transition: all 0.12s !important;
+}
+html[data-weered-theme="broadcast"] .weered-btn:hover {
+  background: linear-gradient(180deg, #22221e 0%, #141412 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -1px 2px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.45),
+    0 0 10px rgba(232,168,60,0.18) !important;
+}
+html[data-weered-theme="broadcast"] .weered-btn:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.75),
+    0 0 0 1px rgba(232,168,60,0.30) !important;
+}
+
+/* USER CORNER — matte console panel */
+html[data-weered-theme="broadcast"] .weered-usercorner {
+  background:
+    url('/themes/broadcast/panel-grain.png') repeat,
+    linear-gradient(180deg, rgba(22,22,24,0.96) 0%, rgba(12,12,14,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.30),
+    0 0 14px rgba(232,168,60,0.08),
+    0 2px 8px rgba(0,0,0,0.6) !important;
+}
+
+/* USER CORNER ACTIONS — matte keys */
+html[data-weered-theme="broadcast"] .weered-uc-action {
+  background: linear-gradient(180deg, #18181a 0%, #0e0e10 100%) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,234,216,0.82) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(232,168,60,0.22) !important;
+}
+html[data-weered-theme="broadcast"] .weered-uc-action:hover {
+  color: rgba(232,168,60,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 0 0 1px rgba(232,168,60,0.50),
+    0 0 10px rgba(232,168,60,0.20) !important;
+}
+
+/* LOBBY TABS */
+html[data-weered-theme="broadcast"] .weered-lobby-tabs {
+  background: linear-gradient(180deg, #0a0a0a, #141414) !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  padding: 3px !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.22) !important;
+}
+html[data-weered-theme="broadcast"] .weered-lobby-tab {
+  background: transparent !important;
+  color: rgba(200,190,170,0.60) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+}
+html[data-weered-theme="broadcast"] .weered-lobby-tab:hover {
+  color: rgba(240,196,120,0.85) !important;
+}
+html[data-weered-theme="broadcast"] .weered-lobby-tab-active {
+  background: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%) !important;
+  color: rgba(20,10,4,0.95) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,180,0.55),
+    inset 0 0 14px rgba(255,210,120,0.22),
+    0 0 0 1px rgba(232,168,60,0.55),
+    0 0 10px rgba(232,168,60,0.25) !important;
+  text-shadow: 0 1px 0 rgba(255,230,170,0.4);
+}
+
+/* BURNER DOCK — sealed console */
+html[data-weered-theme="broadcast"] .weered-dock {
+  position: relative;
+  background:
+    url('/themes/broadcast/panel-grain.png') repeat,
+    linear-gradient(180deg, rgba(22,22,24,0.97) 0%, rgba(12,12,14,0.99) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.30),
+    0 0 0 3px rgba(0,0,0,0.6),
+    0 0 26px rgba(232,168,60,0.08),
+    0 6px 18px rgba(0,0,0,0.7) !important;
+}
+html[data-weered-theme="broadcast"] .weered-dock::before,
+html[data-weered-theme="broadcast"] .weered-dock::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* BURNER TITLE */
+html[data-weered-theme="broadcast"] .weered-dock-title {
+  color: rgba(240,234,216,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.18em !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.8);
+}
+
+/* DOCK TABS */
+html[data-weered-theme="broadcast"] .weered-dock-tabs {
+  background: linear-gradient(180deg, #0a0a0a, #141414) !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.22) !important;
+}
+html[data-weered-theme="broadcast"] .weered-dock-tab {
+  background: transparent !important;
+  color: rgba(200,190,170,0.60) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  border-radius: 3px !important;
+  font-size: 11px !important;
+}
+html[data-weered-theme="broadcast"] .weered-dock-tab:hover {
+  color: rgba(240,196,120,0.85) !important;
+}
+
+/* DOCK BUBBLES */
+html[data-weered-theme="broadcast"] .weered-dock-bubble {
+  background: linear-gradient(180deg, #14141a, #0e0e14) !important;
+  border: 0 !important;
+  border-radius: 4px 4px 4px 1px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 0 1px rgba(232,168,60,0.18) !important;
+}
+html[data-weered-theme="broadcast"] .weered-dock-bubble div {
+  color: rgba(240,234,216,0.92) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  text-shadow: none;
+}
+html[data-weered-theme="broadcast"] .weered-dock-bubble-me {
+  background: linear-gradient(180deg, #2a1f0a, #1a1408) !important;
+  border-radius: 4px 4px 1px 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,200,100,0.14),
+    0 0 0 1px rgba(232,168,60,0.42) !important;
+}
+html[data-weered-theme="broadcast"] .weered-dock-bubble-me div {
+  color: rgba(245,215,155,0.95) !important;
+}
+
+/* DOCK CLOSE + COMPOSE + SEND — matte keys with amber label */
+html[data-weered-theme="broadcast"] .weered-dock-close,
+html[data-weered-theme="broadcast"] .weered-dock-compose,
+html[data-weered-theme="broadcast"] .weered-dock-send {
+  background: linear-gradient(180deg, #18181a, #0e0e10) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(232,168,60,0.85) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.30) !important;
+}
+html[data-weered-theme="broadcast"] .weered-dock-compose:hover,
+html[data-weered-theme="broadcast"] .weered-dock-send:hover {
+  background: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%) !important;
+  color: rgba(20,10,4,1) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,180,0.50),
+    inset 0 0 12px rgba(255,210,120,0.22),
+    0 0 0 1px rgba(232,168,60,0.55),
+    0 0 12px rgba(232,168,60,0.28) !important;
+}
+
+/* DOCK CONVERSATION HEADER */
+html[data-weered-theme="broadcast"] .weered-dock-conv-header {
+  background: linear-gradient(180deg, rgba(40,28,14,0.35), rgba(18,13,8,0.25)) !important;
+  border-bottom: 1px solid rgba(232,168,60,0.20) !important;
+}
+
+/* RIGHT RAIL — ID CHIP */
+html[data-weered-theme="broadcast"] .weered-rr-id-chip {
+  background: linear-gradient(180deg, #0a0a0c, #141418) !important;
+  border: 0 !important;
+  color: rgba(232,168,60,0.85) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.35) !important;
+}
+
+/* RIGHT RAIL — PRIMARY + JOIN */
+html[data-weered-theme="broadcast"] .weered-rr-primary,
+html[data-weered-theme="broadcast"] .weered-rr-join {
+  background: linear-gradient(180deg, #18181a, #0e0e10) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(232,168,60,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.35) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-primary:hover,
+html[data-weered-theme="broadcast"] .weered-rr-join:hover {
+  background: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%) !important;
+  color: rgba(20,10,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,180,0.50),
+    0 0 0 1px rgba(232,168,60,0.55),
+    0 0 12px rgba(232,168,60,0.28) !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-primary-solid {
+  background: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%) !important;
+  color: rgba(20,10,4,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,180,0.55),
+    inset 0 0 14px rgba(255,210,120,0.22),
+    0 0 0 1px rgba(232,168,60,0.55),
+    0 0 12px rgba(232,168,60,0.22) !important;
+  text-shadow: 0 1px 0 rgba(255,230,170,0.4);
+}
+
+/* RIGHT RAIL — CREATE PANEL */
+html[data-weered-theme="broadcast"] .weered-rr-create-panel {
+  background: linear-gradient(180deg, #14141a, #0a0a10) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.32) !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-create-title {
+  display: inline-block !important;
+  background: linear-gradient(180deg, #0a0a0a 0%, #181818 100%) !important;
+  color: rgba(245,238,220,0.95) !important;
+  padding: 3px 10px !important;
+  border-radius: 3px !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 0 0 1px rgba(232,168,60,0.24) !important;
+  transform: rotate(-0.3deg);
+}
+
+/* RIGHT RAIL — MODULE BUTTONS */
+html[data-weered-theme="broadcast"] .weered-rr-module-btn {
+  background: linear-gradient(180deg, #14141a, #0a0a10) !important;
+  border: 0 !important;
+  color: rgba(200,190,170,0.72) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(232,168,60,0.18) !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-module-btn:hover {
+  color: rgba(240,196,120,0.90) !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(232,168,60,0.38) !important;
+}
+
+/* RIGHT RAIL — CARDS + ROWS */
+html[data-weered-theme="broadcast"] .weered-rr-room-card,
+html[data-weered-theme="broadcast"] .weered-rr-friend-row,
+html[data-weered-theme="broadcast"] .weered-rr-crew-row,
+html[data-weered-theme="broadcast"] .weered-dock-thread {
+  background: linear-gradient(180deg, #18181a, #101012) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px rgba(232,168,60,0.15) !important;
+  transition: all 0.15s !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-room-card:hover,
+html[data-weered-theme="broadcast"] .weered-rr-friend-row:hover,
+html[data-weered-theme="broadcast"] .weered-rr-crew-row:hover,
+html[data-weered-theme="broadcast"] .weered-dock-thread:hover {
+  background: linear-gradient(180deg, #1c1c1e, #141416) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(232,168,60,0.38),
+    0 0 10px rgba(232,168,60,0.12) !important;
+}
+
+/* MOD PANEL */
+html[data-weered-theme="broadcast"] .weered-rr-mod-panel {
+  background: linear-gradient(180deg, #14141a, #0a0a10) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.28) !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-mod-panel button {
+  background: linear-gradient(180deg, #18181a, #0e0e10) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(232,168,60,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.30) !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-status-chip {
+  background: linear-gradient(180deg, #2a1f0a, #1a1408) !important;
+  border: 0 !important;
+  color: rgba(240,196,120,0.95) !important;
+  font-family: 'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif !important;
+  letter-spacing: 0.14em !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,120,0.15),
+    0 0 0 1px rgba(232,168,60,0.45),
+    0 0 8px rgba(232,168,60,0.15) !important;
+}
+
+/* INPUTS — matte broadcast input */
+html[data-weered-theme="broadcast"] input,
+html[data-weered-theme="broadcast"] textarea,
+html[data-weered-theme="broadcast"] .weered-input,
+html[data-weered-theme="broadcast"] .weered-presence-search {
+  background: linear-gradient(180deg, #0a0a0c, #141418) !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  color: rgba(240,234,216,0.95) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.28) !important;
+}
+html[data-weered-theme="broadcast"] input:focus,
+html[data-weered-theme="broadcast"] textarea:focus {
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(232,168,60,0.60),
+    0 0 10px rgba(232,168,60,0.22) !important;
+}
+html[data-weered-theme="broadcast"] input::placeholder,
+html[data-weered-theme="broadcast"] textarea::placeholder {
+  color: rgba(200,190,170,0.40) !important;
+}
+
+/* RETINT — green → amber tally */
+html[data-weered-theme="broadcast"] span[style*="background: #22c55e"],
+html[data-weered-theme="broadcast"] span[style*="background:#22c55e"] {
+  background: rgba(232,168,60,0.95) !important;
+  box-shadow: 0 0 4px rgba(232,168,60,0.65) !important;
+}
+html[data-weered-theme="broadcast"] span[style*="background: #f59e0b"],
+html[data-weered-theme="broadcast"] span[style*="background:#f59e0b"] {
+  background: rgba(255,210,120,1) !important;
+  box-shadow: 0 0 6px rgba(232,168,60,0.7), 0 0 10px rgba(232,168,60,0.35) !important;
+}
+
+/* Room card live badge — amber retint */
+html[data-weered-theme="broadcast"] .weered-rr-room-card div[style*="rgba(34,197,94"] {
+  background: rgba(232,168,60,0.10) !important;
+  border-color: rgba(232,168,60,0.35) !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-room-card span[style*="rgba(134,239,172"] {
+  color: rgba(240,200,120,0.95) !important;
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace !important;
+}
+html[data-weered-theme="broadcast"] .weered-rr-room-card > div[style*="background: #5800E5"],
+html[data-weered-theme="broadcast"] .weered-rr-room-card > div[style*="background:#5800E5"] {
+  background: rgba(232,168,60,0.9) !important;
+  box-shadow: 0 0 4px rgba(232,168,60,0.5) !important;
+}
+/* Hide purple top accent line from room cards */
+html[data-weered-theme="broadcast"] .weered-rr-room-card > div[style*="linear-gradient(90deg"] {
+  display: none !important;
+}
+
+/* SITE FOOTER + ICON STRIP */
+html[data-weered-theme="broadcast"] .weered-icon-strip-btn {
+  background: linear-gradient(180deg, #18181a, #0e0e10) !important;
+  border-radius: 3px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 2px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.22) !important;
+}
+html[data-weered-theme="broadcast"] .weered-icon-strip-btn:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 0 0 1px rgba(232,168,60,0.50),
+    0 0 10px rgba(232,168,60,0.20) !important;
+}
+html[data-weered-theme="broadcast"] .weered-icon-strip-btn-active {
+  background: linear-gradient(180deg, #f0b04a 0%, #d18a20 50%, #a86a10 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,180,0.55),
+    0 0 0 1px rgba(232,168,60,0.55),
+    0 0 12px rgba(232,168,60,0.30) !important;
+}
+
+/* LOBBY CARDS */
+html[data-weered-theme="broadcast"] .weered-lobby-grid > * {
+  background:
+    url('/themes/broadcast/panel-grain.png') repeat,
+    linear-gradient(180deg, rgba(22,22,24,0.95) 0%, rgba(14,14,16,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.22),
+    0 2px 6px rgba(0,0,0,0.5) !important;
+  transition: box-shadow 0.2s !important;
+}
+html[data-weered-theme="broadcast"] .weered-lobby-grid > *:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.50),
+    0 0 14px rgba(232,168,60,0.18) !important;
+}
+
+/* HERO — subtle scanline overlay only here */
+html[data-weered-theme="broadcast"] .weered-hero-content {
+  position: relative;
+  background:
+    url('/themes/broadcast/panel-grain.png') repeat,
+    linear-gradient(180deg, rgba(26,22,16,0.95) 0%, rgba(14,12,10,0.98) 100%) !important;
+  background-blend-mode: overlay !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 0 0 1px rgba(232,168,60,0.32),
+    0 0 18px rgba(232,168,60,0.10),
+    0 3px 10px rgba(0,0,0,0.6) !important;
+}
+html[data-weered-theme="broadcast"] .weered-hero-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.12) 0px,
+    rgba(0,0,0,0.12) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  border-radius: 5px;
+}
+
+/* SCROLLBAR — amber */
+html[data-weered-theme="broadcast"] *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(232,168,60,0.45), rgba(140,90,20,0.55)) !important;
+  box-shadow: 0 0 3px rgba(232,168,60,0.25);
+}
+html[data-weered-theme="broadcast"] *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(240,196,120,0.65), rgba(180,120,40,0.7)) !important;
+}
+html[data-weered-theme="broadcast"] *::-webkit-scrollbar-track {
+  background: rgba(10,10,12,0.6) !important;
+}
+
+/* TEXT links */
+html[data-weered-theme="broadcast"] a {
+  color: rgba(240,196,120,0.92);
+  transition: color 0.15s;
+}
+html[data-weered-theme="broadcast"] a:hover {
+  color: rgba(255,220,150,1);
+}
+
+/* ── Broadcast retint: purple (#5800E5, rgba(88,0,229)) → amber ── */
+/* Border retints */
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.5"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.4"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.3"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.2"],
+html[data-weered-theme="broadcast"] *[style*="rgba(88,0,229,.1"] {
+  border-color: rgba(232,168,60,0.35) !important;
+}
+/* Background retints */
+html[data-weered-theme="broadcast"] *[style*="background: rgba(88,0,229"],
+html[data-weered-theme="broadcast"] *[style*="background:rgba(88,0,229"] {
+  background: rgba(232,168,60,0.12) !important;
+}
+/* Solid purple */
+html[data-weered-theme="broadcast"] *[style*="#5800E5"],
+html[data-weered-theme="broadcast"] *[style*="#5800e5"] {
+  color: rgba(232,168,60,0.95) !important;
+}
+/* Lavender/violet text retints (167,139,250 and 216,180,254) */
+html[data-weered-theme="broadcast"] *[style*="rgba(167,139,250"],
+html[data-weered-theme="broadcast"] *[style*="rgba(216,180,254"] {
+  color: rgba(240,196,120,0.95) !important;
+}
+
+/* ── Verified badge — green → amber ── */
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.16"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.18"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.20"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.10"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94,.08"] {
+  background: rgba(232,168,60,0.14) !important;
+  border-color: rgba(232,168,60,0.40) !important;
+  color: rgba(240,196,120,0.95) !important;
+}
+html[data-weered-theme="broadcast"] *[style*="rgb(134,239,172"],
+html[data-weered-theme="broadcast"] *[style*="#22C55E"],
+html[data-weered-theme="broadcast"] *[style*="#22c55e"] {
+  color: rgba(240,196,120,0.95) !important;
+}
+
+/* ── LOBBY tag on lobby cards — retint ── */
+html[data-weered-theme="broadcast"] .weered-lobby-grid *[style*="rgba(34,197,94"],
+html[data-weered-theme="broadcast"] .weered-lobby-grid *[style*="rgba(88,0,229"] {
+  background: rgba(232,168,60,0.14) !important;
+  border-color: rgba(232,168,60,0.40) !important;
+  color: rgba(240,196,120,0.95) !important;
+}
+
+/* ── "What can you do here?" button — matte-ify any purple-bordered buttons ── */
+html[data-weered-theme="broadcast"] button[style*="rgba(88,0,229"] {
+  background: linear-gradient(180deg, #18181a, #0e0e10) !important;
+  color: rgba(232,168,60,0.95) !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(232,168,60,0.35) !important;
+}
+
+/* ── Broader purple variations — catches indigo/violet across the app ── */
+html[data-weered-theme="broadcast"] *[style*="rgba(124,58,237"],
+html[data-weered-theme="broadcast"] *[style*="rgba(139,92,246"],
+html[data-weered-theme="broadcast"] *[style*="rgba(167,139,250"],
+html[data-weered-theme="broadcast"] *[style*="rgba(196,181,253"],
+html[data-weered-theme="broadcast"] *[style*="rgba(192,132,252"],
+html[data-weered-theme="broadcast"] *[style*="#7C3AED"],
+html[data-weered-theme="broadcast"] *[style*="#7c3aed"],
+html[data-weered-theme="broadcast"] *[style*="#8B5CF6"],
+html[data-weered-theme="broadcast"] *[style*="#8b5cf6"],
+html[data-weered-theme="broadcast"] *[style*="#A855F7"],
+html[data-weered-theme="broadcast"] *[style*="#a855f7"] {
+  color: rgba(240,196,120,0.95) !important;
+  border-color: rgba(232,168,60,0.35) !important;
+}
+
+/* Purple bg patterns → matte amber-bordered */
+html[data-weered-theme="broadcast"] *[style*="background: rgba(124,58,237"],
+html[data-weered-theme="broadcast"] *[style*="background:rgba(124,58,237"],
+html[data-weered-theme="broadcast"] *[style*="background: rgba(139,92,246"],
+html[data-weered-theme="broadcast"] *[style*="background:rgba(139,92,246"] {
+  background: rgba(232,168,60,0.12) !important;
+}
+
+/* ── Pink / magenta (favorite stars etc.) → amber ── */
+/* Tailwind pink-500/600 and common hex pinks */
+html[data-weered-theme="broadcast"] *[style*="#EC4899"],
+html[data-weered-theme="broadcast"] *[style*="#ec4899"],
+html[data-weered-theme="broadcast"] *[style*="#DB2777"],
+html[data-weered-theme="broadcast"] *[style*="#db2777"],
+html[data-weered-theme="broadcast"] *[style*="#F472B6"],
+html[data-weered-theme="broadcast"] *[style*="#f472b6"],
+html[data-weered-theme="broadcast"] *[style*="#BE185D"],
+html[data-weered-theme="broadcast"] *[style*="#be185d"],
+html[data-weered-theme="broadcast"] *[style*="rgba(236,72,153"],
+html[data-weered-theme="broadcast"] *[style*="rgba(219,39,119"],
+html[data-weered-theme="broadcast"] *[style*="rgba(244,114,182"],
+html[data-weered-theme="broadcast"] *[style*="rgb(236,72,153"],
+html[data-weered-theme="broadcast"] *[style*="rgb(244,114,182"] {
+  color: rgba(232,168,60,0.95) !important;
+}
+html[data-weered-theme="broadcast"] *[style*="background: #EC4899"],
+html[data-weered-theme="broadcast"] *[style*="background:#EC4899"],
+html[data-weered-theme="broadcast"] *[style*="background: #ec4899"],
+html[data-weered-theme="broadcast"] *[style*="background:#ec4899"],
+html[data-weered-theme="broadcast"] *[style*="background: #DB2777"],
+html[data-weered-theme="broadcast"] *[style*="background:#DB2777"] {
+  background: rgba(232,168,60,0.95) !important;
+  box-shadow: 0 0 4px rgba(232,168,60,0.6) !important;
+}
+
+/* ── Any remaining green online dots / indicators we missed ── */
+html[data-weered-theme="broadcast"] *[style*="#22c55e"],
+html[data-weered-theme="broadcast"] *[style*="#22C55E"],
+html[data-weered-theme="broadcast"] *[style*="#16a34a"],
+html[data-weered-theme="broadcast"] *[style*="#16A34A"],
+html[data-weered-theme="broadcast"] *[style*="rgb(34,197,94"],
+html[data-weered-theme="broadcast"] *[style*="rgba(34,197,94"] {
+  background-color: rgba(232,168,60,0.95);
+}
+html[data-weered-theme="broadcast"] *[style*="background: #22c55e"],
+html[data-weered-theme="broadcast"] *[style*="background:#22c55e"],
+html[data-weered-theme="broadcast"] *[style*="background: #22C55E"],
+html[data-weered-theme="broadcast"] *[style*="background:#22C55E"] {
+  background: rgba(232,168,60,0.95) !important;
+  box-shadow: 0 0 4px rgba(232,168,60,0.6) !important;
+}
+
+/* ── Red "VERIFIED" variants (some may use red-500) ── */
+html[data-weered-theme="broadcast"] *[style*="rgba(239,68,68,.1"],
+html[data-weered-theme="broadcast"] *[style*="rgba(239,68,68,.2"],
+html[data-weered-theme="broadcast"] *[style*="rgba(248,113,113"],
+html[data-weered-theme="broadcast"] *[style*="rgb(248,113,113"] {
+  /* leave red alone — usually reserved for destructive actions / errors */
+}
+
+/* ── Indicted / user corner badges — catch-all for remaining borders ── */
+html[data-weered-theme="broadcast"] .weered-usercorner *[style*="border"][style*="rgba(88,0,229"],
+html[data-weered-theme="broadcast"] .weered-usercorner *[style*="border"][style*="rgba(124,58,237"] {
+  border-color: rgba(232,168,60,0.45) !important;
+  color: rgba(240,196,120,0.95) !important;
+}
+
