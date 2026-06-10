@@ -107,53 +107,52 @@ const TABS = [
 type TabId = typeof TABS[number]["id"];
 
 function EconomyTab({ league, accent }: { league: string; accent: string }) {
-  const [currency, setCurrency] = useState<any[]>([]);
-  const [fragments, setFragments] = useState<any[]>([]);
+  const [data, setData] = useState<{ asOf?: string; divineChaos?: number; currencies: any[] }>({ currencies: [] });
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"currency" | "fragment">("currency");
   const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, fRes] = await Promise.all([
-        ninjaFetch(`${POE_NINJA}/currencyoverview?league=${encodeURIComponent(league)}&type=Currency`),
-        ninjaFetch(`${POE_NINJA}/currencyoverview?league=${encodeURIComponent(league)}&type=Fragment`),
-      ]);
-      setCurrency((cRes.lines || []).sort((a: any, b: any) => (b.chaosEquivalent || 0) - (a.chaosEquivalent || 0)));
-      setFragments((fRes.lines || []).sort((a: any, b: any) => (b.chaosEquivalent || 0) - (a.chaosEquivalent || 0)));
+      const j: any = await apiFetch(`/poe/economy?league=${encodeURIComponent(league)}`);
+      setData({ asOf: j?.asOf, divineChaos: j?.divineChaos, currencies: Array.isArray(j?.currencies) ? j.currencies : [] });
     } catch (e) {
-      console.warn("poe.ninja currency error:", e);
+      console.warn("economy error:", e);
+      setData({ currencies: [] });
     }
     setLoading(false);
   }, [league]);
 
   useEffect(() => { load(); }, [load]);
 
-  const items = view === "currency" ? currency : fragments;
   const filtered = search
-    ? items.filter(i => i.currencyTypeName?.toLowerCase().includes(search.toLowerCase()))
-    : items;
+    ? data.currencies.filter((i: any) => (i.name || i.id || "").toLowerCase().includes(search.toLowerCase()))
+    : data.currencies;
+
+  const asOfLabel = (() => {
+    if (!data.asOf) return "";
+    try {
+      const d = new Date(data.asOf);
+      return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) + " " + d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    } catch { return ""; }
+  })();
 
   if (loading) return <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading Wraeclast economy...</div>;
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        <button onClick={() => setView("currency")} style={{
-          ...S.btn, fontSize: 11, padding: "5px 10px",
-          borderColor: view === "currency" ? `${accent}44` : undefined,
-          background: view === "currency" ? `${accent}12` : undefined,
-          color: view === "currency" ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
-          fontWeight: view === "currency" ? 700 : 500,
-        }}>Currency ({currency.length})</button>
-        <button onClick={() => setView("fragment")} style={{
-          ...S.btn, fontSize: 11, padding: "5px 10px",
-          borderColor: view === "fragment" ? `${accent}44` : undefined,
-          background: view === "fragment" ? `${accent}12` : undefined,
-          color: view === "fragment" ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
-          fontWeight: view === "fragment" ? 700 : 500,
-        }}>Fragments ({fragments.length})</button>
+      {/* Official Currency Exchange header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          {data.divineChaos ? (
+            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>
+              1 Divine = <span style={{ color: accent, fontFamily: "monospace" }}>{data.divineChaos.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> Chaos
+            </span>
+          ) : <span style={{ fontSize: 12, opacity: 0.5 }}>{data.currencies.length} currencies</span>}
+        </div>
+        <span style={{ fontSize: 9, color: "rgba(148,163,184,.45)", letterSpacing: ".5px" }}>
+          OFFICIAL EXCHANGE{asOfLabel ? ` · ${asOfLabel}` : ""}
+        </span>
       </div>
 
       <input
@@ -164,63 +163,59 @@ function EconomyTab({ league, accent }: { league: string; accent: string }) {
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        {filtered.map(item => {
-          const spark = item.receiveSparkLine?.data || item.paySparkLine?.data || null;
-          const clr = trendColor(spark);
-          const pct = trendPercent(spark);
-          const iconUrl = item.currencyTypeName
-            ? `https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvQ3VycmVuY3lEdXBsaWNhdGUiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MX1d/7111ac5c4e/CurrencyDuplicate.png`
-            : null;
-          const detailIcon = item.detailsId
-            ? `https://poe.ninja/image/currency/${item.detailsId}.png`
-            : null;
-          return (
-            <div key={item.detailsId || item.currencyTypeName} style={{
-              ...S.card, display: "flex", alignItems: "center", gap: 8,
-              transition: "border-color .12s",
-            }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
-            >
-              <div style={{
-                width: 32, height: 32, borderRadius: 2,
-                background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                overflow: "hidden",
-              }}>
-                {detailIcon ? (
-                  <img src={detailIcon} alt={item.currencyTypeName + " icon"} style={{ width: 26, height: 26, objectFit: "contain" }}
-                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 16, opacity: 0.4 }}>{"\u{1FA99}"}</span>
-                )}
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {item.currencyTypeName}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: accent, fontFamily: "monospace" }}>
-                    {(item.chaosEquivalent || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                  </span>
-                  <span style={{ fontSize: 9, color: "rgba(148,163,184,.45)" }}>chaos</span>
-                  {pct && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: clr, fontFamily: "monospace" }}>{pct}</span>
-                  )}
-                </div>
-              </div>
-
-              {spark && spark.length >= 2 && (
-                <MiniSparkline data={spark} color={clr} width={50} height={18} />
+        {filtered.map((item: any) => (
+          <div key={item.id} style={{
+            ...S.card, display: "flex", alignItems: "center", gap: 8,
+            transition: "border-color .12s",
+          }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}44`)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: 2,
+              background: `${accent}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              overflow: "hidden",
+            }}>
+              {item.icon ? (
+                <img src={item.icon} alt={(item.name || item.id) + " icon"} style={{ width: 26, height: 26, objectFit: "contain" }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <span style={{ fontSize: 16, opacity: 0.4 }}>{"\u{1FA99}"}</span>
               )}
             </div>
-          );
-        })}
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.92)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item.name || item.id}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: accent, fontFamily: "monospace" }}>
+                  {(item.chaos || 0).toLocaleString(undefined, { maximumFractionDigits: item.chaos >= 100 ? 0 : 1 })}
+                </span>
+                <span style={{ fontSize: 9, color: "rgba(148,163,184,.45)" }}>chaos</span>
+                {item.divine != null && item.divine >= 0.01 && (
+                  <span style={{ fontSize: 9, color: "rgba(148,163,184,.55)", fontFamily: "monospace" }}>
+                    {item.divine.toLocaleString(undefined, { maximumFractionDigits: 2 })} div
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {item.volume ? (
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,.6)", fontFamily: "monospace" }}>
+                  {Number(item.volume).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </div>
+                <div style={{ fontSize: 8, color: "rgba(148,163,184,.4)", letterSpacing: ".3px" }}>VOL</div>
+              </div>
+            ) : null}
+          </div>
+        ))}
       </div>
 
       {filtered.length === 0 && (
-        <EmptyState title="No results." hint="Try a different search." />
+        <EmptyState title="No currency data." hint="The exchange digest may not be published yet for this league." />
       )}
     </div>
   );
