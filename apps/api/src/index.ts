@@ -3909,8 +3909,8 @@ async function main() {
         }
 
         if (msg.type === "chat:pin" || msg.type === "chat:unpin") {
-          if (!ws.user?.id || !ws.joinedRoomId) return;
-          const room = rooms.get(ws.joinedRoomId);
+          if (!ws.user?.id || !ws.roomId) return;
+          const room = rooms.get(ws.roomId);
           if (!room) return;
           if (!isModOrOwner(room, ws.user.id, ws.user.globalRole)) return;
           const msgId = String((msg as any).msgId || "");
@@ -3930,8 +3930,8 @@ async function main() {
         }
 
         if (msg.type === "chat:typing") {
-          if (!ws.user?.id || !ws.joinedRoomId) return;
-          const room = rooms.get(ws.joinedRoomId);
+          if (!ws.user?.id || !ws.roomId) return;
+          const room = rooms.get(ws.roomId);
           if (!room || !room.users.has(ws.user.id)) return;
           broadcast(room, {
             type: "chat:typing",
@@ -3958,8 +3958,8 @@ async function main() {
         if (msg.type === "launch:set" || msg.type === "launch:clear"
             || msg.type === "launch:slot" || msg.type === "launch:ready"
             || msg.type === "launch:fire" || msg.type === "launch:abort") {
-          if (!ws.user || !ws.joinedRoomId) return;
-          const room = rooms.get(ws.joinedRoomId);
+          if (!ws.user || !ws.roomId) return;
+          const room = rooms.get(ws.roomId);
           if (!room) return;
           if (!room.users.has(ws.user.id)) return;
           const launch = ensureLaunch(room);

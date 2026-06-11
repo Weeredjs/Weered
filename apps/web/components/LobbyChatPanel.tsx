@@ -1215,7 +1215,14 @@ function MoreMenu({
 
 function TypingIndicator({ roomId, meId }: { roomId: string; meId?: string }) {
   const liveTyping = useRoomTyping(roomId);
-  const typing = liveTyping.filter((e: any) => e.userId !== meId);
+  const [, setTick] = useState(0);
+  const fresh = Date.now() - 5000;
+  const typing = liveTyping.filter((e: any) => e.userId !== meId && e.ts > fresh);
+  useEffect(() => {
+    if (!liveTyping.length) return;
+    const t = setInterval(() => setTick(x => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [liveTyping.length]);
   if (!typing.length) return null;
   const names = typing.slice(0, 3).map((t: any) => t.name);
   const rest = typing.length - names.length;
