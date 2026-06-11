@@ -612,6 +612,7 @@ export default function UserCorner() {
                 fontSize: 12, fontStyle: "italic",
                 color: "rgba(240,232,214,.7)",
                 overflow: "hidden", textOverflow: "ellipsis",
+                paddingRight: 3,
               }}>{primaryCrew.name}</span>
             </div>
           )}
@@ -645,7 +646,7 @@ export default function UserCorner() {
             title="Set a status"
           >
             {status.emoji && <span style={{ fontSize: 13, flexShrink: 0 }}>{status.emoji}</span>}
-            <span style={{ fontSize: 11, fontStyle: "italic", color: status.text ? "rgba(240,232,214,.80)" : "rgba(148,163,184,.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 11, fontStyle: "italic", color: status.text ? "rgba(240,232,214,.80)" : "rgba(148,163,184,.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 3 }}>
               {status.text || "Set a status\u2026"}
             </span>
           </button>
