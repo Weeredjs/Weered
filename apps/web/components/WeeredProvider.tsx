@@ -622,6 +622,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const m   = msg.msg as ChatMsg;
         if (!m?.id) return;
         setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), m].slice(-200) }));
+        const authorId = (m as any)?.user?.id;
+        if (authorId) setTypingByRoom(prev => {
+          const cur = prev[rid];
+          if (!cur || !cur.some(e => e.userId === authorId)) return prev;
+          return { ...prev, [rid]: cur.filter(e => e.userId !== authorId) };
+        });
         try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } })); } catch {}
         return;
       }
