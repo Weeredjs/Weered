@@ -187,7 +187,7 @@ export default function PresenceRow({
           {activePlatformGlyph && <span style={{ display: "inline-flex", flexShrink: 0 }}>{activePlatformGlyph}</span>}
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {livePresence.activity}
-            {livePresence.detail ? <span style={{ opacity: 0.65, fontWeight: 400, fontStyle: "italic" }}> · {livePresence.detail.slice(0, 40)}</span> : null}
+            {livePresence.detail ? <span style={{ opacity: 0.65, fontWeight: 400, fontStyle: "italic", paddingRight: 3 }}> · {livePresence.detail.slice(0, 40)}</span> : null}
           </span>
         </span>
       );
@@ -196,7 +196,7 @@ export default function PresenceRow({
       return (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, opacity: 0.82 }}>
           {statusEmoji && <span style={{ flexShrink: 0 }}>{statusEmoji}</span>}
-          {statusText && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: "italic" }}>{statusText}</span>}
+          {statusText && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: "italic", paddingRight: 3 }}>{statusText}</span>}
         </span>
       );
     }

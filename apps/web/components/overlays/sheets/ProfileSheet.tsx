@@ -672,13 +672,13 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         {((profile as any).statusText || (profile as any).statusEmoji) && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             {(profile as any).statusEmoji && <span style={{ fontSize: 15 }}>{(profile as any).statusEmoji}</span>}
-            {(profile as any).statusText && <span style={{ fontStyle: "italic", color: "rgba(243,244,246,.85)" }}>{(profile as any).statusText}</span>}
+            {(profile as any).statusText && <span style={{ fontStyle: "italic", color: "rgba(243,244,246,.85)", paddingRight: 3 }}>{(profile as any).statusText}</span>}
           </div>
         )}
         {(profile as any).primaryCrew?.name && (
           <a href={`/crew/${encodeURIComponent((profile as any).primaryCrew.id)}`} style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", width: "fit-content" }}>
             <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 900, letterSpacing: "1px", color: ((profile as any).primaryCrew.accentColor || "#a78bfa"), border: `1px solid ${((profile as any).primaryCrew.accentColor || "#a78bfa")}55`, padding: "1px 7px" }}>[{(profile as any).primaryCrew.tag}]</span>
-            <span style={{ fontSize: 13, fontStyle: "italic", color: "rgba(240,232,214,.78)" }}>{(profile as any).primaryCrew.name}</span>
+            <span style={{ fontSize: 13, fontStyle: "italic", color: "rgba(240,232,214,.78)", paddingRight: 3 }}>{(profile as any).primaryCrew.name}</span>
           </a>
         )}
         <div style={{ fontSize: 11, opacity: 0.4, fontFamily: "monospace" }}>
