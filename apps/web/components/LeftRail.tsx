@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOverlay } from "./overlays/OverlayProvider";
-import { useWeered } from "./WeeredProvider";
+import { useWeered, useRoomUsers } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
 import { useUserHover } from "./UserHoverCard";
 import RoleIcon, { getRoleDisplayName, TierIcon } from "./RoleIcon";
@@ -159,7 +159,8 @@ export default function LeftRail() {
   const { openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
   const router = useRouter();
-  const { users, joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } = useWeered() as any;
+  const { joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } = useWeered() as any;
+  const users = useRoomUsers(activeRoomId);
 
   const [lobbyTheme, setLobbyTheme] = useState<string | null>(null);
   useEffect(() => {
