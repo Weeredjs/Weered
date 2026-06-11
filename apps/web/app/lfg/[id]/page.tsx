@@ -53,7 +53,8 @@ export async function generateStaticParams() {
   return GUIDES.map((g) => ({ id: g.lobby_id }));
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const g = findGuide(params.id);
   if (!g) return { title: "LFG guide not found · Weered" };
   const title = `How to find a ${g.game_name} ${g.noun_singular} on Weered`;
@@ -68,7 +69,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default function LfgGuidePage({ params }: { params: { id: string } }) {
+export default async function LfgGuidePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const g = findGuide(params.id);
   if (!g) notFound();
 

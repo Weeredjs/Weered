@@ -12,7 +12,8 @@ async function fetchBounty(id: string) {
   } catch { return null; }
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const b = await fetchBounty(params.id);
   if (!b) {
     return { title: "Bounty — Weered", description: "A Windrose bounty on Weered." };
@@ -36,7 +37,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default async function BountyPage({ params }: { params: { id: string } }) {
+export default async function BountyPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const b = await fetchBounty(params.id);
   return <BountyView id={params.id} initial={b} />;
 }

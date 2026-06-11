@@ -12,7 +12,8 @@ async function fetchDossier(userId: string) {
   } catch { return null; }
 }
 
-export async function generateMetadata({ params }: { params: { userId: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ userId: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const d = await fetchDossier(decodeURIComponent(params.userId));
   const name = d?.user?.name || "Hunter";
   const kills = d?.hunter?.kills ?? 0;
@@ -31,7 +32,8 @@ export async function generateMetadata({ params }: { params: { userId: string } 
   };
 }
 
-export default async function HunterPage({ params }: { params: { userId: string } }) {
+export default async function HunterPage(props: { params: Promise<{ userId: string }> }) {
+  const params = await props.params;
   const d = await fetchDossier(decodeURIComponent(params.userId));
   return <HunterDossierView userId={params.userId} initial={d} />;
 }

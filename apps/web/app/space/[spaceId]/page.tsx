@@ -1,9 +1,10 @@
 ﻿"use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 
 type Room = { id: string; name: string; roomType: string; privacyMode: string };
 
-export default function SpaceRooms({ params }: any) {
+export default function SpaceRooms(props: any) {
+  const params = use(props.params) as { spaceId: string };
   const { spaceId } = params;
   const [rooms, setRooms] = useState<Room[]>([]);
 

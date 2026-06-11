@@ -18,7 +18,8 @@ const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: strin
   },
 };
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const id = decodeURIComponent(params.id);
   let name = id;
   let description = `Join the ${id} lobby on Weered. Live rooms, real-time chat, and community presence.`;
@@ -73,13 +74,18 @@ async function fetchLobbyName(id: string): Promise<string> {
   return id;
 }
 
-export default async function LobbyIdLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { id: string };
-}) {
+export default async function LobbyIdLayout(
+  props: {
+    children: React.ReactNode;
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const id = decodeURIComponent(params.id);
   const name = await fetchLobbyName(id);
   const breadcrumbLd = {
