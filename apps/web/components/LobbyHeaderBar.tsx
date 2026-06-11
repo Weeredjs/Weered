@@ -5,7 +5,7 @@ import SteamLobbyHeader from "./SteamLobbyHeader";
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useWeered } from "./WeeredProvider";
+import { useWeered, useRoomUsers } from "./WeeredProvider";
 import { ui } from "./weeredUi";
 import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
@@ -82,10 +82,7 @@ export default function LobbyHeaderBar({
   const [roomResults, setRoomResults]     = React.useState<RoomResult[]>([]);
   const [searching, setSearching]         = React.useState(false);
 
-  const people: PersonLite[] = React.useMemo(
-    () => (Array.isArray(w?.users) ? w.users : []),
-    [w?.users]
-  );
+  const people: PersonLite[] = useRoomUsers(w?.activeRoomId) as any;
 
   const searchRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 

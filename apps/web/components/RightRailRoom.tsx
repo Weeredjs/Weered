@@ -1,7 +1,7 @@
 "use client";
 import InviteModal from "./InviteModal";
 import { useOverlay } from "./overlays/OverlayProvider";
-import { useWeered } from "./WeeredProvider";
+import { useWeered, useRoomUsers } from "./WeeredProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { weeredConfirm } from "../lib/confirm";
 import EmptyState from "./EmptyState";
@@ -35,8 +35,8 @@ function canPromote(globalRole: string, roomRole: string) {
   return g === "god" || g === "staff" || g === "admin" || r === "owner";
 }
 
-function extractParticipants(ctx: any, roomId: string): Person[] {
-  const primary = ctx?.usersByRoom?.[roomId];
+function extractParticipants(ctx: any, roomId: string, liveUsers?: any[]): Person[] {
+  const primary = liveUsers;
   if (Array.isArray(primary) && primary.length) return primary.map(normUser).filter(Boolean);
   const tries = [
     ctx?.presence?.rooms?.[roomId]?.users,
@@ -218,6 +218,7 @@ function CrewPanel() {
 export default function RightRailRoom({ roomId }: { roomId: string }) {
   const { replaceTop } = useOverlay();
   const ctx = useWeered() as any;
+  const liveUsers = useRoomUsers(roomId);
 
   const myGlobalRole    = useMemo(() => bestMyRole(ctx), [ctx]);
   const myRoomRole      = useMemo(() => String(ctx?.role ?? "member"), [ctx]);
@@ -225,14 +226,14 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const canPromoteUsers = useMemo(() => canPromote(myGlobalRole, myRoomRole), [myGlobalRole, myRoomRole]);
 
   const people = useMemo(() => {
-    const arr = extractParticipants(ctx, roomId);
+    const arr = extractParticipants(ctx, roomId, liveUsers);
     const seen = new Set<string>();
     return arr.filter(p => {
       const k = String(p.id ?? p.name ?? "");
       if (!k || seen.has(k)) return false;
       seen.add(k); return true;
     });
-  }, [ctx, roomId]);
+  }, [ctx, roomId, liveUsers]);
 
   const admin    = ctx?.admin ?? ctx?.adminByRoom?.[roomId] ?? null;
   const knocks   = useMemo((): Array<{ userId: string; name: string; ts: number }> => admin?.knocks ?? [], [admin]);

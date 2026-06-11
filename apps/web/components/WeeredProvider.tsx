@@ -50,16 +50,12 @@ type Ctx = {
   wsReady: boolean; wsState: number;
   activeRoomId: string; joinedRoomId: string; currentLobbyId: string;
   setActiveRoomId: (id: string) => void;
-  users: RoomUser[]; msgs: ChatMsg[];
-  usersByRoom: Record<string, RoomUser[]>;
-  msgsByRoom: Record<string, ChatMsg[]>;
   metaByRoom: Record<string, RoomMeta>;
   adminByRoom: Record<string, AdminState>;
   moduleByRoom: Record<string, ModuleState>;
   ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
   launchByRoom: Record<string, LaunchSnapshot | null>;
   voiceByRoom: Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>;
-  typingByRoom: Record<string, { userId: string; name: string; ts: number }[]>;
   pinnedByRoom: Record<string, string[]>;
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
@@ -109,6 +105,55 @@ function readSettings(): any {
     const raw = typeof window !== "undefined" ? localStorage.getItem(SETTINGS_KEY) : null;
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
+}
+
+// ── Hot-path store (presence / chat / typing) ────────────────────────────────
+// These maps change on every message, keystroke and presence tick. They live
+// outside React context so an update only re-renders components subscribed
+// through the useRoom* hooks — not every useWeered() consumer.
+type HotMaps = {
+  usersByRoom: Record<string, RoomUser[]>;
+  msgsByRoom: Record<string, ChatMsg[]>;
+  typingByRoom: Record<string, { userId: string; name: string; ts: number }[]>;
+};
+const EMPTY_USERS: RoomUser[] = [];
+const EMPTY_MSGS: ChatMsg[] = [];
+const EMPTY_TYPING: { userId: string; name: string; ts: number }[] = [];
+const hotStore = {
+  state: { usersByRoom: {}, msgsByRoom: {}, typingByRoom: {} } as HotMaps,
+  subs: new Set<() => void>(),
+  set<K extends keyof HotMaps>(key: K, updater: React.SetStateAction<HotMaps[K]>) {
+    const prev = hotStore.state[key];
+    const next = typeof updater === "function" ? (updater as (p: HotMaps[K]) => HotMaps[K])(prev) : updater;
+    if (next === prev) return;
+    hotStore.state = { ...hotStore.state, [key]: next };
+    hotStore.subs.forEach((fn) => { try { fn(); } catch {} });
+  },
+  subscribe(fn: () => void) { hotStore.subs.add(fn); return () => { hotStore.subs.delete(fn); }; },
+};
+export function useRoomUsers(roomId?: string): RoomUser[] {
+  return React.useSyncExternalStore(
+    hotStore.subscribe,
+    () => (roomId ? hotStore.state.usersByRoom[roomId] || EMPTY_USERS : EMPTY_USERS),
+    () => EMPTY_USERS,
+  );
+}
+export function useUsersByRoom(): Record<string, RoomUser[]> {
+  return React.useSyncExternalStore(hotStore.subscribe, () => hotStore.state.usersByRoom, () => hotStore.state.usersByRoom);
+}
+export function useRoomMsgs(roomId?: string): ChatMsg[] {
+  return React.useSyncExternalStore(
+    hotStore.subscribe,
+    () => (roomId ? hotStore.state.msgsByRoom[roomId] || EMPTY_MSGS : EMPTY_MSGS),
+    () => EMPTY_MSGS,
+  );
+}
+export function useRoomTyping(roomId?: string): { userId: string; name: string; ts: number }[] {
+  return React.useSyncExternalStore(
+    hotStore.subscribe,
+    () => (roomId ? hotStore.state.typingByRoom[roomId] || EMPTY_TYPING : EMPTY_TYPING),
+    () => EMPTY_TYPING,
+  );
 }
 
 const WeeredContext = createContext<Ctx | null>(null);
@@ -186,8 +231,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [activeRoomId,  setActiveRoomId ] = useState("");
   const [joinedRoomId,  setJoinedRoomId ] = useState("");
   const [currentLobbyId, setCurrentLobbyId] = useState("");
-  const [usersByRoom,   setUsersByRoom  ] = useState<Record<string, RoomUser[]>>({});
-  const [msgsByRoom,    setMsgsByRoom   ] = useState<Record<string, ChatMsg[]>>({});
+  const setUsersByRoom: React.Dispatch<React.SetStateAction<Record<string, RoomUser[]>>> = (u) => hotStore.set("usersByRoom", u);
+  const setMsgsByRoom:  React.Dispatch<React.SetStateAction<Record<string, ChatMsg[]>>>  = (u) => hotStore.set("msgsByRoom", u);
   const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
   const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
@@ -195,7 +240,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
   const [voiceByRoom,   setVoiceByRoom  ] = useState<Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>>({});
-  const [typingByRoom,  setTypingByRoom ] = useState<Record<string, { userId: string; name: string; ts: number }[]>>({});
+  const setTypingByRoom: React.Dispatch<React.SetStateAction<Record<string, { userId: string; name: string; ts: number }[]>>> = (u) => hotStore.set("typingByRoom", u);
   const [pinnedByRoom,  setPinnedByRoom ] = useState<Record<string, string[]>>({});
   const [rooms,         setRooms        ] = useState<any[]>([]);
   const [passwordRoomId, setPasswordRoomId] = useState("");
@@ -204,8 +249,6 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const authed     = useMemo(() => Boolean(token), [token]);
   const meta       = activeRoomId ? (metaByRoom[activeRoomId]   || null)    : null;
   const admin      = activeRoomId ? (adminByRoom[activeRoomId]  || null)    : null;
-  const users      = activeRoomId ? (usersByRoom[activeRoomId]  || [])      : [];
-  const msgs       = activeRoomId ? (msgsByRoom[activeRoomId]   || [])      : [];
   const joinStatus = activeRoomId ? (statusByRoom[activeRoomId] || "idle")  : "idle";
   const moduleState: ModuleState = activeRoomId ? (moduleByRoom[activeRoomId] ?? null) : null;
 
@@ -1175,9 +1218,9 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
-    users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
-    typingByRoom, pinnedByRoom,
+    meta, admin, role, joinStatus, statusByRoom,
+    metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
+    pinnedByRoom,
     moduleState, setModuleState,
     setVoiceMode, raiseHand, lowerHand, approveSpeaker, revokeSpeaker,
     rooms, join, leave, knock,
@@ -1193,9 +1236,9 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId,
-    users, msgs, meta, admin, role, joinStatus, statusByRoom,
-    usersByRoom, msgsByRoom, metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom,
-    typingByRoom, pinnedByRoom,
+    meta, admin, role, joinStatus, statusByRoom,
+    metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
+    pinnedByRoom,
     moduleState,
     rooms,
     passwordRoomId, passwordError,

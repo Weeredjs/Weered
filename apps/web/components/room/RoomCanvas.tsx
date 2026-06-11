@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useWeered } from "../WeeredProvider";
+import { useWeered, useRoomUsers, useRoomMsgs } from "../WeeredProvider";
 import BungieLinkPill from "../BungieLinkPill";
 import RoomHeader from "./RoomHeader";
 import RoomChatPanel from "../RoomChatPanel";
@@ -95,6 +95,8 @@ const CHAT_HEIGHT_MOBILE  = "100%";
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
   const activeRid = (w?.activeRoomId || "").replace("room:", "");
+  const liveUsers = useRoomUsers(activeRid);
+  const liveMsgs = useRoomMsgs(activeRid);
   const joinStatus = w?.statusByRoom?.[activeRid] || w?.statusByRoom?.["room:" + activeRid] || w?.statusByRoom?.[roomId] || "idle";
   const { openSheet } = useOverlay();
   const voice = useVoice();
@@ -332,7 +334,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  const msgs = Array.isArray(w?.msgs) ? w.msgs : [];
+  const msgs = liveMsgs;
   const prevMsgCountRef = useRef(msgs.length);
   useEffect(() => {
     if (msgs.length > prevMsgCountRef.current) {
@@ -374,7 +376,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     return null;
   }, [w?.meta?.thumbnail, articleUrl]);
 
-  const memberCount = Array.isArray(w?.users) ? w.users.length : 0;
+  const memberCount = liveUsers.length;
   const locked      = Boolean(w?.meta?.locked);
 
   useEffect(() => {
@@ -500,7 +502,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         bannerUrl={w?.meta?.bannerUrl || null}
         accentColor={w?.meta?.accentColor || null}
         pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
-        users={Array.isArray(w?.users) ? w.users : []}
+        users={liveUsers}
         lobbyName={lobbyContext?.name || w?.meta?.lobbyName || null}
         lobbyLogo={lobbyContext?.logoUrl || w?.meta?.lobbyLogo || null}
         onPillClick={(id) => handleModuleClick(id as NonNullable<StageMode>)}
@@ -589,7 +591,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         {stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
           <div style={{ height: "100%" }}>
             <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} roomUsers={(() => {
-              const wsUsers = Array.isArray(w?.users) ? w.users : [];
+              const wsUsers = liveUsers;
               const me: any = w?.me;
               const meId = String(me?.id || "");
               if (meId && !wsUsers.some((u: any) => String(u?.id || "") === meId)) {

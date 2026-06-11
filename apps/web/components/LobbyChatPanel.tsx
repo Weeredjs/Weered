@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
-import { useWeered } from "./WeeredProvider";
+import { useWeered, useRoomMsgs, useRoomUsers, useRoomTyping } from "./WeeredProvider";
 import { avatarBg } from "../lib/avatarColor";
 import { useUserHover } from "./UserHoverCard";
 import EmptyState from "./EmptyState";
@@ -1247,13 +1247,13 @@ export default function LobbyChatPanel(
     return forced || activeRoomId;
   })();
 
-  const msgsByRoom = ctx?.msgsByRoom || {};
   const metaByRoom = ctx?.metaByRoom || {};
   const adminByRoom = ctx?.adminByRoom || {};
   const statusByRoom = ctx?.statusByRoom || {};
 
-  const msgs = Array.isArray(msgsByRoom[effectiveRoomId]) ? msgsByRoom[effectiveRoomId]
-    : Array.isArray(ctx?.msgs) ? ctx.msgs : [];
+  const msgs = useRoomMsgs(effectiveRoomId);
+  const liveRoomUsers = useRoomUsers(effectiveRoomId);
+  const liveTyping = useRoomTyping(effectiveRoomId);
   const meta = metaByRoom[effectiveRoomId] || ctx?.meta || null;
   const admin = adminByRoom[effectiveRoomId] || ctx?.admin || null;
   const effectiveJoinStatus = statusByRoom[effectiveRoomId] || joinStatus;
@@ -1305,23 +1305,23 @@ export default function LobbyChatPanel(
 
   const mentionLookup = useMemo(() => {
     const out: Record<string, string> = { operator: "The Operator" };
-    const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+    const roomUsers: any[] = liveRoomUsers;
     for (const u of roomUsers) {
       const key = String(u?.usernameKey || "").toLowerCase();
       if (key && u?.name) out[key] = u.name;
     }
     return out;
-  }, [ctx?.usersByRoom, effectiveRoomId]);
+  }, [liveRoomUsers, effectiveRoomId]);
 
   const mentionCandidates = useMemo(() => {
     if (!mentionState) return [] as any[];
     const q = mentionState.query.toLowerCase();
-    const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+    const roomUsers: any[] = liveRoomUsers;
     const myId = String(ctx?.me?.id || "");
     return roomUsers
       .filter(u => u?.id && u.id !== myId && u?.name && u.name.toLowerCase().startsWith(q))
       .slice(0, 6);
-  }, [mentionState, ctx?.usersByRoom, effectiveRoomId, ctx?.me?.id]);
+  }, [mentionState, liveRoomUsers, effectiveRoomId, ctx?.me?.id]);
 
   const acceptMention = useCallback((username: string) => {
     setMentionState(s => {
@@ -1945,7 +1945,7 @@ export default function LobbyChatPanel(
                 </div>
                 <div style={{ minWidth: 0, flex: 1, opacity: deletedAt ? 0.55 : 1 }}>
                   {(() => {
-                    const roomUsers = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+                    const roomUsers: any[] = liveRoomUsers;
                     const umeta = msgUserId ? roomUsers.find((u: any) => u?.id === msgUserId) : undefined;
                     const uRole = umeta?.globalRole || m?.user?.globalRole;
                     const uTier = umeta?.tier       || m?.user?.tier;
@@ -2217,7 +2217,7 @@ export default function LobbyChatPanel(
       </div>
 
       {(() => {
-        const typing = (ctx?.typingByRoom?.[effectiveRoomId] || []).filter((e: any) => e.userId !== ctx?.me?.id);
+        const typing = liveTyping.filter((e: any) => e.userId !== ctx?.me?.id);
         if (!typing.length) return null;
         const names = typing.slice(0, 3).map((t: any) => t.name);
         const rest = typing.length - names.length;
@@ -2507,7 +2507,7 @@ export default function LobbyChatPanel(
     </div>
     <aside className="weered-chat-members" aria-label="Room members">
       {(() => {
-        const roomUsers: any[] = Array.isArray(ctx?.usersByRoom?.[effectiveRoomId]) ? ctx.usersByRoom[effectiveRoomId] : [];
+        const roomUsers: any[] = liveRoomUsers;
         if (roomUsers.length === 0) {
           return <div style={{ fontSize: 12, color: "var(--weered-muted, rgba(148,163,184,.55))", fontStyle: "italic", padding: "8px 0" }}>No one's in here yet.</div>;
         }

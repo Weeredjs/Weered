@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useWeered } from "../../components/WeeredProvider";
+import { useWeered, useUsersByRoom } from "../../components/WeeredProvider";
 import { avatarBg } from "../../lib/avatarColor";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
@@ -839,7 +839,8 @@ function SectionHeader({ icon, label, count, sub }: { icon: string; label: strin
 
 export default function HomePage() {
   const router = useRouter();
-  const { rooms, usersByRoom, me, join, joinedRoomId, joinStatus } = useWeered() as any;
+  const { rooms, me, join, joinedRoomId, joinStatus } = useWeered() as any;
+  const usersByRoom = useUsersByRoom();
 
   useEffect(() => {
     if (!me?.id) return;

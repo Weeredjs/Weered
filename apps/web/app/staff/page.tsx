@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useWeered } from "../../components/WeeredProvider";
+import { useWeered, useRoomUsers } from "../../components/WeeredProvider";
 import LobbyChatPanel from "../../components/LobbyChatPanel";
 import AnalyticsTab from "../../components/AnalyticsTab";
 
@@ -180,7 +180,7 @@ function PermissionsTab() {
 
 function OpsPresence() {
   const ctx   = useWeered() as any;
-  const users: any[] = Array.isArray(ctx?.users) ? ctx.users : [];
+  const users: any[] = useRoomUsers(ctx?.activeRoomId);
   return (
     <div>
       <div style={S.label}>Online in Ops</div>

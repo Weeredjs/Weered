@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useWeered } from "./WeeredProvider";
+import { useWeered, useRoomUsers } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
@@ -271,7 +271,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
   const w = useWeered() as any;
   const navRouter = useRouter();
-  const wsUsers: any[] = React.useMemo(() => Array.isArray(w?.users) ? w.users : [], [w?.users]);
+  const wsUsers: any[] = useRoomUsers(w?.activeRoomId);
   const globalRole = String(w?.globalRole || "").toUpperCase();
   const isStaff = ["GOD", "ADMIN", "STAFF", "SUPPORT"].includes(globalRole);
   const [lobbyOwnerId, setLobbyOwnerId] = React.useState<string>("");
