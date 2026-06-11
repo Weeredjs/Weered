@@ -305,6 +305,7 @@ model Room {
   npcs     RoomNpc[]
 
   @@unique([lobbyId, name])
+  @@index([ownerId])
 }
 
 model RoomMember {
@@ -320,6 +321,7 @@ model RoomMember {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
+  @@index([userId])
 }
 
 model RoomBan {
