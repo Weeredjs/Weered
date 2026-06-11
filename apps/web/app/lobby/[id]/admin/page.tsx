@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useWeered } from "../../../../components/WeeredProvider";
+import { useWeered, useRoomUsers } from "../../../../components/WeeredProvider";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
 import TournamentsPanel from "../../../../components/TournamentsPanel";
@@ -113,7 +113,7 @@ type NavId = typeof NAV_ITEMS[number]["id"];
 
 function AdminPresence({ lobbyId, roleNames }: { lobbyId: string; roleNames: Record<string, string> }) {
   const ctx = useWeered() as any;
-  const users: any[] = Array.isArray(ctx?.users) ? ctx.users : [];
+  const users: any[] = useRoomUsers(ctx?.activeRoomId);
 
   return (
     <div>

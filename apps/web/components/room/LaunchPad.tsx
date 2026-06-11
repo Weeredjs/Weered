@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useWeered, type LaunchSnapshot, type LaunchTarget } from "../WeeredProvider";
+import { useWeered, useRoomUsers, type LaunchSnapshot, type LaunchTarget } from "../WeeredProvider";
 
 const STEAM_LAUNCH_MODULE_TYPES = new Set([
   "WINDROSE",
@@ -11,7 +11,7 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
   const ctx: any = useWeered();
   const launch: LaunchSnapshot | null = (ctx?.launchByRoom || {})[roomId] ?? null;
   const steamLaunchable = !!moduleType && STEAM_LAUNCH_MODULE_TYPES.has(String(moduleType).toUpperCase());
-  const users: any[] = Array.isArray(ctx?.usersByRoom?.[roomId]) ? ctx.usersByRoom[roomId] : [];
+  const users: any[] = useRoomUsers(roomId);
   const me = ctx?.me;
   const meId = String(me?.id || "");
   const meGlobalRole = String(me?.globalRole || "USER");
