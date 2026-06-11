@@ -1213,6 +1213,44 @@ function MoreMenu({
   );
 }
 
+function TypingIndicator({ roomId, meId }: { roomId: string; meId?: string }) {
+  const liveTyping = useRoomTyping(roomId);
+  const typing = liveTyping.filter((e: any) => e.userId !== meId);
+  if (!typing.length) return null;
+  const names = typing.slice(0, 3).map((t: any) => t.name);
+  const rest = typing.length - names.length;
+  const label = names.length === 1
+    ? `${names[0]} is typing\u2026`
+    : names.length === 2
+      ? `${names[0]} and ${names[1]} are typing\u2026`
+      : rest > 0
+        ? `${names.join(", ")} and ${rest} other${rest === 1 ? "" : "s"} are typing\u2026`
+        : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} are typing\u2026`;
+  return (
+    <div style={{
+      padding: "4px 14px 2px",
+      fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.70))",
+      fontStyle: "italic",
+      display: "flex", alignItems: "center", gap: 6,
+      flexShrink: 0,
+      minHeight: 18,
+    }}>
+      <span style={{ display: "inline-flex", gap: 2 }}>
+        <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out infinite" }} />
+        <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out 0.2s infinite" }} />
+        <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out 0.4s infinite" }} />
+      </span>
+      {label}
+      <style>{`
+        @keyframes weered-typing {
+          0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+          30% { opacity: 1; transform: translateY(-2px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function LobbyChatPanel(
   props: {
     title?: string;
@@ -1253,7 +1291,6 @@ export default function LobbyChatPanel(
 
   const msgs = useRoomMsgs(effectiveRoomId);
   const liveRoomUsers = useRoomUsers(effectiveRoomId);
-  const liveTyping = useRoomTyping(effectiveRoomId);
   const meta = metaByRoom[effectiveRoomId] || ctx?.meta || null;
   const admin = adminByRoom[effectiveRoomId] || ctx?.admin || null;
   const effectiveJoinStatus = statusByRoom[effectiveRoomId] || joinStatus;
@@ -1645,6 +1682,7 @@ export default function LobbyChatPanel(
 
       <div
         ref={listRef}
+        data-weered-msglist
         style={{
           border: props.embedded ? "none" : "1px solid var(--weered-border)",
           borderRadius: props.embedded ? 0 : 14,
@@ -1656,6 +1694,7 @@ export default function LobbyChatPanel(
           marginBottom: props.hideInput ? 0 : 10,
         }}
       >
+        <style>{`[data-weered-msglist] > div { content-visibility: auto; contain-intrinsic-size: auto 56px; }`}</style>
         {msgs.length === 0 ? (
           <EmptyState title="Crickets." hint="Be the one who drops the first line." />
         ) : (
@@ -2216,42 +2255,7 @@ export default function LobbyChatPanel(
         )}
       </div>
 
-      {(() => {
-        const typing = liveTyping.filter((e: any) => e.userId !== ctx?.me?.id);
-        if (!typing.length) return null;
-        const names = typing.slice(0, 3).map((t: any) => t.name);
-        const rest = typing.length - names.length;
-        const label = names.length === 1
-          ? `${names[0]} is typing…`
-          : names.length === 2
-            ? `${names[0]} and ${names[1]} are typing…`
-            : rest > 0
-              ? `${names.join(", ")} and ${rest} other${rest === 1 ? "" : "s"} are typing…`
-              : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} are typing…`;
-        return (
-          <div style={{
-            padding: "4px 14px 2px",
-            fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.70))",
-            fontStyle: "italic",
-            display: "flex", alignItems: "center", gap: 6,
-            flexShrink: 0,
-            minHeight: 18,
-          }}>
-            <span style={{ display: "inline-flex", gap: 2 }}>
-              <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out infinite" }} />
-              <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out 0.2s infinite" }} />
-              <span style={{ width: 3, height: 3, borderRadius: "50%", background: "currentColor", animation: "weered-typing 1.2s ease-in-out 0.4s infinite" }} />
-            </span>
-            {label}
-            <style>{`
-              @keyframes weered-typing {
-                0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-                30% { opacity: 1; transform: translateY(-2px); }
-              }
-            `}</style>
-          </div>
-        );
-      })()}
+      <TypingIndicator roomId={effectiveRoomId} meId={ctx?.me?.id} />
 
       {!props.hideInput && (
         <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
