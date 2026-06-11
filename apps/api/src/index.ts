@@ -3783,7 +3783,8 @@ async function main() {
         tags: { route: req.routeOptions?.url || req.url },
       });
     }
-    reply.status(err.statusCode || 500).send({ error: err.message || "Internal error" });
+    const e = err as any;
+    reply.status(e.statusCode || 500).send({ error: e.message || "Internal error" });
   });
 
   await app.register(modsRoutes, { verifyToken } as any);
