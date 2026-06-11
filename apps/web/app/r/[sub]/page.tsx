@@ -1,8 +1,9 @@
 "use client";
-import React from "react";
+import React, { use } from "react";
 import { useRouter } from "next/navigation";
 
-export default function SubredditRoute({ params }: { params: { sub: string } }) {
+export default function SubredditRoute(props: { params: Promise<{ sub: string }> }) {
+  const params = use(props.params) as { sub: string };
   const router = useRouter();
   React.useEffect(() => {
     const raw = String(params?.sub || "").trim();

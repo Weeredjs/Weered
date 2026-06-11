@@ -41,7 +41,8 @@ async function loadLobbyBundle(id: string) {
   };
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const id = decodeURIComponent(params.id);
   const { lobby } = await loadLobbyBundle(id);
   const isThinForMeta = !lobby?.description || lobby.description.length < 500;
@@ -62,7 +63,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default async function LobbyAboutPage({ params }: { params: { id: string } }) {
+export default async function LobbyAboutPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const id = decodeURIComponent(params.id);
   const { lobby, rooms, posts, challenges } = await loadLobbyBundle(id);
   const isThin = !lobby?.description || lobby.description.length < 500;

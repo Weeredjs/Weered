@@ -15,7 +15,8 @@ async function fetchPost(postId: string): Promise<any | null> {
   return null;
 }
 
-export async function generateMetadata({ params }: { params: { postId: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ postId: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const post = await fetchPost(params.postId);
   const title = post?.title || "Post — Weered Forum";
   const description = post?.body ? String(post.body).slice(0, 160).replace(/\n/g, " ") : "A discussion on the Weered community forum.";
@@ -37,7 +38,8 @@ export async function generateMetadata({ params }: { params: { postId: string } 
   };
 }
 
-export default async function ForumPostPage({ params }: { params: { postId: string } }) {
+export default async function ForumPostPage(props: { params: Promise<{ postId: string }> }) {
+  const params = await props.params;
   const post = await fetchPost(params.postId);
   const url = `${SITE}/forum/${params.postId}`;
   const breadcrumb = {

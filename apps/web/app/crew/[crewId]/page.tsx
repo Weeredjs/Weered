@@ -12,7 +12,8 @@ async function fetchCrew(crewId: string) {
   } catch { return null; }
 }
 
-export async function generateMetadata({ params }: { params: { crewId: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ crewId: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = await fetchCrew(params.crewId);
   if (!c) return { title: "Crew — Weered", description: "A crew on Weered." };
   const recruitStatus = c.recruiting ? "Recruiting now" : "Closed ranks";
@@ -35,7 +36,8 @@ export async function generateMetadata({ params }: { params: { crewId: string } 
   };
 }
 
-export default async function CrewPage({ params }: { params: { crewId: string } }) {
+export default async function CrewPage(props: { params: Promise<{ crewId: string }> }) {
+  const params = await props.params;
   const c = await fetchCrew(params.crewId);
   return <CrewView crewId={params.crewId} initial={c} />;
 }

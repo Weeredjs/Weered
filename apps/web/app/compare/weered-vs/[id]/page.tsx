@@ -43,7 +43,8 @@ export async function generateStaticParams() {
   return COMPETITORS.map((c) => ({ id: c.id }));
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = findCompetitor(params.id);
   if (!c) return { title: "Comparison not found · Weered" };
   const title = `Weered vs ${c.name} — honest comparison`;
@@ -58,7 +59,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default function CompareWeeredVsPage({ params }: { params: { id: string } }) {
+export default async function CompareWeeredVsPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const c = findCompetitor(params.id);
   if (!c) notFound();
 

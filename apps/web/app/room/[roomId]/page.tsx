@@ -3,7 +3,8 @@ import RoomCanvas from "../../../components/room/RoomCanvas";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-export async function generateMetadata({ params }: { params: { roomId: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ roomId: string }> }): Promise<Metadata> {
+  const params = await props.params;
   let name = decodeURIComponent(params.roomId);
   try {
     const res = await fetch(`${API}/rooms/${encodeURIComponent(params.roomId)}`, {
@@ -26,6 +27,7 @@ export async function generateMetadata({ params }: { params: { roomId: string } 
   };
 }
 
-export default async function RoomPage({ params }: { params: { roomId: string } }) {
+export default async function RoomPage(props: { params: Promise<{ roomId: string }> }) {
+  const params = await props.params;
   return <RoomCanvas roomId={params.roomId} />;
 }
