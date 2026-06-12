@@ -430,6 +430,7 @@ model User {
 
   notoriety   Int        @default(0)
   mediaBannedUntil DateTime?
+  joinPolicy  String     @default("FRIENDS")
   paper       Int        @default(0)   // spendable virtual currency
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
