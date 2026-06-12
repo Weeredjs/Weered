@@ -429,6 +429,7 @@ model User {
   pillAccentColor   String?
 
   notoriety   Int        @default(0)
+  mediaBannedUntil DateTime?
   paper       Int        @default(0)   // spendable virtual currency
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
@@ -2996,4 +2997,32 @@ model Announcement {
 
   @@index([pinned, createdAt])
   @@index([createdAt])
+}
+
+model ChatAttachment {
+  id         String    @id @default(cuid())
+  uploaderId String
+  roomId     String    @default("")
+  url        String
+  thumbUrl   String
+  width      Int       @default(0)
+  height     Int       @default(0)
+  bytes      Int       @default(0)
+  phash      String    @default("")
+  trusted    Boolean   @default(false)
+  status     String    @default("ACTIVE")
+  reports    Int       @default(0)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([uploaderId])
+  @@index([status, expiresAt])
+  @@index([phash])
+}
+
+model BlockedImageHash {
+  id        String   @id @default(cuid())
+  phash     String   @unique
+  reason    String   @default("")
+  createdAt DateTime @default(now())
 }

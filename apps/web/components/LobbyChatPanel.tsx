@@ -553,6 +553,90 @@ type InlineTok = {
   raw: string;
 };
 
+type ChatAtt = { id: string; url: string; thumbUrl: string; w: number; h: number; trusted: boolean; expiresAt?: string | null };
+
+function authHeadersChat(): Record<string, string> {
+  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+}
+
+// Client-side screen — nsfwjs (lazy; the model ships in the package).
+let _nsfwModel: any = null;
+async function screenFile(file: File): Promise<{ ok: boolean }> {
+  try {
+    if (!_nsfwModel) {
+      // Loaded from CDN at runtime — the embedded model shards break the
+      // webpack minifier if bundled. Function() keeps both TS and webpack
+      // from statically analyzing the import.
+      const dynImport = new Function("u", "return import(u)") as (u: string) => Promise<any>;
+      const nsfwjs = await dynImport("https://esm.sh/nsfwjs@4.3.0");
+      _nsfwModel = await (nsfwjs.load ? nsfwjs.load() : nsfwjs.default.load());
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("decode")); img.src = url; });
+      const preds: { className: string; probability: number }[] = await _nsfwModel.classify(img);
+      const bad = preds.find(p => (p.className === "Porn" || p.className === "Hentai") && p.probability > 0.7);
+      return { ok: !bad };
+    } finally { URL.revokeObjectURL(url); }
+  } catch {
+    return { ok: true }; // screen unavailable — the server re-screens
+  }
+}
+
+function daysLeft(iso?: string | null): number | null {
+  if (!iso) return null;
+  const d = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400_000);
+  return d > 0 ? d : 0;
+}
+
+function AttachmentBlock({ att, mine, onOpen }: { att: ChatAtt; mine: boolean; onOpen: (att: ChatAtt) => void }) {
+  const [revealed, setRevealed] = React.useState(false);
+  const needsBlur = !att.trusted && !mine && !revealed;
+  const maxW = 280;
+  const ratio = att.w > 0 && att.h > 0 ? att.h / att.w : 0.66;
+  const h = Math.min(280, Math.round(maxW * ratio));
+  const exp = mine ? daysLeft(att.expiresAt) : null;
+  return (
+    <div style={{ marginTop: 5 }}>
+      <div
+        onClick={() => { if (needsBlur) setRevealed(true); else onOpen(att); }}
+        style={{
+          position: "relative", width: maxW, height: h, borderRadius: 10, overflow: "hidden",
+          border: "1px solid rgba(255,255,255,.1)", cursor: "pointer", background: "rgba(0,0,0,.25)",
+        }}
+      >
+        <img
+          src={`${API}${att.thumbUrl}`} alt="attachment" loading="lazy"
+          style={{
+            width: "100%", height: "100%", objectFit: "cover", display: "block",
+            filter: needsBlur ? "blur(26px) saturate(.7)" : "none",
+            transform: needsBlur ? "scale(1.1)" : "none",
+            transition: "filter .25s",
+          }}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "0.2"; }}
+        />
+        {needsBlur && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 4,
+            alignItems: "center", justifyContent: "center", textAlign: "center", padding: 10,
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.92)", textShadow: "0 1px 6px rgba(0,0,0,.8)" }}>
+              From an unranked member
+            </span>
+            <span style={{ fontSize: 10, color: "rgba(226,232,240,.75)", textShadow: "0 1px 6px rgba(0,0,0,.8)" }}>tap to view</span>
+          </div>
+        )}
+      </div>
+      {exp != null && (
+        <div style={{ fontSize: 9, color: "rgba(148,163,184,.45)", marginTop: 3, paddingRight: 3 }}>
+          expires in {exp}d · keep forever with Indicted
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChatBody({ text, onMentionClick }: { text: string; onMentionClick?: (handle: string) => void }) {
   if (!text) return null;
   const imageUrls: string[] = [];
@@ -1538,7 +1622,7 @@ export default function LobbyChatPanel(
   const joinedByMeta = Boolean((meta || admin) && !chatBlocked && !admin?.locked);
   const canType = (joinedStrict || joinedByMeta) && !chatBlocked;
   const msgTrim = String(text || "").trim();
-  const canSend = !!canType && msgTrim.length > 0;
+  const canSend = !!canType && msgTrim.length > 0; // attachment-only send handled via canSendNow below
 
   useEffect(() => {
     const el = listRef.current;
@@ -1559,10 +1643,71 @@ export default function LobbyChatPanel(
     return () => el.removeEventListener("scroll", onScroll);
   }, [markRoomReadNow, effectiveRoomId]);
 
+  const [pendingAtt, setPendingAtt] = React.useState<ChatAtt | null>(null);
+  const [attBusy, setAttBusy] = React.useState(false);
+  const [mediaElig, setMediaElig] = React.useState<any>(null);
+  const [lockOpen, setLockOpen] = React.useState(false);
+  const [lightbox, setLightbox] = React.useState<ChatAtt | null>(null);
+  const fileRef = React.useRef<HTMLInputElement | null>(null);
+
+  const fetchElig = React.useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/chat/media/eligibility`, { headers: { ...authHeadersChat() } });
+      const j = await r.json();
+      if (j?.ok) { setMediaElig(j); return j; }
+    } catch {}
+    return null;
+  }, []);
+
+  const handleFile = React.useCallback(async (file: File) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    if (file.size > 8 * 1024 * 1024) { weeredToast.error("Images max 8MB."); return; }
+    setAttBusy(true);
+    try {
+      const sc = await screenFile(file);
+      if (!sc.ok) { weeredToast.error("That one didn\u2019t pass the door check."); return; }
+      const dataUrl: string = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result || ""));
+        fr.onerror = () => rej(new Error("read"));
+        fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API}/chat/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeadersChat() },
+        body: JSON.stringify({ image: dataUrl, roomId: effectiveRoomId }),
+      });
+      const j = await r.json();
+      if (!j?.ok) {
+        if (j?.error === "locked") { setMediaElig((e: any) => ({ ...(e || {}), allowed: false, notoriety: j.notoriety, required: j.required })); setLockOpen(true); }
+        else if (j?.error === "media_banned") weeredToast.error("Media privileges are currently revoked.");
+        else if (j?.error === "failed_screen" || j?.error === "blocked_content") weeredToast.error("That one didn\u2019t pass the door check.");
+        else weeredToast.error("Upload failed.");
+        return;
+      }
+      setPendingAtt(j.attachment as ChatAtt);
+      try {
+        if (!localStorage.getItem("weered:media:welcomed")) {
+          localStorage.setItem("weered:media:welcomed", "1");
+          weeredToast.success("The Operator: You\u2019ve earned media privileges. Post like you\u2019ve got something to lose.");
+        }
+      } catch {}
+    } finally { setAttBusy(false); }
+  }, [effectiveRoomId]);
+
+  const onAttachClick = React.useCallback(async () => {
+    if (!canType || attBusy) return;
+    const e = mediaElig || await fetchElig();
+    if (e && !e.allowed) { setLockOpen(true); return; }
+    fileRef.current?.click();
+  }, [canType, attBusy, mediaElig, fetchElig]);
+
+  const canSendNow = canSend || (!!canType && !!pendingAtt);
+
   const onSend = () => {
     if (!canType) return;
     const msg = String(text || "").trim();
-    if (!msg) return;
+    if (!msg && !pendingAtt) return;
     if (msg.startsWith("/")) {
       const handled = runSlashCommand(msg, {
         me: ctx?.me,
@@ -1594,8 +1739,9 @@ export default function LobbyChatPanel(
       });
       if (handled) return;
     }
-    try { ctx?.sendChat?.(msg, replyingTo ? { replyToId: replyingTo.id } : undefined); } catch {}
+    try { ctx?.sendChat?.(msg, { ...(replyingTo ? { replyToId: replyingTo.id } : {}), ...(pendingAtt ? { attachmentId: pendingAtt.id } : {}) }); } catch {}
     setText("");
+    setPendingAtt(null);
     setReplyingTo(null);
     markRoomReadNow();
   };
@@ -2092,10 +2238,19 @@ export default function LobbyChatPanel(
                       </div>
                     </div>
                   ) : (
+                    <>
                     <ChatBody
                       text={m?.body || m?.text || ""}
                       onMentionClick={(h) => replaceTop("profile", { userId: h })}
                     />
+                    {(m as any).attachment && (
+                      <AttachmentBlock
+                        att={(m as any).attachment as ChatAtt}
+                        mine={String(m?.user?.id || "") === String(ctx?.me?.id || "")}
+                        onOpen={(a) => setLightbox(a)}
+                      />
+                    )}
+                    </>
                   )}
                   {Array.isArray((m as any).reactions) && (m as any).reactions.length > 0 && !deletedAt && (
                     <div data-reaction-ui style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
@@ -2262,10 +2417,39 @@ export default function LobbyChatPanel(
         )}
       </div>
 
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(0,0,0,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out", padding: 24 }}>
+          <img src={`${API}${lightbox.url}`} alt="attachment" style={{ maxWidth: "92vw", maxHeight: "86vh", borderRadius: 12, boxShadow: "0 24px 80px rgba(0,0,0,.6)" }} onClick={(e) => e.stopPropagation()} />
+          <div style={{ position: "absolute", bottom: 18, display: "flex", gap: 14, fontSize: 12 }}>
+            <a href={`${API}${lightbox.url}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: "rgba(216,180,254,.9)", textDecoration: "none" }}>Open original</a>
+            <span
+              onClick={(e) => { e.stopPropagation(); fetch(`${API}/chat/attachments/${lightbox.id}/report`, { method: "POST", headers: { ...authHeadersChat() } }).then(() => weeredToast.success("Reported.")).catch(() => {}); setLightbox(null); }}
+              style={{ color: "rgba(252,165,165,.8)", cursor: "pointer" }}
+            >Report</span>
+          </div>
+        </div>
+      )}
       <TypingIndicator roomId={effectiveRoomId} meId={ctx?.me?.id} />
 
       {!props.hideInput && (
         <div style={{ position: "relative", padding: "8px 10px 12px", flexShrink: 0 }}>
+          {pendingAtt && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: 6, borderRadius: 10, background: "rgba(255,255,255,.04)", border: "1px solid rgba(124,58,237,.25)", width: "fit-content" }}>
+              <img src={`${API}${pendingAtt.thumbUrl}`} alt="pending attachment" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 7 }} />
+              <span style={{ fontSize: 11, color: "rgba(200,205,215,.75)" }}>Image ready</span>
+              <button onClick={() => setPendingAtt(null)} title="Remove" style={{ border: "none", background: "transparent", color: "rgba(148,163,184,.7)", cursor: "pointer", fontSize: 13, padding: "2px 6px" }}>{"\u2715"}</button>
+            </div>
+          )}
+          {lockOpen && (
+            <div onClick={() => setLockOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(124,58,237,.08)", border: "1px solid rgba(124,58,237,.3)", cursor: "pointer", width: "fit-content" }}>
+              <span style={{ fontSize: 13 }}>{"\uD83D\uDD12"}</span>
+              <span style={{ fontSize: 11.5, color: "rgba(216,180,254,.9)" }}>
+                {mediaElig?.banned
+                  ? "Media privileges are suspended."
+                  : `Media privileges unlock at ${Number(mediaElig?.required ?? 100).toLocaleString()} rep. You\u2019re ${Math.max(0, Number(mediaElig?.required ?? 100) - Number(mediaElig?.notoriety ?? 0)).toLocaleString()} away.`}
+              </span>
+            </div>
+          )}
           {mentionState && mentionCandidates.length > 0 && (
             <div style={{
               position: "absolute",
@@ -2377,6 +2561,16 @@ export default function LobbyChatPanel(
                 });
               }}
               placeholder={canType ? "Message... (/ for commands · @ to mention)" : chatBlocked ? "Chat is locked." : "Join/admit required..."}
+              onPaste={(e) => {
+                const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"));
+                const f = item?.getAsFile?.();
+                if (f) { e.preventDefault(); void handleFile(f); }
+              }}
+              onDrop={(e) => {
+                const f = e.dataTransfer?.files?.[0];
+                if (f && f.type.startsWith("image/")) { e.preventDefault(); void handleFile(f); }
+              }}
+              onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) e.preventDefault(); }}
               disabled={!canType}
               style={{
                 flex: 1, minWidth: 0, padding: "8px 12px", borderRadius: 10,
@@ -2398,9 +2592,25 @@ export default function LobbyChatPanel(
                   }
                   if (e.key === "Escape") { e.preventDefault(); setMentionState(null); return; }
                 }
-                if (e.key === "Enter" && canSend) onSend();
+                if (e.key === "Enter" && canSendNow) onSend();
               }}
             />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.currentTarget.value = ""; }} />
+            <button
+              onClick={() => { void onAttachClick(); }}
+              disabled={!canType || attBusy}
+              title="Attach image"
+              style={{
+                borderRadius: 8, border: "1px solid rgba(255,255,255,.1)",
+                background: attBusy ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: canType && !attBusy ? "pointer" : "not-allowed",
+                color: canType ? "rgba(200,205,215,.75)" : "rgba(255,255,255,.3)",
+                transition: "background .15s, color .15s", flexShrink: 0, fontSize: 15,
+              }}
+              aria-label="Attach image"
+            >{attBusy ? "\u23F3" : "\uD83D\uDCCE"}</button>
             <button
               onClick={() => { setGifOpen(v => !v); setEmojiOpen(false); }}
               disabled={!canType}
@@ -2439,14 +2649,14 @@ export default function LobbyChatPanel(
             </button>
             <button
               onClick={onSend}
-              disabled={!canSend}
+              disabled={!canSendNow}
               title="Send"
               aria-label="Send"
               style={{
                 borderRadius: 10,
-                border: canSend ? "1px solid rgba(124,58,237,.35)" : "1px solid rgba(255,255,255,.10)",
-                background: canSend ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-                color: canSend ? "rgba(216,180,254,.95)" : "rgba(255,255,255,.4)",
+                border: canSendNow ? "1px solid rgba(124,58,237,.35)" : "1px solid rgba(255,255,255,.10)",
+                background: canSendNow ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+                color: canSendNow ? "rgba(216,180,254,.95)" : "rgba(255,255,255,.4)",
                 width: 40, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: canSend ? "pointer" : "not-allowed", transition: "all .15s",
                 flexShrink: 0,
