@@ -132,6 +132,53 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
+  // Direct room invite: "come hang where I am". Target's invitePolicy
+  // gates it; 5-min dedupe per sender+target+room.
+  const _inviteSentAt = new Map<string, number>();
+  app.post("/friends/:userId/invite", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const targetId = String((req.params as any).userId || "");
+    if (!targetId || targetId === u.id) return reply.code(400).send({ ok: false, error: "bad_target" });
+
+    let myRoomId: string | null = null; let myRoomName = "";
+    for (const [rid, rs] of rooms) {
+      if (rs.users.has(u.id)) { myRoomId = rid; myRoomName = rs.name || rid; break; }
+    }
+    if (!myRoomId) return reply.code(400).send({ ok: false, error: "not_in_room" });
+
+    const target: any = await prisma.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, invitePolicy: true } as any,
+    });
+    if (!target) return reply.code(404).send({ ok: false, error: "not_found" });
+    const policy = String(target.invitePolicy || "FRIENDS");
+    if (policy === "OFF") return reply.code(403).send({ ok: false, error: "invites_off" });
+    if (policy === "FRIENDS") {
+      const fr = await (prisma as any).friendRequest.findFirst({
+        where: { status: "ACCEPTED", OR: [{ fromId: u.id, toId: targetId }, { fromId: targetId, toId: u.id }] },
+      });
+      if (!fr) return reply.code(403).send({ ok: false, error: "friends_only" });
+    }
+
+    const key = `${u.id}:${targetId}:${myRoomId}`;
+    const last = _inviteSentAt.get(key) || 0;
+    if (Date.now() - last < 5 * 60_000) return reply.send({ ok: true, deduped: true });
+    _inviteSentAt.set(key, Date.now());
+
+    const isLobby = !!(await prisma.lobby.findUnique({ where: { id: myRoomId }, select: { id: true } }).catch(() => null));
+    const actionUrl = isLobby ? `/lobby/${encodeURIComponent(myRoomId)}` : `/room/${encodeURIComponent(myRoomId)}`;
+    await createNotification({
+      userId: targetId, type: "ROOM_INVITE",
+      title: `${u.name} invited you to ${myRoomName}`,
+      body: "Tap to join them.",
+      actorId: u.id, actorName: u.name,
+      actionUrl,
+      meta: { roomId: myRoomId, isLobby },
+    }).catch(() => {});
+    return reply.send({ ok: true });
+  });
+
   app.delete("/friends/:userId", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);

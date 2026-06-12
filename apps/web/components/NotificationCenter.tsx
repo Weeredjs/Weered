@@ -42,6 +42,7 @@ const TYPE_ICONS: Record<string, { icon: string; color: string }> = {
   FRIEND_REQUEST:     { icon: "➕", color: "rgba(52,211,153,.8)" },
   FRIEND_ACCEPTED:    { icon: "✔", color: "rgba(52,211,153,.8)" },
   CREW_INVITE:        { icon: "👥", color: "rgba(249,115,22,.8)" },
+  ROOM_INVITE:        { icon: "\u27A4", color: "rgba(34,197,94,.85)" },
   MENTION:            { icon: "@", color: "rgba(245,158,11,.8)" },
   CHALLENGE_STARTED:  { icon: "⚔", color: "rgba(239,68,68,.8)" },
   CHALLENGE_COMPLETED:{ icon: "🏆", color: "rgba(250,204,21,.8)" },

@@ -140,7 +140,7 @@ const THEME_OPTIONS: { id: Settings["theme"]; name: string; sw: string }[] = [
   { id: "gray",      name: "Gray",      sw: "#6b7280" },
 ];
 
-function JoinPolicyRow() {
+function JoinPolicyRow({ field = "joinPolicy", label = "Who can join your session", hint = "Controls the Join button others see on your profile and in their friends list." }: { field?: string; label?: string; hint?: string } = {}) {
   const [policy, setPolicy] = React.useState<string>("FRIENDS");
   const [loaded, setLoaded] = React.useState(false);
   const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -154,7 +154,7 @@ function JoinPolicyRow() {
         const me = JSON.parse(localStorage.getItem("weered_user") || "null");
         if (!me?.id) return;
         const j = await fetch(`${apiBase}/profile/${me.id}`, { headers: hdr() }).then(r => r.json());
-        if (alive && j?.joinPolicy) setPolicy(String(j.joinPolicy));
+        if (alive && j?.[field]) setPolicy(String(j[field]));
       } catch {} finally { if (alive) setLoaded(true); }
     })();
     return () => { alive = false; };
@@ -166,16 +166,16 @@ function JoinPolicyRow() {
       await fetch(`${apiBase}/profile/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...hdr() },
-        body: JSON.stringify({ joinPolicy: v }),
+        body: JSON.stringify({ [field]: v }),
       });
     } catch {}
   };
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0" }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--weered-text, rgba(243,244,246,.92))" }}>Who can join your session</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--weered-text, rgba(243,244,246,.92))" }}>{label}</div>
         <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.6))", marginTop: 2 }}>
-          Controls the Join button others see on your profile and in their friends list.
+          {hint}
         </div>
       </div>
       <select
@@ -363,6 +363,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                   <Toggle checked={s.allowDMs} onChange={(v) => patch({ allowDMs: v })} />
                 </Row>
                 <JoinPolicyRow />
+                <JoinPolicyRow field="invitePolicy" label="Who can invite you" hint="Controls who can send you room invites from their friends list." />
                 <Row label="Cookies & storage" hint="Revisit what Weered stores on your device.">
                   <button type="button" onClick={() => openConsentBanner()} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>
                     Manage
