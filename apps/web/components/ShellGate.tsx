@@ -39,7 +39,7 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact", "/mods", "/apply", "/desktop", "/why-not-discord", "/alternatives", "/tournaments", "/play", "/compare", "/lfg", "/explore", "/overlay", "/terms", "/privacy", "/guidelines", "/forgot-password", "/reset-password", "/verify-email"];
+const NO_SHELL_ROUTES = ["/", "/login", "/register", "/staff", "/about", "/premium", "/contact", "/mods", "/apply", "/desktop", "/why-not-discord", "/alternatives", "/tournaments", "/play", "/compare", "/lfg", "/explore", "/overlay", "/terms", "/privacy", "/guidelines", "/forgot-password", "/reset-password", "/verify-email", "/media-policy"];
 
 const ICO_NAV = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">

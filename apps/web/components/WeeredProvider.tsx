@@ -66,7 +66,7 @@ type Ctx = {
   knock: (roomId: string) => void;
   devLogin: (username: string) => Promise<void>;
   logout: () => void;
-  sendChat: (body: string, opts?: { replyToId?: string }) => void;
+  sendChat: (body: string, opts?: { replyToId?: string; attachmentId?: string }) => void;
   renameRoom: (name: string) => void;
   setModuleState: (mode: string | null, opts?: { url?: string; channel?: string }) => void;
   setVoiceMode: (mode: "OPEN" | "QUEUED" | "LISTEN_ONLY") => void;
@@ -1149,14 +1149,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     lastJoinedRidRef.current = "";
   }
 
-  function sendChat(body: string, opts?: { replyToId?: string }) {
+  function sendChat(body: string, opts?: { replyToId?: string; attachmentId?: string }) {
     const b = body.trim();
-    if (!b || !canChat()) return;
+    if ((!b && !opts?.attachmentId) || !canChat()) return;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     let rid = activeRoomId; try { rid = decodeURIComponent(activeRoomId); } catch {}
     const env: any = { type: "chat:send", roomId: rid, body: b };
     if (opts?.replyToId) env.replyToId = opts.replyToId;
+    if (opts?.attachmentId) env.attachmentId = opts.attachmentId;
     ws.send(JSON.stringify(env));
   }
 

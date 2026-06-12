@@ -39,6 +39,7 @@ import leagueRoutes from "./routes/league";
 import bungieRoutes from "./routes/bungie";
 import eveRoutes from "./routes/eve";
 import poeRoutes from "./routes/poe";
+import chatMediaRoutes from "./routes/chatMedia";
 import mcRoutes from "./routes/mc";
 import windroseRoutes from "./routes/windrose";
 import helldiversStratagemsRoutes from "./routes/helldivers-stratagems";
@@ -162,7 +163,8 @@ type Role = "owner" | "mod" | "member";
 type RoomUser = { id: string; name: string; role?: Role; globalRole?: string; tier?: string; avatarColor?: string | null; avatar?: string | null };
 type ReactionAgg = { emoji: string; count: number; users: string[] };
 type ReplyTo = { id: string; userId: string; userName: string; body: string };
-type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number; reactions?: ReactionAgg[]; replyTo?: ReplyTo };
+type ChatAttachmentRef = { id: string; url: string; thumbUrl: string; w: number; h: number; trusted: boolean; expiresAt?: string | null };
+type ChatMsg = { id: string; user: RoomUser; body: string; ts: number; editedAt?: number; deletedAt?: number; reactions?: ReactionAgg[]; replyTo?: ReplyTo; attachment?: ChatAttachmentRef };
 type Knock = { userId: string; name: string; ts: number };
 
 type AuditItem = {
@@ -4235,7 +4237,8 @@ async function main() {
         if (msg.type === "chat:send") {
           const roomId = normalizeRoomId(String(msg.roomId || ""));
           const body = String(msg.body || "").trim();
-          if (!roomId || !body) return;
+          const attachmentId = String((msg as any).attachmentId || "").slice(0, 40);
+          if (!roomId || (!body && !attachmentId)) return;
           const room = await ensureRoomLoaded(roomId);
           if (!room.users.has(ws.user.id)) return;
           if (room.banned.has(ws.user.id)) return;
@@ -4301,8 +4304,20 @@ async function main() {
               };
             }
           }
+          let attachment: ChatAttachmentRef | undefined;
+          if (attachmentId) {
+            try {
+              const att: any = await (prisma as any).chatAttachment.findUnique({ where: { id: attachmentId } });
+              if (att && att.uploaderId === ws.user.id && att.status === "ACTIVE"
+                  && Date.now() - new Date(att.createdAt).getTime() < 15 * 60_000) {
+                attachment = { id: att.id, url: att.url, thumbUrl: att.thumbUrl, w: att.width, h: att.height, trusted: att.trusted, expiresAt: att.expiresAt ? new Date(att.expiresAt).toISOString() : null };
+                if (!att.roomId) void (prisma as any).chatAttachment.update({ where: { id: att.id }, data: { roomId: room.roomId } }).catch(() => {});
+              }
+            } catch {}
+            if (!attachment) { send(ws, { type: "chat:rejected", roomId, reason: "bad_attachment" }); return; }
+          }
           const u = room.users.get(ws.user.id)!;
-          const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id), avatarColor: (u as any).avatarColor, avatar: (u as any).avatar }, body, ts: Date.now(), replyTo };
+          const m: ChatMsg = { id: randomUUID(), user: { id: u.id, name: u.name, role: roleOf(room, u.id), avatarColor: (u as any).avatarColor, avatar: (u as any).avatar }, body, ts: Date.now(), replyTo, attachment };
           room.msgs.push(m);
           if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
           if (room.roomId !== "lobby") {
@@ -5481,6 +5496,7 @@ async function main() {
   await app.register(bungieRoutes, { authFromHeader, awardNotoriety } as any);
   await app.register(eveRoutes,    { authFromHeader, awardNotoriety } as any);
   await app.register(poeRoutes,    { authFromHeader, awardNotoriety } as any);
+  await app.register(chatMediaRoutes, { authFromHeader, isStaff: isElevatedGlobal, createNotification } as any);
   await app.register(mcRoutes,     { authFromHeader } as any);
 
   if (process.env.BUNGIE_API_KEY) {
