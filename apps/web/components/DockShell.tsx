@@ -1019,6 +1019,7 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
               setDmThreads(cur=>{const ex=cur.find(t=>t.peerId===peerId||t.peerName.toLowerCase()===peerName.toLowerCase()); if(ex){setDmActivePeerId(ex.peerId);return cur;} setDmActivePeerId(peerId); return [{peerId,peerName,msgs:[],unread:0},...cur];});
             }}
             onJoin={roomId=>{try{(ctx as any)?.join?.(roomId);}catch{}}}
+            myRoomId={String((ctx as any)?.joinedRoomId || "")}
           />
         ) : tab==="crew" ? (
           <CrewTab
@@ -1057,9 +1058,9 @@ export default function DockShell(props: { forceMode?: "rail"|"floating" } = {})
   );
 }
 
-function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, onJoin }: {
+function FriendsTab({ apiBase, tokenMaybe, myId, myRoomId, rooms: roomUsers, onMessage, onJoin }: {
   apiBase: string; tokenMaybe: string; myId: string;
-  rooms: any[]; onMessage: (pn: string, pi: string) => void; onJoin: (r: string) => void;
+  rooms: any[]; onMessage: (pn: string, pi: string) => void; onJoin: (r: string) => void; myRoomId?: string;
 }) {
   const [friends, setFriends] = React.useState<any[]>([]);
   const [requests, setRequests] = React.useState<any[]>([]);
@@ -1100,6 +1101,13 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
   async function accept(id: string) { await fetch(`${apiBase}/friends/accept/${id}`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } }); void load(); }
   async function decline(id: string) { await fetch(`${apiBase}/friends/decline/${id}`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } }); void load(); }
   async function remove(userId: string) { await fetch(`${apiBase}/friends/${userId}`, { method: "DELETE", headers: { Authorization: `Bearer ${tokenMaybe}` } }); void load(); }
+  const [invited, setInvited] = React.useState<Record<string, boolean>>({});
+  async function invite(userId: string) {
+    try {
+      const r = await fetch(`${apiBase}/friends/${userId}/invite`, { method: "POST", headers: { Authorization: `Bearer ${tokenMaybe}` } }).then(x => x.json());
+      if (r?.ok) setInvited(prev => ({ ...prev, [userId]: true }));
+    } catch {}
+  }
 
   const online = friends.filter(f => f.online);
   const offline = friends.filter(f => !f.online);
@@ -1144,7 +1152,7 @@ function FriendsTab({ apiBase, tokenMaybe, myId, rooms: roomUsers, onMessage, on
           ?<EmptyState title="Riding solo." hint="Search a name up top to pull someone in." />
           :<>
             {online.length>0&&<div style={{ padding:"10px 14px 4px", fontSize:10, fontWeight:700, color:"var(--weered-muted)", textTransform:"uppercase" as const, letterSpacing:.5 }}>Online · {online.length}</div>}
-            {online.map(f=><FriendRow key={f.id} f={f} onMessage={onMessage} onJoin={onJoin} onRemove={remove} />)}
+            {online.map(f=><FriendRow key={f.id} f={f} onMessage={onMessage} onJoin={onJoin} onRemove={remove} onInvite={myRoomId ? invite : undefined} invited={!!invited[f.id]} />)}
             {offline.length>0&&<div style={{ padding:"10px 14px 4px", fontSize:10, fontWeight:700, color:"var(--weered-muted)", textTransform:"uppercase" as const, letterSpacing:.5, marginTop:4 }}>Offline · {offline.length}</div>}
             {offline.map(f=><FriendRow key={f.id} f={f} onMessage={onMessage} onJoin={onJoin} onRemove={remove} />)}
           </>
@@ -1181,7 +1189,7 @@ function lastSeenAgo(iso?: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:string,i:string)=>void; onJoin:(r:string)=>void; onRemove:(id:string)=>void }) {
+function FriendRow({ f, onMessage, onJoin, onRemove, onInvite, invited }: { f:any; onMessage:(n:string,i:string)=>void; onJoin:(r:string)=>void; onRemove:(id:string)=>void; onInvite?:(id:string)=>void; invited?:boolean }) {
   const role = String(f.globalRole || "").toUpperCase();
   const tier = String(f.tier || "").toUpperCase();
   const roleChip = FRIEND_ROLE_LABEL[role];
@@ -1264,6 +1272,7 @@ function FriendRow({ f, onMessage, onJoin, onRemove }: { f:any; onMessage:(n:str
       </div>
       <div style={{ display:"flex", gap:4 }}>
         <button onClick={()=>onMessage(f.name,f.id)} style={{ padding:"5px 9px", borderRadius:8, border:"1px solid var(--weered-bd2)", background:"rgba(255,255,255,.05)", color:"var(--weered-text)", fontSize:11, cursor:"pointer", fontWeight:600 }}>DM</button>
+        {onInvite&&<button disabled={invited} onClick={()=>onInvite(f.id)} style={{ padding:"5px 9px", borderRadius:8, border:invited?"1px solid rgba(34,197,94,.25)":"1px solid rgba(34,197,94,.35)", background:invited?"rgba(34,197,94,.05)":"rgba(34,197,94,.10)", color:invited?"rgba(134,239,172,.55)":"rgba(134,239,172,.95)", fontSize:11, cursor:invited?"default":"pointer", fontWeight:600 }}>{invited?"Invited \u2713":"Invite"}</button>}
         {f.online&&f.roomId&&<button onClick={()=>onJoin(f.roomId)} style={{ padding:"5px 9px", borderRadius:8, border:"1px solid var(--weered-accent-ring)", background:"var(--weered-accent-bg)", color:"var(--weered-accent-text)", fontSize:11, cursor:"pointer", fontWeight:600 }}>Join</button>}
       </div>
     </div>

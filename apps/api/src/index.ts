@@ -2944,6 +2944,7 @@ async function main() {
           nameEffect: true,
           notoriety: true,
           joinPolicy: true,
+          invitePolicy: true,
           tier: true,
           globalRole: true,
           createdAt: true,
@@ -2983,6 +2984,7 @@ async function main() {
         nameEffect: (u as any).nameEffect || null,
         notoriety: u.notoriety ?? 0,
         joinPolicy: (u as any).joinPolicy || "FRIENDS",
+        invitePolicy: (u as any).invitePolicy || "FRIENDS",
         ...(await (async () => {
           if (!viewer || viewer.id === u.id) return { friendStatus: viewer && viewer.id === u.id ? "self" : "none" };
           let friendStatus = "none"; let requestId: string | null = null;
@@ -3065,6 +3067,7 @@ async function main() {
     const nameEffect = typeof body.nameEffect === "string" && NAME_KEYS.includes(body.nameEffect) ? body.nameEffect : undefined;
     const JOIN_KEYS = ["EVERYONE", "FRIENDS", "OFF"];
     const joinPolicy = typeof body.joinPolicy === "string" && JOIN_KEYS.includes(body.joinPolicy) ? body.joinPolicy : undefined;
+    const invitePolicy = typeof body.invitePolicy === "string" && JOIN_KEYS.includes(body.invitePolicy) ? body.invitePolicy : undefined;
 
     const isHex = (s: string) => /^#[0-9a-f]{6}$/i.test(s);
     const normColor = (raw: any): string | null | undefined => {
@@ -3082,7 +3085,7 @@ async function main() {
       bio === undefined && avatarColor === undefined && avatar === undefined && bannerUrl === undefined
       && panelBgColor === undefined && panelAccentColor === undefined
       && pillBgColor === undefined && pillAccentColor === undefined
-      && statusText === undefined && statusEmoji === undefined && avatarFrame === undefined && nameEffect === undefined && joinPolicy === undefined
+      && statusText === undefined && statusEmoji === undefined && avatarFrame === undefined && nameEffect === undefined && joinPolicy === undefined && invitePolicy === undefined
     ) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
@@ -3098,6 +3101,7 @@ async function main() {
           ...(avatarFrame !== undefined && { avatarFrame: avatarFrame === "none" ? null : avatarFrame }),
           ...(nameEffect !== undefined && { nameEffect: nameEffect === "none" ? null : nameEffect }),
           ...(joinPolicy !== undefined && { joinPolicy }),
+          ...(invitePolicy !== undefined && { invitePolicy }),
           ...(panelBgColor !== undefined && { panelBgColor }),
           ...(panelAccentColor !== undefined && { panelAccentColor }),
           ...(pillBgColor !== undefined && { pillBgColor }),
