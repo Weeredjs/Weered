@@ -2943,6 +2943,7 @@ async function main() {
           avatarFrame: true,
           nameEffect: true,
           notoriety: true,
+          joinPolicy: true,
           tier: true,
           globalRole: true,
           createdAt: true,
@@ -2981,6 +2982,34 @@ async function main() {
         avatarFrame: (u as any).avatarFrame || null,
         nameEffect: (u as any).nameEffect || null,
         notoriety: u.notoriety ?? 0,
+        joinPolicy: (u as any).joinPolicy || "FRIENDS",
+        ...(await (async () => {
+          if (!viewer || viewer.id === u.id) return { friendStatus: viewer && viewer.id === u.id ? "self" : "none" };
+          let friendStatus = "none"; let requestId: string | null = null;
+          try {
+            const fr: any = await (prisma as any).friendRequest.findFirst({
+              where: { OR: [{ fromId: viewer.id, toId: u.id }, { fromId: u.id, toId: viewer.id }], status: { in: ["PENDING", "ACCEPTED"] } },
+              orderBy: { createdAt: "desc" },
+            });
+            if (fr) {
+              if (fr.status === "ACCEPTED") friendStatus = "friends";
+              else if (fr.fromId === viewer.id) friendStatus = "outgoing";
+              else { friendStatus = "incoming"; requestId = fr.id; }
+            }
+          } catch {}
+          let joinable = false; let currentRoomId: string | null = null; let currentRoomIsLobby = false;
+          const policy = (u as any).joinPolicy || "FRIENDS";
+          if (policy !== "OFF" && (policy === "EVERYONE" || friendStatus === "friends")) {
+            for (const [rid, rs] of rooms) {
+              if (rs.users.has(u.id)) { currentRoomId = rid; break; }
+            }
+            if (currentRoomId) {
+              joinable = true;
+              try { currentRoomIsLobby = !!(await prisma.lobby.findUnique({ where: { id: currentRoomId }, select: { id: true } })); } catch {}
+            }
+          }
+          return { friendStatus, friendRequestId: requestId, joinable, currentRoomId: joinable ? currentRoomId : null, currentRoomIsLobby };
+        })()),
         notorietyRank: nRank.title,
         notorietyNext: nRank.next ? { title: nRank.next.title, min: nRank.next.min } : null,
         tier: u.tier ?? "INNOCENT",
@@ -3034,6 +3063,8 @@ async function main() {
     const avatarFrame = typeof body.avatarFrame === "string" && FRAME_KEYS.includes(body.avatarFrame) ? body.avatarFrame : undefined;
     const NAME_KEYS = ["none","gold","fire","ice","toxic","royal","rainbow"];
     const nameEffect = typeof body.nameEffect === "string" && NAME_KEYS.includes(body.nameEffect) ? body.nameEffect : undefined;
+    const JOIN_KEYS = ["EVERYONE", "FRIENDS", "OFF"];
+    const joinPolicy = typeof body.joinPolicy === "string" && JOIN_KEYS.includes(body.joinPolicy) ? body.joinPolicy : undefined;
 
     const isHex = (s: string) => /^#[0-9a-f]{6}$/i.test(s);
     const normColor = (raw: any): string | null | undefined => {
@@ -3051,7 +3082,7 @@ async function main() {
       bio === undefined && avatarColor === undefined && avatar === undefined && bannerUrl === undefined
       && panelBgColor === undefined && panelAccentColor === undefined
       && pillBgColor === undefined && pillAccentColor === undefined
-      && statusText === undefined && statusEmoji === undefined && avatarFrame === undefined && nameEffect === undefined
+      && statusText === undefined && statusEmoji === undefined && avatarFrame === undefined && nameEffect === undefined && joinPolicy === undefined
     ) return reply.code(400).send({ error: "Nothing to update" });
 
     try {
@@ -3066,6 +3097,7 @@ async function main() {
           ...(statusEmoji !== undefined && { statusEmoji: statusEmoji || null }),
           ...(avatarFrame !== undefined && { avatarFrame: avatarFrame === "none" ? null : avatarFrame }),
           ...(nameEffect !== undefined && { nameEffect: nameEffect === "none" ? null : nameEffect }),
+          ...(joinPolicy !== undefined && { joinPolicy }),
           ...(panelBgColor !== undefined && { panelBgColor }),
           ...(panelAccentColor !== undefined && { panelAccentColor }),
           ...(pillBgColor !== undefined && { pillBgColor }),

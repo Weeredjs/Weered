@@ -88,6 +88,51 @@ export interface UserHoverCardProps {
   onMessage?: (userId: string, userName: string) => void;
 }
 
+function HoverFriendRow({ profile, userId }: { profile: any; userId: string }) {
+  const [status, setStatus] = React.useState<string>("");
+  const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => { setStatus(String(profile?.friendStatus || "")); }, [profile?.id, profile?.friendStatus]);
+  if (!profile || status === "self" || status === "") {
+    if (!profile) return null;
+  }
+  const hdr = (): Record<string, string> => {
+    try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  };
+  const chip: React.CSSProperties = {
+    flex: 1, padding: "6px 0", borderRadius: 6, fontSize: 10, fontWeight: 700,
+    fontFamily: "inherit", textAlign: "center",
+  };
+  const joinable = !!(profile?.joinable && profile?.currentRoomId);
+  if (status === "self") return null;
+  return (
+    <div style={{ display: "flex", gap: 6, paddingBottom: 8 }}>
+      {status === "friends" ? (
+        <span style={{ ...chip, border: "1px solid rgba(34,197,94,.2)", background: "rgba(34,197,94,.06)", color: "rgba(134,239,172,.75)", cursor: "default" }}>{"\u2713"} Friends</span>
+      ) : status === "outgoing" ? (
+        <span style={{ ...chip, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", color: "rgba(148,163,184,.6)", cursor: "default" }}>Request sent</span>
+      ) : status === "incoming" ? (
+        <button
+          disabled={busy}
+          onClick={async (e) => { e.stopPropagation(); if (!profile?.friendRequestId) return; setBusy(true); try { await fetch(`${API}/friends/accept/${profile.friendRequestId}`, { method: "POST", headers: hdr() }); setStatus("friends"); } catch {} finally { setBusy(false); } }}
+          style={{ ...chip, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", color: "rgba(216,180,254,.92)", cursor: "pointer" }}
+        >{"\u2713"} Accept</button>
+      ) : (
+        <button
+          disabled={busy}
+          onClick={async (e) => { e.stopPropagation(); setBusy(true); try { const r = await fetch(`${API}/friends/request/${profile.id || userId}`, { method: "POST", headers: hdr() }).then(x => x.json()); if (r?.ok) setStatus("outgoing"); } catch {} finally { setBusy(false); } }}
+          style={{ ...chip, border: "1px solid rgba(124,58,237,.3)", background: "rgba(124,58,237,.08)", color: "rgba(196,181,253,.85)", cursor: "pointer" }}
+        >+ Add Friend</button>
+      )}
+      {joinable && (
+        <button
+          onClick={(e) => { e.stopPropagation(); const rid = String(profile.currentRoomId); window.location.href = profile.currentRoomIsLobby ? `/lobby/${encodeURIComponent(rid)}` : `/room/${encodeURIComponent(rid)}`; }}
+          style={{ ...chip, border: "1px solid rgba(34,197,94,.3)", background: "rgba(34,197,94,.08)", color: "rgba(134,239,172,.9)", cursor: "pointer" }}
+        >{"\u27A4"} Join</button>
+      )}
+    </div>
+  );
+}
+
 export default function UserHoverCard({
   userId, userName, position, lobbyModuleType, isAway,
   onClose, onMouseEnter, onMouseLeave,
@@ -462,6 +507,7 @@ export default function UserHoverCard({
           </div>
         )}
 
+        <HoverFriendRow profile={profile} userId={userId} />
         <div style={{ display: "flex", gap: 6, paddingBottom: 12 }}>
           {onViewProfile && (
             <button onClick={() => onViewProfile(userId)} style={{

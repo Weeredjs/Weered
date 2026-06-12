@@ -22,7 +22,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     });
     const peerIds = (links as any[]).map((l: any) => l.fromId === u.id ? l.toId : l.fromId);
     const profiles = peerIds.length
-      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true, pillAccentColor: true, statusText: true, statusEmoji: true, nameEffect: true, avatarFrame: true } as any })
+      ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true, avatarColor: true, avatar: true, livePresence: true, globalRole: true, tier: true, steamId: true, twitchLogin: true, xboxGamertag: true, lastSeenAt: true, lastSeenLocation: true, pillBgColor: true, pillAccentColor: true, statusText: true, statusEmoji: true, nameEffect: true, avatarFrame: true, joinPolicy: true } as any })
       : [];
     const presenceMap = new Map<string, { roomId: string; roomName: string; isAway: boolean }>();
     for (const p of profiles) {
@@ -54,10 +54,13 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const roomId = pres?.roomId ?? null;
       const roomName = pres?.roomName ?? null;
       const crew = crewByUser.get(p.id) || null;
+      const joinOff = String((p as any).joinPolicy || "FRIENDS") === "OFF";
       return {
         ...p,
+        joinPolicy: undefined,
         online: roomId !== null,
-        roomId, roomName,
+        roomId: joinOff ? null : roomId,
+        roomName: joinOff ? null : roomName,
         roomIsLobby: roomId ? lobbySet.has(roomId) : false,
         isAway: Boolean(pres?.isAway),
         livePresence: p.livePresence || null,

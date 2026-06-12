@@ -322,6 +322,55 @@ function StatCard({ label, value, icon }: { label: string; value: string | numbe
   );
 }
 
+function FriendButton({ profile, apiBase }: { profile: any; apiBase: string }) {
+  const [status, setStatus] = React.useState<string>(String(profile?.friendStatus || "none"));
+  const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => { setStatus(String(profile?.friendStatus || "none")); }, [profile?.id, profile?.friendStatus]);
+  const hdr = (): Record<string, string> => {
+    try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  };
+  const base: React.CSSProperties = {
+    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9,
+    fontSize: 12, fontWeight: 700, cursor: "pointer", border: "1px solid", fontFamily: "inherit",
+  };
+  if (status === "self") return null;
+  if (status === "friends") {
+    return <span style={{ ...base, cursor: "default", background: "rgba(34,197,94,.07)", borderColor: "rgba(34,197,94,.22)", color: "rgba(134,239,172,.8)" }}>{"\u2713"} Friends</span>;
+  }
+  if (status === "outgoing") {
+    return <span style={{ ...base, cursor: "default", background: "rgba(255,255,255,.04)", borderColor: "rgba(255,255,255,.10)", color: "rgba(148,163,184,.7)" }}>Request sent</span>;
+  }
+  if (status === "incoming") {
+    return (
+      <button
+        disabled={busy}
+        onClick={async () => {
+          if (!profile?.friendRequestId) return;
+          setBusy(true);
+          try {
+            await fetch(`${apiBase}/friends/accept/${profile.friendRequestId}`, { method: "POST", headers: hdr() });
+            setStatus("friends");
+          } catch {} finally { setBusy(false); }
+        }}
+        style={{ ...base, background: "rgba(124,58,237,.16)", borderColor: "rgba(124,58,237,.4)", color: "rgba(216,180,254,.95)" }}
+      >{"\u2713"} Accept request</button>
+    );
+  }
+  return (
+    <button
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const r = await fetch(`${apiBase}/friends/request/${profile.id}`, { method: "POST", headers: hdr() }).then(x => x.json());
+          if (r?.ok) setStatus("outgoing");
+        } catch {} finally { setBusy(false); }
+      }}
+      style={{ ...base, background: "rgba(124,58,237,.12)", borderColor: "rgba(124,58,237,.35)", color: "rgba(216,180,254,.92)" }}
+    >+ Add Friend</button>
+  );
+}
+
 export default function ProfileSheet({ userId }: { userId: string }) {
   const w       = useWeered() as any;
   const me      = w?.me;
@@ -1006,7 +1055,20 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
       {!isMe && (
         <div style={{ ...section, marginTop: 10 }}>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <FriendButton profile={profile} apiBase={apiBase} />
+            {(profile as any).joinable && (profile as any).currentRoomId && (
+              <button
+                onClick={() => {
+                  const rid = String((profile as any).currentRoomId);
+                  const isLobby = !!(profile as any).currentRoomIsLobby;
+                  try { window.location.href = isLobby ? `/lobby/${encodeURIComponent(rid)}` : `/room/${encodeURIComponent(rid)}`; } catch {}
+                }}
+                style={{ ...actionButton, background: "rgba(34,197,94,.10)", borderColor: "rgba(34,197,94,.3)", color: "rgba(134,239,172,.95)" }}
+              >
+                <span style={{ fontSize: 14 }}>{"\u27A4"}</span> Join
+              </button>
+            )}
             <button onClick={openDM} disabled={isBlocked} title={isBlocked ? "Unblock to message" : undefined} style={{ ...actionButton, background: "var(--weered-accent-bg, rgba(167,139,250,.1))", borderColor: "var(--weered-accent-ring, rgba(167,139,250,.25))", color: "var(--weered-accent-text, #c4b5fd)", opacity: isBlocked ? 0.4 : 1, cursor: isBlocked ? "not-allowed" : "pointer" }}>
               <span style={{ fontSize: 14 }}>💬</span> Message
             </button>

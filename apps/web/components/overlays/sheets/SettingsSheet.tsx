@@ -140,6 +140,58 @@ const THEME_OPTIONS: { id: Settings["theme"]; name: string; sw: string }[] = [
   { id: "gray",      name: "Gray",      sw: "#6b7280" },
 ];
 
+function JoinPolicyRow() {
+  const [policy, setPolicy] = React.useState<string>("FRIENDS");
+  const [loaded, setLoaded] = React.useState(false);
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+  const hdr = (): Record<string, string> => {
+    try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  };
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const me = JSON.parse(localStorage.getItem("weered_user") || "null");
+        if (!me?.id) return;
+        const j = await fetch(`${apiBase}/profile/${me.id}`, { headers: hdr() }).then(r => r.json());
+        if (alive && j?.joinPolicy) setPolicy(String(j.joinPolicy));
+      } catch {} finally { if (alive) setLoaded(true); }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const save = async (v: string) => {
+    setPolicy(v);
+    try {
+      await fetch(`${apiBase}/profile/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...hdr() },
+        body: JSON.stringify({ joinPolicy: v }),
+      });
+    } catch {}
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--weered-text, rgba(243,244,246,.92))" }}>Who can join your session</div>
+        <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.6))", marginTop: 2 }}>
+          Controls the Join button others see on your profile and in their friends list.
+        </div>
+      </div>
+      <select
+        value={policy}
+        disabled={!loaded}
+        onChange={(e) => void save(e.target.value)}
+        style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--weered-bd2, rgba(255,255,255,.12))", background: "rgba(0,0,0,.3)", color: "var(--weered-text, rgba(243,244,246,.9))", fontSize: 12, fontFamily: "inherit", cursor: "pointer", outline: "none", flexShrink: 0 }}
+      >
+        <option value="EVERYONE">Everyone</option>
+        <option value="FRIENDS">Friends only</option>
+        <option value="OFF">Nobody</option>
+      </select>
+    </div>
+  );
+}
+
 export default function SettingsSheet({ initialTab }: { initialTab?: string } = {}) {
   const [s, setS] = React.useState<Settings>(DEFAULTS);
   const [copied, setCopied] = React.useState(false);
@@ -310,6 +362,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                 <Row label="Allow DMs" hint="Let anyone send you a direct message.">
                   <Toggle checked={s.allowDMs} onChange={(v) => patch({ allowDMs: v })} />
                 </Row>
+                <JoinPolicyRow />
                 <Row label="Cookies & storage" hint="Revisit what Weered stores on your device.">
                   <button type="button" onClick={() => openConsentBanner()} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>
                     Manage
