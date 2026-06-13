@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
 
-const TITLE = "Host a Destiny 2 tournament with API-verified scoring — Weered";
+const TITLE = "Host a Destiny 2 tournament with API-verified scoring | Weered";
 const DESC = "Run Pantheon 2.0 races, Trials brackets, raid speedruns, and Custom Ops challenges with results pulled straight from the Bungie API. No screenshots, no manual scoring. Free to host.";
 const URL = "https://weered.ca/tournaments/destiny-2";
 
@@ -30,7 +30,7 @@ const faqLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   mainEntity: [
-    { "@type": "Question", name: "Do I need a Bungie API key to host?", acceptedAnswer: { "@type": "Answer", text: "No. The tournament host doesn't need anything — Weered already holds the Bungie OAuth integration. Players link their Bungie account once and their fireteam results flow into the tournament automatically." }},
+    { "@type": "Question", name: "Do I need a Bungie API key to host?", acceptedAnswer: { "@type": "Answer", text: "No. The tournament host doesn't need anything. Weered already holds the Bungie OAuth integration. Players link their Bungie account once and their fireteam results flow into the tournament automatically." }},
     { "@type": "Question", name: "Which Destiny 2 formats does Weered support?", acceptedAnswer: { "@type": "Answer", text: "Single-run races (fastest clear), bracket-style elimination, challenge-race (first team to complete a set of objectives), and Custom Ops with mandatory modifier sets. Pantheon 2.0 races, Trials weekend brackets, raid speedruns, GM strike challenges, and dungeon races all fit one of those formats." }},
     { "@type": "Question", name: "How does Weered verify a raid clear actually happened?", acceptedAnswer: { "@type": "Answer", text: "When a fireteam finishes an activity, Bungie publishes the Post-Game Carnage Report (PGCR). Weered's worker polls each linked player's recent activity history, parses the PGCRs, matches them against the tournament's activity-hash filter and modifier requirements (including the Skull modifier system for Custom Ops), and credits the result. End-to-end verification, no manual claims." }},
     { "@type": "Question", name: "Is it free to host?", acceptedAnswer: { "@type": "Answer", text: "Yes. Hosting a tournament in the Destiny 2 lobby on Weered is free. Premium cosmetic flair grants and custom branding are paid extras for serious community organisers, but the tournament engine itself costs nothing." }},
@@ -123,7 +123,7 @@ export default function TournamentsDestiny2Page() {
             <ul className="mkt-bullet-list">
               <li><strong>Open the Destiny 2 lobby.</strong> No setup required, no Bungie API key to register.</li>
               <li><strong>Click "Create Tournament" in the Tournaments tab.</strong> Pick format, activity filter, modifier requirements, sign-up window, prize.</li>
-              <li><strong>Share the link.</strong> Anyone with a linked Bungie account can sign up. Cross-platform — Steam, PSN, Xbox, Epic all covered by one Bungie OAuth.</li>
+              <li><strong>Share the link.</strong> Anyone with a linked Bungie account can sign up. Cross-platform: Steam, PSN, Xbox, Epic all covered by one Bungie OAuth.</li>
               <li><strong>Play the activity.</strong> Weered detects the PGCR within ~5 minutes of completion and credits the team automatically.</li>
               <li><strong>Watch the bracket settle itself.</strong> Match-by-match auto-confirmation, dispute flow built in if there's a reporting conflict.</li>
             </ul>
@@ -137,7 +137,7 @@ export default function TournamentsDestiny2Page() {
               Weered is hosting community races into the Shadow & Order content drop. Pantheon 2.0 day-one races, Tier 5 exotic acquisition challenges, and the first wave of Custom Ops league seasons all land the week of launch.
             </p>
             <p className="mkt-p">
-              Link your Bungie account now and your stats start tracking immediately — when launch hits, you're already in.
+              Link your Bungie account now and your stats start tracking immediately. When launch hits, you're already in.
             </p>
           </div>
         </section>

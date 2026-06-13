@@ -139,12 +139,12 @@ export default function PrivacyContent() {
             <div className="legal-text">
               We integrate with the following third-party services, each governed by their own privacy policies:
               <ul>
-                <li><strong>Bungie / Destiny 2</strong> — OAuth account linking for guardian stats, inventory, and Xur data</li>
-                <li><strong>Riot Games</strong> — Riot Sign-On for League of Legends summoner data</li>
-                <li><strong>Twitch</strong> — Stream data and embedded players</li>
-                <li><strong>Stripe</strong> — Payment processing (PCI-DSS compliant; we never see your full card number)</li>
-                <li><strong>LiveKit</strong> — Real-time video, voice, and screen sharing infrastructure</li>
-                <li><strong>Web Push (VAPID)</strong> — Browser push notification delivery</li>
+                <li><strong>Bungie / Destiny 2</strong>: OAuth account linking for guardian stats, inventory, and Xur data</li>
+                <li><strong>Riot Games</strong>: Riot Sign-On for League of Legends summoner data</li>
+                <li><strong>Twitch</strong>: Stream data and embedded players</li>
+                <li><strong>Stripe</strong>: Payment processing (PCI-DSS compliant; we never see your full card number)</li>
+                <li><strong>LiveKit</strong>: Real-time video, voice, and screen sharing infrastructure</li>
+                <li><strong>Web Push (VAPID)</strong>: Browser push notification delivery</li>
               </ul>
               When you link a third-party account, we store only the OAuth tokens necessary to provide the integration. You can unlink these accounts at any time.
             </div>
@@ -183,7 +183,7 @@ export default function PrivacyContent() {
             <div className="legal-text">
               Weered surfaces publicly-available metadata from third-party game services to power features like the mod catalog, live server browser, stream listings, and live player counts. We:
               <ul>
-                <li><strong>Cache metadata only.</strong> For mods, we cache the name, author, summary, thumbnail URL, endorsement count, and download count — sourced from the public Nexus Mods API. We do <strong>not</strong> rehost mod files. Every install link points to the mod's original Nexus page; downloads happen there, not here.</li>
+                <li><strong>Cache metadata only.</strong> For mods, we cache the name, author, summary, thumbnail URL, endorsement count, and download count, sourced from the public Nexus Mods API. We do <strong>not</strong> rehost mod files. Every install link points to the mod's original Nexus page; downloads happen there, not here.</li>
                 <li><strong>Do not collect Nexus credentials.</strong> Reading the public catalog never requires a Nexus account or API key. We do not ask users for, store, or proxy any third-party API keys.</li>
                 <li><strong>Honour author opt-out.</strong> If you are a mod author and prefer your work not appear in our catalog, email <strong>support@weered.ca</strong> with the mod name. We will hide it from the catalog within one business day. The hide is persistent: even if our poller re-fetches the public Nexus listing, the exclusion stays in effect.</li>
                 <li><strong>Other public game data sources we cache the same way:</strong> Steam (live player counts, public server browser), Twitch (live streams for a given game), Bungie (Destiny 2 public profiles, opt-in linked), Riot (League of Legends summoner stats, opt-in linked), and similar first-party public APIs. None of these require us to store credentials beyond what the user explicitly links.</li>

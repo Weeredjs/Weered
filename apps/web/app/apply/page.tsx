@@ -36,7 +36,7 @@ export default function ApplyPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    document.title = "Apply to Moderate \u2014 Weered";
+    document.title = "Apply to Moderate | Weered";
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute("content", "Apply to become a Global Moderator on Weered. Help keep our community safe and welcoming.");
     else {
@@ -381,7 +381,7 @@ export default function ApplyPage() {
           <div className="mod-title">Apply to Moderate</div>
           <div className="mod-sub">
             Help us keep Weered safe and welcoming.<br />
-            Global Moderators are the backbone of our community.
+            Global Moderators keep the lobbies in order.
           </div>
 
           {authed === false && (

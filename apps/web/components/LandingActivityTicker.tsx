@@ -47,7 +47,7 @@ export default function LandingActivityTicker() {
       <div className="lp-ticker-track">
         {display.length === 0 && hasFetched && (
           <div className="lp-ticker-empty">
-            quiet right now — be the first to make some noise
+            quiet right now, be the first to make some noise
           </div>
         )}
         {display.length === 0 && !hasFetched && (

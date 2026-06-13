@@ -50,7 +50,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   const description = lobby?.description || `Overview of the ${name} lobby on Weered.`;
   const lobbyUrl = `${SITE}/lobby/${encodeURIComponent(id)}`;
   return {
-    title: `${name} — community overview · Weered`,
+    title: `${name}: community overview · Weered`,
     description: description.slice(0, 300),
     alternates: { canonical: lobbyUrl },
     openGraph: {
@@ -104,7 +104,7 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
         name: `What is the ${lobby.name} lobby on Weered?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: lobby.description || `${lobby.name} is one of the themed game-community lobbies on Weered — voice rooms, chat, presence, and forum discussion built around the ${lobby.name} community.`,
+          text: lobby.description || `${lobby.name} is one of the themed game-community lobbies on Weered: voice rooms, chat, presence, and forum discussion built around the ${lobby.name} community.`,
         },
       },
       {
@@ -112,7 +112,7 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
         name: `How do I join the ${lobby.name} lobby on Weered?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Open ${lobbyUrl} and create a free Weered account using Steam, Xbox, PSN, or email. The ${lobby.name} lobby is public — no invite required. Once joined, you can enter voice rooms, post in the forum, and see other members' real-time presence.`,
+          text: `Open ${lobbyUrl} and create a free Weered account using Steam, Xbox, PSN, or email. The ${lobby.name} lobby is public, no invite required. Once joined, you can enter voice rooms, post in the forum, and see other members' real-time presence.`,
         },
       },
       {
@@ -120,7 +120,7 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
         name: `Is the ${lobby.name} lobby free to use?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. Joining and using the ${lobby.name} lobby on Weered is free. Weered has an optional premium tier with cosmetic flair and custom community branding, but all core features — voice, chat, presence, forum, tournaments — work without paying.`,
+          text: `Yes. Joining and using the ${lobby.name} lobby on Weered is free. Weered has an optional premium tier with cosmetic flair and custom community branding, but all core features (voice, chat, presence, forum, tournaments) work without paying.`,
         },
       },
       {
@@ -181,7 +181,7 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
             {challenges.map(c => (
               <li key={c.id} style={{ marginBottom: 8 }}>
                 <strong>{c.definition!.title}</strong>
-                {c.definition?.description && <span> — {c.definition.description}</span>}
+                {c.definition?.description && <span>: {c.definition.description}</span>}
               </li>
             ))}
           </ul>
@@ -197,7 +197,7 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
               return (
                 <li key={rid} style={{ marginBottom: 8 }}>
                   <Link href={`/room/${encodeURIComponent(rid!)}`} style={{ color: "#7c9dff", fontWeight: 600 }}>{r.name}</Link>
-                  {r.description && <span> — {r.description}</span>}
+                  {r.description && <span>: {r.description}</span>}
                 </li>
               );
             })}
@@ -231,14 +231,14 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
       <section style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 22, marginBottom: 10 }}>About Weered</h2>
         <p>
-          Weered is a real-time community platform built around <em>lobbies</em> — themed hubs where each
+          Weered is a real-time community platform built around <em>lobbies</em>: themed hubs where each
           game, interest, or scene gets its own space. Live voice rooms, persistent chat, presence (who&apos;s
           playing what, right now), forum discussions, challenges, and tournaments are all first-class
-          features of every lobby. No invites, no servers to set up — just join.
+          features of every lobby. No invites, no servers to set up. Just join.
         </p>
         <p>
           The {lobby.name} lobby is one of {`many`} on the platform. To participate, open the live lobby
-          and create an account in seconds — Steam, Xbox, PSN, or email all work. Most rooms are
+          and create an account in seconds. Steam, Xbox, PSN, or email all work. Most rooms are
           public; lobby owners can run their own moderation, tiers, and rules.
         </p>
       </section>

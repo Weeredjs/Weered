@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Explore Weered — Lobbies, Guides & Comparisons",
+  title: "Explore Weered | Lobbies, Guides & Comparisons",
   description: "Browse every Weered game lobby, LFG guide, and platform comparison. The full directory of communities and resources on weered.ca.",
   alternates: { canonical: "https://weered.ca/explore" },
 };
@@ -24,7 +24,7 @@ async function getData(): Promise<{ lobbies: LinkItem[]; guides: LinkItem[]; com
       lobbies = usable.map((l: any) => ({ href: `/lobby/${encodeURIComponent(l.id)}`, label: l.name || l.id }));
       guides = usable
         .filter((l: any) => typeof l?.description === "string" && l.description.length >= 500)
-        .map((l: any) => ({ href: `/about/lobby/${encodeURIComponent(l.id)}`, label: `${l.name || l.id} — overview` }));
+        .map((l: any) => ({ href: `/about/lobby/${encodeURIComponent(l.id)}`, label: `${l.name || l.id}: overview` }));
     }
   } catch {}
 

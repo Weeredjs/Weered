@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../components/MarketingHeader";
 
-const TITLE = "Safety on Weered — every image screened, nobody gets ambushed";
+const TITLE = "Safety on Weered: every image screened, nobody gets ambushed";
 const DESC = "How Weered keeps you safe: every image is screened twice before it ever displays, posting is a reputation-gated privilege, media from unproven members shows blurred until you choose, removed content is fingerprint-banned platform-wide, and illegal content is reported under Canadian law.";
 const URL = "https://weered.ca/safety";
 

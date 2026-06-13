@@ -200,7 +200,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-block">
             <div className="manifesto-label">// the trading angle, because someone asked</div>
             <div className="manifesto-text">
-              I run an autonomous ML forex scalper called <em>Stirling FOREX</em> on the side. So I sit in trading Discords — FX desks, crypto rooms, the whole spread.<br /><br />
+              I run an autonomous ML forex scalper called <em>Stirling FOREX</em> on the side. So I sit in trading Discords: FX desks, crypto rooms, the whole spread.<br /><br />
               Day traders have been screaming about Discord&apos;s 50-viewer screenshare cap for years.
               A trader running a live charting session for a paid room hits the cap by 9:32am.
               The room fragments. Half the audience is staring at a frozen embed.

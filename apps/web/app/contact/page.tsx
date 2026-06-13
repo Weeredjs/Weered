@@ -3,7 +3,7 @@ import ContactContent from "./ContactContent";
 
 export const metadata: Metadata = {
   title: "Contact Weered",
-  description: "Get in touch with Weered. No ticket system, no chatbot — just send a message.",
+  description: "Get in touch with Weered. No ticket system, no chatbot. Just send a message.",
   openGraph: {
     title: "Contact Weered",
     description: "Get in touch with Weered. Send us a message directly.",
