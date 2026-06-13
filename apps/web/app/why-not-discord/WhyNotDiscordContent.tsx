@@ -147,7 +147,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-tagline">a manifesto · 2026</div>
 
           <div className="manifesto-block">
-            <div className="manifesto-label">// origin</div>
+            <div className="manifesto-label">origin</div>
             <div className="manifesto-text">
               I grew up on MPlayer. Late 90s, dial-up, dedicated lobbies for specific games.
               You walked into a room and everyone there was playing the same thing you were.
@@ -161,7 +161,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-divider" />
 
           <div className="manifesto-block">
-            <div className="manifesto-label">// what we lost</div>
+            <div className="manifesto-label">what we lost</div>
             <div className="manifesto-text">
               Discord is incredible at being the everything-app for chat. I use it.
               I&apos;m not pretending it&apos;s bad software. But somewhere around 2018 the gaming community started using Discord as the only place we organize, and that&apos;s where it broke.<br /><br />
@@ -181,7 +181,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-divider" />
 
           <div className="manifesto-block">
-            <div className="manifesto-label">// what weered does differently</div>
+            <div className="manifesto-label">what weered does differently</div>
             <div className="manifesto-text">
               <em>Weered is lobby-first, not server-first.</em><br /><br />
               A Weered lobby is a room built around a specific activity.
@@ -198,7 +198,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-divider" />
 
           <div className="manifesto-block">
-            <div className="manifesto-label">// the trading angle, because someone asked</div>
+            <div className="manifesto-label">the trading angle, because someone asked</div>
             <div className="manifesto-text">
               I run an autonomous ML forex scalper called <em>Stirling FOREX</em> on the side. So I sit in trading Discords: FX desks, crypto rooms, the whole spread.<br /><br />
               Day traders have been screaming about Discord&apos;s 50-viewer screenshare cap for years.
@@ -215,7 +215,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-divider" />
 
           <div className="manifesto-block">
-            <div className="manifesto-label">// the honest part</div>
+            <div className="manifesto-label">the honest part</div>
             <div className="manifesto-text">
               Weered is not trying to be a billion-user platform.
               We&apos;re not a Discord competitor in the &quot;let&apos;s eat their lunch&quot; sense.
@@ -233,7 +233,7 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-divider" />
 
           <div className="manifesto-block">
-            <div className="manifesto-label">// come look</div>
+            <div className="manifesto-label">come look</div>
             <div className="manifesto-text">
               Tell me what&apos;s missing. I&apos;m building this in public and the early users shape what it becomes.<br /><br />
               The next version of community tooling isn&apos;t going to be Discord with more bots.

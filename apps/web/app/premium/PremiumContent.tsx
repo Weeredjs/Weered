@@ -274,7 +274,7 @@ export default function PremiumContent() {
                 <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 120, height: 120, filter: "drop-shadow(0 0 32px rgba(88,0,229,0.35))" }} />
               </a>
             </div>
-            <div className="prem-eyebrow">// access levels</div>
+            <div className="prem-eyebrow">access levels</div>
             <div className="prem-title">Choose your status.</div>
             <div className="prem-sub">Some things cost money. Most things don&apos;t. One thing can&apos;t be bought.</div>
           </div>

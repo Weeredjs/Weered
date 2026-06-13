@@ -149,7 +149,7 @@ export default function AboutContent() {
           <div className="about-tagline">communities · presence · rooms</div>
 
           <div className="about-block">
-            <div className="about-label">// origin</div>
+            <div className="about-label">origin</div>
             <div className="about-text">
               Built in the dark.<br />
               No roadmap. No investors. No announcements.<br />
@@ -160,7 +160,7 @@ export default function AboutContent() {
           <div className="about-divider" />
 
           <div className="about-block">
-            <div className="about-label">// what this is</div>
+            <div className="about-label">what this is</div>
             <div className="about-text">
               Weered is a <em>real-time community platform</em>.<br />
               Think lobbies, not servers. Rooms, not channels. Presence, not status dots.<br /><br />
@@ -182,7 +182,7 @@ export default function AboutContent() {
           <div className="about-divider" />
 
           <div className="about-block">
-            <div className="about-label">// how it feels</div>
+            <div className="about-label">how it feels</div>
             <div className="about-text">
               Every platform looks like every other platform.<br />
               Weered doesn&apos;t.<br />
@@ -194,7 +194,7 @@ export default function AboutContent() {
           <div className="about-divider" />
 
           <div className="about-block">
-            <div className="about-label">// who runs this</div>
+            <div className="about-label">who runs this</div>
             <div className="about-text">
               Someone who got tired of every platform feeling the same.<br />
               That&apos;s all you get for now.<br />
@@ -205,7 +205,7 @@ export default function AboutContent() {
           <div className="about-divider" />
 
           <div className="about-block">
-            <div className="about-label">// status</div>
+            <div className="about-label">status</div>
             <div className="about-text">
               Early access. Growing fast.<br />
               30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator. Focus rooms.<br />

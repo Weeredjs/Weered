@@ -1138,7 +1138,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
         letterSpacing: "0.4px",
         color: "rgba(243,244,246,.45)",
       }}>
-        <span style={{ textTransform: "uppercase", fontWeight: 700, opacity: 0.7 }}>// in the works</span>
+        <span style={{ textTransform: "uppercase", fontWeight: 700, opacity: 0.7 }}>in the works</span>
         <span>FX feeds (twelvedata) · MyFXBook verified-stats sync · crew portfolios</span>
       </div>
 
