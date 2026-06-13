@@ -135,9 +135,8 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">origin</div>
             <div className="about-text">
-              I built Weered myself. No investors, no roadmap, no big launch.<br />
-              Most places you hang out online feel like software you log into and then leave.<br />
-              I wanted one that felt like somewhere to actually be.
+              Weered came out of a simple problem: the tools gaming communities live in are built for everyone, so they fit no one in particular.<br />
+              We built the opposite. A platform that knows what you&apos;re playing and gives each community the tools it actually needs, wired straight into the games.
             </div>
           </div>
 
@@ -169,7 +168,7 @@ export default function AboutContent() {
             <div className="about-label">how it feels</div>
             <div className="about-text">
               The look is deliberately dark and cinematic. That&apos;s a choice, not a default.<br />
-              Most platforms settle for the same grey dashboard. I&apos;d rather it felt like a room you walked into than a product you opened.
+              Most platforms settle for the same grey dashboard. We&apos;d rather it felt like a room you walked into than a product you opened.
             </div>
           </div>
 
@@ -178,8 +177,8 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">who runs this</div>
             <div className="about-text">
-              One person, for now. I&apos;m keeping my name off this while it&apos;s early.<br />
-              Not a mystery for its own sake. Just not the point yet.
+              A small team that would rather the work spoke first.<br />
+              We keep our names off the front of it on purpose. Not a gimmick: we&apos;d rather Weered was judged on what it does than on who built it.
             </div>
           </div>
 
@@ -188,7 +187,7 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">status</div>
             <div className="about-text">
-              Early access, and still rough in places. I ship most days.<br />
+              Early access, and moving fast. We ship most days.<br />
               30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator. Focus rooms.<br />
               It&apos;s not finished. It&apos;s being built in the open, and you&apos;re early.
             </div>
