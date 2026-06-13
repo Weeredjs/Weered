@@ -192,7 +192,7 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
           color: "rgba(232,196,138,.5)",
           textTransform: "uppercase",
           paddingRight: 4,
-        }}>// BIOME</span>
+        }}>BIOME</span>
         <Chip active={!biome} color={accent} onClick={() => setBiome("")}>All</Chip>
         {BIOMES.map(b => (
           <Chip key={b.id} active={biome === b.id} color={accent} onClick={() => setBiome(biome === b.id ? "" : b.id)}>{b.label}</Chip>
@@ -204,7 +204,7 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
           color: "rgba(232,196,138,.5)",
           textTransform: "uppercase",
           paddingRight: 4,
-        }}>// TYPE</span>
+        }}>TYPE</span>
         <Chip active={!buildType} color={accent} onClick={() => setBuildType("")}>All</Chip>
         {BUILD_TYPES.map(t => (
           <Chip key={t.id} active={buildType === t.id} color={accent} onClick={() => setBuildType(buildType === t.id ? "" : t.id)}>{t.label}</Chip>

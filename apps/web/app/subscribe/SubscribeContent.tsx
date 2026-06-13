@@ -302,7 +302,7 @@ export default function SubscribeContent() {
         <div className={`sub-inner${visible ? " visible" : ""}`}>
 
           <div className="sub-header">
-            <div className="sub-eyebrow">// access levels</div>
+            <div className="sub-eyebrow">access levels</div>
             <div className="sub-title">Choose your status.</div>
             <div className="sub-subtitle">Some things cost money. Most things don't. One thing can't be bought.</div>
           </div>

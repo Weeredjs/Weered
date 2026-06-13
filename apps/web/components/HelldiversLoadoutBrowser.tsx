@@ -108,7 +108,7 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
           color: "rgba(255,215,0,.5)",
           textTransform: "uppercase",
           paddingRight: 4,
-        }}>// FRONT</span>
+        }}>FRONT</span>
         <FilterChip label="All Fronts" active={!faction} onClick={() => setFaction("")} color={lobbyAccent} />
         {Object.entries(FACTION_META).filter(([id]) => id !== "ANY").map(([id, m]) => (
           <FilterChip key={id} label={m.label} active={faction === id} onClick={() => setFaction(faction === id ? "" : id)} color={m.color} />
@@ -200,7 +200,7 @@ function LoadoutCard({ loadout, onClick }: { loadout: Loadout; onClick: () => vo
         fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: 9, letterSpacing: 2, fontWeight: 800,
         display: "flex", justifyContent: "space-between",
       }}>
-        <span>// CLASSIFIED</span>
+        <span>CLASSIFIED</span>
         <span>{meta.label.toUpperCase()}</span>
       </div>
       <div style={{ padding: 12 }}>
