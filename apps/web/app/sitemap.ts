@@ -20,6 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/why-not-discord`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/safety`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/features`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${BASE}/blog/build-notes-poe-tree-screened-media-friends`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/guidelines`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE}/map`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${BASE}/desktop`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
