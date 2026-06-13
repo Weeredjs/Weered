@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
 
-const TITLE = "Path of Exile community hub — ladders, builds, crew tools | Weered";
+const TITLE = "Path of Exile community hub: ladders, builds, crew tools | Weered";
 const DESC = "The unofficial PoE lobby with the poe.ninja economy live, ladder leaderboards, build inspector, and a room to actually hang out in while you map. Free.";
 const URL = "https://weered.ca/play/path-of-exile";
 
@@ -34,7 +34,7 @@ export default function PlayPathOfExilePage() {
       <main className="mkt">
         <section className="mkt-hero">
           <div className="mkt-wrap">
-            <span className="mkt-eyebrow">Path of Exile — Unofficial Community Hub</span>
+            <span className="mkt-eyebrow">Path of Exile: Unofficial Community Hub</span>
             <h1 className="mkt-h1">
               A real lobby for <span className="accent">the long grind</span>.
             </h1>
@@ -54,7 +54,7 @@ export default function PlayPathOfExilePage() {
             <div className="mkt-grid-3">
               <div className="mkt-card">
                 <h3>Live economy via poe.ninja</h3>
-                <p>Current league currency, divine rates, fragments, scarabs, unique gear — all the prices, in-lobby, refreshed against the canonical community data source.</p>
+                <p>Current league currency, divine rates, fragments, scarabs, unique gear. Every price, in-lobby, refreshed against the canonical community data source.</p>
               </div>
               <div className="mkt-card">
                 <h3>Ladder leaderboards</h3>
@@ -62,7 +62,7 @@ export default function PlayPathOfExilePage() {
               </div>
               <div className="mkt-card">
                 <h3>Twitch stream directory</h3>
-                <p>Who's streaming PoE right now. ZiggyD, Mathil, Empyrian, Imexile, Pohx, Tytykiller — all sortable by viewer count. Click to embed the stream on the room canvas.</p>
+                <p>Who's streaming PoE right now. ZiggyD, Mathil, Empyrian, Imexile, Pohx, Tytykiller, all sortable by viewer count. Click to embed the stream on the room canvas.</p>
               </div>
               <div className="mkt-card">
                 <h3>Crew finder</h3>
@@ -84,8 +84,8 @@ export default function PlayPathOfExilePage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">What's coming when GGG approves OAuth</h2>
             <ul className="mkt-bullet-list">
-              <li><strong>Build inspector.</strong> Link your PoE account, anyone in your crew can pull up your character's gear, passives, gems, and ascendancy — read-only — for build review.</li>
-              <li><strong>Character-linked challenges.</strong> "Reach level 95 in standard," "Clear T17 on a melee build," "Hit 80 challenges this league" — auto-credited from your account data.</li>
+              <li><strong>Build inspector.</strong> Link your PoE account, anyone in your crew can pull up your character's gear, passives, gems, and ascendancy (read-only) for build review.</li>
+              <li><strong>Character-linked challenges.</strong> "Reach level 95 in standard," "Clear T17 on a melee build," "Hit 80 challenges this league." Auto-credited from your account data.</li>
               <li><strong>League-bracket leaderboards.</strong> Lobby-internal ladders, scoped to your crew or league. Show off without leaving Weered.</li>
               <li><strong>Atlas + map completion tracking.</strong> Visualised, sharable, comparable across your crew.</li>
             </ul>
@@ -99,7 +99,7 @@ export default function PlayPathOfExilePage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Why this lobby exists</h2>
             <p className="mkt-p">
-              PoE has the deepest community-tools ecosystem in any ARPG — poe.ninja, Path of Building, awakened-poe-trade, FilterBlade, the wiki, sub-leagues, race events. But the place where the community actually <em>talks</em> is fragmented across Discord servers, Reddit, and a sprawl of build-guide spreadsheets. Weered's PoE lobby is one room where all of it lives next to each other: live economy, live ladder, live streams, live voice, live crew.
+              PoE has the deepest community-tools ecosystem in any ARPG: poe.ninja, Path of Building, awakened-poe-trade, FilterBlade, the wiki, sub-leagues, race events. But the place where the community actually <em>talks</em> is fragmented across Discord servers, Reddit, and a sprawl of build-guide spreadsheets. Weered's PoE lobby is one room where all of it lives next to each other: live economy, live ladder, live streams, live voice, live crew.
             </p>
             <p className="mkt-p">
               The point isn't to replace any of those tools. It's to be the room you sit in while you use them.
@@ -111,7 +111,7 @@ export default function PlayPathOfExilePage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Built by someone who plays</h2>
             <p className="mkt-p">
-              Weered's founder is an actual Path of Exile player — hundreds of hours, multiple leagues deep. The PoE lobby exists because the founder wanted somewhere to play with friends that wasn't another Discord with 18 dead channels. The tools in the lobby are the tools the founder kept opening in browser tabs while grinding maps.
+              Weered's founder is an actual Path of Exile player, hundreds of hours and multiple leagues deep. The PoE lobby exists because the founder wanted somewhere to play with friends that wasn't another Discord with 18 dead channels. The tools in the lobby are the tools the founder kept opening in browser tabs while grinding maps.
             </p>
             <p className="mkt-p">
               <em>Not affiliated with or endorsed by Grinding Gear Games.</em> Path of Exile and related trademarks are property of GGG.

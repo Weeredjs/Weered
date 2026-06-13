@@ -47,7 +47,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   const params = await props.params;
   const c = findCompetitor(params.id);
   if (!c) return { title: "Comparison not found · Weered" };
-  const title = `Weered vs ${c.name} — honest comparison`;
+  const title = `Weered vs ${c.name} | Honest comparison`;
   const description = `${c.tagline} Side-by-side comparison with Weered: when to use each, feature breakdown, and a fair bottom line.`;
   const url = `${SITE}/compare/weered-vs/${c.id}`;
   return {
@@ -77,7 +77,7 @@ export default async function CompareWeeredVsPage(props: { params: Promise<{ id:
   const articleLd = {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: `Weered vs ${c.name} — honest comparison`,
+    headline: `Weered vs ${c.name} | Honest comparison`,
     description: c.tagline,
     url: pageUrl,
     publisher: { "@type": "Organization", name: "Weered", url: SITE },

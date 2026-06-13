@@ -6,7 +6,7 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 export const metadata: Metadata = {
   title: "Windrose mods catalog · Weered",
   description:
-    "Public catalog of Windrose mods, sourced live from Nexus. View what Weered surfaces about each mod — name, author, summary, endorsements, downloads — without creating an account.",
+    "Public catalog of Windrose mods, sourced live from Nexus. View what Weered surfaces about each mod (name, author, summary, endorsements, downloads), no account required.",
   alternates: { canonical: "https://weered.ca/mods/windrose" },
 };
 
@@ -122,7 +122,7 @@ export default async function WindroseModsPublicPage() {
             }}
           >
             Public read-only view of the Windrose mods Weered surfaces. Sourced
-            live from the Nexus public API. Metadata only — every install
+            live from the Nexus public API. Metadata only. Every install
             click-through goes to the mod's Nexus page. We don't host or
             redistribute mod files.
           </p>

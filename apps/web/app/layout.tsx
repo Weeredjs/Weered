@@ -57,10 +57,10 @@ import BugReportButton from "../components/BugReportButton";
 
 export const metadata = {
   title: {
-    default: "Weered — Real-Time Community Platform",
+    default: "Weered: Real-Time Community Platform",
     template: "%s | Weered",
   },
-  description: "Weered is a real-time community platform. Lobbies, rooms, presence, and modules — built for gaming communities and beyond.",
+  description: "Weered is a real-time community platform. Lobbies, rooms, presence, and modules, built for gaming communities and beyond.",
   metadataBase: new URL("https://weered.ca"),
   icons: {
     icon: [
@@ -71,7 +71,7 @@ export const metadata = {
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "Weered — Real-Time Community Platform",
+    title: "Weered: Real-Time Community Platform",
     description: "Lobbies, rooms, presence, and modules. A community platform that feels like a place, not a product.",
     url: "https://weered.ca",
     siteName: "Weered",
@@ -80,7 +80,7 @@ export const metadata = {
         url: "https://weered.ca/og",
         width: 1200,
         height: 630,
-        alt: "Weered — Real-Time Community Platform",
+        alt: "Weered: Real-Time Community Platform",
       },
     ],
     type: "website",
@@ -88,7 +88,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Weered — Real-Time Community Platform",
+    title: "Weered: Real-Time Community Platform",
     description: "Lobbies, rooms, presence, and modules. Built for gaming communities.",
     images: ["https://weered.ca/og"],
   },
@@ -153,7 +153,7 @@ const orgJsonLd = {
   name: "Weered",
   url: "https://weered.ca",
   logo: "https://weered.ca/brand/logo/weered-logo-512.png",
-  description: "Weered is a real-time community platform for gaming and beyond — lobbies, rooms, presence, and modules.",
+  description: "Weered is a real-time community platform for gaming and beyond: lobbies, rooms, presence, and modules.",
   foundingDate: "2024",
   sameAs: [
     "https://twitter.com/weered",
@@ -195,7 +195,7 @@ try {
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users
   // before paint (no FOUC). The slab stays in the DOM for crawlers.
   if (localStorage.getItem('weered_user')) d.setAttribute('data-weered-authed', '1');
-  // Streamer overlay route — strip chrome + transparent body before paint
+  // Streamer overlay route: strip chrome + transparent body before paint
   // so OBS browser-source captures a clean composite over the game capture.
   if (location.pathname.indexOf('/overlay/') === 0 || location.pathname === '/overlay') {
     d.setAttribute('data-weered-bare', 'overlay');
@@ -213,7 +213,7 @@ try {
   // reskinnable ones (windrose/destiny2/dnd/helldivers2) INCLUDED. The reskin
   // is opt-in (settings.keepDefaultThemeInLobbies === false) + member-only and
   // is resolved by the lobby page AFTER hydration. Previously these 4 were left
-  // UNSET here to dodge a min->reskin flash — but that left them painting the
+  // UNSET here to dodge a min->reskin flash, but that left them painting the
   // base/gold theme for the entire lobbyInfo API-load window (the lobby page's
   // chrome effect bails until lobbyInfo loads), which is the base->theme flash
   // James kept hitting on hard load. So pre-paint min for EVERY lobby. The

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
 
-const TITLE = "FakeOut — paper trading with your crew, free, $100K fake money | Weered";
+const TITLE = "FakeOut: paper trading with your crew, free, $100K fake money | Weered";
 const DESC = "Live Binance crypto + TradingView charts + $100,000 in fake money. Compete on leaderboards, run trading competitions, talk shop in voice. The paper-trading platform that's a place, not a tab.";
 const URL = "https://weered.ca/play/fakeout";
 
@@ -18,10 +18,10 @@ const faqLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   mainEntity: [
-    { "@type": "Question", name: "Is FakeOut real money?", acceptedAnswer: { "@type": "Answer", text: "No. FakeOut is a paper-trading platform — you trade with $100,000 in virtual money against live Binance market data. Nothing you do affects real markets and nothing you win is convertible to real currency. It's a learning and competition platform, not an exchange." }},
+    { "@type": "Question", name: "Is FakeOut real money?", acceptedAnswer: { "@type": "Answer", text: "No. FakeOut is a paper-trading platform. You trade with $100,000 in virtual money against live Binance market data. Nothing you do affects real markets and nothing you win is convertible to real currency. It's a learning and competition platform, not an exchange." }},
     { "@type": "Question", name: "What markets does it support?", acceptedAnswer: { "@type": "Answer", text: "Spot crypto via Binance's live WebSocket feed: BTC, ETH, SOL, and the top spot pairs. Forex pairs are stubbed today and the live wiring to a twelvedata FX feed is on the roadmap. Equities aren't planned for the near term." }},
     { "@type": "Question", name: "Are the charts real TradingView?", acceptedAnswer: { "@type": "Answer", text: "Yes. The chart on every trade view is the actual TradingView embed with full indicator support. The order book, depth chart, and trade feed are live from Binance. Only the wallet and orders are virtual." }},
-    { "@type": "Question", name: "Can I run a trading competition with my crew?", acceptedAnswer: { "@type": "Answer", text: "Yes. The FakeOut lobby supports tournaments — define a window (e.g. 'best PnL over 7 days, starting Monday'), invite your crew, leaderboard updates live as positions change. Notoriety and Paper rewards on the platform." }},
+    { "@type": "Question", name: "Can I run a trading competition with my crew?", acceptedAnswer: { "@type": "Answer", text: "Yes. The FakeOut lobby supports tournaments: define a window (e.g. 'best PnL over 7 days, starting Monday'), invite your crew, leaderboard updates live as positions change. Notoriety and Paper rewards on the platform." }},
   ],
 };
 
@@ -34,7 +34,7 @@ export default function PlayFakeOutPage() {
       <main className="mkt">
         <section className="mkt-hero">
           <div className="mkt-wrap">
-            <span className="mkt-eyebrow">FakeOut — Paper Trading</span>
+            <span className="mkt-eyebrow">FakeOut: Paper Trading</span>
             <h1 className="mkt-h1">
               Trade $100,000 in fake money <span className="accent">against real markets</span>.
             </h1>
@@ -52,10 +52,10 @@ export default function PlayFakeOutPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Real market data, fake money</h2>
             <p className="mkt-p">
-              FakeOut sits on top of Binance's live WebSocket feed. Order book, depth, recent trades, candle data — all the same data the actual Binance terminal shows. What's different is that you start with a $100,000 virtual wallet, and every trade you place is paper.
+              FakeOut sits on top of Binance's live WebSocket feed. Order book, depth, recent trades, candle data: all the same data the actual Binance terminal shows. What's different is that you start with a $100,000 virtual wallet, and every trade you place is paper.
             </p>
             <p className="mkt-p">
-              The charts are TradingView, embedded with the full indicator suite. You're not looking at a stylised wrapper — it's the same chart you'd use on TradingView itself, with all the drawing tools and overlays you expect.
+              The charts are TradingView, embedded with the full indicator suite. You're not looking at a stylised wrapper. It's the same chart you'd use on TradingView itself, with all the drawing tools and overlays you expect.
             </p>
           </div>
         </section>
@@ -66,7 +66,7 @@ export default function PlayFakeOutPage() {
             <div className="mkt-grid-3">
               <div className="mkt-card">
                 <h3>Learning</h3>
-                <p>Build the muscle memory of placing orders, watching the book, managing risk — without losing the rent. Make every dumb mistake possible for free.</p>
+                <p>Build the muscle memory of placing orders, watching the book, managing risk, without losing the rent. Make every dumb mistake possible for free.</p>
               </div>
               <div className="mkt-card">
                 <h3>Strategy testing</h3>
@@ -86,7 +86,7 @@ export default function PlayFakeOutPage() {
               </div>
               <div className="mkt-card">
                 <h3>No fees, no slippage tax</h3>
-                <p>Real markets eat you alive with spread and fees. FakeOut lets you see what your strategy looks like on the pure price action — a clean signal to compare against.</p>
+                <p>Real markets eat you alive with spread and fees. FakeOut lets you see what your strategy looks like on the pure price action, a clean signal to compare against.</p>
               </div>
             </div>
           </div>

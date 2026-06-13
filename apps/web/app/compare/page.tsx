@@ -13,11 +13,11 @@ type Competitor = {
 const COMPETITORS: Competitor[] = (competitorsData as any).competitors;
 
 export const metadata: Metadata = {
-  title: "Compare Weered — honest side-by-side comparisons",
+  title: "Compare Weered | Honest side-by-side comparisons",
   description: "Side-by-side comparisons of Weered against other community platforms. When to use each, feature breakdown, honest bottom line.",
   alternates: { canonical: `${SITE}/compare` },
   openGraph: {
-    title: "Compare Weered — honest comparisons",
+    title: "Compare Weered: honest comparisons",
     description: "Side-by-side comparisons of Weered against Discord, Guilded, TeamSpeak, Element, Revolt, Steam Chat, and more.",
     url: `${SITE}/compare`,
     type: "website",
@@ -40,7 +40,7 @@ export default function CompareIndexPage() {
         <h1 style={{ fontSize: 32, margin: "0 0 12px", lineHeight: 1.15 }}>Compare Weered</h1>
         <p style={{ fontSize: 17, opacity: 0.92 }}>
           Picking a community platform is a real decision and there's no one right answer. Below are honest
-          comparisons against the platforms Weered most often gets compared to — including when you should
+          comparisons against the platforms Weered most often gets compared to, including when you should
           pick the other one.
         </p>
       </header>

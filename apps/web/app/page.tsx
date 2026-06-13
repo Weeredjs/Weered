@@ -828,7 +828,7 @@ function Landing({ nextPath }: { nextPath: string }) {
             Every game<br />deserves a lobby.
           </h1>
           <p className="lp-sub">
-            Voice rooms, crews, and live game presence — built into a place that actually knows what you're playing. Weered is the game lobby reborn: more gamery than the launchers you already use, and free.
+            Voice rooms, crews, and live game presence, built into a place that actually knows what you're playing. Weered is the game lobby reborn: more gamery than the launchers you already use, and free.
           </p>
           <div className="lp-hero-cta">
             <Link href={getIn} className="lp-btn-primary">get_in()</Link>
@@ -841,7 +841,7 @@ function Landing({ nextPath }: { nextPath: string }) {
         <section id="inside" className="lp-section">
           <h2 className="lp-section-title">The lobbies are open.</h2>
           <p className="lp-section-sub">
-            Every tile is a real lobby with real members. Click one to peek inside — read-only — then get_in() to actually sit at the table.
+            Every tile is a real lobby with real members. Click one to peek inside (read-only), then get_in() to actually sit at the table.
           </p>
           <LobbyWall loginHref={getIn} />
         </section>
@@ -849,19 +849,19 @@ function Landing({ nextPath }: { nextPath: string }) {
         <section id="different" className="lp-section">
           <h2 className="lp-section-title">Why it's different.</h2>
           <p className="lp-section-sub">
-            You already have a chat app. Weered isn't trying to replace it — it's doing things it won't.
+            You already have a chat app. Weered isn't trying to replace it. It does things it won't.
           </p>
           <div className="lp-diff">
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>No invite links.</strong> Communities are discoverable by default. Lobbies live on the front page. People find you because they care about what you do — not because someone slid them a link.
+                <strong>No invite links.</strong> Communities are discoverable by default. Lobbies live on the front page. People find you because they care about what you do, not because someone slid them a link.
               </div>
             </div>
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>Game integrations are apps, not bots.</strong> Your Destiny clan leader can actually manage loadouts from inside Weered. Your League room shows real match state. This isn't a chat command — it's a real UI layer with authenticated context per user.
+                <strong>Game integrations are apps, not bots.</strong> Your Destiny clan leader can actually manage loadouts from inside Weered. Your League room shows real match state. This isn't a chat command. It's a real UI layer with authenticated context per user.
               </div>
             </div>
             <div className="lp-diff-row">

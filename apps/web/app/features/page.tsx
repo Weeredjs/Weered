@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../components/MarketingHeader";
 
-const TITLE = "What Weered does — a real lobby for every game";
+const TITLE = "What Weered does: a real lobby for every game";
 const DESC = "Weered gives every game its own lobby wired to the game itself: live PoE economy and skill tree, Bungie-verified Destiny tournaments, EVE killboards, voice rooms, crews, an earned reputation economy, and cross-platform presence. Web, desktop, and mobile.";
 const URL = "https://weered.ca/features";
 

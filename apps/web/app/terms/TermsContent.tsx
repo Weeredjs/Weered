@@ -163,7 +163,7 @@ export default function TermsContent() {
                 <li>By posting or transmitting User Content, you grant Weered a worldwide, non-exclusive, royalty-free license to use, display, reproduce, and distribute that content solely for the purpose of operating and improving the platform.</li>
                 <li>You represent that you have the right to share any content you transmit and that it does not infringe on any third party's rights.</li>
                 <li>We do not pre-screen User Content but reserve the right to remove any content at our sole discretion.</li>
-                <li>You can report objectionable User Content — including lobby logos, banners, and other uploaded images — using the in-app report control, or by emailing <strong>safety@weered.ca</strong>. We review reports and remove content that violates these terms.</li>
+                <li>You can report objectionable User Content (including lobby logos, banners, and other uploaded images) using the in-app report control, or by emailing <strong>safety@weered.ca</strong>. We review reports and remove content that violates these terms.</li>
                 <li>We do not tolerate content that sexually exploits or endangers minors. Such material is removed and reported to the appropriate authorities, including Cybertip.ca in Canada and NCMEC.</li>
               </ul>
             </div>

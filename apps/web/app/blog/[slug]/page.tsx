@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!post) return {};
   const url = `https://weered.ca/blog/${post.slug}`;
   return {
-    title: { absolute: `${post.title} — Weered` },
+    title: { absolute: `${post.title} | Weered` },
     description: post.excerpt,
     alternates: { canonical: url },
     openGraph: { title: post.title, description: post.excerpt, url, type: "article", siteName: "Weered" },

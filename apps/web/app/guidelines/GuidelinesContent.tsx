@@ -153,7 +153,7 @@ export default function GuidelinesContent() {
             <div className="legal-text">
               <ul>
                 <li>Don't upload or share content you don't have the right to use.</li>
-                <li>Game screenshots, clips, and discussion are fine — that's what the lobbies are for.</li>
+                <li>Game screenshots, clips, and discussion are fine. That's what the lobbies are for.</li>
                 <li>Full copyrighted works (films, albums, books, software) shared without authorization will be removed.</li>
                 <li>If your content is infringed, contact us at <strong>legal@weered.ca</strong> (see our <a href="/terms">Terms of Service</a> for the full DMCA process).</li>
               </ul>
@@ -165,11 +165,11 @@ export default function GuidelinesContent() {
             <div className="legal-text">
               We enforce these guidelines through a combination of staff moderation, lobby owner/mod tools, and user reports. Depending on severity:
               <ul>
-                <li><strong>Warning</strong> — for minor or first-time violations</li>
-                <li><strong>Mute / Timeout</strong> — temporary restriction from chat or features</li>
-                <li><strong>Room/Lobby Ban</strong> — removed from a specific space</li>
-                <li><strong>Account Suspension</strong> — temporary platform-wide ban</li>
-                <li><strong>Permanent Ban</strong> — account terminated, no appeal for zero-tolerance violations</li>
+                <li><strong>Warning</strong>: for minor or first-time violations</li>
+                <li><strong>Mute / Timeout</strong>: temporary restriction from chat or features</li>
+                <li><strong>Room/Lobby Ban</strong>: removed from a specific space</li>
+                <li><strong>Account Suspension</strong>: temporary platform-wide ban</li>
+                <li><strong>Permanent Ban</strong>: account terminated, no appeal for zero-tolerance violations</li>
               </ul>
               Lobby owners and moderators can enforce additional rules within their lobbies. If you believe moderation was unfair, contact us at <strong>support@weered.ca</strong>.
             </div>

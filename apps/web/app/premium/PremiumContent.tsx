@@ -54,7 +54,7 @@ const tiers = [
     features: [
       "Everything in Indicted",
       "Own up to 3 verified lobbies",
-      "Full forum moderation — pin, lock, delete",
+      "Full forum moderation: pin, lock, delete",
       "Lobby mod tools + custom modules",
       "Verified badge on your lobbies",
       "Direct line to platform support",

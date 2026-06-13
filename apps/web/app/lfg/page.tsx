@@ -24,12 +24,12 @@ const GUIDES: Guide[] = (() => {
 })();
 
 export const metadata: Metadata = {
-  title: "LFG guides — how to find groups for any game on Weered",
+  title: "LFG guides: how to find groups for any game on Weered",
   description: "Per-game guides for finding fireteams, parties, squads, pods, and teams on Weered. Destiny 2, League of Legends, MTG, Path of Exile, Helldivers 2, D&D and more.",
   alternates: { canonical: `${SITE}/lfg` },
   openGraph: {
     title: "LFG guides on Weered",
-    description: "How to find groups for any game on Weered — Destiny 2 fireteams, MTG pods, PoE parties, D&D campaigns, and more.",
+    description: "How to find groups for any game on Weered: Destiny 2 fireteams, MTG pods, PoE parties, D&D campaigns, and more.",
     url: `${SITE}/lfg`,
     type: "website",
   },

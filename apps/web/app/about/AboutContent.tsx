@@ -164,17 +164,17 @@ export default function AboutContent() {
             <div className="about-text">
               Weered is a <em>real-time community platform</em>.<br />
               Think lobbies, not servers. Rooms, not channels. Presence, not status dots.<br /><br />
-              <em>Lobbies</em> are living spaces — communities built around games, trading, studying, business, whatever pulls people in.
+              <em>Lobbies</em> are living spaces: communities built around games, trading, studying, business, whatever pulls people in.
               Each one has its own identity, roles, events, and deep integrations.<br /><br />
               <em>Rooms</em> are where things happen. Voice chat, video, screen share, watch parties, poker tables, study sessions.
-              Drop into a room and you&apos;re there — not lurking in a sidebar, actually <em>present</em>.<br /><br />
+              Drop into a room and you&apos;re there, not lurking in a sidebar. Actually <em>present</em>.<br /><br />
               <em>Modules</em> plug directly into the things you care about.
               Destiny 2 guardian lookup. League of Legends leaderboards. CS2 squad finder. Fortnite stats.
               Dota 2 player search. Live Twitch streams. Paper trading with real Binance prices.
               Poker with virtual currency. AI-powered practice tests. Pomodoro focus timers.<br /><br />
-              <em>The Operator</em> — our AI — lives in every chat. Type @operator and ask anything. It knows the platform, and it&apos;s got attitude.<br /><br />
-              <em>Paper</em> — virtual currency. Earn it from trading profits, challenges, daily bonuses. Spend it in the Store, use it at the poker table, trade items with other users.<br /><br />
-              The feed, the chat, the rooms — they all orbit <em>presence</em>.
+              <em>The Operator</em> (our AI) lives in every chat. Type @operator and ask anything. It knows the platform, and it&apos;s got attitude.<br /><br />
+              <em>Paper</em>: virtual currency. Earn it from trading profits, challenges, daily bonuses. Spend it in the Store, use it at the poker table, trade items with other users.<br /><br />
+              The feed, the chat, the rooms: they all orbit <em>presence</em>.
               Who is here. What they&apos;re doing. Right now.
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function AboutContent() {
             <div className="about-text">
               Every platform looks like every other platform.<br />
               Weered doesn&apos;t.<br />
-              The aesthetic is intentional — <em>dark, cinematic, a little dangerous</em>.<br />
+              The aesthetic is intentional: <em>dark, cinematic, a little dangerous</em>.<br />
               It&apos;s supposed to feel like a place, not a product.
             </div>
           </div>

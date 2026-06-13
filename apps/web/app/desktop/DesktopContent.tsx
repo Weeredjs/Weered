@@ -14,9 +14,9 @@ type LatestRelease = {
 const FEATURES: { icon: string; title: string; body: string }[] = [
   { icon: "▣", title: "System tray",        body: "Stays online in your tray. One click and you're back in the lobby." },
   { icon: "⌘", title: "Global hotkeys",     body: "Ctrl+Shift+W toggles the window from anywhere. Push-to-talk soon." },
-  { icon: "✸", title: "Native notifications", body: "OS-level pings — no browser permission popups, no missed DMs." },
+  { icon: "✸", title: "Native notifications", body: "OS-level pings. No browser permission popups, no missed DMs." },
   { icon: "⌬", title: "Deep links",          body: "Click weered:// links in Discord/email/wherever and they open in the app." },
-  { icon: "↑",  title: "Auto-launch",        body: "Optional — start Weered with your machine. Runs hidden in the tray." },
+  { icon: "↑",  title: "Auto-launch",        body: "Optional. Start Weered with your machine. Runs hidden in the tray." },
   { icon: "⟲", title: "Auto-update",         body: "Background updates, no nagware. Restart and you're on the latest." },
 ];
 
@@ -119,7 +119,7 @@ export default function DesktopContent() {
           <div className="dt-eyebrow">Weered Desktop</div>
           <h1 className="dt-h1">Native. Tiny. <em>Always on.</em></h1>
           <p className="dt-lede">
-            The full Weered experience as a real desktop app. System tray, native notifications, global hotkeys, deep links — built on Rust + Tauri.
+            The full Weered experience as a real desktop app. System tray, native notifications, global hotkeys, deep links. Built on Rust + Tauri.
             30× smaller than Discord. Eats less RAM. Doesn't pretend to be a browser.
           </p>
 
