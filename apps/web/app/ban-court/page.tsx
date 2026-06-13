@@ -33,7 +33,7 @@ export default function BanCourtPage() {
           <span style={{ fontSize: 11, fontWeight: 800, color: "#f5b700", letterSpacing: 2 }}>WEERED</span>
         </div>
         <p style={{ fontSize: 13, color: "rgba(203,213,225,0.6)", lineHeight: 1.6, marginBottom: 32, maxWidth: 620 }}>
-          Public record of accounts currently banned from Weered. If you've been banned and think it was wrong, file an appeal — it goes to a human queue.
+          Public record of accounts currently banned from Weered. If you've been banned and think it was wrong, file an appeal. It goes to a human queue.
         </p>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>

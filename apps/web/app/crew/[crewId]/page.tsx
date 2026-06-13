@@ -15,10 +15,10 @@ async function fetchCrew(crewId: string) {
 export async function generateMetadata(props: { params: Promise<{ crewId: string }> }): Promise<Metadata> {
   const params = await props.params;
   const c = await fetchCrew(params.crewId);
-  if (!c) return { title: "Crew — Weered", description: "A crew on Weered." };
+  if (!c) return { title: "Crew | Weered", description: "A crew on Weered." };
   const recruitStatus = c.recruiting ? "Recruiting now" : "Closed ranks";
   const tag = c.tag ? ` [${c.tag}]` : "";
-  const title = `${c.name}${tag} — Weered Crew`;
+  const title = `${c.name}${tag} | Weered Crew`;
   const description = c.description
     ? `${c.description.slice(0, 140)}${c.description.length > 140 ? "…" : ""}`
     : `${c.memberCount} member${c.memberCount === 1 ? "" : "s"} · ${recruitStatus}.`;

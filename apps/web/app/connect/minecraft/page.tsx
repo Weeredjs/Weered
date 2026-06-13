@@ -49,7 +49,7 @@ function ConnectMinecraftInner() {
       if (j?.ok) {
         setDone(true);
       } else {
-        setError(j?.error || "Failed to confirm — try a fresh code from the mod.");
+        setError(j?.error || "Failed to confirm. Try a fresh code from the mod.");
       }
     } catch (e: any) {
       setError(e?.message || "Network error");

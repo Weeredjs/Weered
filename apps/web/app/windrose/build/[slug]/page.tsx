@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const images = Array.isArray(build.images) ? build.images : [];
   const primaryUrl = images[0]?.url || build.thumbnailUrl || null;
   const desc = (build.description || "").slice(0, 200) || `Filed by ${build.author?.name || "a Captain"}`;
-  const title = `${build.title} — Windrose build by ${build.author?.name || "?"}`;
+  const title = `${build.title} | Windrose build by ${build.author?.name || "?"}`;
 
   return {
     title,

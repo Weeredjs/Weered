@@ -204,7 +204,7 @@ function OnboardingForm() {
               Pick your handle.
             </div>
             <div style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", marginTop: 8, lineHeight: 1.65 }}>
-              This is how you'll show up everywhere — rooms, chat, presence.<br/>
+              This is how you'll show up everywhere: rooms, chat, presence.<br/>
               Lowercase, numbers, and underscores. Pick something you'll answer to.
             </div>
           </div>
