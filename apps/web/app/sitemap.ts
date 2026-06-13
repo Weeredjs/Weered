@@ -19,6 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/forum`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: `${BASE}/why-not-discord`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/safety`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/features`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/guidelines`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE}/map`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${BASE}/desktop`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
