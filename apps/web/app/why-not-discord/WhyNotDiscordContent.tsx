@@ -1,18 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-const GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノ01";
-function Glyph({ delay }: { delay: number }) {
-  const [char, setChar] = useState(GLYPHS[0]);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const iv = setInterval(() => setChar(GLYPHS[Math.floor(Math.random() * GLYPHS.length)]), 80);
-      setTimeout(() => clearInterval(iv), 600);
-    }, delay);
-    return () => clearTimeout(t);
-  }, [delay]);
-  return <span style={{ color: "rgba(124,58,237,0.4)", fontFamily: "monospace" }}>{char}</span>;
-}
 
 export default function WhyNotDiscordContent() {
   const [visible, setVisible] = useState(false);
@@ -133,10 +121,6 @@ export default function WhyNotDiscordContent() {
 
       <div className="manifesto-root">
         <div className={`manifesto-inner${visible ? " visible" : ""}`}>
-
-          <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
-            {Array.from({ length: 8 }).map((_, i) => <Glyph key={i} delay={i * 120} />)}
-          </div>
 
           <div style={{ marginBottom: 20 }}>
             <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
