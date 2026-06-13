@@ -135,9 +135,9 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">origin</div>
             <div className="about-text">
-              Built in the dark.<br />
-              No roadmap. No investors. No announcements.<br />
-              Just a question: <em>what if online spaces felt like somewhere you actually wanted to be?</em>
+              I built Weered myself. No investors, no roadmap, no big launch.<br />
+              Most places you hang out online feel like software you log into and then leave.<br />
+              I wanted one that felt like somewhere to actually be.
             </div>
           </div>
 
@@ -168,10 +168,8 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">how it feels</div>
             <div className="about-text">
-              Every platform looks like every other platform.<br />
-              Weered doesn&apos;t.<br />
-              The aesthetic is intentional: <em>dark, cinematic, a little dangerous</em>.<br />
-              It&apos;s supposed to feel like a place, not a product.
+              The look is deliberately dark and cinematic. That&apos;s a choice, not a default.<br />
+              Most platforms settle for the same grey dashboard. I&apos;d rather it felt like a room you walked into than a product you opened.
             </div>
           </div>
 
@@ -180,9 +178,8 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">who runs this</div>
             <div className="about-text">
-              Someone who got tired of every platform feeling the same.<br />
-              That&apos;s all you get for now.<br />
-              <em>You know the username.</em>
+              One person, for now. I&apos;m keeping my name off this while it&apos;s early.<br />
+              Not a mystery for its own sake. Just not the point yet.
             </div>
           </div>
 
@@ -191,10 +188,9 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">status</div>
             <div className="about-text">
-              Early access. Growing fast.<br />
+              Early access, and still rough in places. I ship most days.<br />
               30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator. Focus rooms.<br />
-              New features ship daily. The rough edges are temporary. The vision isn&apos;t.<br />
-              <em>If you&apos;re here now, you were supposed to find it.</em>
+              It&apos;s not finished. It&apos;s being built in the open, and you&apos;re early.
             </div>
           </div>
 
