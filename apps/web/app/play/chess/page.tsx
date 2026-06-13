@@ -132,7 +132,7 @@ export default function PlayChessPage() {
         <section className="mkt-wrap">
           <div className="mkt-final-cta">
             <h2>Sit in the room while you climb.</h2>
-            <p>Status stays on Lichess. Bragging rights start showing up where your crew lives.</p>
+            <p>Status stays on Lichess. Your wins show up in the lobby.</p>
             <Link href="/lobby/chess" className="mkt-cta-primary">Open the Chess Lobby →</Link>
           </div>
         </section>

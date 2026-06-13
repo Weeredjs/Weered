@@ -49,7 +49,7 @@ export default function SafetyPage() {
               You can&apos;t get <span className="accent">ambushed</span> on Weered.
             </h1>
             <p className="mkt-sub">
-              No surprise gore in a lobby, no stranger flashing something at you, no throwaway account that dumps garbage and vanishes. We didn&apos;t bolt safety on as an apology. We built it into how the place runs, and this is exactly how.
+              No surprise gore in a lobby, no stranger flashing something at you, no throwaway account that dumps garbage and vanishes. Safety is built into how the place runs, not bolted on after. Here&apos;s exactly how.
             </p>
             <div className="mkt-cta-row">
               <Link href="/explore" className="mkt-cta-primary">Look around Weered</Link>
@@ -65,7 +65,7 @@ export default function SafetyPage() {
               Images are where things go wrong fastest, so we check every single one, twice. When you attach a picture, your own device checks it first, before it even uploads. If it&apos;s pornographic or violent, it stops right there and never leaves your machine.
             </p>
             <p className="mkt-p">
-              Anything that does upload gets checked again on our servers and re-encoded, which quietly strips out hidden data like the GPS coordinates baked into the photo. Nothing reaches another person unprocessed. Ever.
+              Anything that does upload gets checked again on our servers and re-encoded, which quietly strips out hidden data like the GPS coordinates baked into the photo. Nothing reaches another person unprocessed.
             </p>
           </div>
         </section>
@@ -149,8 +149,8 @@ export default function SafetyPage() {
 
         <section className="mkt-wrap">
           <div className="mkt-final-cta">
-            <h2>Found something? Don&apos;t sit on it.</h2>
-            <p>The report button is everywhere there&apos;s content, and safety@weered.ca goes to a person, not a void. We&apos;d rather get a report that turns out fine than miss one that didn&apos;t.</p>
+            <h2>If you see something, report it.</h2>
+            <p>The report button is everywhere there&apos;s content, and safety@weered.ca goes to a real person. We&apos;d rather get a report that turns out fine than miss one that didn&apos;t.</p>
             <Link href="/explore" className="mkt-cta-primary">Look around Weered →</Link>
           </div>
         </section>

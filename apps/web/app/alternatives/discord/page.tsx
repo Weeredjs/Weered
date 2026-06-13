@@ -76,7 +76,7 @@ export default function AlternativesDiscordPage() {
           <div className="mkt-wrap">
             <span className="mkt-eyebrow">Discord Alternative</span>
             <h1 className="mkt-h1">
-              What if your community lived <span className="accent">somewhere built for it</span>?
+              Built for game communities, not <span className="accent">bolted onto a chat app</span>.
             </h1>
             <p className="mkt-sub">
               Discord was made for everyone. Weered was made for game communities. Lobbies instead of servers, rooms instead of channels, presence instead of status dots. And real integrations with the games you actually play.
@@ -95,7 +95,7 @@ export default function AlternativesDiscordPage() {
               Discord puts you in a list of servers, each with a list of channels. You scroll a feed of messages and hope someone is around. Weered is a place. You walk into the <strong>Destiny 2 lobby</strong> and there are rooms with names like <em>Fireteam Find: Ultimate Ops</em> and <em>Trials Carry-talk</em>. Each room has a live voice channel, a live chat, and a stage that anyone can put a Twitch stream, a YouTube clip, a browser tab, or a Lichess board on. Other Guardians are visible, not as a status dot but as actual presence in the room.
             </p>
             <p className="mkt-p">
-              It feels closer to walking into a clubhouse than opening an app. That difference is the whole pitch.
+              It feels closer to walking into a clubhouse than opening an app.
             </p>
           </div>
         </section>

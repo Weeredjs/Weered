@@ -51,7 +51,7 @@ const BODIES: Record<string, ReactNode> = {
       </p>
 
       <p className="mkt-p">
-        More next week. There&apos;s always more.
+        More next week.
       </p>
     </>
   ),

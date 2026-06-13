@@ -38,7 +38,7 @@ export default function FeaturesPage() {
               Every game gets a <span className="accent">real lobby</span>, wired to the game itself.
             </h1>
             <p className="mkt-sub">
-              Most community apps hand you a text channel with a game&apos;s logo slapped on it. Weered gives each game a lobby that actually talks to the game. Your clears, your loot prices, your killboard, live in the room. That&apos;s the whole point, and it&apos;s the part a chat app can&apos;t fake.
+              Most community apps hand you a text channel with a game&apos;s logo slapped on it. Weered gives each game a lobby that actually talks to the game. Your clears, your loot prices, your killboard, live in the room.
             </p>
             <div className="mkt-cta-row">
               <Link href="/explore" className="mkt-cta-primary">Browse the lobbies</Link>
@@ -81,7 +81,7 @@ export default function FeaturesPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Crews that stick around</h2>
             <p className="mkt-p">
-              Build a crew and your tag rides your name across the whole platform. Crews get their own space, their own chat, and their own identity. It&apos;s the difference between a group of friends and a thing with a name people recognise.
+              Build a crew and your tag rides your name across the whole platform. Crews get their own space, their own chat, and their own identity.
             </p>
           </div>
         </section>
@@ -90,7 +90,7 @@ export default function FeaturesPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Standing you earn, not a badge you buy</h2>
             <p className="mkt-p">
-              Notoriety is platform-wide reputation you build by sticking around and playing straight. It unlocks what you can do: posting media, hosting your own lobbies, running moderation. Paper is the in-platform currency, spendable on store items, tournament buy-ins, and crew goods. Both are earned, and earning them is half the fun.
+              Notoriety is platform-wide reputation you build by sticking around and playing straight. It unlocks what you can do: posting media, hosting your own lobbies, running moderation. Paper is the in-platform currency, spendable on store items, tournament buy-ins, and crew goods. Both are earned.
             </p>
           </div>
         </section>
@@ -99,7 +99,7 @@ export default function FeaturesPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">It already knows what you&apos;re playing</h2>
             <p className="mkt-p">
-              Weered reads cross-platform presence from Steam, Xbox, PlayStation, and Twitch. Your rails show who&apos;s in a game, who&apos;s streaming, and who&apos;s lying low, without anyone typing a status. Walk in and the place already knows what your crew is up to.
+              Weered reads cross-platform presence from Steam, Xbox, PlayStation, and Twitch. Your rails show who&apos;s in a game, who&apos;s streaming, and who&apos;s lying low, without anyone typing a status.
             </p>
           </div>
         </section>

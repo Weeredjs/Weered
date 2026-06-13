@@ -36,10 +36,10 @@ export default function PlayPathOfExilePage() {
           <div className="mkt-wrap">
             <span className="mkt-eyebrow">Path of Exile: Unofficial Community Hub</span>
             <h1 className="mkt-h1">
-              A real lobby for <span className="accent">the long grind</span>.
+              Everything Path of Exile, in <span className="accent">one lobby</span>.
             </h1>
             <p className="mkt-sub">
-              Live poe.ninja economy, ladder leaderboards, Twitch streamer directory, crew finder, and rooms to hang out in while you map. The Path of Exile community space that's actually a place, not a Discord channel.
+              Live poe.ninja economy, ladder leaderboards, Twitch streamer directory, crew finder, and rooms to hang out in while you map.
             </p>
             <div className="mkt-cta-row">
               <Link href="/lobby/path-of-exile" className="mkt-cta-primary">Open the PoE Lobby</Link>
