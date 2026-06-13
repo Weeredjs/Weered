@@ -18,20 +18,20 @@ async function fetchPost(postId: string): Promise<any | null> {
 export async function generateMetadata(props: { params: Promise<{ postId: string }> }): Promise<Metadata> {
   const params = await props.params;
   const post = await fetchPost(params.postId);
-  const title = post?.title || "Post — Weered Forum";
+  const title = post?.title || "Post | Weered Forum";
   const description = post?.body ? String(post.body).slice(0, 160).replace(/\n/g, " ") : "A discussion on the Weered community forum.";
   return {
     title,
     description,
     openGraph: {
-      title: `${title} — Weered Forum`,
+      title: `${title} | Weered Forum`,
       description,
       url: `${SITE}/forum/${params.postId}`,
       type: "article",
     },
     twitter: {
       card: "summary",
-      title: `${title} — Weered Forum`,
+      title: `${title} | Weered Forum`,
       description,
     },
     alternates: { canonical: `${SITE}/forum/${params.postId}` },

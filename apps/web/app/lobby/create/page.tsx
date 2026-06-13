@@ -19,7 +19,7 @@ const MODULE_TYPES = [
   { id: "BUNGIE", label: "Destiny 2", desc: "Guardian stats, challenges, Xur", icon: "🔮" },
   { id: "RIOT", label: "League of Legends", desc: "Summoner lookup, ranked, rotation", icon: "⚔️" },
   { id: "FORTNITE", label: "Fortnite", desc: "Stats, item shop, cosmetics, news", icon: "🎯" },
-  { id: "TRADING", label: "FakeOut", desc: "Paper trade crypto — live charts, fake money, leaderboards", icon: "📈" },
+  { id: "TRADING", label: "FakeOut", desc: "Paper trade crypto: live charts, fake money, leaderboards", icon: "📈" },
   { id: "TWITCH", label: "Twitch", desc: "Live stream integration", icon: "📺" },
   { id: "YOUTUBE", label: "YouTube", desc: "Video sync & watch parties", icon: "▶️" },
   { id: "FEED", label: "Feed", desc: "Community content feed", icon: "📰" },

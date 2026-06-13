@@ -41,7 +41,7 @@ const TOOLKIT_SECTIONS = [
     title: "Rooms & Modules",
     icon: "🧩",
     color: "#7C3AED",
-    desc: "Create rooms with pluggable modules — voice chat, video, YouTube sync, Twitch embeds, article readers, Reddit feeds, and custom iframes. Each room is its own configurable space.",
+    desc: "Create rooms with pluggable modules: voice chat, video, YouTube sync, Twitch embeds, article readers, Reddit feeds, and custom iframes. Each room is its own configurable space.",
     features: ["Voice & video rooms (LiveKit)", "YouTube / Twitch sync viewing", "Article reader module", "Reddit feed integration", "Custom iframe embeds", "Room lock & password protection"],
   },
   {
@@ -55,7 +55,7 @@ const TOOLKIT_SECTIONS = [
     title: "Challenges & Tournaments",
     icon: "🎯",
     color: "#F59E0B",
-    desc: "Build custom challenges with 8 objective types — kills, wins, K/D targets, speed clears, weapon-specific goals, and more. Run tournaments with live leaderboards and auto-award badges.",
+    desc: "Build custom challenges with 8 objective types: kills, wins, K/D targets, speed clears, weapon-specific goals, and more. Run tournaments with live leaderboards and auto-award badges.",
     features: ["8 objective types (kills, wins, K/D, speed, weapon kills...)", "Recurring daily/weekly challenges", "Tournament leaderboards", "Badge system with rarity tiers", "Real-time WebSocket progress", "PGCR weapon kill tracking"],
   },
   {
@@ -69,7 +69,7 @@ const TOOLKIT_SECTIONS = [
     title: "Branding & Customization",
     icon: "🎨",
     color: "#DB2777",
-    desc: "Full lobby theming — accent colors, logos, banners, custom descriptions, and search keywords. Your lobby, your brand.",
+    desc: "Full lobby theming: accent colors, logos, banners, custom descriptions, and search keywords. Your lobby, your brand.",
     features: ["Accent color theming", "Logo & banner upload", "Custom description & keywords", "Website URL embedding"],
   },
   {
@@ -447,7 +447,7 @@ export default function LobbyPage() {
 
                 <div style={{ marginBottom: 20 }}>
                   <p style={{ fontSize: 13, color: "rgba(226,232,240,0.75)", lineHeight: 1.6, margin: "0 0 6px" }}>
-                    Every lobby comes with a full suite of admin tools — rooms, moderation, events, monetization, and game integrations. Here's what each tier unlocks and how to use it all.
+                    Every lobby comes with a full suite of admin tools: rooms, moderation, events, monetization, and game integrations. Here's what each tier unlocks and how to use it all.
                   </p>
                 </div>
 

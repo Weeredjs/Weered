@@ -16,7 +16,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   const params = await props.params;
   const b = await fetchBounty(params.id);
   if (!b) {
-    return { title: "Bounty — Weered", description: "A Windrose bounty on Weered." };
+    return { title: "Bounty | Weered", description: "A Windrose bounty on Weered." };
   }
   const status = b.status === "OPEN" ? "OPEN"
     : b.status === "CLAIMED" ? "AWAITING SETTLE"
@@ -27,7 +27,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
     ? `${b.claimantName || "A hunter"} delivered on ${b.targetHandle} for ${b.amount.toLocaleString()} Paper. Posted by ${b.posterName}.`
     : b.status === "OPEN"
     ? `${b.amount.toLocaleString()} Paper on ${b.targetHandle}. Posted by ${b.posterName}. [${status}]`
-    : `Bounty on ${b.targetHandle} — ${b.amount.toLocaleString()} Paper. [${status}]`;
+    : `Bounty on ${b.targetHandle} for ${b.amount.toLocaleString()} Paper. [${status}]`;
   return {
     title,
     description,
