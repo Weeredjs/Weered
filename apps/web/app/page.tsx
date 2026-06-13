@@ -825,10 +825,10 @@ function Landing({ nextPath }: { nextPath: string }) {
         <section className="lp-hero">
           <div className="lp-eyebrow">Bringing back the game lobby</div>
           <h1 className="lp-headline">
-            Every game<br />deserves a lobby.
+            Every game<br />gets a lobby.
           </h1>
           <p className="lp-sub">
-            Voice rooms, crews, and live game presence, built into a place that actually knows what you're playing. Weered is the game lobby reborn: more gamery than the launchers you already use, and free.
+            Voice rooms, crews, and live game presence, built into a place that actually knows what you're playing. It does more than the launcher you already have, and it's free.
           </p>
           <div className="lp-hero-cta">
             <Link href={getIn} className="lp-btn-primary">get_in()</Link>
@@ -873,7 +873,7 @@ function Landing({ nextPath }: { nextPath: string }) {
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>One place, many vibes.</strong> Same platform serves gamers, pickleballers, fishermen, storm chasers, D&D tables. Pick your vertical. The experience adapts.
+                <strong>Not just gaming.</strong> The same platform serves gamers, pickleballers, fishermen, storm chasers, and D&D tables. Pick your vertical and the tools match it.
               </div>
             </div>
           </div>
