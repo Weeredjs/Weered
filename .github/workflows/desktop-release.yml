@@ -99,7 +99,7 @@ jobs:
           args: ${{ matrix.args }}
 
       # ── Publish release to Weeredjs/Weered-releases ─────────────────
-      # softprops/action-gh-release@v2 handles cross-repo publishing
+      # softprops/action-gh-release@v3 handles cross-repo publishing
       # cleanly. RELEASES_PUBLISH_TOKE has Contents:write on the public
       # releases repo.
       #
@@ -111,7 +111,7 @@ jobs:
       # what /desktop/latest checks before serving an update offer to
       # Tauri clients. Without them, auto-updater returns 204 (no update).
       - name: Publish to Weered-releases (cross-repo)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           repository: Weeredjs/Weered-releases
           token: ${{ secrets.RELEASES_PUBLISH_TOKE }}
