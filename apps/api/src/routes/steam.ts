@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
 
@@ -51,7 +52,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
 
     try {
       const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appId}`;
-      const r = await fetch(url);
+      const r = await fetchWithTimeout(url);
       if (!r.ok) throw new Error(String(r.status));
       const j: any = await r.json();
       const count = Number(j?.response?.player_count ?? 0);
@@ -89,7 +90,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
 
     try {
       const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${STEAM_API_KEY}&steamid=${steamId}&include_played_free_games=1&appids_filter[0]=${appId}&format=json`;
-      const r = await fetch(url);
+      const r = await fetchWithTimeout(url);
       if (!r.ok) throw new Error(String(r.status));
       const j: any = await r.json();
       const games: any[] = j?.response?.games || [];
@@ -141,7 +142,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       let schema: any = cs && now - cs.ts < SCHEMA_TTL_MS ? cs.schema : null;
       if (!schema) {
         const sUrl = `https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key=${STEAM_API_KEY}&appid=${appId}&l=english`;
-        const sr = await fetch(sUrl);
+        const sr = await fetchWithTimeout(sUrl);
         if (sr.ok) {
           schema = await sr.json();
           schemaCache.set(schemaKey, { schema, ts: now });
@@ -151,7 +152,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       const schemaByName = new Map(schemaList.map((s: any) => [String(s.name), s]));
 
       const aUrl = `https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?key=${STEAM_API_KEY}&steamid=${steamId}&appid=${appId}&l=english`;
-      const ar = await fetch(aUrl);
+      const ar = await fetchWithTimeout(aUrl);
       if (!ar.ok) throw new Error(String(ar.status));
       const aj: any = await ar.json();
       const playerStats = aj?.playerstats;

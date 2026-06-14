@@ -33,7 +33,7 @@
     "resend": "^6.12.2",
     "sharp": "^0.34.5",
     "web-push": "^3.6.7",
-    "ws": "^8.18.0"
+    "ws": "^8.20.1"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",

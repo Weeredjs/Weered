@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 
 export default async function leagueRoutes(app: FastifyInstance) {
@@ -9,7 +10,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
   let ddragonVersion = "14.24.1";
   (async () => {
     try {
-      const res = await fetch(DDRAGON_VER_URL);
+      const res = await fetchWithTimeout(DDRAGON_VER_URL);
       const versions: string[] = await res.json() as string[];
       if (versions?.[0]) { ddragonVersion = versions[0]; console.log(`[league] Data Dragon version: ${ddragonVersion}`); }
     } catch (e) { console.warn("[league] Failed to fetch DDragon version, using fallback"); }
@@ -20,7 +21,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
   function ddragonImg(path: string) { return `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/${path}`; }
 
   async function riotGet(url: string) {
-    const res = await fetch(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
+    const res = await fetchWithTimeout(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
     if (res.status === 429) { console.warn("[riot] Rate limited"); return null; }
     if (res.status === 404) return null;
     if (!res.ok) { console.error(`[riot] ${res.status} ${res.statusText} — ${url}`); return null; }
@@ -207,7 +208,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
     if (cached) return reply.send(cached);
 
     try {
-      const res = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/en_US/champion.json`);
+      const res = await fetchWithTimeout(`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/en_US/champion.json`);
       const data: any = await res.json();
       const champions = Object.values(data.data || {}).map((c: any) => ({
         id: c.id,
