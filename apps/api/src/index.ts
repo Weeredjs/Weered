@@ -106,6 +106,7 @@ import profileRoutes from "./routes/profile";
 import pokerRoutes from "./routes/poker";
 import setupTradingSocket from "./sockets/tradingWs";
 import { handleCanvas } from "./sockets/canvas";
+import { handleLaunch } from "./sockets/roomMedia";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -2934,83 +2935,7 @@ async function main() {
         if (msg.type === "launch:set" || msg.type === "launch:clear"
             || msg.type === "launch:slot" || msg.type === "launch:ready"
             || msg.type === "launch:fire" || msg.type === "launch:abort") {
-          if (!ws.user || !ws.roomId) return;
-          const room = rooms.get(ws.roomId);
-          if (!room) return;
-          if (!room.users.has(ws.user.id)) return;
-          const launch = ensureLaunch(room);
-          const userIsOwner = isOwner(room, ws.user.id) || isElevatedGlobal(ws.user.globalRole);
-
-          if (msg.type === "launch:set") {
-            if (!userIsOwner) return;
-            const appid = Number(msg.appid);
-            const connect = String(msg.connect || "").trim().slice(0, 200);
-            const display = String(msg.display || connect || "").trim().slice(0, 80);
-            const note    = msg.note ? String(msg.note).trim().slice(0, 300) : undefined;
-            if (!appid || !connect) return;
-            launch.target = { appid, connect, display, note, setBy: ws.user.id, setAt: Date.now() };
-            launch.ready.clear();
-            launch.firedAt = null;
-            launch.firedBy = null;
-            broadcastLaunch(room);
-            return;
-          }
-
-          if (msg.type === "launch:clear") {
-            if (!userIsOwner) return;
-            launch.target = null;
-            launch.ready.clear();
-            launch.slots.clear();
-            launch.firedAt = null;
-            launch.firedBy = null;
-            broadcastLaunch(room);
-            return;
-          }
-
-          if (msg.type === "launch:slot") {
-            const slot: LaunchSlot = msg.slot === "player" ? "player" : "observer";
-            launch.slots.set(ws.user.id, slot);
-            if (slot === "observer") launch.ready.delete(ws.user.id);
-            broadcastLaunch(room);
-            return;
-          }
-
-          if (msg.type === "launch:ready") {
-            if (launch.slots.get(ws.user.id) !== "player") return;
-            const ready = Boolean(msg.ready);
-            if (ready) launch.ready.add(ws.user.id);
-            else launch.ready.delete(ws.user.id);
-            broadcastLaunch(room);
-            return;
-          }
-
-          if (msg.type === "launch:fire") {
-            if (!userIsOwner || !launch.target) return;
-            const anyPlayer = Array.from(launch.slots.values()).some(s => s === "player");
-            if (!anyPlayer) return;
-            launch.firedAt = Date.now();
-            launch.firedBy = ws.user.id;
-            broadcastLaunch(room);
-            setTimeout(() => {
-              const r = rooms.get(room.roomId);
-              if (!r?.launch) return;
-              if (r.launch.firedAt === launch.firedAt) {
-                r.launch.firedAt = null;
-                r.launch.firedBy = null;
-                r.launch.ready.clear();
-                broadcastLaunch(r);
-              }
-            }, 60_000);
-            return;
-          }
-
-          if (msg.type === "launch:abort") {
-            if (!userIsOwner) return;
-            launch.firedAt = null;
-            launch.firedBy = null;
-            broadcastLaunch(room);
-            return;
-          }
+          handleLaunch(ws, msg, { rooms, ensureLaunch, isOwner, isElevatedGlobal, broadcastLaunch });
           return;
         }
 
