@@ -105,7 +105,7 @@ import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
 import pokerRoutes from "./routes/poker";
 import setupTradingSocket from "./sockets/tradingWs";
-import { handleCanvas } from "./sockets/canvas";
+import { handleCanvas, handleCanvasRelay } from "./sockets/canvas";
 import { handleLaunch } from "./sockets/roomMedia";
 import { handleVoice } from "./sockets/voiceWs";
 import campaignsRoutes from "./routes/campaigns";
@@ -3518,28 +3518,7 @@ async function main() {
           return;
         }
 
-        if (
-          msg.type === "dnd:initiative" ||
-          msg.type === "dnd:roll" ||
-          msg.type === "dnd:combatant:damage" ||
-          msg.type === "dnd:combatant:select"
-        ) {
-          if (!room.users.has(ws.user.id)) return;
-          for (const s of room.sockets) {
-            if (s === ws) continue;
-            send(s, { ...msg, roomId, _from: ws.user.id });
-          }
-          return;
-        }
-
-        if (msg.type === "map:token-move" || msg.type === "map:fog-reveal" || msg.type === "map:fog-clear") {
-          if (!room.users.has(ws.user.id)) return;
-          for (const s of room.sockets) {
-            if (s === ws) continue;
-            send(s, { ...msg, roomId, _from: ws.user.id });
-          }
-          return;
-        }
+        if (handleCanvasRelay(ws, msg, { room, roomId }, { send })) return;
 
         if (msg.type === "poker:join") {
           const tableId = String(msg.tableId || "").trim();

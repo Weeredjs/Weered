@@ -59,3 +59,25 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
 
   return false;
 }
+
+export function handleCanvasRelay(
+  ws: any,
+  msg: any,
+  snap: { room: any; roomId: string },
+  opts: { send: (ws: any, m: any) => void },
+): boolean {
+  if (
+    msg.type === "dnd:initiative" || msg.type === "dnd:roll" ||
+    msg.type === "dnd:combatant:damage" || msg.type === "dnd:combatant:select" ||
+    msg.type === "map:token-move" || msg.type === "map:fog-reveal" || msg.type === "map:fog-clear"
+  ) {
+    const { room, roomId } = snap;
+    if (!room.users.has(ws.user.id)) return true;
+    for (const s of room.sockets) {
+      if (s === ws) continue;
+      opts.send(s, { ...msg, roomId, _from: ws.user.id });
+    }
+    return true;
+  }
+  return false;
+}
