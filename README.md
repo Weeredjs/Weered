@@ -27,7 +27,7 @@ packages/
 
 **The architectural rule:** business logic lives in the API. Permissions, scoring, the paper economy, friend logic, lobby joining, notoriety — every rule is server-side, decomposed across `apps/api/src/routes/*`. Clients render and submit; they never decide.
 
-See [`CLAUDE.md`](./CLAUDE.md) for the full repo guide — per-client release cadence, deploy procedures, and gotchas.
+See [`DEVELOPMENT.md`](./DEVELOPMENT.md) for the full repo guide — per-client release cadence, deploy procedures, and gotchas.
 
 ## Stack
 
@@ -79,7 +79,7 @@ bash scripts/deploy.sh        # guardrails -> web build -> restart both -> smoke
 bash scripts/deploy.sh api    # API only: guardrails -> restart api -> smoke test
 ```
 
-Runtime: the API is esbuild-bundled to `dist/` and run with Node; the web app is `next build` + `next start`; both run under PM2 on the droplet. Full procedures in [`CLAUDE.md`](./CLAUDE.md).
+Runtime: the API is esbuild-bundled to `dist/` and run with Node; the web app is `next build` + `next start`; both run under PM2 on the droplet. Full procedures in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
 
 ## Status
 
