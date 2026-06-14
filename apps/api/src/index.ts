@@ -105,6 +105,7 @@ import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
 import pokerRoutes from "./routes/poker";
 import setupTradingSocket from "./sockets/tradingWs";
+import { handleCanvas } from "./sockets/canvas";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -3031,48 +3032,7 @@ async function main() {
           leaveRoom(ws);
           return;
         }
-        if (msg.type === "module:set") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!room.users.has(ws.user.id)) return;
-          const mode = String(msg.mode || "").trim() || null;
-          if (!mode) {
-            room.activeModule = null;
-            room.ytState = null;
-            broadcast(room, { type: "module:state", roomId, activeModule: null });
-            return;
-          }
-          const disabled: string[] = Array.isArray((room as any).disabledModules) ? (room as any).disabledModules : [];
-          if (disabled.includes(mode) && !isModOrOwner(room, ws.user.id, ws.user?.globalRole)) {
-            try { send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" }); } catch {}
-            return;
-          }
-          if (mode !== "youtube") room.ytState = null;
-          const moduleState: ModuleState = {
-            mode,
-            url: typeof msg.url === "string" ? msg.url.slice(0, 2000) : undefined,
-            channel: typeof msg.channel === "string" ? msg.channel.slice(0, 100).toLowerCase() : undefined,
-            setBy: ws.user.id,
-            setAt: Date.now(),
-          };
-          room.activeModule = moduleState;
-          broadcast(room, { type: "module:state", roomId, activeModule: moduleState });
-          return;
-        }
-
-        if (msg.type === "module:clear") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!room.users.has(ws.user.id)) return;
-          room.activeModule = null;
-          room.ytState = null;
-          broadcast(room, { type: "module:state", roomId, activeModule: null });
-          return;
-        }
+        if (handleCanvas(ws, msg, { normalizeRoomId, rooms, broadcast, isModOrOwner, send })) return;
 
         function broadcastVoiceState(room: RoomState) {
           broadcast(room, {
