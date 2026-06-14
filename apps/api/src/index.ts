@@ -111,9 +111,22 @@ import { sendMail, buildVerifyEmail, buildResetEmail } from "./lib/email";
 let _anthropicModule: any = null;
 let _anthropicLoaded = false;
 
+// Cached SiteConfig flags (aiEnabled, maintenanceMode), refreshed lazily (<=15s)
+// so per-request hooks never hammer the DB. registrationOpen is read directly.
+let _siteFlags: Record<string, string> = {};
+let _siteFlagsAt = 0;
+async function getSiteFlags(): Promise<Record<string, string>> {
+  const now = Date.now();
+  if (now - _siteFlagsAt > 15000) {
+    try { _siteFlags = await getAllSiteConfig(); _siteFlagsAt = now; } catch {}
+  }
+  return _siteFlags;
+}
+
 async function getAI(): Promise<any | null> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return null;
+  if ((await getSiteFlags()).aiEnabled === "false") return null;
   if (!_anthropicLoaded) {
     _anthropicLoaded = true;
     try {
@@ -129,7 +142,7 @@ async function getAI(): Promise<any | null> {
 }
 
 function isAIAvailable(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY) && _siteFlags.aiEnabled !== "false";
 }
 
 import { prisma } from "./lib/prisma";
@@ -1015,6 +1028,7 @@ const SITE_CONFIG_DEFAULTS: Record<string, string> = {
   featuredLobbyId: "",
   registrationOpen: "true",
   maintenanceMode: "false",
+  aiEnabled: "true",
   defaultTier: "INNOCENT",
   maxRoomsPerLobby: "50",
   chatRateLimit: "30",
@@ -2434,6 +2448,20 @@ async function main() {
       const c = readCookieToken(req);
       if (c) req.headers.authorization = "Bearer " + c;
     }
+  });
+
+  // Maintenance gate: when on, non-staff get 503. /health, /auth/*, and /staff*
+  // always pass so an operator can always log in and turn it back off.
+  // Fail-open: any error here lets the request through so a bug can never down the site.
+  app.addHook("onRequest", async (req: any, reply: any) => {
+    try {
+      if ((await getSiteFlags()).maintenanceMode !== "true") return;
+      const url = String(req.url || "").split("?")[0];
+      if (url === "/health" || url.startsWith("/auth/") || url.startsWith("/staff")) return;
+      const au = authFromHeader(req.headers.authorization);
+      if (au && canAccessStaff(await getGlobalRole(au.id))) return;
+      return reply.code(503).send({ error: "maintenance", message: "Weered is down for maintenance. Back shortly." });
+    } catch {}
   });
 
   const { default: rateLimit } = await import("@fastify/rate-limit");

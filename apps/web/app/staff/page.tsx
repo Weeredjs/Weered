@@ -15,7 +15,7 @@ type AuditLog   = { id: string; actorName: string; action: string; targetName?: 
 type StaffNote  = { id: string; authorName: string; body: string; createdAt: string };
 type StaffRoom  = { id: string; name: string; locked: boolean; members: number; lobbyId?: string; createdAt: string; pinned?: boolean; liveUsers?: number; lastActiveAt?: number };
 type StaffLobby = { id: string; name: string; description?: string; verified: boolean; pinned: boolean; moduleType: string; onlineCount: number };
-type SiteConfig = { featuredLobbyId: string; registrationOpen: boolean; maintenanceMode: boolean; defaultTier: UserTier; maxRoomsPerLobby: number; chatRateLimit: number };
+type SiteConfig = { featuredLobbyId: string; registrationOpen: boolean; maintenanceMode: boolean; aiEnabled: boolean; defaultTier: UserTier; maxRoomsPerLobby: number; chatRateLimit: number };
 
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
@@ -1867,6 +1867,7 @@ function ConfigTab() {
       </Row>
       <Row label="Registration Open"><Toggle on={config.registrationOpen} onClick={() => toggle("registrationOpen")} /></Row>
       <Row label="Maintenance Mode"><Toggle on={config.maintenanceMode} onClick={() => toggle("maintenanceMode")} /></Row>
+      <Row label="Operator AI Enabled"><Toggle on={config.aiEnabled} onClick={() => toggle("aiEnabled")} /></Row>
       <Row label="Chat Rate Limit (msg/min)">
         <input type="number" style={{ ...S.input, width: 80 }} value={config.chatRateLimit} onChange={e => num("chatRateLimit", e.target.value)} />
       </Row>
