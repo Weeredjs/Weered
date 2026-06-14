@@ -108,6 +108,7 @@ import setupTradingSocket from "./sockets/tradingWs";
 import { handleCanvas, handleCanvasRelay } from "./sockets/canvas";
 import { handleLaunch, handleYoutube } from "./sockets/roomMedia";
 import { handleVoice } from "./sockets/voiceWs";
+import { handlePresence } from "./sockets/presence";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -2807,82 +2808,9 @@ async function main() {
 
         if (!ws.user) { send(ws, { type: "auth:fail", reason: "Not authenticated" }); return; }
 
-        if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
-          const [lobbyList, roomList] = await Promise.all([
-            (prisma as any).lobby.findMany({
-            where: { pinned: true },
-            select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
-            }),
-            prisma.room.findMany({
-              orderBy: { updatedAt: "desc" },
-              select: {
-                id: true, name: true, locked: true, lobbyId: true,
-                iconUrl: true, bannerUrl: true, accentColor: true, pinned: true, isEvent: true,
-                _count: { select: { members: true } },
-              },
-              take: 100,
-            }),
-          ]);
-            const lobbyIds = new Set(lobbyList.map((l: any) => l.id));
-            const lobbyOut = lobbyList.map((l: any) => ({
-            id: l.id, roomId: l.id, name: l.name, description: l.description,
-            verified: l.verified, pinned: true, moduleType: l.moduleType,
-            onlineCount: rooms.get(l.id)?.users.size ?? 0, locked: false,
-          }));
-          const roomOut = roomList
-            .filter(r => !r.id.includes("%") && !lobbyIds.has(r.id))
-            .map((r: any) => ({
-              id: r.id, roomId: r.id, name: r.name || r.id,
-              onlineCount: rooms.get(r.id)?.users.size ?? 0,
-              locked: Boolean(r.locked), pinned: Boolean(r.pinned), isEvent: Boolean(r.isEvent),
-              iconUrl: r.iconUrl ?? null, bannerUrl: r.bannerUrl ?? null, accentColor: r.accentColor ?? null,
-              lobbyId: r.lobbyId ?? null,
-            }));
-          send(ws, { type: "rooms", rooms: [...lobbyOut, ...roomOut] });
-          return;
-        }
-
-        if (msg.type === "presence:join") {
-          const roomId = normalizeRoomId(String(msg.roomId || ""));
-          if (!roomId) return;
-          const room = await ensureRoomLoaded(roomId);
-          if (room.banned.has(ws.user.id)) { send(ws, { type: "room:banned", roomId }); return; }
-          const uid = ws.user.id;
-          const isLobby = String(roomId || "").startsWith("lobby:");
-
-          if (room.passwordHash && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
-            const suppliedPassword = typeof msg.password === "string" ? msg.password : "";
-            if (!suppliedPassword) {
-              send(ws, { type: "room:password:required", roomId });
-              return;
-            }
-            const passwordOk = await bcrypt.compare(suppliedPassword, room.passwordHash);
-            if (!passwordOk) {
-              send(ws, { type: "room:password:wrong", roomId });
-              return;
-            }
-          }
-
-          if (isLobby) room.locked = false;
-          if (room.locked && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
-            if (!room.knocks.some((k) => k.userId === uid)) {
-              room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
-              if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
-            }
-            let p = room.pending.get(uid);
-            if (!p) { p = new Set<Sock>(); room.pending.set(uid, p); }
-            p.add(ws);
-            ws.pendingRoomId = roomId;
-            send(ws, { type: "room:knock:queued", roomId });
-            for (const s of room.sockets) {
-              const sid = s.user?.id;
-              if (!sid || !isModOrOwner(room, sid)) continue;
-              send(s, { type: "room:knock", roomId, user: { id: uid, name: ws.user.name } });
-            }
-            publishState(room);
-            return;
-          }
-          await doJoin(ws, roomId);
+        if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list"
+            || msg.type === "presence:join" || msg.type === "presence:idle" || msg.type === "presence:leave") {
+          await handlePresence(ws, msg, { rooms, send, broadcast, normalizeRoomId, ensureRoomLoaded, isModOrOwner, doJoin, publishState, leaveRoom });
           return;
         }
 
@@ -2919,20 +2847,6 @@ async function main() {
           return;
         }
 
-        if (msg.type === "presence:idle") {
-          if (!ws.user) return;
-          const away = Boolean(msg.away);
-          (ws.user as any).isAway = away;
-          for (const [, room] of rooms) {
-            const entry = room.users.get(ws.user.id);
-            if (entry) {
-              (entry as any).isAway = away;
-              broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
-            }
-          }
-          return;
-        }
-
         if (msg.type === "launch:set" || msg.type === "launch:clear"
             || msg.type === "launch:slot" || msg.type === "launch:ready"
             || msg.type === "launch:fire" || msg.type === "launch:abort") {
@@ -2940,24 +2854,6 @@ async function main() {
           return;
         }
 
-        if (msg.type === "presence:leave") {
-          if (ws.pendingRoomId) {
-            const rid = ws.pendingRoomId;
-            const r = rooms.get(rid);
-            if (r) {
-              const set = r.pending.get(ws.user.id);
-              if (set) set.delete(ws);
-              if (set && set.size === 0) r.pending.delete(ws.user.id);
-              ws.pendingRoomId = undefined;
-              publishState(r);
-            }
-            return;
-          }
-          const leaveRid = normalizeRoomId(String(msg.roomId || ""));
-          if (leaveRid && ws.roomId && leaveRid !== ws.roomId) return;
-          leaveRoom(ws);
-          return;
-        }
         if (handleCanvas(ws, msg, { normalizeRoomId, rooms, broadcast, isModOrOwner, send })) return;
 
         if (typeof msg.type === "string" && msg.type.startsWith("voice:")) {
