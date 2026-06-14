@@ -100,6 +100,7 @@ import notorietyRoutes from "./routes/notoriety";
 import publicMiscRoutes from "./routes/publicMisc";
 import desktopRoutes from "./routes/desktop";
 import voiceRoutes from "./routes/voice";
+import staffContentRoutes from "./routes/staffContent";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -181,7 +182,6 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 }
 const HTTP_PORT = Number(process.env.PORT || 4000);
 const WS_PORT = Number(process.env.WS_PORT || 4001);
-
 
 type AuthedUser = { id: string; name: string; usernameKey?: string; globalRole?: string; tier?: string; avatarColor?: string; avatar?: string };
 type Sock = WebSocket & { user?: AuthedUser; roomId?: string; pendingRoomId?: string; joinedRoomId?: string };
@@ -2941,31 +2941,7 @@ async function main() {
     isModOrOwner, audit, publishState, findSocketsByUser,
   } as any);
 
-  await 
-    app.get("/staff/rooms", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-
-    const list = await prisma.room.findMany({
-      orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, locked: true, createdAt: true, lobbyId: true, _count: { select: { members: true } } },
-    });
-    const roomsMem = new Map([...rooms.entries()]);
-    const enriched = list.map(r => {
-    const mem = roomsMem.get(r.id);
-    return {
-      id: r.id, name: r.name || "", locked: Boolean(r.locked),
-      members: r._count.members, createdAt: r.createdAt.toISOString(),
-      lobbyId: r.lobbyId || null,
-      pinned: mem?.pinned || false,
-      liveUsers: mem?.users.size || 0,
-      lastActiveAt: mem?.lastActiveAt || null,
-    };
-  });
-  return reply.send({ ok: true, rooms: enriched });
-  });
+  await app.register(staffContentRoutes, { authFromHeader, getGlobalRole, canAccessStaff, globalAudit, rooms } as any);
   app.get("/profile/:userId", async (req, reply) => {
     const { userId } = req.params as any;
     if (!userId) return reply.code(400).send({ error: "Missing userId" });
@@ -3375,18 +3351,6 @@ async function main() {
     return reply.send({ ok: true, livePresence: primary ?? null, presenceCheckedAt: new Date().toISOString() });
   });
 
-  app.get("/presence/users", async (req, reply) => {
-    const ids = String((req.query as any)?.ids || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 60);
-    if (ids.length === 0) return reply.send({ ok: true, presence: {} });
-    const rows = await prisma.user.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, livePresence: true },
-    });
-    const out: Record<string, any> = {};
-    for (const r of rows) if (r.livePresence) out[r.id] = r.livePresence;
-    return reply.send({ ok: true, presence: out });
-  });
-
   app.post("/profile/me/delete", async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -3603,66 +3567,6 @@ async function main() {
       }
     } catch (e) { console.warn("[announcements] seed:", e); }
   })();
-
-  app.get("/staff/announcements", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
-    const items = await annDb.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
-    return reply.send({ ok: true, announcements: items.map((a: any) => ({ ...a, createdAt: a.createdAt?.toISOString?.() })) });
-  });
-
-  app.post("/staff/announcements", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
-    const b: any = (req as any).body || {};
-    const message = String(b.message || "").trim().slice(0, 500);
-    if (!message) return reply.code(400).send({ ok: false, error: "message required" });
-    const level = ["info", "warning", "urgent"].includes(b.level) ? b.level : "info";
-    const a = await annDb.announcement.create({ data: {
-      message, level, pinned: !!b.pinned, sticky: !!b.pinned && !!b.sticky,
-      createdById: u.id, createdByName: u.name,
-    } });
-    await globalAudit(u.id, u.name, "announcement_create", a.id, undefined, { message, level, pinned: !!b.pinned });
-    return reply.send({ ok: true, announcement: { ...a, createdAt: a.createdAt?.toISOString?.() } });
-  });
-
-  app.patch("/staff/announcements/:id", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
-    const id = String((req as any).params?.id || "");
-    const b: any = (req as any).body || {};
-    const data: any = {};
-    if (b.pinned !== undefined) data.pinned = !!b.pinned;
-    if (b.sticky !== undefined) data.sticky = !!b.sticky;
-    if (data.pinned === false) data.sticky = false;
-    const a = await annDb.announcement.update({ where: { id }, data });
-    await globalAudit(u.id, u.name, "announcement_update", id, undefined, data);
-    return reply.send({ ok: true, announcement: { ...a, createdAt: a.createdAt?.toISOString?.() } });
-  });
-
-  app.delete("/staff/announcements/:id", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
-    const id = String((req as any).params?.id || "");
-    await annDb.announcement.delete({ where: { id } }).catch(() => {});
-    await globalAudit(u.id, u.name, "announcement_delete", id);
-    return reply.send({ ok: true });
-  });
-
-  app.post("/staff/banner", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
-    const { message, level, clear } = (req as any).body || {};
-    if (clear) { await annDb.announcement.updateMany({ where: { pinned: true }, data: { pinned: false, sticky: false } }); return reply.send({ ok: true, banner: null }); }
-    if (!message) return reply.code(400).send({ ok: false, error: "message required" });
-    const a = await annDb.announcement.create({ data: { message: String(message).slice(0, 500), level: level || "info", pinned: true, sticky: true, createdById: u.id, createdByName: u.name } });
-    return reply.send({ ok: true, banner: { id: a.id, message: a.message, level: a.level, sticky: true, from: u.name, ts: 1 } });
-  });
 
   await app.register(desktopRoutes, {} as any);
 

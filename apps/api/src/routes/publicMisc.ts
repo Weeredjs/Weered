@@ -102,4 +102,16 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
       return reply.send({ ok: false, error: "fetch_failed" });
     }
   });
+
+  app.get("/presence/users", async (req, reply) => {
+    const ids = String((req.query as any)?.ids || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 60);
+    if (ids.length === 0) return reply.send({ ok: true, presence: {} });
+    const rows = await prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, livePresence: true },
+    });
+    const out: Record<string, any> = {};
+    for (const r of rows) if (r.livePresence) out[r.id] = r.livePresence;
+    return reply.send({ ok: true, presence: out });
+  });
 }
