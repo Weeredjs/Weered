@@ -112,6 +112,7 @@ import { handlePresence } from "./sockets/presence";
 import { handleChat, handleCrewDm, handleReactionToggle } from "./sockets/messaging";
 import { handleRoomClose, handleRoomMod } from "./sockets/roomMod";
 import { handlePoker } from "./sockets/poker";
+import { handleAuthHello, handleClose } from "./sockets/connection";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -2782,30 +2783,7 @@ async function main() {
         if (!msg || typeof msg.type !== "string") return;
 
         if (msg.type === "auth:hello") {
-          const u = verifyToken(msg.token);
-          if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
-          ws.user = await hydrateGlobalRole(u);
-          if (await isGloballyBanned(ws.user.id)) {
-            send(ws, { type: "auth:fail", reason: "Your account has been suspended." });
-            try { ws.close(4003, "banned"); } catch {}
-            return;
-          }
-          send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar, panelBgColor: (ws.user as any).panelBgColor, panelAccentColor: (ws.user as any).panelAccentColor, pillBgColor: (ws.user as any).pillBgColor, pillAccentColor: (ws.user as any).pillAccentColor } });
-          awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
-          (async () => {
-            try {
-              const memberships = await (prisma as any).crewMember.findMany({ where: { userId: ws.user!.id }, select: { crewId: true } });
-              if (!memberships.length) return;
-              const crewIds = memberships.map((m: any) => m.crewId);
-              const mates = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: ws.user!.id } }, select: { userId: true, crewId: true } });
-              const payload = { type: "crew:presence", userId: ws.user!.id, name: ws.user!.name, online: true };
-              for (const mate of mates) {
-                for (const sock of wss.clients) {
-                  if ((sock as any).user?.id === mate.userId) send(sock as Sock, payload);
-                }
-              }
-            } catch {}
-          })();
+          await handleAuthHello(ws, msg, { verifyToken, hydrateGlobalRole, isGloballyBanned, send, awardNotoriety, wss });
           return;
         }
 
@@ -2888,37 +2866,7 @@ async function main() {
     });
 
     ws.on("close", () => {
-      if (ws.pendingRoomId && ws.user) {
-        const r = rooms.get(ws.pendingRoomId);
-        if (r) {
-          const set = r.pending.get(ws.user.id);
-          if (set) set.delete(ws);
-          if (set && set.size === 0) r.pending.delete(ws.user.id);
-        }
-      }
-      if (ws.user) {
-        const closingUserId = ws.user.id;
-        const closingUserName = ws.user.name;
-        setTimeout(() => {
-          if (!isUserOnline(closingUserId)) {
-            (async () => {
-              try {
-                const memberships = await (prisma as any).crewMember.findMany({ where: { userId: closingUserId }, select: { crewId: true } });
-                if (!memberships.length) return;
-                const crewIds = memberships.map((m: any) => m.crewId);
-                const mates = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: closingUserId } }, select: { userId: true } });
-                const payload = { type: "crew:presence", userId: closingUserId, name: closingUserName, online: false };
-                for (const mate of mates) {
-                  for (const sock of wss.clients) {
-                    if ((sock as any).user?.id === mate.userId) send(sock as Sock, payload);
-                  }
-                }
-              } catch {}
-            })();
-          }
-        }, 2000);
-      }
-      leaveRoom(ws);
+      handleClose(ws, { rooms, isUserOnline, send, leaveRoom, wss });
     });
   });
 
