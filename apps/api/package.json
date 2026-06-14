@@ -15,7 +15,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@fastify/cookie": "^11.0.2",
-    "@fastify/cors": "^11.2.0",
     "@fastify/rate-limit": "^10.3.0",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^10.49.0",

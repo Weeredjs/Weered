@@ -1,13 +1,48 @@
-﻿weered.ca, www.weered.ca {
+weered.ca {
   reverse_proxy 127.0.0.1:3000
 }
 
+www.weered.ca {
+  redir https://weered.ca{uri} permanent
+}
+
 api.weered.ca {
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+  }
+  @corsOk header_regexp Origin ^(https://(weered\.ca|www\.weered\.ca)|http://(localhost|127\.0\.0\.1):3000)$
+  @preflight {
+    method OPTIONS
+    header_regexp Origin ^(https://(weered\.ca|www\.weered\.ca)|http://(localhost|127\.0\.0\.1):3000)$
+  }
+  handle @preflight {
+    header Access-Control-Allow-Origin "{http.request.header.Origin}"
+    header Access-Control-Allow-Credentials "true"
+    header Access-Control-Allow-Headers "content-type,authorization,x-client"
+    header Access-Control-Allow-Methods "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+    header Vary "Origin, Access-Control-Request-Headers"
+    respond "" 204
+  }
+  header @corsOk {
+    Access-Control-Allow-Origin "{http.request.header.Origin}"
+    Access-Control-Allow-Credentials "true"
+    Access-Control-Allow-Headers "content-type,authorization,x-client"
+    Access-Control-Allow-Methods "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+    Vary "Origin, Access-Control-Request-Headers"
+  }
   reverse_proxy 127.0.0.1:4000
 }
 
 ws.weered.ca {
-  reverse_proxy 127.0.0.1:4001
+  reverse_proxy 127.0.0.1:4001 {
+    transport http {
+      versions 1.1
+    }
+  }
 }
 
 livekit.weered.ca {
