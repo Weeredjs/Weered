@@ -71,3 +71,6 @@ seo-tools/venv/
 apps/mod/.gradle/
 apps/mod/build/
 apps/mod/run/
+
+# AI tooling — local only, never versioned
+.claude/
