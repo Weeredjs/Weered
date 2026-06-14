@@ -71,4 +71,35 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
     const banners = pinned.map((a: any) => ({ id: a.id, message: a.message, level: a.level, sticky: a.sticky, from: a.createdByName, ts: a.createdAt?.getTime?.() ?? 1 }));
     return reply.send({ ok: true, banner: banners[0] ?? null, banners });
   });
+
+  const DESTINY2_APPID = "1085660";
+  const d2Cache = new Map<string, { data: any; expiresAt: number }>();
+  function d2CacheGet(key: string) {
+    const c = d2Cache.get(key);
+    if (c && c.expiresAt > Date.now()) return c.data;
+    return null;
+  }
+  function d2CacheSet(key: string, data: any, ttlMs: number) {
+    d2Cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  }
+
+  app.get("/destiny/live-players", async (req, reply) => {
+    const cacheKey = "d2:live";
+    const cached = d2CacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    try {
+      const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${DESTINY2_APPID}`;
+      const res = await fetch(url);
+      if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
+      const j: any = await res.json();
+      const count = j?.response?.player_count;
+      if (typeof count !== "number") return reply.send({ ok: false, error: "no_count" });
+      const result = { ok: true, players: count, appid: DESTINY2_APPID, checkedAt: new Date().toISOString() };
+      d2CacheSet(cacheKey, result, 60 * 1000);
+      return reply.send(result);
+    } catch (e) {
+      console.error("[destiny/live-players]", e);
+      return reply.send({ ok: false, error: "fetch_failed" });
+    }
+  });
 }
