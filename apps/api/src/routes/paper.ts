@@ -78,21 +78,24 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const lastDaily = await (prisma as any).paperTransaction.findFirst({
-      where: { userId: u.id, type: "EARN_DAILY" },
-      orderBy: { createdAt: "desc" },
+    // Atomic 24h claim: only one request can flip lastDailyAt within the window,
+    // so concurrent calls cannot double-claim the bonus.
+    const DAY = 86400000;
+    const claimed = await prisma.user.updateMany({
+      where: { id: u.id, OR: [{ lastDailyAt: null }, { lastDailyAt: { lt: new Date(Date.now() - DAY) } }] },
+      data: { lastDailyAt: new Date() },
     });
-
-    if (lastDaily) {
-      const since = Date.now() - new Date(lastDaily.createdAt).getTime();
-      if (since < 86400000) {
-        const nextAt = new Date(new Date(lastDaily.createdAt).getTime() + 86400000);
-        return reply.send({ ok: false, error: "cooldown", nextAt: nextAt.toISOString() });
-      }
+    if (claimed.count === 0) {
+      const cur = await prisma.user.findUnique({ where: { id: u.id }, select: { lastDailyAt: true } });
+      const last = (cur as any)?.lastDailyAt ? new Date((cur as any).lastDailyAt).getTime() : Date.now();
+      return reply.send({ ok: false, error: "cooldown", nextAt: new Date(last + DAY).toISOString() });
     }
 
     const result = await awardPaper(u.id, "EARN_DAILY", 25, "Daily login bonus");
-    if (!result) return reply.send({ ok: false, error: "failed" });
+    if (!result) {
+      await prisma.user.updateMany({ where: { id: u.id }, data: { lastDailyAt: null } }).catch(() => {});
+      return reply.send({ ok: false, error: "failed" });
+    }
     return reply.send({ ok: true, awarded: 25, balance: result.balance });
   });
 }
