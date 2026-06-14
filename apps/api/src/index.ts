@@ -106,7 +106,7 @@ import profileRoutes from "./routes/profile";
 import pokerRoutes from "./routes/poker";
 import setupTradingSocket from "./sockets/tradingWs";
 import { handleCanvas, handleCanvasRelay } from "./sockets/canvas";
-import { handleLaunch } from "./sockets/roomMedia";
+import { handleLaunch, handleYoutube } from "./sockets/roomMedia";
 import { handleVoice } from "./sockets/voiceWs";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
@@ -3496,25 +3496,8 @@ async function main() {
           return;
         }
 
-        if (msg.type === "youtube:load" || msg.type === "youtube:sync" ||
-            msg.type === "youtube:play" || msg.type === "youtube:pause" || msg.type === "youtube:stop") {
-          if (!room.users.has(ws.user.id)) return;
-          if (msg.type === "youtube:load" && msg.videoId) {
-            room.ytState = { videoId: String(msg.videoId), playing: false, position: 0, updatedAt: Date.now() };
-            if (room.activeModule && room.activeModule.mode === "youtube") {
-              room.activeModule.url = String(msg.videoId);
-            }
-          } else if (msg.type === "youtube:play") {
-            if (room.ytState) { room.ytState.playing = true; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
-          } else if (msg.type === "youtube:pause") {
-            if (room.ytState) { room.ytState.playing = false; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
-          } else if (msg.type === "youtube:stop") {
-            room.ytState = null;
-          }
-          for (const s of room.sockets) {
-            if (s === ws) continue;
-            send(s, { ...msg, roomId, _from: ws.user.id });
-          }
+        if (typeof msg.type === "string" && msg.type.startsWith("youtube:")) {
+          handleYoutube(ws, msg, { room, roomId }, { send });
           return;
         }
 
