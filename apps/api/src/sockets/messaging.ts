@@ -260,3 +260,335 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     return;
   }
 }
+
+// Crew + direct-message WS handlers extracted from the index.ts main message
+// handler: crew:send/edit/delete/react + dm:send/read/edit/delete/react. Void
+// async handler (dispatched via the isCrewOrDm prefix check kept in index.ts, so
+// the room-required preamble guard still exempts crew/dm). Self-resolving via
+// ws.user; wss passed in (request-time, already assigned) for crew/dm fan-out.
+export async function handleCrewDm(
+  ws: any,
+  msg: any,
+  opts: {
+    checkUrlSpam: (body: string) => { ok: boolean; reason?: string };
+    checkChatRateLimit: (userId: string) => { ok: boolean; reason?: string; retryInMs?: number };
+    createNotification: (opts: any) => Promise<any>;
+    dmDeliver: (toUserId: string, payload: any) => void;
+    isUserOnline: (userId: string) => boolean;
+    resolveMentions: (body: string, senderId: string) => Promise<Array<{ id: string }>>;
+    resolveUserId: (raw: string) => Promise<string>;
+    send: (ws: any, msg: any) => void;
+    sendPush: (userId: string, data: any) => Promise<any>;
+    toggleReactionOnTarget: (targetType: any, targetId: string, userId: string, emoji: string) => Promise<any>;
+    awardNotoriety: (userId: string, action: string) => Promise<number | null>;
+    wss: any;
+  },
+): Promise<void> {
+  const { checkUrlSpam, checkChatRateLimit, createNotification, dmDeliver, isUserOnline, resolveMentions, resolveUserId, send, sendPush, toggleReactionOnTarget, awardNotoriety, wss } = opts;
+
+  if (msg.type === "crew:send") {
+    const crewId = String(msg.crewId || "").trim();
+    const body = String(msg.body || "").trim().slice(0, 2000);
+    const fromId = ws.user?.id;
+    if (!fromId || !crewId || !body) return;
+    const urlCheck = checkUrlSpam(body);
+    if (!urlCheck.ok) { send(ws, { type: "crew:rejected", crewId, reason: urlCheck.reason }); return; }
+    const rate = checkChatRateLimit(fromId);
+    if (!rate.ok) { send(ws, { type: "crew:rejected", crewId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
+
+    try {
+      const membership = await (prisma as any).crewMember.findFirst({
+        where: { crewId, userId: fromId },
+      });
+      if (!membership) return;
+
+      let crewReplyData: any = {};
+      const crewReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
+      if (crewReplyToId) {
+        const parent = await (prisma as any).crewMessage.findUnique({ where: { id: crewReplyToId } });
+        if (parent && !parent.deletedAt && parent.crewId === crewId) {
+          crewReplyData = {
+            replyToId: parent.id,
+            replyToUserId: parent.userId,
+            replyToUserName: parent.userName || "?",
+            replyToBody: String(parent.body || "").slice(0, 120),
+          };
+        }
+      }
+
+      const message = await (prisma as any).crewMessage.create({
+        data: { crewId, userId: fromId, userName: ws.user?.name || "Unknown", body, ...crewReplyData },
+        select: { id: true, crewId: true, userId: true, userName: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true },
+      });
+
+      const members = await (prisma as any).crewMember.findMany({
+        where: { crewId },
+        select: { userId: true },
+      });
+
+      const payload = { type: "crew:message", crewId, message: { ...message, createdAt: message.createdAt.toISOString() } };
+      for (const sock of wss.clients) {
+        const sockUser = (sock as any).user;
+        if (sockUser && members.some((m: any) => m.userId === sockUser.id)) {
+          send(sock as any, payload);
+        }
+      }
+
+      for (const m of members) {
+        if (m.userId === fromId) continue;
+        if (!isUserOnline(m.userId)) {
+          sendPush(m.userId, {
+            title: `Crew message from ${ws.user?.name}`,
+            body: body.slice(0, 120),
+            url: "/home",
+            tag: `crew:${crewId}`,
+          }).catch(() => {});
+        }
+      }
+
+      awardNotoriety(fromId, "CHAT_MESSAGE").catch(() => {});
+
+      (async () => {
+        try {
+          const mentioned = await resolveMentions(body, fromId);
+          if (mentioned.length === 0) return;
+          const memberRows = await (prisma as any).crewMember.findMany({
+            where: { crewId },
+            select: { userId: true },
+          });
+          const memberSet = new Set<string>(memberRows.map((r: any) => r.userId));
+          for (const u of mentioned) {
+            if (!memberSet.has(u.id)) continue;
+            createNotification({
+              userId: u.id,
+              type: "MENTION",
+              title: `${ws.user?.name || "Someone"} mentioned you in crew chat`,
+              body: body.slice(0, 120),
+              actorId: fromId,
+              actorName: ws.user?.name || undefined,
+              actionUrl: "/home",
+              meta: { crewId },
+            }).catch(() => {});
+          }
+        } catch {}
+      })();
+    } catch (e) { console.error("[crew:send]", e); }
+    return;
+  }
+
+  if (msg.type === "crew:edit") {
+    const msgId = String(msg.msgId || "");
+    const newBody = String(msg.body || "").trim().slice(0, 2000);
+    const meId = ws.user?.id;
+    if (!msgId || !newBody || !meId) return;
+    try {
+      const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+      if (!row) return;
+      if (row.userId !== meId) return;
+      if (row.deletedAt) return;
+      if (row.body === newBody) return;
+      if (Date.now() - new Date(row.createdAt).getTime() > 15 * 60 * 1000) return;
+      const editedAt = new Date();
+      await (prisma as any).crewMessage.update({ where: { id: msgId }, data: { body: newBody, editedAt } });
+      const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+      const memberIds = new Set(members.map((m: any) => m.userId));
+      const payload = { type: "crew:edited", crewId: row.crewId, msgId, body: newBody, editedAt: editedAt.toISOString() };
+      for (const sock of wss.clients) {
+        const sockUser = (sock as any).user;
+        if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+      }
+    } catch (e) { console.error("[crew:edit]", e); }
+    return;
+  }
+
+  if (msg.type === "crew:delete") {
+    const msgId = String(msg.msgId || "");
+    const meId = ws.user?.id;
+    if (!msgId || !meId) return;
+    try {
+      const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+      if (!row) return;
+      if (row.deletedAt) return;
+      const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
+      const isMod = membership?.role === "LEADER" || membership?.role === "OFFICER";
+      if (row.userId !== meId && !isMod) return;
+      const deletedAt = new Date();
+      await (prisma as any).crewMessage.update({ where: { id: msgId }, data: { body: "", deletedAt } });
+      const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+      const memberIds = new Set(members.map((m: any) => m.userId));
+      const payload = { type: "crew:deleted", crewId: row.crewId, msgId, deletedAt: deletedAt.toISOString() };
+      for (const sock of wss.clients) {
+        const sockUser = (sock as any).user;
+        if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+      }
+    } catch (e) { console.error("[crew:delete]", e); }
+    return;
+  }
+
+  if (msg.type === "crew:react") {
+    const msgId = String(msg.msgId || "");
+    const emoji = String(msg.emoji || "").trim().slice(0, 12);
+    const meId = ws.user?.id;
+    if (!msgId || !emoji || !meId) return;
+    try {
+      const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+      if (!row) return;
+      if (row.deletedAt) return;
+      const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
+      if (!membership) return;
+      const res = await toggleReactionOnTarget("CREW_MESSAGE", msgId, meId, emoji);
+      if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
+      const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+      const memberIds = new Set(members.map((m: any) => m.userId));
+      const payload = { type: "crew:reaction", crewId: row.crewId, msgId, reactions: res.reactions };
+      for (const sock of wss.clients) {
+        const sockUser = (sock as any).user;
+        if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+      }
+    } catch (e) { console.error("[crew:react]", e); }
+    return;
+  }
+
+  if (msg.type === "dm:send") {
+    const rawToId = String(msg.toId  || "").trim();
+    const body    = String(msg.body  || "").trim().slice(0, 2000);
+    const fromId  = ws.user?.id;
+    console.log(`[dm:send] fromId=${fromId || "(none)"} rawToId=${JSON.stringify(rawToId)} bodyLen=${body.length}`);
+    if (!fromId) { send(ws, { type: "dm:rejected", reason: "Session expired. Refresh the page." }); return; }
+    if (!rawToId) { send(ws, { type: "dm:rejected", reason: "No recipient selected." }); return; }
+    if (!body) { send(ws, { type: "dm:rejected", reason: "Empty message." }); return; }
+    const urlCheck = checkUrlSpam(body);
+    if (!urlCheck.ok) { send(ws, { type: "dm:rejected", reason: urlCheck.reason }); return; }
+    const rate = checkChatRateLimit(fromId);
+    if (!rate.ok) { send(ws, { type: "dm:rejected", reason: rate.reason, retryInMs: rate.retryInMs }); return; }
+    const toId = await resolveUserId(rawToId);
+    try {
+      const blocked = await (prisma as any).userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: fromId, blockedId: toId },
+            { blockerId: toId, blockedId: fromId },
+          ],
+        },
+        select: { blockerId: true },
+      });
+      if (blocked) {
+        const reason = blocked.blockerId === fromId
+          ? "You've blocked this user. Unblock them in Settings to send messages."
+          : "Message not delivered.";
+        send(ws, { type: "dm:rejected", reason });
+        return;
+      }
+    } catch {}
+    let dmReplyData: any = {};
+    const dmReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
+    if (dmReplyToId) {
+      try {
+        const parent = await prisma.directMessage.findUnique({ where: { id: dmReplyToId } });
+        if (parent && !(parent as any).deletedAt) {
+          const sameThread =
+            (parent.fromId === fromId && parent.toId === toId) ||
+            (parent.fromId === toId && parent.toId === fromId);
+          if (sameThread) {
+            const parentUser = await prisma.user.findUnique({ where: { id: parent.fromId }, select: { name: true } });
+            dmReplyData = {
+              replyToId: parent.id,
+              replyToUserId: parent.fromId,
+              replyToUserName: parentUser?.name || "?",
+              replyToBody: String(parent.body || "").slice(0, 120),
+            };
+          }
+        }
+      } catch {}
+    }
+    try {
+      const dm = await prisma.directMessage.create({
+        data: { fromId, toId, body, ...dmReplyData },
+        select: { id: true, fromId: true, toId: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true } as any,
+      });
+    const payload = { type: "dm:message", message: { ...dm, createdAt: (dm as any).createdAt.toISOString() } };
+    dmDeliver(toId, payload);
+    sendPush(toId, { title: `DM from ${ws.user?.name || "Someone"}`, body: body.slice(0, 120), url: "/home", tag: `dm:${fromId}` }).catch(() => {});
+    createNotification({ userId: toId, type: "DM_RECEIVED", title: `${ws.user?.name || "Someone"} sent you a message`, body: body.slice(0, 120), actorId: fromId, actorName: ws.user?.name || undefined, actionUrl: "/home", meta: { fromId } }).catch(() => {});
+    } catch (e) { console.error("[dm:send]", e); }
+    return;
+  }
+
+  if (msg.type === "dm:read") {
+    const fromId = String(msg.fromId || "").trim();
+    const toId   = ws.user?.id;
+    if (!fromId || !toId) return;
+    try {
+      await prisma.directMessage.updateMany({
+        where: { fromId, toId, readAt: null },
+        data: { readAt: new Date() },
+      });
+      send(ws, { type: "dm:read:ack", fromId });
+    } catch (e) { console.error("[dm:read]", e); }
+    return;
+  }
+
+  if (msg.type === "dm:edit") {
+    const msgId  = String(msg.msgId || "");
+    const newBody = String(msg.body || "").trim().slice(0, 2000);
+    const meId   = ws.user?.id;
+    if (!msgId || !newBody || !meId) return;
+    try {
+      const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
+      if (!dm) return;
+      if (dm.fromId !== meId) return;
+      if ((dm as any).deletedAt) return;
+      if (dm.body === newBody) return;
+      if (Date.now() - new Date(dm.createdAt).getTime() > 15 * 60 * 1000) return;
+      const editedAt = new Date();
+      await prisma.directMessage.update({
+        where: { id: msgId },
+        data: { body: newBody, editedAt },
+      });
+      const payload = { type: "dm:edited", msgId, fromId: dm.fromId, toId: dm.toId, body: newBody, editedAt: editedAt.toISOString() };
+      dmDeliver(dm.toId, payload);
+      dmDeliver(dm.fromId, payload);
+    } catch (e) { console.error("[dm:edit]", e); }
+    return;
+  }
+
+  if (msg.type === "dm:delete") {
+    const msgId = String(msg.msgId || "");
+    const meId  = ws.user?.id;
+    if (!msgId || !meId) return;
+    try {
+      const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
+      if (!dm) return;
+      if (dm.fromId !== meId) return;
+      if ((dm as any).deletedAt) return;
+      const deletedAt = new Date();
+      await prisma.directMessage.update({
+        where: { id: msgId },
+        data: { body: "", deletedAt },
+      });
+      const payload = { type: "dm:deleted", msgId, fromId: dm.fromId, toId: dm.toId, deletedAt: deletedAt.toISOString() };
+      dmDeliver(dm.toId, payload);
+      dmDeliver(dm.fromId, payload);
+    } catch (e) { console.error("[dm:delete]", e); }
+    return;
+  }
+
+  if (msg.type === "dm:react") {
+    const msgId = String(msg.msgId || "");
+    const emoji = String(msg.emoji || "").trim().slice(0, 12);
+    const meId  = ws.user?.id;
+    if (!msgId || !emoji || !meId) return;
+    try {
+      const dm = await prisma.directMessage.findUnique({ where: { id: msgId } });
+      if (!dm) return;
+      if ((dm as any).deletedAt) return;
+      if (dm.fromId !== meId && dm.toId !== meId) return;
+      const res = await toggleReactionOnTarget("DIRECT_MESSAGE", msgId, meId, emoji);
+      if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
+      const payload = { type: "dm:reaction", msgId, fromId: dm.fromId, toId: dm.toId, reactions: res.reactions };
+      dmDeliver(dm.toId, payload);
+      dmDeliver(dm.fromId, payload);
+    } catch (e) { console.error("[dm:react]", e); }
+    return;
+  }
+}
