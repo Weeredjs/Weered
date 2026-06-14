@@ -29,6 +29,8 @@ packages/
 
 See [`DEVELOPMENT.md`](./DEVELOPMENT.md) for the full repo guide — per-client release cadence, deploy procedures, and gotchas.
 
+For the deliberate single-node scaling posture (and why horizontal WS scaling is intentionally deferred), see [`SCALING.md`](./SCALING.md). Ops and disaster recovery: [`RUNBOOK.md`](./RUNBOOK.md).
+
 ## Stack
 
 - **Backend:** Fastify 5, Prisma + PostgreSQL, WebSockets, LiveKit (voice/video), Redis (presence). Type-gated (`tsc --noEmit` clean) and esbuild-compiled to `dist/` for production.
