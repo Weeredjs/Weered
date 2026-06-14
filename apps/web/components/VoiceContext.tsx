@@ -193,6 +193,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
       room.on(RoomEvent.TrackSubscribed, (track) => {
         console.log("[LK] TrackSubscribed", { kind: track.kind, source: track.source, sid: track.sid });
+        if (!track.sid) return;
         if (track.kind === Track.Kind.Audio) {
           const el = track.attach() as HTMLAudioElement;
           el.autoplay = true; el.volume = 1;
@@ -209,6 +210,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         rebuildTiles(room);
       });
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        if (!track.sid) return;
         if (track.kind === Track.Kind.Audio) {
           const el = audioRefs.current.get(track.sid);
           if (el) { el.remove(); audioRefs.current.delete(track.sid); }

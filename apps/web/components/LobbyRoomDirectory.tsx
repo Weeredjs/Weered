@@ -28,7 +28,7 @@ interface RoomData {
   accentColor?: string | null;
 }
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   try {
     const t = localStorage.getItem("weered_token") || "";
     return t ? { Authorization: `Bearer ${t}` } : {};

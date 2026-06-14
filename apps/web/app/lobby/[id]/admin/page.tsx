@@ -47,7 +47,7 @@ function fmtDate(s: string) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
 }
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 
@@ -1258,7 +1258,14 @@ function TournamentsTab({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-function FlairEditor({ tournaments, flairItems, savingId, msg, currentFlairId, setFlair }: any) {
+function FlairEditor({ tournaments, flairItems, savingId, msg, currentFlairId, setFlair }: {
+  tournaments: TournamentRow[];
+  flairItems: FlairItem[];
+  savingId: string | null;
+  msg: string;
+  currentFlairId: (t: TournamentRow) => string;
+  setFlair: (t: TournamentRow, itemId: string) => void;
+}) {
   return (
     <div>
       <div style={S.sectionTitle}>Tournaments in this lobby</div>

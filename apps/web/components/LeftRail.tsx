@@ -18,7 +18,7 @@ function pickFirstString(...vals: any[]): string {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 

@@ -15,7 +15,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0
 
 type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean; pinned?: boolean; isEvent?: boolean };
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 

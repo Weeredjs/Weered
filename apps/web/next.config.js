@@ -1,5 +1,7 @@
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  // Lint runs in CI (root eslint flat config); the build is the type-gate only.
+  eslint: { ignoreDuringBuilds: true },
   allowedDevOrigins: ['127.0.0.1','localhost'],
   images: {
     formats: ['image/avif', 'image/webp'],
