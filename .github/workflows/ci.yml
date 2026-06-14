@@ -19,6 +19,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client (types for the API type gate)
+        run: cd apps/api && pnpm prisma generate
       - name: Guardrails (API type gate + file-size tripwire)
         run: bash scripts/check.sh
       - name: Web build (Next.js type gate)
