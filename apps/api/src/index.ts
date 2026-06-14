@@ -98,6 +98,7 @@ import tradingRoutes from "./routes/trading";
 import usersSearchRoutes from "./routes/usersSearch";
 import notorietyRoutes from "./routes/notoriety";
 import publicMiscRoutes from "./routes/publicMisc";
+import desktopRoutes from "./routes/desktop";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -3698,120 +3699,7 @@ async function main() {
     return reply.send({ ok: true, banner: { id: a.id, message: a.message, level: a.level, sticky: true, from: u.name, ts: 1 } });
   });
 
-  type DesktopReleaseManifest = {
-    version: string;
-    notes: string;
-    pub_date: string;
-    platforms: Record<string, { signature: string; url: string }>;
-  };
-
-  const TAURI_TARGET_MATCHERS: Record<string, RegExp> = {
-    "windows-x86_64":  /Weered.*x64-setup\.exe$/i,
-    "darwin-x86_64":   /Weered.*x64\.app\.tar\.gz$/i,
-    "darwin-aarch64":  /Weered.*aarch64\.app\.tar\.gz$/i,
-    "linux-x86_64":    /weered.*amd64\.AppImage$/i,
-  };
-
-  type GhAsset = { name: string; browser_download_url: string };
-  type GhRelease = {
-    tag_name: string;
-    name: string;
-    body: string;
-    published_at: string;
-    assets: GhAsset[];
-    prerelease: boolean;
-    draft: boolean;
-  };
-
-  let desktopReleaseCache: { manifest: DesktopReleaseManifest | null; expiresAt: number } | null = null;
-  const DESKTOP_RELEASE_TTL = 5 * 60 * 1000;
-
-  const DESKTOP_RELEASES_REPO = process.env.DESKTOP_RELEASES_REPO || "Weeredjs/Weered";
-
-  async function fetchLatestDesktopRelease(): Promise<DesktopReleaseManifest | null> {
-    if (desktopReleaseCache && desktopReleaseCache.expiresAt > Date.now()) {
-      return desktopReleaseCache.manifest;
-    }
-
-    let manifest: DesktopReleaseManifest | null = null;
-    try {
-      const url = `https://api.github.com/repos/${DESKTOP_RELEASES_REPO}/releases?per_page=10`;
-      const headers: Record<string, string> = {
-        "User-Agent": "Weered-API/1.0",
-        Accept: "application/vnd.github+json",
-      };
-      if (process.env.GITHUB_TOKEN) headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
-      const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error(`GitHub releases ${res.status}`);
-      const releases = (await res.json()) as GhRelease[];
-
-      const latest = releases.find((r) => !r.draft && !r.prerelease && /^desktop-v/.test(r.tag_name));
-      if (!latest) {
-        manifest = null;
-      } else {
-        const version = latest.tag_name.replace(/^desktop-v/, "");
-
-        const platforms: DesktopReleaseManifest["platforms"] = {};
-        for (const [target, matcher] of Object.entries(TAURI_TARGET_MATCHERS)) {
-          const asset = latest.assets.find((a) => matcher.test(a.name));
-          if (!asset) continue;
-          const sigAsset = latest.assets.find((a) => a.name === `${asset.name}.sig`);
-          let signature = "";
-          if (sigAsset) {
-            try {
-              const sigRes = await fetch(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
-              if (sigRes.ok) signature = (await sigRes.text()).trim();
-            } catch {}
-          }
-          platforms[target] = { signature, url: asset.browser_download_url };
-        }
-
-        if (Object.keys(platforms).length > 0) {
-          manifest = {
-            version,
-            notes: latest.body || `Weered Desktop ${version}`,
-            pub_date: latest.published_at,
-            platforms,
-          };
-        }
-      }
-    } catch (e) {
-      console.warn("[desktop-updater] fetchLatestDesktopRelease failed:", e);
-      if (desktopReleaseCache?.manifest) return desktopReleaseCache.manifest;
-    }
-
-    desktopReleaseCache = { manifest, expiresAt: Date.now() + DESKTOP_RELEASE_TTL };
-    return manifest;
-  }
-
-  app.get<{ Params: { target: string; version: string } }>(
-    "/desktop/updates/:target/:version",
-    async (req, reply) => {
-      const manifest = await fetchLatestDesktopRelease();
-      if (!manifest) return reply.code(204).send();
-      const { version, target } = req.params;
-      if (manifest.version === version) return reply.code(204).send();
-      const plat = manifest.platforms[target];
-      if (!plat || !plat.signature) return reply.code(204).send();
-      return reply.send(manifest);
-    },
-  );
-
-  app.get("/desktop/latest", async (_req, reply) => {
-    const manifest = await fetchLatestDesktopRelease();
-    if (!manifest) return reply.send({ ok: true, release: null });
-    return reply.send({
-      ok: true,
-      release: {
-        version: manifest.version,
-        pub_date: manifest.pub_date,
-        notes: manifest.notes,
-        downloads: Object.fromEntries(
-          Object.entries(manifest.platforms).map(([k, v]) => [k, v.url]),
-        ),
-      },
-    });
-  });
+  await app.register(desktopRoutes, {} as any);
 
   await app.register(youtubeRoutes);
 
@@ -5529,37 +5417,6 @@ async function main() {
   await app.register(helldiversLoadoutsRoutes, { authFromHeader } as any);
   await app.register(steamRoutes, { authFromHeader, createNotification } as any);
   await app.register(windroseBuildsRoutes, { authFromHeader, awardNotoriety, broadcastToLobby, canAccessStaff, getGlobalRole } as any);
-
-  const DESTINY2_APPID = "1085660";
-  const d2Cache = new Map<string, { data: any; expiresAt: number }>();
-  function d2CacheGet(key: string) {
-    const c = d2Cache.get(key);
-    if (c && c.expiresAt > Date.now()) return c.data;
-    return null;
-  }
-  function d2CacheSet(key: string, data: any, ttlMs: number) {
-    d2Cache.set(key, { data, expiresAt: Date.now() + ttlMs });
-  }
-
-  app.get("/destiny/live-players", async (req, reply) => {
-    const cacheKey = "d2:live";
-    const cached = d2CacheGet(cacheKey);
-    if (cached) return reply.send(cached);
-    try {
-      const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${DESTINY2_APPID}`;
-      const res = await fetch(url);
-      if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
-      const j: any = await res.json();
-      const count = j?.response?.player_count;
-      if (typeof count !== "number") return reply.send({ ok: false, error: "no_count" });
-      const result = { ok: true, players: count, appid: DESTINY2_APPID, checkedAt: new Date().toISOString() };
-      d2CacheSet(cacheKey, result, 60 * 1000);
-      return reply.send(result);
-    } catch (e) {
-      console.error("[destiny/live-players]", e);
-      return reply.send({ ok: false, error: "fetch_failed" });
-    }
-  });
 
   await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby, awardNotoriety, createNotification } as any);
   await app.register(redditRoutes);
