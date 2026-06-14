@@ -104,6 +104,7 @@ import staffContentRoutes from "./routes/staffContent";
 import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
 import pokerRoutes from "./routes/poker";
+import setupTradingSocket from "./sockets/tradingWs";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -4843,41 +4844,7 @@ async function main() {
     rooms, verifyToken,
   } as any);
 
-  wss.on("connection", (rawWs) => {
-    const ws = rawWs as Sock;
-    (ws as any)._tradingSubs = new Set<string>();
-
-    ws.on("message", (raw) => {
-      const msg = safeJson(raw);
-      if (!msg) return;
-
-      if (msg.type === "trading:subscribe") {
-        const sym = String(msg.symbol || "").toLowerCase();
-        if (!sym) return;
-        subscribeBinanceSymbol(sym);
-        if (!symbolSubscribers.has(sym)) symbolSubscribers.set(sym, new Set());
-        symbolSubscribers.get(sym)!.add(ws);
-        (ws as any)._tradingSubs.add(sym);
-        const p = livePrices.get(sym);
-        if (p) send(ws, { type: "trading:price", symbol: sym.toUpperCase(), price: p.price, time: p.time });
-      }
-
-      if (msg.type === "trading:unsubscribe") {
-        const sym = String(msg.symbol || "").toLowerCase();
-        symbolSubscribers.get(sym)?.delete(ws);
-        (ws as any)._tradingSubs?.delete(sym);
-      }
-    });
-
-    ws.on("close", () => {
-      const subs = (ws as any)._tradingSubs as Set<string> | undefined;
-      if (subs) {
-        for (const sym of subs) {
-          symbolSubscribers.get(sym)?.delete(ws);
-        }
-      }
-    });
-  });
+  setupTradingSocket(wss, { send, safeJson, subscribeBinanceSymbol, symbolSubscribers, livePrices });
 
   console.log("[trading] Paper trading engine initialized with", DEFAULT_SYMBOLS.length, "default symbols");
 
