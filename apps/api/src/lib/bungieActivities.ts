@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "./fetchWithTimeout";
 ﻿
 
 import type { PrismaClient } from "@prisma/client";
@@ -46,7 +47,7 @@ export function getBungieApiKey() { return _bungieApiKey; }
 
 export async function bungieGet(path: string): Promise<any> {
   await rateLimiter.acquire();
-  const res = await fetch(`${BUNGIE_ROOT}${path}`, {
+  const res = await fetchWithTimeout(`${BUNGIE_ROOT}${path}`, {
     headers: { "X-API-Key": _bungieApiKey },
   });
   const _t = await res.text();

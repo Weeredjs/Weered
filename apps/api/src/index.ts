@@ -25,6 +25,15 @@ if (process.env.SENTRY_DSN_API) {
     ],
   });
 }
+
+process.on("unhandledRejection", (reason: any) => {
+  console.error("[unhandledRejection]", reason);
+  try { Sentry.captureException(reason); } catch {}
+});
+process.on("uncaughtException", (err: any) => {
+  console.error("[uncaughtException]", err);
+  try { Sentry.captureException(err); Sentry.close(2000).finally(() => process.exit(1)); } catch { process.exit(1); }
+});
 import Fastify from "fastify";
 import mlbRoutes from "./routes/mlb";
 import pgaRoutes from "./routes/pga";

@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import * as fs from "fs";
@@ -26,7 +27,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
   async function bungieGet(path: string, accessToken?: string) {
     const headers: Record<string, string> = { "X-API-Key": BUNGIE_API_KEY };
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-    const res = await fetch(`${BUNGIE_ROOT}${path}`, { headers });
+    const res = await fetchWithTimeout(`${BUNGIE_ROOT}${path}`, { headers });
     const j = await res.json(); if (j.error) console.error("[bungie]", path, JSON.stringify(j.error)); return j;
   }
 
@@ -86,7 +87,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       };
       if (BUNGIE_CLIENT_SECRET) tokenBody.client_secret = BUNGIE_CLIENT_SECRET;
 
-      const tokenRes = await fetch("https://www.bungie.net/Platform/App/OAuth/Token/", {
+      const tokenRes = await fetchWithTimeout("https://www.bungie.net/Platform/App/OAuth/Token/", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "X-API-Key": BUNGIE_API_KEY },
         body: new URLSearchParams(tokenBody),
@@ -407,7 +408,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       const name = parts[0];
       const code = parts[1] || "0";
 
-      const searchRes = await fetch(`${BUNGIE_ROOT}/Destiny2/SearchDestinyPlayerByBungieName/-1/`, {
+      const searchRes = await fetchWithTimeout(`${BUNGIE_ROOT}/Destiny2/SearchDestinyPlayerByBungieName/-1/`, {
         method: "POST",
         headers: { "X-API-Key": BUNGIE_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ displayName: name, displayNameCode: Number(code) }),
@@ -634,7 +635,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       };
       if (BUNGIE_CLIENT_SECRET) tokenBody.client_secret = BUNGIE_CLIENT_SECRET;
 
-      const tokenRes = await fetch("https://www.bungie.net/Platform/App/OAuth/Token/", {
+      const tokenRes = await fetchWithTimeout("https://www.bungie.net/Platform/App/OAuth/Token/", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "X-API-Key": BUNGIE_API_KEY },
         body: new URLSearchParams(tokenBody),
@@ -646,7 +647,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=error`);
       }
 
-      const memberRes = await fetch("https://www.bungie.net/Platform/User/GetMembershipsForCurrentUser/", {
+      const memberRes = await fetchWithTimeout("https://www.bungie.net/Platform/User/GetMembershipsForCurrentUser/", {
         headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${tokens.access_token}` },
       });
       const memberData = await memberRes.json();
@@ -767,7 +768,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     if (!itemId || !characterId) return reply.code(400).send({ ok: false, error: "missing_fields" });
 
     try {
-      const result = await fetch(`${BUNGIE_ROOT}/Destiny2/Actions/Items/EquipItem/`, {
+      const result = await fetchWithTimeout(`${BUNGIE_ROOT}/Destiny2/Actions/Items/EquipItem/`, {
         method: "POST",
         headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, characterId, membershipType: Number(account.platform) }),
@@ -796,7 +797,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     if (!itemId || !characterId || !itemReferenceHash) return reply.code(400).send({ ok: false, error: "missing_fields" });
 
     try {
-      const result = await fetch(`${BUNGIE_ROOT}/Destiny2/Actions/Items/TransferItem/`, {
+      const result = await fetchWithTimeout(`${BUNGIE_ROOT}/Destiny2/Actions/Items/TransferItem/`, {
         method: "POST",
         headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({

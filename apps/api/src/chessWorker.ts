@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "./lib/fetchWithTimeout";
 import type { PrismaClient } from "@prisma/client";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -69,7 +70,7 @@ function parseLichessGame(g: any, myUsername: string): any | null {
 async function fetchLichessGames(username: string): Promise<any[]> {
   const url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${LICHESS_GAMES_PER_USER}&opening=true&clocks=false&evals=false&moves=false`;
   try {
-    const r = await fetch(url, { headers: { Accept: "application/x-ndjson" } });
+    const r = await fetchWithTimeout(url, { headers: { Accept: "application/x-ndjson" } });
     if (!r.ok) return [];
     const text = await r.text();
     const lines = text.trim().split(/\n+/).filter(Boolean);
@@ -134,7 +135,7 @@ async function fetchChessComGames(username: string): Promise<any[]> {
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
   const url = `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/${yyyy}/${mm}`;
   try {
-    const r = await fetch(url, { headers: { "User-Agent": "Weered (https://weered.ca)" } });
+    const r = await fetchWithTimeout(url, { headers: { "User-Agent": "Weered (https://weered.ca)" } });
     if (!r.ok) return [];
     const data = await r.json();
     const games = Array.isArray(data?.games) ? data.games : [];
