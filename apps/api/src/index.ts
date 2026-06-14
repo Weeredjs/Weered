@@ -97,6 +97,7 @@ import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
 import usersSearchRoutes from "./routes/usersSearch";
 import notorietyRoutes from "./routes/notoriety";
+import publicMiscRoutes from "./routes/publicMisc";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -2585,39 +2586,7 @@ async function main() {
     return lobby;
   }
 
-  app.get("/featured", async (_req, reply) => {
-    const featuredId = await getSiteConfig("featuredLobbyId");
-    if (!featuredId) {
-      const fallback = await (prisma as any).lobby.findFirst({
-        where: { pinned: true },
-        select: {
-          id: true, name: true, description: true, verified: true, pinned: true,
-          moduleType: true, moduleConfig: true, keywords: true,
-          accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
-          _count: { select: { rooms: true, members: true } },
-        },
-        orderBy: { name: "asc" },
-      });
-      return reply.send({ ok: true, lobby: applyWindroseReel(fallback), source: "fallback" });
-    }
-
-    const lobby = await (prisma as any).lobby.findUnique({
-      where: { id: featuredId },
-      select: {
-        id: true, name: true, description: true, verified: true, pinned: true,
-        moduleType: true, moduleConfig: true, keywords: true,
-        accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
-        _count: { select: { rooms: true, members: true } },
-      },
-    });
-
-    if (!lobby) {
-      return reply.send({ ok: true, lobby: null, source: "missing" });
-    }
-
-    return reply.send({ ok: true, lobby: applyWindroseReel(lobby), source: "config" });
-  });
-
+  await app.register(publicMiscRoutes, { getSiteConfig, applyWindroseReel } as any);
   app.get("/health", async () => {
     try { await prisma.$queryRaw`SELECT 1`; return { ok: true, db: "ok" }; }
     catch { return { ok: true, db: "down" }; }
@@ -3540,22 +3509,6 @@ async function main() {
   await app.register(dmRoutes, { authFromHeader, resolveUserId, fetchReactionsForTargets, dmDeliver, isUserOnline, sendPush } as any);
   await app.register(groupRoutes, { authFromHeader, resolveUserId, dmDeliver, isUserOnline, sendPush, resolveMentions, createNotification } as any);
 
-  app.get("/feed/hot", async (req, reply) => {
-    const qs       = (req as any).query as any;
-    const category = qs?.category && qs.category !== "all" ? String(qs.category) : undefined;
-    const domain   = qs?.domain ? String(qs.domain) : undefined;
-    const sort     = qs?.sort === "new" ? { postedAt: "desc" as const } : { heat: "desc" as const };
-    const where: any = {};
-    if (category) where.category = category;
-    if (domain)   where.domain   = domain;
-    const items    = await prisma.feedItem.findMany({
-      where:   Object.keys(where).length ? where : undefined,
-      orderBy: sort,
-      take:    50,
-    });
-    return reply.send({ items, updatedAt: new Date().toISOString() });
-  });
-
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
   setInterval(() => { void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers }); }, 10 * 60 * 1000);
@@ -3684,14 +3637,6 @@ async function main() {
       }
     } catch (e) { console.warn("[announcements] seed:", e); }
   })();
-
-  app.get("/banner", async (_req, reply) => {
-    const pinned = await annDb.announcement.findMany({
-      where: { pinned: true }, orderBy: { createdAt: "desc" }, take: 10,
-    });
-    const banners = pinned.map((a: any) => ({ id: a.id, message: a.message, level: a.level, sticky: a.sticky, from: a.createdByName, ts: a.createdAt?.getTime?.() ?? 1 }));
-    return reply.send({ ok: true, banner: banners[0] ?? null, banners });
-  });
 
   app.get("/staff/announcements", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
