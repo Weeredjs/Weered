@@ -403,10 +403,13 @@ app.post("/trading/close/:lobbyId/:positionId", async (req, reply) => {
     ? (currentPrice - pos.entryPrice) * pos.quantity
     : (pos.entryPrice - currentPrice) * pos.quantity;
 
-  await (prisma as any).paperPosition.update({
-    where: { id: positionId },
+  // Idempotent close: only the request that actually flips OPEN->CLOSED credits
+  // the account, so two concurrent closes cannot double-pay.
+  const claimed = await (prisma as any).paperPosition.updateMany({
+    where: { id: positionId, status: "OPEN" },
     data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date(), closeReason: "MANUAL" },
   });
+  if (claimed.count === 0) return reply.code(400).send({ ok: false, error: "already_closed" });
   await (prisma as any).paperAccount.update({
     where: { id: pos.accountId },
     data: { cashBalance: { increment: pos.entryValue + pnl }, realizedPnl: { increment: pnl } },

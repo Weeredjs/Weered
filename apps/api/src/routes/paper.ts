@@ -30,20 +30,25 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
       if (!recipient) return reply.code(404).send({ ok: false, error: "recipient_not_found", message: `No user named @${toUsername}.` });
       if (recipient.id === u.id) return reply.code(400).send({ ok: false, error: "cannot_self_tip" });
 
-      const debit = await awardPaper(u.id, "SPEND_GIFT", -amount, `Tip to ${recipient.name}${note ? ` · ${note}` : ""}`, recipient.id);
-      if (!debit) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
-
-      const credit = await awardPaper(recipient.id, "EARN_GIFT", amount, `Tip from ${u.name || u.id}${note ? ` · ${note}` : ""}`, u.id);
-      if (!credit) {
-        await awardPaper(u.id, "ADJUSTMENT", amount, "Tip refund (credit failed)").catch(() => {});
-        return reply.code(500).send({ ok: false, error: "credit_failed" });
-      }
+      const result = await prisma.$transaction(async (tx) => {
+        const deb = await tx.user.updateMany({ where: { id: u.id, paper: { gte: amount } }, data: { paper: { decrement: amount } } });
+        if (deb.count === 0) return { ok: false as const, balance: 0 };
+        const sender = await tx.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+        const senderBal = (sender as any)?.paper ?? 0;
+        await (tx as any).paperTransaction.create({ data: { userId: u.id, type: "SPEND_GIFT", amount: -amount, balance: senderBal, description: `Tip to ${recipient.name}${note ? ` · ${note}` : ""}`, refId: recipient.id } });
+        await tx.user.update({ where: { id: recipient.id }, data: { paper: { increment: amount } } });
+        const recip = await tx.user.findUnique({ where: { id: recipient.id }, select: { paper: true } });
+        const recipBal = (recip as any)?.paper ?? 0;
+        await (tx as any).paperTransaction.create({ data: { userId: recipient.id, type: "EARN_GIFT", amount, balance: recipBal, description: `Tip from ${u.name || u.id}${note ? ` · ${note}` : ""}`, refId: u.id } });
+        return { ok: true as const, balance: senderBal };
+      });
+      if (!result.ok) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
 
       return reply.send({
         ok: true,
         recipient: { id: recipient.id, name: recipient.name },
         amount,
-        balance: debit.balance,
+        balance: result.balance,
       });
     } catch (e) {
       console.error("[paper/tip]", e);

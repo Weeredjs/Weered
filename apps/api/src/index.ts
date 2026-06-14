@@ -4861,25 +4861,11 @@ async function main() {
           }
 
           try {
-            const user = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { paper: true } });
-            if (!user || (user as any).paper < buyin) {
+            const res = await awardPaper(ws.user.id, "POKER_BUYIN", -buyin, `Poker buy-in at table ${tableId}`, tableId);
+            if (!res) {
               send(ws, { type: "poker:error", error: "Insufficient Paper balance" });
               return;
             }
-            const newBalance = (user as any).paper - buyin;
-            await prisma.$transaction([
-              (prisma as any).paperTransaction.create({
-                data: {
-                  userId: ws.user.id,
-                  type: "POKER_BUYIN",
-                  amount: -buyin,
-                  balance: newBalance,
-                  description: `Poker buy-in at table ${tableId}`,
-                  refId: tableId,
-                },
-              }),
-              prisma.user.update({ where: { id: ws.user.id }, data: { paper: newBalance } }),
-            ]);
           } catch (e) {
             console.error("[poker:join] Paper deduction failed:", e);
             send(ws, { type: "poker:error", error: "Failed to process buy-in" });
@@ -5630,20 +5616,21 @@ async function main() {
 
   async function awardPaper(userId: string, type: string, amount: number, description: string, refId?: string): Promise<{ balance: number } | null> {
     try {
-      const user = await prisma.user.findUnique({ where: { id: userId }, select: { paper: true } });
-      if (!user) return null;
-
-      const newBalance = (user as any).paper + amount;
-      if (newBalance < 0) return null;
-
-      await prisma.$transaction([
-        (prisma as any).paperTransaction.create({
+      return await prisma.$transaction(async (tx) => {
+        // Race-safe: atomic increment with a WHERE guard so concurrent debits
+        // cannot overdraft (Postgres re-checks the predicate on the locked row).
+        const upd = await tx.user.updateMany({
+          where: amount < 0 ? { id: userId, paper: { gte: -amount } } : { id: userId },
+          data: { paper: { increment: amount } },
+        });
+        if (upd.count === 0) return null;
+        const fresh = await tx.user.findUnique({ where: { id: userId }, select: { paper: true } });
+        const newBalance = (fresh as any)?.paper ?? 0;
+        await (tx as any).paperTransaction.create({
           data: { userId, type, amount, balance: newBalance, description, refId: refId || null },
-        }),
-        prisma.user.update({ where: { id: userId }, data: { paper: newBalance } }),
-      ]);
-
-      return { balance: newBalance };
+        });
+        return { balance: newBalance };
+      });
     } catch (e) {
       console.error("[paper] awardPaper error:", e);
       return null;
@@ -5689,29 +5676,14 @@ async function main() {
       return reply.send({ ok: true, cashed: 0, balance: 0 });
     }
 
+    // Clear the seat synchronously BEFORE awarding so a concurrent cashout
+    // cannot double-credit the same chips.
+    table.seats[seatIdx] = null;
+    broadcastPokerState(tableId);
     try {
-      const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
-      if (!user) return reply.code(404).send({ ok: false, error: "User not found" });
-
-      const newBalance = (user as any).paper + chips;
-      await prisma.$transaction([
-        (prisma as any).paperTransaction.create({
-          data: {
-            userId: u.id,
-            type: "POKER_CASHOUT",
-            amount: chips,
-            balance: newBalance,
-            description: `Cashed out ${chips} chips from poker table ${tableId}`,
-            refId: tableId,
-          },
-        }),
-        prisma.user.update({ where: { id: u.id }, data: { paper: newBalance } }),
-      ]);
-
-      table.seats[seatIdx] = null;
-      broadcastPokerState(tableId);
-
-      return reply.send({ ok: true, cashed: chips, balance: newBalance });
+      const res = await awardPaper(u.id, "POKER_CASHOUT", chips, `Cashed out ${chips} chips from poker table ${tableId}`, tableId);
+      if (!res) return reply.code(500).send({ ok: false, error: "Cashout failed" });
+      return reply.send({ ok: true, cashed: chips, balance: res.balance });
     } catch (e) {
       console.error("[poker:cashout] Error:", e);
       return reply.code(500).send({ ok: false, error: "Cashout failed" });
