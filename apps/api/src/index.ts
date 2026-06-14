@@ -103,6 +103,7 @@ import voiceRoutes from "./routes/voice";
 import staffContentRoutes from "./routes/staffContent";
 import authRoutes from "./routes/auth";
 import profileRoutes from "./routes/profile";
+import pokerRoutes from "./routes/poker";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -4496,56 +4497,7 @@ async function main() {
 
   await app.register(paperRoutes, { authFromHeader, awardPaper } as any);
 
-  app.get("/poker/:tableId", async (req, reply) => {
-    const tableId = String((req as any).params?.tableId || "").trim();
-    if (!tableId) return reply.code(400).send({ ok: false, error: "missing tableId" });
-
-    const table = pokerTables.get(tableId);
-    if (!table) return reply.send({ ok: true, table: null, message: "No active table" });
-
-    const u = authFromHeader((req as any).headers?.authorization);
-    return reply.send({ ok: true, table: buildPokerStateForUser(table, u?.id) });
-  });
-
-  app.post("/poker/:tableId/cashout", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-
-    const tableId = String((req as any).params?.tableId || "").trim();
-    if (!tableId) return reply.code(400).send({ ok: false, error: "missing tableId" });
-
-    const table = pokerTables.get(tableId);
-    if (!table) return reply.code(404).send({ ok: false, error: "Table not found" });
-
-    const seatIdx = table.seats.findIndex(s => s && s.userId === u.id);
-    if (seatIdx === -1) return reply.code(400).send({ ok: false, error: "Not seated at this table" });
-
-    const seat = table.seats[seatIdx]!;
-
-    if (table.handInProgress && !seat.folded) {
-      return reply.code(400).send({ ok: false, error: "Cannot cash out during an active hand. Fold first or wait for the hand to end." });
-    }
-
-    const chips = seat.chips;
-    if (chips <= 0) {
-      table.seats[seatIdx] = null;
-      broadcastPokerState(tableId);
-      return reply.send({ ok: true, cashed: 0, balance: 0 });
-    }
-
-    // Clear the seat synchronously BEFORE awarding so a concurrent cashout
-    // cannot double-credit the same chips.
-    table.seats[seatIdx] = null;
-    broadcastPokerState(tableId);
-    try {
-      const res = await awardPaper(u.id, "POKER_CASHOUT", chips, `Cashed out ${chips} chips from poker table ${tableId}`, tableId);
-      if (!res) return reply.code(500).send({ ok: false, error: "Cashout failed" });
-      return reply.send({ ok: true, cashed: chips, balance: res.balance });
-    } catch (e) {
-      console.error("[poker:cashout] Error:", e);
-      return reply.code(500).send({ ok: false, error: "Cashout failed" });
-    }
-  });
+  await app.register(pokerRoutes, { authFromHeader, pokerTables, buildPokerStateForUser, broadcastPokerState, awardPaper } as any);
 
   await app.register(storeRoutes, { authFromHeader } as any);
 
