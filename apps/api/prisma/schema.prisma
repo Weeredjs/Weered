@@ -433,6 +433,7 @@ model User {
   joinPolicy  String     @default("FRIENDS")
   invitePolicy String    @default("FRIENDS")
   paper       Int        @default(0)   // spendable virtual currency
+  lastDailyAt DateTime?                  // atomic guard for the daily Paper bonus
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
   onboardingComplete Boolean    @default(false)
