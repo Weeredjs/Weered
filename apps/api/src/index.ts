@@ -164,6 +164,7 @@ function isAIAvailable(): boolean {
 }
 
 import { prisma } from "./lib/prisma";
+import { setAuthCookie, clearAuthCookie, readCookieToken } from "./lib/authCookie";
 
 const JWT_SECRET = (() => {
   const s = process.env.JWT_SECRET;
@@ -2435,28 +2436,6 @@ async function runFeedWorker() {
 
 async function main() {
   const app = Fastify({ logger: true });
-  const AUTH_COOKIE = "weered_token";
-  function setAuthCookie(reply: any, token: string) {
-    reply.header("Set-Cookie", AUTH_COOKIE + "=" + token + "; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=" + (7 * 24 * 3600));
-  }
-  function clearAuthCookie(reply: any) {
-    reply.header("Set-Cookie", AUTH_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=0");
-  }
-  // Web clients auth via the httpOnly cookie alone; omitting the body token
-  // closes the one-shot XSS grab at login. Mobile (Bearer-header client) still
-  // needs the body token and doesn't send X-Client: web.
-  function isWebClient(req: any): boolean {
-    return String(req.headers["x-client"] || "").toLowerCase() === "web";
-  }
-  function readCookieToken(req: any): string | null {
-    const raw = req.headers.cookie;
-    if (!raw) return null;
-    for (const part of String(raw).split(";")) {
-      const i = part.indexOf("=");
-      if (i > 0 && part.slice(0, i).trim() === AUTH_COOKIE) return decodeURIComponent(part.slice(i + 1).trim());
-    }
-    return null;
-  }
   app.addHook("onRequest", async (req: any) => {
     if (!req.headers.authorization) {
       const c = readCookieToken(req);
