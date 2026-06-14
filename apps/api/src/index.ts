@@ -109,7 +109,7 @@ import { handleCanvas, handleCanvasRelay } from "./sockets/canvas";
 import { handleLaunch, handleYoutube } from "./sockets/roomMedia";
 import { handleVoice } from "./sockets/voiceWs";
 import { handlePresence } from "./sockets/presence";
-import { handleChat, handleCrewDm } from "./sockets/messaging";
+import { handleChat, handleCrewDm, handleReactionToggle } from "./sockets/messaging";
 import { handleRoomClose, handleRoomMod } from "./sockets/roomMod";
 import { handlePoker } from "./sockets/poker";
 import campaignsRoutes from "./routes/campaigns";
@@ -2840,69 +2840,7 @@ async function main() {
           return;
         }
         if (msg.type === "reaction:toggle") {
-          const rId = normalizeRoomId(String(msg.roomId || ""));
-          const msgId = String(msg.msgId || "");
-          const emoji = String(msg.emoji || "").trim().slice(0, 12);
-          if (!rId || !msgId || !emoji) return;
-          const room = await ensureRoomLoaded(rId);
-          if (room.banned.has(ws.user.id)) return;
-          const target = room.msgs.find(m => m.id === msgId);
-          if (!target || target.deletedAt) return;
-
-          if (room.roomId !== "lobby") {
-            try {
-              const existing = await (prisma as any).reaction.findUnique({
-                where: { targetType_targetId_userId_emoji: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji } },
-              });
-              if (existing) {
-                await (prisma as any).reaction.delete({ where: { id: existing.id } });
-              } else {
-                const distinctCount = await (prisma as any).reaction.groupBy({
-                  by: ["emoji"], where: { targetType: "ROOM_MESSAGE", targetId: msgId },
-                });
-                if (distinctCount.length >= 20 && !distinctCount.find((d: any) => d.emoji === emoji)) {
-                  send(ws, { type: "reaction:rejected", roomId: rId, msgId, reason: "Too many different reactions on this message." });
-                  return;
-                }
-                await (prisma as any).reaction.create({
-                  data: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji },
-                });
-              }
-              const rows = await (prisma as any).reaction.findMany({
-                where: { targetType: "ROOM_MESSAGE", targetId: msgId },
-                select: { emoji: true, userId: true },
-              });
-              const agg: Record<string, { count: number; users: string[] }> = {};
-              for (const r of rows) {
-                if (!agg[r.emoji]) agg[r.emoji] = { count: 0, users: [] };
-                agg[r.emoji].count++;
-                if (agg[r.emoji].users.length < 12) agg[r.emoji].users.push(r.userId);
-              }
-              const reactions = Object.entries(agg).map(([e, v]) => ({ emoji: e, count: v.count, users: v.users }));
-              target.reactions = reactions;
-              broadcast(room, { type: "reaction:changed", roomId: rId, msgId, reactions });
-            } catch (e) { console.error("[reaction:toggle]", e); }
-          } else {
-            target.reactions = target.reactions || [];
-            const existing = target.reactions.find(r => r.emoji === emoji);
-            if (existing) {
-              if (existing.users.includes(ws.user!.id)) {
-                existing.users = existing.users.filter(u => u !== ws.user!.id);
-                existing.count = Math.max(0, existing.count - 1);
-                if (existing.count === 0) target.reactions = target.reactions.filter(r => r.emoji !== emoji);
-              } else {
-                existing.users.push(ws.user!.id);
-                existing.count++;
-              }
-            } else {
-              if (target.reactions.length >= 20) {
-                send(ws, { type: "reaction:rejected", roomId: rId, msgId, reason: "Too many different reactions on this message." });
-                return;
-              }
-              target.reactions.push({ emoji, count: 1, users: [ws.user.id] });
-            }
-            broadcast(room, { type: "reaction:changed", roomId: rId, msgId, reactions: target.reactions });
-          }
+          await handleReactionToggle(ws, msg, { normalizeRoomId, ensureRoomLoaded, send, broadcast });
           return;
         }
 
