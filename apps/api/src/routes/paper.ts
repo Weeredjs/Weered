@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -11,7 +12,17 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
   const TIP_MIN = 1;
   const TIP_MAX = 100_000;
 
-  app.post("/paper/tip", async (req, reply) => {
+  app.post("/paper/tip", {
+    schema: {
+      tags: ["paper"],
+      summary: "Tip Paper to another user",
+      body: z.object({
+        toUsername: z.string().min(1).max(64),
+        amount: z.coerce.number(),
+        note: z.string().max(2000).optional().nullable(),
+      }).passthrough(),
+    },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
