@@ -1054,7 +1054,7 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
   ];
 
   return (
-    <div style={{ padding: "0 1px" }}>
+    <div style={{ padding: "0 1px", flex: 1, minHeight: 0, overflowY: "auto" }}>
       <LobbyPnlTicker lobbyId={lobbyId} mode={mode} />
 
       <TheBrief open={brief.open} onClose={brief.hide} />
