@@ -2573,6 +2573,7 @@ async function main() {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply.code(400).send({ error: "Invalid email" });
     const cap = await verifyCaptcha(captchaToken, req.ip);
     if (!cap.ok) return reply.code(400).send({ error: "captcha_required", reason: cap.reason });
+    if ((await getSiteConfig("registrationOpen")) === "false") return reply.code(403).send({ error: "registration_closed" });
     const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
     if (existing) return reply.code(409).send({ error: "Username already exists" });
     if (email) {
@@ -2788,6 +2789,7 @@ async function main() {
 
       const isNew = !user;
       if (!user) {
+        if ((await getSiteConfig("registrationOpen")) === "false") return reply.redirect(customRedirect ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=registration_closed` : `${WEB_URL}/login?error=registration_closed`);
         const tempName = `g_${googleId.slice(0, 12)}`;
         user = await prisma.user.create({ data: { name: displayName, usernameKey: tempName, googleId, email, avatar } });
         seedWelcomeDM(user.id).catch(() => {});
