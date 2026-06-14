@@ -10,7 +10,9 @@
     "test:smoke": "vitest run test/smoke.test.ts",
     "test:smoke:local": "API_BASE=http://127.0.0.1:4000 vitest run test/smoke.test.ts",
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.js --sourcemap",
-    "start:tsx": "tsx src/index.ts"
+    "start:tsx": "tsx src/index.ts",
+    "test": "vitest run test/unit",
+    "test:unit": "vitest run test/unit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

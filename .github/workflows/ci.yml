@@ -23,6 +23,8 @@ jobs:
         run: bash scripts/check.sh
       - name: Web build (Next.js type gate)
         run: cd apps/web && pnpm next build
+      - name: Unit tests
+        run: pnpm --filter @weered/api test:unit
       - name: Lint (non-blocking)
         run: pnpm -w lint
         continue-on-error: true
