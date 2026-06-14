@@ -701,9 +701,9 @@ export default function LeftRail() {
                   <button
                     onClick={() => toggleFav(room)}
                     title="Unpin"
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 7px", flexShrink:0, color: accent, opacity: 0.7, fontSize:13, lineHeight:1, transition:"opacity 0.12s", borderRadius:8 }}
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 7px", flexShrink:0, color: "#FFD24A", opacity: 0.9, fontSize:13, lineHeight:1, transition:"opacity 0.12s", borderRadius:8 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
                   >
                     ★
                   </button>
