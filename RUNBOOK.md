@@ -101,11 +101,9 @@ The worst-case plan: registration off, AI dependency cut, server up cheap, indef
 That now closes **both** signup paths (local username/password **and** Google OAuth). Existing users keep logging in normally. (Backup method, no UI: on the droplet, `psql "postgresql://weered:REDACTED_DB_PASSWORD@127.0.0.1:5432/=public" -c "UPDATE \"SiteConfig\" SET value='false' WHERE key='registrationOpen';"` — takes effect immediately, no restart.)
 
 ### 4b. <a name="llm-independence"></a>Cut the LLM / AI dependency
-If access to Claude/LLMs is lost or too expensive, remove the key and the platform keeps running:
-```bash
-# comment out or delete ANTHROPIC_API_KEY in /opt/weered/apps/api/.env, then:
-pm2 restart weered-api --update-env
-```
+**One click, no SSH:** `/staff` → Config → **Operator AI Enabled** → off. Within ~15s the Operator goes silent and **zero LLM calls are made.** Belt-and-suspenders (also stops paying for the key): remove `ANTHROPIC_API_KEY` from `/opt/weered/apps/api/.env` and `pm2 restart weered-api --update-env`.
+
+**Full site-down** (heavier than parking — for emergencies): `/staff` → Config → **Maintenance Mode** → on. Non-staff get a 503 from the API; staff and the login flow still work, so you can always get back in to turn it off.
 **What breaks (all fail-soft — they degrade, they don't crash):** The Operator chat (`@operator`/`/ask`), AI lobby search, AI quiz generator, D&D NPC chat, FakeOut trade commentary, Helldivers war commentary, Windrose weekly recap. The "Operator" pseudo-user simply stops appearing.
 
 **What keeps working (everything else):** lobbies, rooms, voice/video (LiveKit), text chat, presence, all game integrations (Destiny/EVE/PoE/League/etc.), payments, auth, notifications, the forum, tournaments. **The AI is a garnish, not a load-bearing wall.**
@@ -132,7 +130,9 @@ Three nightly cron jobs on the droplet (`crontab -l`):
 
 Plus a weekly **Claude context** backup (the memory/transcripts) to `/root/claude-context-backups/` via a Windows scheduled task.
 
-> ⚠️ **Biggest gap: all backups live on the same droplet.** If the droplet is destroyed, only the *code* (on GitHub) survives — the DB, uploads, and `.env` secrets would be lost. **Fix to do:** enable DigitalOcean weekly droplet snapshots (DO control panel) and/or copy `/root/weered-pg-backups` + `/root/weered-env-backups` off-box (e.g. DO Spaces). Until then, before any risky change, manually `scp` the latest dump + env-backup somewhere off the droplet.
+**Off-site copy (added 2026-06-14):** a daily Windows scheduled task (**"Weered Offsite Backup Pull"**) pulls the latest DB dump + uploads + both `.env` snapshots + `livekit.yaml` to `~/weered-offsite-backups` on James's machine (keeps last 8). Run manually anytime: `bash "/c/Users/jstir/.claude/backups/pull-weered-backups.sh"`. So a droplet loss no longer takes the only copy with it.
+
+> ⚠️ **Still do:** enable **DigitalOcean droplet snapshots** (DO control panel) as a second, independent copy — the off-site pull lands on one PC; DO snapshots cover the whole box on DO's own infra.
 
 ---
 
@@ -187,10 +187,10 @@ Every secret is in `/opt/weered/apps/api/.env`. Re-issue from the provider, past
 
 ## 8. Known gaps / hardening TODO
 
-- **Off-site backups** (section 5) — the single biggest risk. Enable DO snapshots + copy backups off-box.
+- **Off-site backups** (section 5) — partially closed: a daily off-site pull now copies the DB + secrets to James's machine. Remaining: enable DigitalOcean droplet snapshots for a second independent copy.
 - **`weered-web` has a very high PM2 restart count** — possible crash-loop; check `/root/.pm2/logs/weered-web-error.log`.
 - **LiveKit `livekit.yaml`** has `node_ip: 192.168.0.106` + `use_external_ip: false` (a stale LAN value) — may break voice for some clients; set to the droplet's public IP / `use_external_ip: true` and confirm voice works.
-- **`maintenanceMode` toggle in `/staff` is still dead config** (only `registrationOpen` was wired). A full "site down for non-staff" mode would need a middleware — ask for it if you want it.
+- **`maintenanceMode`** is now wired (API-level: non-staff get 503 when on; `/staff`, `/auth/*`, `/health` always pass). It gates the **API**, so the Next.js page shell still renders for non-staff but can't load data — a dedicated web maintenance page would be a further nicety.
 - **Stale `weered` database** alongside the live `=public` — drop it when convenient to avoid confusion.
 - **Helldivers war endpoints** depend on an external community API that intermittently times out (the 4 smoke fails) — cosmetic, self-heals.
 - `ufw` is inactive — inbound filtering relies on the DigitalOcean cloud firewall; confirm 4000/4001/3000/5432/6379 aren't publicly reachable.
