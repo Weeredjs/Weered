@@ -50,7 +50,7 @@ function BannedBadge() {
   return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: "rgba(239,68,68,.15)", border: "1px solid rgba(239,68,68,.40)", color: "rgb(252,165,165)", fontWeight: 700, letterSpacing: ".4px", flexShrink: 0 }}>BANNED</span>;
 }
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 

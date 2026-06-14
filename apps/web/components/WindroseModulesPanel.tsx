@@ -402,11 +402,11 @@ function ActivityTicker() {
       </div>
 
       {loading ? (
-        <div style={{ padding: "14px 18px", textAlign: "center", fontSize: 12, color: PAL.parchDim, fontStyle: "italic", ...S.card }}>
+        <div style={{ ...S.card, padding: "14px 18px", textAlign: "center", fontSize: 12, color: PAL.parchDim, fontStyle: "italic" }}>
           Listening to the docks…
         </div>
       ) : !events || events.length === 0 ? (
-        <div style={{ padding: "14px 18px", textAlign: "center", fontSize: 12, color: PAL.parchDim, fontStyle: "italic", ...S.card }}>
+        <div style={{ ...S.card, padding: "14px 18px", textAlign: "center", fontSize: 12, color: PAL.parchDim, fontStyle: "italic" }}>
           Quiet harbour. Post a bounty or raise a flag to kick it off.
         </div>
       ) : (

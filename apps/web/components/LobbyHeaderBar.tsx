@@ -197,7 +197,7 @@ export default function LobbyHeaderBar({
       }}>
         {(() => {
           const HAS_SPLASH = new Set(["windrose", "destiny2"]);
-          const isTier2 = HAS_SPLASH.has(lobbyId);
+          const isTier2 = HAS_SPLASH.has(lobbyId ?? "");
           const replaySplash = () => {
             try { window.dispatchEvent(new CustomEvent("weered:splash:open", { detail: { lobbyId } })); } catch {}
           };

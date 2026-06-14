@@ -267,7 +267,7 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
           token={token}
           roomId={roomId}
           target={editorTarget}
-          onSaved={handleSaved}
+          onSaved={(c) => { void handleSaved(c as Parameters<typeof handleSaved>[0]); }}
           onClose={() => setEditorOpen(false)}
         />
       )}

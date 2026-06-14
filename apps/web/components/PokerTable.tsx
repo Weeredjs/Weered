@@ -988,6 +988,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
   useEffect(() => {
     if (!state?.lastAction) return;
     const la = ts.lastAction;
+    if (!la) return;
     const key = `${la.userId}-${la.action}-${la.amount ?? ""}`;
     if (key === lastActionRef.current) return;
     lastActionRef.current = key;
