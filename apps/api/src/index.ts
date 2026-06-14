@@ -107,6 +107,7 @@ import pokerRoutes from "./routes/poker";
 import setupTradingSocket from "./sockets/tradingWs";
 import { handleCanvas } from "./sockets/canvas";
 import { handleLaunch } from "./sockets/roomMedia";
+import { handleVoice } from "./sockets/voiceWs";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -2959,96 +2960,8 @@ async function main() {
         }
         if (handleCanvas(ws, msg, { normalizeRoomId, rooms, broadcast, isModOrOwner, send })) return;
 
-        function broadcastVoiceState(room: RoomState) {
-          broadcast(room, {
-            type: "voice:state",
-            roomId: room.roomId,
-            mode: room.voiceMode || "OPEN",
-            queue: Array.from(room.voiceQueue || []),
-            speakers: Array.from(room.voiceSpeakers || []),
-          });
-        }
-        function pushVoicePermission(room: RoomState, userId: string) {
-          for (const sock of room.sockets) {
-            if ((sock as any).user?.id === userId) {
-              try { send(sock as Sock, { type: "voice:permission", roomId: room.roomId, userId }); } catch {}
-            }
-          }
-        }
-
-        if (msg.type === "voice:mode") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
-          const next = String(msg.mode || "").toUpperCase();
-          if (!["OPEN", "QUEUED", "LISTEN_ONLY"].includes(next)) return;
-          room.voiceMode = next as any;
-          if (next === "LISTEN_ONLY" || next === "OPEN") {
-            const dropped = new Set([...(room.voiceSpeakers || []), ...(room.voiceQueue || [])]);
-            room.voiceQueue = new Set();
-            room.voiceSpeakers = new Set();
-            for (const uid of dropped) pushVoicePermission(room, uid);
-          }
-          (prisma as any).room.update({ where: { id: roomId }, data: { voiceMode: next } }).catch(() => {});
-          broadcastVoiceState(room);
-          return;
-        }
-
-        if (msg.type === "voice:raise") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!room.users.has(ws.user.id)) return;
-          if ((room.voiceMode || "OPEN") !== "QUEUED") return;
-          if (!room.voiceQueue) room.voiceQueue = new Set();
-          if (room.voiceSpeakers?.has(ws.user.id)) return;
-          room.voiceQueue.add(ws.user.id);
-          broadcastVoiceState(room);
-          return;
-        }
-
-        if (msg.type === "voice:lower") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!room.voiceQueue?.has(ws.user.id)) return;
-          room.voiceQueue.delete(ws.user.id);
-          broadcastVoiceState(room);
-          return;
-        }
-
-        if (msg.type === "voice:approve") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
-          const target = String(msg.userId || "").trim();
-          if (!target) return;
-          if (!room.voiceSpeakers) room.voiceSpeakers = new Set();
-          room.voiceQueue?.delete(target);
-          room.voiceSpeakers.add(target);
-          broadcastVoiceState(room);
-          pushVoicePermission(room, target);
-          return;
-        }
-
-        if (msg.type === "voice:revoke") {
-          const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ""));
-          if (!roomId) return;
-          const room = rooms.get(roomId);
-          if (!room) return;
-          if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
-          const target = String(msg.userId || "").trim();
-          if (!target) return;
-          const removed = room.voiceSpeakers?.delete(target) || false;
-          room.voiceQueue?.delete(target);
-          if (removed) pushVoicePermission(room, target);
-          broadcastVoiceState(room);
+        if (typeof msg.type === "string" && msg.type.startsWith("voice:")) {
+          handleVoice(ws, msg, { broadcast, send, normalizeRoomId, rooms, isModOrOwner });
           return;
         }
         if (msg.type === "room:close") {
