@@ -94,3 +94,31 @@ export function handleLaunch(ws: any, msg: any, opts: Opts): void {
   }
   return;
 }
+
+export function handleYoutube(
+  ws: any,
+  msg: any,
+  snap: { room: any; roomId: string },
+  opts: { send: (ws: any, m: any) => void },
+): void {
+  const { room, roomId } = snap;
+  const { send } = opts;
+  if (!room.users.has(ws.user.id)) return;
+  if (msg.type === "youtube:load" && msg.videoId) {
+    room.ytState = { videoId: String(msg.videoId), playing: false, position: 0, updatedAt: Date.now() };
+    if (room.activeModule && room.activeModule.mode === "youtube") {
+      room.activeModule.url = String(msg.videoId);
+    }
+  } else if (msg.type === "youtube:play") {
+    if (room.ytState) { room.ytState.playing = true; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
+  } else if (msg.type === "youtube:pause") {
+    if (room.ytState) { room.ytState.playing = false; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
+  } else if (msg.type === "youtube:stop") {
+    room.ytState = null;
+  }
+  for (const s of room.sockets) {
+    if (s === ws) continue;
+    send(s, { ...msg, roomId, _from: ws.user.id });
+  }
+  return;
+}
