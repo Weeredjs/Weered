@@ -35,6 +35,10 @@ process.on("uncaughtException", (err: any) => {
   try { Sentry.captureException(err); Sentry.close(2000).finally(() => process.exit(1)); } catch { process.exit(1); }
 });
 import Fastify from "fastify";
+import { z } from "zod";
+import { serializerCompiler, validatorCompiler, jsonSchemaTransform } from "fastify-type-provider-zod";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 import mlbRoutes from "./routes/mlb";
 import pgaRoutes from "./routes/pga";
 import tenorRoutes from "./routes/tenor";
@@ -2473,6 +2477,52 @@ async function main() {
     } catch {}
   });
 
+  // ── Zod-backed validation + OpenAPI ───────────────────────────────────────
+  // The Zod compilers only run for routes that declare a `schema`, so every
+  // existing schema-less route is completely unaffected. /docs is staff-gated.
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
+  app.setErrorHandler((err, req, reply) => {
+    const e = err as any;
+    const status = e.statusCode || 500;
+    // Schema (Zod) validation failures are client errors: clean 400, no Sentry noise.
+    if (status === 400 && (e.validation || e.code === "FST_ERR_VALIDATION")) {
+      return reply.status(400).send({ error: "validation_error", message: e.message || "Invalid request" });
+    }
+    if (status >= 500 && process.env.SENTRY_DSN_API) {
+      Sentry.captureException(err, { tags: { route: req.routeOptions?.url || req.url } });
+    }
+    reply.status(status).send({ error: e.message || "Internal error" });
+  });
+  await app.register(fastifySwagger, {
+    openapi: {
+      info: {
+        title: "Weered API",
+        version: "1.0.0",
+        description: "Weered platform API. Web clients authenticate with an httpOnly session cookie; mobile/desktop use a Bearer token.",
+      },
+      tags: [
+        { name: "auth", description: "Registration, login, session" },
+        { name: "paper", description: "Paper virtual-currency economy" },
+        { name: "trading", description: "FakeOut paper trading" },
+      ],
+    },
+    transform: jsonSchemaTransform,
+  });
+  await app.register(fastifySwaggerUi, {
+    routePrefix: "/docs",
+    uiHooks: {
+      onRequest: async (req: any, reply: any) => {
+        try {
+          const u = authFromHeader(req.headers.authorization);
+          if (u && canAccessStaff(await getGlobalRole(u.id))) return;
+        } catch {}
+        return reply.code(403).send({ error: "forbidden" });
+      },
+    },
+  });
+
   const { default: rateLimit } = await import("@fastify/rate-limit");
   await app.register(rateLimit, {
     global: true,
@@ -2596,6 +2646,17 @@ async function main() {
 
   app.post("/auth/register", {
     config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+    schema: {
+      tags: ["auth"],
+      summary: "Register a new local account",
+      body: z.object({
+        username: z.string().min(1).max(64),
+        password: z.string().min(1).max(512),
+        email: z.string().max(254).optional().nullable(),
+        captchaToken: z.string().optional().nullable(),
+        turnstileToken: z.string().optional().nullable(),
+      }).passthrough(),
+    },
   }, async (req, reply) => {
     const body: any = (req as any).body || {};
     const rawU = typeof body.username === "string" ? body.username : "";
@@ -2729,6 +2790,14 @@ async function main() {
 
   app.post("/auth/login", {
     config: { rateLimit: { max: 20, timeWindow: "15 minutes" } },
+    schema: {
+      tags: ["auth"],
+      summary: "Log in with username + password",
+      body: z.object({
+        username: z.string().min(1).max(64),
+        password: z.string().min(1).max(512),
+      }).passthrough(),
+    },
   }, async (req, reply) => {
     const body: any = (req as any).body || {};
     const rawU = typeof body.username === "string" ? body.username : "";
@@ -3853,16 +3922,6 @@ async function main() {
   setInterval(runNewsWorker, 15 * 60 * 1000);
 
   await seedLobbies();
-
-  app.setErrorHandler((err, req, reply) => {
-    if (process.env.SENTRY_DSN_API) {
-      Sentry.captureException(err, {
-        tags: { route: req.routeOptions?.url || req.url },
-      });
-    }
-    const e = err as any;
-    reply.status(e.statusCode || 500).send({ error: e.message || "Internal error" });
-  });
 
   await app.register(modsRoutes, { verifyToken } as any);
 

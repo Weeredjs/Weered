@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -154,7 +155,18 @@ app.get("/trading/account/:lobbyId", async (req, reply) => {
   });
 });
 
-app.post("/trading/order/:lobbyId", async (req, reply) => {
+app.post("/trading/order/:lobbyId", {
+    schema: {
+      tags: ["trading"],
+      summary: "Place a market / limit / stop order (FakeOut paper trading)",
+      body: z.object({
+        symbol: z.string().min(1).max(20),
+        side: z.string().min(1),
+        orderType: z.string().optional(),
+        quantity: z.coerce.number(),
+      }).passthrough(),
+    },
+  }, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const lobbyId = String((req as any).params?.lobbyId || "");
