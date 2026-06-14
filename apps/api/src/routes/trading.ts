@@ -217,129 +217,143 @@ app.post("/trading/order/:lobbyId", async (req, reply) => {
 
   const cost = currentPrice * quantity;
 
-  if (side === "BUY") {
-    if (cost > account.cashBalance) {
+  // Awards are fired AFTER the DB transaction commits, so a rolled-back trade
+  // never leaks Paper / notoriety.
+  const pendingAwards: { paper: number; desc: string; refId: string }[] = [];
+
+  try {
+    if (side === "BUY") {
+      // Fast-path UX rejection; the authoritative overdraft guard is the conditional debit below.
+      if (cost > account.cashBalance) {
+        return reply.code(400).send({ ok: false, error: "insufficient_funds", available: account.cashBalance, required: cost });
+      }
+      await (prisma as any).$transaction(async (tx: any) => {
+        const existing = account.positions.find((p: any) => p.side === "BUY");
+        if (existing) {
+          // Averaging into an existing long: debit the added cost (guarded) THEN grow the position.
+          const debited = await tx.paperAccount.updateMany({
+            where: { id: account.id, cashBalance: { gte: cost } },
+            data: { cashBalance: { decrement: cost } },
+          });
+          if (debited.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+          const newQty = existing.quantity + quantity;
+          const newEntry = ((existing.entryPrice * existing.quantity) + (currentPrice * quantity)) / newQty;
+          await tx.paperPosition.update({
+            where: { id: existing.id },
+            data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
+          });
+        } else {
+          const shortPos = account.positions.find((p: any) => p.side === "SELL");
+          if (shortPos) {
+            const pnl = (shortPos.entryPrice - currentPrice) * shortPos.quantity;
+            await tx.paperPosition.update({
+              where: { id: shortPos.id },
+              data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date() },
+            });
+            await tx.paperAccount.update({
+              where: { id: account.id },
+              data: { cashBalance: { increment: shortPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
+            });
+            if (pnl > 0) pendingAwards.push({ paper: Math.max(1, Math.floor(pnl / 100)) * paperMul, desc: `FakeOut short profit: $${pnl.toFixed(2)} on ${symbol}`, refId: shortPos.id });
+            const remaining = quantity - shortPos.quantity;
+            if (remaining > 0) {
+              const remainCost = currentPrice * remaining;
+              const debited = await tx.paperAccount.updateMany({
+                where: { id: account.id, cashBalance: { gte: remainCost } },
+                data: { cashBalance: { decrement: remainCost } },
+              });
+              if (debited.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+              await tx.paperPosition.create({
+                data: { accountId: account.id, symbol, side: "BUY", quantity: remaining, entryPrice: currentPrice, entryValue: remainCost, stopLoss, takeProfit },
+              });
+            }
+          } else {
+            const debited = await tx.paperAccount.updateMany({
+              where: { id: account.id, cashBalance: { gte: cost } },
+              data: { cashBalance: { decrement: cost } },
+            });
+            if (debited.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+            await tx.paperPosition.create({
+              data: { accountId: account.id, symbol, side: "BUY", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
+            });
+          }
+        }
+      });
+    } else {
+      await (prisma as any).$transaction(async (tx: any) => {
+        const longPos = account.positions.find((p: any) => p.side === "BUY");
+        if (longPos) {
+          if (quantity >= longPos.quantity) {
+            const pnl = (currentPrice - longPos.entryPrice) * longPos.quantity;
+            await tx.paperPosition.update({
+              where: { id: longPos.id },
+              data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date() },
+            });
+            await tx.paperAccount.update({
+              where: { id: account.id },
+              data: { cashBalance: { increment: longPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
+            });
+            if (pnl > 0) pendingAwards.push({ paper: Math.max(1, Math.floor(pnl / 100)) * paperMul, desc: `FakeOut long profit: $${pnl.toFixed(2)} on ${symbol}`, refId: longPos.id });
+            const remaining = quantity - longPos.quantity;
+            if (remaining > 0) {
+              const remainValue = currentPrice * remaining;
+              const debited = await tx.paperAccount.updateMany({
+                where: { id: account.id, cashBalance: { gte: remainValue } },
+                data: { cashBalance: { decrement: remainValue } },
+              });
+              if (debited.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+              await tx.paperPosition.create({
+                data: { accountId: account.id, symbol, side: "SELL", quantity: remaining, entryPrice: currentPrice, entryValue: remainValue, stopLoss, takeProfit },
+              });
+            }
+          } else {
+            const pnl = (currentPrice - longPos.entryPrice) * quantity;
+            const newQty = longPos.quantity - quantity;
+            await tx.paperPosition.update({
+              where: { id: longPos.id },
+              data: { quantity: newQty, entryValue: longPos.entryPrice * newQty },
+            });
+            await tx.paperAccount.update({
+              where: { id: account.id },
+              data: { cashBalance: { increment: (longPos.entryPrice * quantity) + pnl }, realizedPnl: { increment: pnl } },
+            });
+            if (pnl > 0) pendingAwards.push({ paper: Math.max(1, Math.floor(pnl / 100)) * paperMul, desc: `FakeOut partial profit: $${pnl.toFixed(2)} on ${symbol}`, refId: longPos.id });
+          }
+        } else {
+          // Opening / adding to a short requires margin = notional; guarded so it can't overdraft.
+          const debited = await tx.paperAccount.updateMany({
+            where: { id: account.id, cashBalance: { gte: cost } },
+            data: { cashBalance: { decrement: cost } },
+          });
+          if (debited.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+          const existingShort = account.positions.find((p: any) => p.side === "SELL");
+          if (existingShort) {
+            const newQty = existingShort.quantity + quantity;
+            const newEntry = ((existingShort.entryPrice * existingShort.quantity) + (currentPrice * quantity)) / newQty;
+            await tx.paperPosition.update({
+              where: { id: existingShort.id },
+              data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
+            });
+          } else {
+            await tx.paperPosition.create({
+              data: { accountId: account.id, symbol, side: "SELL", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
+            });
+          }
+        }
+      });
+    }
+  } catch (e: any) {
+    if (e && e.message === "INSUFFICIENT_FUNDS") {
       return reply.code(400).send({ ok: false, error: "insufficient_funds", available: account.cashBalance, required: cost });
     }
-
-    const existing = account.positions.find((p: any) => p.side === "BUY");
-    if (existing) {
-      const newQty = existing.quantity + quantity;
-      const newEntry = ((existing.entryPrice * existing.quantity) + (currentPrice * quantity)) / newQty;
-      await (prisma as any).paperPosition.update({
-        where: { id: existing.id },
-        data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
-      });
-    } else {
-      const shortPos = account.positions.find((p: any) => p.side === "SELL");
-      if (shortPos) {
-        const pnl = (shortPos.entryPrice - currentPrice) * shortPos.quantity;
-        await (prisma as any).paperPosition.update({
-          where: { id: shortPos.id },
-          data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date() },
-        });
-        await (prisma as any).paperAccount.update({
-          where: { id: account.id },
-          data: { cashBalance: { increment: shortPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
-        });
-        if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
-          awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut short profit: $${pnl.toFixed(2)} on ${symbol}`, shortPos.id).catch(() => {});
-          if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
-        }
-        const remaining = quantity - shortPos.quantity;
-        if (remaining > 0) {
-          const remainCost = currentPrice * remaining;
-          await (prisma as any).paperPosition.create({
-            data: { accountId: account.id, symbol, side: "BUY", quantity: remaining, entryPrice: currentPrice, entryValue: remainCost, stopLoss, takeProfit },
-          });
-          await (prisma as any).paperAccount.update({
-            where: { id: account.id },
-            data: { cashBalance: { decrement: remainCost } },
-          });
-        }
-      } else {
-        await (prisma as any).paperPosition.create({
-          data: { accountId: account.id, symbol, side: "BUY", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
-        });
-        await (prisma as any).paperAccount.update({
-          where: { id: account.id },
-          data: { cashBalance: { decrement: cost } },
-        });
-      }
-    }
-
-    if (!account.positions.find((p: any) => p.side === "SELL")) {
-      if (!account.positions.find((p: any) => p.side === "BUY") && !account.positions.find((p: any) => p.side === "SELL")) {
-      }
-    }
-  } else {
-    const longPos = account.positions.find((p: any) => p.side === "BUY");
-    if (longPos) {
-      if (quantity >= longPos.quantity) {
-        const pnl = (currentPrice - longPos.entryPrice) * longPos.quantity;
-        await (prisma as any).paperPosition.update({
-          where: { id: longPos.id },
-          data: { status: "CLOSED", exitPrice: currentPrice, realizedPnl: pnl, closedAt: new Date() },
-        });
-        await (prisma as any).paperAccount.update({
-          where: { id: account.id },
-          data: { cashBalance: { increment: longPos.entryValue + pnl }, realizedPnl: { increment: pnl } },
-        });
-        if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
-          awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut long profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
-          if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
-        }
-        const remaining = quantity - longPos.quantity;
-        if (remaining > 0) {
-          const remainValue = currentPrice * remaining;
-          await (prisma as any).paperPosition.create({
-            data: { accountId: account.id, symbol, side: "SELL", quantity: remaining, entryPrice: currentPrice, entryValue: remainValue, stopLoss, takeProfit },
-          });
-          await (prisma as any).paperAccount.update({
-            where: { id: account.id },
-            data: { cashBalance: { decrement: remainValue } },
-          });
-        }
-      } else {
-        const pnl = (currentPrice - longPos.entryPrice) * quantity;
-        const newQty = longPos.quantity - quantity;
-        await (prisma as any).paperPosition.update({
-          where: { id: longPos.id },
-          data: { quantity: newQty, entryValue: longPos.entryPrice * newQty },
-        });
-        await (prisma as any).paperAccount.update({
-          where: { id: account.id },
-          data: { cashBalance: { increment: (longPos.entryPrice * quantity) + pnl }, realizedPnl: { increment: pnl } },
-        });
-        if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
-          awardPaper(u.id, "EARN_FAKEOUT", paperEarned, `FakeOut partial profit: $${pnl.toFixed(2)} on ${symbol}`, longPos.id).catch(() => {});
-          if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
-        }
-      }
-    } else {
-      const existingShort = account.positions.find((p: any) => p.side === "SELL");
-      if (existingShort) {
-        const newQty = existingShort.quantity + quantity;
-        const newEntry = ((existingShort.entryPrice * existingShort.quantity) + (currentPrice * quantity)) / newQty;
-        await (prisma as any).paperPosition.update({
-          where: { id: existingShort.id },
-          data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
-        });
-      } else {
-        await (prisma as any).paperPosition.create({
-          data: { accountId: account.id, symbol, side: "SELL", quantity, entryPrice: currentPrice, entryValue: cost, stopLoss, takeProfit },
-        });
-      }
-      await (prisma as any).paperAccount.update({
-        where: { id: account.id },
-        data: { cashBalance: { decrement: cost } },
-      });
-    }
+    throw e;
   }
 
+  // Economy awards fire only after the trade is durably committed.
+  for (const a of pendingAwards) {
+    awardPaper(u.id, "EARN_FAKEOUT", a.paper, a.desc, a.refId).catch(() => {});
+    if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+  }
   await (prisma as any).paperOrder.create({
     data: { accountId: account.id, symbol, side, orderType: "MARKET", quantity, filledPrice: currentPrice, filledAt: new Date(), status: "FILLED" },
   });
@@ -829,29 +843,26 @@ setInterval(async () => {
         const fillPrice = order.price;
         const cost = fillPrice * order.quantity;
 
-        if (order.side === "BUY" && cost > order.account.cashBalance) continue;
-
-        await (prisma as any).paperOrder.update({
-          where: { id: order.id },
-          data: { status: "FILLED", filledPrice: fillPrice, filledAt: new Date() },
-        });
-
-        if (order.side === "BUY") {
-          await (prisma as any).paperPosition.create({
-            data: { accountId: order.accountId, symbol: order.symbol, side: "BUY", quantity: order.quantity, entryPrice: fillPrice, entryValue: cost },
+        // Guarded margin debit + fill in one transaction: a concurrent market order
+        // can't overdraft the account, and a filled order can't be double-counted.
+        try {
+          await (prisma as any).$transaction(async (tx: any) => {
+            const debited = await tx.paperAccount.updateMany({
+              where: { id: order.accountId, cashBalance: { gte: cost } },
+              data: { cashBalance: { decrement: cost } },
+            });
+            if (debited.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+            await tx.paperPosition.create({
+              data: { accountId: order.accountId, symbol: order.symbol, side: order.side, quantity: order.quantity, entryPrice: fillPrice, entryValue: cost },
+            });
+            await tx.paperOrder.update({
+              where: { id: order.id },
+              data: { status: "FILLED", filledPrice: fillPrice, filledAt: new Date() },
+            });
           });
-          await (prisma as any).paperAccount.update({
-            where: { id: order.accountId },
-            data: { cashBalance: { decrement: cost } },
-          });
-        } else {
-          await (prisma as any).paperPosition.create({
-            data: { accountId: order.accountId, symbol: order.symbol, side: "SELL", quantity: order.quantity, entryPrice: fillPrice, entryValue: cost },
-          });
-          await (prisma as any).paperAccount.update({
-            where: { id: order.accountId },
-            data: { cashBalance: { decrement: cost } },
-          });
+        } catch (e: any) {
+          if (e && e.message === "INSUFFICIENT_FUNDS") continue; // can't afford now; leave PENDING for a later tick
+          throw e;
         }
 
         notifyUser(order.account.userId, { type: "trading:order_filled", orderId: order.id, symbol: order.symbol, side: order.side, quantity: order.quantity, price: fillPrice });
