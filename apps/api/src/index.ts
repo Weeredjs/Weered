@@ -95,6 +95,7 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
+import usersSearchRoutes from "./routes/usersSearch";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -5512,23 +5513,7 @@ async function main() {
 
   await app.register(socialRoutes, { authFromHeader, verifyToken, awardNotoriety, createNotification, rooms } as any);
 
-  app.get("/users/search", async (req, reply) => {
-    const q = String((req.query as any).q ?? "").trim();
-    if (!q || q.length < 2) return reply.send({ ok: true, users: [] });
-    const users = await prisma.user.findMany({
-      where: {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { usernameKey: { contains: q.toLowerCase() } },
-        ],
-        banned: false,
-      },
-      select: { id: true, name: true, usernameKey: true, avatar: true, avatarColor: true, tier: true, notoriety: true },
-      orderBy: { notoriety: "desc" },
-      take: 25,
-    });
-    return reply.send({ ok: true, users });
-  });
+  await app.register(usersSearchRoutes, {} as any);
 
   await app.register(billingRoutes, { authFromHeader, getGlobalRole, canAccessStaff, canAssignRoles, globalAudit, lobbyAdminAccess } as any);
 

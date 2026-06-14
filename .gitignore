@@ -78,3 +78,5 @@ apps/mod/run/
 # build artifacts (untracked)
 *.tsbuildinfo
 .next/
+
+_drain_baseline/
