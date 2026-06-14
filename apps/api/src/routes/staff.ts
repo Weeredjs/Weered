@@ -537,6 +537,7 @@ app.get("/staff/config", async (req, reply) => {
       featuredLobbyId: config.featuredLobbyId || "",
       registrationOpen: config.registrationOpen !== "false",
       maintenanceMode: config.maintenanceMode === "true",
+      aiEnabled: config.aiEnabled !== "false",
       defaultTier: config.defaultTier || "INNOCENT",
       maxRoomsPerLobby: Number(config.maxRoomsPerLobby) || 50,
       chatRateLimit: Number(config.chatRateLimit) || 30,
@@ -556,6 +557,7 @@ app.post("/staff/config", async (req, reply) => {
   if (body.featuredLobbyId !== undefined) updates.push({ key: "featuredLobbyId", value: String(body.featuredLobbyId) });
   if (body.registrationOpen !== undefined) updates.push({ key: "registrationOpen", value: String(body.registrationOpen) });
   if (body.maintenanceMode !== undefined) updates.push({ key: "maintenanceMode", value: String(body.maintenanceMode) });
+  if (body.aiEnabled !== undefined) updates.push({ key: "aiEnabled", value: String(body.aiEnabled) });
   if (body.defaultTier !== undefined) updates.push({ key: "defaultTier", value: String(body.defaultTier) });
   if (body.maxRoomsPerLobby !== undefined) updates.push({ key: "maxRoomsPerLobby", value: String(body.maxRoomsPerLobby) });
   if (body.chatRateLimit !== undefined) updates.push({ key: "chatRateLimit", value: String(body.chatRateLimit) });
