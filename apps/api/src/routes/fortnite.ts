@@ -244,7 +244,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/fortnite/wishlist", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const items = await (prisma as any).fortniteWishlist.findMany({
+    const items = await prisma.fortniteWishlist.findMany({
       where: { userId: u.id },
       orderBy: { createdAt: "desc" },
     });
@@ -260,11 +260,11 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     const cosmeticId = String(body.cosmeticId || "").trim();
     if (!cosmeticId) return reply.code(400).send({ ok: false, error: "cosmetic_id_required" });
 
-    const count = await (prisma as any).fortniteWishlist.count({ where: { userId: u.id } });
+    const count = await prisma.fortniteWishlist.count({ where: { userId: u.id } });
     if (count >= 50) return reply.code(400).send({ ok: false, error: "wishlist_full", message: "Maximum 50 items." });
 
     try {
-      const item = await (prisma as any).fortniteWishlist.upsert({
+      const item = await prisma.fortniteWishlist.upsert({
         where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
         update: { notified: false, notifiedAt: null },
         create: {
@@ -290,7 +290,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const cosmeticId = String((req as any).params?.cosmeticId || "");
     try {
-      await (prisma as any).fortniteWishlist.delete({
+      await prisma.fortniteWishlist.delete({
         where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
       });
     } catch {}
@@ -302,14 +302,14 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.send({ ok: true, count: 0, friends: [] });
     const cosmeticId = String((req as any).params?.cosmeticId || "");
 
-    const friendRows = await (prisma as any).friendRequest.findMany({
-      where: { OR: [{ senderId: u.id, status: "ACCEPTED" }, { receiverId: u.id, status: "ACCEPTED" }] },
-      select: { senderId: true, receiverId: true },
+    const friendRows = await prisma.friendRequest.findMany({
+      where: { OR: [{ fromId: u.id, status: "ACCEPTED" }, { toId: u.id, status: "ACCEPTED" }] },
+      select: { fromId: true, toId: true },
     });
-    const friendIds = friendRows.map((f: any) => f.senderId === u.id ? f.receiverId : f.senderId);
+    const friendIds = friendRows.map((f: any) => f.fromId === u.id ? f.toId : f.fromId);
     if (friendIds.length === 0) return reply.send({ ok: true, count: 0, friends: [] });
 
-    const matches = await (prisma as any).fortniteWishlist.findMany({
+    const matches = await prisma.fortniteWishlist.findMany({
       where: { cosmeticId, userId: { in: friendIds } },
       select: { userId: true },
     });
@@ -346,7 +346,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       }
       if (shopIds.size === 0) return;
 
-      const matches = await (prisma as any).fortniteWishlist.findMany({
+      const matches = await prisma.fortniteWishlist.findMany({
         where: {
           cosmeticId: { in: Array.from(shopIds) },
           notified: false,
@@ -373,7 +373,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
           tag: "fn-shop-wishlist",
         });
 
-        await (prisma as any).fortniteWishlist.updateMany({
+        await prisma.fortniteWishlist.updateMany({
           where: { userId, cosmeticId: { in: items.map((i: any) => i.cosmeticId) } },
           data: { notified: true, notifiedAt: new Date() },
         });
