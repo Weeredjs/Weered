@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import { VoiceRoomMode } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
@@ -30,7 +31,9 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
       if ((sock as any).user?.id === userId) {
         try {
           send(sock as any, { type: "voice:permission", roomId: room.roomId, userId });
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
     }
   }
@@ -52,7 +55,7 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
     }
     prisma.room
       .update({ where: { id: roomId }, data: { voiceMode: next as VoiceRoomMode } })
-      .catch(() => {});
+      .catch(swallow);
     broadcastVoiceState(room);
     return;
   }

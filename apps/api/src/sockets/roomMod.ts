@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { RoomRole } from "@prisma/client";
 
@@ -43,7 +44,9 @@ export async function handleRoomClose(
         send(s, { type: "room:closed", roomId, by: ws.user.name });
         try {
           s.close(4004, "room:closed");
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
       room.users.clear();
       room.sockets.clear();
@@ -56,7 +59,9 @@ export async function handleRoomClose(
       send(s, { type: "room:closed", roomId, by: ws.user.name });
       try {
         s.close(4004, "room:closed");
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     room.users.clear();
@@ -65,10 +70,12 @@ export async function handleRoomClose(
     room.activeModule = null;
 
     try {
-      await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
-      await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
-      await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
-    } catch {}
+      await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(swallow);
+      await prisma.roomMember.deleteMany({ where: { roomId } }).catch(swallow);
+      await prisma.room.delete({ where: { id: roomId } }).catch(swallow);
+    } catch (e) {
+      swallow(e);
+    }
 
     rooms.delete(roomId);
 
@@ -192,7 +199,9 @@ export async function handleRoomMod(
         send(s, { type: "room:denied", roomId });
         try {
           s.pendingRoomId = undefined;
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
     }
     removePending(room, targetId);
@@ -218,15 +227,23 @@ export async function handleRoomMod(
             send(s, { type: "staff:kicked", roomId: r.roomId });
             try {
               (s as any).roomId = undefined;
-            } catch {}
+            } catch (e) {
+              swallow(e);
+            }
             try {
               (s as any).pendingRoomId = undefined;
-            } catch {}
+            } catch (e) {
+              swallow(e);
+            }
             try {
               (s as any).close(4001, "staff:kick");
-            } catch {}
+            } catch (e) {
+              swallow(e);
+            }
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         broadcast(r, { type: "presence:leave", roomId: r.roomId, userId: targetId });
         audit(r, { type: "staff:kick", actorId: kickActorId, actorName: kickActorName, targetId });
         publishState(r);
@@ -239,10 +256,14 @@ export async function handleRoomMod(
           send(s, { type: "staff:kicked" });
           try {
             s.close(4001, "staff:kick");
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     return;
   }
 
@@ -280,13 +301,15 @@ export async function handleRoomMod(
           where: { roomId: room.roomId, userId: targetId },
           data: { role: RoomRole.MEMBER },
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:kicked", roomId });
       try {
         (s as any).roomId = undefined;
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     broadcast(room, { type: "presence:leave", roomId, userId: targetId });
     audit(room, { type: "mod:kick", actorId, actorName, targetId });
@@ -308,13 +331,15 @@ export async function handleRoomMod(
           update: {},
           create: { roomId: room.roomId, userId: targetId },
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:banned", roomId });
       try {
         (s as any).roomId = undefined;
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     broadcast(room, { type: "presence:leave", roomId, userId: targetId });
     audit(room, { type: "mod:ban", actorId, actorName, targetId });
@@ -330,7 +355,7 @@ export async function handleRoomMod(
     if (room.roomId !== "lobby") {
       void prisma.roomBan
         .deleteMany({ where: { roomId: room.roomId, userId: targetId } })
-        .catch(() => {});
+        .catch(swallow);
     }
     audit(room, { type: "mod:unban", actorId, actorName, targetId });
     publishState(room);
@@ -349,7 +374,7 @@ export async function handleRoomMod(
           update: { role: RoomRole.MOD },
           create: { roomId: room.roomId, userId: targetId, name: "", role: RoomRole.MOD },
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     audit(room, { type: "mod:promote", actorId, actorName, targetId });
     publishState(room);
@@ -367,7 +392,7 @@ export async function handleRoomMod(
           where: { roomId: room.roomId, userId: targetId },
           data: { role: RoomRole.MEMBER },
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     audit(room, { type: "mod:demote", actorId, actorName, targetId });
     publishState(room);

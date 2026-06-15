@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
@@ -127,7 +128,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
           userName: u.name,
           activity: post.activity,
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return reply.send({ ok: true, post });
     },
   );
@@ -278,7 +281,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
           actorName: u.name,
           actionUrl: `/lobby/${post.lobbyId}`,
           meta: { postId },
-        }).catch(() => {});
+        }).catch(swallow);
       }
       return reply.send({ ok: true, status, roleClaims: claims, roleClaimNames: names });
     },
@@ -330,7 +333,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
       if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
       if (post.userId !== u.id) return reply.code(403).send({ ok: false, error: "host_only" });
       await prisma.lfgPost.update({ where: { id: postId }, data: { status: "COMPLETED" } });
-      for (const uid of post.players || []) awardNotoriety?.(uid, "LFG_COMPLETED").catch(() => {});
+      for (const uid of post.players || []) awardNotoriety?.(uid, "LFG_COMPLETED").catch(swallow);
       return reply.send({ ok: true, status: "COMPLETED" });
     },
   );

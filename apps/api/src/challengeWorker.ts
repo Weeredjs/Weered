@@ -1,4 +1,4 @@
-import { log } from "./lib/logger";
+import { log, swallow } from "./lib/logger";
 import { PrismaClient } from "@prisma/client";
 import { resolveActivity, resolveItem } from "./manifest";
 import {
@@ -326,7 +326,7 @@ async function creditChallengeRace(
         body: `Score: ${updated.score}${t.pointsToWin ? ` / ${t.pointsToWin}` : ""}`,
         actionUrl: t.lobbyId ? `/lobby/${encodeURIComponent(t.lobbyId)}` : null,
         meta: { kind: "tournament_race_credit", tournamentId: t.id, points, score: updated.score },
-      }).catch(() => {});
+      }).catch(swallow);
     }
 
     const wc = String(t.raceWinCondition || "DEADLINE").toUpperCase();
@@ -505,7 +505,7 @@ export function startChallengeWorker(
                   difficultyTier: tier,
                 },
               })
-              .catch(() => {});
+              .catch(swallow);
           }
 
           for (const enrollment of userEnrollments) {
@@ -584,7 +584,7 @@ export function startChallengeWorker(
               updateData.completedAt = new Date();
 
               if (def.notorietyReward > 0) {
-                awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
+                awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(swallow);
               }
               if ((def as any).paperReward > 0 && awardPaper) {
                 awardPaper(
@@ -593,7 +593,7 @@ export function startChallengeWorker(
                   (def as any).paperReward,
                   `Challenge completed: ${def.title}`,
                   enrollment.instanceId,
-                ).catch(() => {});
+                ).catch(swallow);
               }
 
               if (def.badgeId) {
@@ -601,7 +601,7 @@ export function startChallengeWorker(
                   .create({
                     data: { userId, badgeId: def.badgeId },
                   })
-                  .catch(() => {});
+                  .catch(swallow);
               }
 
               log.log(`[challenges] ${userId} completed "${def.title}"`);
@@ -693,7 +693,7 @@ export function startChallengeWorker(
                 where: { id: ranked[i].id },
                 data: { rank: i + 1 },
               })
-              .catch(() => {});
+              .catch(swallow);
           }
           await prisma.tournament.update({
             where: { id: tourney.id },
@@ -756,7 +756,7 @@ export function startChallengeWorker(
                 where: { id: entry.id },
                 data: { score },
               })
-              .catch(() => {});
+              .catch(swallow);
           }
         }
       }
@@ -828,14 +828,14 @@ export function startChallengeWorker(
                 where: { id: lastInstance.id },
                 data: { status: "COMPLETED" },
               })
-              .catch(() => {});
+              .catch(swallow);
 
             await prisma.challengeEnrollment
               .updateMany({
                 where: { instanceId: lastInstance.id, status: "ACTIVE" },
                 data: { status: "FAILED" },
               })
-              .catch(() => {});
+              .catch(swallow);
           }
 
           await prisma.challengeInstance.create({

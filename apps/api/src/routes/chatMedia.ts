@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
@@ -25,7 +25,9 @@ const AUTO_HIDE_REPORTS = 3;
 function ensureDir() {
   try {
     fs.mkdirSync(UP_DIR, { recursive: true });
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 
 // 64-bit dHash from a 9x8 grayscale render — survives re-encodes/resizes.
@@ -180,7 +182,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
               where: { id: u.id },
               data: { mediaBannedUntil: new Date(Date.now() + 90 * 86400_000) } as any,
             })
-            .catch(() => {});
+            .catch(swallow);
           log.warn(`[media] blocked-hash reupload by ${u.id} (${phash})`);
           return reply.code(403).send({ ok: false, error: "blocked_content" });
         }
@@ -309,7 +311,9 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
         if (/^[a-f0-9]{20}(\.t)?\.webp$/.test(f)) {
           try {
             fs.unlinkSync(path.join(UP_DIR, f));
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
       }
       await prisma.chatAttachment.update({ where: { id }, data: { status: "REMOVED" } });
@@ -320,7 +324,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
             create: { phash: att.phash, reason: `staff-removed ${id}` },
             update: {},
           })
-          .catch(() => {});
+          .catch(swallow);
       }
       const SLASH = 500;
       await prisma.user
@@ -331,19 +335,19 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
             mediaBannedUntil: new Date(Date.now() + 30 * 86400_000),
           } as any,
         })
-        .catch(() => {});
+        .catch(swallow);
       await prisma.notorietyEvent
         .create({
           data: { userId: att.uploaderId, action: "MEDIA_VIOLATION", points: -SLASH },
         })
-        .catch(() => {});
+        .catch(swallow);
       if (createNotification) {
         await createNotification({
           userId: att.uploaderId,
           type: "SYSTEM",
           title: "Upload removed",
           body: `Your upload broke house rules. −${SLASH} notoriety. Media privileges revoked for 30 days.`,
-        }).catch(() => {});
+        }).catch(swallow);
       }
       return reply.send({ ok: true });
     },
@@ -365,12 +369,14 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
           if (/^[a-f0-9]{20}(\.t)?\.webp$/.test(f)) {
             try {
               fs.unlinkSync(path.join(UP_DIR, f));
-            } catch {}
+            } catch (e) {
+              swallow(e);
+            }
           }
         }
         await prisma.chatAttachment
           .update({ where: { id: att.id }, data: { status: "EXPIRED" } })
-          .catch(() => {});
+          .catch(swallow);
       }
       if (stale.length) log.log(`[media] expired ${stale.length} attachments`);
     } catch (e: any) {

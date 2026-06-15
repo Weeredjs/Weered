@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
@@ -87,7 +87,7 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     try {
       writeFileSync(filepath, buffer);
     } catch (e) {
-      await prisma.tacticalMap.delete({ where: { id: map.id } }).catch(() => {});
+      await prisma.tacticalMap.delete({ where: { id: map.id } }).catch(swallow);
       log.error("[map upload]", e);
       return reply.code(500).send({ error: "write_failed" });
     }
@@ -160,7 +160,9 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
       if (fname)
         try {
           unlinkSync(join(MAP_PUBLIC_DIR, fname));
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
     }
     await prisma.tacticalMap.delete({ where: { id: mapId } });
     broadcastToRoom(map.roomId, { type: "map:deleted", roomId: map.roomId, mapId });

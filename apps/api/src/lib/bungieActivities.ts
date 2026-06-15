@@ -1,3 +1,4 @@
+import { swallow } from "./logger";
 import { fetchWithTimeout } from "./fetchWithTimeout";
 import type { PrismaClient } from "@prisma/client";
 import { resolveActivity } from "../manifest";
@@ -248,7 +249,7 @@ export async function pollAndStoreActivities(
         },
         update: {},
       })
-      .catch(() => {});
+      .catch(swallow);
   }
 
   return activities;

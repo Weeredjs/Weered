@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 
 // Connection-lifecycle WS handlers extracted from index.ts wss.on("connection"):
@@ -34,7 +35,9 @@ export async function handleAuthHello(
       send(ws, { type: "auth:fail", reason: "Your account has been suspended." });
       try {
         ws.close(4003, "banned");
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return;
     }
     send(ws, {
@@ -52,7 +55,7 @@ export async function handleAuthHello(
         pillAccentColor: (ws.user as any).pillAccentColor,
       },
     });
-    awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
+    awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(swallow);
     (async () => {
       try {
         const memberships = await prisma.crewMember.findMany({
@@ -76,7 +79,9 @@ export async function handleAuthHello(
             if ((sock as any).user?.id === mate.userId) send(sock as any, payload);
           }
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     })();
     return;
   }
@@ -130,7 +135,9 @@ export function handleClose(
                 if ((sock as any).user?.id === mate.userId) send(sock as any, payload);
               }
             }
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         })();
       }
     }, 2000);

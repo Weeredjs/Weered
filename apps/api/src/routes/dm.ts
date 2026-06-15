@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -213,7 +213,9 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
               };
             }
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
 
       try {
@@ -242,7 +244,7 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
             body: text.slice(0, 120),
             url: "/home",
             tag: `dm:${viewer.id}`,
-          }).catch(() => {});
+          }).catch(swallow);
         }
         return reply.send({
           ok: true,

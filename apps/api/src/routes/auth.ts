@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
@@ -174,9 +174,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       });
       if (email && verifyToken) {
         const tmpl = buildVerifyEmail({ username, token: verifyToken });
-        sendMail({ to: email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
+        sendMail({ to: email, subject: tmpl.subject, html: tmpl.html }).catch(swallow);
       }
-      seedWelcomeDM(user.id).catch(() => {});
+      seedWelcomeDM(user.id).catch(swallow);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
       return reply.send({ token, user, pendingVerification: Boolean(email) });
@@ -235,7 +235,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           data: { verifyToken, verifyTokenExp },
         });
         const tmpl = buildVerifyEmail({ username, token: verifyToken });
-        sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
+        sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(swallow);
       }
       return reply.send({ ok: true });
     },
@@ -269,7 +269,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           data: { passwordResetToken: resetToken, passwordResetTokenExp: resetExp },
         });
         const tmpl = buildResetEmail({ username: la.username, token: resetToken });
-        sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(() => {});
+        sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(swallow);
       }
       return reply.send({ ok: true });
     },
@@ -377,7 +377,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       try {
         const decoded = jwt.verify(state, JWT_SECRET) as { r?: string };
         if (decoded?.r && isAllowedRedirect(decoded.r)) customRedirect = decoded.r;
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     const finishUrl = (path: string, qs: string) => {
       if (customRedirect) {
@@ -431,7 +433,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         user = await prisma.user.create({
           data: { name: displayName, usernameKey: tempName, googleId, email, avatar },
         });
-        seedWelcomeDM(user.id).catch(() => {});
+        seedWelcomeDM(user.id).catch(swallow);
       }
       if (user.banned)
         return reply.redirect(

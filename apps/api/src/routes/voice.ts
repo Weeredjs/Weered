@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { AccessToken } from "livekit-server-sdk";
@@ -58,7 +59,9 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
               isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
           }
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
 
       const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
         identity: u.id,
@@ -72,7 +75,7 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
         canPublishData: true,
       });
       const token = await at.toJwt();
-      awardNotoriety(u.id, "VOICE_JOINED").catch(() => {});
+      awardNotoriety(u.id, "VOICE_JOINED").catch(swallow);
       return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
     },
   );

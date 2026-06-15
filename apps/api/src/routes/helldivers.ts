@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 
 type Opts = {
@@ -71,9 +71,9 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     }
   }
 
-  warmCache().catch(() => {});
+  warmCache().catch(swallow);
   setInterval(() => {
-    warmCache().catch(() => {});
+    warmCache().catch(swallow);
   }, 60_000);
 
   async function getOrFetch(key: string, path: string) {

@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -176,7 +176,7 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
     if (!result) {
       await prisma.user
         .updateMany({ where: { id: u.id }, data: { lastDailyAt: null } })
-        .catch(() => {});
+        .catch(swallow);
       return reply.send({ ok: false, error: "failed" });
     }
     return reply.send({ ok: true, awarded: 25, balance: result.balance });

@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -153,7 +154,9 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
             count: d.count,
           };
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     if (chessComUsername) {
       try {
@@ -174,7 +177,9 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
             },
           };
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     return reply.send(result);
@@ -225,7 +230,9 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
             games: d?.perfs?.[perf]?.games || 0,
           });
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     rows.sort((a, b) => b.rating - a.rating);

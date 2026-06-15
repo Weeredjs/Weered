@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 
@@ -147,7 +147,9 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             });
             return;
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
       if (policy.blockedWords.length > 0) {
         const lower = body.toLowerCase();
@@ -205,9 +207,11 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
           if (!att.roomId)
             void prisma.chatAttachment
               .update({ where: { id: att.id }, data: { roomId: room.roomId } })
-              .catch(() => {});
+              .catch(swallow);
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       if (!attachment) {
         send(ws, { type: "chat:rejected", roomId, reason: "bad_attachment" });
         return;
@@ -246,11 +250,11 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             replyToBody: replyTo?.body ?? null,
           } as any,
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     broadcast(room, { type: "chat:new", roomId, msg: m });
     room.lastActiveAt = Date.now();
-    awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(() => {});
+    awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(swallow);
     (async () => {
       try {
         const mentioned = await resolveMentions(body, ws.user!.id);
@@ -264,9 +268,11 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             actorId: ws.user!.id,
             actorName: ws.user!.name,
             actionUrl: roomPath,
-          }).catch(() => {});
+          }).catch(swallow);
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     })();
     if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
       const question = body
@@ -333,7 +339,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
           where: { id: msgId },
           data: { body: newBody, editedAt: new Date(editedAt) },
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     broadcast(room, { type: "chat:edited", roomId: rId, msgId, body: newBody, editedAt });
     return;
@@ -359,7 +365,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
           where: { id: msgId },
           data: { body: "", deletedAt: new Date(deletedAt) },
         })
-        .catch(() => {});
+        .catch(swallow);
     }
     broadcast(room, { type: "chat:deleted", roomId: rId, msgId, deletedAt });
     return;
@@ -494,11 +500,11 @@ export async function handleCrewDm(
             body: body.slice(0, 120),
             url: "/home",
             tag: `crew:${crewId}`,
-          }).catch(() => {});
+          }).catch(swallow);
         }
       }
 
-      awardNotoriety(fromId, "CHAT_MESSAGE").catch(() => {});
+      awardNotoriety(fromId, "CHAT_MESSAGE").catch(swallow);
 
       (async () => {
         try {
@@ -520,9 +526,11 @@ export async function handleCrewDm(
               actorName: ws.user?.name || undefined,
               actionUrl: "/home",
               meta: { crewId },
-            }).catch(() => {});
+            }).catch(swallow);
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       })();
     } catch (e) {
       log.error("[crew:send]", e);
@@ -695,7 +703,9 @@ export async function handleCrewDm(
         send(ws, { type: "dm:rejected", reason });
         return;
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     let dmReplyData: any = {};
     const dmReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
     if (dmReplyToId) {
@@ -718,7 +728,9 @@ export async function handleCrewDm(
             };
           }
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     try {
       const dm = await prisma.directMessage.create({
@@ -745,7 +757,7 @@ export async function handleCrewDm(
         body: body.slice(0, 120),
         url: "/home",
         tag: `dm:${fromId}`,
-      }).catch(() => {});
+      }).catch(swallow);
       createNotification({
         userId: toId,
         type: "DM_RECEIVED",
@@ -755,7 +767,7 @@ export async function handleCrewDm(
         actorName: ws.user?.name || undefined,
         actionUrl: "/home",
         meta: { fromId },
-      }).catch(() => {});
+      }).catch(swallow);
     } catch (e) {
       log.error("[dm:send]", e);
     }

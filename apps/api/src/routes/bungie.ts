@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
@@ -47,7 +47,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const cached = await prisma.bungieCache.findUnique({ where: { key } });
       if (cached && new Date(cached.expiresAt) > new Date()) return cached.data;
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     if (!BUNGIE_API_KEY) return null;
     try {
       const data = await bungieGet(path);
@@ -73,7 +75,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const cached = await prisma.bungieCache.findUnique({ where: { key } });
       if (cached && new Date(cached.expiresAt) > new Date()) return cached.data;
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     try {
       const data = await bungieGet(path, accessToken);
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
@@ -158,7 +162,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           cachedAt: cached.fetchedAt,
         });
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
 
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u)
@@ -260,10 +266,14 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     let mods: Record<string, any> = {};
     try {
       if (fs.existsSync(skullsPath)) skulls = JSON.parse(fs.readFileSync(skullsPath, "utf-8"));
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     try {
       if (fs.existsSync(modsPath)) mods = JSON.parse(fs.readFileSync(modsPath, "utf-8"));
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
 
     const rows = await prisma.bungieActivityLog.findMany({
       where: { userId: u.id },
@@ -792,7 +802,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
               when: act.period || "",
             };
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
 
       const card = {
@@ -809,7 +821,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           where: { userId_gameType: { userId, gameType: "BUNGIE" } },
           data: { cardData: card as any, cardCachedAt: new Date() },
         })
-        .catch(() => {});
+        .catch(swallow);
 
       return reply.send({ ok: true, ...card });
     } catch (e) {
@@ -892,7 +904,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      awardNotoriety(userId, "BUNGIE_LINKED").catch(() => {});
+      awardNotoriety(userId, "BUNGIE_LINKED").catch(swallow);
       return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=success`);
     } catch (e) {
       log.error("[bungie oauth callback]", e);

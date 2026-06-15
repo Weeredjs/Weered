@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { join } from "path";
@@ -63,7 +63,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
         data: { avatar: avatarUrl },
       });
 
-      awardNotoriety(u.id, "AVATAR_SET").catch(() => {});
+      awardNotoriety(u.id, "AVATAR_SET").catch(swallow);
 
       onAvatarChanged?.(u.id, avatarUrl);
 

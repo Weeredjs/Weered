@@ -1,4 +1,4 @@
-import { log } from "./lib/logger";
+import { log, swallow } from "./lib/logger";
 import { fetchWithTimeout } from "./lib/fetchWithTimeout";
 import type { PrismaClient } from "@prisma/client";
 
@@ -85,7 +85,9 @@ async function fetchLichessGames(username: string): Promise<any[]> {
         const g = JSON.parse(line);
         const parsed = parseLichessGame(g, username);
         if (parsed) out.push(parsed);
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     return out;
   } catch {

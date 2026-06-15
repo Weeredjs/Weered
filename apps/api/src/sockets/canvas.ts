@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 // Canvas/tabletop WS handlers extracted from the index.ts main message handler.
 // Pure in-memory room-module relays. Deps injected by reference (rooms is the
 // SAME live Map the rest of the WS layer mutates). Returns true if it consumed
@@ -33,7 +34,9 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
     if (disabled.includes(mode) && !isModOrOwner(room, ws.user.id, ws.user?.globalRole)) {
       try {
         send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return true;
     }
     if (mode !== "youtube") room.ytState = null;

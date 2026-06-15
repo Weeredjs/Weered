@@ -1,4 +1,4 @@
-import { log } from "./logger";
+import { log, swallow } from "./logger";
 import type { PrismaClient } from "@prisma/client";
 import { grantFlairToUser } from "./flair";
 
@@ -129,7 +129,7 @@ export async function completeTournament(
         p.paper,
         `${tournament.title} · ${t}`,
         tournamentId,
-      ).catch(() => {});
+      ).catch(swallow);
     }
     if (p.notoriety > 0) {
       try {
@@ -145,7 +145,9 @@ export async function completeTournament(
           where: { id: e.userId },
           data: { notoriety: { increment: p.notoriety } },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     if (t === "CHAMPION") {
@@ -204,7 +206,7 @@ export async function completeTournament(
             : "Honor only — no payout.",
         actionUrl: tournament.lobbyId ? `/lobby/${encodeURIComponent(tournament.lobbyId)}` : null,
         meta: { kind: "tournament_complete", tournamentId, rank: i + 1, tier: t },
-      }).catch(() => {});
+      }).catch(swallow);
     }
   }
 

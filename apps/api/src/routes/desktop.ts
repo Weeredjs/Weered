@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
@@ -74,7 +74,9 @@ export default async function desktopRoutes(app: FastifyInstance) {
                 headers: { "User-Agent": "Weered-API/1.0" },
               });
               if (sigRes.ok) signature = (await sigRes.text()).trim();
-            } catch {}
+            } catch (e) {
+              swallow(e);
+            }
           }
           platforms[target] = { signature, url: asset.browser_download_url };
         }

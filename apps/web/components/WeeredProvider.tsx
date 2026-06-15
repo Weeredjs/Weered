@@ -383,12 +383,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
       }
       if (msg.type === "notification:new") {
-        console.log("[ws] notification:new received", msg.notification?.type);
         try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
         try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
-      }
-      if (msg && msg.type && !msg.type.startsWith("presence:") && !msg.type.startsWith("chat:typing")) {
-        console.log("[ws] msg type:", msg.type);
       }
       if (msg.type === "crew:message") {
         try { window.dispatchEvent(new CustomEvent("weered:crew:message", { detail: { crewId: msg.crewId, message: msg.message } })); } catch {}

@@ -1,4 +1,4 @@
-import { log } from "./lib/logger";
+import { log, swallow } from "./lib/logger";
 import type { PrismaClient } from "@prisma/client";
 import { pollAndStoreActivities } from "./lib/bungieActivities";
 import { advanceWinner as bracketAdvanceWinner } from "./lib/tournamentBracket";
@@ -178,7 +178,9 @@ export function startTournamentAutoDetect(
           score: scoreB,
           opponentScore: scoreA,
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     if (createNotification) {
       const tournament = await prisma.tournament.findUnique({
@@ -204,7 +206,7 @@ export function startTournamentAutoDetect(
           pgcrInstanceId: instanceId,
           won: aWon,
         },
-      }).catch(() => {});
+      }).catch(swallow);
       await createNotification({
         userId: bUserId,
         type: "CHALLENGE_PROGRESS",
@@ -219,7 +221,7 @@ export function startTournamentAutoDetect(
           pgcrInstanceId: instanceId,
           won: !aWon,
         },
-      }).catch(() => {});
+      }).catch(swallow);
     }
 
     log.log(

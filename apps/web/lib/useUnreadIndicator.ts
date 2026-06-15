@@ -71,15 +71,8 @@ export function useUnreadIndicator() {
   useEffect(() => {
     if (typeof document === "undefined") return;
     baseTitleRef.current = document.title.replace(/^\(\d+\)\s+/, "");
-    console.log("[unread] hook mounted; base title:", baseTitleRef.current);
 
     function bump() {
-      console.log(
-        "[unread] bump() called; current count:",
-        countRef.current,
-        "focused:",
-        document.hasFocus(),
-      );
       playChime();
       const focused =
         typeof document !== "undefined" &&
@@ -107,7 +100,6 @@ export function useUnreadIndicator() {
     }
 
     function onTick(_e: Event) {
-      console.log("[unread] received weered:unread-tick");
       bump();
     }
 

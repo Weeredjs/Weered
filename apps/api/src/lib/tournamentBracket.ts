@@ -1,3 +1,4 @@
+import { swallow } from "./logger";
 import type { PrismaClient } from "@prisma/client";
 
 type CreateNotification = (n: {
@@ -50,7 +51,9 @@ export async function notifyMatchReady(
         meta: { kind: "tournament_match_ready", tournamentId: m.tournament.id, matchId },
       });
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 
 export async function advanceWinner(

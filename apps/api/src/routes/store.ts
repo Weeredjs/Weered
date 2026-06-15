@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -519,7 +519,9 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
           where: { status: "ACTIVE", expiresAt: { lte: new Date() } },
           data: { status: "EXPIRED" },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     },
     5 * 60 * 1000,
   );

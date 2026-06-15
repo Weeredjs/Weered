@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
@@ -283,7 +283,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
           send(s, { type: "staff:kicked", roomId: room.roomId });
           try {
             (s as any).close(4001, "staff:kick");
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
         broadcast(room, { type: "presence:leave", roomId: room.roomId, userId: targetId });
         publishState(room);
@@ -327,7 +329,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
           send(s, { type: "staff:banned", roomId: room.roomId, reason });
           try {
             (s as any).close(4002, "staff:ban");
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
         broadcast(room, { type: "presence:leave", roomId: room.roomId, userId: targetId });
         publishState(room);
@@ -380,7 +384,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         send(s, { type: "room:deleted", roomId });
         try {
           (s as any).close(4000, "room:deleted");
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
       rooms.delete(roomId);
     }
@@ -480,7 +486,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         send(s, { type: "room:closed", roomId, by: u.name });
         try {
           s.close(4004, "room:closed");
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
       room.users.clear();
       room.sockets.clear();
@@ -488,10 +496,12 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
-      await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
-      await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
-    } catch {}
+      await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(swallow);
+      await prisma.roomMember.deleteMany({ where: { roomId } }).catch(swallow);
+      await prisma.room.delete({ where: { id: roomId } }).catch(swallow);
+    } catch (e) {
+      swallow(e);
+    }
 
     await globalAudit(u.id, u.name, "room_close", roomId);
     return reply.send({ ok: true });

@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -197,7 +197,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      awardNotoriety(userId, "EVE_LINKED").catch(() => {});
+      awardNotoriety(userId, "EVE_LINKED").catch(swallow);
       return reply.redirect(`${SITE_URL}/lobby/eve?eve=success`);
     } catch (e) {
       log.error("[eve oauth callback]", e);

@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import {
@@ -201,7 +202,9 @@ export async function runAutoMod(
           }
         }
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
 
     if (trigger) {
       return {
@@ -242,7 +245,9 @@ export async function autoModTick() {
         );
       }
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 
 export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
@@ -770,5 +775,7 @@ export async function fileAutoModReport(
         detail: `Auto-mod: ${ruleName || ""}${reason ? ` — ${reason}` : ""}`.slice(0, 2000),
       },
     });
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }

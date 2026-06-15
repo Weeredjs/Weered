@@ -1,4 +1,4 @@
-import { log, logger } from "./lib/logger";
+import { log, logger, swallow } from "./lib/logger";
 import dotenv from "dotenv";
 dotenv.config({ override: true });
 import nodeHttps from "https";
@@ -31,7 +31,9 @@ process.on("unhandledRejection", (reason: any) => {
   log.error("[unhandledRejection]", reason);
   try {
     Sentry.captureException(reason);
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 });
 process.on("uncaughtException", (err: any) => {
   log.error("[uncaughtException]", err);
@@ -192,7 +194,9 @@ async function getSiteFlags(): Promise<Record<string, string>> {
     try {
       _siteFlags = await getAllSiteConfig();
       _siteFlagsAt = now;
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
   return _siteFlags;
 }
@@ -687,7 +691,9 @@ function broadcastToPokerTable(tableId: string, event: any) {
     if (isSeated || isSpectator) {
       try {
         send(sock as any, event);
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
 }
@@ -1910,7 +1916,9 @@ async function globalAudit(
         meta: meta ?? null,
       },
     });
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 async function getSiteConfig(key: string): Promise<string | null> {
   const row = await prisma.siteConfig.findUnique({ where: { key } });
@@ -2078,7 +2086,9 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
           }
         }
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     r.audit = dbRoom.audit.map((a) => ({
       id: a.id,
       ts: new Date(a.ts).getTime(),
@@ -2115,7 +2125,9 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
             break;
           }
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
 
@@ -2126,7 +2138,9 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
         select: { id: true },
       });
       if (isLobby) r.lobbyId = roomId;
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
 
   rooms.set(roomId, r);
@@ -2167,7 +2181,9 @@ function withPayload(msg: any) {
 function send(ws: Sock, msg: any) {
   try {
     if (ws.readyState === 1) ws.send(JSON.stringify(withPayload(msg)));
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 
 function broadcast(room: RoomState, msg: any) {
@@ -2187,7 +2203,9 @@ function broadcast(room: RoomState, msg: any) {
       for (const sock of wss.clients) {
         try {
           if ((sock as any).readyState === 1) sock.send(ping);
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
     }
   }
@@ -2260,7 +2278,7 @@ function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts?: numb
           ts: new Date(a.ts),
         },
       })
-      .catch(() => {});
+      .catch(swallow);
   }
 
   for (const s of room.sockets) {
@@ -2401,7 +2419,7 @@ function leaveRoom(ws: Sock) {
           where: { id: userId },
           data: { lastSeenAt: new Date(), lastSeenLocation: location },
         })
-        .catch(() => {});
+        .catch(swallow);
       if (room.launch) {
         const hadSlot = room.launch.slots.delete(ws.user.id);
         const hadReady = room.launch.ready.delete(ws.user.id);
@@ -2524,7 +2542,7 @@ async function awardNotoriety(userId: string, action: string): Promise<number | 
         title: `You are now a ${rankAfter.title}!`,
         body: `Promoted from ${rankBefore.title} at ${scoreAfter.toLocaleString()} notoriety`,
         actionUrl: `/profile/${userId}`,
-      }).catch(() => {});
+      }).catch(swallow);
     }
 
     return cfg.points;
@@ -2649,7 +2667,9 @@ async function fetchReactionsForTargets(
         users: v.users,
       }));
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
   return byMsg;
 }
 
@@ -2960,7 +2980,7 @@ async function runPresencePoll() {
           where: { id: u.id },
           data: { livePresence: primary as any, presenceCheckedAt: new Date() },
         })
-        .catch(() => {});
+        .catch(swallow);
 
       try {
         for (const [, room] of rooms) {
@@ -2972,7 +2992,9 @@ async function runPresencePoll() {
         for (const s of wss.clients as any) {
           if (s?.user?.id === u.id) (s.user as any).livePresence = primary ?? null;
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   } catch (e) {
     log.error("[presence poll]", e);
@@ -3064,7 +3086,7 @@ async function sendWebPush(
       );
     } catch (e: any) {
       if (e.statusCode === 404 || e.statusCode === 410) {
-        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(swallow);
       }
     }
   }
@@ -3097,10 +3119,12 @@ async function sendExpoPush(
       const token = tokens[i];
       if (!token) continue;
       if (ticket?.status === "error" && ticket?.details?.error === "DeviceNotRegistered") {
-        await prisma.expoPushToken.delete({ where: { id: token.id } }).catch(() => {});
+        await prisma.expoPushToken.delete({ where: { id: token.id } }).catch(swallow);
       }
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 
 async function sendPush(
@@ -3166,7 +3190,7 @@ async function createNotification(opts: {
         body: opts.body || "",
         url: opts.actionUrl || "/home",
         tag: `notif:${opts.type}:${notif.id}`,
-      }).catch(() => {});
+      }).catch(swallow);
     }
   } catch (e) {
     log.error("[notification] create failed", e);
@@ -3179,7 +3203,9 @@ function removePending(room: RoomState, userId: string) {
     for (const s of set) {
       try {
         s.pendingRoomId = undefined;
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
   room.pending.delete(userId);
@@ -3438,10 +3464,12 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) {
     try {
       await persistMember(room, ws.user);
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
 
-  if (ws.user) awardNotoriety(ws.user.id, "ROOM_JOINED").catch(() => {});
+  if (ws.user) awardNotoriety(ws.user.id, "ROOM_JOINED").catch(swallow);
 
   publishStateToSocket(ws, room);
 
@@ -3716,7 +3744,9 @@ async function main() {
       return reply
         .code(503)
         .send({ error: "maintenance", message: "Weered is down for maintenance. Back shortly." });
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   });
 
   // ── Zod-backed validation + OpenAPI ───────────────────────────────────────
@@ -3770,7 +3800,9 @@ async function main() {
         try {
           const u = authFromHeader(req.headers.authorization);
           if (u && canAccessStaff(await getGlobalRole(u.id))) return;
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         return reply.code(403).send({ error: "forbidden" });
       },
     },
@@ -4280,7 +4312,9 @@ async function main() {
             create: a,
           });
           upserted++;
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
 
       await prisma.newsArticle.deleteMany({
@@ -4344,13 +4378,17 @@ async function main() {
       if (s.isAlive === false) {
         try {
           s.terminate();
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         continue;
       }
       s.isAlive = false;
       try {
         s.ping();
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }, 30000);
   wss.on("close", () => clearInterval(wsHeartbeat));
@@ -4867,7 +4905,9 @@ async function main() {
             for (const sock of subs) {
               try {
                 send(sock, msg);
-              } catch {}
+              } catch (e) {
+                swallow(e);
+              }
             }
           }
         } else if (data.e === "kline") {
@@ -4888,11 +4928,15 @@ async function main() {
             for (const sock of subs) {
               try {
                 send(sock, msg);
-              } catch {}
+              } catch (e) {
+                swallow(e);
+              }
             }
           }
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     });
 
     upstream.on("close", () => {
@@ -4916,12 +4960,16 @@ async function main() {
       if (s.roomId === `lobby:${lobbyId}` || s.roomId === lobbyId) {
         try {
           send(s, event);
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
     }
     try {
       capturePublicActivity(event, { lobbyId });
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
   broadcastToLobbyRef = broadcastToLobby;
 
@@ -4942,12 +4990,16 @@ async function main() {
       if (s.roomId === roomId) {
         try {
           send(s, event);
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
     }
     try {
       capturePublicActivity(event, { roomId });
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
 
   function capturePublicActivity(event: any, ctx: { lobbyId?: string; roomId?: string }) {
@@ -5170,7 +5222,9 @@ async function main() {
       if ((sock as any).user?.id === userId) {
         try {
           send(sock as Sock, event);
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
     }
   }
@@ -5265,11 +5319,15 @@ async function main() {
     for (const [, ws] of binanceSubs) {
       try {
         ws.close();
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     try {
       await prisma.$disconnect();
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     process.exit(0);
   });
   const ROOM_TTL_MS = 60 * 60 * 1000;
@@ -5278,7 +5336,9 @@ async function main() {
   setInterval(() => {
     try {
       seedSyntheticActivity();
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }, 32_000);
   for (let i = 0; i < 5; i++) seedSyntheticActivity();
 
@@ -5298,10 +5358,12 @@ async function main() {
     for (const roomId of toDelete) {
       rooms.delete(roomId);
       try {
-        await prisma.room.delete({ where: { id: roomId } }).catch(() => {});
-        await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(() => {});
-        await prisma.roomMember.deleteMany({ where: { roomId } }).catch(() => {});
-      } catch {}
+        await prisma.room.delete({ where: { id: roomId } }).catch(swallow);
+        await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(swallow);
+        await prisma.roomMember.deleteMany({ where: { roomId } }).catch(swallow);
+      } catch (e) {
+        swallow(e);
+      }
       log.log(`[dissolution] Room "${roomId}" dissolved after ${ROOM_TTL_MS / 60000}min empty`);
     }
 

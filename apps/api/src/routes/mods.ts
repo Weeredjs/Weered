@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { fetchAndUpsertMod } from "../nexusPoller";
@@ -52,7 +53,9 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
       if (!mod) {
         try {
           await fetchAndUpsertMod(prisma as any, Number(sourceId));
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         mod = await prisma.mod.findUnique({
           where: { source_sourceId: { source: "NEXUS", sourceId } },
         });
@@ -159,7 +162,9 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const id = String((req.params as any).id || "");
     try {
       await prisma.userModInstall.delete({ where: { userId_modId: { userId: u.id, modId: id } } });
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     return reply.send({ ok: true });
   });
 
@@ -207,7 +212,9 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     }
     try {
       await prisma.crewMod.delete({ where: { crewId_modId: { crewId, modId } } });
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
     return reply.send({ ok: true });
   });
 }

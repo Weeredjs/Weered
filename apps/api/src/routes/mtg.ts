@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
@@ -125,7 +126,9 @@ function parseUrl(raw: string): { source: "moxfield" | "archidekt"; id: string }
       const m = u.pathname.match(/^\/decks\/(\d+)/);
       if (m) return { source: "archidekt", id: m[1] };
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
   return null;
 }
 

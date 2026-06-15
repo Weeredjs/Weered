@@ -46,6 +46,15 @@ function emit(level: Level, args: unknown[]): void {
   }
 }
 
+// Deliberately-swallowed errors still leave a debug breadcrumb (suppressed at
+// the default prod `info` level, surfaced under LOG_LEVEL=debug). Makes the
+// common "best effort, don't block the request" pattern explicit and observable
+// instead of silently dropping the error on the floor.
+export function swallow(err?: unknown): void {
+  if (err !== undefined) logger.debug({ err }, "swallowed");
+  else logger.debug("swallowed");
+}
+
 export const log = {
   log: (...a: unknown[]) => emit("info", a),
   info: (...a: unknown[]) => emit("info", a),

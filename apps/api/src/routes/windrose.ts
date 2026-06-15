@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
@@ -851,7 +851,7 @@ Rules:
                 tag: `windrose:bounty:${created.id}`,
               };
               for (const uid of memberIds) {
-                sendPush(uid, data).catch(() => {});
+                sendPush(uid, data).catch(swallow);
               }
             } catch (e) {
               log.error("[windrose/bounties most-wanted push]", e);
@@ -867,7 +867,9 @@ Rules:
             bountyId: created.id,
             amount: created.amount,
           });
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         return reply.send({ ok: true, bounty: created, balance: debit.balance });
       } catch (e) {
         await awardPaper(u.id, "ADJUSTMENT", amount, `Bounty escrow refund (create failed)`);
@@ -933,13 +935,15 @@ Rules:
             bountyId: b.id,
             amount: b.amount,
           });
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         sendPush(b.posterId, {
           title: "Claim on your bounty",
           body: `${claimantName} claims ${b.amount.toLocaleString()} Paper on ${b.targetHandle}. Review the proof.`,
           url: "/lobby/windrose",
           tag: `windrose:bounty:${b.id}`,
-        }).catch(() => {});
+        }).catch(swallow);
         return reply.send({ ok: true, bounty: updated });
       } catch (e) {
         log.error("[windrose/bounties claim]", e);
@@ -983,7 +987,7 @@ Rules:
             body: `${b.amount.toLocaleString()} Paper just hit your wallet. ${b.targetHandle} is settled.`,
             url: "/store",
             tag: `windrose:bounty:${b.id}:settled`,
-          }).catch(() => {});
+          }).catch(swallow);
         }
         return reply.send({ ok: true, bounty: updated });
       } catch (e) {
@@ -1026,7 +1030,7 @@ Rules:
             body: `Your claim on ${b.targetHandle} was rejected. The bounty's back on the board.`,
             url: "/lobby/windrose",
             tag: `windrose:bounty:${b.id}:rejected`,
-          }).catch(() => {});
+          }).catch(swallow);
         }
         return reply.send({ ok: true, bounty: updated });
       } catch (e) {
@@ -1105,7 +1109,7 @@ Rules:
             body: `Your ${b.amount.toLocaleString()} Paper on ${b.targetHandle} went unclaimed. Refunded to your wallet.`,
             url: "/lobby/windrose",
             tag: `windrose:bounty:${b.id}:expired`,
-          }).catch(() => {});
+          }).catch(swallow);
         } catch (e) {
           await awardPaper(
             b.posterId,
@@ -1113,7 +1117,7 @@ Rules:
             -b.amount,
             `Bounty expire rollback`,
             b.id,
-          ).catch(() => {});
+          ).catch(swallow);
           log.error("[windrose/bounties expire]", e);
         }
       }
@@ -1236,7 +1240,7 @@ Rules:
           if (!res.ok) {
             await prisma.communityServer
               .update({ where: { id: s.id }, data: { status: "offline" } })
-              .catch(() => {});
+              .catch(swallow);
             continue;
           }
           const json: any = await res.json().catch(() => null);
@@ -1245,11 +1249,11 @@ Rules:
               where: { id: s.id },
               data: { status: "online", lastSeenAt: new Date(), lastState: json as any },
             })
-            .catch(() => {});
+            .catch(swallow);
         } catch {
           await prisma.communityServer
             .update({ where: { id: s.id }, data: { status: "offline" } })
-            .catch(() => {});
+            .catch(swallow);
         }
       }
     } catch (e) {

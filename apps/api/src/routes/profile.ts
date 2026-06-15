@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
@@ -156,7 +156,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
                 requestId = fr.id;
               }
             }
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
           let joinable = false;
           let currentRoomId: string | null = null;
           let currentRoomIsLobby = false;
@@ -175,7 +177,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
                   where: { id: currentRoomId },
                   select: { id: true },
                 }));
-              } catch {}
+              } catch (e) {
+                swallow(e);
+              }
             }
           }
           return {
@@ -333,7 +337,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           pillAccentColor !== undefined;
         if (visibleChanged) {
           if (avatar !== undefined && avatar)
-            awardNotoriety(viewer.id, "AVATAR_SET").catch(() => {});
+            awardNotoriety(viewer.id, "AVATAR_SET").catch(swallow);
           for (const sock of getWss().clients) {
             const s = sock as any;
             if (s.user?.id === viewer.id) {
@@ -414,7 +418,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
               steamId = j.response.steamid;
             }
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
 
       if (!steamId) {
@@ -623,7 +629,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
             where: { id: row.id },
             data: { livePresence: primary as any, presenceCheckedAt: new Date() },
           })
-          .catch(() => {});
+          .catch(swallow);
       }
       return reply.send({
         ok: true,
@@ -685,10 +691,14 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
             if ((sock as any).user?.id === userId) {
               try {
                 (sock as any).close();
-              } catch {}
+              } catch (e) {
+                swallow(e);
+              }
             }
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
 
         await globalAudit(userId, anonName, "account_deleted_self", userId);
 

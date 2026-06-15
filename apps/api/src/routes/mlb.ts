@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
@@ -350,7 +350,9 @@ export default async function mlbRoutes(app: FastifyInstance) {
                 date: item.date || date,
               });
             }
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }),
       );
 
@@ -381,7 +383,9 @@ export default async function mlbRoutes(app: FastifyInstance) {
             const feed = await feedRes.json();
             const w = feed?.gameData?.weather;
             if (w) weather = { temp: w.temp, condition: w.condition, wind: w.wind };
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
 
           const mapPitcher = (team: any) => {
             const pp = team?.probablePitcher;

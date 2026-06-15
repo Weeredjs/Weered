@@ -1,4 +1,4 @@
-import { log } from "./lib/logger";
+import { log, swallow } from "./lib/logger";
 import type { PrismaClient } from "@prisma/client";
 
 const POLL_INTERVAL_MS = 60_000;
@@ -213,7 +213,7 @@ export function startChessChallengeWorker(
             updateData.status = "COMPLETED";
             updateData.completedAt = new Date();
             if (def.notorietyReward > 0)
-              awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
+              awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(swallow);
             if ((def as any).paperReward > 0 && awardPaper) {
               awardPaper(
                 userId,
@@ -221,10 +221,10 @@ export function startChessChallengeWorker(
                 (def as any).paperReward,
                 `Chess challenge: ${def.title}`,
                 enr.instanceId,
-              ).catch(() => {});
+              ).catch(swallow);
             }
             if (def.badgeId) {
-              prisma.userBadge.create({ data: { userId, badgeId: def.badgeId } }).catch(() => {});
+              prisma.userBadge.create({ data: { userId, badgeId: def.badgeId } }).catch(swallow);
             }
             log.log(`[chess-challenges] ${userId} completed "${def.title}"`);
             if (broadcastToLobby && (def as any).lobbyId) {

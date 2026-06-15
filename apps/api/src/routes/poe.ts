@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -194,7 +194,9 @@ async function currencyStatic(): Promise<
         }
       }
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
   _cxStatic = { map, exp: Date.now() + 24 * 3600_000 };
   return map;
 }
@@ -432,7 +434,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      awardNotoriety(userId, "POE_LINKED").catch(() => {});
+      awardNotoriety(userId, "POE_LINKED").catch(swallow);
       return reply.redirect(`${SITE_URL}/lobby/poe?poe=success`);
     } catch (e) {
       log.error("[poe oauth callback]", e);
@@ -488,7 +490,9 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
             break;
           }
         } else if (body?.error?.code === 6) forbidden = true;
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     if (chars.length === 0) {
@@ -512,7 +516,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
         where: { id: acct.id },
         data: { cardData: { ...card, characters: chars, charsCachedAt: new Date().toISOString() } },
       })
-      .catch(() => {});
+      .catch(swallow);
     return reply.send({ ok: true, linked: true, characters: chars });
   });
 

@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
@@ -110,7 +110,9 @@ async function processBuildImage(
     </svg>`;
     try {
       pipeline = pipeline.composite([{ input: Buffer.from(svg), gravity: "southeast" }]);
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
 
   let outputBuffer = await pipeline.webp({ quality: 80 }).toBuffer();
@@ -150,7 +152,9 @@ async function processBuildImage(
           .padStart(2, "0");
       dominantColor = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 
   return {
     url: `${SITE_BASE}/builds/${fullName}`,
@@ -288,7 +292,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     });
 
     uploadCooldown.set(u.id, now);
-    if (awardNotoriety) await awardNotoriety(u.id, "WINDROSE_BUILD_POSTED").catch(() => {});
+    if (awardNotoriety) await awardNotoriety(u.id, "WINDROSE_BUILD_POSTED").catch(swallow);
 
     if (broadcastToLobby) {
       try {
@@ -303,7 +307,9 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
           buildType,
           ts: Date.now(),
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     return reply.send({ ok: true, build: created });
@@ -441,7 +447,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (!u || u.id !== b.authorId) {
       prisma.windroseBuild
         .update({ where: { id: b.id }, data: { views: { increment: 1 } } })
-        .catch(() => {});
+        .catch(swallow);
     }
 
     let myVote = 0;
@@ -529,7 +535,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     });
 
     if (value === 1 && awardNotoriety)
-      await awardNotoriety(b.authorId, "WINDROSE_BUILD_UPVOTED").catch(() => {});
+      await awardNotoriety(b.authorId, "WINDROSE_BUILD_UPVOTED").catch(swallow);
 
     return reply.send({ ok: true, upvotes: up, downvotes: down, myVote: value });
   });

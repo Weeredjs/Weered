@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
@@ -124,7 +125,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
     if (!u) return reply.code(401).send({ ok: false });
     if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const id = String((req as any).params?.id || "");
-    await annDb.announcement.delete({ where: { id } }).catch(() => {});
+    await annDb.announcement.delete({ where: { id } }).catch(swallow);
     await globalAudit(u.id, u.name, "announcement_delete", id);
     return reply.send({ ok: true });
   });

@@ -1,5 +1,5 @@
 import { ReportTargetType, ReportReason } from "@prisma/client";
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -174,7 +174,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         actorId: u.id,
         actorName: u.name,
         actionUrl: "/home",
-      }).catch(() => {});
+      }).catch(swallow);
       return reply.send({ ok: true, request: fr });
     },
   );
@@ -202,8 +202,8 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         update: { status: "ACCEPTED" },
         create: { fromId: u.id, toId: fr.fromId, status: "ACCEPTED" },
       });
-      awardNotoriety(u.id, "FRIEND_ADDED").catch(() => {});
-      awardNotoriety(fr.fromId, "FRIEND_ADDED").catch(() => {});
+      awardNotoriety(u.id, "FRIEND_ADDED").catch(swallow);
+      awardNotoriety(fr.fromId, "FRIEND_ADDED").catch(swallow);
       createNotification({
         userId: fr.fromId,
         type: "FRIEND_ACCEPTED",
@@ -211,7 +211,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         actorId: u.id,
         actorName: u.name,
         actionUrl: "/home",
-      }).catch(() => {});
+      }).catch(swallow);
       return reply.send({ ok: true });
     },
   );
@@ -308,7 +308,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         actorName: u.name,
         actionUrl,
         meta: { roomId: myRoomId, isLobby },
-      }).catch(() => {});
+      }).catch(swallow);
       return reply.send({ ok: true });
     },
   );
@@ -759,7 +759,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
             select: { body: true },
           });
           if (m?.body) bodySnapshot = String(m.body).slice(0, 500);
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
         if (!bodySnapshot) {
           try {
             const dm = await prisma.directMessage.findUnique({
@@ -767,7 +769,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
               select: { body: true },
             });
             if (dm?.body) bodySnapshot = String(dm.body).slice(0, 500);
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
         if (!bodySnapshot) {
           try {
@@ -776,7 +780,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
               select: { body: true },
             });
             if (cm?.body) bodySnapshot = String(cm.body).slice(0, 500);
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
       }
 

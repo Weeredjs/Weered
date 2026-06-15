@@ -187,16 +187,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     };
     addP(room.localParticipant, true);
     room.remoteParticipants.forEach((p) => addP(p, false));
-    console.log(
-      "[LK] rebuildTiles",
-      next.map((t) => ({
-        name: t.name,
-        hasScreen: t.hasScreenShare,
-        screenSid: t.screenTrackSid,
-        videoSid: t.videoTrackSid,
-      })),
-    );
-    console.log("[LK] videoRefs keys:", [...videoRefs.current.keys()]);
     setTiles(next);
   }, []);
 
@@ -238,11 +228,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         roomRef.current = room;
 
         room.on(RoomEvent.TrackSubscribed, (track) => {
-          console.log("[LK] TrackSubscribed", {
-            kind: track.kind,
-            source: track.source,
-            sid: track.sid,
-          });
           if (!track.sid) return;
           if (track.kind === Track.Kind.Audio) {
             const el = track.attach() as HTMLAudioElement;
@@ -251,7 +236,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             document.body.appendChild(el);
             audioRefs.current.set(track.sid, el);
           } else if (track.kind === Track.Kind.Video) {
-            console.log("[LK] Storing remote video element with SID:", track.sid);
             const el = track.attach() as HTMLVideoElement;
             el.autoplay = true;
             el.playsInline = true;
@@ -296,7 +280,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             const storeBySid = () => {
               const sid = pub.track?.sid || pub.trackSid;
               if (sid) {
-                console.log("[LK] Local video stored with SID:", sid, "source:", pub.source);
                 videoRefs.current.set(sid, el);
                 rebuildTiles(room);
               } else if (attempts++ < 50) {

@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
@@ -106,7 +106,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
       const body = (req as any).body || {};
       const token = typeof body.token === "string" ? body.token.trim() : "";
       if (!token) return reply.code(400).send({ ok: false, error: "invalid_token" });
-      await prisma.expoPushToken.deleteMany({ where: { token, userId: u.id } }).catch(() => {});
+      await prisma.expoPushToken.deleteMany({ where: { token, userId: u.id } }).catch(swallow);
       return reply.send({ ok: true });
     },
   );
@@ -205,7 +205,9 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
         await prisma.notification.deleteMany({
           where: { id: (req as any).params.id, userId: u.id },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return reply.send({ ok: true });
     },
   );

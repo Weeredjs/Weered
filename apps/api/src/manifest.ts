@@ -1,4 +1,4 @@
-import { log } from "./lib/logger";
+import { log, swallow } from "./lib/logger";
 import fs from "fs";
 import path from "path";
 
@@ -503,7 +503,9 @@ export async function syncManifest(
       if (fs.existsSync(metaPath)) {
         diskMeta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
 
     log.log("[manifest] Fetching manifest metadata...");
     const metaRes = await fetch(`${BUNGIE_BASE}/Platform/Destiny2/Manifest/`, {
@@ -786,4 +788,6 @@ function getCounts() {
 
 try {
   loadFromDisk();
-} catch {}
+} catch (e) {
+  swallow(e);
+}

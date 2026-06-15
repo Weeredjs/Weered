@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
@@ -185,7 +185,7 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
 
       prisma.helldiversLoadout
         .update({ where: { slug }, data: { views: { increment: 1 } } })
-        .catch(() => {});
+        .catch(swallow);
 
       let myVote = 0;
       const auth = authFromHeader(String((req.headers as any).authorization || ""));

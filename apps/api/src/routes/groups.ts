@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -44,7 +44,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     for (const id of memberIds) {
       try {
         dmDeliver(id, payload);
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
 
@@ -306,7 +308,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
               replyToBody: String(parent.body || "").slice(0, 120),
             };
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
 
       try {
@@ -352,9 +356,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
               body: text.slice(0, 120),
               url: "/home",
               tag: `group:${id}`,
-            }).catch(() => {}),
+            }).catch(swallow),
           );
-        Promise.all(offlinePushes).catch(() => {});
+        Promise.all(offlinePushes).catch(swallow);
 
         if (resolveMentions && createNotification) {
           (async () => {
@@ -374,9 +378,11 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
                   actorName: viewer.name,
                   actionUrl: "/home",
                   meta: { groupId: id },
-                }).catch(() => {});
+                }).catch(swallow);
               }
-            } catch {}
+            } catch (e) {
+              swallow(e);
+            }
           })();
         }
 

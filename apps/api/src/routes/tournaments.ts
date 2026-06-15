@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -524,7 +524,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
             p.paper,
             `${tournament.title} · ${t}`,
             id,
-          ).catch(() => {});
+          ).catch(swallow);
         }
         if (p.notoriety > 0) {
           try {
@@ -535,7 +535,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
               where: { id: e.userId },
               data: { notoriety: { increment: p.notoriety } },
             });
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
 
         if (t === "CHAMPION" || t === "PODIUM") {
@@ -582,7 +584,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
               ? `/lobby/${encodeURIComponent(tournament.lobbyId)}`
               : undefined,
             meta: { kind: "tournament_complete", tournamentId: id, rank: i + 1, tier: t },
-          }).catch(() => {});
+          }).catch(swallow);
         }
       }
 
@@ -607,7 +609,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
             where: { id: r.itemId },
             data: { totalMinted: { increment: 1 } },
           });
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
 
       const updated = await prisma.tournament.update({
@@ -1086,7 +1090,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           meta: { kind: "tournament_match_ready", tournamentId: m.tournament.id, matchId },
         });
       }
-    } catch {}
+    } catch (e) {
+      swallow(e);
+    }
   }
 
   app.post(

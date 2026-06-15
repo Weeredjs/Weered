@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
@@ -321,7 +321,9 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
         await prisma.fortniteWishlist.delete({
           where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return reply.send({ ok: true });
     },
   );

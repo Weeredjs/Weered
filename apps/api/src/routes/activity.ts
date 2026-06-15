@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -162,7 +163,9 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
           }
           return reply.send(result);
         }
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     try {

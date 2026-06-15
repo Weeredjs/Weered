@@ -1,4 +1,4 @@
-import { log } from "./lib/logger";
+import { log, swallow } from "./lib/logger";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -170,12 +170,12 @@ async function syncCampaignRooms(active: Map<number, CampaignSnapshot>) {
       const pidStr = row.id.replace("helldivers2-campaign-", "");
       const pid = Number(pidStr);
       if (!Number.isFinite(pid) || !active.has(pid)) {
-        await prisma.room
-          .update({ where: { id: row.id }, data: { pinned: false } })
-          .catch(() => {});
+        await prisma.room.update({ where: { id: row.id }, data: { pinned: false } }).catch(swallow);
       }
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 }
 
 async function syncMajorOrderChallenges(
@@ -306,7 +306,9 @@ export async function runHelldiversWorker(deps: {
           health,
           defense: isDefense,
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
 
@@ -335,7 +337,9 @@ export async function runHelldiversWorker(deps: {
           expiresAt: expiresMs,
           rewardMedals,
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
 

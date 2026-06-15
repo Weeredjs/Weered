@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -276,7 +276,9 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
           lobbyId,
           room: { id, name, isEvent, defaultModule },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return reply.send({
         ok: true,
         id,
@@ -561,7 +563,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const npcId = String((req as any).params?.npcId || "");
-      await prisma.roomNpc.delete({ where: { id: npcId } }).catch(() => {});
+      await prisma.roomNpc.delete({ where: { id: npcId } }).catch(swallow);
       return reply.send({ ok: true });
     },
   );

@@ -1,5 +1,5 @@
 import { OrderSide } from "@prisma/client";
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -545,8 +545,8 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
       // Economy awards fire only after the trade is durably committed.
       for (const a of pendingAwards) {
-        awardPaper(u.id, "EARN_FAKEOUT", a.paper, a.desc, a.refId).catch(() => {});
-        if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+        awardPaper(u.id, "EARN_FAKEOUT", a.paper, a.desc, a.refId).catch(swallow);
+        if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(swallow);
       }
       await prisma.paperOrder.create({
         data: {
@@ -562,8 +562,8 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       });
 
       if (mode === "RANKED") {
-        awardNotoriety(u.id, "FIRST_FAKEOUT_TRADE").catch(() => {});
-        awardNotoriety(u.id, "FAKEOUT_TRADE").catch(() => {});
+        awardNotoriety(u.id, "FIRST_FAKEOUT_TRADE").catch(swallow);
+        awardNotoriety(u.id, "FAKEOUT_TRADE").catch(swallow);
       }
 
       const tradeEvent = {
@@ -604,7 +604,9 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
               ctx = `${u.name} just opened a $${cost.toFixed(0)} ${sideLabel} on ${sym} at $${currentPrice.toFixed(2)}.`;
             }
             if (ctx) await operatorCommentateOnTrade(lobbyId, ctx);
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         })();
       }
 
@@ -661,8 +663,8 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         paperEarned,
         `FakeOut profit: $${pnl.toFixed(2)} on ${pos.symbol}`,
         positionId,
-      ).catch(() => {});
-      if (accountMode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
+      ).catch(swallow);
+      if (accountMode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(swallow);
     }
 
     if (operatorCommentateOnTrade && Math.abs(pnl) >= 500) {
@@ -673,7 +675,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
           pnl > 0
             ? `${u.name} just closed a ${sym} trade for a +$${pnl.toFixed(0)} profit.`
             : `${u.name} just closed a ${sym} trade taking a -$${Math.abs(pnl).toFixed(0)} loss.`;
-        operatorCommentateOnTrade(lobbyId, ctx).catch(() => {});
+        operatorCommentateOnTrade(lobbyId, ctx).catch(swallow);
       }
     }
 
@@ -1126,7 +1128,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
               prizes[i],
               `${i === 0 ? "1st" : i === 1 ? "2nd" : "3rd"} place: ${comp.name}`,
               comp.id,
-            ).catch(() => {});
+            ).catch(swallow);
           }
         }
         log.log(`[trading] Competition "${comp.name}" ended — ${ranked.length} participants`);
@@ -1267,9 +1269,9 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
             paperEarned,
             `FakeOut ${trigger === "TAKE_PROFIT" ? "TP" : "SL"} hit: $${pnl.toFixed(2)} on ${pos.symbol}`,
             pos.id,
-          ).catch(() => {});
+          ).catch(swallow);
           if (accountMode === "RANKED")
-            awardNotoriety(pos.account.userId, "FAKEOUT_PROFIT").catch(() => {});
+            awardNotoriety(pos.account.userId, "FAKEOUT_PROFIT").catch(swallow);
         }
 
         notifyUser(pos.account.userId, {
@@ -1304,7 +1306,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
             trigger === "TAKE_PROFIT"
               ? `${userName} just hit take-profit on ${sym} for +$${pnl.toFixed(0)}.`
               : `${userName} just got stopped out on ${sym} for -$${Math.abs(pnl).toFixed(0)}.`;
-          operatorCommentateOnTrade(pos.account.lobbyId, ctx).catch(() => {});
+          operatorCommentateOnTrade(pos.account.lobbyId, ctx).catch(swallow);
         }
       }
     } catch (e) {

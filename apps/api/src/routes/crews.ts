@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -166,7 +166,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         },
         include: { members: true },
       });
-      awardNotoriety(u.id, "CREW_CREATED").catch(() => {});
+      awardNotoriety(u.id, "CREW_CREATED").catch(swallow);
       return reply.send({ ok: true, crew });
     },
   );
@@ -200,7 +200,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         update: {},
         create: { crewId, userId, name: target.name, role: "MEMBER" },
       });
-      awardNotoriety(userId, "CREW_JOINED").catch(() => {});
+      awardNotoriety(userId, "CREW_JOINED").catch(swallow);
       const crew = await db.crew.findUnique({
         where: { id: crewId },
         select: { name: true, tag: true },
@@ -214,7 +214,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         actorName: u.name,
         actionUrl: "/home",
         meta: { crewId },
-      }).catch(() => {});
+      }).catch(swallow);
       return reply.send({ ok: true });
     },
   );
@@ -266,7 +266,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
           actorName: u.name,
           actionUrl: `/crew/${crewId}`,
           meta: { crewId, kind: "join_request" },
-        }).catch(() => {});
+        }).catch(swallow);
       }
       return reply.send({ ok: true, status: "PENDING" });
     },
@@ -332,7 +332,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
           update: {},
           create: { crewId, userId, name: target?.name || reqRow.userName, role: "MEMBER" },
         });
-        awardNotoriety(userId, "CREW_JOINED").catch(() => {});
+        awardNotoriety(userId, "CREW_JOINED").catch(swallow);
         createNotification({
           userId,
           type: "CREW_INVITE",
@@ -342,7 +342,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
           actorName: u.name,
           actionUrl: `/crew/${crewId}`,
           meta: { crewId },
-        }).catch(() => {});
+        }).catch(swallow);
       } else {
         createNotification({
           userId,
@@ -353,7 +353,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
           actorName: u.name,
           actionUrl: "/home",
           meta: { crewId },
-        }).catch(() => {});
+        }).catch(swallow);
       }
       await db.crewJoinRequest.update({
         where: { crewId_userId: { crewId, userId } },
@@ -419,7 +419,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         actorName: u.name,
         actionUrl: `/crew/${crewId}`,
         meta: { crewId },
-      }).catch(() => {});
+      }).catch(swallow);
       return reply.send({ ok: true, role: newRole });
     },
   );

@@ -1,5 +1,5 @@
 import { FlairKind } from "@prisma/client";
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
@@ -88,7 +88,9 @@ async function processSubmissionImage(
           .padStart(2, "0");
       dominantColor = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
     }
-  } catch {}
+  } catch (e) {
+    swallow(e);
+  }
 
   return {
     url: `${SITE_BASE}/flair-contests-img/${filename}`,
@@ -309,7 +311,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     if (broadcastToLobby && lobbyId) {
       try {
         broadcastToLobby(lobbyId, { type: "flair-contest:created", contestId: contest.id, title });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     return reply.send({ ok: true, contest });
@@ -421,7 +425,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       if (oldName) {
         try {
           unlinkSync(join(FLAIR_DIR, oldName));
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       }
       submission = await prisma.flairSubmission.update({
         where: { id: existing.id },
@@ -441,7 +447,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
           submissionId: submission.id,
           userId: u.id,
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     return reply.send({ ok: true, submission });
@@ -466,7 +474,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     if (oldName) {
       try {
         unlinkSync(join(FLAIR_DIR, oldName));
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
     await prisma.flairSubmission.delete({ where: { id: sid } });
     return reply.send({ ok: true });
@@ -640,7 +650,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
           actionUrl: c.lobbyId ? `/lobby/${c.lobbyId}` : "/",
           meta: { contestId, submissionId: winner.id, flairItemId: rewardFlair?.id ?? null },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     if (broadcastToLobby && c.lobbyId) {
@@ -650,7 +662,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
           contestId,
           winnerUserId: winner.userId,
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
     }
 
     return { ok: true, contest: updated, rewardFlair };
@@ -683,7 +697,9 @@ export async function tickContestStates(
               type: "flair-contest:voting-open",
               contestId: c.id,
             });
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
       } catch (e: any) {
         log.error("[flair-contests] tick submissions→voting failed:", c.id, e?.message || e);
@@ -762,7 +778,9 @@ export async function tickContestStates(
                 flairItemId: rewardFlair?.id ?? null,
               },
             });
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
         if (opts.broadcastToLobby && c.lobbyId) {
           try {
@@ -771,7 +789,9 @@ export async function tickContestStates(
               contestId: c.id,
               winnerUserId: winner.userId,
             });
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
       } catch (e: any) {
         log.error("[flair-contests] tick voting→completed failed:", c.id, e?.message || e);
@@ -798,6 +818,6 @@ export function startFlairContestTick(
       log.error("[flair-contests] tick error:", e?.message || e),
     );
   }, interval);
-  tickContestStates(prismaClient, opts).catch(() => {});
+  tickContestStates(prismaClient, opts).catch(swallow);
   return { stop: () => clearInterval(t) };
 }

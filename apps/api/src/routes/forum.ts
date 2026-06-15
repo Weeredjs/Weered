@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
@@ -280,7 +281,9 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
       }
       try {
         await prisma.forumSubscription.create({ data: { userId: u.id, postId: post.id } });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       (async () => {
         try {
           const mentioned = await resolveMentions(String(body || ""), u.id);
@@ -293,9 +296,11 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
               actorId: u.id,
               actorName: user?.name || u.name,
               actionUrl: `/forum/${post.id}`,
-            }).catch(() => {});
+            }).catch(swallow);
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       })();
       return reply.send({ ok: true, post });
     },
@@ -512,7 +517,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
           { kind: "COMMENT", id: comment.id },
           automod.ruleName,
           automod.reason,
-        ).catch(() => {});
+        ).catch(swallow);
       }
 
       (async () => {
@@ -546,7 +551,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
               actorName: replierName,
               actionUrl: `/forum/${postId}`,
               meta,
-            }).catch(() => {});
+            }).catch(swallow);
           }
 
           const mentioned = await resolveMentions(String(body || ""), u.id);
@@ -561,9 +566,11 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
               actorId: u.id,
               actorName: replierName,
               actionUrl: `/forum/${postId}`,
-            }).catch(() => {});
+            }).catch(swallow);
           }
-        } catch {}
+        } catch (e) {
+          swallow(e);
+        }
       })();
 
       const authorMap = await enrichForumAuthors([u.id]);
@@ -725,7 +732,9 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
           update: {},
           create: { userId: u.id, postId },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       return reply.send({ ok: true, bookmarked: true });
     },
   );
@@ -808,7 +817,9 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
           update: {},
           create: { userId: u.id, postId },
         });
-      } catch {}
+      } catch (e) {
+        swallow(e);
+      }
       const count = await prisma.forumSubscription.count({ where: { postId } });
       return reply.send({ ok: true, subscribed: true, subscriberCount: count });
     },

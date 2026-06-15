@@ -1,3 +1,4 @@
+import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -132,7 +133,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
             create: { roomId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
             update: {},
           })
-          .catch(() => {});
+          .catch(swallow);
         redirect = `/room/${encodeURIComponent(invite.targetId)}`;
       } else if (invite.type === "LOBBY" && invite.targetId) {
         await prisma.lobbyMember
@@ -141,7 +142,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
             create: { lobbyId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
             update: {},
           })
-          .catch(() => {});
+          .catch(swallow);
         redirect = `/lobby/${encodeURIComponent(invite.targetId)}`;
       } else if (invite.type === "CREW" && invite.targetId) {
         await prisma.crewMember
@@ -150,8 +151,8 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
             create: { crewId: invite.targetId, userId: u.id, name: u.name, role: "MEMBER" },
             update: {},
           })
-          .catch(() => {});
-        awardNotoriety(u.id, "CREW_JOINED").catch(() => {});
+          .catch(swallow);
+        awardNotoriety(u.id, "CREW_JOINED").catch(swallow);
         redirect = "/lobby";
       }
 
@@ -164,7 +165,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           .create({
             data: { fromId: u.id, toId: invite.createdBy, body: msg },
           })
-          .catch(() => {});
+          .catch(swallow);
       }
 
       return reply.send({ ok: true, redirect, type: invite.type, targetId: invite.targetId });

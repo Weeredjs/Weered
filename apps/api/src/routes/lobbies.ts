@@ -1,4 +1,4 @@
-import { log } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
@@ -735,7 +735,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           websiteUrl: websiteUrl ?? null,
         },
       });
-      awardNotoriety(u.id, "LOBBY_CREATED").catch(() => {});
+      awardNotoriety(u.id, "LOBBY_CREATED").catch(swallow);
       return reply.send({ ok: true, lobby });
     },
   );
@@ -1467,7 +1467,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           send(s, { type: "room:deleted", roomId });
           try {
             (s as any).close(4000, "room:deleted");
-          } catch {}
+          } catch (e) {
+            swallow(e);
+          }
         }
         rooms.delete(roomId);
       }
