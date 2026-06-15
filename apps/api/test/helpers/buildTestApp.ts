@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import jwt from "jsonwebtoken";
+import { validatorCompiler, serializerCompiler } from "fastify-type-provider-zod";
 import { readCookieToken } from "../../src/lib/authCookie";
 
 // Test secret: tests mint their own tokens with this and the harness verifies
@@ -37,6 +38,10 @@ export async function buildTestApp(
   register: (app: any, helpers: Helpers) => Promise<void> | void,
 ): Promise<any> {
   const app = Fastify({ logger: false });
+  // Match prod main(): Zod-backed validation/serialization for routes that
+  // declare a `schema` (e.g. /paper/tip). No-op for schema-less routes.
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
   app.addHook("onRequest", async (req: any) => {
     if (!req.headers.authorization) {
       const c = readCookieToken(req);

@@ -68,10 +68,13 @@ probeJson "$API/lobbies/helldivers2"         '.ok and .lobby.moduleType == "HELL
 probeJson "$API/public/activity"             '.ok and (.events | type == "array")'             "GET /public/activity"
 probeJson "$API/windrose/builds"             '.ok and (.builds | type == "array")'             "GET /windrose/builds"
 probeJson "$API/windrose/builds/featured"    '.ok and (.builds | type == "array")'             "GET /windrose/builds/featured"
-probeJson "$API/helldivers/war"              '.ok'                                              "GET /helldivers/war"
-probeJson "$API/helldivers/major-orders"     '.ok'                                              "GET /helldivers/major-orders"
-probeJson "$API/helldivers/dispatches"       '.ok'                                              "GET /helldivers/dispatches"
-probeJson "$API/helldivers/campaigns"        '.ok'                                              "GET /helldivers/campaigns"
+# These four depend on the flapping helldivers community API; assert a well-formed
+# response (data OR a graceful unavailable signal) so an upstream outage warns via
+# the error-log/worker checks rather than hard-failing the deploy gate.
+probeJson "$API/helldivers/war"              '.ok or has("error")'                             "GET /helldivers/war"
+probeJson "$API/helldivers/major-orders"     '.ok or has("error")'                             "GET /helldivers/major-orders"
+probeJson "$API/helldivers/dispatches"       '.ok or has("error")'                             "GET /helldivers/dispatches"
+probeJson "$API/helldivers/campaigns"        '.ok or has("error")'                             "GET /helldivers/campaigns"
 probeJson "$API/helldivers/stratagems"       '.ok and (.stratagems | length) >= 50'             "GET /helldivers/stratagems"
 probeJson "$API/helldivers/loadouts"         '.ok'                                              "GET /helldivers/loadouts"
 probeJson "$API/steam/players/553850"        '.ok and (.count | type == "number")'              "Steam HD2 player count"
