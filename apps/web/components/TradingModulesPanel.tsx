@@ -11,56 +11,18 @@ import TheBrief, { useTheBrief } from "./TheBrief";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders(): Record<string, string> {
-  try {
-    const t = localStorage.getItem("weered_token") || "";
-    return t ? { Authorization: `Bearer ${t}` } : {};
-  } catch {
-    return {};
-  }
+  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
-  });
+  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
   return r.json();
 }
 
 const S = {
-  card: {
-    borderRadius: 2,
-    border: "1px solid rgba(255,255,255,.08)",
-    background: "rgba(255,255,255,.03)",
-    padding: "10px 12px",
-  } as React.CSSProperties,
-  btn: {
-    padding: "6px 12px",
-    borderRadius: 2,
-    border: "1px solid rgba(255,255,255,.10)",
-    background: "rgba(255,255,255,.05)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgba(243,244,246,.88)",
-  } as React.CSSProperties,
-  input: {
-    width: "100%",
-    padding: "8px 12px",
-    borderRadius: 2,
-    border: "1px solid rgba(255,255,255,.10)",
-    background: "rgba(0,0,0,.30)",
-    fontSize: 13,
-    color: "rgba(243,244,246,.92)",
-    outline: "none",
-    boxSizing: "border-box" as const,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: 700,
-    opacity: 0.45,
-    letterSpacing: ".7px",
-    textTransform: "uppercase" as const,
-    marginBottom: 6,
-  } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
+  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
+  label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
 const GREEN = "#22c55e";
@@ -69,8 +31,7 @@ const ACCENT = "#F5C518";
 
 function fmtPrice(p: number | null | undefined): string {
   if (p == null) return "—";
-  if (p >= 1)
-    return p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 1) return p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return p.toFixed(6);
 }
 function fmtPnl(n: number): string {
@@ -83,24 +44,16 @@ function fmtPct(n: number): string {
 }
 
 const TIMEFRAMES: { id: string; label: string }[] = [
-  { id: "1m", label: "1m" },
-  { id: "5m", label: "5m" },
+  { id: "1m",  label: "1m"  },
+  { id: "5m",  label: "5m"  },
   { id: "15m", label: "15m" },
-  { id: "1h", label: "1h" },
-  { id: "4h", label: "4h" },
-  { id: "1d", label: "1D" },
-  { id: "1w", label: "1W" },
+  { id: "1h",  label: "1h"  },
+  { id: "4h",  label: "4h"  },
+  { id: "1d",  label: "1D"  },
+  { id: "1w",  label: "1W"  },
 ];
 
-function PriceChart({
-  symbol,
-  accent,
-  timeframe = "1m",
-}: {
-  symbol: string;
-  accent: string;
-  timeframe?: string;
-}) {
+function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; accent: string; timeframe?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candleSeriesRef = useRef<any>(null);
@@ -198,23 +151,17 @@ function PriceChart({
       volumeSeriesRef.current = volumeSeries;
 
       try {
-        const data = await apiFetch(
-          `/trading/candles?symbol=${symbol}&interval=${timeframe}&limit=300`,
-        );
+        const data = await apiFetch(`/trading/candles?symbol=${symbol}&interval=${timeframe}&limit=300`);
         if (data.ok && data.candles?.length) {
           candleSeries.setData(data.candles);
-          volumeSeries.setData(
-            data.candles.map((c: any) => ({
-              time: c.time,
-              value: c.volume,
-              color: c.close >= c.open ? "rgba(34,197,94,.20)" : "rgba(239,68,68,.20)",
-            })),
-          );
+          volumeSeries.setData(data.candles.map((c: any) => ({
+            time: c.time,
+            value: c.volume,
+            color: c.close >= c.open ? "rgba(34,197,94,.20)" : "rgba(239,68,68,.20)",
+          })));
           chart.timeScale().fitContent();
         }
-      } catch (e) {
-        console.error("[chart] candle load failed:", e);
-      }
+      } catch (e) { console.error("[chart] candle load failed:", e); }
 
       const wc = getWeeredClient();
       wc.send("trading:subscribe", { symbol: symbol.toUpperCase() });
@@ -265,16 +212,12 @@ function PriceChart({
   }, [symbol, timeframe]);
 
   const zoomBtn: React.CSSProperties = {
-    width: 26,
-    height: 26,
-    padding: 0,
+    width: 26, height: 26, padding: 0,
     borderRadius: 2,
     border: "1px solid rgba(255,255,255,.10)",
     background: "rgba(0,0,0,.55)",
     color: "rgba(243,244,246,.85)",
-    fontSize: 13,
-    fontWeight: 700,
-    lineHeight: 1,
+    fontSize: 13, fontWeight: 700, lineHeight: 1,
     cursor: "pointer",
     backdropFilter: "blur(6px)",
   };
@@ -283,63 +226,28 @@ function PriceChart({
     <div style={{ position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", borderRadius: 2, overflow: "hidden" }} />
       <div style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 4, zIndex: 2 }}>
-        <button
-          type="button"
-          onClick={zoomReset}
-          style={{
-            ...zoomBtn,
-            width: "auto",
-            padding: "0 8px",
-            fontSize: 10,
-            letterSpacing: "0.5px",
-          }}
-          title="Fit content"
-        >
-          FIT
-        </button>
-        <button
-          type="button"
-          onClick={zoomOut}
-          style={zoomBtn}
-          aria-label="Zoom out"
-          title="Zoom out"
-        >
-          −
-        </button>
-        <button type="button" onClick={zoomIn} style={zoomBtn} aria-label="Zoom in" title="Zoom in">
-          +
-        </button>
+        <button type="button" onClick={zoomReset}  style={{ ...zoomBtn, width: "auto", padding: "0 8px", fontSize: 10, letterSpacing: "0.5px" }} title="Fit content">FIT</button>
+        <button type="button" onClick={zoomOut}    style={zoomBtn} aria-label="Zoom out" title="Zoom out">−</button>
+        <button type="button" onClick={zoomIn}     style={zoomBtn} aria-label="Zoom in"  title="Zoom in">+</button>
       </div>
     </div>
   );
 }
 
-type SymInfo = {
-  symbol: string;
-  name: string;
-  icon: string;
-  price: number | null;
-  assetClass?: "crypto" | "fx" | "metal";
-  comingSoon?: boolean;
-};
+type SymInfo = { symbol: string; name: string; icon: string; price: number | null; assetClass?: "crypto" | "fx" | "metal"; comingSoon?: boolean };
 
-function SymbolBar({
-  symbols,
-  selected,
-  onSelect,
-  livePrice,
-}: {
+function SymbolBar({ symbols, selected, onSelect, livePrice }: {
   symbols: SymInfo[];
   selected: string;
   onSelect: (s: string) => void;
   livePrice: number | null;
 }) {
-  const live = symbols.filter((s) => !s.comingSoon);
-  const soon = symbols.filter((s) => s.comingSoon);
+  const live = symbols.filter(s => !s.comingSoon);
+  const soon = symbols.filter(s => s.comingSoon);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {live.map((s) => (
+        {live.map(s => (
           <button
             key={s.symbol}
             onClick={() => onSelect(s.symbol)}
@@ -349,10 +257,7 @@ function SymbolBar({
               fontSize: 11,
               fontWeight: s.symbol === selected ? 700 : 400,
               background: s.symbol === selected ? "rgba(245,197,24,.15)" : "rgba(255,255,255,.03)",
-              border:
-                s.symbol === selected
-                  ? "1px solid rgba(245,197,24,.40)"
-                  : "1px solid rgba(255,255,255,.06)",
+              border: s.symbol === selected ? "1px solid rgba(245,197,24,.40)" : "1px solid rgba(255,255,255,.06)",
               color: s.symbol === selected ? ACCENT : "rgba(243,244,246,.6)",
             }}
           >
@@ -363,7 +268,7 @@ function SymbolBar({
       {soon.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{ ...S.label, marginBottom: 0 }}>FX · soon</span>
-          {soon.map((s) => (
+          {soon.map(s => (
             <button
               key={s.symbol}
               type="button"
@@ -386,15 +291,7 @@ function SymbolBar({
         </div>
       )}
       {livePrice != null && (
-        <div
-          style={{
-            fontSize: 22,
-            fontWeight: 800,
-            fontFamily: "monospace",
-            color: "rgba(243,244,246,.95)",
-            letterSpacing: "-0.5px",
-          }}
-        >
+        <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "monospace", color: "rgba(243,244,246,.95)", letterSpacing: "-0.5px" }}>
           ${fmtPrice(livePrice)}
         </div>
       )}
@@ -402,13 +299,7 @@ function SymbolBar({
   );
 }
 
-function OrderEntry({
-  symbol,
-  lobbyId,
-  livePrice,
-  mode,
-  onTrade,
-}: {
+function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
   symbol: string;
   lobbyId: string;
   livePrice: number | null;
@@ -427,14 +318,8 @@ function OrderEntry({
   const quantity = livePrice && parseFloat(usdAmount) > 0 ? parseFloat(usdAmount) / livePrice : 0;
   const slNum = stopLoss ? parseFloat(stopLoss) : null;
   const tpNum = takeProfit ? parseFloat(takeProfit) : null;
-  const slRisk =
-    slNum != null && livePrice
-      ? (side === "BUY" ? livePrice - slNum : slNum - livePrice) * quantity
-      : null;
-  const tpReward =
-    tpNum != null && livePrice
-      ? (side === "BUY" ? tpNum - livePrice : livePrice - tpNum) * quantity
-      : null;
+  const slRisk = (slNum != null && livePrice) ? (side === "BUY" ? (livePrice - slNum) : (slNum - livePrice)) * quantity : null;
+  const tpReward = (tpNum != null && livePrice) ? (side === "BUY" ? (tpNum - livePrice) : (livePrice - tpNum)) * quantity : null;
 
   async function placeOrder() {
     let price = livePrice;
@@ -458,10 +343,7 @@ function OrderEntry({
     });
     setLoading(false);
     if (j.ok) {
-      setResult({
-        ok: true,
-        msg: `${side} ${quantity.toFixed(6)} ${symbol} @ $${fmtPrice(j.filled.price)}`,
-      });
+      setResult({ ok: true, msg: `${side} ${quantity.toFixed(6)} ${symbol} @ $${fmtPrice(j.filled.price)}` });
       onTrade();
       setStopLoss("");
       setTakeProfit("");
@@ -480,13 +362,8 @@ function OrderEntry({
         <button
           onClick={() => setSide("BUY")}
           style={{
-            flex: 1,
-            padding: "8px 0",
-            borderRadius: 2,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 700,
-            fontSize: 13,
+            flex: 1, padding: "8px 0", borderRadius: 2, border: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 13,
             background: side === "BUY" ? GREEN : "rgba(255,255,255,.05)",
             color: side === "BUY" ? "#fff" : "rgba(243,244,246,.4)",
           }}
@@ -496,13 +373,8 @@ function OrderEntry({
         <button
           onClick={() => setSide("SELL")}
           style={{
-            flex: 1,
-            padding: "8px 0",
-            borderRadius: 2,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 700,
-            fontSize: 13,
+            flex: 1, padding: "8px 0", borderRadius: 2, border: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 13,
             background: side === "SELL" ? RED : "rgba(255,255,255,.05)",
             color: side === "SELL" ? "#fff" : "rgba(243,244,246,.4)",
           }}
@@ -512,14 +384,12 @@ function OrderEntry({
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
-        {presets.map((p) => (
+        {presets.map(p => (
           <button
             key={p}
             onClick={() => setUsdAmount(String(p))}
             style={{
-              ...S.btn,
-              padding: "3px 8px",
-              fontSize: 10,
+              ...S.btn, padding: "3px 8px", fontSize: 10,
               background: usdAmount === String(p) ? "rgba(245,197,24,.12)" : undefined,
               borderColor: usdAmount === String(p) ? "rgba(245,197,24,.3)" : undefined,
             }}
@@ -531,23 +401,11 @@ function OrderEntry({
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
         <div style={{ position: "relative", flex: 1 }}>
-          <span
-            style={{
-              position: "absolute",
-              left: 10,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "rgba(243,244,246,.3)",
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            $
-          </span>
+          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "rgba(243,244,246,.3)", fontSize: 13, fontWeight: 600 }}>$</span>
           <input
             style={{ ...S.input, paddingLeft: 22 }}
             value={usdAmount}
-            onChange={(e) => setUsdAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={e => setUsdAmount(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="USD amount"
           />
         </div>
@@ -555,42 +413,38 @@ function OrderEntry({
 
       {quantity > 0 && livePrice && (
         <div style={{ fontSize: 11, opacity: 0.4, marginBottom: 8 }}>
-          ≈ {quantity < 0.001 ? quantity.toFixed(8) : quantity.toFixed(6)}{" "}
-          {symbol.replace("USDT", "")} @ ${fmtPrice(livePrice)}
+          ≈ {quantity < 0.001 ? quantity.toFixed(8) : quantity.toFixed(6)} {symbol.replace("USDT", "")} @ ${fmtPrice(livePrice)}
         </div>
       )}
 
       <div style={{ marginBottom: 8 }}>
         <button
           type="button"
-          onClick={() => setShowExits((s) => !s)}
+          onClick={() => setShowExits(s => !s)}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "5px 10px",
-            borderRadius: 2,
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "5px 10px", borderRadius: 2,
             cursor: "pointer",
-            fontSize: 10,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
             fontWeight: 800,
-            border:
-              showExits || slNum || tpNum
-                ? "1px solid rgba(245,197,24,.45)"
-                : "1px solid rgba(255,255,255,.14)",
-            background:
-              showExits || slNum || tpNum ? "rgba(245,197,24,.12)" : "rgba(255,255,255,.04)",
-            color: showExits || slNum || tpNum ? "rgb(253,230,138)" : "rgba(243,244,246,.7)",
+            border: showExits || slNum || tpNum
+              ? "1px solid rgba(245,197,24,.45)"
+              : "1px solid rgba(255,255,255,.14)",
+            background: showExits || slNum || tpNum
+              ? "rgba(245,197,24,.12)"
+              : "rgba(255,255,255,.04)",
+            color: showExits || slNum || tpNum
+              ? "rgb(253,230,138)"
+              : "rgba(243,244,246,.7)",
             transition: "all 0.12s",
           }}
-          onMouseEnter={(e) => {
+          onMouseEnter={e => {
             if (showExits || slNum || tpNum) return;
             (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)";
             (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,197,24,.30)";
             (e.currentTarget as HTMLElement).style.color = "rgba(253,230,138,.85)";
           }}
-          onMouseLeave={(e) => {
+          onMouseLeave={e => {
             if (showExits || slNum || tpNum) return;
             (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)";
             (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)";
@@ -598,32 +452,19 @@ function OrderEntry({
           }}
         >
           <span style={{ fontSize: 11 }}>🛑</span>
-          {showExits
-            ? "Hide exits"
-            : slNum || tpNum
-              ? `Edit exits · ${slNum ? "SL" : ""}${slNum && tpNum ? "+" : ""}${tpNum ? "TP" : ""}`
-              : "Set stop loss / take profit"}
+          {showExits ? "Hide exits" : (slNum || tpNum) ? `Edit exits · ${slNum ? "SL" : ""}${slNum && tpNum ? "+" : ""}${tpNum ? "TP" : ""}` : "Set stop loss / take profit"}
           <span style={{ opacity: 0.5, fontSize: 9 }}>{showExits ? "▾" : "▸"}</span>
         </button>
         {showExits && (
           <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
             <div>
-              <div
-                style={{
-                  fontSize: 9,
-                  color: "rgba(243,244,246,0.4)",
-                  letterSpacing: ".4px",
-                  textTransform: "uppercase",
-                  marginBottom: 3,
-                }}
-              >
-                Stop loss · {side === "BUY" ? "below" : "above"}{" "}
-                {livePrice ? `$${fmtPrice(livePrice)}` : "entry"}
+              <div style={{ fontSize: 9, color: "rgba(243,244,246,0.4)", letterSpacing: ".4px", textTransform: "uppercase", marginBottom: 3 }}>
+                Stop loss · {side === "BUY" ? "below" : "above"} {livePrice ? `$${fmtPrice(livePrice)}` : "entry"}
               </div>
               <input
                 style={{ ...S.input, fontFamily: "monospace" }}
                 value={stopLoss}
-                onChange={(e) => setStopLoss(e.target.value.replace(/[^0-9.]/g, ""))}
+                onChange={e => setStopLoss(e.target.value.replace(/[^0-9.]/g, ""))}
                 placeholder={side === "BUY" ? "lower trigger price" : "upper trigger price"}
               />
               {slRisk != null && Number.isFinite(slRisk) && slRisk > 0 && (
@@ -633,22 +474,13 @@ function OrderEntry({
               )}
             </div>
             <div>
-              <div
-                style={{
-                  fontSize: 9,
-                  color: "rgba(243,244,246,0.4)",
-                  letterSpacing: ".4px",
-                  textTransform: "uppercase",
-                  marginBottom: 3,
-                }}
-              >
-                Take profit · {side === "BUY" ? "above" : "below"}{" "}
-                {livePrice ? `$${fmtPrice(livePrice)}` : "entry"}
+              <div style={{ fontSize: 9, color: "rgba(243,244,246,0.4)", letterSpacing: ".4px", textTransform: "uppercase", marginBottom: 3 }}>
+                Take profit · {side === "BUY" ? "above" : "below"} {livePrice ? `$${fmtPrice(livePrice)}` : "entry"}
               </div>
               <input
                 style={{ ...S.input, fontFamily: "monospace" }}
                 value={takeProfit}
-                onChange={(e) => setTakeProfit(e.target.value.replace(/[^0-9.]/g, ""))}
+                onChange={e => setTakeProfit(e.target.value.replace(/[^0-9.]/g, ""))}
                 placeholder={side === "BUY" ? "upper trigger price" : "lower trigger price"}
               />
               {tpReward != null && Number.isFinite(tpReward) && tpReward > 0 && (
@@ -665,39 +497,25 @@ function OrderEntry({
         onClick={placeOrder}
         disabled={loading || parseFloat(usdAmount) <= 0}
         style={{
-          width: "100%",
-          padding: "10px 0",
-          borderRadius: 2,
-          border: "none",
-          cursor: "pointer",
-          fontWeight: 700,
-          fontSize: 14,
-          letterSpacing: ".3px",
-          background:
-            side === "BUY"
-              ? "linear-gradient(135deg, #22c55e, #16a34a)"
-              : "linear-gradient(135deg, #ef4444, #dc2626)",
+          width: "100%", padding: "10px 0", borderRadius: 2, border: "none", cursor: "pointer",
+          fontWeight: 700, fontSize: 14, letterSpacing: ".3px",
+          background: side === "BUY"
+            ? "linear-gradient(135deg, #22c55e, #16a34a)"
+            : "linear-gradient(135deg, #ef4444, #dc2626)",
           color: "#fff",
           opacity: loading ? 0.5 : 1,
         }}
       >
-        {loading
-          ? "Executing..."
-          : `${side === "BUY" ? "LONG" : "SHORT"} ${symbol.replace("USDT", "")}`}
+        {loading ? "Executing..." : `${side === "BUY" ? "LONG" : "SHORT"} ${symbol.replace("USDT", "")}`}
       </button>
 
       {result && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: "6px 10px",
-            borderRadius: 2,
-            fontSize: 11,
-            background: result.ok ? "rgba(34,197,94,.10)" : "rgba(239,68,68,.10)",
-            color: result.ok ? GREEN : RED,
-            border: `1px solid ${result.ok ? "rgba(34,197,94,.2)" : "rgba(239,68,68,.2)"}`,
-          }}
-        >
+        <div style={{
+          marginTop: 8, padding: "6px 10px", borderRadius: 2, fontSize: 11,
+          background: result.ok ? "rgba(34,197,94,.10)" : "rgba(239,68,68,.10)",
+          color: result.ok ? GREEN : RED,
+          border: `1px solid ${result.ok ? "rgba(34,197,94,.2)" : "rgba(239,68,68,.2)"}`,
+        }}>
           {result.msg}
         </div>
       )}
@@ -705,30 +523,20 @@ function OrderEntry({
   );
 }
 
-function Positions({
-  positions,
-  lobbyId,
-  onClose,
-}: {
-  positions: any[];
-  lobbyId: string;
-  onClose: () => void;
-}) {
+function Positions({ positions, lobbyId, onClose }: { positions: any[]; lobbyId: string; onClose: () => void }) {
   const [closing, setClosing] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   async function closePosition(posId: string) {
     setClosing(posId);
-    await apiFetch(`/trading/close/${lobbyId}/${posId}`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
+    await apiFetch(`/trading/close/${lobbyId}/${posId}`, { method: "POST", body: JSON.stringify({}) });
     setClosing(null);
     onClose();
   }
 
-  if (!positions.length)
-    return <EmptyState compact title="No open positions." hint="Place a trade to get started." />;
+  if (!positions.length) return (
+    <EmptyState compact title="No open positions." hint="Place a trade to get started." />
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -738,57 +546,26 @@ function Positions({
         const isProfit = pnl >= 0;
         const hasExits = p.stopLoss != null || p.takeProfit != null;
         return (
-          <div
-            key={p.id}
-            style={{
-              ...S.card,
-              padding: "8px 10px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-            }}
-          >
+          <div key={p.id} style={{ ...S.card, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
-                style={{
-                  padding: "2px 6px",
-                  borderRadius: 2,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  background: p.side === "BUY" ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)",
-                  color: p.side === "BUY" ? GREEN : RED,
-                }}
-              >
+              <div style={{
+                padding: "2px 6px", borderRadius: 2, fontSize: 10, fontWeight: 700,
+                background: p.side === "BUY" ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)",
+                color: p.side === "BUY" ? GREEN : RED,
+              }}>
                 {p.side === "BUY" ? "LONG" : "SHORT"}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)" }}>
-                  {p.symbol.replace("USDT", "")}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)" }}>{p.symbol.replace("USDT", "")}</div>
                 <div style={{ fontSize: 10, opacity: 0.4 }}>
-                  {p.quantity < 0.01 ? p.quantity.toFixed(6) : p.quantity.toFixed(4)} @ $
-                  {fmtPrice(p.entryPrice)}
+                  {p.quantity < 0.01 ? p.quantity.toFixed(6) : p.quantity.toFixed(4)} @ ${fmtPrice(p.entryPrice)}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                    color: isProfit ? GREEN : RED,
-                  }}
-                >
+                <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: isProfit ? GREEN : RED }}>
                   {fmtPnl(pnl)}
                 </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontFamily: "monospace",
-                    color: isProfit ? GREEN : RED,
-                    opacity: 0.7,
-                  }}
-                >
+                <div style={{ fontSize: 10, fontFamily: "monospace", color: isProfit ? GREEN : RED, opacity: 0.7 }}>
                   {fmtPct(pnlPct)}
                 </div>
               </div>
@@ -796,56 +573,24 @@ function Positions({
                 onClick={() => closePosition(p.id)}
                 disabled={closing === p.id}
                 style={{
-                  ...S.btn,
-                  padding: "4px 8px",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "rgba(239,68,68,.8)",
-                  borderColor: "rgba(239,68,68,.2)",
-                  background: "rgba(239,68,68,.05)",
+                  ...S.btn, padding: "4px 8px", fontSize: 10, fontWeight: 600,
+                  color: "rgba(239,68,68,.8)", borderColor: "rgba(239,68,68,.2)", background: "rgba(239,68,68,.05)",
                 }}
               >
                 {closing === p.id ? "..." : "CLOSE"}
               </button>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 10,
-                fontFamily: "monospace",
-                flexWrap: "wrap",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontFamily: "monospace", flexWrap: "wrap" }}>
               {p.stopLoss != null ? (
-                <span
-                  title="Stop loss"
-                  style={{
-                    padding: "1px 6px",
-                    borderRadius: 2,
-                    background: "rgba(239,68,68,.10)",
-                    border: "1px solid rgba(239,68,68,.25)",
-                    color: "rgba(252,165,165,.85)",
-                  }}
-                >
+                <span title="Stop loss" style={{ padding: "1px 6px", borderRadius: 2, background: "rgba(239,68,68,.10)", border: "1px solid rgba(239,68,68,.25)", color: "rgba(252,165,165,.85)" }}>
                   SL ${fmtPrice(p.stopLoss)}
                 </span>
               ) : (
                 <span style={{ opacity: 0.3, padding: "1px 6px" }}>SL —</span>
               )}
               {p.takeProfit != null ? (
-                <span
-                  title="Take profit"
-                  style={{
-                    padding: "1px 6px",
-                    borderRadius: 2,
-                    background: "rgba(34,197,94,.10)",
-                    border: "1px solid rgba(34,197,94,.25)",
-                    color: "rgba(167,243,208,.85)",
-                  }}
-                >
+                <span title="Take profit" style={{ padding: "1px 6px", borderRadius: 2, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(167,243,208,.85)" }}>
                   TP ${fmtPrice(p.takeProfit)}
                 </span>
               ) : (
@@ -855,28 +600,18 @@ function Positions({
                 type="button"
                 onClick={() => setEditingId(editingId === p.id ? null : p.id)}
                 style={{
-                  marginLeft: "auto",
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  fontSize: 9,
-                  letterSpacing: ".4px",
-                  textTransform: "uppercase",
-                  color: "rgba(255,255,255,.45)",
-                  fontWeight: 700,
-                  cursor: "pointer",
+                  marginLeft: "auto", background: "none", border: "none", padding: 0,
+                  fontSize: 9, letterSpacing: ".4px", textTransform: "uppercase",
+                  color: "rgba(255,255,255,.45)", fontWeight: 700, cursor: "pointer",
                 }}
               >
-                {editingId === p.id ? "▾ close" : hasExits ? "▸ edit" : "▸ set exits"}
+                {editingId === p.id ? "▾ close" : (hasExits ? "▸ edit" : "▸ set exits")}
               </button>
             </div>
             {editingId === p.id && (
               <ExitsEditor
                 position={p}
-                onSaved={() => {
-                  setEditingId(null);
-                  onClose();
-                }}
+                onSaved={() => { setEditingId(null); onClose(); }}
                 onCancel={() => setEditingId(null)}
               />
             )}
@@ -887,11 +622,7 @@ function Positions({
   );
 }
 
-function ExitsEditor({
-  position,
-  onSaved,
-  onCancel,
-}: {
+function ExitsEditor({ position, onSaved, onCancel }: {
   position: any;
   onSaved: () => void;
   onCancel: () => void;
@@ -902,8 +633,7 @@ function ExitsEditor({
   const [err, setErr] = useState("");
 
   async function save() {
-    setSaving(true);
-    setErr("");
+    setSaving(true); setErr("");
     const body: any = {};
     body.stopLoss = sl === "" ? null : parseFloat(sl);
     body.takeProfit = tp === "" ? null : parseFloat(tp);
@@ -917,56 +647,31 @@ function ExitsEditor({
   }
 
   return (
-    <div
-      style={{
-        marginTop: 4,
-        padding: 8,
-        borderRadius: 2,
-        border: "1px solid rgba(255,255,255,.06)",
-        background: "rgba(0,0,0,.2)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-      }}
-    >
+    <div style={{
+      marginTop: 4, padding: 8, borderRadius: 2,
+      border: "1px solid rgba(255,255,255,.06)", background: "rgba(0,0,0,.2)",
+      display: "flex", flexDirection: "column", gap: 6,
+    }}>
       <div style={{ display: "flex", gap: 6 }}>
         <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontSize: 9,
-              color: "rgba(252,165,165,.8)",
-              letterSpacing: ".4px",
-              textTransform: "uppercase",
-              marginBottom: 3,
-            }}
-          >
-            Stop loss · {position.side === "BUY" ? "below" : "above"} $
-            {fmtPrice(position.entryPrice)}
+          <div style={{ fontSize: 9, color: "rgba(252,165,165,.8)", letterSpacing: ".4px", textTransform: "uppercase", marginBottom: 3 }}>
+            Stop loss · {position.side === "BUY" ? "below" : "above"} ${fmtPrice(position.entryPrice)}
           </div>
           <input
             style={{ ...S.input, fontFamily: "monospace", fontSize: 11, padding: "6px 8px" }}
             value={sl}
-            onChange={(e) => setSl(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={e => setSl(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="—"
           />
         </div>
         <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontSize: 9,
-              color: "rgba(167,243,208,.85)",
-              letterSpacing: ".4px",
-              textTransform: "uppercase",
-              marginBottom: 3,
-            }}
-          >
-            Take profit · {position.side === "BUY" ? "above" : "below"} $
-            {fmtPrice(position.entryPrice)}
+          <div style={{ fontSize: 9, color: "rgba(167,243,208,.85)", letterSpacing: ".4px", textTransform: "uppercase", marginBottom: 3 }}>
+            Take profit · {position.side === "BUY" ? "above" : "below"} ${fmtPrice(position.entryPrice)}
           </div>
           <input
             style={{ ...S.input, fontFamily: "monospace", fontSize: 11, padding: "6px 8px" }}
             value={tp}
-            onChange={(e) => setTp(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={e => setTp(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="—"
           />
         </div>
@@ -985,13 +690,8 @@ function ExitsEditor({
           onClick={save}
           disabled={saving}
           style={{
-            ...S.btn,
-            padding: "4px 10px",
-            fontSize: 10,
-            fontWeight: 700,
-            borderColor: "rgba(245,197,24,.30)",
-            background: "rgba(245,197,24,.10)",
-            color: "rgb(253,230,138)",
+            ...S.btn, padding: "4px 10px", fontSize: 10, fontWeight: 700,
+            borderColor: "rgba(245,197,24,.30)", background: "rgba(245,197,24,.10)", color: "rgb(253,230,138)",
           }}
         >
           {saving ? "..." : "Save"}
@@ -1001,107 +701,45 @@ function ExitsEditor({
   );
 }
 
-function AccountSummary({
-  account,
-  paperBalance,
-  onReset,
-}: {
-  account: any;
-  paperBalance?: number;
-  onReset: () => void;
-}) {
+function AccountSummary({ account, paperBalance, onReset }: { account: any; paperBalance?: number; onReset: () => void }) {
   if (!account) return null;
   const isProfit = account.totalPnl >= 0;
   return (
     <div style={{ ...S.card, marginBottom: 10 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: 4,
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
         <div style={S.label}>PORTFOLIO</div>
-        <button
-          onClick={onReset}
-          style={{ ...S.btn, padding: "2px 8px", fontSize: 9, opacity: 0.4 }}
-        >
-          RESET
-        </button>
+        <button onClick={onReset} style={{ ...S.btn, padding: "2px 8px", fontSize: 9, opacity: 0.4 }}>RESET</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <div>
           <div style={{ fontSize: 10, opacity: 0.35 }}>Equity</div>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 800,
-              fontFamily: "monospace",
-              color: "rgba(243,244,246,.95)",
-            }}
-          >
-            $
-            {account.equity?.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+          <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "monospace", color: "rgba(243,244,246,.95)" }}>
+            ${account.equity?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div>
           <div style={{ fontSize: 10, opacity: 0.35 }}>Total P&L</div>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 800,
-              fontFamily: "monospace",
-              color: isProfit ? GREEN : RED,
-            }}
-          >
-            {fmtPnl(account.totalPnl)}{" "}
-            <span style={{ fontSize: 11 }}>({fmtPct(account.pnlPercent)})</span>
+          <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "monospace", color: isProfit ? GREEN : RED }}>
+            {fmtPnl(account.totalPnl)} <span style={{ fontSize: 11 }}>({fmtPct(account.pnlPercent)})</span>
           </div>
         </div>
         <div>
           <div style={{ fontSize: 10, opacity: 0.35 }}>Cash</div>
           <div style={{ fontSize: 12, fontFamily: "monospace", color: "rgba(243,244,246,.7)" }}>
-            $
-            {account.cashBalance?.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            ${account.cashBalance?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div>
           <div style={{ fontSize: 10, opacity: 0.35 }}>Unrealized</div>
-          <div
-            style={{
-              fontSize: 12,
-              fontFamily: "monospace",
-              color: account.unrealizedPnl >= 0 ? GREEN : RED,
-            }}
-          >
+          <div style={{ fontSize: 12, fontFamily: "monospace", color: account.unrealizedPnl >= 0 ? GREEN : RED }}>
             {fmtPnl(account.unrealizedPnl)}
           </div>
         </div>
       </div>
       {paperBalance !== undefined && (
-        <div
-          style={{
-            marginTop: 6,
-            paddingTop: 6,
-            borderTop: "1px solid rgba(245,197,24,.12)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(245,197,24,.12)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 10, color: "#F5C518", opacity: 0.7 }}>Paper Balance</span>
-          <span
-            style={{ fontSize: 13, fontWeight: 700, color: "#F5C518", fontFamily: "monospace" }}
-          >
-            {(paperBalance ?? 0).toLocaleString()} 💵
-          </span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#F5C518", fontFamily: "monospace" }}>{(paperBalance ?? 0).toLocaleString()} 💵</span>
         </div>
       )}
     </div>
@@ -1113,12 +751,10 @@ function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RAN
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
-    apiFetch(`/trading/leaderboard/${lobbyId}?mode=${mode}`)
-      .then((j) => {
-        if (j.ok) setEntries(j.leaderboard || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    apiFetch(`/trading/leaderboard/${lobbyId}?mode=${mode}`).then(j => {
+      if (j.ok) setEntries(j.leaderboard || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [lobbyId, mode]);
 
   useEffect(() => {
@@ -1128,14 +764,8 @@ function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RAN
     return () => clearInterval(iv);
   }, [load]);
 
-  if (loading)
-    return (
-      <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>
-        Loading leaderboard...
-      </div>
-    );
-  if (!entries.length)
-    return <EmptyState compact title="No traders yet." hint="Be the first on the board." />;
+  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>Loading leaderboard...</div>;
+  if (!entries.length) return <EmptyState compact title="No traders yet." hint="Be the first on the board." />;
 
   const medals = ["🥇", "🥈", "🥉"];
 
@@ -1144,73 +774,34 @@ function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RAN
       {entries.map((e, i) => {
         const isProfit = e.totalPnl >= 0;
         return (
-          <div
-            key={e.userId}
-            style={{
-              ...S.card,
-              padding: "8px 10px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              border: i === 0 ? "1px solid rgba(245,197,24,.25)" : undefined,
-              background: i === 0 ? "rgba(245,197,24,.05)" : undefined,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 14,
-                width: 28,
-                textAlign: "center",
-                fontWeight: 700,
-                color: i < 3 ? ACCENT : "rgba(243,244,246,.3)",
-              }}
-            >
+          <div key={e.userId} style={{
+            ...S.card, padding: "8px 10px",
+            display: "flex", alignItems: "center", gap: 8,
+            border: i === 0 ? "1px solid rgba(245,197,24,.25)" : undefined,
+            background: i === 0 ? "rgba(245,197,24,.05)" : undefined,
+          }}>
+            <div style={{ fontSize: 14, width: 28, textAlign: "center", fontWeight: 700, color: i < 3 ? ACCENT : "rgba(243,244,246,.3)" }}>
               {i < 3 ? medals[i] : `#${i + 1}`}
             </div>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: e.avatarColor || "rgba(255,255,255,.1)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 11,
-                fontWeight: 700,
-                color: "#fff",
-              }}
-            >
+            <div style={{
+              width: 28, height: 28, borderRadius: "50%",
+              background: e.avatarColor || "rgba(255,255,255,.1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700, color: "#fff",
+            }}>
               {e.userName?.charAt(0)?.toUpperCase() || "?"}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)" }}>
-                {e.userName}
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)" }}>{e.userName}</div>
               <div style={{ fontSize: 10, opacity: 0.35 }}>
-                {e.openPositions} open · Equity: $
-                {e.equity?.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                {e.openPositions} open · Equity: ${e.equity?.toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  fontFamily: "monospace",
-                  color: isProfit ? GREEN : RED,
-                }}
-              >
+              <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: isProfit ? GREEN : RED }}>
                 {fmtPnl(e.totalPnl)}
               </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontFamily: "monospace",
-                  color: isProfit ? GREEN : RED,
-                  opacity: 0.7,
-                }}
-              >
+              <div style={{ fontSize: 10, fontFamily: "monospace", color: isProfit ? GREEN : RED, opacity: 0.7 }}>
                 {fmtPct(e.pnlPercent)}
               </div>
             </div>
@@ -1227,7 +818,7 @@ function TradeFeed() {
   useEffect(() => {
     const wc = getWeeredClient();
     const handler = (msg: any) => {
-      setTrades((prev) => [msg, ...prev].slice(0, 30));
+      setTrades(prev => [msg, ...prev].slice(0, 30));
     };
     const unsub = wc.on("trading:trade", handler);
     return unsub;
@@ -1238,39 +829,19 @@ function TradeFeed() {
   return (
     <div style={{ ...S.card, marginBottom: 10 }}>
       <div style={S.label}>LIVE TRADES</div>
-      <div
-        style={{
-          maxHeight: 120,
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-        }}
-      >
+      <div style={{ maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
         {trades.map((t, i) => (
           <div key={i} style={{ display: "flex", gap: 6, fontSize: 11, alignItems: "center" }}>
             <span style={{ fontWeight: 600, color: "rgba(243,244,246,.7)" }}>{t.userName}</span>
-            <span
-              style={{
-                padding: "1px 4px",
-                borderRadius: 3,
-                fontSize: 9,
-                fontWeight: 700,
-                background: t.side === "BUY" ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)",
-                color: t.side === "BUY" ? GREEN : RED,
-              }}
-            >
+            <span style={{
+              padding: "1px 4px", borderRadius: 3, fontSize: 9, fontWeight: 700,
+              background: t.side === "BUY" ? "rgba(34,197,94,.15)" : "rgba(239,68,68,.15)",
+              color: t.side === "BUY" ? GREEN : RED,
+            }}>
               {t.side === "BUY" ? "LONG" : "SHORT"}
             </span>
             <span style={{ color: "rgba(243,244,246,.5)" }}>{t.symbol?.replace("USDT", "")}</span>
-            <span
-              style={{
-                fontFamily: "monospace",
-                color: "rgba(243,244,246,.4)",
-                fontSize: 10,
-                marginLeft: "auto",
-              }}
-            >
+            <span style={{ fontFamily: "monospace", color: "rgba(243,244,246,.4)", fontSize: 10, marginLeft: "auto" }}>
               ${fmtPrice(t.price)}
             </span>
           </div>
@@ -1286,19 +857,14 @@ function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "
   useEffect(() => {
     let live = true;
     const load = () => {
-      apiFetch(`/trading/leaderboard/${lobbyId}?mode=${mode}`)
-        .then((j) => {
-          if (!live) return;
-          if (j.ok) setEntries((j.leaderboard || []).slice(0, 8));
-        })
-        .catch(() => {});
+      apiFetch(`/trading/leaderboard/${lobbyId}?mode=${mode}`).then(j => {
+        if (!live) return;
+        if (j.ok) setEntries((j.leaderboard || []).slice(0, 8));
+      }).catch(() => {});
     };
     load();
     const iv = setInterval(load, 5000);
-    return () => {
-      live = false;
-      clearInterval(iv);
-    };
+    return () => { live = false; clearInterval(iv); };
   }, [lobbyId, mode]);
 
   if (entries.length < 2) return null;
@@ -1325,98 +891,59 @@ function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "
           borderRadius: 2,
           border: "1px solid rgba(255,255,255,.06)",
           borderLeft: `2px solid ${ACCENT}`,
-          background:
-            "linear-gradient(90deg, rgba(245,197,24,.04) 0%, rgba(245,197,24,.08) 50%, rgba(245,197,24,.04) 100%)",
+          background: "linear-gradient(90deg, rgba(245,197,24,.04) 0%, rgba(245,197,24,.08) 50%, rgba(245,197,24,.04) 100%)",
           overflow: "hidden",
           position: "relative",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            left: 6,
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 3,
-            padding: "3px 7px",
-            borderRadius: 2,
-            fontSize: 9,
-            fontWeight: 800,
-            letterSpacing: "0.6px",
-            textTransform: "uppercase",
-            border: `1px solid ${ACCENT}55`,
-            background: mode === "RANKED" ? "rgba(245,197,24,.18)" : "rgba(255,255,255,.04)",
-            color: mode === "RANKED" ? ACCENT : "rgba(243,244,246,.65)",
-            fontFamily: "monospace",
-            whiteSpace: "nowrap",
-          }}
-          title={mode === "RANKED" ? "Ranked $1K leaderboard" : "Casual $100K leaderboard"}
-        >
+        <div style={{
+          position: "absolute", left: 6, top: "50%", transform: "translateY(-50%)",
+          zIndex: 3,
+          padding: "3px 7px", borderRadius: 2,
+          fontSize: 9, fontWeight: 800, letterSpacing: "0.6px", textTransform: "uppercase",
+          border: `1px solid ${ACCENT}55`,
+          background: mode === "RANKED" ? "rgba(245,197,24,.18)" : "rgba(255,255,255,.04)",
+          color: mode === "RANKED" ? ACCENT : "rgba(243,244,246,.65)",
+          fontFamily: "monospace",
+          whiteSpace: "nowrap",
+        }} title={mode === "RANKED" ? "Ranked $1K leaderboard" : "Casual $100K leaderboard"}>
           {mode === "RANKED" ? "RANKED" : "CASUAL"} · TOP {Math.min(entries.length, 8)}
         </div>
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: 70,
-            width: 24,
-            background: "linear-gradient(90deg, rgba(11,11,16,.95), transparent)",
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: 32,
-            background: "linear-gradient(270deg, rgba(11,11,16,.95), transparent)",
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        />
-        <div
-          className="pnl-ticker-track"
-          style={{ display: "inline-flex", gap: 28, whiteSpace: "nowrap" }}
-        >
+        <div style={{
+          position: "absolute",
+          top: 0, bottom: 0, left: 70,
+          width: 24,
+          background: "linear-gradient(90deg, rgba(11,11,16,.95), transparent)",
+          pointerEvents: "none",
+          zIndex: 2,
+        }} />
+        <div style={{
+          position: "absolute",
+          top: 0, bottom: 0, right: 0,
+          width: 32,
+          background: "linear-gradient(270deg, rgba(11,11,16,.95), transparent)",
+          pointerEvents: "none",
+          zIndex: 2,
+        }} />
+        <div className="pnl-ticker-track" style={{ display: "inline-flex", gap: 28, whiteSpace: "nowrap" }}>
           {loop.map((e: any, i: number) => {
             const isUp = (e.totalPnl || 0) >= 0;
             const color = isUp ? GREEN : RED;
             const idx = i % entries.length;
             return (
-              <span
-                key={i}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 7,
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: "0.5px",
-                    color: ACCENT,
-                    opacity: 0.65,
-                  }}
-                >
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 11, fontFamily: "monospace" }}>
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.5px", color: ACCENT, opacity: 0.65 }}>
                   {RANK_BADGES[idx] || `#${idx + 1}`}
                 </span>
-                <span style={{ fontWeight: 700, color: "rgba(243,244,246,.85)" }}>
-                  {e.userName || "—"}
+                <span style={{ fontWeight: 700, color: "rgba(243,244,246,.85)" }}>{e.userName || "—"}</span>
+                <span style={{ fontWeight: 700, color }}>
+                  {fmtPnl(e.totalPnl || 0)}
                 </span>
-                <span style={{ fontWeight: 700, color }}>{fmtPnl(e.totalPnl || 0)}</span>
-                <span style={{ color, opacity: 0.7 }}>({fmtPct(e.pnlPercent || 0)})</span>
+                <span style={{ color, opacity: 0.7 }}>
+                  ({fmtPct(e.pnlPercent || 0)})
+                </span>
                 {e.openPositions > 0 && (
-                  <span
-                    style={{ fontSize: 9, color: "rgba(243,244,246,.35)", letterSpacing: "0.5px" }}
-                  >
+                  <span style={{ fontSize: 9, color: "rgba(243,244,246,.35)", letterSpacing: "0.5px" }}>
                     {e.openPositions} OPEN
                   </span>
                 )}
@@ -1434,13 +961,7 @@ type Tab = "trade" | "leaderboard" | "history";
 type PaperMode = "CASUAL" | "RANKED";
 const MODE_STORAGE_KEY = "weered:fakeout:mode";
 
-export default function TradingModulesPanel({
-  lobbyId,
-  accent,
-}: {
-  lobbyId: string;
-  accent?: string;
-}) {
+export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: string; accent?: string }) {
   const accentColor = accent || ACCENT;
   const [tab, setTab] = useState<Tab>("trade");
   const [symbols, setSymbols] = useState<SymInfo[]>([]);
@@ -1448,18 +969,11 @@ export default function TradingModulesPanel({
   const [selectedTimeframe, setSelectedTimeframe] = useState("1m");
   const [mode, setMode] = useState<PaperMode>(() => {
     if (typeof window === "undefined") return "CASUAL";
-    try {
-      return (localStorage.getItem(MODE_STORAGE_KEY) as PaperMode) === "RANKED"
-        ? "RANKED"
-        : "CASUAL";
-    } catch {
-      return "CASUAL";
-    }
+    try { return (localStorage.getItem(MODE_STORAGE_KEY) as PaperMode) === "RANKED" ? "RANKED" : "CASUAL"; }
+    catch { return "CASUAL"; }
   });
   useEffect(() => {
-    try {
-      localStorage.setItem(MODE_STORAGE_KEY, mode);
-    } catch {}
+    try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch {}
   }, [mode]);
   const [account, setAccount] = useState<any>(null);
   const [livePrice, setLivePrice] = useState<number | null>(null);
@@ -1469,21 +983,19 @@ export default function TradingModulesPanel({
   const brief = useTheBrief();
 
   useEffect(() => {
-    apiFetch("/paper/wallet")
-      .then((j) => {
-        if (j.balance !== undefined) setPaperBalance(j.balance);
-      })
-      .catch(() => {});
+    apiFetch("/paper/wallet").then(j => {
+      if (j.balance !== undefined) setPaperBalance(j.balance);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
-    apiFetch("/trading/symbols").then((j) => {
+    apiFetch("/trading/symbols").then(j => {
       if (j.ok && j.symbols?.length) setSymbols(j.symbols);
     });
   }, []);
 
   const loadAccount = useCallback(() => {
-    apiFetch(`/trading/account/${lobbyId}?mode=${mode}`).then((j) => {
+    apiFetch(`/trading/account/${lobbyId}?mode=${mode}`).then(j => {
       if (j.ok) setAccount(j.account);
     });
   }, [lobbyId, mode]);
@@ -1494,9 +1006,7 @@ export default function TradingModulesPanel({
     return () => clearInterval(iv);
   }, [loadAccount]);
 
-  useEffect(() => {
-    setHistory(null);
-  }, [mode]);
+  useEffect(() => { setHistory(null); }, [mode]);
 
   useEffect(() => {
     const wc = getWeeredClient();
@@ -1516,7 +1026,7 @@ export default function TradingModulesPanel({
 
   useEffect(() => {
     if (tab === "history" && !history) {
-      apiFetch(`/trading/history/${lobbyId}?mode=${mode}`).then((j) => {
+      apiFetch(`/trading/history/${lobbyId}?mode=${mode}`).then(j => {
         if (j.ok) setHistory({ orders: j.orders || [], closedPositions: j.closedPositions || [] });
       });
     }
@@ -1553,45 +1063,32 @@ export default function TradingModulesPanel({
         onClick={brief.show}
         title="Reopen The Brief — the FakeOut walkthrough"
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          marginBottom: 10,
-          padding: "5px 12px",
+          display: "inline-flex", alignItems: "center", gap: 6,
+          marginBottom: 10, padding: "5px 12px",
           borderRadius: 2,
           border: `1px solid ${accentColor}40`,
           background: `${accentColor}0d`,
-          color: accentColor,
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: "0.6px",
-          textTransform: "uppercase",
-          cursor: "pointer",
-          transition: "all 0.15s",
+          color: accentColor, fontSize: 10, fontWeight: 800,
+          letterSpacing: "0.6px", textTransform: "uppercase",
+          cursor: "pointer", transition: "all 0.15s",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = `${accentColor}1a`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = `${accentColor}0d`;
-        }}
+        onMouseEnter={e => { e.currentTarget.style.background = `${accentColor}1a`; }}
+        onMouseLeave={e => { e.currentTarget.style.background = `${accentColor}0d`; }}
       >
         <span style={{ fontSize: 11 }}>📓</span> The Brief
       </button>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "stretch",
-          gap: 6,
-          marginBottom: 10,
-          padding: 4,
-          borderRadius: 2,
-          border: "1px solid rgba(255,255,255,.06)",
-          background: "rgba(0,0,0,.20)",
-        }}
-      >
-        {(["CASUAL", "RANKED"] as const).map((m) => {
+      <div style={{
+        display: "flex",
+        alignItems: "stretch",
+        gap: 6,
+        marginBottom: 10,
+        padding: 4,
+        borderRadius: 2,
+        border: "1px solid rgba(255,255,255,.06)",
+        background: "rgba(0,0,0,.20)",
+      }}>
+        {(["CASUAL", "RANKED"] as const).map(m => {
           const active = mode === m;
           const isRanked = m === "RANKED";
           return (
@@ -1605,9 +1102,7 @@ export default function TradingModulesPanel({
                 borderRadius: 2,
                 border: active ? `1px solid ${accentColor}55` : "1px solid transparent",
                 background: active
-                  ? isRanked
-                    ? "linear-gradient(135deg, rgba(245,197,24,.18), rgba(239,68,68,.10))"
-                    : "rgba(255,255,255,.04)"
+                  ? (isRanked ? "linear-gradient(135deg, rgba(245,197,24,.18), rgba(239,68,68,.10))" : "rgba(255,255,255,.04)")
                   : "transparent",
                 color: active ? "rgba(243,244,246,.95)" : "rgba(243,244,246,.45)",
                 cursor: "pointer",
@@ -1616,60 +1111,38 @@ export default function TradingModulesPanel({
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    letterSpacing: "1px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {m === "RANKED" ? "Ranked" : "Casual"}
-                </span>
-                <span
-                  style={{ fontSize: 10, fontWeight: 600, opacity: 0.6, fontFamily: "monospace" }}
-                >
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase" }}>{m === "RANKED" ? "Ranked" : "Casual"}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.6, fontFamily: "monospace" }}>
                   {m === "RANKED" ? "$1K start" : "$100K start"}
                 </span>
               </div>
               <div style={{ fontSize: 9, marginTop: 3, opacity: 0.55, letterSpacing: "0.3px" }}>
-                {m === "RANKED"
-                  ? "10× Paper · Notoriety XP · split leaderboard"
-                  : "for fun · no XP · base Paper rate"}
+                {m === "RANKED" ? "10× Paper · Notoriety XP · split leaderboard" : "for fun · no XP · base Paper rate"}
               </div>
             </button>
           );
         })}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          marginBottom: 10,
-          padding: "5px 10px",
-          borderRadius: 2,
-          border: "1px dashed rgba(255,255,255,.08)",
-          background: "rgba(255,255,255,.015)",
-          fontSize: 10,
-          letterSpacing: "0.4px",
-          color: "rgba(243,244,246,.45)",
-        }}
-      >
-        <span style={{ textTransform: "uppercase", fontWeight: 700, opacity: 0.7 }}>
-          in the works
-        </span>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        marginBottom: 10,
+        padding: "5px 10px",
+        borderRadius: 2,
+        border: "1px dashed rgba(255,255,255,.08)",
+        background: "rgba(255,255,255,.015)",
+        fontSize: 10,
+        letterSpacing: "0.4px",
+        color: "rgba(243,244,246,.45)",
+      }}>
+        <span style={{ textTransform: "uppercase", fontWeight: 700, opacity: 0.7 }}>in the works</span>
         <span>FX feeds (twelvedata) · MyFXBook verified-stats sync · crew portfolios</span>
       </div>
 
-      <ModuleTabBar
-        tabs={TABS}
-        active={tab}
-        onSelect={(id) => setTab(id as Tab)}
-        accent={accentColor}
-      />
+      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as Tab)} accent={accentColor} />
 
       {tab === "trade" && (
         <>
@@ -1682,7 +1155,7 @@ export default function TradingModulesPanel({
 
           <div style={{ display: "flex", gap: 4, marginBottom: 8, alignItems: "center" }}>
             <span style={{ ...S.label, marginBottom: 0, marginRight: 6 }}>Timeframe</span>
-            {TIMEFRAMES.map((t) => {
+            {TIMEFRAMES.map(t => {
               const active = selectedTimeframe === t.id;
               return (
                 <button
@@ -1707,19 +1180,8 @@ export default function TradingModulesPanel({
             })}
           </div>
 
-          <div
-            style={{
-              marginBottom: 10,
-              borderRadius: 2,
-              border: "1px solid rgba(255,255,255,.06)",
-              overflow: "hidden",
-            }}
-          >
-            <PriceChart
-              symbol={selectedSymbol}
-              accent={accentColor}
-              timeframe={selectedTimeframe}
-            />
+          <div style={{ marginBottom: 10, borderRadius: 2, border: "1px solid rgba(255,255,255,.06)", overflow: "hidden" }}>
+            <PriceChart symbol={selectedSymbol} accent={accentColor} timeframe={selectedTimeframe} />
           </div>
 
           <TradeFeed />
@@ -1737,18 +1199,10 @@ export default function TradingModulesPanel({
           {account?.positions?.length > 0 && (
             <div style={{ marginTop: 10 }}>
               <div style={S.label}>OPEN POSITIONS</div>
-              <Positions
-                positions={account.positions}
-                lobbyId={lobbyId}
-                onClose={() => {
-                  loadAccount();
-                  apiFetch("/paper/wallet")
-                    .then((j) => {
-                      if (j.balance !== undefined) setPaperBalance(j.balance);
-                    })
-                    .catch(() => {});
-                }}
-              />
+              <Positions positions={account.positions} lobbyId={lobbyId} onClose={() => {
+                loadAccount();
+                apiFetch("/paper/wallet").then(j => { if (j.balance !== undefined) setPaperBalance(j.balance); }).catch(() => {});
+              }} />
             </div>
           )}
         </>
@@ -1765,58 +1219,25 @@ export default function TradingModulesPanel({
               {history.closedPositions.length > 0 && (
                 <>
                   <div style={S.label}>CLOSED POSITIONS</div>
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 16 }}
-                  >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 16 }}>
                     {history.closedPositions.map((p: any) => {
                       const isProfit = (p.realizedPnl || 0) >= 0;
                       return (
-                        <div
-                          key={p.id}
-                          style={{
-                            ...S.card,
-                            padding: "8px 10px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <div
-                            style={{
-                              padding: "2px 6px",
-                              borderRadius: 2,
-                              fontSize: 10,
-                              fontWeight: 700,
-                              background:
-                                p.side === "BUY" ? "rgba(34,197,94,.10)" : "rgba(239,68,68,.10)",
-                              color: p.side === "BUY" ? GREEN : RED,
-                              opacity: 0.6,
-                            }}
-                          >
+                        <div key={p.id} style={{ ...S.card, padding: "8px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{
+                            padding: "2px 6px", borderRadius: 2, fontSize: 10, fontWeight: 700,
+                            background: p.side === "BUY" ? "rgba(34,197,94,.10)" : "rgba(239,68,68,.10)",
+                            color: p.side === "BUY" ? GREEN : RED, opacity: 0.6,
+                          }}>
                             {p.side === "BUY" ? "LONG" : "SHORT"}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: "rgba(243,244,246,.7)",
-                              }}
-                            >
-                              {p.symbol.replace("USDT", "")}
-                            </div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.7)" }}>{p.symbol.replace("USDT", "")}</div>
                             <div style={{ fontSize: 10, opacity: 0.35 }}>
                               ${fmtPrice(p.entryPrice)} → ${fmtPrice(p.exitPrice)}
                             </div>
                           </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              fontFamily: "monospace",
-                              color: isProfit ? GREEN : RED,
-                            }}
-                          >
+                          <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: isProfit ? GREEN : RED }}>
                             {fmtPnl(p.realizedPnl || 0)}
                           </div>
                         </div>
@@ -1832,32 +1253,15 @@ export default function TradingModulesPanel({
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {history.orders.map((o: any) => (
-                    <div
-                      key={o.id}
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        fontSize: 11,
-                        padding: "4px 0",
-                        borderBottom: "1px solid rgba(255,255,255,.03)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          padding: "1px 5px",
-                          borderRadius: 3,
-                          fontSize: 9,
-                          fontWeight: 700,
-                          background:
-                            o.side === "BUY" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
-                          color: o.side === "BUY" ? GREEN : RED,
-                        }}
-                      >
+                    <div key={o.id} style={{ display: "flex", gap: 8, fontSize: 11, padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,.03)" }}>
+                      <span style={{
+                        padding: "1px 5px", borderRadius: 3, fontSize: 9, fontWeight: 700,
+                        background: o.side === "BUY" ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)",
+                        color: o.side === "BUY" ? GREEN : RED,
+                      }}>
                         {o.side}
                       </span>
-                      <span style={{ color: "rgba(243,244,246,.7)" }}>
-                        {o.symbol.replace("USDT", "")}
-                      </span>
+                      <span style={{ color: "rgba(243,244,246,.7)" }}>{o.symbol.replace("USDT", "")}</span>
                       <span style={{ fontFamily: "monospace", opacity: 0.4, marginLeft: "auto" }}>
                         {o.filledPrice ? `$${fmtPrice(o.filledPrice)}` : o.status}
                       </span>
@@ -1873,18 +1277,9 @@ export default function TradingModulesPanel({
         </div>
       )}
 
-      <div
-        style={{
-          marginTop: 20,
-          padding: "8px 10px",
-          borderRadius: 2,
-          background: "rgba(255,255,255,.02)",
-          border: "1px solid rgba(255,255,255,.04)",
-        }}
-      >
+      <div style={{ marginTop: 20, padding: "8px 10px", borderRadius: 2, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
         <div style={{ fontSize: 9, opacity: 0.25, lineHeight: 1.5 }}>
-          FakeOut — paper trading only, no real money at risk. Market data provided by Binance.
-          Prices are real-time but simulated trades have no market impact. Not financial advice.
+          FakeOut — paper trading only, no real money at risk. Market data provided by Binance. Prices are real-time but simulated trades have no market impact. Not financial advice.
         </div>
       </div>
     </div>

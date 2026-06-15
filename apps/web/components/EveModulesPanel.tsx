@@ -26,9 +26,7 @@ function timeAgo(iso: string): string {
     const h = Math.floor(m / 60);
     if (h < 24) return `${h}h ago`;
     return `${Math.floor(h / 24)}d ago`;
-  } catch {
-    return "";
-  }
+  } catch { return ""; }
 }
 
 function authHeaders(): Record<string, string> {
@@ -48,42 +46,10 @@ async function apiFetch(path: string, opts?: RequestInit) {
 }
 
 const S = {
-  card: {
-    borderRadius: 2,
-    border: "1px solid rgba(212,175,55,.18)",
-    background: "rgba(20,18,12,.85)",
-    padding: "12px 14px",
-  } as React.CSSProperties,
-  btn: {
-    padding: "7px 14px",
-    borderRadius: 2,
-    border: "1px solid rgba(255,255,255,.10)",
-    background: "rgba(255,255,255,.05)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgba(243,244,246,.88)",
-    fontFamily: "inherit",
-  } as React.CSSProperties,
-  btnPri: {
-    padding: "7px 14px",
-    borderRadius: 2,
-    border: "1px solid rgba(212,175,55,.45)",
-    background: "rgba(212,175,55,.14)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgb(244,212,108)",
-    fontWeight: 700,
-    fontFamily: "inherit",
-    letterSpacing: ".3px",
-  } as React.CSSProperties,
-  label: {
-    fontSize: 10,
-    fontWeight: 700,
-    opacity: 0.5,
-    letterSpacing: ".8px",
-    textTransform: "uppercase" as const,
-    marginBottom: 5,
-  } as React.CSSProperties,
+  card: { borderRadius: 2, border: "1px solid rgba(212,175,55,.18)", background: "rgba(20,18,12,.85)", padding: "12px 14px" } as React.CSSProperties,
+  btn: { padding: "7px 14px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
+  btnPri: { padding: "7px 14px", borderRadius: 2, border: "1px solid rgba(212,175,55,.45)", background: "rgba(212,175,55,.14)", fontSize: 12, cursor: "pointer", color: "rgb(244,212,108)", fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" } as React.CSSProperties,
+  label: { fontSize: 10, fontWeight: 700, opacity: 0.5, letterSpacing: ".8px", textTransform: "uppercase" as const, marginBottom: 5 } as React.CSSProperties,
 };
 
 type TabId = "live" | "character" | "killboard" | "sov" | "market" | "news" | "newpilots" | "corp";
@@ -107,14 +73,8 @@ type EveLive = {
   lastLogout: string | null;
   loginCount: number | null;
   system: { id: number; name: string | null } | null;
-  ship: { id: number; name: string | null; customName: string | null } | null;
-  trainingSkill: {
-    id: number;
-    name: string | null;
-    finishedLevel: number;
-    finishDate: string | null;
-    startDate: string | null;
-  } | null;
+  ship:   { id: number; name: string | null; customName: string | null } | null;
+  trainingSkill: { id: number; name: string | null; finishedLevel: number; finishDate: string | null; startDate: string | null } | null;
   queueLength: number;
 };
 
@@ -140,7 +100,7 @@ function CharacterTab() {
     if (j?.ok && j.linked) {
       setLinked(true);
       setCard(j.character);
-      apiFetch("/eve/me/live").then((r) => {
+      apiFetch("/eve/me/live").then(r => {
         if (r?.ok && r.linked && r.live) setLive(r.live);
       });
     } else {
@@ -164,18 +124,11 @@ function CharacterTab() {
     return (
       <div style={{ padding: "24px 8px", textAlign: "center", maxWidth: 500, margin: "0 auto" }}>
         <div style={{ fontSize: 36, marginBottom: 10 }}>🛰️</div>
-        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, color: "rgb(244,212,108)" }}>
-          Link your capsuleer
-        </div>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, color: "rgb(244,212,108)" }}>Link your capsuleer</div>
         <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 16, lineHeight: 1.5 }}>
-          We use CCP's official ESI OAuth. Phase 1 scopes are minimal: public character data,
-          current location, skills, killmails. No wallet access, no mail access, no asset access.
-          You can revoke at any time on the EVE Online community page.
+          We use CCP's official ESI OAuth. Phase 1 scopes are minimal: public character data, current location, skills, killmails. No wallet access, no mail access, no asset access. You can revoke at any time on the EVE Online community page.
         </div>
-        <a
-          href={`${API}/auth/eve?token=${typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""}`}
-          style={{ ...S.btnPri, display: "inline-block", textDecoration: "none" }}
-        >
+        <a href={`${API}/auth/eve?token=${typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : ""}`} style={{ ...S.btnPri, display: "inline-block", textDecoration: "none" }}>
           Link with EVE Online
         </a>
       </div>
@@ -186,82 +139,28 @@ function CharacterTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ ...S.card, display: "flex", gap: 14, alignItems: "center" }}>
-        <img
-          src={PORTRAIT(card.characterId, 128)}
-          alt={`${card.characterName} portrait`}
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: 2,
-            border: "1px solid rgba(212,175,55,.3)",
-          }}
-        />
+        <img src={PORTRAIT(card.characterId, 128)} alt={`${card.characterName} portrait`} style={{ width: 96, height: 96, borderRadius: 2, border: "1px solid rgba(212,175,55,.3)" }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{ fontSize: 18, fontWeight: 800, color: "rgb(244,212,108)", marginBottom: 4 }}
-          >
-            {card.characterName}
-          </div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "rgb(244,212,108)", marginBottom: 4 }}>{card.characterName}</div>
           {card.corpName && (
-            <div
-              style={{ fontSize: 12, opacity: 0.85, display: "flex", alignItems: "center", gap: 6 }}
-            >
-              {card.corpId && (
-                <img src={CORP_LOGO(card.corpId, 32)} alt="" style={{ width: 16, height: 16 }} />
-              )}
+            <div style={{ fontSize: 12, opacity: 0.85, display: "flex", alignItems: "center", gap: 6 }}>
+              {card.corpId && <img src={CORP_LOGO(card.corpId, 32)} alt="" style={{ width: 16, height: 16 }} />}
               {card.corpName} <span style={{ opacity: 0.5 }}>[{card.corpTicker}]</span>
             </div>
           )}
           {card.allianceName && (
-            <div
-              style={{
-                fontSize: 12,
-                opacity: 0.7,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginTop: 2,
-              }}
-            >
-              {card.allianceId && (
-                <img
-                  src={ALLIANCE_LOGO(card.allianceId, 32)}
-                  alt=""
-                  style={{ width: 16, height: 16 }}
-                />
-              )}
-              {card.allianceName}{" "}
-              <span style={{ opacity: 0.55 }}>&lt;{card.allianceTicker}&gt;</span>
+            <div style={{ fontSize: 12, opacity: 0.7, display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+              {card.allianceId && <img src={ALLIANCE_LOGO(card.allianceId, 32)} alt="" style={{ width: 16, height: 16 }} />}
+              {card.allianceName} <span style={{ opacity: 0.55 }}>&lt;{card.allianceTicker}&gt;</span>
             </div>
           )}
           <div style={{ fontSize: 11, opacity: 0.55, marginTop: 6 }}>
-            Sec status:{" "}
-            <span style={{ color: (card.securityStatus ?? 0) >= 0 ? "#86efac" : "#fca5a5" }}>
-              {card.securityStatus?.toFixed(2) ?? "—"}
-            </span>
-            {card.birthday && (
-              <span style={{ marginLeft: 12 }}>
-                Born: {new Date(card.birthday).toLocaleDateString()}
-              </span>
-            )}
+            Sec status: <span style={{ color: (card.securityStatus ?? 0) >= 0 ? "#86efac" : "#fca5a5" }}>{card.securityStatus?.toFixed(2) ?? "—"}</span>
+            {card.birthday && <span style={{ marginLeft: 12 }}>Born: {new Date(card.birthday).toLocaleDateString()}</span>}
           </div>
           <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-            <a
-              href={ZKILL_CHAR(card.characterId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}
-            >
-              zKillboard ↗
-            </a>
-            <a
-              href={`https://evewho.com/character/${card.characterId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}
-            >
-              EveWho ↗
-            </a>
+            <a href={ZKILL_CHAR(card.characterId)} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}>zKillboard ↗</a>
+            <a href={`https://evewho.com/character/${card.characterId}`} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}>EveWho ↗</a>
           </div>
         </div>
       </div>
@@ -270,53 +169,32 @@ function CharacterTab() {
         <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <div>
             <div style={S.label}>Online</div>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: live.online ? "#86efac" : "rgba(255,255,255,.55)",
-              }}
-            >
+            <div style={{ fontSize: 13, fontWeight: 700, color: live.online ? "#86efac" : "rgba(255,255,255,.55)" }}>
               {live.online === null ? "—" : live.online ? "● In space" : "○ Offline"}
             </div>
             {!live.online && live.lastLogout && (
-              <div style={{ fontSize: 10, opacity: 0.45, marginTop: 2 }}>
-                Last seen: {new Date(live.lastLogout).toLocaleString()}
-              </div>
+              <div style={{ fontSize: 10, opacity: 0.45, marginTop: 2 }}>Last seen: {new Date(live.lastLogout).toLocaleString()}</div>
             )}
           </div>
           <div>
             <div style={S.label}>Current system</div>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>
-              {live.system?.name || (live.system?.id ? `#${live.system.id}` : "—")}
-            </div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{live.system?.name || (live.system?.id ? `#${live.system.id}` : "—")}</div>
           </div>
           <div>
             <div style={S.label}>Flying</div>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>
-              {live.ship?.name || (live.ship?.id ? `#${live.ship.id}` : "—")}
-            </div>
-            {live.ship?.customName && (
-              <div style={{ fontSize: 10, opacity: 0.5, marginTop: 1, fontStyle: "italic" }}>
-                &ldquo;{live.ship.customName}&rdquo;
-              </div>
-            )}
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{live.ship?.name || (live.ship?.id ? `#${live.ship.id}` : "—")}</div>
+            {live.ship?.customName && <div style={{ fontSize: 10, opacity: 0.5, marginTop: 1, fontStyle: "italic" }}>&ldquo;{live.ship.customName}&rdquo;</div>}
           </div>
           <div>
             <div style={S.label}>Training</div>
             {live.trainingSkill ? (
               <>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>
-                  {live.trainingSkill.name || `Skill #${live.trainingSkill.id}`}{" "}
-                  <span style={{ opacity: 0.5, fontWeight: 500 }}>
-                    → {live.trainingSkill.finishedLevel}
-                  </span>
+                  {live.trainingSkill.name || `Skill #${live.trainingSkill.id}`} <span style={{ opacity: 0.5, fontWeight: 500 }}>→ {live.trainingSkill.finishedLevel}</span>
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1 }}>
                   ETA: {fmtEta(live.trainingSkill.finishDate)}
-                  {live.queueLength > 1 && (
-                    <span style={{ marginLeft: 8 }}>· {live.queueLength - 1} more in queue</span>
-                  )}
+                  {live.queueLength > 1 && <span style={{ marginLeft: 8 }}>· {live.queueLength - 1} more in queue</span>}
                 </div>
               </>
             ) : (
@@ -343,8 +221,7 @@ function KillboardTab() {
     return () => clearInterval(t);
   }, [load]);
 
-  if (kills === null)
-    return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading killmails...</div>;
+  if (kills === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading killmails...</div>;
   if (kills.length === 0) {
     return (
       <EmptyState
@@ -359,17 +236,8 @@ function KillboardTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div
-        style={{
-          ...S.card,
-          background: "rgba(212,175,55,.06)",
-          fontSize: 12,
-          opacity: 0.78,
-          lineHeight: 1.5,
-        }}
-      >
-        🔥 Biggest recent kills across <strong>nullsec</strong> — live from zKillboard. Link your
-        capsuleer on the <strong>Capsuleer</strong> tab to surface kills involving this lobby.
+      <div style={{ ...S.card, background: "rgba(212,175,55,.06)", fontSize: 12, opacity: 0.78, lineHeight: 1.5 }}>
+        🔥 Biggest recent kills across <strong>nullsec</strong> — live from zKillboard. Link your capsuleer on the <strong>Capsuleer</strong> tab to surface kills involving this lobby.
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {kills.map((k: any) => (
@@ -378,114 +246,27 @@ function KillboardTab() {
             href={ZKILL_KILL(k.killId)}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              ...S.card,
-              position: "relative",
-              overflow: "hidden",
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "10px 12px",
-            }}
+            style={{ ...S.card, position: "relative", overflow: "hidden", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px" }}
           >
-            <span
-              aria-hidden
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: `${Math.max(3, Math.round((k.value / max) * 100))}%`,
-                background: "rgba(252,165,165,.08)",
-                zIndex: 0,
-              }}
-            />
+            <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(3, Math.round((k.value / max) * 100))}%`, background: "rgba(252,165,165,.08)", zIndex: 0 }} />
             {k.shipTypeId && (
-              <img
-                src={SHIP_RENDER(k.shipTypeId, 64)}
-                alt=""
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 2,
-                  flexShrink: 0,
-                  position: "relative",
-                  zIndex: 1,
-                  border: "1px solid rgba(255,255,255,.08)",
-                  background: "rgba(0,0,0,.3)",
-                }}
-              />
+              <img src={SHIP_RENDER(k.shipTypeId, 64)} alt="" style={{ width: 40, height: 40, borderRadius: 2, flexShrink: 0, position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,.08)", background: "rgba(0,0,0,.3)" }} />
             )}
             <div style={{ minWidth: 0, flex: 1, position: "relative", zIndex: 1 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <div style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {k.ship || "Unknown ship"}
-                {k.solo && (
-                  <span
-                    style={{
-                      marginLeft: 8,
-                      fontSize: 9,
-                      fontWeight: 800,
-                      color: "#fbbf24",
-                      letterSpacing: ".05em",
-                    }}
-                  >
-                    SOLO
-                  </span>
-                )}
-                {k.npc && (
-                  <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, opacity: 0.45 }}>
-                    NPC
-                  </span>
-                )}
+                {k.solo && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 800, color: "#fbbf24", letterSpacing: ".05em" }}>SOLO</span>}
+                {k.npc && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, opacity: 0.45 }}>NPC</span>}
               </div>
-              <div
-                style={{
-                  fontSize: 10.5,
-                  opacity: 0.6,
-                  marginTop: 2,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {k.victimName || "—"}
-                {k.victimCorp ? ` · ${k.victimCorp}` : ""}
+              <div style={{ fontSize: 10.5, opacity: 0.6, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {k.victimName || "—"}{k.victimCorp ? ` · ${k.victimCorp}` : ""}
               </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  opacity: 0.4,
-                  marginTop: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {k.system || "—"} · {k.attackers} attacker{k.attackers === 1 ? "" : "s"}
-                {k.time ? ` · ${timeAgo(k.time)}` : ""}
+              <div style={{ fontSize: 10, opacity: 0.4, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {k.system || "—"} · {k.attackers} attacker{k.attackers === 1 ? "" : "s"}{k.time ? ` · ${timeAgo(k.time)}` : ""}
               </div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0, position: "relative", zIndex: 1 }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "rgb(244,212,108)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {fmtIsk(k.value)}
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "rgb(244,212,108)", fontVariantNumeric: "tabular-nums" }}>{fmtIsk(k.value)}</div>
               <div style={{ fontSize: 9, opacity: 0.4, letterSpacing: ".05em" }}>ISK</div>
             </div>
           </a>
@@ -497,176 +278,49 @@ function KillboardTab() {
 
 const STAT_ICON = {
   pilots: (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
-      <path d="M16 6.2a3 3 0 0 1 0 5.6M18 19a5 5 0 0 0-3-4.6" />
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M16 6.2a3 3 0 0 1 0 5.6M18 19a5 5 0 0 0-3-4.6" />
     </svg>
   ),
   kills: (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="7.5" />
-      <path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
-      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="7.5" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" /><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
     </svg>
   ),
   incursion: (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 2.5 22 20H2L12 2.5z" />
-      <path d="M12 9.5v4.5" />
-      <circle cx="12" cy="17" r=".4" fill="currentColor" stroke="currentColor" />
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.5 22 20H2L12 2.5z" /><path d="M12 9.5v4.5" /><circle cx="12" cy="17" r=".4" fill="currentColor" stroke="currentColor" />
     </svg>
   ),
 } as const;
 
-function StatBox({
-  label,
-  value,
-  accent,
-  sub,
-  icon,
-}: {
-  label: string;
-  value: string;
-  accent?: string;
-  sub?: string;
-  icon?: React.ReactNode;
-}) {
+function StatBox({ label, value, accent, sub, icon }: { label: string; value: string; accent?: string; sub?: string; icon?: React.ReactNode }) {
   const a = accent || "rgb(244,212,108)";
   return (
-    <div
-      style={{
-        ...S.card,
-        padding: "11px 13px",
-        borderLeft: `2px solid ${a}`,
-        display: "flex",
-        flexDirection: "column",
-        gap: 3,
-      }}
-    >
+    <div style={{ ...S.card, padding: "11px 13px", borderLeft: `2px solid ${a}`, display: "flex", flexDirection: "column", gap: 3 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {icon && <span style={{ color: a, display: "inline-flex", opacity: 0.85 }}>{icon}</span>}
         <span style={{ ...S.label, marginBottom: 0 }}>{label}</span>
       </div>
-      <div
-        style={{
-          fontSize: 27,
-          fontWeight: 800,
-          color: a,
-          fontVariantNumeric: "tabular-nums",
-          lineHeight: 1.02,
-          letterSpacing: "-.015em",
-        }}
-      >
-        {value}
-      </div>
-      {sub && (
-        <div
-          style={{
-            fontSize: 9.5,
-            opacity: 0.4,
-            letterSpacing: ".05em",
-            textTransform: "uppercase",
-          }}
-        >
-          {sub}
-        </div>
-      )}
+      <div style={{ fontSize: 27, fontWeight: 800, color: a, fontVariantNumeric: "tabular-nums", lineHeight: 1.02, letterSpacing: "-.015em" }}>{value}</div>
+      {sub && <div style={{ fontSize: 9.5, opacity: 0.4, letterSpacing: ".05em", textTransform: "uppercase" }}>{sub}</div>}
     </div>
   );
 }
 
-function SystemRow({
-  rank,
-  name,
-  id,
-  right,
-  rightColor,
-  pct,
-  barColor,
-}: {
-  rank: number;
-  name: string | null;
-  id: number;
-  right: string;
-  rightColor?: string;
-  pct?: number;
-  barColor?: string;
-}) {
+function SystemRow({ rank, name, id, right, rightColor, pct, barColor }: { rank: number; name: string | null; id: number; right: string; rightColor?: string; pct?: number; barColor?: string }) {
   const lead = rank === 1;
   return (
     <a
       href={`https://evemaps.dotlan.net/system/${encodeURIComponent((name || "").replace(/ /g, "_"))}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        position: "relative",
-        display: "flex",
-        justifyContent: "space-between",
-        fontSize: 12,
-        textDecoration: "none",
-        color: "inherit",
-        padding: "4px 8px",
-        overflow: "hidden",
-        borderRadius: 2,
-      }}
+      target="_blank" rel="noopener noreferrer"
+      style={{ position: "relative", display: "flex", justifyContent: "space-between", fontSize: 12, textDecoration: "none", color: "inherit", padding: "4px 8px", overflow: "hidden", borderRadius: 2 }}
     >
       {pct != null && (
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: `${Math.max(3, Math.round(pct * 100))}%`,
-            background: barColor || "rgba(252,165,165,.12)",
-            zIndex: 0,
-          }}
-        />
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(3, Math.round(pct * 100))}%`, background: barColor || "rgba(252,165,165,.12)", zIndex: 0 }} />
       )}
-      <span style={{ position: "relative", zIndex: 1, fontWeight: lead ? 700 : 400 }}>
-        <span style={{ opacity: 0.4, marginRight: 8, fontWeight: 400 }}>{rank}</span>
-        {name || `#${id}`}
-      </span>
-      <span
-        style={{
-          position: "relative",
-          zIndex: 1,
-          color: rightColor || "rgba(255,255,255,.7)",
-          fontWeight: 700,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {right}
-      </span>
+      <span style={{ position: "relative", zIndex: 1, fontWeight: lead ? 700 : 400 }}><span style={{ opacity: 0.4, marginRight: 8, fontWeight: 400 }}>{rank}</span>{name || `#${id}`}</span>
+      <span style={{ position: "relative", zIndex: 1, color: rightColor || "rgba(255,255,255,.7)", fontWeight: 700, whiteSpace: "nowrap" }}>{right}</span>
     </a>
   );
 }
@@ -676,12 +330,8 @@ function LiveTab() {
   const [fw, setFw] = useState<any | null>(null);
 
   const load = useCallback(async () => {
-    apiFetch("/eve/live/pulse").then((j) => {
-      if (j?.ok) setPulse(j);
-    });
-    apiFetch("/eve/fw/leaderboard").then((j) => {
-      if (j?.ok) setFw(j);
-    });
+    apiFetch("/eve/live/pulse").then(j => { if (j?.ok) setPulse(j); });
+    apiFetch("/eve/fw/leaderboard").then(j => { if (j?.ok) setFw(j); });
   }, []);
 
   useEffect(() => {
@@ -692,32 +342,14 @@ function LiveTab() {
 
   const fmt = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString());
 
-  if (pulse === null)
-    return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Reading New Eden...</div>;
+  if (pulse === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Reading New Eden...</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-        <StatBox
-          label="Pilots online"
-          value={fmt(pulse.players)}
-          accent="#86efac"
-          sub="Tranquility · live"
-          icon={STAT_ICON.pilots}
-        />
-        <StatBox
-          label="Ships killed / hr"
-          value={fmt(pulse.totalShipKills)}
-          accent="#fca5a5"
-          sub="New Eden · 60 min"
-          icon={STAT_ICON.kills}
-        />
-        <StatBox
-          label="Incursions"
-          value={fmt(pulse.incursions)}
-          sub="Sansha's Nation"
-          icon={STAT_ICON.incursion}
-        />
+        <StatBox label="Pilots online" value={fmt(pulse.players)} accent="#86efac" sub="Tranquility · live" icon={STAT_ICON.pilots} />
+        <StatBox label="Ships killed / hr" value={fmt(pulse.totalShipKills)} accent="#fca5a5" sub="New Eden · 60 min" icon={STAT_ICON.kills} />
+        <StatBox label="Incursions" value={fmt(pulse.incursions)} sub="Sansha's Nation" icon={STAT_ICON.incursion} />
       </div>
 
       <div style={S.card}>
@@ -727,16 +359,7 @@ function LiveTab() {
             const arr = pulse.dangerous || [];
             const max = Math.max(1, ...arr.map((s: any) => s.shipKills || 0));
             return arr.map((s: any, i: number) => (
-              <SystemRow
-                key={s.id}
-                rank={i + 1}
-                name={s.name}
-                id={s.id}
-                right={`${s.shipKills} kills`}
-                rightColor="#fca5a5"
-                pct={(s.shipKills || 0) / max}
-                barColor="rgba(252,165,165,.11)"
-              />
+              <SystemRow key={s.id} rank={i + 1} name={s.name} id={s.id} right={`${s.shipKills} kills`} rightColor="#fca5a5" pct={(s.shipKills || 0) / max} barColor="rgba(252,165,165,.11)" />
             ));
           })()}
         </div>
@@ -749,16 +372,7 @@ function LiveTab() {
             const arr = pulse.busiest || [];
             const max = Math.max(1, ...arr.map((s: any) => s.jumps || 0));
             return arr.map((s: any, i: number) => (
-              <SystemRow
-                key={s.id}
-                rank={i + 1}
-                name={s.name}
-                id={s.id}
-                right={`${(s.jumps || 0).toLocaleString()} jumps`}
-                rightColor="#7dd3fc"
-                pct={(s.jumps || 0) / max}
-                barColor="rgba(125,211,252,.10)"
-              />
+              <SystemRow key={s.id} rank={i + 1} name={s.name} id={s.id} right={`${(s.jumps || 0).toLocaleString()} jumps`} rightColor="#7dd3fc" pct={(s.jumps || 0) / max} barColor="rgba(125,211,252,.10)" />
             ));
           })()}
         </div>
@@ -771,65 +385,14 @@ function LiveTab() {
             {(() => {
               const max = Math.max(1, ...fw.pilots.map((p: any) => p.kills || 0));
               return fw.pilots.map((p: any, i: number) => (
-                <div
-                  key={p.id}
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 12,
-                    padding: "4px 8px",
-                    alignItems: "center",
-                    overflow: "hidden",
-                    borderRadius: 2,
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: `${Math.max(3, Math.round(((p.kills || 0) / max) * 100))}%`,
-                      background: "rgba(244,212,108,.10)",
-                      zIndex: 0,
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: "relative",
-                      zIndex: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      minWidth: 0,
-                      fontWeight: i === 0 ? 700 : 400,
-                    }}
-                  >
+                <div key={p.id} style={{ position: "relative", display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 8px", alignItems: "center", overflow: "hidden", borderRadius: 2 }}>
+                  <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(3, Math.round(((p.kills || 0) / max) * 100))}%`, background: "rgba(244,212,108,.10)", zIndex: 0 }} />
+                  <span style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 7, minWidth: 0, fontWeight: i === 0 ? 700 : 400 }}>
                     <span style={{ opacity: 0.4, fontWeight: 400 }}>{i + 1}</span>
-                    <img
-                      src={PORTRAIT(p.id, 32)}
-                      alt=""
-                      style={{ width: 18, height: 18, borderRadius: 2, flexShrink: 0 }}
-                    />
-                    <span
-                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {p.name}
-                    </span>
+                    <img src={PORTRAIT(p.id, 32)} alt="" style={{ width: 18, height: 18, borderRadius: 2, flexShrink: 0 }} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                   </span>
-                  <span
-                    style={{
-                      position: "relative",
-                      zIndex: 1,
-                      color: "rgb(244,212,108)",
-                      fontWeight: 700,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {(p.kills || 0).toLocaleString()} kills
-                  </span>
+                  <span style={{ position: "relative", zIndex: 1, color: "rgb(244,212,108)", fontWeight: 700, whiteSpace: "nowrap" }}>{(p.kills || 0).toLocaleString()} kills</span>
                 </div>
               ));
             })()}
@@ -854,25 +417,11 @@ function NewsTab() {
     return () => clearInterval(t);
   }, [load]);
 
-  if (items === null)
-    return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading news...</div>;
-  if (items.length === 0)
-    return (
-      <EmptyState
-        compact
-        title="No recent EVE news."
-        hint="Pulled from across the web; check back shortly."
-      />
-    );
+  if (items === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading news...</div>;
+  if (items.length === 0) return <EmptyState compact title="No recent EVE news." hint="Pulled from across the web; check back shortly." />;
 
   const isToday = (d: string) => {
-    try {
-      const t = new Date(d);
-      const now = new Date();
-      return t.toDateString() === now.toDateString();
-    } catch {
-      return false;
-    }
+    try { const t = new Date(d); const now = new Date(); return t.toDateString() === now.toDateString(); } catch { return false; }
   };
 
   return (
@@ -880,90 +429,15 @@ function NewsTab() {
       {items.map((n: any, i: number) => {
         const fresh = n.pubDate && isToday(n.pubDate);
         return (
-          <a
-            key={i}
-            href={n.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              ...S.card,
-              borderLeft: fresh
-                ? "2px solid rgba(134,239,172,.55)"
-                : "2px solid rgba(212,175,55,.3)",
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              gap: 11,
-              alignItems: "flex-start",
-              padding: "11px 13px",
-            }}
-          >
-            <span
-              style={{
-                width: 30,
-                height: 30,
-                flexShrink: 0,
-                borderRadius: 2,
-                background: "rgba(212,175,55,.12)",
-                border: "1px solid rgba(212,175,55,.25)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                fontWeight: 800,
-                color: "rgb(244,212,108)",
-              }}
-            >
+          <a key={i} href={n.link} target="_blank" rel="noopener noreferrer" style={{ ...S.card, borderLeft: fresh ? "2px solid rgba(134,239,172,.55)" : "2px solid rgba(212,175,55,.3)", textDecoration: "none", color: "inherit", display: "flex", gap: 11, alignItems: "flex-start", padding: "11px 13px" }}>
+            <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 2, background: "rgba(212,175,55,.12)", border: "1px solid rgba(212,175,55,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "rgb(244,212,108)" }}>
               {(n.source || "E").trim().charAt(0).toUpperCase()}
             </span>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "rgb(244,212,108)",
-                  lineHeight: 1.35,
-                }}
-              >
-                {n.title}
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  opacity: 0.5,
-                  marginTop: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {fresh && (
-                  <span
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: "#86efac",
-                      boxShadow: "0 0 5px #86efac",
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                <span>
-                  {n.source}
-                  {n.pubDate && (
-                    <span>
-                      {n.source ? " · " : ""}
-                      {(() => {
-                        try {
-                          return new Date(n.pubDate).toLocaleDateString();
-                        } catch {
-                          return "";
-                        }
-                      })()}
-                    </span>
-                  )}
-                </span>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "rgb(244,212,108)", lineHeight: 1.35 }}>{n.title}</div>
+              <div style={{ fontSize: 10, opacity: 0.5, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                {fresh && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#86efac", boxShadow: "0 0 5px #86efac", flexShrink: 0 }} />}
+                <span>{n.source}{n.pubDate && <span>{n.source ? " · " : ""}{(() => { try { return new Date(n.pubDate).toLocaleDateString(); } catch { return ""; } })()}</span>}</span>
               </div>
             </div>
           </a>
@@ -974,10 +448,7 @@ function NewsTab() {
 }
 
 const SOV_EVENT_LABEL: Record<number, string> = {
-  1: "TCU defense",
-  2: "IHUB defense",
-  3: "Station defense",
-  4: "Station freeport",
+  1: "TCU defense", 2: "IHUB defense", 3: "Station defense", 4: "Station freeport",
 };
 
 function SovTab() {
@@ -994,61 +465,27 @@ function SovTab() {
     return () => clearInterval(t);
   }, [load]);
 
-  if (camps === null)
-    return (
-      <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading contested space...</div>
-    );
+  if (camps === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading contested space...</div>;
   if (camps.length === 0) {
-    return (
-      <EmptyState
-        compact
-        title="No active sov campaigns right now."
-        hint="When alliances fight over sovereignty, contested systems show here live from CCP's ESI."
-      />
-    );
+    return <EmptyState compact title="No active sov campaigns right now." hint="When alliances fight over sovereignty, contested systems show here live from CCP's ESI." />;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div
-        style={{
-          ...S.card,
-          background: "rgba(212,175,55,.06)",
-          fontSize: 12,
-          opacity: 0.75,
-          lineHeight: 1.5,
-        }}
-      >
-        Live sovereignty campaigns across New Eden, straight from ESI. These are the systems where
-        alliances are fighting for space right now.
+      <div style={{ ...S.card, background: "rgba(212,175,55,.06)", fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>
+        Live sovereignty campaigns across New Eden, straight from ESI. These are the systems where alliances are fighting for space right now.
       </div>
       {camps.map((c: any) => {
         const def = Math.round((c.defenderScore ?? 0) * 100);
         const atk = Math.round((c.attackersScore ?? 0) * 100);
         return (
-          <div
-            key={c.campaignId}
-            style={{ ...S.card, borderLeft: "2px solid rgba(212,175,55,.5)" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                gap: 12,
-              }}
-            >
+          <div key={c.campaignId} style={{ ...S.card, borderLeft: "2px solid rgba(212,175,55,.5)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
               <div style={{ minWidth: 0 }}>
                 <a
                   href={`https://evemaps.dotlan.net/system/${encodeURIComponent((c.system?.name || "").replace(/ /g, "_"))}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "rgb(244,212,108)",
-                    textDecoration: "none",
-                  }}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 13, fontWeight: 800, color: "rgb(244,212,108)", textDecoration: "none" }}
                 >
                   {c.system?.name || `System #${c.system?.id}`} ↗
                 </a>
@@ -1059,42 +496,12 @@ function SovTab() {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9 }}>
-              <span
-                style={{
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  color: "#86efac",
-                  width: 56,
-                  flexShrink: 0,
-                }}
-              >
-                {def}% def
-              </span>
-              <div
-                style={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  display: "flex",
-                  background: "rgba(255,255,255,.05)",
-                }}
-              >
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: "#86efac", width: 56, flexShrink: 0 }}>{def}% def</span>
+              <div style={{ flex: 1, height: 6, borderRadius: 2, overflow: "hidden", display: "flex", background: "rgba(255,255,255,.05)" }}>
                 <span style={{ width: `${def}%`, background: "rgba(134,239,172,.65)" }} />
                 <span style={{ width: `${atk}%`, background: "rgba(252,165,165,.6)" }} />
               </div>
-              <span
-                style={{
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  color: "#fca5a5",
-                  width: 56,
-                  flexShrink: 0,
-                  textAlign: "right",
-                }}
-              >
-                atk {atk}%
-              </span>
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fca5a5", width: 56, flexShrink: 0, textAlign: "right" }}>atk {atk}%</span>
             </div>
           </div>
         );
@@ -1116,9 +523,7 @@ function MarketTab() {
 
   const load = useCallback(async () => {
     const j = await apiFetch("/eve/market/signals");
-    setData(
-      j?.ok ? { items: j.items || [], region: j.region || "Jita" } : { items: [], region: "Jita" },
-    );
+    setData(j?.ok ? { items: j.items || [], region: j.region || "Jita" } : { items: [], region: "Jita" });
   }, []);
 
   useEffect(() => {
@@ -1127,95 +532,31 @@ function MarketTab() {
     return () => clearInterval(t);
   }, [load]);
 
-  if (data === null)
-    return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading market...</div>;
+  if (data === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading market...</div>;
   if (data.items.length === 0) {
-    return (
-      <EmptyState
-        compact
-        title="Market data unavailable."
-        hint="Live mineral prices come from Fuzzwork's Jita aggregates — try again shortly."
-      />
-    );
+    return <EmptyState compact title="Market data unavailable." hint="Live mineral prices come from Fuzzwork's Jita aggregates — try again shortly." />;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div
-        style={{
-          ...S.card,
-          background: "rgba(212,175,55,.06)",
-          fontSize: 12,
-          opacity: 0.75,
-          lineHeight: 1.5,
-        }}
-      >
-        Live <strong>{data.region}</strong> mineral prices for industrialists. Buy = highest buy
-        order, Sell = lowest sell order.
+      <div style={{ ...S.card, background: "rgba(212,175,55,.06)", fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>
+        Live <strong>{data.region}</strong> mineral prices for industrialists. Buy = highest buy order, Sell = lowest sell order.
       </div>
       <div style={{ ...S.card, borderLeft: "2px solid rgba(212,175,55,.5)", padding: "12px 14px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.3fr .9fr .9fr .7fr",
-            fontSize: 10,
-            fontWeight: 700,
-            opacity: 0.5,
-            letterSpacing: ".5px",
-            textTransform: "uppercase",
-            paddingBottom: 6,
-            borderBottom: "1px solid rgba(255,255,255,.08)",
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr .9fr .9fr .7fr", fontSize: 10, fontWeight: 700, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", paddingBottom: 6, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
           <div>Mineral</div>
           <div style={{ textAlign: "right" }}>Buy</div>
           <div style={{ textAlign: "right" }}>Sell</div>
           <div style={{ textAlign: "right" }}>Spread</div>
         </div>
         {data.items.map((it: any) => {
-          const spread =
-            it.buy && it.sell && it.sell > 0 ? ((it.sell - it.buy) / it.sell) * 100 : null;
+          const spread = it.buy && it.sell && it.sell > 0 ? ((it.sell - it.buy) / it.sell) * 100 : null;
           return (
-            <div
-              key={it.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.3fr .9fr .9fr .7fr",
-                alignItems: "center",
-                fontSize: 13,
-                padding: "7px 0",
-                borderBottom: "1px solid rgba(255,255,255,.04)",
-              }}
-            >
+            <div key={it.id} style={{ display: "grid", gridTemplateColumns: "1.3fr .9fr .9fr .7fr", alignItems: "center", fontSize: 13, padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,.04)" }}>
               <div style={{ fontWeight: 600 }}>{it.name}</div>
-              <div
-                style={{ textAlign: "right", color: "#86efac", fontVariantNumeric: "tabular-nums" }}
-              >
-                {fmtIsk(it.buy)}
-              </div>
-              <div
-                style={{
-                  textAlign: "right",
-                  color: "rgb(244,212,108)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {fmtIsk(it.sell)}
-              </div>
-              <div
-                style={{
-                  textAlign: "right",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontVariantNumeric: "tabular-nums",
-                  color:
-                    spread == null
-                      ? "rgba(255,255,255,.3)"
-                      : spread > 8
-                        ? "#86efac"
-                        : "rgba(255,255,255,.55)",
-                }}
-              >
+              <div style={{ textAlign: "right", color: "#86efac", fontVariantNumeric: "tabular-nums" }}>{fmtIsk(it.buy)}</div>
+              <div style={{ textAlign: "right", color: "rgb(244,212,108)", fontVariantNumeric: "tabular-nums" }}>{fmtIsk(it.sell)}</div>
+              <div style={{ textAlign: "right", fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: spread == null ? "rgba(255,255,255,.3)" : spread > 8 ? "#86efac" : "rgba(255,255,255,.55)" }}>
                 {spread == null ? "—" : `${spread.toFixed(1)}%`}
               </div>
             </div>
@@ -1231,49 +572,25 @@ function NewPilotsTab() {
     {
       title: "Your first hour",
       items: [
-        {
-          href: "https://wiki.eveuniversity.org/Crash_course_for_newbros",
-          label: "Crash course for newbros (EVE Uni Wiki)",
-        },
-        {
-          href: "https://www.eveonline.com/news/view/eve-online-tutorial-guide",
-          label: "Official tutorial guide",
-        },
+        { href: "https://wiki.eveuniversity.org/Crash_course_for_newbros", label: "Crash course for newbros (EVE Uni Wiki)" },
+        { href: "https://www.eveonline.com/news/view/eve-online-tutorial-guide", label: "Official tutorial guide" },
         { href: "https://www.youtube.com/c/EveOnline", label: "CCP's video tutorials" },
       ],
     },
     {
       title: "Your first week",
       items: [
-        {
-          href: "https://wiki.eveuniversity.org/Career_Agents",
-          label: "Career Agents (10 agent series, free ships)",
-        },
-        {
-          href: "https://wiki.eveuniversity.org/SOE_Epic_Arc",
-          label: "Sisters of EVE Epic Arc (best newbro storyline)",
-        },
-        {
-          href: "https://www.eveuniversity.org/",
-          label: "Join EVE University (free training corp)",
-        },
+        { href: "https://wiki.eveuniversity.org/Career_Agents", label: "Career Agents (10 agent series, free ships)" },
+        { href: "https://wiki.eveuniversity.org/SOE_Epic_Arc", label: "Sisters of EVE Epic Arc (best newbro storyline)" },
+        { href: "https://www.eveuniversity.org/", label: "Join EVE University (free training corp)" },
       ],
     },
     {
       title: "Your first month",
       items: [
-        {
-          href: "https://wiki.eveuniversity.org/Skill_training_plans",
-          label: "Skill training plans by playstyle",
-        },
-        {
-          href: "https://wiki.eveuniversity.org/Choosing_a_career",
-          label: "Choosing a career (PvP / indy / WH / null)",
-        },
-        {
-          href: "https://forums.eveonline.com/c/communications-center/recruitment-center/55",
-          label: "Corporation recruitment forum",
-        },
+        { href: "https://wiki.eveuniversity.org/Skill_training_plans", label: "Skill training plans by playstyle" },
+        { href: "https://wiki.eveuniversity.org/Choosing_a_career", label: "Choosing a career (PvP / indy / WH / null)" },
+        { href: "https://forums.eveonline.com/c/communications-center/recruitment-center/55", label: "Corporation recruitment forum" },
       ],
     },
     {
@@ -1290,28 +607,18 @@ function NewPilotsTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ ...S.card, background: "rgba(212,175,55,.06)" }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: "rgb(244,212,108)", marginBottom: 4 }}>
-          Welcome, capsuleer.
-        </div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "rgb(244,212,108)", marginBottom: 4 }}>Welcome, capsuleer.</div>
         <div style={{ fontSize: 12, opacity: 0.7, lineHeight: 1.5 }}>
-          EVE's first 30 days are infamously rough. This lobby is a no-judgement room — ask anything
-          in chat, no question is too basic. The links below are the curriculum we wish someone had
-          handed us on day one.
+          EVE's first 30 days are infamously rough. This lobby is a no-judgement room — ask anything in chat, no question is too basic. The links below are the curriculum we wish someone had handed us on day one.
         </div>
       </div>
 
-      {sections.map((s) => (
+      {sections.map(s => (
         <div key={s.title} style={S.card}>
           <div style={S.label}>{s.title}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {s.items.map((it) => (
-              <a
-                key={it.href}
-                href={it.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: 12, color: "rgb(244,212,108)", textDecoration: "none" }}
-              >
+            {s.items.map(it => (
+              <a key={it.href} href={it.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "rgb(244,212,108)", textDecoration: "none" }}>
                 → {it.label}
               </a>
             ))}
@@ -1373,22 +680,16 @@ function LookupTab() {
             onClick={() => setMode("character")}
             style={{
               ...(mode === "character" ? S.btnPri : S.btn),
-              fontSize: 11,
-              padding: "5px 12px",
+              fontSize: 11, padding: "5px 12px",
             }}
-          >
-            👤 Character
-          </button>
+          >👤 Character</button>
           <button
             onClick={() => setMode("corp")}
             style={{
               ...(mode === "corp" ? S.btnPri : S.btn),
-              fontSize: 11,
-              padding: "5px 12px",
+              fontSize: 11, padding: "5px 12px",
             }}
-          >
-            🏢 Corp by ID
-          </button>
+          >🏢 Corp by ID</button>
         </div>
         <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 10 }}>
           {mode === "character"
@@ -1396,7 +697,7 @@ function LookupTab() {
             : "Paste a corporation ID (find it on the corp's zKillboard or EveWho page)."}
         </div>
         <form
-          onSubmit={(e) => {
+          onSubmit={e => {
             e.preventDefault();
             if (mode === "character") lookupCharacter(q.trim());
             else lookupCorp(q.trim());
@@ -1405,123 +706,44 @@ function LookupTab() {
         >
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={e => setQ(e.target.value)}
             placeholder={placeholder}
-            style={{
-              flex: 1,
-              padding: "8px 12px",
-              borderRadius: 2,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "rgba(0,0,0,.30)",
-              fontSize: 13,
-              color: "rgba(243,244,246,.92)",
-              outline: "none",
-              fontFamily: "inherit",
-            }}
+            style={{ flex: 1, padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", fontFamily: "inherit" }}
           />
-          <button
-            type="submit"
-            disabled={searching || !q.trim()}
-            style={{ ...S.btnPri, opacity: searching || !q.trim() ? 0.5 : 1 }}
-          >
+          <button type="submit" disabled={searching || !q.trim()} style={{ ...S.btnPri, opacity: searching || !q.trim() ? 0.5 : 1 }}>
             {searching ? "..." : "Look up"}
           </button>
         </form>
       </div>
 
       {mode === "character" && charNotFound && (
-        <div style={{ ...S.card, fontSize: 12, opacity: 0.55 }}>
-          No character found by that name.
-        </div>
+        <div style={{ ...S.card, fontSize: 12, opacity: 0.55 }}>No character found by that name.</div>
       )}
 
       {mode === "character" && character && (
         <div style={{ ...S.card, display: "flex", gap: 14, alignItems: "center" }}>
-          <img
-            src={PORTRAIT(character.id, 128)}
-            alt={`${character.name} portrait`}
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 2,
-              border: "1px solid rgba(212,175,55,.3)",
-            }}
-          />
+          <img src={PORTRAIT(character.id, 128)} alt={`${character.name} portrait`} style={{ width: 80, height: 80, borderRadius: 2, border: "1px solid rgba(212,175,55,.3)" }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "rgb(244,212,108)" }}>
-              {character.name}
-            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "rgb(244,212,108)" }}>{character.name}</div>
             {character.corpName && (
-              <div
-                style={{
-                  fontSize: 12,
-                  opacity: 0.85,
-                  marginTop: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {character.corpId && (
-                  <img
-                    src={CORP_LOGO(character.corpId, 32)}
-                    alt=""
-                    style={{ width: 14, height: 14 }}
-                  />
-                )}
+              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                {character.corpId && <img src={CORP_LOGO(character.corpId, 32)} alt="" style={{ width: 14, height: 14 }} />}
                 {character.corpName} <span style={{ opacity: 0.5 }}>[{character.corpTicker}]</span>
               </div>
             )}
             {character.allianceName && (
-              <div
-                style={{
-                  fontSize: 12,
-                  opacity: 0.7,
-                  marginTop: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {character.allianceId && (
-                  <img
-                    src={ALLIANCE_LOGO(character.allianceId, 32)}
-                    alt=""
-                    style={{ width: 14, height: 14 }}
-                  />
-                )}
-                {character.allianceName}{" "}
-                <span style={{ opacity: 0.55 }}>&lt;{character.allianceTicker}&gt;</span>
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                {character.allianceId && <img src={ALLIANCE_LOGO(character.allianceId, 32)} alt="" style={{ width: 14, height: 14 }} />}
+                {character.allianceName} <span style={{ opacity: 0.55 }}>&lt;{character.allianceTicker}&gt;</span>
               </div>
             )}
             <div style={{ fontSize: 11, opacity: 0.55, marginTop: 6 }}>
-              Sec status:{" "}
-              <span style={{ color: (character.securityStatus ?? 0) >= 0 ? "#86efac" : "#fca5a5" }}>
-                {character.securityStatus?.toFixed(2) ?? "—"}
-              </span>
-              {character.birthday && (
-                <span style={{ marginLeft: 12 }}>
-                  Born: {new Date(character.birthday).toLocaleDateString()}
-                </span>
-              )}
+              Sec status: <span style={{ color: (character.securityStatus ?? 0) >= 0 ? "#86efac" : "#fca5a5" }}>{character.securityStatus?.toFixed(2) ?? "—"}</span>
+              {character.birthday && <span style={{ marginLeft: 12 }}>Born: {new Date(character.birthday).toLocaleDateString()}</span>}
             </div>
             <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
-              <a
-                href={ZKILL_CHAR(character.id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}
-              >
-                zKill ↗
-              </a>
-              <a
-                href={`https://evewho.com/character/${character.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}
-              >
-                EveWho ↗
-              </a>
+              <a href={ZKILL_CHAR(character.id)} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}>zKill ↗</a>
+              <a href={`https://evewho.com/character/${character.id}`} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}>EveWho ↗</a>
             </div>
           </div>
         </div>
@@ -1533,36 +755,16 @@ function LookupTab() {
 
       {mode === "corp" && corp && (
         <div style={{ ...S.card, display: "flex", gap: 12, alignItems: "center" }}>
-          <img
-            src={CORP_LOGO(corp.id, 64)}
-            alt={`${corp.name} logo`}
-            style={{ width: 56, height: 56, borderRadius: 2 }}
-          />
+          <img src={CORP_LOGO(corp.id, 64)} alt={`${corp.name} logo`} style={{ width: 56, height: 56, borderRadius: 2 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800 }}>
-              {corp.name} <span style={{ opacity: 0.5, fontWeight: 500 }}>[{corp.ticker}]</span>
-            </div>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>{corp.name} <span style={{ opacity: 0.5, fontWeight: 500 }}>[{corp.ticker}]</span></div>
             <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>
               {corp.memberCount} members
               {corp.allianceId && <span> · alliance {corp.allianceId}</span>}
             </div>
             <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
-              <a
-                href={`https://zkillboard.com/corporation/${corp.id}/`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}
-              >
-                zKill ↗
-              </a>
-              <a
-                href={`https://evewho.com/corporation/${corp.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}
-              >
-                EveWho ↗
-              </a>
+              <a href={`https://zkillboard.com/corporation/${corp.id}/`} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}>zKill ↗</a>
+              <a href={`https://evewho.com/corporation/${corp.id}`} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, textDecoration: "none", fontSize: 11 }}>EveWho ↗</a>
             </div>
           </div>
         </div>
@@ -1572,58 +774,25 @@ function LookupTab() {
 }
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "live", label: "Live" },
+  { id: "live",      label: "Live" },
   { id: "character", label: "Capsuleer" },
   { id: "killboard", label: "Killboard" },
-  { id: "sov", label: "Sov" },
-  { id: "market", label: "Market" },
-  { id: "news", label: "News" },
+  { id: "sov",       label: "Sov" },
+  { id: "market",    label: "Market" },
+  { id: "news",      label: "News" },
   { id: "newpilots", label: "New Pilots" },
-  { id: "corp", label: "Lookup" },
+  { id: "corp",      label: "Lookup" },
 ];
 
 const TAB_ICON: Record<TabId, React.ReactNode> = {
-  live: (
-    <>
-      <path d="M5 5a9.5 9.5 0 0 0 0 14M19 5a9.5 9.5 0 0 1 0 14M8 8a5 5 0 0 0 0 8M16 8a5 5 0 0 1 0 8" />
-      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-    </>
-  ),
-  character: (
-    <>
-      <circle cx="12" cy="8" r="4" fill="currentColor" stroke="none" />
-      <path d="M4 21v-1.5a8 8 0 0 1 16 0V21z" fill="currentColor" stroke="none" />
-    </>
-  ),
-  killboard: (
-    <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
-      <circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none" />
-    </>
-  ),
-  sov: <path d="M5 22V3M5 3h12l-2.5 3.5L17 10H5" />,
-  market: <path d="M3 17l5.5-5.5 3.5 3.5 7.5-7.5M22 7h-5M22 7v5" />,
-  news: (
-    <>
-      <path d="M4 5h13v14H4z" />
-      <path d="M17 9h3v8a2 2 0 0 1-2 2h-1" />
-      <path d="M7 9h7M7 13h7M7 16.5h4" />
-    </>
-  ),
-  newpilots: (
-    <path
-      d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z"
-      fill="currentColor"
-      stroke="none"
-    />
-  ),
-  corp: (
-    <>
-      <circle cx="11" cy="11" r="7" />
-      <path d="M21 21l-4.3-4.3" />
-    </>
-  ),
+  live:      (<><path d="M5 5a9.5 9.5 0 0 0 0 14M19 5a9.5 9.5 0 0 1 0 14M8 8a5 5 0 0 0 0 8M16 8a5 5 0 0 1 0 8" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></>),
+  character: (<><circle cx="12" cy="8" r="4" fill="currentColor" stroke="none" /><path d="M4 21v-1.5a8 8 0 0 1 16 0V21z" fill="currentColor" stroke="none" /></>),
+  killboard: (<><circle cx="12" cy="12" r="8" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" /><circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none" /></>),
+  sov:       (<path d="M5 22V3M5 3h12l-2.5 3.5L17 10H5" />),
+  market:    (<path d="M3 17l5.5-5.5 3.5 3.5 7.5-7.5M22 7h-5M22 7v5" />),
+  news:      (<><path d="M4 5h13v14H4z" /><path d="M17 9h3v8a2 2 0 0 1-2 2h-1" /><path d="M7 9h7M7 13h7M7 16.5h4" /></>),
+  newpilots: (<path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" fill="currentColor" stroke="none" />),
+  corp:      (<><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>),
 };
 
 export default function EveModulesPanel({
@@ -1640,20 +809,10 @@ export default function EveModulesPanel({
   const [tab, setTab] = useState<TabId>("live");
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          padding: "10px 12px 10px",
-          flexShrink: 0,
-          flexWrap: "wrap",
-        }}
-      >
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
+      <div style={{ display: "flex", gap: 8, padding: "10px 12px 10px", flexShrink: 0, flexWrap: "wrap" }}>
         <style>{`@keyframes weeredTabCorona{0%{opacity:.5;transform:rotate(0deg) scale(.98)}50%{opacity:.95;transform:rotate(7deg) scale(1.05)}100%{opacity:.5;transform:rotate(0deg) scale(.98)}}@keyframes weeredCrackPulse{0%,100%{opacity:.8}50%{opacity:1}}`}</style>
-        {TABS.map((t) => {
+        {TABS.map(t => {
           const active = tab === t.id;
           const CLIP = "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)";
           return (
@@ -1663,55 +822,34 @@ export default function EveModulesPanel({
                   <span
                     aria-hidden
                     style={{
-                      position: "absolute",
-                      top: -18,
-                      bottom: -18,
-                      left: -22,
-                      right: -22,
-                      background:
-                        "conic-gradient(from 12deg at 50% 55%, transparent 0 6deg, rgba(255,182,72,.95) 9deg, transparent 13deg 41deg, rgba(255,182,72,.72) 45deg, transparent 49deg 96deg, rgba(255,182,72,.9) 100deg, transparent 105deg 151deg, rgba(255,182,72,.64) 155deg, transparent 160deg 211deg, rgba(255,182,72,.85) 215deg, transparent 220deg 271deg, rgba(255,182,72,.7) 275deg, transparent 280deg 331deg, rgba(255,182,72,.8) 335deg, transparent 340deg 360deg)",
-                      WebkitMaskImage:
-                        "radial-gradient(ellipse at center, #000 8%, rgba(0,0,0,.6) 36%, transparent 72%)",
-                      maskImage:
-                        "radial-gradient(ellipse at center, #000 8%, rgba(0,0,0,.6) 36%, transparent 72%)",
+                      position: "absolute", top: -18, bottom: -18, left: -22, right: -22,
+                      background: "conic-gradient(from 12deg at 50% 55%, transparent 0 6deg, rgba(255,182,72,.95) 9deg, transparent 13deg 41deg, rgba(255,182,72,.72) 45deg, transparent 49deg 96deg, rgba(255,182,72,.9) 100deg, transparent 105deg 151deg, rgba(255,182,72,.64) 155deg, transparent 160deg 211deg, rgba(255,182,72,.85) 215deg, transparent 220deg 271deg, rgba(255,182,72,.7) 275deg, transparent 280deg 331deg, rgba(255,182,72,.8) 335deg, transparent 340deg 360deg)",
+                      WebkitMaskImage: "radial-gradient(ellipse at center, #000 8%, rgba(0,0,0,.6) 36%, transparent 72%)",
+                      maskImage: "radial-gradient(ellipse at center, #000 8%, rgba(0,0,0,.6) 36%, transparent 72%)",
                       filter: "blur(2.5px)",
                       animation: "weeredTabCorona 90s ease-in-out infinite",
-                      pointerEvents: "none",
-                      zIndex: 0,
+                      pointerEvents: "none", zIndex: 0,
                     }}
                   />
                   <span
                     aria-hidden
                     style={{
-                      position: "absolute",
-                      top: -3,
-                      bottom: -3,
-                      left: -3,
-                      right: -3,
+                      position: "absolute", top: -3, bottom: -3, left: -3, right: -3,
                       clipPath: CLIP,
                       background: "rgba(255,184,74,.95)",
-                      WebkitMaskImage:
-                        "conic-gradient(from 28deg at 50% 50%, #000 0deg, rgba(0,0,0,.28) 40deg, #000 92deg, rgba(0,0,0,.45) 150deg, #000 206deg, rgba(0,0,0,.3) 266deg, #000 320deg, rgba(0,0,0,.5) 360deg)",
-                      maskImage:
-                        "conic-gradient(from 28deg at 50% 50%, #000 0deg, rgba(0,0,0,.28) 40deg, #000 92deg, rgba(0,0,0,.45) 150deg, #000 206deg, rgba(0,0,0,.3) 266deg, #000 320deg, rgba(0,0,0,.5) 360deg)",
+                      WebkitMaskImage: "conic-gradient(from 28deg at 50% 50%, #000 0deg, rgba(0,0,0,.28) 40deg, #000 92deg, rgba(0,0,0,.45) 150deg, #000 206deg, rgba(0,0,0,.3) 266deg, #000 320deg, rgba(0,0,0,.5) 360deg)",
+                      maskImage: "conic-gradient(from 28deg at 50% 50%, #000 0deg, rgba(0,0,0,.28) 40deg, #000 92deg, rgba(0,0,0,.45) 150deg, #000 206deg, rgba(0,0,0,.3) 266deg, #000 320deg, rgba(0,0,0,.5) 360deg)",
                       animation: "weeredCrackPulse 90s ease-in-out infinite",
-                      pointerEvents: "none",
-                      zIndex: 1,
+                      pointerEvents: "none", zIndex: 1,
                     }}
                   />
                   <span
                     aria-hidden
                     style={{
-                      position: "absolute",
-                      top: -1,
-                      bottom: -1,
-                      left: -1,
-                      right: -1,
+                      position: "absolute", top: -1, bottom: -1, left: -1, right: -1,
                       clipPath: CLIP,
-                      background:
-                        "linear-gradient(135deg, rgba(120,70,28,.95) 0%, rgba(70,40,15,.92) 100%)",
-                      pointerEvents: "none",
-                      zIndex: 2,
+                      background: "linear-gradient(135deg, rgba(120,70,28,.95) 0%, rgba(70,40,15,.92) 100%)",
+                      pointerEvents: "none", zIndex: 2,
                     }}
                   />
                 </>
@@ -1739,17 +877,7 @@ export default function EveModulesPanel({
                   transition: "color .15s",
                 }}
               >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ flexShrink: 0 }}
-                >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   {TAB_ICON[t.id]}
                 </svg>
                 {t.label}

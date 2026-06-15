@@ -20,9 +20,7 @@ function normUser(u: any): Person {
   };
 }
 
-function normRole(r: any) {
-  return String(r ?? "").toLowerCase();
-}
+function normRole(r: any) { return String(r ?? "").toLowerCase(); }
 
 function bestMyRole(ctx: any) {
   return String(ctx?.globalRole ?? ctx?.role ?? ctx?.me?.role ?? ctx?.me?.globalRole ?? "");
@@ -60,80 +58,39 @@ function FriendsPanel() {
   const [open, setOpen] = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  React.useEffect(() => { setMounted(true); }, []);
 
   async function load() {
     try {
       const t = localStorage.getItem("weered_token") || "";
-      const r = await fetch(`${API_BASE}/friends`, {
-        headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
-      });
+      const r = await fetch(`${API_BASE}/friends`, { headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" } });
       const j = await r.json();
       setFriends(Array.isArray(j?.friends) ? j.friends : []);
     } catch {}
   }
 
-  React.useEffect(() => {
-    if (mounted) void load();
-  }, [mounted]);
-  React.useEffect(() => {
-    if (!mounted) return;
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
-  }, [mounted]);
+  React.useEffect(() => { if (mounted) void load(); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
   if (!mounted || !friends.length) return null;
 
-  const online = friends.filter((f) => f.online);
-  const offline = friends.filter((f) => !f.online);
+  const online  = friends.filter(f => f.online);
+  const offline = friends.filter(f => !f.online);
 
   return (
     <div style={{ marginTop: 12 }}>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          opacity: 0.5,
-          letterSpacing: ".7px",
-          textTransform: "uppercase",
-          marginBottom: 8,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           Friends · {online.length} Online
-          {friends.some((f) => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: 999,
-                background: "#f59e0b",
-                boxShadow: "0 0 5px #f59e0b88",
-              }}
-            />
+          {friends.some(f => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: "#f59e0b", boxShadow: "0 0 5px #f59e0b88" }} />
           )}
         </div>
-        <button
-          onClick={() => setOpen((o) => !o)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "rgba(255,255,255,0.4)",
-            cursor: "pointer",
-            fontSize: 11,
-          }}
-        >
-          {open ? "▲" : "▼"}
-        </button>
+        <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11 }}>{open ? "▲" : "▼"}</button>
       </div>
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {online.map((f) => {
+          {online.map(f => {
             const hasUnread = (f.unreadCount ?? 0) > 0 || Boolean(f.hasUnread ?? f.hasPendingDm);
             const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
             const userId = String(f.id ?? f.userId ?? f.username ?? "");
@@ -141,83 +98,31 @@ function FriendsPanel() {
               <div
                 key={f.id}
                 onClick={() => userId && openSheet("profile", { userId })}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 10px",
-                  borderRadius: 9,
-                  background: "rgba(255,255,255,.03)",
-                  border: "1px solid rgba(255,255,255,.06)",
-                  cursor: "pointer",
-                  transition: "background 0.12s",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)";
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", cursor: "pointer", transition: "background 0.12s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
               >
                 <div style={{ position: "relative", flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "#22c55e",
-                      boxShadow: "0 0 5px #22c55e",
-                    }}
-                  />
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
                   {hasUnread && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: -5,
-                        right: -5,
-                        minWidth: 13,
-                        height: 13,
-                        borderRadius: 999,
-                        background: "#f59e0b",
-                        border: "2px solid rgba(10,10,15,1)",
-                        fontSize: 7,
-                        fontWeight: 900,
-                        color: "#000",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "0 1px",
-                        lineHeight: 1,
-                      }}
-                    >
+                    <span style={{
+                      position: "absolute", top: -5, right: -5,
+                      minWidth: 13, height: 13, borderRadius: 999,
+                      background: "#f59e0b", border: "2px solid rgba(10,10,15,1)",
+                      fontSize: 7, fontWeight: 900, color: "#000",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      padding: "0 1px", lineHeight: 1,
+                    }}>
                       {unreadCount > 9 ? "9+" : unreadCount > 1 ? unreadCount : ""}
                     </span>
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: hasUnread ? 700 : 600,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      color: hasUnread ? "rgba(243,244,246,1)" : "inherit",
-                    }}
-                  >
+                  <div style={{ fontSize: 12, fontWeight: hasUnread ? 700 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: hasUnread ? "rgba(243,244,246,1)" : "inherit" }}>
                     {f.name}
                   </div>
                   {f.roomName && (
-                    <div
-                      style={{
-                        fontSize: 10,
-                        opacity: 0.4,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        marginTop: 1,
-                      }}
-                    >
+                    <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
                       {f.roomName}
                     </div>
                   )}
@@ -225,48 +130,18 @@ function FriendsPanel() {
               </div>
             );
           })}
-          {offline.map((f) => {
+          {offline.map(f => {
             const userId = String(f.id ?? f.userId ?? f.username ?? "");
             return (
               <div
                 key={f.id}
                 onClick={() => userId && openSheet("profile", { userId })}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 10px",
-                  borderRadius: 9,
-                  opacity: 0.4,
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.opacity = "0.7";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.opacity = "0.4";
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, opacity: 0.4, cursor: "pointer" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}
               >
-                <div
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.2)",
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 12,
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {f.name}
-                </span>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
               </div>
             );
           })}
@@ -282,139 +157,60 @@ function CrewPanel() {
   const [open, setOpen] = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  React.useEffect(() => { setMounted(true); }, []);
 
   async function load() {
     try {
       const t = localStorage.getItem("weered_token") || "";
-      const r = await fetch(`${API_BASE}/crews/mine`, {
-        headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
-      });
+      const r = await fetch(`${API_BASE}/crews/mine`, { headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" } });
       const j = await r.json();
       setCrews(Array.isArray(j?.crews) ? j.crews : []);
     } catch {}
   }
 
-  React.useEffect(() => {
-    if (mounted) void load();
-  }, [mounted]);
-  React.useEffect(() => {
-    if (!mounted) return;
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
-  }, [mounted]);
+  React.useEffect(() => { if (mounted) void load(); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
   if (!mounted || !crews.length) return null;
 
   return (
     <div style={{ marginTop: 12 }}>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          opacity: 0.5,
-          letterSpacing: ".7px",
-          textTransform: "uppercase",
-          marginBottom: 8,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         Crew
-        <button
-          onClick={() => setOpen((o) => !o)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "rgba(255,255,255,0.4)",
-            cursor: "pointer",
-            fontSize: 11,
-          }}
-        >
-          {open ? "▲" : "▼"}
-        </button>
+        <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 11 }}>{open ? "▲" : "▼"}</button>
       </div>
-      {open &&
-        crews.map((crew) => {
-          const online = (crew.members || []).filter((m: any) => m.online);
-          return (
-            <div key={crew.id} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>
-                {crew.name} {crew.tag ? `[${crew.tag}]` : ""} · {online.length} online
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                {(crew.members || []).map((m: any) => {
-                  const userId = String(m.userId ?? m.id ?? "");
-                  return (
-                    <div
-                      key={m.userId}
-                      onClick={() => userId && openSheet("profile", { userId })}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "5px 10px",
-                        borderRadius: 8,
-                        background: "rgba(255,255,255,.03)",
-                        border: "1px solid rgba(255,255,255,.06)",
-                        opacity: m.online ? 1 : 0.4,
-                        cursor: "pointer",
-                        transition: "background 0.12s",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)";
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)",
-                          boxShadow: m.online ? "0 0 5px #a78bfa" : "none",
-                          flexShrink: 0,
-                        }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {m.name}
+      {open && crews.map(crew => {
+        const online = (crew.members || []).filter((m: any) => m.online);
+        return (
+          <div key={crew.id} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{crew.name} {crew.tag ? `[${crew.tag}]` : ""} · {online.length} online</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {(crew.members || []).map((m: any) => {
+                const userId = String(m.userId ?? m.id ?? "");
+                return (
+                  <div
+                    key={m.userId}
+                    onClick={() => userId && openSheet("profile", { userId })}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4, cursor: "pointer", transition: "background 0.12s" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)", boxShadow: m.online ? "0 0 5px #a78bfa" : "none", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                      {m.online && m.roomName && (
+                        <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
+                          {m.roomName}
                         </div>
-                        {m.online && m.roomName && (
-                          <div
-                            style={{
-                              fontSize: 10,
-                              opacity: 0.4,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              marginTop: 1,
-                            }}
-                          >
-                            {m.roomName}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -424,45 +220,31 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const ctx = useWeered() as any;
   const liveUsers = useRoomUsers(roomId);
 
-  const myGlobalRole = useMemo(() => bestMyRole(ctx), [ctx]);
-  const myRoomRole = useMemo(() => String(ctx?.role ?? "member"), [ctx]);
-  const allowed = useMemo(
-    () => canMod(myGlobalRole) || canMod(myRoomRole),
-    [myGlobalRole, myRoomRole],
-  );
-  const canPromoteUsers = useMemo(
-    () => canPromote(myGlobalRole, myRoomRole),
-    [myGlobalRole, myRoomRole],
-  );
+  const myGlobalRole    = useMemo(() => bestMyRole(ctx), [ctx]);
+  const myRoomRole      = useMemo(() => String(ctx?.role ?? "member"), [ctx]);
+  const allowed         = useMemo(() => canMod(myGlobalRole) || canMod(myRoomRole), [myGlobalRole, myRoomRole]);
+  const canPromoteUsers = useMemo(() => canPromote(myGlobalRole, myRoomRole), [myGlobalRole, myRoomRole]);
 
   const people = useMemo(() => {
     const arr = extractParticipants(ctx, roomId, liveUsers);
     const seen = new Set<string>();
-    return arr.filter((p) => {
+    return arr.filter(p => {
       const k = String(p.id ?? p.name ?? "");
       if (!k || seen.has(k)) return false;
-      seen.add(k);
-      return true;
+      seen.add(k); return true;
     });
   }, [ctx, roomId, liveUsers]);
 
-  const admin = ctx?.admin ?? ctx?.adminByRoom?.[roomId] ?? null;
-  const knocks = useMemo(
-    (): Array<{ userId: string; name: string; ts: number }> => admin?.knocks ?? [],
-    [admin],
-  );
-  const banned = useMemo((): string[] => admin?.banned ?? [], [admin]);
-  const muted = useMemo((): string[] => admin?.muted ?? [], [admin]);
+  const admin    = ctx?.admin ?? ctx?.adminByRoom?.[roomId] ?? null;
+  const knocks   = useMemo((): Array<{ userId: string; name: string; ts: number }> => admin?.knocks ?? [], [admin]);
+  const banned   = useMemo((): string[] => admin?.banned ?? [], [admin]);
+  const muted    = useMemo((): string[] => admin?.muted  ?? [], [admin]);
   const auditLog = useMemo(() => (admin?.audit ?? []).slice().reverse().slice(0, 40), [admin]);
 
   const roomLabel = (() => {
     const n = ctx?.meta?.name || ctx?.metaByRoom?.[roomId]?.name;
     if (n && n !== roomId) return n;
-    try {
-      return decodeURIComponent(roomId || "");
-    } catch {
-      return roomId || "unknown";
-    }
+    try { return decodeURIComponent(roomId || ""); } catch { return roomId || "unknown"; }
   })();
 
   const metaLocked = Boolean(ctx?.meta?.locked ?? false);
@@ -471,92 +253,68 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
   useEffect(() => {
     if (lockedOverride === null) return;
-    if (metaLocked === lockedOverride) {
-      setLockedOverride(null);
-      return;
-    }
+    if (metaLocked === lockedOverride) { setLockedOverride(null); return; }
     const t = setTimeout(() => setLockedOverride(null), 8000);
     return () => clearTimeout(t);
   }, [metaLocked, lockedOverride]);
 
-  const [slowSec, setSlowSec] = useState(0);
-  const [selectedId, setSelectedId] = useState("");
-  const [confirm, setConfirm] = useState<{ kind: string; userId: string; name: string } | null>(
-    null,
-  );
-  const [note, setNote] = useState("");
-  const [renameVal, setRenameVal] = useState("");
-  const [renaming, setRenaming] = useState(false);
-  const [tab, setTab] = useState<"users" | "knocks" | "banned" | "audit">("users");
-  const [showInvite, setShowInvite] = useState(false);
+  const [slowSec,      setSlowSec     ] = useState(0);
+  const [selectedId,   setSelectedId  ] = useState("");
+  const [confirm,      setConfirm     ] = useState<{ kind: string; userId: string; name: string } | null>(null);
+  const [note,         setNote        ] = useState("");
+  const [renameVal,    setRenameVal   ] = useState("");
+  const [renaming,     setRenaming    ] = useState(false);
+  const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
+  const [showInvite,   setShowInvite  ] = useState(false);
 
   const selected = useMemo(() => {
     const id = selectedId || people[0]?.id || people[0]?.name || "";
-    return people.find((p) => (p.id ?? p.name) === id) ?? people[0] ?? null;
+    return people.find(p => (p.id ?? p.name) === id) ?? people[0] ?? null;
   }, [people, selectedId]);
 
   const copyText = useCallback(async (label: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setNote(`Copied ${label}`);
-    } catch {
-      setNote("Copy failed");
-    }
+    try { await navigator.clipboard.writeText(text); setNote(`Copied ${label}`); }
+    catch { setNote("Copy failed"); }
   }, []);
 
-  const doAction = useCallback(
-    (kind: string, overrideId?: string) => {
-      const targetId = overrideId ?? String(selected?.id ?? selected?.name ?? "");
-      const targetName = overrideId
-        ? (people.find((p) => p.id === overrideId)?.name ??
-          knocks.find((k) => k.userId === overrideId)?.name ??
-          overrideId)
-        : String(selected?.name ?? selected?.handle ?? targetId);
+  const doAction = useCallback((kind: string, overrideId?: string) => {
+    const targetId   = overrideId ?? String(selected?.id ?? selected?.name ?? "");
+    const targetName = overrideId
+      ? (people.find(p => p.id === overrideId)?.name ?? knocks.find(k => k.userId === overrideId)?.name ?? overrideId)
+      : String(selected?.name ?? selected?.handle ?? targetId);
 
-      if (!targetId && !["lock", "unlock"].includes(kind)) {
-        setNote("Select a user first.");
-        return;
+    if (!targetId && !["lock","unlock"].includes(kind)) { setNote("Select a user first."); return; }
+    if (["kick","ban"].includes(kind)) { setConfirm({ kind, userId: targetId, name: targetName }); return; }
+
+    try {
+      if (kind === "mute")    ctx?.mute?.(targetId);
+      if (kind === "unmute")  ctx?.unmute?.(targetId);
+      if (kind === "promote") ctx?.promote?.(targetId);
+      if (kind === "demote")  ctx?.demote?.(targetId);
+      if (kind === "unban")   ctx?.unban?.(targetId);
+      if (kind === "admit")   ctx?.admit?.(targetId);
+      if (kind === "deny")    ctx?.deny?.(targetId);
+
+      if (kind === "lock") {
+        ctx?.lockRoom?.();
+        setLockedOverride(true);
       }
-      if (["kick", "ban"].includes(kind)) {
-        setConfirm({ kind, userId: targetId, name: targetName });
-        return;
+      if (kind === "unlock") {
+        ctx?.unlockRoom?.();
+        setLockedOverride(false);
       }
 
-      try {
-        if (kind === "mute") ctx?.mute?.(targetId);
-        if (kind === "unmute") ctx?.unmute?.(targetId);
-        if (kind === "promote") ctx?.promote?.(targetId);
-        if (kind === "demote") ctx?.demote?.(targetId);
-        if (kind === "unban") ctx?.unban?.(targetId);
-        if (kind === "admit") ctx?.admit?.(targetId);
-        if (kind === "deny") ctx?.deny?.(targetId);
-
-        if (kind === "lock") {
-          ctx?.lockRoom?.();
-          setLockedOverride(true);
-        }
-        if (kind === "unlock") {
-          ctx?.unlockRoom?.();
-          setLockedOverride(false);
-        }
-
-        setNote(`${kind} → ${targetId ? targetName : "room"}`);
-      } catch {
-        setNote(`${kind} failed`);
-      }
-    },
-    [ctx, selected, people, knocks],
-  );
+      setNote(`${kind} → ${targetId ? targetName : "room"}`);
+    } catch { setNote(`${kind} failed`); }
+  }, [ctx, selected, people, knocks]);
 
   const confirmYes = useCallback(() => {
     if (!confirm) return;
     try {
       if (confirm.kind === "kick") ctx?.kick?.(confirm.userId);
-      if (confirm.kind === "ban") ctx?.ban?.(confirm.userId);
+      if (confirm.kind === "ban")  ctx?.ban?.(confirm.userId);
       setNote(`${confirm.kind} → ${confirm.name}`);
-    } catch {
-      setNote(`${confirm.kind} failed`);
-    }
+    } catch { setNote(`${confirm.kind} failed`); }
     setConfirm(null);
   }, [ctx, confirm]);
 
@@ -564,616 +322,229 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
     const name = renameVal.trim();
     if (!name) return;
     setRenaming(true);
-    try {
-      ctx?.renameRoom?.(name);
-      setNote(`Renamed to "${name}"`);
-      setRenameVal("");
-    } catch {
-      setNote("Rename failed.");
-    } finally {
-      setRenaming(false);
-    }
+    try { ctx?.renameRoom?.(name); setNote(`Renamed to "${name}"`); setRenameVal(""); }
+    catch { setNote("Rename failed."); }
+    finally { setRenaming(false); }
   }, [ctx, renameVal]);
 
   const s = {
-    section: {
-      marginTop: 10,
-      borderRadius: 12,
-      border: "1px solid rgba(255,255,255,.08)",
-      background: "rgba(255,255,255,.03)",
-      padding: "10px 12px",
-    } as React.CSSProperties,
-    label: {
-      fontSize: 10,
-      fontWeight: 700,
-      opacity: 0.55,
-      letterSpacing: ".7px",
-      textTransform: "uppercase" as const,
-      marginBottom: 7,
-    },
-    btn: {
-      padding: "6px 10px",
-      borderRadius: 8,
-      border: "1px solid rgba(255,255,255,.10)",
-      background: "rgba(255,255,255,.05)",
-      fontSize: 11,
-      cursor: "pointer",
-      color: "rgba(243,244,246,.85)",
-    } as React.CSSProperties,
-    btnPrimary: {
-      padding: "6px 10px",
-      borderRadius: 8,
-      border: "1px solid rgba(124,58,237,.30)",
-      background: "rgba(124,58,237,.14)",
-      fontSize: 11,
-      cursor: "pointer",
-      color: "rgb(216,180,254)",
-      fontWeight: 600,
-    } as React.CSSProperties,
-    btnGreen: {
-      padding: "6px 10px",
-      borderRadius: 8,
-      border: "1px solid rgba(16,185,129,.30)",
-      background: "rgba(16,185,129,.10)",
-      fontSize: 11,
-      cursor: "pointer",
-      color: "rgb(167,243,208)",
-    } as React.CSSProperties,
-    btnRed: {
-      padding: "6px 10px",
-      borderRadius: 8,
-      border: "1px solid rgba(239,68,68,.25)",
-      background: "rgba(239,68,68,.08)",
-      fontSize: 11,
-      cursor: "pointer",
-      color: "rgba(252,165,165,.90)",
-    } as React.CSSProperties,
-    input: {
-      width: "100%",
-      padding: "7px 10px",
-      borderRadius: 9,
-      border: "1px solid rgba(255,255,255,.10)",
-      background: "rgba(0,0,0,.25)",
-      fontSize: 12,
-      color: "rgba(243,244,246,.90)",
-      outline: "none",
-      boxSizing: "border-box" as const,
-    },
-    select: {
-      flex: 1,
-      padding: "6px 10px",
-      borderRadius: 8,
-      border: "1px solid rgba(255,255,255,.10)",
-      background: "rgba(0,0,0,.25)",
-      fontSize: 11,
-      color: "rgba(243,244,246,.90)",
-      outline: "none",
-    } as React.CSSProperties,
-    tabBtn: (active: boolean, alert?: boolean) =>
-      ({
-        padding: "4px 10px",
-        borderRadius: 6,
-        fontSize: 10,
-        fontWeight: 700,
-        cursor: "pointer",
-        letterSpacing: ".4px",
-        border: active
-          ? "1px solid rgba(124,58,237,.45)"
-          : alert
-            ? "1px solid rgba(245,158,11,.4)"
-            : "1px solid rgba(255,255,255,.08)",
-        background: active ? "rgba(124,58,237,.18)" : "transparent",
-        color: active ? "rgb(216,180,254)" : alert ? "rgb(253,230,138)" : "rgba(255,255,255,.40)",
-      }) as React.CSSProperties,
+    section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+    label:      { fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 7 },
+    btn:        { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 11, cursor: "pointer", color: "rgba(243,244,246,.85)" } as React.CSSProperties,
+    btnPrimary: { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.14)", fontSize: 11, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
+    btnGreen:   { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(16,185,129,.30)",  background: "rgba(16,185,129,.10)",  fontSize: 11, cursor: "pointer", color: "rgb(167,243,208)" } as React.CSSProperties,
+    btnRed:     { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(239,68,68,.25)",   background: "rgba(239,68,68,.08)",   fontSize: 11, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
+    input:      { width: "100%", padding: "7px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 12, color: "rgba(243,244,246,.90)", outline: "none", boxSizing: "border-box" as const },
+    select:     { flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.90)", outline: "none" } as React.CSSProperties,
+    tabBtn:     (active: boolean, alert?: boolean) => ({
+      padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: ".4px",
+      border: active ? "1px solid rgba(124,58,237,.45)" : alert ? "1px solid rgba(245,158,11,.4)" : "1px solid rgba(255,255,255,.08)",
+      background: active ? "rgba(124,58,237,.18)" : "transparent",
+      color: active ? "rgb(216,180,254)" : alert ? "rgb(253,230,138)" : "rgba(255,255,255,.40)",
+    } as React.CSSProperties),
   };
 
   const statusColor = locked ? "rgba(245,158,11,.85)" : "rgba(16,185,129,.85)";
   const statusLabel = locked ? "LOCKED" : slowSec > 0 ? `SLOW ${slowSec}s` : "UNLOCKED";
 
   return (
-    <div
-      className="weered-rrr"
-      style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}
-    >
+    <div className="weered-rrr" style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
+
       <div style={{ marginBottom: 4, paddingRight: 60 }}>
-        <div className="weered-rrr-title" style={{ fontWeight: 700, fontSize: 13 }}>
-          Control Panel
-        </div>
+        <div className="weered-rrr-title" style={{ fontWeight: 700, fontSize: 13 }}>Control Panel</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
           <span style={{ fontSize: 11, opacity: 0.55 }}>context: {roomLabel}</span>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: ".5px",
-              padding: "2px 8px",
-              borderRadius: 999,
-              background: locked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)",
-              border: `1px solid ${statusColor}40`,
-              color: statusColor,
-            }}
-          >
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".5px", padding: "2px 8px", borderRadius: 999, background: locked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${statusColor}40`, color: statusColor }}>
             {statusLabel}
           </span>
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
-        <button
-          style={s.btn}
-          onClick={() => {
-            const base = typeof window !== "undefined" ? window.location.origin : "";
-            copyText("link", `${base}/room/${encodeURIComponent(roomId)}`);
-          }}
-        >
-          Copy link
-        </button>
-        <button style={s.btn} onClick={() => copyText("id", roomId)}>
-          Copy id
-        </button>
-        <button
-          style={{
-            ...s.btn,
-            gridColumn: "span 2",
-            borderColor: "rgba(124,58,237,.30)",
-            color: "rgb(216,180,254)",
-            background: "rgba(124,58,237,.08)",
-          }}
-          onClick={() => setShowInvite(true)}
-        >
-          Invite
-        </button>
+        <button style={s.btn} onClick={() => { const base = typeof window !== "undefined" ? window.location.origin : ""; copyText("link", `${base}/room/${encodeURIComponent(roomId)}`); }}>Copy link</button>
+        <button style={s.btn} onClick={() => copyText("id", roomId)}>Copy id</button>
+        <button style={{ ...s.btn, gridColumn: "span 2", borderColor: "rgba(124,58,237,.30)", color: "rgb(216,180,254)", background: "rgba(124,58,237,.08)" }} onClick={() => setShowInvite(true)}>Invite</button>
       </div>
 
       {allowed && (
         <details open style={{ marginTop: 10 }}>
-          <summary
-            style={{
-              listStyle: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(167,139,250,.45)",
-              background: "rgba(124,58,237,.18)",
-              userSelect: "none",
-            }}
-          >
-            <span
-              className="weered-rrr-section-label"
-              style={{
-                color: "rgb(233,220,255)",
-                fontWeight: 800,
-                fontSize: 11,
-                letterSpacing: ".5px",
-              }}
-            >
-              MODERATION
-            </span>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(167,139,250,.45)", background: "rgba(124,58,237,.18)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgb(233,220,255)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODERATION</span>
             <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
               {knocks.length > 0 && (
-                <span
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 900,
-                    background: "rgba(245,158,11,.85)",
-                    color: "#000",
-                    borderRadius: 5,
-                    padding: "1px 5px",
-                  }}
-                >
+                <span style={{ fontSize: 9, fontWeight: 900, background: "rgba(245,158,11,.85)", color: "#000", borderRadius: 5, padding: "1px 5px" }}>
                   {knocks.length} KNOCK{knocks.length > 1 ? "S" : ""}
                 </span>
               )}
-              <span
-                style={{
-                  fontSize: 10,
-                  padding: "2px 7px",
-                  borderRadius: 999,
-                  background: "rgba(167,139,250,.25)",
-                  border: "1px solid rgba(167,139,250,.45)",
-                  color: "rgb(233,220,255)",
-                  fontWeight: 700,
-                }}
-              >
-                mod tools
-              </span>
+              <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 999, background: "rgba(167,139,250,.25)", border: "1px solid rgba(167,139,250,.45)", color: "rgb(233,220,255)", fontWeight: 700 }}>mod tools</span>
             </div>
           </summary>
 
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              <button style={s.tabBtn(tab === "users")} onClick={() => setTab("users")}>
-                Users ({people.length})
-              </button>
-              <button
-                style={s.tabBtn(tab === "knocks", knocks.length > 0)}
-                onClick={() => setTab("knocks")}
-              >
+              <button style={s.tabBtn(tab === "users")}  onClick={() => setTab("users")}>Users ({people.length})</button>
+              <button style={s.tabBtn(tab === "knocks", knocks.length > 0)} onClick={() => setTab("knocks")}>
                 Knocks{knocks.length > 0 ? ` (${knocks.length})` : ""}
               </button>
-              <button style={s.tabBtn(tab === "banned")} onClick={() => setTab("banned")}>
-                Banned ({banned.length})
-              </button>
-              <button style={s.tabBtn(tab === "audit")} onClick={() => setTab("audit")}>
-                Audit
-              </button>
+              <button style={s.tabBtn(tab === "banned")} onClick={() => setTab("banned")}>Banned ({banned.length})</button>
+              <button style={s.tabBtn(tab === "audit")}  onClick={() => setTab("audit")}>Audit</button>
             </div>
 
-            {tab === "users" && (
-              <>
-                <div style={s.section}>
-                  <div style={s.label}>Select user</div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <select
-                      style={s.select}
-                      value={selectedId}
-                      onChange={(e) => setSelectedId(e.target.value)}
-                    >
-                      <option value="">(first in list)</option>
-                      {people.map((p, i) => {
-                        const id = String(p.id ?? p.name ?? i);
-                        const isMuted = muted.includes(id);
-                        const isBanned = banned.includes(id);
-                        return (
-                          <option key={id} value={id}>
-                            {String(p.name ?? id)}
-                            {isMuted ? " [muted]" : ""}
-                            {isBanned ? " [banned]" : ""}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <button style={s.btn} onClick={() => setSelectedId("")}>
-                      &#x2715;
-                    </button>
+            {tab === "users" && (<>
+              <div style={s.section}>
+                <div style={s.label}>Select user</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <select style={s.select} value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+                    <option value="">(first in list)</option>
+                    {people.map((p, i) => {
+                      const id = String(p.id ?? p.name ?? i);
+                      const isMuted  = muted.includes(id);
+                      const isBanned = banned.includes(id);
+                      return <option key={id} value={id}>{String(p.name ?? id)}{isMuted ? " [muted]" : ""}{isBanned ? " [banned]" : ""}</option>;
+                    })}
+                  </select>
+                  <button style={s.btn} onClick={() => setSelectedId("")}>&#x2715;</button>
+                </div>
+                {selected && (
+                  <div style={{ marginTop: 6, fontSize: 11, opacity: 0.65, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <span>{String(selected.name ?? selected.id ?? "?")} {selected.role ? `· ${selected.role}` : ""}</span>
+                    {muted.includes(String(selected.id ?? ""))  && <span style={{ fontSize: 9, background: "rgba(245,158,11,.18)", border: "1px solid rgba(245,158,11,.35)", borderRadius: 4, padding: "1px 5px", color: "rgb(253,230,138)" }}>MUTED</span>}
+                    {banned.includes(String(selected.id ?? "")) && <span style={{ fontSize: 9, background: "rgba(239,68,68,.15)",  border: "1px solid rgba(239,68,68,.3)",  borderRadius: 4, padding: "1px 5px", color: "rgba(252,165,165,.9)" }}>BANNED</span>}
                   </div>
-                  {selected && (
-                    <div
-                      style={{
-                        marginTop: 6,
-                        fontSize: 11,
-                        opacity: 0.65,
-                        display: "flex",
-                        gap: 6,
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span>
-                        {String(selected.name ?? selected.id ?? "?")}{" "}
-                        {selected.role ? `· ${selected.role}` : ""}
-                      </span>
-                      {muted.includes(String(selected.id ?? "")) && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            background: "rgba(245,158,11,.18)",
-                            border: "1px solid rgba(245,158,11,.35)",
-                            borderRadius: 4,
-                            padding: "1px 5px",
-                            color: "rgb(253,230,138)",
-                          }}
-                        >
-                          MUTED
-                        </span>
-                      )}
-                      {banned.includes(String(selected.id ?? "")) && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            background: "rgba(239,68,68,.15)",
-                            border: "1px solid rgba(239,68,68,.3)",
-                            borderRadius: 4,
-                            padding: "1px 5px",
-                            color: "rgba(252,165,165,.9)",
-                          }}
-                        >
-                          BANNED
-                        </span>
-                      )}
-                    </div>
-                  )}
+                )}
+              </div>
+
+              <div style={s.section}>
+                <div style={s.label}>User actions</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                  {selected && muted.includes(String(selected?.id ?? ""))
+                    ? <button style={s.btnGreen} onClick={() => doAction("unmute")}>Unmute</button>
+                    : <button style={s.btn}      onClick={() => doAction("mute")}>Mute</button>
+                  }
+                  <button style={s.btn}    onClick={() => doAction("kick")}>Kick</button>
+                  <button style={s.btnRed} onClick={() => doAction("ban")}>Ban</button>
+                  <button style={s.btn}    onClick={() => { const uid = String(selected?.id ?? ""); if (uid) replaceTop("profile", { userId: uid }); }}>View profile</button>
+                  {canPromoteUsers && <>
+                    <button style={s.btnPrimary} onClick={() => doAction("promote")}>Promote MOD</button>
+                    <button style={s.btn}        onClick={() => doAction("demote")}>Demote</button>
+                  </>}
                 </div>
 
-                <div style={s.section}>
-                  <div style={s.label}>User actions</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                    {selected && muted.includes(String(selected?.id ?? "")) ? (
-                      <button style={s.btnGreen} onClick={() => doAction("unmute")}>
-                        Unmute
-                      </button>
-                    ) : (
-                      <button style={s.btn} onClick={() => doAction("mute")}>
-                        Mute
-                      </button>
-                    )}
-                    <button style={s.btn} onClick={() => doAction("kick")}>
-                      Kick
-                    </button>
-                    <button style={s.btnRed} onClick={() => doAction("ban")}>
-                      Ban
-                    </button>
-                    <button
-                      style={s.btn}
-                      onClick={() => {
-                        const uid = String(selected?.id ?? "");
-                        if (uid) replaceTop("profile", { userId: uid });
-                      }}
-                    >
-                      View profile
-                    </button>
-                    {canPromoteUsers && (
-                      <>
-                        <button style={s.btnPrimary} onClick={() => doAction("promote")}>
-                          Promote MOD
-                        </button>
-                        <button style={s.btn} onClick={() => doAction("demote")}>
-                          Demote
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {confirm && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        padding: "8px 10px",
-                        borderRadius: 9,
-                        background: "rgba(245,158,11,.10)",
-                        border: "1px solid rgba(245,158,11,.25)",
-                        fontSize: 12,
-                      }}
-                    >
-                      <div style={{ marginBottom: 6 }}>
-                        Confirm <strong>{confirm.kind}</strong> for <strong>{confirm.name}</strong>?
-                      </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button style={{ ...s.btnRed, flex: 1 }} onClick={confirmYes}>
-                          Yes, {confirm.kind}
-                        </button>
-                        <button style={{ ...s.btn, flex: 1 }} onClick={() => setConfirm(null)}>
-                          Cancel
-                        </button>
-                      </div>
+                {confirm && (
+                  <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 9, background: "rgba(245,158,11,.10)", border: "1px solid rgba(245,158,11,.25)", fontSize: 12 }}>
+                    <div style={{ marginBottom: 6 }}>Confirm <strong>{confirm.kind}</strong> for <strong>{confirm.name}</strong>?</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button style={{ ...s.btnRed, flex: 1 }} onClick={confirmYes}>Yes, {confirm.kind}</button>
+                      <button style={{ ...s.btn,    flex: 1 }} onClick={() => setConfirm(null)}>Cancel</button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+              </div>
 
-                <div style={s.section}>
-                  <div style={s.label}>Room</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                    <button style={locked ? s.btn : s.btnRed} onClick={() => doAction("lock")}>
-                      🔒 Lock entry
-                    </button>
-                    <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>
-                      🔓 Unlock entry
-                    </button>
-                    <button
-                      style={{ ...s.btnRed, gridColumn: "span 2" }}
-                      onClick={async () => {
-                        const ok = await weeredConfirm({
-                          title: "Clear all chat in this room?",
-                          body: "Every message gets wiped for everyone. This can't be undone.",
-                          confirmLabel: "Clear chat",
-                          destructive: true,
+              <div style={s.section}>
+                <div style={s.label}>Room</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                  <button style={locked ? s.btn : s.btnRed}   onClick={() => doAction("lock")}>🔒 Lock entry</button>
+                  <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>🔓 Unlock entry</button>
+                  <button
+                    style={{ ...s.btnRed, gridColumn: "span 2" }}
+                    onClick={async () => {
+                      const ok = await weeredConfirm({ title: "Clear all chat in this room?", body: "Every message gets wiped for everyone. This can't be undone.", confirmLabel: "Clear chat", destructive: true });
+                      if (!ok) return;
+                      try {
+                        const t = localStorage.getItem("weered_token") || "";
+                        const r = await fetch(`${API_BASE}/staff/room/clear-chat`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+                          body: JSON.stringify({ roomId }),
                         });
-                        if (!ok) return;
-                        try {
-                          const t = localStorage.getItem("weered_token") || "";
-                          const r = await fetch(`${API_BASE}/staff/room/clear-chat`, {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${t}`,
-                            },
-                            body: JSON.stringify({ roomId }),
-                          });
-                          const j = await r.json();
-                          setNote(j.ok ? "Chat cleared." : j.error || "Failed.");
-                        } catch {
-                          setNote("Request failed.");
-                        }
-                      }}
-                    >
-                      Clear Chat
-                    </button>
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ ...s.label, marginBottom: 4 }}>Rename</div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input
-                        style={s.input}
-                        placeholder="New name…"
-                        value={renameVal}
-                        onChange={(e) => setRenameVal(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && doRename()}
-                      />
-                      <button
-                        style={s.btn}
-                        onClick={doRename}
-                        disabled={renaming || !renameVal.trim()}
-                      >
-                        {renaming ? "…" : "OK"}
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ ...s.label, marginBottom: 4 }}>Slow mode</div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <select
-                        style={s.select}
-                        value={String(slowSec)}
-                        onChange={(e) => setSlowSec(parseInt(e.target.value || "0", 10))}
-                      >
-                        <option value="0">Off</option>
-                        <option value="5">5s</option>
-                        <option value="10">10s</option>
-                        <option value="30">30s</option>
-                        <option value="60">60s</option>
-                      </select>
-                      <button style={s.btn} onClick={() => setSlowSec(0)}>
-                        Off
-                      </button>
-                    </div>
+                        const j = await r.json();
+                        setNote(j.ok ? "Chat cleared." : j.error || "Failed.");
+                      } catch { setNote("Request failed."); }
+                    }}
+                  >Clear Chat</button>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ ...s.label, marginBottom: 4 }}>Rename</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input style={s.input} placeholder="New name…" value={renameVal} onChange={e => setRenameVal(e.target.value)} onKeyDown={e => e.key === "Enter" && doRename()} />
+                    <button style={s.btn} onClick={doRename} disabled={renaming || !renameVal.trim()}>{renaming ? "…" : "OK"}</button>
                   </div>
                 </div>
-              </>
-            )}
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ ...s.label, marginBottom: 4 }}>Slow mode</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <select style={s.select} value={String(slowSec)} onChange={e => setSlowSec(parseInt(e.target.value || "0", 10))}>
+                      <option value="0">Off</option><option value="5">5s</option><option value="10">10s</option><option value="30">30s</option><option value="60">60s</option>
+                    </select>
+                    <button style={s.btn} onClick={() => setSlowSec(0)}>Off</button>
+                  </div>
+                </div>
+              </div>
+            </>)}
 
             {tab === "knocks" && (
               <div style={s.section}>
                 <div style={s.label}>Waiting to enter ({knocks.length})</div>
-                {knocks.length === 0 ? (
-                  <EmptyState compact title="Nobody at the door." />
-                ) : (
-                  <>
+                {knocks.length === 0
+                  ? <EmptyState compact title="Nobody at the door." />
+                  : <>
                     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                      {knocks.map((k) => (
-                        <div
-                          key={k.userId}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            padding: "7px 10px",
-                            borderRadius: 9,
-                            background: "rgba(245,158,11,.06)",
-                            border: "1px solid rgba(245,158,11,.18)",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 600,
-                              flex: 1,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {k.name}
-                          </span>
-                          <button style={s.btnGreen} onClick={() => doAction("admit", k.userId)}>
-                            Admit
-                          </button>
-                          <button style={s.btnRed} onClick={() => doAction("deny", k.userId)}>
-                            Deny
-                          </button>
+                      {knocks.map(k => (
+                        <div key={k.userId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 9, background: "rgba(245,158,11,.06)", border: "1px solid rgba(245,158,11,.18)" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{k.name}</span>
+                          <button style={s.btnGreen} onClick={() => doAction("admit", k.userId)}>Admit</button>
+                          <button style={s.btnRed}   onClick={() => doAction("deny",  k.userId)}>Deny</button>
                         </div>
                       ))}
                     </div>
                     <div style={{ display: "flex", gap: 5, marginTop: 6 }}>
-                      <button
-                        style={{ ...s.btnGreen, flex: 1 }}
-                        onClick={() => knocks.forEach((k) => doAction("admit", k.userId))}
-                      >
-                        Admit all
-                      </button>
-                      <button
-                        style={{ ...s.btnRed, flex: 1 }}
-                        onClick={() => knocks.forEach((k) => doAction("deny", k.userId))}
-                      >
-                        Deny all
-                      </button>
+                      <button style={{ ...s.btnGreen, flex: 1 }} onClick={() => knocks.forEach(k => doAction("admit", k.userId))}>Admit all</button>
+                      <button style={{ ...s.btnRed,   flex: 1 }} onClick={() => knocks.forEach(k => doAction("deny",  k.userId))}>Deny all</button>
                     </div>
                   </>
-                )}
+                }
               </div>
             )}
 
             {tab === "banned" && (
               <div style={s.section}>
                 <div style={s.label}>Banned ({banned.length})</div>
-                {banned.length === 0 ? (
-                  <EmptyState compact title="Nobody banned." />
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {banned.map((uid) => (
-                      <div
-                        key={uid}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "6px 10px",
-                          borderRadius: 9,
-                          background: "rgba(239,68,68,.05)",
-                          border: "1px solid rgba(239,68,68,.14)",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontFamily: "monospace",
-                            opacity: 0.7,
-                            flex: 1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {uid}
-                        </span>
-                        <button style={s.btnGreen} onClick={() => doAction("unban", uid)}>
-                          Unban
-                        </button>
+                {banned.length === 0
+                  ? <EmptyState compact title="Nobody banned." />
+                  : <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {banned.map(uid => (
+                      <div key={uid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(239,68,68,.05)", border: "1px solid rgba(239,68,68,.14)" }}>
+                        <span style={{ fontSize: 11, fontFamily: "monospace", opacity: 0.7, flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{uid}</span>
+                        <button style={s.btnGreen} onClick={() => doAction("unban", uid)}>Unban</button>
                       </div>
                     ))}
                   </div>
-                )}
+                }
               </div>
             )}
 
             {tab === "audit" && (
               <div style={s.section}>
                 <div style={s.label}>Recent actions</div>
-                {auditLog.length === 0 ? (
-                  <EmptyState
-                    compact
-                    title="No actions yet."
-                    hint="Mod actions show up here as they happen."
-                  />
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 3,
-                      maxHeight: 300,
-                      overflowY: "auto",
-                    }}
-                  >
+                {auditLog.length === 0
+                  ? <EmptyState compact title="No actions yet." hint="Mod actions show up here as they happen." />
+                  : <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 300, overflowY: "auto" }}>
                     {auditLog.map((a: any) => (
-                      <div
-                        key={a.id}
-                        style={{
-                          padding: "5px 8px",
-                          borderRadius: 7,
-                          background: "rgba(255,255,255,.02)",
-                          border: "1px solid rgba(255,255,255,.05)",
-                          fontSize: 11,
-                        }}
-                      >
+                      <div key={a.id} style={{ padding: "5px 8px", borderRadius: 7, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", fontSize: 11 }}>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <span style={{ fontFamily: "monospace", fontSize: 9, opacity: 0.4 }}>
-                            {new Date(a.ts).toLocaleTimeString()}
-                          </span>
-                          <span style={{ fontWeight: 700, color: "rgba(167,139,250,.8)" }}>
-                            {a.type}
-                          </span>
+                          <span style={{ fontFamily: "monospace", fontSize: 9, opacity: 0.4 }}>{new Date(a.ts).toLocaleTimeString()}</span>
+                          <span style={{ fontWeight: 700, color: "rgba(167,139,250,.8)" }}>{a.type}</span>
                         </div>
                         <div style={{ opacity: 0.6, marginTop: 1 }}>
-                          {a.actorName}
-                          {a.targetId ? ` → ${String(a.targetId).slice(0, 12)}…` : ""}
+                          {a.actorName}{a.targetId ? ` → ${String(a.targetId).slice(0,12)}…` : ""}
                           {a.note ? ` "${a.note}"` : ""}
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
+                }
               </div>
             )}
 
@@ -1184,56 +555,17 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary
-            style={{
-              listStyle: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.08)",
-              background: "rgba(255,255,255,.03)",
-              userSelect: "none",
-            }}
-          >
-            <span
-              className="weered-rrr-section-label"
-              style={{
-                color: "rgba(243,244,246,.75)",
-                fontWeight: 800,
-                fontSize: 11,
-                letterSpacing: ".5px",
-              }}
-            >
-              VOICE
-            </span>
-            <span
-              style={{
-                fontSize: 9,
-                padding: "2px 7px",
-                borderRadius: 999,
-                background: "rgba(245,158,11,.12)",
-                border: "1px solid rgba(245,158,11,.30)",
-                color: "rgb(253,230,138)",
-                fontWeight: 700,
-              }}
-            >
-              {(
-                ctx?.voiceByRoom?.[`room:${roomId}`]?.mode ||
-                ctx?.voiceByRoom?.[roomId]?.mode ||
-                "OPEN"
-              ).toLowerCase()}
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>VOICE</span>
+            <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>
+              {(ctx?.voiceByRoom?.[`room:${roomId}`]?.mode || ctx?.voiceByRoom?.[roomId]?.mode || "OPEN").toLowerCase()}
             </span>
           </summary>
           <div style={{ marginTop: 8, padding: "0 4px" }}>
             <VoiceQueueControls
-              isOwner={(canMod(myRoomRole) && myRoomRole === "owner") || canMod(myGlobalRole)}
+              isOwner={canMod(myRoomRole) && myRoomRole === "owner" || canMod(myGlobalRole)}
               isMod={canMod(myRoomRole) || canMod(myGlobalRole)}
-              voiceState={
-                ctx?.voiceByRoom?.[`room:${roomId}`] || ctx?.voiceByRoom?.[roomId] || null
-              }
+              voiceState={ctx?.voiceByRoom?.[`room:${roomId}`] || ctx?.voiceByRoom?.[roomId] || null}
               users={people}
               onSetMode={(m) => ctx?.setVoiceMode?.(m)}
               onApprove={(uid) => ctx?.approveSpeaker?.(uid)}
@@ -1245,43 +577,10 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary
-            style={{
-              listStyle: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.08)",
-              background: "rgba(255,255,255,.03)",
-              userSelect: "none",
-            }}
-          >
-            <span
-              className="weered-rrr-section-label"
-              style={{
-                color: "rgba(243,244,246,.75)",
-                fontWeight: 800,
-                fontSize: 11,
-                letterSpacing: ".5px",
-              }}
-            >
-              MODULES
-            </span>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODULES</span>
             {((ctx?.meta?.disabledModules as string[]) || []).length > 0 && (
-              <span
-                style={{
-                  fontSize: 9,
-                  padding: "2px 7px",
-                  borderRadius: 999,
-                  background: "rgba(239,68,68,.12)",
-                  border: "1px solid rgba(239,68,68,.3)",
-                  color: "rgba(252,165,165,.9)",
-                  fontWeight: 700,
-                }}
-              >
+              <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)", fontWeight: 700 }}>
                 {((ctx?.meta?.disabledModules as string[]) || []).length} off
               </span>
             )}
@@ -1297,44 +596,9 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary
-            style={{
-              listStyle: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,.08)",
-              background: "rgba(255,255,255,.03)",
-              userSelect: "none",
-            }}
-          >
-            <span
-              className="weered-rrr-section-label"
-              style={{
-                color: "rgba(243,244,246,.75)",
-                fontWeight: 800,
-                fontSize: 11,
-                letterSpacing: ".5px",
-              }}
-            >
-              APPEARANCE
-            </span>
-            <span
-              style={{
-                fontSize: 9,
-                padding: "2px 7px",
-                borderRadius: 999,
-                background: "rgba(245,158,11,.12)",
-                border: "1px solid rgba(245,158,11,.30)",
-                color: "rgb(253,230,138)",
-                fontWeight: 700,
-              }}
-            >
-              owner
-            </span>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>APPEARANCE</span>
+            <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>owner</span>
           </summary>
           <div style={{ marginTop: 8, padding: "0 4px" }}>
             <RoomAppearanceEditor
@@ -1352,45 +616,17 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary
-            style={{
-              ...s.label,
-              cursor: "pointer",
-              listStyle: "none",
-              padding: "5px 10px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,.06)",
-              opacity: 0.4,
-            }}
-          >
+          <summary style={{ ...s.label, cursor: "pointer", listStyle: "none", padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.06)", opacity: 0.4 }}>
             debug tools
           </summary>
           <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 5 }}>
-            <button
-              style={s.btn}
-              onClick={async () => {
-                const snap = {
-                  roomId,
-                  myGlobalRole,
-                  myRoomRole,
-                  users: people.map((p) => ({ id: p.id, name: p.name, role: p.role })),
-                  muted,
-                  banned,
-                  knocks: knocks.length,
-                };
-                try {
-                  await navigator.clipboard.writeText(JSON.stringify(snap, null, 2));
-                  setNote("Copied.");
-                } catch {
-                  setNote("Copy failed.");
-                }
-              }}
-            >
-              Copy debug snapshot
-            </button>
+            <button style={s.btn} onClick={async () => {
+              const snap = { roomId, myGlobalRole, myRoomRole, users: people.map(p => ({ id: p.id, name: p.name, role: p.role })), muted, banned, knocks: knocks.length };
+              try { await navigator.clipboard.writeText(JSON.stringify(snap, null, 2)); setNote("Copied."); }
+              catch { setNote("Copy failed."); }
+            }}>Copy debug snapshot</button>
             <div style={{ fontSize: 11, opacity: 0.45 }}>
-              globalRole: {myGlobalRole || "?"} · roomRole: {myRoomRole} · users: {people.length} ·
-              muted: {muted.length} · knocks: {knocks.length}
+              globalRole: {myGlobalRole||"?"} · roomRole: {myRoomRole} · users: {people.length} · muted: {muted.length} · knocks: {knocks.length}
             </div>
           </div>
         </details>
@@ -1433,8 +669,7 @@ function RoomAppearanceEditor({
     description !== (initial.description || "");
 
   async function save() {
-    setSaving(true);
-    setMsg(null);
+    setSaving(true); setMsg(null);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
       const r = await fetch(`${API_BASE}/rooms/${encodeURIComponent(roomId)}`, {
@@ -1450,218 +685,65 @@ function RoomAppearanceEditor({
       const j = await r.json();
       if (j?.ok) setMsg({ kind: "ok", text: "Saved." });
       else setMsg({ kind: "err", text: j?.error || "Save failed." });
-    } catch {
-      setMsg({ kind: "err", text: "Network error." });
-    } finally {
-      setSaving(false);
-    }
+    } catch { setMsg({ kind: "err", text: "Network error." }); }
+    finally { setSaving(false); }
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div>
-        <div
-          style={{
-            fontSize: 10,
-            opacity: 0.5,
-            letterSpacing: ".5px",
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Icon URL
-        </div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Icon URL</div>
         <input
           value={iconUrl}
-          onChange={(e) => setIconUrl(e.target.value)}
+          onChange={e => setIconUrl(e.target.value)}
           placeholder="https://…/icon.png"
-          style={{
-            width: "100%",
-            padding: "6px 10px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "rgba(0,0,0,.25)",
-            fontSize: 11,
-            color: "rgba(243,244,246,.85)",
-            outline: "none",
-            boxSizing: "border-box",
-            fontFamily: "monospace",
-          }}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
         />
       </div>
       <div>
-        <div
-          style={{
-            fontSize: 10,
-            opacity: 0.5,
-            letterSpacing: ".5px",
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Banner URL
-        </div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Banner URL</div>
         <input
           value={bannerUrl}
-          onChange={(e) => setBannerUrl(e.target.value)}
+          onChange={e => setBannerUrl(e.target.value)}
           placeholder="https://…/banner.jpg"
-          style={{
-            width: "100%",
-            padding: "6px 10px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "rgba(0,0,0,.25)",
-            fontSize: 11,
-            color: "rgba(243,244,246,.85)",
-            outline: "none",
-            boxSizing: "border-box",
-            fontFamily: "monospace",
-          }}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
         />
       </div>
       <div>
-        <div
-          style={{
-            fontSize: 10,
-            opacity: 0.5,
-            letterSpacing: ".5px",
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Accent color
-        </div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Accent color</div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <input
-            type="color"
-            value={accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#5800E5"}
-            onChange={(e) => setAccentColor(e.target.value)}
-            style={{
-              width: 36,
-              height: 28,
-              borderRadius: 6,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "transparent",
-              cursor: "pointer",
-            }}
-          />
-          <input
-            value={accentColor}
-            onChange={(e) => setAccentColor(e.target.value)}
-            placeholder="#5800E5"
-            style={{
-              flex: 1,
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "rgba(0,0,0,.25)",
-              fontSize: 11,
-              color: "rgba(243,244,246,.85)",
-              outline: "none",
-              fontFamily: "monospace",
-            }}
-          />
-          {accentColor && (
-            <button
-              type="button"
-              onClick={() => setAccentColor("")}
-              style={{
-                background: "none",
-                border: "none",
-                color: "rgba(255,255,255,.4)",
-                fontSize: 10,
-                cursor: "pointer",
-              }}
-            >
-              clear
-            </button>
-          )}
+          <input type="color" value={accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#5800E5"} onChange={e => setAccentColor(e.target.value)} style={{ width: 36, height: 28, borderRadius: 6, border: "1px solid rgba(255,255,255,.10)", background: "transparent", cursor: "pointer" }} />
+          <input value={accentColor} onChange={e => setAccentColor(e.target.value)} placeholder="#5800E5" style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", fontFamily: "monospace" }} />
+          {accentColor && (<button type="button" onClick={() => setAccentColor("")} style={{ background: "none", border: "none", color: "rgba(255,255,255,.4)", fontSize: 10, cursor: "pointer" }}>clear</button>)}
         </div>
       </div>
       <div>
-        <div
-          style={{
-            fontSize: 10,
-            opacity: 0.5,
-            letterSpacing: ".5px",
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Description
-        </div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Description</div>
         <textarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={e => setDescription(e.target.value)}
           rows={2}
           placeholder="What is this room about?"
-          style={{
-            width: "100%",
-            padding: "6px 10px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "rgba(0,0,0,.25)",
-            fontSize: 12,
-            color: "rgba(243,244,246,.85)",
-            outline: "none",
-            boxSizing: "border-box",
-            resize: "none",
-          }}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 12, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", resize: "none" }}
         />
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <button
-          type="button"
-          disabled={!dirty || saving}
-          onClick={save}
-          style={{
-            padding: "6px 14px",
-            borderRadius: 8,
-            border: "1px solid rgba(245,158,11,.30)",
-            background: "rgba(245,158,11,.10)",
-            color: "rgb(253,230,138)",
-            fontSize: 11,
-            fontWeight: 700,
-            cursor: !dirty || saving ? "default" : "pointer",
-            opacity: !dirty || saving ? 0.4 : 1,
-          }}
-        >
+        <button type="button" disabled={!dirty || saving} onClick={save} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(253,230,138)", fontSize: 11, fontWeight: 700, cursor: !dirty || saving ? "default" : "pointer", opacity: !dirty || saving ? 0.4 : 1 }}>
           {saving ? "Saving…" : dirty ? "Save" : "Saved"}
         </button>
-        {msg && (
-          <span
-            style={{
-              fontSize: 10,
-              color: msg.kind === "ok" ? "rgb(110,231,183)" : "rgba(252,165,165,.9)",
-            }}
-          >
-            {msg.text}
-          </span>
-        )}
+        {msg && <span style={{ fontSize: 10, color: msg.kind === "ok" ? "rgb(110,231,183)" : "rgba(252,165,165,.9)" }}>{msg.text}</span>}
       </div>
     </div>
   );
 }
 
 const TOGGLEABLE_MODULES: { id: string; label: string }[] = [
-  { id: "voice", label: "Voice" },
-  { id: "youtube", label: "YouTube" },
-  { id: "twitch", label: "Twitch" },
-  { id: "browser", label: "Browser" },
-  { id: "screen", label: "Screen" },
-  { id: "video", label: "Video" },
-  { id: "article", label: "Article" },
-  { id: "fakeout", label: "FakeOut" },
-  { id: "poker", label: "Poker" },
-  { id: "study", label: "Study" },
-  { id: "dnd", label: "D&D" },
-  { id: "destiny", label: "Destiny 2" },
-  { id: "league", label: "LoL" },
-  { id: "fortnite", label: "Fortnite" },
-  { id: "cs2", label: "CS2" },
-  { id: "dota2", label: "Dota 2" },
-  { id: "pubg", label: "PUBG" },
-  { id: "hq", label: "HQ" },
+  { id: "voice", label: "Voice" }, { id: "youtube", label: "YouTube" }, { id: "twitch", label: "Twitch" },
+  { id: "browser", label: "Browser" }, { id: "screen", label: "Screen" }, { id: "video", label: "Video" },
+  { id: "article", label: "Article" }, { id: "fakeout", label: "FakeOut" }, { id: "poker", label: "Poker" },
+  { id: "study", label: "Study" }, { id: "dnd", label: "D&D" }, { id: "destiny", label: "Destiny 2" },
+  { id: "league", label: "LoL" }, { id: "fortnite", label: "Fortnite" }, { id: "cs2", label: "CS2" },
+  { id: "dota2", label: "Dota 2" }, { id: "pubg", label: "PUBG" }, { id: "hq", label: "HQ" },
 ];
 
 function RoomModulesEditor({
@@ -1671,30 +753,22 @@ function RoomModulesEditor({
   roomId: string;
   initial: { disabledModules: string[] };
 }) {
-  const [disabled, setDisabled] = useState<Set<string>>(
-    () => new Set(initial.disabledModules || []),
-  );
+  const [disabled, setDisabled] = useState<Set<string>>(() => new Set(initial.disabledModules || []));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const initialSet = useMemo(
-    () => new Set(initial.disabledModules || []),
-    [initial.disabledModules],
-  );
-  const dirty =
-    disabled.size !== initialSet.size || Array.from(disabled).some((m) => !initialSet.has(m));
+  const initialSet = useMemo(() => new Set(initial.disabledModules || []), [initial.disabledModules]);
+  const dirty = disabled.size !== initialSet.size || Array.from(disabled).some(m => !initialSet.has(m));
 
   function toggle(mod: string) {
-    setDisabled((prev) => {
+    setDisabled(prev => {
       const next = new Set(prev);
-      if (next.has(mod)) next.delete(mod);
-      else next.add(mod);
+      if (next.has(mod)) next.delete(mod); else next.add(mod);
       return next;
     });
     setMsg(null);
   }
   async function save() {
-    setSaving(true);
-    setMsg(null);
+    setSaving(true); setMsg(null);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
       const r = await fetch(`${API_BASE}/rooms/${encodeURIComponent(roomId)}`, {
@@ -1705,11 +779,8 @@ function RoomModulesEditor({
       const j = await r.json();
       if (j?.ok) setMsg({ kind: "ok", text: "Saved." });
       else setMsg({ kind: "err", text: j?.error || "Save failed." });
-    } catch {
-      setMsg({ kind: "err", text: "Network error." });
-    } finally {
-      setSaving(false);
-    }
+    } catch { setMsg({ kind: "err", text: "Network error." }); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -1718,7 +789,7 @@ function RoomModulesEditor({
         Click a module to disable it in this room. Members get a toast if they try to switch to it.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-        {TOGGLEABLE_MODULES.map((m) => {
+        {TOGGLEABLE_MODULES.map(m => {
           const isOff = disabled.has(m.id);
           return (
             <button
@@ -1735,57 +806,20 @@ function RoomModulesEditor({
                 border: `1px solid ${isOff ? "rgba(239,68,68,.35)" : "rgba(255,255,255,.08)"}`,
                 background: isOff ? "rgba(239,68,68,.08)" : "rgba(255,255,255,.02)",
                 color: isOff ? "rgba(252,165,165,.85)" : "rgba(243,244,246,.55)",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
+                display: "flex", alignItems: "center", gap: 6,
               }}
             >
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 10,
-                  height: 10,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: isOff ? "rgba(252,165,165,.6)" : "rgba(255,255,255,.2)",
-                  background: isOff ? "rgba(239,68,68,.4)" : "transparent",
-                }}
-              />
-              {m.label}
-              {isOff && " ×"}
+              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, border: "1px solid", borderColor: isOff ? "rgba(252,165,165,.6)" : "rgba(255,255,255,.2)", background: isOff ? "rgba(239,68,68,.4)" : "transparent" }} />
+              {m.label}{isOff && " ×"}
             </button>
           );
         })}
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <button
-          type="button"
-          disabled={!dirty || saving}
-          onClick={save}
-          style={{
-            padding: "6px 14px",
-            borderRadius: 8,
-            border: "1px solid rgba(245,158,11,.30)",
-            background: "rgba(245,158,11,.10)",
-            color: "rgb(253,230,138)",
-            fontSize: 11,
-            fontWeight: 700,
-            cursor: !dirty || saving ? "default" : "pointer",
-            opacity: !dirty || saving ? 0.4 : 1,
-          }}
-        >
+        <button type="button" disabled={!dirty || saving} onClick={save} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(253,230,138)", fontSize: 11, fontWeight: 700, cursor: !dirty || saving ? "default" : "pointer", opacity: !dirty || saving ? 0.4 : 1 }}>
           {saving ? "Saving…" : dirty ? "Save" : "Saved"}
         </button>
-        {msg && (
-          <span
-            style={{
-              fontSize: 10,
-              color: msg.kind === "ok" ? "rgb(110,231,183)" : "rgba(252,165,165,.9)",
-            }}
-          >
-            {msg.text}
-          </span>
-        )}
+        {msg && <span style={{ fontSize: 10, color: msg.kind === "ok" ? "rgb(110,231,183)" : "rgba(252,165,165,.9)" }}>{msg.text}</span>}
       </div>
     </div>
   );
@@ -1802,10 +836,7 @@ function VoiceQueueControls({
 }: {
   isOwner: boolean;
   isMod: boolean;
-  voiceState:
-    | { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }
-    | null
-    | undefined;
+  voiceState: { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] } | null | undefined;
   users: any[];
   onSetMode: (m: "OPEN" | "QUEUED" | "LISTEN_ONLY") => void;
   onApprove: (userId: string) => void;
@@ -1822,27 +853,17 @@ function VoiceQueueControls({
   if (!isOwner && !isMod) return null;
 
   const MODES: { id: "OPEN" | "QUEUED" | "LISTEN_ONLY"; label: string; hint: string }[] = [
-    { id: "OPEN", label: "Open", hint: "Anyone can speak" },
-    { id: "QUEUED", label: "Queued", hint: "Raise hand → mod approves" },
+    { id: "OPEN",        label: "Open",   hint: "Anyone can speak" },
+    { id: "QUEUED",      label: "Queued", hint: "Raise hand → mod approves" },
     { id: "LISTEN_ONLY", label: "Listen", hint: "Mods/owner only" },
   ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div>
-        <div
-          style={{
-            fontSize: 10,
-            opacity: 0.5,
-            letterSpacing: ".5px",
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Mode
-        </div>
+        <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Mode</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
-          {MODES.map((m) => {
+          {MODES.map(m => {
             const active = mode === m.id;
             return (
               <button
@@ -1851,32 +872,16 @@ function VoiceQueueControls({
                 onClick={() => onSetMode(m.id)}
                 title={m.hint}
                 style={{
-                  padding: "5px 6px",
-                  borderRadius: 6,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: ".4px",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  border: active
-                    ? "1px solid rgba(245,158,11,.45)"
-                    : "1px solid rgba(255,255,255,.08)",
+                  padding: "5px 6px", borderRadius: 6,
+                  fontSize: 10, fontWeight: 700, letterSpacing: ".4px",
+                  textAlign: "left", cursor: "pointer",
+                  border: active ? "1px solid rgba(245,158,11,.45)" : "1px solid rgba(255,255,255,.08)",
                   background: active ? "rgba(245,158,11,.12)" : "rgba(255,255,255,.02)",
                   color: active ? "rgb(253,230,138)" : "rgba(243,244,246,.55)",
                 }}
               >
                 <div style={{ fontSize: 11 }}>{m.label}</div>
-                <div
-                  style={{
-                    fontSize: 9,
-                    opacity: 0.6,
-                    fontWeight: 500,
-                    lineHeight: 1.2,
-                    marginTop: 2,
-                  }}
-                >
-                  {m.hint}
-                </div>
+                <div style={{ fontSize: 9, opacity: 0.6, fontWeight: 500, lineHeight: 1.2, marginTop: 2 }}>{m.hint}</div>
               </button>
             );
           })}
@@ -1885,58 +890,14 @@ function VoiceQueueControls({
 
       {mode !== "OPEN" && queue.length > 0 && (
         <div>
-          <div
-            style={{
-              fontSize: 10,
-              opacity: 0.5,
-              letterSpacing: ".5px",
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
-            Queue ({queue.length})
-          </div>
+          <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Queue ({queue.length})</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {queue.map((uid) => {
+            {queue.map(uid => {
               const u = usersById.get(uid);
               return (
-                <div
-                  key={uid}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderRadius: 6,
-                    border: "1px solid rgba(255,255,255,.06)",
-                    background: "rgba(255,255,255,.02)",
-                    padding: "4px 8px",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "rgba(243,244,246,.75)",
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {u?.name || uid}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onApprove(uid)}
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: 5,
-                      border: "1px solid rgba(16,185,129,.3)",
-                      background: "rgba(16,185,129,.10)",
-                      color: "rgb(167,243,208)",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Approve
-                  </button>
+                <div key={uid} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 6, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)", padding: "4px 8px" }}>
+                  <span style={{ fontSize: 11, color: "rgba(243,244,246,.75)", fontFamily: "monospace" }}>{u?.name || uid}</span>
+                  <button type="button" onClick={() => onApprove(uid)} style={{ padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(16,185,129,.3)", background: "rgba(16,185,129,.10)", color: "rgb(167,243,208)", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Approve</button>
                 </div>
               );
             })}
@@ -1946,50 +907,14 @@ function VoiceQueueControls({
 
       {mode !== "OPEN" && speakers.length > 0 && (
         <div>
-          <div
-            style={{
-              fontSize: 10,
-              opacity: 0.5,
-              letterSpacing: ".5px",
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
-            Speakers ({speakers.length})
-          </div>
+          <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Speakers ({speakers.length})</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {speakers.map((uid) => {
+            {speakers.map(uid => {
               const u = usersById.get(uid);
               return (
-                <span
-                  key={uid}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    borderRadius: 999,
-                    border: "1px solid rgba(16,185,129,.25)",
-                    background: "rgba(16,185,129,.08)",
-                    padding: "2px 8px",
-                    fontSize: 10,
-                    color: "rgba(167,243,208,.85)",
-                  }}
-                >
+                <span key={uid} style={{ display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, border: "1px solid rgba(16,185,129,.25)", background: "rgba(16,185,129,.08)", padding: "2px 8px", fontSize: 10, color: "rgba(167,243,208,.85)" }}>
                   {u?.name || uid}
-                  <button
-                    type="button"
-                    onClick={() => onRevoke(uid)}
-                    title="Revoke"
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "rgba(167,243,208,.6)",
-                      cursor: "pointer",
-                      marginLeft: 2,
-                    }}
-                  >
-                    ×
-                  </button>
+                  <button type="button" onClick={() => onRevoke(uid)} title="Revoke" style={{ background: "none", border: "none", color: "rgba(167,243,208,.6)", cursor: "pointer", marginLeft: 2 }}>×</button>
                 </span>
               );
             })}

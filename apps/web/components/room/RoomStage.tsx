@@ -16,43 +16,13 @@ import MicSettings from "../MicSettings";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode =
-  | "voice"
-  | "video"
-  | "screen"
-  | "youtube"
-  | "browser"
-  | "twitch"
-  | "article"
-  | "poker"
-  | "fakeout"
-  | "destiny"
-  | "league"
-  | "fortnite"
-  | "pubg"
-  | "hq"
-  | "cs2"
-  | "dota2"
-  | "study"
-  | "dnd"
-  | "windrose"
-  | "helldivers"
-  | "chess"
-  | "gta"
-  | "eve"
-  | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "chess" | "gta" | "eve" | null;
 
 interface Props {
   roomId: string;
   mode: StageMode;
   moduleType?: string;
-  roomUsers?: {
-    id: string;
-    name: string;
-    role?: string;
-    globalRole?: string;
-    avatarColor?: string;
-  }[];
+  roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[];
   onClose: () => void;
   style?: React.CSSProperties;
 }
@@ -74,9 +44,7 @@ function getToken(): string {
       sessionStorage.getItem("weered_token") ||
       ""
     );
-  } catch {
-    return "";
-  }
+  } catch { return ""; }
 }
 
 import { avatarBg as avatarColor } from "../../lib/avatarColor";
@@ -85,68 +53,21 @@ import DndStage from "./DndStage";
 
 // Game panels are code-split: a room only downloads the module it runs.
 const stageLoading = () => (
-  <div
-    style={{
-      flex: 1,
-      display: "grid",
-      placeItems: "center",
-      minHeight: 200,
-      color: "rgba(148,163,184,.4)",
-      fontSize: 12,
-    }}
-  >
-    Loading module\u2026
-  </div>
+  <div style={{ flex: 1, display: "grid", placeItems: "center", minHeight: 200, color: "rgba(148,163,184,.4)", fontSize: 12 }}>Loading module\u2026</div>
 );
 const PokerTable = dynamic(() => import("../PokerTable"), { loading: stageLoading, ssr: false });
-const TradingModulesPanel = dynamic(() => import("../TradingModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const LobbyModulesPanel = dynamic(() => import("../LobbyModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const LeagueModulesPanel = dynamic(() => import("../LeagueModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const FortniteModulesPanel = dynamic(() => import("../FortniteModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const PubgModulesPanel = dynamic(() => import("../PubgModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const HeadquartersModulesPanel = dynamic(() => import("../HeadquartersModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const CS2ModulesPanel = dynamic(() => import("../CS2ModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const Dota2ModulesPanel = dynamic(() => import("../Dota2ModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const StudyModulesPanel = dynamic(() => import("../StudyModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const WindroseModulesPanel = dynamic(() => import("../WindroseModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const HelldiversModulesPanel = dynamic(() => import("../HelldiversModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
-const EveModulesPanel = dynamic(() => import("../EveModulesPanel"), {
-  loading: stageLoading,
-  ssr: false,
-});
+const TradingModulesPanel = dynamic(() => import("../TradingModulesPanel"), { loading: stageLoading, ssr: false });
+const LobbyModulesPanel = dynamic(() => import("../LobbyModulesPanel"), { loading: stageLoading, ssr: false });
+const LeagueModulesPanel = dynamic(() => import("../LeagueModulesPanel"), { loading: stageLoading, ssr: false });
+const FortniteModulesPanel = dynamic(() => import("../FortniteModulesPanel"), { loading: stageLoading, ssr: false });
+const PubgModulesPanel = dynamic(() => import("../PubgModulesPanel"), { loading: stageLoading, ssr: false });
+const HeadquartersModulesPanel = dynamic(() => import("../HeadquartersModulesPanel"), { loading: stageLoading, ssr: false });
+const CS2ModulesPanel = dynamic(() => import("../CS2ModulesPanel"), { loading: stageLoading, ssr: false });
+const Dota2ModulesPanel = dynamic(() => import("../Dota2ModulesPanel"), { loading: stageLoading, ssr: false });
+const StudyModulesPanel = dynamic(() => import("../StudyModulesPanel"), { loading: stageLoading, ssr: false });
+const WindroseModulesPanel = dynamic(() => import("../WindroseModulesPanel"), { loading: stageLoading, ssr: false });
+const HelldiversModulesPanel = dynamic(() => import("../HelldiversModulesPanel"), { loading: stageLoading, ssr: false });
+const EveModulesPanel = dynamic(() => import("../EveModulesPanel"), { loading: stageLoading, ssr: false });
 
 function extractVideoId(input: string): string | null {
   const s = String(input || "").trim();
@@ -166,26 +87,18 @@ declare global {
   }
 }
 
-function YoutubeStage({
-  roomId,
-  onClose,
-  style,
-}: {
-  roomId: string;
-  onClose: () => void;
-  style?: React.CSSProperties;
-}) {
+function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () => void; style?: React.CSSProperties }) {
   const { sendRaw, ytStateByRoom } = useWeered() as any;
   const voice = useVoice();
-  const playerRef = useRef<any>(null);
+  const playerRef    = useRef<any>(null);
   const playerDivRef = useRef<HTMLDivElement>(null);
-  const isSyncing = useRef(false);
+  const isSyncing    = useRef(false);
 
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [inputVal, setInputVal] = useState("");
-  const [inputErr, setInputErr] = useState("");
-  const [ytReady, setYtReady] = useState(false);
-  const [playing, setPlaying] = useState(false);
+  const [videoId,   setVideoId  ] = useState<string | null>(null);
+  const [inputVal,  setInputVal ] = useState("");
+  const [inputErr,  setInputErr ] = useState("");
+  const [ytReady,   setYtReady  ] = useState(false);
+  const [playing,   setPlaying  ] = useState(false);
   const didInitFromBuffer = useRef(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -205,22 +118,16 @@ function YoutubeStage({
   }, [ytStateByRoom, roomId]);
 
   useEffect(() => {
-    if (window.YT?.Player) {
-      setYtReady(true);
-      return;
-    }
+    if (window.YT?.Player) { setYtReady(true); return; }
     const existing = document.getElementById("yt-iframe-api");
     if (!existing) {
       const s = document.createElement("script");
-      s.id = "yt-iframe-api";
+      s.id  = "yt-iframe-api";
       s.src = "https://www.youtube.com/iframe_api";
       document.head.appendChild(s);
     }
     const poll = setInterval(() => {
-      if (window.YT?.Player) {
-        setYtReady(true);
-        clearInterval(poll);
-      }
+      if (window.YT?.Player) { setYtReady(true); clearInterval(poll); }
     }, 200);
     return () => clearInterval(poll);
   }, []);
@@ -239,7 +146,7 @@ function YoutubeStage({
           const YT = window.YT;
           const pos = playerRef.current?.getCurrentTime?.() ?? 0;
           if (e.data === YT.PlayerState.PLAYING) {
-            sendRaw?.({ type: "youtube:play", roomId, position: pos });
+            sendRaw?.({ type: "youtube:play",  roomId, position: pos });
             setPlaying(true);
           } else if (e.data === YT.PlayerState.PAUSED) {
             sendRaw?.({ type: "youtube:pause", roomId, position: pos });
@@ -257,9 +164,7 @@ function YoutubeStage({
             if (target > 2) {
               isSyncing.current = true;
               playerRef.current?.seekTo?.(target, true);
-              setTimeout(() => {
-                isSyncing.current = false;
-              }, 800);
+              setTimeout(() => { isSyncing.current = false; }, 800);
             }
             if (buf.playing) {
               playerRef.current?.playVideo?.();
@@ -274,10 +179,7 @@ function YoutubeStage({
       playerRef.current = null;
       setTimeout(() => {
         try {
-          try {
-            const iframe = p?.getIframe?.();
-            iframe?.parentNode?.removeChild(iframe);
-          } catch {}
+          try { const iframe = p?.getIframe?.(); iframe?.parentNode?.removeChild(iframe); } catch {}
           p?.destroy?.();
         } catch {}
       }, 0);
@@ -308,9 +210,7 @@ function YoutubeStage({
         if (playerRef.current?.loadVideoById && d.videoId !== videoId) {
           isSyncing.current = true;
           playerRef.current.loadVideoById(d.videoId);
-          setTimeout(() => {
-            isSyncing.current = false;
-          }, 800);
+          setTimeout(() => { isSyncing.current = false; }, 800);
         }
         setVideoId(d.videoId);
         return;
@@ -328,9 +228,7 @@ function YoutubeStage({
           player.playVideo?.();
           setPlaying(true);
         } finally {
-          setTimeout(() => {
-            isSyncing.current = false;
-          }, 500);
+          setTimeout(() => { isSyncing.current = false; }, 500);
         }
         return;
       }
@@ -346,9 +244,7 @@ function YoutubeStage({
           player.pauseVideo?.();
           setPlaying(false);
         } finally {
-          setTimeout(() => {
-            isSyncing.current = false;
-          }, 500);
+          setTimeout(() => { isSyncing.current = false; }, 500);
         }
         return;
       }
@@ -359,9 +255,7 @@ function YoutubeStage({
             isSyncing.current = true;
             playerRef.current.loadVideoById(d.videoId);
             setVideoId(d.videoId);
-            setTimeout(() => {
-              isSyncing.current = false;
-            }, 800);
+            setTimeout(() => { isSyncing.current = false; }, 800);
             return;
           }
           setVideoId(d.videoId);
@@ -375,17 +269,10 @@ function YoutubeStage({
           const target = (d.position ?? 0) + (d.playing ? drift : 0);
           const current = player.getCurrentTime?.() ?? 0;
           if (Math.abs(current - target) > 2) player.seekTo(target, true);
-          if (d.playing) {
-            player.playVideo?.();
-            setPlaying(true);
-          } else {
-            player.pauseVideo?.();
-            setPlaying(false);
-          }
+          if (d.playing) { player.playVideo?.(); setPlaying(true); }
+          else           { player.pauseVideo?.(); setPlaying(false); }
         } finally {
-          setTimeout(() => {
-            isSyncing.current = false;
-          }, 500);
+          setTimeout(() => { isSyncing.current = false; }, 500);
         }
       }
     };
@@ -396,10 +283,7 @@ function YoutubeStage({
 
   const loadVideo = () => {
     const id = extractVideoId(inputVal);
-    if (!id) {
-      setInputErr("Couldn't find a YouTube video ID in that URL.");
-      return;
-    }
+    if (!id) { setInputErr("Couldn't find a YouTube video ID in that URL."); return; }
     setInputErr("");
     setVideoId(id);
     sendRaw?.({ type: "youtube:load", roomId, videoId: id });
@@ -415,441 +299,140 @@ function YoutubeStage({
     setSearchQuery("");
   };
 
-  const API_BASE =
-    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_BASE) ||
-    "http://127.0.0.1:4000";
+  const API_BASE = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_BASE) || "http://127.0.0.1:4000";
 
   const doSearch = (q: string) => {
-    if (!q.trim()) {
-      setSearchResults([]);
-      return;
-    }
+    if (!q.trim()) { setSearchResults([]); return; }
     setSearching(true);
     fetch(`${API_BASE}/youtube/search?q=${encodeURIComponent(q.trim())}`)
-      .then((r) => r.json())
-      .then((j) => {
-        setSearchResults(j.results || []);
-        setSearching(false);
-      })
+      .then(r => r.json())
+      .then(j => { setSearchResults(j.results || []); setSearching(false); })
       .catch(() => setSearching(false));
   };
 
   const onSearchInput = (val: string) => {
     setSearchQuery(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (!val.trim()) {
-      setSearchResults([]);
-      return;
-    }
+    if (!val.trim()) { setSearchResults([]); return; }
     searchTimer.current = setTimeout(() => doSearch(val), 400);
   };
 
   const stopVideo = () => {
     sendRaw?.({ type: "youtube:stop", roomId });
-    try {
-      playerRef.current?.stopVideo?.();
-    } catch {}
+    try { playerRef.current?.stopVideo?.(); } catch {}
     setVideoId(null);
     setPlaying(false);
     setSearchMode(true);
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        background: "rgba(0,0,0,.4)",
-        ...style,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 12px",
-          borderBottom: "1px solid rgba(255,255,255,.07)",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            opacity: 0.6,
-          }}
-        >
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: videoId ? "#22c55e" : "rgba(255,255,255,.2)",
-              boxShadow: videoId ? "0 0 6px #22c55e" : "none",
-              display: "inline-block",
-            }}
-          />
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,.4)", ...style }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: videoId ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: videoId ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
           YouTube Sync
         </div>
         {videoId && (
-          <button
-            onClick={stopVideo}
-            style={{
-              marginLeft: "auto",
-              fontSize: 11,
-              padding: "3px 10px",
-              borderRadius: 6,
-              border: "1px solid rgba(239,68,68,.3)",
-              background: "rgba(239,68,68,.1)",
-              color: "#fca5a5",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={stopVideo} style={{ marginLeft: "auto", fontSize: 11, padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,.3)", background: "rgba(239,68,68,.1)", color: "#fca5a5", cursor: "pointer" }}>
             Stop
           </button>
         )}
-        <button
-          onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            opacity: 0.4,
-            fontSize: 16,
-            color: "#fff",
-            padding: "2px 4px",
-            marginLeft: videoId ? 0 : "auto",
-          }}
-        >
-          ✕
-        </button>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, color: "#fff", padding: "2px 4px", marginLeft: videoId ? 0 : "auto" }}>✕</button>
       </div>
 
       <style>{`.yt-stage-player iframe { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }`}</style>
-      <div
-        style={{
-          display: videoId ? "flex" : "none",
-          flex: 1,
-          minHeight: 0,
-          gap: 0,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            background: "#000",
-            position: "relative",
-            minWidth: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            ref={playerDivRef}
-            className="yt-stage-player"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-          />
+      <div style={{ display: videoId ? "flex" : "none", flex: 1, minHeight: 0, gap: 0, overflow: "hidden" }}>
+        <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0, overflow: "hidden" }}>
+          <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
         </div>
-        <div
-          style={{
-            width: 220,
-            borderLeft: "1px solid rgba(255,255,255,.07)",
-            background: "rgba(255,255,255,.02)",
-            padding: "10px 10px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            flexShrink: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              opacity: 0.35,
-            }}
-          >
-            Now Playing
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              padding: "5px 8px",
-              borderRadius: 6,
-              border: "1px solid rgba(124,106,245,.3)",
-              background: "rgba(124,106,245,.1)",
-              color: "#c4bef8",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            ▶ {videoId}
-          </div>
-          <div
-            style={{
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              opacity: 0.35,
-              marginTop: 6,
-            }}
-          >
-            Search / Load Next
-          </div>
-          <input
-            value={searchQuery}
-            onChange={(e) => onSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && doSearch(searchQuery)}
-            placeholder="Search YouTube..."
-            style={{
-              width: "100%",
-              background: "rgba(0,0,0,.3)",
-              border: "1px solid rgba(255,255,255,.1)",
-              borderRadius: 6,
-              padding: "5px 8px",
-              fontSize: 11,
-              color: "#fff",
-              outline: "none",
-            }}
-          />
-          <div
-            style={{
-              flex: 1,
-              overflow: "auto",
-              scrollbarWidth: "thin",
-              scrollbarColor: "rgba(148,163,184,.2) transparent",
-            }}
-          >
-            {searching && (
-              <div style={{ fontSize: 10, opacity: 0.4, padding: 8 }}>Searching...</div>
-            )}
-            {searchResults.map((r: any) => (
-              <button
-                key={r.videoId}
-                onClick={() => loadFromSearch(r.videoId)}
-                style={{
-                  display: "flex",
-                  gap: 6,
-                  padding: 5,
-                  borderRadius: 6,
-                  border: "1px solid transparent",
-                  background: "transparent",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  width: "100%",
-                  marginBottom: 4,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.25)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                  (e.currentTarget as HTMLElement).style.borderColor = "transparent";
-                }}
-              >
-                {r.thumbnail && (
-                  <img
-                    src={r.thumbnail}
-                    alt="Video thumbnail"
-                    style={{
-                      width: 64,
-                      height: 36,
-                      objectFit: "cover",
-                      borderRadius: 4,
-                      flexShrink: 0,
-                      background: "#111",
-                    }}
-                  />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: "rgba(243,244,246,.85)",
-                      lineHeight: 1.2,
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical" as any,
-                    }}
-                    dangerouslySetInnerHTML={{ __html: r.title }}
-                  />
-                  <div style={{ fontSize: 9, color: "rgba(148,163,184,.4)", marginTop: 1 }}>
-                    {r.channel}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 6 }}>
+          <div style={{ width: 220, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, overflow: "hidden" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35 }}>Now Playing</div>
+            <div style={{ fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "#c4bef8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              ▶ {videoId}
+            </div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginTop: 6 }}>Search / Load Next</div>
             <input
-              value={inputVal}
-              onChange={(e) => {
-                setInputVal(e.target.value);
-                setInputErr("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && loadVideo()}
-              placeholder="Or paste URL..."
-              style={{
-                width: "100%",
-                background: "rgba(0,0,0,.3)",
-                border: "1px solid rgba(255,255,255,.1)",
-                borderRadius: 6,
-                padding: "5px 8px",
-                fontSize: 10,
-                color: "#fff",
-                outline: "none",
-              }}
+              value={searchQuery}
+              onChange={e => onSearchInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && doSearch(searchQuery)}
+              placeholder="Search YouTube..."
+              style={{ width: "100%", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 6, padding: "5px 8px", fontSize: 11, color: "#fff", outline: "none" }}
             />
+            <div style={{ flex: 1, overflow: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.2) transparent" }}>
+              {searching && <div style={{ fontSize: 10, opacity: 0.4, padding: 8 }}>Searching...</div>}
+              {searchResults.map((r: any) => (
+                <button
+                  key={r.videoId}
+                  onClick={() => loadFromSearch(r.videoId)}
+                  style={{ display: "flex", gap: 6, padding: 5, borderRadius: 6, border: "1px solid transparent", background: "transparent", cursor: "pointer", textAlign: "left", width: "100%", marginBottom: 4 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.25)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.borderColor = "transparent"; }}
+                >
+                  {r.thumbnail && <img src={r.thumbnail} alt="Video thumbnail" style={{ width: 64, height: 36, objectFit: "cover", borderRadius: 4, flexShrink: 0, background: "#111" }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(243,244,246,.85)", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
+                      dangerouslySetInnerHTML={{ __html: r.title }}
+                    />
+                    <div style={{ fontSize: 9, color: "rgba(148,163,184,.4)", marginTop: 1 }}>{r.channel}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 6 }}>
+              <input
+                value={inputVal}
+                onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
+                onKeyDown={e => e.key === "Enter" && loadVideo()}
+                placeholder="Or paste URL..."
+                style={{ width: "100%", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#fff", outline: "none" }}
+              />
+            </div>
           </div>
-        </div>
       </div>
       {!videoId && (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            padding: 16,
-            overflow: "hidden",
-          }}
-        >
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 16, overflow: "hidden" }}>
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <div style={{ flex: 1, position: "relative" }}>
               <input
                 value={searchQuery}
-                onChange={(e) => onSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && doSearch(searchQuery)}
+                onChange={e => onSearchInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && doSearch(searchQuery)}
                 placeholder="Search YouTube..."
-                style={{
-                  width: "100%",
-                  background: "rgba(255,255,255,.05)",
-                  border: "1px solid rgba(255,255,255,.12)",
-                  borderRadius: 8,
-                  padding: "9px 14px 9px 34px",
-                  fontSize: 13,
-                  color: "#fff",
-                  outline: "none",
-                }}
+                style={{ width: "100%", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "9px 14px 9px 34px", fontSize: 13, color: "#fff", outline: "none" }}
               />
-              <span
-                style={{
-                  position: "absolute",
-                  left: 11,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: 14,
-                  opacity: 0.35,
-                }}
-              >
-                🔍
-              </span>
+              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, opacity: 0.35 }}>🔍</span>
             </div>
-            <button
-              onClick={() => setSearchMode(!searchMode)}
-              style={{
-                padding: "9px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,.1)",
-                background: searchMode ? "transparent" : "rgba(124,106,245,.15)",
-                color: searchMode ? "rgba(255,255,255,.5)" : "#c4bef8",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <button onClick={() => setSearchMode(!searchMode)} style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: searchMode ? "transparent" : "rgba(124,106,245,.15)", color: searchMode ? "rgba(255,255,255,.5)" : "#c4bef8", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
               {searchMode ? "Paste URL" : "Search"}
             </button>
           </div>
 
           {!searchMode ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: 1,
-                gap: 12,
-              }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 12 }}>
               <div style={{ fontSize: 12, opacity: 0.4 }}>Paste a YouTube URL</div>
               <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 400 }}>
                 <input
                   value={inputVal}
-                  onChange={(e) => {
-                    setInputVal(e.target.value);
-                    setInputErr("");
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && loadVideo()}
+                  onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
+                  onKeyDown={e => e.key === "Enter" && loadVideo()}
                   placeholder="https://youtube.com/watch?v=…"
-                  style={{
-                    flex: 1,
-                    background: "rgba(255,255,255,.05)",
-                    border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`,
-                    borderRadius: 8,
-                    padding: "9px 14px",
-                    fontSize: 13,
-                    color: "#fff",
-                    outline: "none",
-                  }}
+                  style={{ flex: 1, background: "rgba(255,255,255,.05)", border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: "#fff", outline: "none" }}
                 />
-                <button
-                  onClick={loadVideo}
-                  style={{
-                    padding: "9px 20px",
-                    borderRadius: 8,
-                    border: "1px solid rgba(124,106,245,.35)",
-                    background: "rgba(124,106,245,.15)",
-                    color: "#c4bef8",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
+                <button onClick={loadVideo} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(124,106,245,.35)", background: "rgba(124,106,245,.15)", color: "#c4bef8", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   Load
                 </button>
               </div>
               {inputErr && <div style={{ fontSize: 12, color: "#fca5a5" }}>{inputErr}</div>}
             </div>
           ) : (
-            <div
-              style={{
-                flex: 1,
-                overflow: "auto",
-                scrollbarWidth: "thin",
-                scrollbarColor: "rgba(148,163,184,.2) transparent",
-              }}
-            >
-              {searching && (
-                <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.5 }}>
-                  Searching...
-                </div>
-              )}
+            <div style={{ flex: 1, overflow: "auto", scrollbarWidth: "thin", scrollbarColor: "rgba(148,163,184,.2) transparent" }}>
+              {searching && <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.5 }}>Searching...</div>}
               {!searching && searchResults.length === 0 && searchQuery.trim() && (
-                <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.4 }}>
-                  No results found
-                </div>
+                <div style={{ textAlign: "center", padding: 20, fontSize: 12, opacity: 0.4 }}>No results found</div>
               )}
               {!searching && searchResults.length === 0 && !searchQuery.trim() && (
                 <div style={{ textAlign: "center", padding: 40, fontSize: 13, opacity: 0.35 }}>
-                  Search for music, videos, or anything on YouTube
-                  <br />
+                  Search for music, videos, or anything on YouTube<br />
                   <span style={{ fontSize: 11, opacity: 0.7 }}>Syncs for everyone in the room</span>
                 </div>
               )}
@@ -859,65 +442,25 @@ function YoutubeStage({
                     key={r.videoId}
                     onClick={() => loadFromSearch(r.videoId)}
                     style={{
-                      display: "flex",
-                      gap: 10,
-                      padding: 8,
-                      borderRadius: 8,
-                      border: "1px solid rgba(255,255,255,.06)",
-                      background: "rgba(255,255,255,.03)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      width: "100%",
+                      display: "flex", gap: 10, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,.06)",
+                      background: "rgba(255,255,255,.03)", cursor: "pointer", textAlign: "left", width: "100%",
                       transition: "all 0.12s",
                     }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)";
-                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.3)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; }}
                   >
                     {r.thumbnail && (
                       <img
                         src={r.thumbnail}
                         alt="Video thumbnail"
-                        style={{
-                          width: 120,
-                          height: 68,
-                          objectFit: "cover",
-                          borderRadius: 6,
-                          flexShrink: 0,
-                          background: "#111",
-                        }}
+                        style={{ width: 120, height: 68, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "#111" }}
                       />
                     )}
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: "rgba(243,244,246,.9)",
-                          lineHeight: 1.3,
-                          overflow: "hidden",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical" as any,
-                        }}
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
                         dangerouslySetInnerHTML={{ __html: r.title }}
                       />
-                      <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                        {r.channel}
-                      </div>
+                      <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>{r.channel}</div>
                     </div>
                   </button>
                 ))}
@@ -934,12 +477,9 @@ const guardianTileCache = new Map<string, { data: any; at: number }>();
 const GUARDIAN_TTL = 120_000;
 
 type GuardianChar = {
-  className: string;
-  light: number;
-  raceName: string;
+  className: string; light: number; raceName: string;
   emblemBackgroundPath: string | null;
-  dateLastPlayed: string;
-  minutesPlayedTotal: number;
+  dateLastPlayed: string; minutesPlayedTotal: number;
 };
 
 type GuardianCard = {
@@ -955,19 +495,13 @@ function useGuardianData(userId: string, moduleType?: string) {
   const [data, setData] = useState<GuardianCard | null>(null);
 
   useEffect(() => {
-    if (moduleType !== "BUNGIE" || !userId) {
-      setData(null);
-      return;
-    }
+    if (moduleType !== "BUNGIE" || !userId) { setData(null); return; }
     const cached = guardianTileCache.get(userId);
-    if (cached && Date.now() - cached.at < GUARDIAN_TTL) {
-      setData(cached.data);
-      return;
-    }
+    if (cached && Date.now() - cached.at < GUARDIAN_TTL) { setData(cached.data); return; }
 
     fetch(`${API}/bungie/card/${encodeURIComponent(userId)}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(r => r.json())
+      .then(d => {
         if (d?.ok && d?.characters?.length) {
           const info: GuardianCard = {
             displayName: d.displayName,
@@ -992,178 +526,92 @@ function useGuardianData(userId: string, moduleType?: string) {
 
 const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Titan: "🛡" };
 
-function VoiceCard({
-  tile,
-  moduleType,
-  roomUsers,
-}: {
-  tile: any;
-  moduleType?: string;
-  roomUsers?: any[];
-}) {
+function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: string; roomUsers?: any[] }) {
   const guardian = useGuardianData(tile.identity, moduleType);
   const mainChar = guardian?.characters?.[0];
   const notInVoice = tile._notInVoice === true;
-  const userInfo = roomUsers?.find(
-    (u: any) => u.id === tile.identity || u.userId === tile.identity,
-  );
+  const userInfo = roomUsers?.find((u: any) => u.id === tile.identity || u.userId === tile.identity);
   const userAvatar = userInfo?.avatar || null;
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
-    : tile.isLocal
-      ? "rgba(124,58,237,.35)"
-      : "rgba(255,255,255,.08)";
+    : tile.isLocal ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.08)";
   const bgColor = tile.isSpeaking
     ? "rgba(34,197,94,.06)"
-    : tile.isLocal
-      ? "rgba(124,58,237,.06)"
-      : "rgba(255,255,255,.02)";
+    : tile.isLocal ? "rgba(124,58,237,.06)" : "rgba(255,255,255,.02)";
 
   return (
-    <div
-      style={{
-        width: 200,
-        borderRadius: 12,
-        overflow: "hidden",
-        border: `1.5px solid ${borderColor}`,
-        background: bgColor,
-        transition: "border-color .2s, background .2s, opacity .2s",
-        position: "relative",
-        opacity: notInVoice ? 0.5 : 1,
-      }}
-    >
+    <div style={{
+      width: 200, borderRadius: 12, overflow: "hidden",
+      border: `1.5px solid ${borderColor}`,
+      background: bgColor,
+      transition: "border-color .2s, background .2s, opacity .2s",
+      position: "relative",
+      opacity: notInVoice ? 0.5 : 1,
+    }}>
       {mainChar?.emblemBackgroundPath ? (
-        <div
-          style={{
-            height: 48,
-            background: `url(${mainChar.emblemBackgroundPath}) center/cover`,
-            opacity: 0.6,
-          }}
-        />
+        <div style={{ height: 48, background: `url(${mainChar.emblemBackgroundPath}) center/cover`, opacity: 0.6 }} />
       ) : (
-        <div
-          style={{
-            height: 48,
-            background: "linear-gradient(135deg, rgba(124,58,237,.15), rgba(79,136,198,.1))",
-          }}
-        />
+        <div style={{ height: 48, background: "linear-gradient(135deg, rgba(124,58,237,.15), rgba(79,136,198,.1))" }} />
       )}
 
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          position: "absolute",
-          top: 28,
-          left: 12,
-          background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
-          border: "2.5px solid rgba(10,10,20,.9)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 16,
-          fontWeight: 900,
-          color: "#fff",
-          overflow: "hidden",
-        }}
-      >
-        {userAvatar ? (
-          <img
-            src={userAvatar}
-            alt={tile.name + " avatar"}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        ) : (
-          (tile.name[0]?.toUpperCase() ?? "?")
-        )}
+      <div style={{
+        width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
+        background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
+        border: "2.5px solid rgba(10,10,20,.9)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 16, fontWeight: 900, color: "#fff",
+        overflow: "hidden",
+      }}>
+        {userAvatar ? <img src={userAvatar} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
       </div>
 
       {tile.isSpeaking && (
-        <div
-          style={{
-            position: "absolute",
-            top: 6,
-            right: 8,
-            display: "flex",
-            gap: 2,
-            alignItems: "flex-end",
-            height: 14,
-          }}
-        >
+        <div style={{
+          position: "absolute", top: 6, right: 8,
+          display: "flex", gap: 2, alignItems: "flex-end", height: 14,
+        }}>
           {[4, 8, 5].map((h, i) => (
-            <div
-              key={i}
-              style={{
-                width: 3,
-                height: h,
-                borderRadius: 2,
-                background: "#22c55e",
-                opacity: 0.9,
-                animation: `waveBar .8s ease-in-out ${i * 0.15}s infinite alternate`,
-              }}
-            />
+            <div key={i} style={{
+              width: 3, height: h, borderRadius: 2, background: "#22c55e", opacity: 0.9,
+              animation: `waveBar .8s ease-in-out ${i * 0.15}s infinite alternate`,
+            }} />
           ))}
         </div>
       )}
 
       <div style={{ padding: "20px 12px 10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              maxWidth: 120,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <span style={{
+            fontSize: 13, fontWeight: 700, maxWidth: 120,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
             {tile.name}
           </span>
-          {tile.isLocal && (
-            <span style={{ fontSize: 9, opacity: 0.35, fontWeight: 600 }}>(you)</span>
-          )}
+          {tile.isLocal && <span style={{ fontSize: 9, opacity: 0.35, fontWeight: 600 }}>(you)</span>}
           {tile.isMuted && <span style={{ fontSize: 11, opacity: 0.4 }}>🔇</span>}
         </div>
 
         {mainChar && (
           <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 11,
-                  color: "rgba(226,232,240,.7)",
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "rgba(226,232,240,.7)" }}>
                 <span>{CLASS_ICONS[mainChar.className] || "⚔"}</span>
                 <span style={{ fontWeight: 600 }}>{mainChar.className}</span>
                 <span style={{ fontSize: 10, opacity: 0.4 }}>{mainChar.raceName}</span>
               </div>
-              <span
-                style={{ color: "#fcd34d", fontWeight: 800, fontFamily: "monospace", fontSize: 12 }}
-              >
+              <span style={{ color: "#fcd34d", fontWeight: 800, fontFamily: "monospace", fontSize: 12 }}>
                 ✦ {mainChar.light}
               </span>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10 }}>
               {guardian?.guardianRankName && (
-                <span
-                  style={{
-                    padding: "1px 6px",
-                    borderRadius: 4,
-                    background: "rgba(250,204,21,.1)",
-                    border: "1px solid rgba(250,204,21,.2)",
-                    color: "rgba(250,204,21,.8)",
-                    fontWeight: 700,
-                    fontSize: 9,
-                  }}
-                >
+                <span style={{
+                  padding: "1px 6px", borderRadius: 4,
+                  background: "rgba(250,204,21,.1)", border: "1px solid rgba(250,204,21,.2)",
+                  color: "rgba(250,204,21,.8)", fontWeight: 700, fontSize: 9,
+                }}>
                   ⟐ {guardian.guardianRank} {guardian.guardianRankName}
                 </span>
               )}
@@ -1175,16 +623,10 @@ function VoiceCard({
             </div>
 
             {guardian?.lastActivity && (
-              <div
-                style={{
-                  fontSize: 9,
-                  color: "rgba(148,163,184,.45)",
-                  marginTop: 1,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <div style={{
+                fontSize: 9, color: "rgba(148,163,184,.45)", marginTop: 1,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
                 {guardian.lastActivity.mode} · {guardian.lastActivity.name}
               </div>
             )}
@@ -1201,32 +643,14 @@ function VoiceCard({
   );
 }
 
-function VoiceStage({
-  roomId,
-  moduleType,
-  roomUsers,
-  onClose,
-  style,
-}: {
-  roomId: string;
-  moduleType?: string;
-  roomUsers?: {
-    id: string;
-    name: string;
-    role?: string;
-    globalRole?: string;
-    avatarColor?: string;
-  }[];
-  onClose: () => void;
-  style?: React.CSSProperties;
-}) {
+function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId: string; moduleType?: string; roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[]; onClose: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
   const [prompted, setPrompted] = useState(alreadyInRoom);
 
   const [, forceUpdate] = useState(0);
   useEffect(() => {
-    const handler = () => forceUpdate((n) => n + 1);
+    const handler = () => forceUpdate(n => n + 1);
     window.addEventListener("weered:avatarColor", handler);
     return () => window.removeEventListener("weered:avatarColor", handler);
   }, []);
@@ -1247,181 +671,63 @@ function VoiceStage({
   useEffect(() => {
     if (!prompted) return;
     const alreadyHere = voice.connState === "connected" && voice.activeRoomId === roomId;
-    const inProgress = voice.connState === "connecting";
-    if (!alreadyHere && !inProgress) {
-      connect();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const inProgress  = voice.connState === "connecting";
+    if (!alreadyHere && !inProgress) { connect(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompted, roomId]);
 
   const { connState, errorMsg, muted, tiles } = voice;
   const live = connState === "connected";
 
   return (
-    <div
-      style={{
-        background: "rgba(0,0,0,.35)",
-        borderBottom: "1px solid rgba(148,163,184,.12)",
-        padding: "12px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        height: "100%",
-        ...style,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase" as const,
-            opacity: 0.5,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: live ? "#22c55e" : "rgba(255,255,255,.2)",
-              boxShadow: live ? "0 0 6px #22c55e" : "none",
-              display: "inline-block",
-            }}
-          />
+    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, height: "100%", ...style }}>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: live ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
           Voice
           {connState === "connecting" && <span style={{ opacity: 0.5 }}> connecting…</span>}
-          {connState === "error" && <span style={{ color: "#fca5a5" }}> {errorMsg}</span>}
+          {connState === "error"      && <span style={{ color: "#fca5a5" }}> {errorMsg}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {live && (
             <>
-              <button
-                onClick={toggleMute}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  background: "rgba(255,255,255,.07)",
-                  color: "rgba(255,255,255,.8)",
-                }}
-              >
+              <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
                 {muted ? "🔇 Unmute" : "🎙 Mute"}
               </button>
               <MicSettings />
-              <button
-                onClick={disconnect}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  background: "rgba(239,68,68,.15)",
-                  color: "#fca5a5",
-                }}
-              >
-                Leave
-              </button>
+              <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
             </>
           )}
-          {connState === "error" && (
-            <button
-              onClick={connect}
-              style={{
-                padding: "5px 12px",
-                borderRadius: 8,
-                border: "none",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 700,
-                background: "rgba(255,255,255,.07)",
-                color: "rgba(255,255,255,.8)",
-              }}
-            >
-              Retry
-            </button>
-          )}
-          <button
-            onClick={disconnect}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              opacity: 0.4,
-              fontSize: 16,
-              padding: "2px 4px",
-              color: "#fff",
-            }}
-            title="Close"
-          >
-            ✕
-          </button>
+          {connState === "error" && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>Retry</button>}
+          <button onClick={disconnect} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, padding: "2px 4px", color: "#fff" }} title="Close">✕</button>
         </div>
       </div>
 
       {(() => {
-        const voiceIdentities = new Set(tiles.map((t) => t.identity));
+        const voiceIdentities = new Set(tiles.map(t => t.identity));
         const nonVoiceUsers = (roomUsers || [])
-          .filter((u) => !voiceIdentities.has(u.id))
-          .map((u) => ({
-            sid: `room-${u.id}`,
-            identity: u.id,
-            name: u.name,
-            isSpeaking: false,
-            isMuted: true,
-            isLocal: false,
-            hasVideo: false,
-            hasScreenShare: false,
-            videoTrackSid: null,
-            screenTrackSid: null,
+          .filter(u => !voiceIdentities.has(u.id))
+          .map(u => ({
+            sid: `room-${u.id}`, identity: u.id, name: u.name,
+            isSpeaking: false, isMuted: true, isLocal: false,
+            hasVideo: false, hasScreenShare: false,
+            videoTrackSid: null, screenTrackSid: null,
             _notInVoice: true,
           }));
         const allTiles = [...tiles, ...nonVoiceUsers];
 
         return allTiles.length > 0 ? (
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap" as const,
-              alignContent: "start",
-              flex: 1,
-              overflow: "auto",
-              padding: "4px 0",
-            }}
-          >
-            {allTiles.map((t) => (
+          <div style={{
+            display: "flex", gap: 10, flexWrap: "wrap" as const,
+            alignContent: "start", flex: 1, overflow: "auto", padding: "4px 0",
+          }}>
+            {allTiles.map(t => (
               <VoiceCard key={t.sid} tile={t} moduleType={moduleType} roomUsers={roomUsers} />
             ))}
           </div>
         ) : (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: 0.45,
-              fontSize: 12,
-              letterSpacing: ".04em",
-            }}
-          >
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.45, fontSize: 12, letterSpacing: ".04em" }}>
             {live ? "Waiting for others to join…" : "You're the first one here."}
           </div>
         );
@@ -1432,13 +738,7 @@ function VoiceStage({
   );
 }
 
-function VideoTile({
-  tile,
-  getVideoElement,
-}: {
-  tile: any;
-  getVideoElement: (sid: string) => HTMLVideoElement | null;
-}) {
+function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid: string) => HTMLVideoElement | null }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1446,32 +746,17 @@ function VideoTile({
     while (ref.current.firstChild) ref.current.removeChild(ref.current.firstChild);
 
     const trackSid = tile.videoTrackSid || tile.screenTrackSid;
-    console.log("[VideoTile]", {
-      name: tile.name,
-      trackSid,
-      videoTrackSid: tile.videoTrackSid,
-      screenTrackSid: tile.screenTrackSid,
-      hasVideo: tile.hasVideo,
-      hasScreenShare: tile.hasScreenShare,
-    });
+    console.log("[VideoTile]", { name: tile.name, trackSid, videoTrackSid: tile.videoTrackSid, screenTrackSid: tile.screenTrackSid, hasVideo: tile.hasVideo, hasScreenShare: tile.hasScreenShare });
     if (!trackSid) return;
 
     let el = getVideoElement(trackSid);
-    console.log(
-      "[VideoTile] getVideoElement result:",
-      el ? "FOUND" : "MISSING",
-      "for SID:",
-      trackSid,
-    );
+    console.log("[VideoTile] getVideoElement result:", el ? "FOUND" : "MISSING", "for SID:", trackSid);
     let retryTimer: any;
 
     const attach = () => {
       if (!ref.current) return;
       el = getVideoElement(trackSid);
-      if (!el) {
-        retryTimer = setTimeout(attach, 200);
-        return;
-      }
+      if (!el) { retryTimer = setTimeout(attach, 200); return; }
       el.style.display = "block";
       el.style.width = "100%";
       el.style.height = "100%";
@@ -1493,99 +778,43 @@ function VideoTile({
   const hasVideo = tile.hasVideo || tile.hasScreenShare;
 
   return (
-    <div
-      style={{
-        position: "relative",
-        borderRadius: 10,
-        overflow: "hidden",
-        background: "rgba(0,0,0,.4)",
-        border: "1px solid rgba(255,255,255,.06)",
-        aspectRatio: tile.hasScreenShare ? undefined : "16/10",
-        width: "100%",
-        height: tile.hasScreenShare ? "100%" : undefined,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <div style={{
+      position: "relative", borderRadius: 10, overflow: "hidden",
+      background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.06)",
+      aspectRatio: tile.hasScreenShare ? undefined : "16/10",
+      width: "100%", height: tile.hasScreenShare ? "100%" : undefined,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
       {hasVideo ? (
         <div ref={ref} style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }} />
       ) : (
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: "rgba(124,58,237,.2)",
-            border: "1px solid rgba(124,58,237,.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 20,
-            fontWeight: 900,
-            color: "rgba(167,139,250,.7)",
-          }}
-        >
+        <div style={{
+          width: 48, height: 48, borderRadius: "50%",
+          background: "rgba(124,58,237,.2)", border: "1px solid rgba(124,58,237,.3)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, fontWeight: 900, color: "rgba(167,139,250,.7)",
+        }}>
           {tile.name?.[0]?.toUpperCase() || "?"}
         </div>
       )}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 4,
-          left: 6,
-          right: 6,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          fontSize: 10,
-          fontWeight: 700,
-          color: "#fff",
-          textShadow: "0 1px 4px rgba(0,0,0,.8)",
-        }}
-      >
-        {tile.isSpeaking && (
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "#22c55e",
-              boxShadow: "0 0 6px #22c55e",
-            }}
-          />
-        )}
+      <div style={{
+        position: "absolute", bottom: 4, left: 6, right: 6,
+        display: "flex", alignItems: "center", gap: 4,
+        fontSize: 10, fontWeight: 700, color: "#fff",
+        textShadow: "0 1px 4px rgba(0,0,0,.8)",
+      }}>
+        {tile.isSpeaking && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />}
         {tile.isMuted && <span style={{ opacity: 0.4 }}>🔇</span>}
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {tile.name}
-        </span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tile.name}</span>
         {tile.isLocal && <span style={{ opacity: 0.4 }}>(you)</span>}
       </div>
     </div>
   );
 }
 
-function VideoStage({
-  roomId,
-  onClose,
-  style,
-}: {
-  roomId: string;
-  onClose?: () => void;
-  style?: React.CSSProperties;
-}) {
+function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
-  const {
-    connState,
-    tiles,
-    muted,
-    cameraOn,
-    toggleMute,
-    toggleCamera,
-    connect,
-    disconnect,
-    getVideoElement,
-  } = voice;
+  const { connState, tiles, muted, cameraOn, toggleMute, toggleCamera, connect, disconnect, getVideoElement } = voice;
 
   useEffect(() => {
     if (connState === "idle" || connState === "error") {
@@ -1593,81 +822,35 @@ function VideoStage({
     }
   }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cameraTiles = tiles.filter((t) => t.hasVideo || !t.hasScreenShare);
+  const cameraTiles = tiles.filter(t => t.hasVideo || !t.hasScreenShare);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, ...style }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "6px 10px",
-          borderBottom: "1px solid rgba(255,255,255,.06)",
-          flexShrink: 0,
-        }}
-      >
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+        borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0,
+      }}>
         <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>📹 Video</span>
         <div style={{ flex: 1 }} />
-        <button onClick={toggleMute} style={ctrlBtn}>
-          {muted ? "🔇 Unmute" : "🎙 Mute"}
-        </button>
+        <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>
         <MicSettings />
-        <button
-          onClick={toggleCamera}
-          style={{
-            ...ctrlBtn,
-            ...(cameraOn
-              ? {
-                  background: "rgba(239,68,68,.15)",
-                  borderColor: "rgba(239,68,68,.3)",
-                  color: "rgba(252,165,165,.9)",
-                }
-              : {}),
-          }}
-        >
+        <button onClick={toggleCamera} style={{ ...ctrlBtn, ...(cameraOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : {}) }}>
           {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
         </button>
-        <button
-          onClick={() => {
-            disconnect();
-            onClose?.();
-          }}
-          style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}
-        >
-          Leave
-        </button>
+        <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          padding: 8,
-          overflow: "auto",
-          display: "grid",
-          gridTemplateColumns:
-            cameraTiles.length <= 1 ? "1fr" : cameraTiles.length <= 4 ? "1fr 1fr" : "1fr 1fr 1fr",
-          gap: 6,
-          alignContent: "start",
-        }}
-      >
-        {cameraTiles.map((t) => (
-          <VideoTile
-            key={t.sid}
-            tile={{ ...t, hasScreenShare: false, screenTrackSid: null }}
-            getVideoElement={getVideoElement}
-          />
+      <div style={{
+        flex: 1, padding: 8, overflow: "auto",
+        display: "grid",
+        gridTemplateColumns: cameraTiles.length <= 1 ? "1fr" : cameraTiles.length <= 4 ? "1fr 1fr" : "1fr 1fr 1fr",
+        gap: 6, alignContent: "start",
+      }}>
+        {cameraTiles.map(t => (
+          <VideoTile key={t.sid} tile={{ ...t, hasScreenShare: false, screenTrackSid: null }} getVideoElement={getVideoElement} />
         ))}
         {cameraTiles.length === 0 && (
-          <div
-            style={{
-              gridColumn: "1/-1",
-              textAlign: "center",
-              padding: 24,
-              opacity: 0.3,
-              fontSize: 12,
-            }}
-          >
+          <div style={{ gridColumn: "1/-1", textAlign: "center", padding: 24, opacity: 0.3, fontSize: 12 }}>
             {connState === "connecting" ? "Connecting..." : "No participants yet"}
           </div>
         )}
@@ -1676,28 +859,9 @@ function VideoStage({
   );
 }
 
-function ScreenStage({
-  roomId,
-  onClose,
-  style,
-}: {
-  roomId: string;
-  onClose?: () => void;
-  style?: React.CSSProperties;
-}) {
+function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
-  const {
-    connState,
-    activeRoomId,
-    tiles,
-    muted,
-    screenShareOn,
-    toggleMute,
-    toggleScreenShare,
-    connect,
-    disconnect,
-    getVideoElement,
-  } = voice;
+  const { connState, activeRoomId, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
   const screenRef = useRef<HTMLDivElement>(null);
 
   const handleShareScreen = useCallback(async () => {
@@ -1707,13 +871,12 @@ function ScreenStage({
     toggleScreenShare();
   }, [connState, roomId, connect, toggleScreenShare]);
 
-  const presenter = tiles.find((t) => t.hasScreenShare);
+  const presenter = tiles.find(t => t.hasScreenShare);
   const screenSid = presenter?.screenTrackSid;
 
   useEffect(() => {
     if (!screenRef.current || !screenSid) return;
-    while (screenRef.current.firstChild)
-      screenRef.current.removeChild(screenRef.current.firstChild);
+    while (screenRef.current.firstChild) screenRef.current.removeChild(screenRef.current.firstChild);
 
     let el: HTMLVideoElement | null = null;
     let retryTimer: any;
@@ -1748,59 +911,21 @@ function ScreenStage({
 
   return (
     <div style={{ height: "100%", position: "relative", ...style }}>
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 2,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "6px 10px",
-          borderBottom: "1px solid rgba(255,255,255,.06)",
-          background: "rgba(0,0,0,.5)",
-          backdropFilter: "blur(8px)",
-        }}
-      >
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, zIndex: 2,
+        display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+        borderBottom: "1px solid rgba(255,255,255,.06)",
+        background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)",
+      }}>
         <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5 }}>🖥 Screen Share</span>
         <div style={{ flex: 1 }} />
-        {connState === "connected" && (
-          <button onClick={toggleMute} style={ctrlBtn}>
-            {muted ? "🔇 Unmute" : "🎙 Mute"}
-          </button>
-        )}
+        {connState === "connected" && <button onClick={toggleMute} style={ctrlBtn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>}
         {connState === "connected" && <MicSettings />}
-        <button
-          onClick={handleShareScreen}
-          style={{
-            ...ctrlBtn,
-            ...(screenShareOn
-              ? {
-                  background: "rgba(239,68,68,.15)",
-                  borderColor: "rgba(239,68,68,.3)",
-                  color: "rgba(252,165,165,.9)",
-                }
-              : {
-                  background: "rgba(34,197,94,.12)",
-                  borderColor: "rgba(34,197,94,.25)",
-                  color: "rgba(134,239,172,.9)",
-                }),
-          }}
-        >
+        <button onClick={handleShareScreen} style={{ ...ctrlBtn, ...(screenShareOn ? { background: "rgba(239,68,68,.15)", borderColor: "rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)" } : { background: "rgba(34,197,94,.12)", borderColor: "rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }) }}>
           {screenShareOn ? "🖥 Stop Sharing" : "🖥 Share Screen"}
         </button>
         {connState === "connected" && (
-          <button
-            onClick={() => {
-              disconnect();
-              onClose?.();
-            }}
-            style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}
-          >
-            Leave
-          </button>
+          <button onClick={() => { disconnect(); onClose?.(); }} style={{ ...ctrlBtn, color: "rgba(239,68,68,.7)" }}>Leave</button>
         )}
       </div>
 
@@ -1808,36 +933,20 @@ function ScreenStage({
         <div
           ref={screenRef}
           style={{
-            position: "absolute",
-            inset: 0,
+            position: "absolute", inset: 0,
             background: "rgba(0,0,0,.4)",
             overflow: "hidden",
           }}
         />
       ) : (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", opacity: 0.3 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🖥</div>
             <div style={{ fontSize: 13 }}>
-              {connState === "connecting"
-                ? "Connecting..."
-                : screenShareOn
-                  ? "You are sharing your screen"
-                  : "No one is sharing their screen"}
+              {connState === "connecting" ? "Connecting..." : screenShareOn ? "You are sharing your screen" : "No one is sharing their screen"}
             </div>
             {!screenShareOn && connState === "connected" && (
-              <button
-                onClick={toggleScreenShare}
-                style={{ ...ctrlBtn, marginTop: 12, padding: "8px 20px" }}
-              >
+              <button onClick={toggleScreenShare} style={{ ...ctrlBtn, marginTop: 12, padding: "8px 20px" }}>
                 Share Your Screen
               </button>
             )}
@@ -1846,17 +955,9 @@ function ScreenStage({
       )}
 
       {presenter && (
-        <div
-          style={{
-            padding: "4px 16px 8px",
-            fontSize: 10,
-            fontWeight: 700,
-            color: "rgba(255,255,255,.5)",
-          }}
-        >
+        <div style={{ padding: "4px 16px 8px", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.5)" }}>
           {presenter.isMuted && <span style={{ opacity: 0.4, marginRight: 4 }}>🔇</span>}
-          {presenter.name}
-          {presenter.isLocal ? " (you)" : ""}
+          {presenter.name}{presenter.isLocal ? " (you)" : ""}
         </div>
       )}
     </div>
@@ -1864,163 +965,37 @@ function ScreenStage({
 }
 
 const ctrlBtn: React.CSSProperties = {
-  padding: "4px 10px",
-  borderRadius: 6,
-  border: "1px solid rgba(255,255,255,.1)",
-  background: "rgba(255,255,255,.05)",
-  color: "rgba(255,255,255,.6)",
-  fontSize: 10,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "inherit",
+  padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,.1)",
+  background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.6)",
+  fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
 };
 
 export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose, style }: Props) {
   const ctx = useWeered() as any;
-  if (mode === "poker")
-    return <PokerTable roomId={roomId} myId={ctx?.me?.id || ""} myName={ctx?.me?.name || ""} />;
-  if (mode === "fakeout")
-    return <TradingModulesPanel lobbyId={ctx?.currentLobbyId || roomId} accent="#22c55e" />;
-  if (mode === "destiny")
-    return (
-      <LobbyModulesPanel
-        lobbyId={ctx?.currentLobbyId || "destiny2"}
-        gameName="Destiny 2"
-        accentColor="#5ca0c6"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "league")
-    return (
-      <LeagueModulesPanel
-        lobbyId={ctx?.currentLobbyId || "league-of-legends"}
-        gameName="League of Legends"
-        accentColor="#C89B3C"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "fortnite")
-    return (
-      <FortniteModulesPanel
-        lobbyId={ctx?.currentLobbyId || "fortnite"}
-        gameName="Fortnite"
-        accentColor="#00D4FF"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "pubg")
-    return (
-      <PubgModulesPanel
-        lobbyId={ctx?.currentLobbyId || "pubg"}
-        gameName="PUBG: Battlegrounds"
-        accentColor="#FFAA00"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "hq")
-    return (
-      <HeadquartersModulesPanel
-        lobbyId={ctx?.currentLobbyId || roomId}
-        accentColor="#3B82F6"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "cs2")
-    return (
-      <CS2ModulesPanel
-        lobbyId={ctx?.currentLobbyId || "counter-strike-2"}
-        gameName="Counter-Strike 2"
-        accentColor="#DE9B35"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "dota2")
-    return (
-      <Dota2ModulesPanel
-        lobbyId={ctx?.currentLobbyId || "dota-2"}
-        gameName="Dota 2"
-        accentColor="#C23C2A"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "study")
-    return (
-      <StudyModulesPanel
-        lobbyId={ctx?.currentLobbyId || "study"}
-        accentColor="#6366F1"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "windrose")
-    return (
-      <WindroseModulesPanel
-        slim
-        lobbyId={ctx?.currentLobbyId || "windrose"}
-        gameName="Windrose"
-        accentColor="#c9a066"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "gta")
-    return (
-      <GtaModulePanel
-        lobbyId={ctx?.currentLobbyId || "gta6"}
-        redditSub="gta6"
-        accent="#e84393"
-        currentUserId={ctx?.me?.id}
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "helldivers")
-    return (
-      <HelldiversModulesPanel
-        lobbyId={ctx?.currentLobbyId || "helldivers2"}
-        accentColor="#FFD700"
-        currentUserId={ctx?.me?.id}
-        hideSquad
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
-  if (mode === "eve")
-    return (
-      <EveModulesPanel
-        lobbyId={ctx?.currentLobbyId || "eve"}
-        gameName="EVE Online"
-        accentColor="#d4af37"
-        style={{ flex: 1, minHeight: 0 }}
-      />
-    );
+  if (mode === "poker") return <PokerTable roomId={roomId} myId={ctx?.me?.id || ""} myName={ctx?.me?.name || ""} />;
+  if (mode === "fakeout") return <TradingModulesPanel lobbyId={ctx?.currentLobbyId || roomId} accent="#22c55e" />;
+  if (mode === "destiny") return <LobbyModulesPanel lobbyId={ctx?.currentLobbyId || "destiny2"} gameName="Destiny 2" accentColor="#5ca0c6" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "league") return <LeagueModulesPanel lobbyId={ctx?.currentLobbyId || "league-of-legends"} gameName="League of Legends" accentColor="#C89B3C" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "fortnite") return <FortniteModulesPanel lobbyId={ctx?.currentLobbyId || "fortnite"} gameName="Fortnite" accentColor="#00D4FF" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "pubg") return <PubgModulesPanel lobbyId={ctx?.currentLobbyId || "pubg"} gameName="PUBG: Battlegrounds" accentColor="#FFAA00" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "hq") return <HeadquartersModulesPanel lobbyId={ctx?.currentLobbyId || roomId} accentColor="#3B82F6" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "cs2") return <CS2ModulesPanel lobbyId={ctx?.currentLobbyId || "counter-strike-2"} gameName="Counter-Strike 2" accentColor="#DE9B35" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "dota2") return <Dota2ModulesPanel lobbyId={ctx?.currentLobbyId || "dota-2"} gameName="Dota 2" accentColor="#C23C2A" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "study") return <StudyModulesPanel lobbyId={ctx?.currentLobbyId || "study"} accentColor="#6366F1" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "windrose") return <WindroseModulesPanel slim lobbyId={ctx?.currentLobbyId || "windrose"} gameName="Windrose" accentColor="#c9a066" style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "gta") return <GtaModulePanel lobbyId={ctx?.currentLobbyId || "gta6"} redditSub="gta6" accent="#e84393" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "helldivers") return <HelldiversModulesPanel lobbyId={ctx?.currentLobbyId || "helldivers2"} accentColor="#FFD700" currentUserId={ctx?.me?.id} hideSquad style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "eve") return <EveModulesPanel lobbyId={ctx?.currentLobbyId || "eve"} gameName="EVE Online" accentColor="#d4af37" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "dnd") return <DndStage roomId={roomId} onClose={onClose} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
-  if (mode === "voice")
-    return (
-      <VoiceStage
-        roomId={roomId}
-        moduleType={moduleType}
-        roomUsers={roomUsers}
-        onClose={onClose}
-        style={style}
-      />
-    );
-  if (mode === "video") return <VideoStage roomId={roomId} onClose={onClose} style={style} />;
-  if (mode === "screen") return <ScreenStage roomId={roomId} onClose={onClose} style={style} />;
+  if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;
+  if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
+  if (mode === "screen")  return <ScreenStage  roomId={roomId} onClose={onClose} style={style} />;
 
   return (
     <div style={{ padding: 16, opacity: 0.5, fontSize: 13 }}>
       {mode} — coming soon
-      <button
-        onClick={onClose}
-        style={{
-          marginLeft: 12,
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "#fff",
-          opacity: 0.5,
-        }}
-      >
-        ✕
-      </button>
+      <button onClick={onClose} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#fff", opacity: 0.5 }}>✕</button>
     </div>
   );
 }
