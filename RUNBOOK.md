@@ -98,7 +98,7 @@ The worst-case plan: registration off, AI dependency cut, server up cheap, indef
 1. Sign in as a **GOD**-role account, go to **`/staff` → Config tab**.
 2. Toggle **Registration Open** → off.
 
-That now closes **both** signup paths (local username/password **and** Google OAuth). Existing users keep logging in normally. (Backup method, no UI: on the droplet, `psql "postgresql://weered:REDACTED_DB_PASSWORD@127.0.0.1:5432/=public" -c "UPDATE \"SiteConfig\" SET value='false' WHERE key='registrationOpen';"` — takes effect immediately, no restart.)
+That now closes **both** signup paths (local username/password **and** Google OAuth). Existing users keep logging in normally. (Backup method, no UI: on the droplet, `psql "postgresql://weered:$PGPASSWORD@127.0.0.1:5432/=public" -c "UPDATE \"SiteConfig\" SET value='false' WHERE key='registrationOpen';"` — takes effect immediately, no restart.)
 
 ### 4b. <a name="llm-independence"></a>Cut the LLM / AI dependency
 **One click, no SSH:** `/staff` → Config → **Operator AI Enabled** → off. Within ~15s the Operator goes silent and **zero LLM calls are made.** Belt-and-suspenders (also stops paying for the key): remove `ANTHROPIC_API_KEY` from `/opt/weered/apps/api/.env` and `pm2 restart weered-api --update-env`.
