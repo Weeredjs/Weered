@@ -174,13 +174,13 @@ async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>,
   for (const [moId, mo] of active) {
     const externalRef = `hd2:mo:${moId}`;
     try {
-      const existing = await (prisma as any).challengeDefinition.findFirst({
+      const existing = await prisma.challengeDefinition.findFirst({
         where: { kind: "MAJOR_ORDER", externalRef },
       });
       if (existing) continue;
 
       const rewardPaper = clamp(100 + Math.max(0, mo.rewardMedals) * 10, 100, 1000);
-      await (prisma as any).challengeDefinition.create({
+      await prisma.challengeDefinition.create({
         data: {
           title: truncate("Major Order: " + (mo.title || "Super Earth Directive"), 80),
           description:
@@ -211,11 +211,11 @@ async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>,
         },
       });
 
-      const def = await (prisma as any).challengeDefinition.findFirst({
+      const def = await prisma.challengeDefinition.findFirst({
         where: { kind: "MAJOR_ORDER", externalRef },
       });
       if (def) {
-        await (prisma as any).challengeInstance.create({
+        await prisma.challengeInstance.create({
           data: {
             definitionId: def.id,
             startsAt: new Date(),
@@ -234,13 +234,13 @@ let _systemUserIdCache: string | null = null;
 async function getSystemUserId(): Promise<string | null> {
   if (_systemUserIdCache) return _systemUserIdCache;
   try {
-    const u = await (prisma as any).user.findFirst({
+    const u = await prisma.user.findFirst({
       where: { OR: [{ globalRole: "ADMIN" }, { globalRole: "STAFF" }] },
       orderBy: { createdAt: "asc" },
       select: { id: true },
     });
     if (u?.id) { _systemUserIdCache = u.id; return u.id; }
-    const fallback = await (prisma as any).user.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } });
+    const fallback = await prisma.user.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } });
     _systemUserIdCache = fallback?.id || null;
     return _systemUserIdCache;
   } catch {

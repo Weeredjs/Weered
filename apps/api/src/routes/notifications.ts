@@ -52,7 +52,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     if (!token || !/^ExponentPushToken\[[^\]]+\]$/.test(token)) {
       return reply.code(400).send({ ok: false, error: "invalid_token" });
     }
-    await (prisma as any).expoPushToken.upsert({
+    await prisma.expoPushToken.upsert({
       where: { token },
       update: { userId: u.id, platform, lastUsedAt: new Date() },
       create: { userId: u.id, token, platform },
@@ -77,7 +77,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     const body = (req as any).body || {};
     const token = typeof body.token === "string" ? body.token.trim() : "";
     if (!token) return reply.code(400).send({ ok: false, error: "invalid_token" });
-    await (prisma as any).expoPushToken.deleteMany({ where: { token, userId: u.id } }).catch(() => {});
+    await prisma.expoPushToken.deleteMany({ where: { token, userId: u.id } }).catch(() => {});
     return reply.send({ ok: true });
   });
 
@@ -88,7 +88,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const [webSubs, expoTokens] = await Promise.all([
       prisma.pushSubscription.count({ where: { userId: u.id } }),
-      (prisma as any).expoPushToken.count({ where: { userId: u.id } }),
+      prisma.expoPushToken.count({ where: { userId: u.id } }),
     ]);
     if (webSubs === 0 && expoTokens === 0) {
       return reply.send({ ok: false, error: "no_tokens", webSubs, expoTokens });
@@ -113,12 +113,12 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     if (cursor) where.createdAt = { lt: new Date(cursor) };
 
     const [notifications, unreadCount] = await Promise.all([
-      (prisma as any).notification.findMany({
+      prisma.notification.findMany({
         where,
         orderBy: { createdAt: "desc" },
         take: limit,
       }),
-      (prisma as any).notification.count({ where: { userId: u.id, read: false } }),
+      prisma.notification.count({ where: { userId: u.id, read: false } }),
     ]);
 
     return reply.send({
@@ -140,12 +140,12 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     const body = (req as any).body || {};
 
     if (body.all) {
-      await (prisma as any).notification.updateMany({
+      await prisma.notification.updateMany({
         where: { userId: u.id, read: false },
         data: { read: true },
       });
     } else if (Array.isArray(body.ids) && body.ids.length > 0) {
-      await (prisma as any).notification.updateMany({
+      await prisma.notification.updateMany({
         where: { id: { in: body.ids }, userId: u.id },
         data: { read: true },
       });
@@ -161,7 +161,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
     try {
-      await (prisma as any).notification.deleteMany({
+      await prisma.notification.deleteMany({
         where: { id: (req as any).params.id, userId: u.id },
       });
     } catch {}
@@ -172,7 +172,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const count = await (prisma as any).notification.count({ where: { userId: u.id, read: false } });
+    const count = await prisma.notification.count({ where: { userId: u.id, read: false } });
     return reply.send({ ok: true, count });
   });
 }

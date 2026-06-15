@@ -162,7 +162,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
         birthday: charInfo?.birthday || null,
       };
 
-      await (prisma as any).userGameAccount.upsert({
+      await prisma.userGameAccount.upsert({
         where: { userId_gameType: { userId, gameType: "EVE" } },
         update: {
           accessToken: tokens.access_token,
@@ -199,7 +199,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/eve/me", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await (prisma as any).userGameAccount.findFirst({
+    const acct = await prisma.userGameAccount.findFirst({
       where: { userId: u.id, gameType: "EVE" },
     });
     if (!acct) return reply.send({ ok: true, linked: false });
@@ -214,7 +214,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/eve/me/live", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await (prisma as any).userGameAccount.findFirst({
+    const acct = await prisma.userGameAccount.findFirst({
       where: { userId: u.id, gameType: "EVE" },
     });
     if (!acct?.accessToken) return reply.send({ ok: true, linked: false });
@@ -303,7 +303,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/eve/kills/recent", async (_req, reply) => {
-    const linked = await (prisma as any).userGameAccount.findMany({
+    const linked = await prisma.userGameAccount.findMany({
       where: { gameType: "EVE" },
       select: { externalId: true, displayName: true },
       take: 50,

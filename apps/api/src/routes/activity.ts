@@ -16,25 +16,25 @@ app.get("/activity-feed", async (req, reply) => {
   const since = new Date(Date.now() - 3 * 86400000);
 
   const [dms, notifs, notorietyEvents, friendships] = await Promise.all([
-    (prisma as any).directMessage.findMany({
+    prisma.directMessage.findMany({
       where: { toId: u.id, createdAt: { gte: since } },
       select: { id: true, fromId: true, body: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    (prisma as any).notification.findMany({
+    prisma.notification.findMany({
       where: { userId: u.id, createdAt: { gte: since } },
       select: { id: true, type: true, title: true, body: true, actorName: true, actionUrl: true, createdAt: true, read: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    (prisma as any).notorietyEvent.findMany({
+    prisma.notorietyEvent.findMany({
       where: { userId: u.id, createdAt: { gte: since } },
       select: { id: true, action: true, points: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    (prisma as any).friendRequest.findMany({
+    prisma.friendRequest.findMany({
       where: { OR: [{ fromId: u.id }, { toId: u.id }], status: "ACCEPTED", updatedAt: { gte: since } },
       select: { id: true, fromId: true, toId: true, updatedAt: true },
       take: 5,
@@ -42,14 +42,14 @@ app.get("/activity-feed", async (req, reply) => {
   ]);
 
   const senderIds = [...new Set(dms.map((d: any) => d.fromId))];
-  const senders = senderIds.length > 0 ? await (prisma as any).user.findMany({
+  const senders = senderIds.length > 0 ? await prisma.user.findMany({
     where: { id: { in: senderIds } },
     select: { id: true, name: true },
   }) : [];
   const senderMap = new Map(senders.map((s: any) => [s.id, s.name]));
 
   const friendUserIds = [...new Set(friendships.flatMap((f: any) => [f.fromId, f.toId]).filter((id: string) => id !== u.id))];
-  const friendUsers = friendUserIds.length > 0 ? await (prisma as any).user.findMany({
+  const friendUsers = friendUserIds.length > 0 ? await prisma.user.findMany({
     where: { id: { in: friendUserIds } },
     select: { id: true, name: true },
   }) : [];

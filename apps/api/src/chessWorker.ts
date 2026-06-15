@@ -167,7 +167,7 @@ export function startChessWorker(prisma: PrismaClient) {
 
         for (const g of games) {
           try {
-            await (prisma as any).chessActivityLog.upsert({
+            await prisma.chessActivityLog.upsert({
               where: { userId_externalGameId: { userId: u.id, externalGameId: g.externalGameId } },
               create: { userId: u.id, ...g },
               update: {},

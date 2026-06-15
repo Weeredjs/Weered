@@ -36,10 +36,10 @@ export async function handleAuthHello(
     awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
     (async () => {
       try {
-        const memberships = await (prisma as any).crewMember.findMany({ where: { userId: ws.user!.id }, select: { crewId: true } });
+        const memberships = await prisma.crewMember.findMany({ where: { userId: ws.user!.id }, select: { crewId: true } });
         if (!memberships.length) return;
         const crewIds = memberships.map((m: any) => m.crewId);
-        const mates = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: ws.user!.id } }, select: { userId: true, crewId: true } });
+        const mates = await prisma.crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: ws.user!.id } }, select: { userId: true, crewId: true } });
         const payload = { type: "crew:presence", userId: ws.user!.id, name: ws.user!.name, online: true };
         for (const mate of mates) {
           for (const sock of wss.clients) {
@@ -79,10 +79,10 @@ export function handleClose(
       if (!isUserOnline(closingUserId)) {
         (async () => {
           try {
-            const memberships = await (prisma as any).crewMember.findMany({ where: { userId: closingUserId }, select: { crewId: true } });
+            const memberships = await prisma.crewMember.findMany({ where: { userId: closingUserId }, select: { crewId: true } });
             if (!memberships.length) return;
             const crewIds = memberships.map((m: any) => m.crewId);
-            const mates = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: closingUserId } }, select: { userId: true } });
+            const mates = await prisma.crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: closingUserId } }, select: { userId: true } });
             const payload = { type: "crew:presence", userId: closingUserId, name: closingUserName, online: false };
             for (const mate of mates) {
               for (const sock of wss.clients) {

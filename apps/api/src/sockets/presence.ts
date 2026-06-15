@@ -23,7 +23,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
 
   if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
     const [lobbyList, roomList] = await Promise.all([
-      (prisma as any).lobby.findMany({
+      prisma.lobby.findMany({
       where: { pinned: true },
       select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
       }),

@@ -99,12 +99,12 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     async function resolveLobbyForGame(gameName: string): Promise<string | null> {
       const g = gameName.toLowerCase().trim();
       try {
-        const exact = await (prisma as any).lobby.findFirst({
+        const exact = await prisma.lobby.findFirst({
           where: { name: { equals: gameName, mode: "insensitive" } },
           select: { id: true },
         });
         if (exact?.id) return exact.id;
-        const byKeyword = await (prisma as any).lobby.findFirst({
+        const byKeyword = await prisma.lobby.findFirst({
           where: { keywords: { has: g } },
           select: { id: true },
         });
@@ -113,7 +113,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     }
 
     try {
-      const linked: any[] = await (prisma as any).user.findMany({
+      const linked: any[] = await prisma.user.findMany({
         where: { twitchLogin: { not: null } },
         select: { id: true, name: true, avatar: true, twitchLogin: true },
         take: 100,
@@ -145,11 +145,11 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     }
 
     try {
-      const cfg = await (prisma as any).siteConfig.findUnique({ where: { key: "featuredLobbyId" } });
+      const cfg = await prisma.siteConfig.findUnique({ where: { key: "featuredLobbyId" } });
       const featuredId = cfg?.value || null;
       let featuredLobbyName: string | null = null;
       if (featuredId) {
-        const lob = await (prisma as any).lobby.findUnique({ where: { id: featuredId }, select: { name: true } });
+        const lob = await prisma.lobby.findUnique({ where: { id: featuredId }, select: { name: true } });
         featuredLobbyName = lob?.name || null;
       }
       if (featuredLobbyName) {
@@ -231,7 +231,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
 
     const [lobbies, users] = await Promise.all([
       lobbyIds.length
-        ? (prisma as any).lobby.findMany({
+        ? prisma.lobby.findMany({
             where: { id: { in: lobbyIds } },
             select: { id: true, name: true, logoUrl: true, accentColor: true },
           })
@@ -250,7 +250,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     const allActiveIds = [...new Set(active.map(r => r.id))];
     const lobbyIdSet = new Set(
       allActiveIds.length
-        ? (await (prisma as any).lobby.findMany({ where: { id: { in: allActiveIds } }, select: { id: true } })).map((l: any) => l.id)
+        ? (await prisma.lobby.findMany({ where: { id: { in: allActiveIds } }, select: { id: true } })).map((l: any) => l.id)
         : []
     );
 

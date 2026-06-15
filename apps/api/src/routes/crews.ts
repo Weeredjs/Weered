@@ -477,12 +477,12 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
 
     const crewId = (req.params as any).crewId;
 
-    const membership = await (prisma as any).crewMember.findFirst({
+    const membership = await prisma.crewMember.findFirst({
       where: { crewId, userId: u.id },
     });
     if (!membership) return reply.code(403).send({ ok: false, error: "Not a crew member" });
 
-    const messages = await (prisma as any).crewMessage.findMany({
+    const messages = await prisma.crewMessage.findMany({
       where: { crewId },
       orderBy: { createdAt: "desc" },
       take: 50,

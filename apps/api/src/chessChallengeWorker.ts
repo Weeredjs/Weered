@@ -148,7 +148,7 @@ export function startChessChallengeWorker(
       }
 
       for (const [userId, userEnrolls] of byUser) {
-        const games = await (prisma as any).chessActivityLog.findMany({
+        const games = await prisma.chessActivityLog.findMany({
           where: { userId },
           orderBy: { playedAt: "desc" },
           take: 500,

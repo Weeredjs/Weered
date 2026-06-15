@@ -31,8 +31,8 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
       sort === "new" ? { fetchedAt: "desc" } :
       { endorsements: "desc" };
 
-    const rows = await (prisma as any).mod.findMany({ where, orderBy, take: limit, skip: offset });
-    const total = await (prisma as any).mod.count({ where });
+    const rows = await prisma.mod.findMany({ where, orderBy, take: limit, skip: offset });
+    const total = await prisma.mod.count({ where });
     return reply.send({ mods: rows, total });
   });
 
@@ -43,13 +43,13 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     let mod: any = null;
     if (id.startsWith("nexus:")) {
       const sourceId = id.slice("nexus:".length);
-      mod = await (prisma as any).mod.findUnique({ where: { source_sourceId: { source: "NEXUS", sourceId } } });
+      mod = await prisma.mod.findUnique({ where: { source_sourceId: { source: "NEXUS", sourceId } } });
       if (!mod) {
         try { await fetchAndUpsertMod(prisma as any, Number(sourceId)); } catch {}
-        mod = await (prisma as any).mod.findUnique({ where: { source_sourceId: { source: "NEXUS", sourceId } } });
+        mod = await prisma.mod.findUnique({ where: { source_sourceId: { source: "NEXUS", sourceId } } });
       }
     } else {
-      mod = await (prisma as any).mod.findUnique({ where: { id } });
+      mod = await prisma.mod.findUnique({ where: { id } });
     }
     if (!mod || mod.excluded) return reply.code(404).send({ error: "not_found" });
 
@@ -58,12 +58,12 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     let crewCount = 0;
     let crewInstallers: Array<{ userId: string; name: string }> = [];
     if (u?.id) {
-      const myCrews = await (prisma as any).crewMember.findMany({ where: { userId: u.id }, select: { crewId: true } });
+      const myCrews = await prisma.crewMember.findMany({ where: { userId: u.id }, select: { crewId: true } });
       const crewIds = (myCrews as any[]).map((m: any) => m.crewId);
       if (crewIds.length > 0) {
-        const crewMemberships = await (prisma as any).crewMember.findMany({ where: { crewId: { in: crewIds } }, select: { userId: true, name: true } });
+        const crewMemberships = await prisma.crewMember.findMany({ where: { crewId: { in: crewIds } }, select: { userId: true, name: true } });
         const memberIds = Array.from(new Set((crewMemberships as any[]).map((m: any) => m.userId)));
-        const installs = await (prisma as any).userModInstall.findMany({
+        const installs = await prisma.userModInstall.findMany({
           where: { modId: mod.id, userId: { in: memberIds } },
           select: { userId: true },
         });
@@ -82,7 +82,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/users/:userId/mods", async (req, reply) => {
     const userId = String((req.params as any).userId || "");
     if (!userId) return reply.code(400).send({ error: "missing_userId" });
-    const installs = await (prisma as any).userModInstall.findMany({
+    const installs = await prisma.userModInstall.findMany({
       where: { userId },
       include: { mod: { select: { id: true, name: true, thumbnailUrl: true, sourceUrl: true, endorsements: true } } },
       orderBy: { installedAt: "desc" },
@@ -95,12 +95,12 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const crewId = String((req.params as any).crewId || "");
     if (!crewId) return reply.code(400).send({ error: "missing_crewId" });
     const [crewMods, loadouts] = await Promise.all([
-      (prisma as any).crewMod.findMany({
+      prisma.crewMod.findMany({
         where: { crewId },
         include: { mod: { select: { id: true, name: true, thumbnailUrl: true, sourceUrl: true, endorsements: true, author: true } } },
         orderBy: { addedAt: "desc" },
       }),
-      (prisma as any).crewModLoadout.findMany({ where: { crewId }, orderBy: { updatedAt: "desc" } }),
+      prisma.crewModLoadout.findMany({ where: { crewId }, orderBy: { updatedAt: "desc" } }),
     ]);
     return reply.send({ crewMods, loadouts });
   });
@@ -112,9 +112,9 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const id = String((req.params as any).id || "");
     const b: any = (req as any).body || {};
     const version = String(b.version || "").slice(0, 64);
-    const mod = await (prisma as any).mod.findUnique({ where: { id } });
+    const mod = await prisma.mod.findUnique({ where: { id } });
     if (!mod) return reply.code(404).send({ error: "not_found" });
-    await (prisma as any).userModInstall.upsert({
+    await prisma.userModInstall.upsert({
       where: { userId_modId: { userId: u.id, modId: mod.id } },
       update: { version, installedAt: new Date() },
       create: { userId: u.id, modId: mod.id, version },
@@ -128,7 +128,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const id = String((req.params as any).id || "");
     try {
-      await (prisma as any).userModInstall.delete({ where: { userId_modId: { userId: u.id, modId: id } } });
+      await prisma.userModInstall.delete({ where: { userId_modId: { userId: u.id, modId: id } } });
     } catch {}
     return reply.send({ ok: true });
   });
@@ -144,17 +144,17 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const note = String(b.note || "").slice(0, 280);
     if (!crewId || !modId) return reply.code(400).send({ error: "missing_fields" });
 
-    const membership = await (prisma as any).crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    const membership = await prisma.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
     if (!membership || !["LEADER", "OFFICER"].includes(String(membership.role))) {
       return reply.code(403).send({ error: "not_authorized" });
     }
     if (!["RECOMMENDED", "REQUIRED", "BANNED"].includes(role)) {
       return reply.code(400).send({ error: "bad_role" });
     }
-    const mod = await (prisma as any).mod.findUnique({ where: { id: modId } });
+    const mod = await prisma.mod.findUnique({ where: { id: modId } });
     if (!mod) return reply.code(404).send({ error: "mod_not_found" });
 
-    await (prisma as any).crewMod.upsert({
+    await prisma.crewMod.upsert({
       where: { crewId_modId: { crewId, modId } },
       update: { role: role as any, note, addedById: u.id },
       create: { crewId, modId, role: role as any, note, addedById: u.id },
@@ -167,11 +167,11 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
     const { crewId, modId } = (req.params as any) || {};
-    const membership = await (prisma as any).crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
+    const membership = await prisma.crewMember.findUnique({ where: { crewId_userId: { crewId, userId: u.id } } });
     if (!membership || !["LEADER", "OFFICER"].includes(String(membership.role))) {
       return reply.code(403).send({ error: "not_authorized" });
     }
-    try { await (prisma as any).crewMod.delete({ where: { crewId_modId: { crewId, modId } } }); } catch {}
+    try { await prisma.crewMod.delete({ where: { crewId_modId: { crewId, modId } } }); } catch {}
     return reply.send({ ok: true });
   });
 }

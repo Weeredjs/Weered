@@ -263,7 +263,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
 
     const [target, lobby] = await Promise.all([
       prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, livePresence: true } as any }),
-      (prisma as any).lobby.findUnique({ where: { id: lobbyId }, select: { id: true, name: true, moduleConfig: true } }),
+      prisma.lobby.findUnique({ where: { id: lobbyId }, select: { id: true, name: true, moduleConfig: true } }),
     ]);
     if (!target) return reply.code(404).send({ ok: false, error: "target_not_found" });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });

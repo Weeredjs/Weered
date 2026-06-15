@@ -142,10 +142,10 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
 
     const phash = await dHash(full).catch(() => "");
     if (phash) {
-      const blocked = await (prisma as any).blockedImageHash.findMany({ select: { phash: true } });
+      const blocked = await prisma.blockedImageHash.findMany({ select: { phash: true } });
       const hit = blocked.find((b: any) => hamming(b.phash, phash) <= 4);
       if (hit) {
-        await (prisma as any).user.update({
+        await prisma.user.update({
           where: { id: u.id },
           data: { mediaBannedUntil: new Date(Date.now() + 90 * 86400_000) } as any,
         }).catch(() => {});
@@ -166,7 +166,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
     const outMeta = await sharp(full).metadata();
     const trusted = paid || user.notoriety >= TRUST_NOTORIETY;
     const expiresAt = paid ? null : new Date(Date.now() + FREE_TTL_DAYS * 86400_000);
-    const att = await (prisma as any).chatAttachment.create({
+    const att = await prisma.chatAttachment.create({
       data: {
         uploaderId: u.id, roomId,
         url: `/chat/media/${fname}`, thumbUrl: `/chat/media/${tname}`,
@@ -200,9 +200,9 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
     const id = String((req as any).params?.id || "");
-    const att = await (prisma as any).chatAttachment.findUnique({ where: { id } });
+    const att = await prisma.chatAttachment.findUnique({ where: { id } });
     if (!att || att.status === "REMOVED") return reply.code(404).send({ ok: false });
-    const updated = await (prisma as any).chatAttachment.update({
+    const updated = await prisma.chatAttachment.update({
       where: { id },
       data: { reports: { increment: 1 }, ...(att.reports + 1 >= AUTO_HIDE_REPORTS && att.status === "ACTIVE" ? { status: "HIDDEN" } : {}) },
     });
@@ -216,7 +216,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
     if (!u) return reply.code(401).send({ ok: false });
     const me: any = await prisma.user.findUnique({ where: { id: u.id }, select: { globalRole: true } });
     if (!isStaff(me?.globalRole)) return reply.code(403).send({ ok: false });
-    const rows = await (prisma as any).chatAttachment.findMany({
+    const rows = await prisma.chatAttachment.findMany({
       where: { status: { in: ["HIDDEN", "ACTIVE"] }, reports: { gt: 0 } },
       orderBy: [{ status: "desc" }, { reports: "desc" }],
       take: 50,
@@ -232,27 +232,27 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
     const me: any = await prisma.user.findUnique({ where: { id: u.id }, select: { globalRole: true } });
     if (!isStaff(me?.globalRole)) return reply.code(403).send({ ok: false });
     const id = String((req as any).params?.id || "");
-    const att = await (prisma as any).chatAttachment.findUnique({ where: { id } });
+    const att = await prisma.chatAttachment.findUnique({ where: { id } });
     if (!att) return reply.code(404).send({ ok: false });
 
     for (const rel of [att.url, att.thumbUrl]) {
       const f = String(rel || "").split("/").pop() || "";
       if (/^[a-f0-9]{20}(\.t)?\.webp$/.test(f)) { try { fs.unlinkSync(path.join(UP_DIR, f)); } catch {} }
     }
-    await (prisma as any).chatAttachment.update({ where: { id }, data: { status: "REMOVED" } });
+    await prisma.chatAttachment.update({ where: { id }, data: { status: "REMOVED" } });
     if (att.phash) {
-      await (prisma as any).blockedImageHash.upsert({
+      await prisma.blockedImageHash.upsert({
         where: { phash: att.phash },
         create: { phash: att.phash, reason: `staff-removed ${id}` },
         update: {},
       }).catch(() => {});
     }
     const SLASH = 500;
-    await (prisma as any).user.update({
+    await prisma.user.update({
       where: { id: att.uploaderId },
       data: { notoriety: { decrement: SLASH }, mediaBannedUntil: new Date(Date.now() + 30 * 86400_000) } as any,
     }).catch(() => {});
-    await (prisma as any).notorietyEvent.create({
+    await prisma.notorietyEvent.create({
       data: { userId: att.uploaderId, action: "MEDIA_VIOLATION", points: -SLASH },
     }).catch(() => {});
     if (createNotification) {
@@ -268,7 +268,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
   // Expiry sweep — free-tier images age out; DB rows + hashes are kept.
   const sweep = async () => {
     try {
-      const stale = await (prisma as any).chatAttachment.findMany({
+      const stale = await prisma.chatAttachment.findMany({
         where: { status: { in: ["ACTIVE", "HIDDEN"] }, expiresAt: { not: null, lt: new Date() } },
         take: 500,
       });
@@ -277,7 +277,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
           const f = String(rel || "").split("/").pop() || "";
           if (/^[a-f0-9]{20}(\.t)?\.webp$/.test(f)) { try { fs.unlinkSync(path.join(UP_DIR, f)); } catch {} }
         }
-        await (prisma as any).chatAttachment.update({ where: { id: att.id }, data: { status: "EXPIRED" } }).catch(() => {});
+        await prisma.chatAttachment.update({ where: { id: att.id }, data: { status: "EXPIRED" } }).catch(() => {});
       }
       if (stale.length) console.log(`[media] expired ${stale.length} attachments`);
     } catch (e: any) { console.warn("[media] sweep error:", e?.message || e); }

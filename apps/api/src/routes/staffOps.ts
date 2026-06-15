@@ -24,7 +24,7 @@ app.get("/staff/outreach", async (req, reply) => {
   if (status) where.status = status;
   if (category) where.category = category;
 
-  const contacts = await (prisma as any).outreachContact.findMany({
+  const contacts = await prisma.outreachContact.findMany({
     where,
     orderBy: { updatedAt: "desc" },
     take: 200,
@@ -43,7 +43,7 @@ app.post("/staff/outreach", {
   const b = (req as any).body || {};
   if (!b.name || !b.company) return reply.code(400).send({ ok: false, error: "name and company required" });
 
-  const contact = await (prisma as any).outreachContact.create({
+  const contact = await prisma.outreachContact.create({
     data: {
       name: b.name,
       company: b.company,
@@ -84,7 +84,7 @@ app.patch("/staff/outreach/:id", {
   if (b.nextFollowUp !== undefined) data.nextFollowUp = b.nextFollowUp ? new Date(b.nextFollowUp) : null;
 
   try {
-    const contact = await (prisma as any).outreachContact.update({ where: { id }, data });
+    const contact = await prisma.outreachContact.update({ where: { id }, data });
     return reply.send({ ok: true, contact });
   } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
 });
@@ -98,7 +98,7 @@ app.delete("/staff/outreach/:id", {
   if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
   try {
-    await (prisma as any).outreachContact.delete({ where: { id: (req as any).params.id } });
+    await prisma.outreachContact.delete({ where: { id: (req as any).params.id } });
   } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
   return reply.send({ ok: true });
 });
@@ -142,26 +142,26 @@ app.get("/staff/analytics", async (req, reply) => {
     recentSignups,
     topUsersByNotoriety,
   ] = await Promise.all([
-    (prisma as any).user.count(),
-    (prisma as any).user.count({ where: { createdAt: { gte: todayStart } } }),
-    (prisma as any).user.count({ where: { createdAt: { gte: weekStart } } }),
-    (prisma as any).user.count({ where: { createdAt: { gte: monthStart } } }),
-    (prisma as any).directMessage.count({ where: { createdAt: { gte: todayStart } } }),
-    (prisma as any).directMessage.count({ where: { createdAt: { gte: weekStart } } }),
-    (prisma as any).roomMessage.count({ where: { ts: { gte: todayStart } } }),
-    (prisma as any).roomMessage.count({ where: { ts: { gte: weekStart } } }),
-    (prisma as any).lfgPost.count({ where: { createdAt: { gte: weekStart } } }),
-    (prisma as any).notorietyEvent.count({ where: { createdAt: { gte: todayStart } } }),
-    (prisma as any).notification.count({ where: { createdAt: { gte: todayStart } } }),
-    (prisma as any).pushSubscription.count(),
-    (prisma as any).lobby.findMany({
+    prisma.user.count(),
+    prisma.user.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.user.count({ where: { createdAt: { gte: weekStart } } }),
+    prisma.user.count({ where: { createdAt: { gte: monthStart } } }),
+    prisma.directMessage.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.directMessage.count({ where: { createdAt: { gte: weekStart } } }),
+    prisma.roomMessage.count({ where: { ts: { gte: todayStart } } }),
+    prisma.roomMessage.count({ where: { ts: { gte: weekStart } } }),
+    prisma.lfgPost.count({ where: { createdAt: { gte: weekStart } } }),
+    prisma.notorietyEvent.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.notification.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.pushSubscription.count(),
+    prisma.lobby.findMany({
       select: { id: true, name: true, _count: { select: { members: true } } },
     }),
-    (prisma as any).user.findMany({
+    prisma.user.findMany({
       where: { createdAt: { gte: monthStart } },
       select: { id: true, createdAt: true },
     }),
-    (prisma as any).user.findMany({
+    prisma.user.findMany({
       orderBy: { notoriety: "desc" },
       take: 10,
       select: { id: true, name: true, notoriety: true },
@@ -193,11 +193,11 @@ app.get("/staff/analytics", async (req, reply) => {
     for (const su of recentSignups as any[]) userCreatedMap.set(su.id, new Date(su.createdAt));
 
     const [dmActivity, chatActivity] = await Promise.all([
-      (prisma as any).directMessage.findMany({
+      prisma.directMessage.findMany({
         where: { fromId: { in: userIds }, createdAt: { gte: monthStart } },
         select: { fromId: true, createdAt: true },
       }),
-      (prisma as any).roomMessage.findMany({
+      prisma.roomMessage.findMany({
         where: { userId: { in: userIds }, ts: { gte: monthStart } },
         select: { userId: true, ts: true },
       }),
@@ -225,7 +225,7 @@ app.get("/staff/analytics", async (req, reply) => {
   }
 
   const topUserIds = (topUsersByNotoriety as any[]).map((u: any) => u.id);
-  const dmCounts = await (prisma as any).directMessage.groupBy({
+  const dmCounts = await prisma.directMessage.groupBy({
     by: ["fromId"],
     where: { fromId: { in: topUserIds }, createdAt: { gte: weekStart } },
     _count: { id: true },

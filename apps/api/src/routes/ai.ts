@@ -24,7 +24,7 @@ export default async function aiRoutes(app: FastifyInstance, opts: Opts) {
     if (!q) return reply.send({ ok: true, results: [], answer: null });
 
     const [lobbyList, onlineCount] = await Promise.all([
-      (prisma as any).lobby.findMany({
+      prisma.lobby.findMany({
         select: { id: true, name: true, description: true, moduleType: true, pinned: true, verified: true },
         orderBy: { name: "asc" },
       }),

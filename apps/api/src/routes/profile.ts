@@ -76,7 +76,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         select: { gameType: true, displayName: true, platform: true, createdAt: true },
       });
 
-      const primaryMembership = await (prisma as any).crewMember.findFirst({
+      const primaryMembership = await prisma.crewMember.findFirst({
         where: { userId: u.id },
         orderBy: { joinedAt: "asc" },
         include: { crew: { select: { id: true, name: true, tag: true, logoUrl: true, accentColor: true, tagShape: true } } },
@@ -98,7 +98,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           if (!viewer || viewer.id === u.id) return { friendStatus: viewer && viewer.id === u.id ? "self" : "none" };
           let friendStatus = "none"; let requestId: string | null = null;
           try {
-            const fr: any = await (prisma as any).friendRequest.findFirst({
+            const fr: any = await prisma.friendRequest.findFirst({
               where: { OR: [{ fromId: viewer.id, toId: u.id }, { fromId: u.id, toId: viewer.id }], status: { in: ["PENDING", "ACCEPTED"] } },
               orderBy: { createdAt: "desc" },
             });
@@ -490,9 +490,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
 
         await tx.localAuth.deleteMany({ where: { userId } });
 
-        await (tx as any).pushSubscription.deleteMany({ where: { userId } });
+        await tx.pushSubscription.deleteMany({ where: { userId } });
 
-        await (tx as any).userGameAccount.deleteMany({ where: { userId } });
+        await tx.userGameAccount.deleteMany({ where: { userId } });
       });
 
       try {

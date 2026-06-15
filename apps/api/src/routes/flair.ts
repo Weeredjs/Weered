@@ -21,13 +21,13 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const owned = await (prisma as any).userFlair.findMany({
+    const owned = await prisma.userFlair.findMany({
       where: { userId: u.id },
       orderBy: { acquiredAt: "desc" },
     });
     const flairIds = owned.map((o: any) => o.flairItemId);
     const items = flairIds.length > 0
-      ? await (prisma as any).flairItem.findMany({ where: { id: { in: flairIds } } })
+      ? await prisma.flairItem.findMany({ where: { id: { in: flairIds } } })
       : [];
     const byId: Record<string, any> = {};
     for (const f of items) byId[f.id] = f;
@@ -67,7 +67,7 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     const flairItemId = body.flairItemId === null || body.flairItemId === undefined ? null : String(body.flairItemId);
 
     if (flairItemId !== null) {
-      const owned = await (prisma as any).userFlair.findUnique({
+      const owned = await prisma.userFlair.findUnique({
         where: { userId_flairItemId: { userId: u.id, flairItemId } },
       });
       if (!owned) return reply.code(403).send({ ok: false, error: "not_owned" });
@@ -82,7 +82,7 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/flair/items/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
-    const f = await (prisma as any).flairItem.findUnique({ where: { id } });
+    const f = await prisma.flairItem.findUnique({ where: { id } });
     if (!f) return reply.code(404).send({ ok: false, error: "not_found" });
     return reply.send({ ok: true, flairItem: f });
   });

@@ -34,18 +34,18 @@ export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opt
     }
 
     const externalRef = `hd2:mo:${moId}`;
-    const def = await (prisma as any).challengeDefinition.findFirst({
+    const def = await prisma.challengeDefinition.findFirst({
       where: { kind: "MAJOR_ORDER", externalRef },
     });
     if (!def) return reply.code(404).send({ ok: false, error: "challenge_not_found" });
 
-    const inst = await (prisma as any).challengeInstance.findFirst({
+    const inst = await prisma.challengeInstance.findFirst({
       where: { definitionId: def.id, status: "ACTIVE" },
       orderBy: { createdAt: "desc" },
     });
     if (!inst) return reply.code(404).send({ ok: false, error: "no_active_instance" });
 
-    const existing = await (prisma as any).challengeEnrollment.findUnique({
+    const existing = await prisma.challengeEnrollment.findUnique({
       where: { instanceId_userId: { instanceId: inst.id, userId: u.id } },
     }).catch(() => null);
     if (existing && existing.status === "COMPLETED") {
@@ -54,7 +54,7 @@ export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opt
 
     const now = new Date();
     if (existing) {
-      await (prisma as any).challengeEnrollment.update({
+      await prisma.challengeEnrollment.update({
         where: { id: existing.id },
         data: {
           status: "COMPLETED",
@@ -63,7 +63,7 @@ export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opt
         },
       });
     } else {
-      await (prisma as any).challengeEnrollment.create({
+      await prisma.challengeEnrollment.create({
         data: {
           instanceId: inst.id,
           userId: u.id,

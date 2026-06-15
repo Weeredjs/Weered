@@ -46,7 +46,7 @@ async function upsertMod(prisma: PrismaClient, m: NexusMod): Promise<void> {
   const sourceId = String(m.mod_id);
   const url = `https://www.nexusmods.com/${GAME_SLUG}/mods/${m.mod_id}`;
 
-  await (prisma as any).mod.upsert({
+  await prisma.mod.upsert({
     where: { source_sourceId: { source: "NEXUS", sourceId } },
     update: {
       name: m.name || "",

@@ -228,7 +228,7 @@ async function creditChallengeRace(
   createNotification?: (opts: any) => Promise<any>,
   awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<any>,
 ) {
-  const tournaments: any[] = await (prisma as any).tournament.findMany({
+  const tournaments: any[] = await prisma.tournament.findMany({
     where: {
       format: "CHALLENGE_RACE",
       status: "ACTIVE",
@@ -243,13 +243,13 @@ async function creditChallengeRace(
     const inPool = pool.includes(defId);
     if (!inPool && !(poolEmpty && t.lobbyId && defLobbyId && t.lobbyId === defLobbyId)) continue;
 
-    const entry = await (prisma as any).tournamentEntry.findFirst({
+    const entry = await prisma.tournamentEntry.findFirst({
       where: { tournamentId: t.id, userId },
     });
     if (!entry) continue;
 
     const points = Math.max(1, t.pointsPerCompletion || 100);
-    const updated = await (prisma as any).tournamentEntry.update({
+    const updated = await prisma.tournamentEntry.update({
       where: { id: entry.id },
       data: { score: { increment: points } },
     });
@@ -272,7 +272,7 @@ async function creditChallengeRace(
       shouldComplete = true;
     } else if (wc === "ALL_COMPLETED") {
       if (pool.length > 0) {
-        const completedCount = await (prisma as any).challengeEnrollment.count({
+        const completedCount = await prisma.challengeEnrollment.count({
           where: {
             userId,
             status: "COMPLETED",
@@ -396,7 +396,7 @@ export function startChallengeWorker(
             (act as any).modifierHashes = merged;
             const pgcrTier = tierByInstance.get(act.activityInstanceId);
             const tier = pgcrTier != null ? pgcrTier : (actDef?.difficultyTier ?? null);
-            await (prisma as any).bungieActivityLog.upsert({
+            await prisma.bungieActivityLog.upsert({
               where: { userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId } },
               create: {
                 userId,

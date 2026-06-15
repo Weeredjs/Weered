@@ -24,7 +24,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
   async function completionCounts(userIds: string[]): Promise<Record<string, number>> {
     const ids = Array.from(new Set(userIds.filter(Boolean)));
     if (ids.length === 0) return {};
-    const rows = await (prisma as any).notorietyEvent.groupBy({
+    const rows = await prisma.notorietyEvent.groupBy({
       by: ["userId"],
       where: { userId: { in: ids }, action: "LFG_COMPLETED" },
       _count: { _all: true },
@@ -36,7 +36,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/lfg/:lobbyId", async (req, reply) => {
     const lobbyId = String((req as any).params?.lobbyId || "");
-    const posts = await (prisma as any).lfgPost.findMany({
+    const posts = await prisma.lfgPost.findMany({
       where: { lobbyId, status: { not: "CLOSED" } },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -77,7 +77,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     const roleClaims = hasRoles ? roleSlots.map((_, i) => (i === 0 ? u.id : "")) : [];
     const roleClaimNames = hasRoles ? roleSlots.map((_, i) => (i === 0 ? u.name : "")) : [];
 
-    const post = await (prisma as any).lfgPost.create({
+    const post = await prisma.lfgPost.create({
       data: {
         lobbyId,
         userId: u.id,
@@ -114,7 +114,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
 
-    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
     if (post.status !== "OPEN") return reply.code(400).send({ ok: false, error: "post_not_open", message: "This fireteam is no longer open." });
     if (post.players.includes(u.id)) return reply.code(400).send({ ok: false, error: "already_joined", message: "You're already in this fireteam." });
@@ -124,7 +124,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     const playerNames = [...post.playerNames, u.name];
     const status = players.length >= post.maxPlayers ? "FULL" : "OPEN";
 
-    await (prisma as any).lfgPost.update({
+    await prisma.lfgPost.update({
       where: { id: postId },
       data: { players, playerNames, status },
     });
@@ -138,7 +138,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
 
-    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
 
     const idx = post.players.indexOf(u.id);
@@ -149,7 +149,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     playerNames.splice(idx, 1);
     const status = players.length === 0 ? "CLOSED" : "OPEN";
 
-    await (prisma as any).lfgPost.update({
+    await prisma.lfgPost.update({
       where: { id: postId },
       data: { players, playerNames, status },
     });
@@ -163,7 +163,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
 
-    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
 
     const gr = await getGlobalRole(u.id);
@@ -171,7 +171,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(403).send({ ok: false, error: "not_owner" });
     }
 
-    await (prisma as any).lfgPost.update({ where: { id: postId }, data: { status: "CLOSED" } });
+    await prisma.lfgPost.update({ where: { id: postId }, data: { status: "CLOSED" } });
     return reply.send({ ok: true });
   });
 
@@ -182,7 +182,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
     const index = Number((req as any).params?.index);
-    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
     if (!Array.isArray(post.roleSlots) || post.roleSlots.length === 0) return reply.code(400).send({ ok: false, error: "not_a_role_post" });
     if (post.status === "CLOSED" || post.status === "COMPLETED") return reply.code(400).send({ ok: false, error: "post_closed" });
@@ -195,7 +195,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     names[index] = u.name;
     const players = claims.filter(Boolean);
     const status = players.length >= post.roleSlots.length ? "FULL" : "OPEN";
-    await (prisma as any).lfgPost.update({
+    await prisma.lfgPost.update({
       where: { id: postId },
       data: { roleClaims: claims, roleClaimNames: names, players, playerNames: names.filter(Boolean), status },
     });
@@ -211,7 +211,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
-    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
     const claims: string[] = [...(post.roleClaims || [])];
     const names: string[] = [...(post.roleClaimNames || [])];
@@ -221,7 +221,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     names[idx] = "";
     const players = claims.filter(Boolean);
     const status = players.length === 0 ? "CLOSED" : "OPEN";
-    await (prisma as any).lfgPost.update({
+    await prisma.lfgPost.update({
       where: { id: postId },
       data: { roleClaims: claims, roleClaimNames: names, players, playerNames: names.filter(Boolean), status },
     });
@@ -234,10 +234,10 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
-    const post = await (prisma as any).lfgPost.findUnique({ where: { id: postId } });
+    const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
     if (post.userId !== u.id) return reply.code(403).send({ ok: false, error: "host_only" });
-    await (prisma as any).lfgPost.update({ where: { id: postId }, data: { status: "COMPLETED" } });
+    await prisma.lfgPost.update({ where: { id: postId }, data: { status: "COMPLETED" } });
     for (const uid of (post.players || [])) awardNotoriety?.(uid, "LFG_COMPLETED").catch(() => {});
     return reply.send({ ok: true, status: "COMPLETED" });
   });

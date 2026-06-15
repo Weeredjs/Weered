@@ -79,7 +79,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
       let policy = cache && cache.expiresAt > Date.now() ? cache : null;
       if (!policy) {
         try {
-          const l: any = await (prisma as any).lobby.findUnique({
+          const l: any = await prisma.lobby.findUnique({
             where: { id: room.lobbyId },
             select: { blockedWords: true, blockedDomains: true, newAccountChatHours: true },
           });
@@ -134,11 +134,11 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     let attachment: any;
     if (attachmentId) {
       try {
-        const att: any = await (prisma as any).chatAttachment.findUnique({ where: { id: attachmentId } });
+        const att: any = await prisma.chatAttachment.findUnique({ where: { id: attachmentId } });
         if (att && att.uploaderId === ws.user.id && att.status === "ACTIVE"
             && Date.now() - new Date(att.createdAt).getTime() < 15 * 60_000) {
           attachment = { id: att.id, url: att.url, thumbUrl: att.thumbUrl, w: att.width, h: att.height, trusted: att.trusted, expiresAt: att.expiresAt ? new Date(att.expiresAt).toISOString() : null };
-          if (!att.roomId) void (prisma as any).chatAttachment.update({ where: { id: att.id }, data: { roomId: room.roomId } }).catch(() => {});
+          if (!att.roomId) void prisma.chatAttachment.update({ where: { id: att.id }, data: { roomId: room.roomId } }).catch(() => {});
         }
       } catch {}
       if (!attachment) { send(ws, { type: "chat:rejected", roomId, reason: "bad_attachment" }); return; }
@@ -297,7 +297,7 @@ export async function handleCrewDm(
     if (!rate.ok) { send(ws, { type: "crew:rejected", crewId, reason: rate.reason, retryInMs: rate.retryInMs }); return; }
 
     try {
-      const membership = await (prisma as any).crewMember.findFirst({
+      const membership = await prisma.crewMember.findFirst({
         where: { crewId, userId: fromId },
       });
       if (!membership) return;
@@ -305,7 +305,7 @@ export async function handleCrewDm(
       let crewReplyData: any = {};
       const crewReplyToId = typeof msg.replyToId === "string" ? msg.replyToId : "";
       if (crewReplyToId) {
-        const parent = await (prisma as any).crewMessage.findUnique({ where: { id: crewReplyToId } });
+        const parent = await prisma.crewMessage.findUnique({ where: { id: crewReplyToId } });
         if (parent && !parent.deletedAt && parent.crewId === crewId) {
           crewReplyData = {
             replyToId: parent.id,
@@ -316,12 +316,12 @@ export async function handleCrewDm(
         }
       }
 
-      const message = await (prisma as any).crewMessage.create({
+      const message = await prisma.crewMessage.create({
         data: { crewId, userId: fromId, userName: ws.user?.name || "Unknown", body, ...crewReplyData },
         select: { id: true, crewId: true, userId: true, userName: true, body: true, createdAt: true, replyToId: true, replyToUserId: true, replyToUserName: true, replyToBody: true },
       });
 
-      const members = await (prisma as any).crewMember.findMany({
+      const members = await prisma.crewMember.findMany({
         where: { crewId },
         select: { userId: true },
       });
@@ -352,7 +352,7 @@ export async function handleCrewDm(
         try {
           const mentioned = await resolveMentions(body, fromId);
           if (mentioned.length === 0) return;
-          const memberRows = await (prisma as any).crewMember.findMany({
+          const memberRows = await prisma.crewMember.findMany({
             where: { crewId },
             select: { userId: true },
           });
@@ -382,15 +382,15 @@ export async function handleCrewDm(
     const meId = ws.user?.id;
     if (!msgId || !newBody || !meId) return;
     try {
-      const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+      const row = await prisma.crewMessage.findUnique({ where: { id: msgId } });
       if (!row) return;
       if (row.userId !== meId) return;
       if (row.deletedAt) return;
       if (row.body === newBody) return;
       if (Date.now() - new Date(row.createdAt).getTime() > 15 * 60 * 1000) return;
       const editedAt = new Date();
-      await (prisma as any).crewMessage.update({ where: { id: msgId }, data: { body: newBody, editedAt } });
-      const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+      await prisma.crewMessage.update({ where: { id: msgId }, data: { body: newBody, editedAt } });
+      const members = await prisma.crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
       const memberIds = new Set(members.map((m: any) => m.userId));
       const payload = { type: "crew:edited", crewId: row.crewId, msgId, body: newBody, editedAt: editedAt.toISOString() };
       for (const sock of wss.clients) {
@@ -406,15 +406,15 @@ export async function handleCrewDm(
     const meId = ws.user?.id;
     if (!msgId || !meId) return;
     try {
-      const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+      const row = await prisma.crewMessage.findUnique({ where: { id: msgId } });
       if (!row) return;
       if (row.deletedAt) return;
-      const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
+      const membership = await prisma.crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
       const isMod = membership?.role === "LEADER" || membership?.role === "OFFICER";
       if (row.userId !== meId && !isMod) return;
       const deletedAt = new Date();
-      await (prisma as any).crewMessage.update({ where: { id: msgId }, data: { body: "", deletedAt } });
-      const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+      await prisma.crewMessage.update({ where: { id: msgId }, data: { body: "", deletedAt } });
+      const members = await prisma.crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
       const memberIds = new Set(members.map((m: any) => m.userId));
       const payload = { type: "crew:deleted", crewId: row.crewId, msgId, deletedAt: deletedAt.toISOString() };
       for (const sock of wss.clients) {
@@ -431,14 +431,14 @@ export async function handleCrewDm(
     const meId = ws.user?.id;
     if (!msgId || !emoji || !meId) return;
     try {
-      const row = await (prisma as any).crewMessage.findUnique({ where: { id: msgId } });
+      const row = await prisma.crewMessage.findUnique({ where: { id: msgId } });
       if (!row) return;
       if (row.deletedAt) return;
-      const membership = await (prisma as any).crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
+      const membership = await prisma.crewMember.findFirst({ where: { crewId: row.crewId, userId: meId } });
       if (!membership) return;
       const res = await toggleReactionOnTarget("CREW_MESSAGE", msgId, meId, emoji);
       if (!res.ok) { send(ws, { type: "reaction:rejected", msgId, reason: res.reason }); return; }
-      const members = await (prisma as any).crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
+      const members = await prisma.crewMember.findMany({ where: { crewId: row.crewId }, select: { userId: true } });
       const memberIds = new Set(members.map((m: any) => m.userId));
       const payload = { type: "crew:reaction", crewId: row.crewId, msgId, reactions: res.reactions };
       for (const sock of wss.clients) {
@@ -463,7 +463,7 @@ export async function handleCrewDm(
     if (!rate.ok) { send(ws, { type: "dm:rejected", reason: rate.reason, retryInMs: rate.retryInMs }); return; }
     const toId = await resolveUserId(rawToId);
     try {
-      const blocked = await (prisma as any).userBlock.findFirst({
+      const blocked = await prisma.userBlock.findFirst({
         where: {
           OR: [
             { blockerId: fromId, blockedId: toId },
@@ -623,24 +623,24 @@ export async function handleReactionToggle(
 
     if (room.roomId !== "lobby") {
       try {
-        const existing = await (prisma as any).reaction.findUnique({
+        const existing = await prisma.reaction.findUnique({
           where: { targetType_targetId_userId_emoji: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji } },
         });
         if (existing) {
-          await (prisma as any).reaction.delete({ where: { id: existing.id } });
+          await prisma.reaction.delete({ where: { id: existing.id } });
         } else {
-          const distinctCount = await (prisma as any).reaction.groupBy({
+          const distinctCount = await prisma.reaction.groupBy({
             by: ["emoji"], where: { targetType: "ROOM_MESSAGE", targetId: msgId },
           });
           if (distinctCount.length >= 20 && !distinctCount.find((d: any) => d.emoji === emoji)) {
             send(ws, { type: "reaction:rejected", roomId: rId, msgId, reason: "Too many different reactions on this message." });
             return;
           }
-          await (prisma as any).reaction.create({
+          await prisma.reaction.create({
             data: { targetType: "ROOM_MESSAGE", targetId: msgId, userId: ws.user.id, emoji },
           });
         }
-        const rows = await (prisma as any).reaction.findMany({
+        const rows = await prisma.reaction.findMany({
           where: { targetType: "ROOM_MESSAGE", targetId: msgId },
           select: { emoji: true, userId: true },
         });

@@ -19,7 +19,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     const startOfYear = new Date(now.getFullYear(), 0, 1);
     const currentWeek = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
 
-    const items = await (prisma as any).storeItem.findMany({
+    const items = await prisma.storeItem.findMany({
       where,
       orderBy: [{ featured: "desc" }, { rarity: "desc" }, { createdAt: "desc" }],
       take: 100,
@@ -46,7 +46,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const itemId = String((req as any).params?.itemId || "");
 
-    const item = await (prisma as any).storeItem.findUnique({ where: { id: itemId } });
+    const item = await prisma.storeItem.findUnique({ where: { id: itemId } });
     if (!item || !item.available) return reply.code(404).send({ ok: false, error: "item_not_found" });
 
     if (item.maxSupply != null && item.totalMinted >= item.maxSupply) {
@@ -59,7 +59,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     if (item.category !== "CONSUMABLE" && item.category !== "COLLECTIBLE") {
-      const existing = await (prisma as any).userItem.findFirst({
+      const existing = await prisma.userItem.findFirst({
         where: { userId: u.id, itemId, consumed: false },
       });
       if (existing) return reply.code(400).send({ ok: false, error: "already_owned" });
@@ -79,24 +79,24 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
 
         let claimedMint: number | null = null;
         if (item.maxSupply != null) {
-          const sup = await (tx as any).storeItem.updateMany({
+          const sup = await tx.storeItem.updateMany({
             where: { id: itemId, totalMinted: { lt: item.maxSupply } },
             data: { totalMinted: { increment: 1 } },
           });
           if (sup.count === 0) throw new Error("__SOLD_OUT__"); // rolls back the debit
-          const si = await (tx as any).storeItem.findUnique({ where: { id: itemId }, select: { totalMinted: true } });
+          const si = await tx.storeItem.findUnique({ where: { id: itemId }, select: { totalMinted: true } });
           claimedMint = (si as any)?.totalMinted ?? null;
         } else {
-          await (tx as any).storeItem.update({ where: { id: itemId }, data: { totalMinted: { increment: 1 } } });
+          await tx.storeItem.update({ where: { id: itemId }, data: { totalMinted: { increment: 1 } } });
         }
 
         const fresh = await tx.user.findUnique({ where: { id: u.id }, select: { paper: true } });
         const newBalance = (fresh as any)?.paper ?? 0;
 
-        const userItem = await (tx as any).userItem.create({
+        const userItem = await tx.userItem.create({
           data: { userId: u.id, itemId, acquiredFrom: "store", acquiredPrice: item.price, mintNumber: claimedMint },
         });
-        await (tx as any).paperTransaction.create({
+        await tx.paperTransaction.create({
           data: {
             userId: u.id,
             type: "SPEND_STORE",
@@ -129,7 +129,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const items = await (prisma as any).userItem.findMany({
+    const items = await prisma.userItem.findMany({
       where: { userId: u.id },
       include: { item: true },
       orderBy: { acquiredAt: "desc" },
@@ -165,18 +165,18 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const userItemId = String((req as any).params?.userItemId || "");
 
-    const ui = await (prisma as any).userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
+    const ui = await prisma.userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
     if (!ui || ui.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
     if (ui.consumed) return reply.code(400).send({ ok: false, error: "consumed" });
 
     if (!ui.equipped) {
-      await (prisma as any).userItem.updateMany({
+      await prisma.userItem.updateMany({
         where: { userId: u.id, equipped: true, item: { category: ui.item.category } },
         data: { equipped: false },
       });
     }
 
-    await (prisma as any).userItem.update({
+    await prisma.userItem.update({
       where: { id: userItemId },
       data: { equipped: !ui.equipped },
     });
@@ -191,12 +191,12 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const userItemId = String((req as any).params?.userItemId || "");
 
-    const ui = await (prisma as any).userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
+    const ui = await prisma.userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
     if (!ui || ui.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
     if (ui.item.category !== "CONSUMABLE") return reply.code(400).send({ ok: false, error: "not_consumable" });
     if (ui.consumed) return reply.code(400).send({ ok: false, error: "already_consumed" });
 
-    await (prisma as any).userItem.update({
+    await prisma.userItem.update({
       where: { id: userItemId },
       data: { consumed: true, consumedAt: new Date() },
     });
@@ -214,7 +214,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       : q.sort === "price_desc" ? { price: "desc" as const }
       : { createdAt: "desc" as const };
 
-    const listings = await (prisma as any).marketListing.findMany({
+    const listings = await prisma.marketListing.findMany({
       where,
       orderBy: sort,
       take: 50,
@@ -228,7 +228,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
 
     const itemIds = [...new Set(listings.map((l: any) => l.itemId))] as string[];
     const items = itemIds.length
-      ? await (prisma as any).storeItem.findMany({ where: { id: { in: itemIds } }, select: { id: true, imageUrl: true, category: true, description: true } })
+      ? await prisma.storeItem.findMany({ where: { id: { in: itemIds } }, select: { id: true, imageUrl: true, category: true, description: true } })
       : [];
     const itemMap = new Map(items.map((i: any) => [i.id, i]));
 
@@ -265,16 +265,16 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     const price = parseInt(body.price);
     if (!userItemId || !price || price < 1) return reply.code(400).send({ ok: false, error: "invalid_params" });
 
-    const ui = await (prisma as any).userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
+    const ui = await prisma.userItem.findUnique({ where: { id: userItemId }, include: { item: true } });
     if (!ui || ui.userId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
     if (ui.consumed) return reply.code(400).send({ ok: false, error: "consumed" });
 
-    const existingListing = await (prisma as any).marketListing.findFirst({
+    const existingListing = await prisma.marketListing.findFirst({
       where: { userItemId, status: "ACTIVE" },
     });
     if (existingListing) return reply.code(400).send({ ok: false, error: "already_listed" });
 
-    const listing = await (prisma as any).marketListing.create({
+    const listing = await prisma.marketListing.create({
       data: {
         sellerId: u.id,
         userItemId,
@@ -287,7 +287,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     });
 
     if (ui.equipped) {
-      await (prisma as any).userItem.update({ where: { id: userItemId }, data: { equipped: false } });
+      await prisma.userItem.update({ where: { id: userItemId }, data: { equipped: false } });
     }
 
     return reply.send({ ok: true, listing: { ...listing, createdAt: listing.createdAt?.toISOString() } });
@@ -300,7 +300,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const listingId = String((req as any).params?.listingId || "");
 
-    const listing = await (prisma as any).marketListing.findUnique({ where: { id: listingId } });
+    const listing = await prisma.marketListing.findUnique({ where: { id: listingId } });
     if (!listing || listing.status !== "ACTIVE") return reply.code(404).send({ ok: false, error: "not_found" });
     if (listing.sellerId === u.id) return reply.code(400).send({ ok: false, error: "cant_buy_own" });
 
@@ -316,7 +316,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       // absolute write) so a concurrent change to the seller's balance is never
       // clobbered (the prior absolute writes were a lost-update for both sides).
       const result: any = await prisma.$transaction(async (tx) => {
-        const claim = await (tx as any).marketListing.updateMany({
+        const claim = await tx.marketListing.updateMany({
           where: { id: listingId, status: "ACTIVE" },
           data: { status: "SOLD", buyerId: u.id, soldAt: new Date() },
         });
@@ -329,7 +329,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
         if (deb.count === 0) throw new Error("__INSUFFICIENT__"); // rolls back the listing claim
 
         await tx.user.update({ where: { id: listing.sellerId }, data: { paper: { increment: listing.price } } });
-        await (tx as any).userItem.update({
+        await tx.userItem.update({
           where: { id: listing.userItemId },
           data: { userId: u.id, acquiredFrom: listing.sellerId, acquiredPrice: listing.price, acquiredAt: new Date(), equipped: false },
         });
@@ -339,10 +339,10 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
         const buyerNewBalance = (buyerFresh as any)?.paper ?? 0;
         const sellerNewBalance = (sellerFresh as any)?.paper ?? 0;
 
-        await (tx as any).paperTransaction.create({
+        await tx.paperTransaction.create({
           data: { userId: u.id, type: "SPEND_MARKET", amount: -listing.price, balance: buyerNewBalance, description: `Bought: ${listing.itemName}`, refId: listingId },
         });
-        await (tx as any).paperTransaction.create({
+        await tx.paperTransaction.create({
           data: { userId: listing.sellerId, type: "EARN_TRADE_SOLD", amount: listing.price, balance: sellerNewBalance, description: `Sold: ${listing.itemName}`, refId: listingId },
         });
         return { balance: buyerNewBalance };
@@ -364,17 +364,17 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const listingId = String((req as any).params?.listingId || "");
 
-    const listing = await (prisma as any).marketListing.findUnique({ where: { id: listingId } });
+    const listing = await prisma.marketListing.findUnique({ where: { id: listingId } });
     if (!listing || listing.sellerId !== u.id) return reply.code(404).send({ ok: false, error: "not_found" });
     if (listing.status !== "ACTIVE") return reply.code(400).send({ ok: false, error: "not_active" });
 
-    await (prisma as any).marketListing.update({ where: { id: listingId }, data: { status: "CANCELLED" } });
+    await prisma.marketListing.update({ where: { id: listingId }, data: { status: "CANCELLED" } });
     return reply.send({ ok: true });
   });
 
   setInterval(async () => {
     try {
-      await (prisma as any).marketListing.updateMany({
+      await prisma.marketListing.updateMany({
         where: { status: "ACTIVE", expiresAt: { lte: new Date() } },
         data: { status: "EXPIRED" },
       });

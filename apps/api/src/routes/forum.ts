@@ -121,7 +121,7 @@ app.get("/forum/posts", async (req, reply) => {
   if (u) {
     const votes = await prisma.forumVote.findMany({ where: { userId: u.id, postId: { in: posts.map((p: any) => p.id) } } });
     for (const v of votes) if (v.postId) myVotes[v.postId] = v.value;
-    const bms = await (prisma as any).forumBookmark.findMany({ where: { userId: u.id, postId: { in: posts.map((p: any) => p.id) } } });
+    const bms = await prisma.forumBookmark.findMany({ where: { userId: u.id, postId: { in: posts.map((p: any) => p.id) } } });
     for (const b of bms) myBookmarks[b.postId] = true;
   }
 
@@ -201,7 +201,7 @@ app.post("/forum/posts", {
     fileAutoModReport({ kind: "POST", id: post.id }, automod.ruleName, automod.reason).catch(() => {});
   }
   try {
-    await (prisma as any).forumSubscription.create({ data: { userId: u.id, postId: post.id } });
+    await prisma.forumSubscription.create({ data: { userId: u.id, postId: post.id } });
   } catch {}
   (async () => {
     try {
@@ -248,13 +248,13 @@ app.get("/forum/posts/:postId", async (req, reply) => {
       const cvs = await prisma.forumVote.findMany({ where: { userId: u.id, commentId: { in: comments.map(c => c.id) } } });
       for (const v of cvs) if (v.commentId) myCommentVotes[v.commentId] = v.value;
     }
-    const bm = await (prisma as any).forumBookmark.findFirst({ where: { userId: u.id, postId } });
+    const bm = await prisma.forumBookmark.findFirst({ where: { userId: u.id, postId } });
     myBookmarked = !!bm;
-    const sub = await (prisma as any).forumSubscription.findFirst({ where: { userId: u.id, postId } });
+    const sub = await prisma.forumSubscription.findFirst({ where: { userId: u.id, postId } });
     mySubscribed = !!sub;
   }
 
-  const subscriberCount = await (prisma as any).forumSubscription.count({ where: { postId } });
+  const subscriberCount = await prisma.forumSubscription.count({ where: { postId } });
 
   const modPerms = u ? await canModForumPost(u.id, post) : { canDelete: false, canLock: false, canPin: false, canAnnounce: false };
   const isMod = modPerms.canLock || modPerms.canPin;
@@ -401,7 +401,7 @@ app.post("/forum/posts/:postId/comments", {
       const bodyTrim = String(body).trim().slice(0, 200);
       const meta = { kind: "forum_reply", postId, commentId: comment.id, replierId: u.id, replierName };
 
-      const subs = await (prisma as any).forumSubscription.findMany({ where: { postId }, select: { userId: true } });
+      const subs = await prisma.forumSubscription.findMany({ where: { postId }, select: { userId: true } });
       for (const s of subs) {
         if (s.userId === u.id) continue;
         if (notifiedIds.has(s.userId)) continue;
@@ -550,7 +550,7 @@ app.post("/forum/posts/:postId/bookmark", {
   const post = await prisma.forumPost.findUnique({ where: { id: postId }, select: { id: true } });
   if (!post) return reply.code(404).send({ error: "Post not found" });
   try {
-    await (prisma as any).forumBookmark.upsert({
+    await prisma.forumBookmark.upsert({
       where: { userId_postId: { userId: u.id, postId } },
       update: {},
       create: { userId: u.id, postId },
@@ -565,7 +565,7 @@ app.delete("/forum/posts/:postId/bookmark", {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
-  await (prisma as any).forumBookmark.deleteMany({ where: { userId: u.id, postId } });
+  await prisma.forumBookmark.deleteMany({ where: { userId: u.id, postId } });
   return reply.send({ ok: true, bookmarked: false });
 });
 
@@ -575,7 +575,7 @@ app.get("/forum/me/bookmarks", async (req, reply) => {
   const limit = Math.min(Number((req as any).query?.limit) || 50, 100);
   const offset = Math.max(0, Number((req as any).query?.offset) || 0);
 
-  const bms = await (prisma as any).forumBookmark.findMany({
+  const bms = await prisma.forumBookmark.findMany({
     where: { userId: u.id },
     orderBy: { createdAt: "desc" },
     skip: offset,
@@ -590,7 +590,7 @@ app.get("/forum/me/bookmarks", async (req, reply) => {
   });
   const postMap = new Map(posts.map((p: any) => [p.id, p]));
   const authorMap = await enrichForumAuthors(posts.map((p: any) => p.authorId));
-  const total = await (prisma as any).forumBookmark.count({ where: { userId: u.id } });
+  const total = await prisma.forumBookmark.count({ where: { userId: u.id } });
 
   const out = bms
     .map((b: any) => {
@@ -619,13 +619,13 @@ app.post("/forum/posts/:postId/subscribe", {
   const post = await prisma.forumPost.findUnique({ where: { id: postId }, select: { id: true } });
   if (!post) return reply.code(404).send({ error: "Post not found" });
   try {
-    await (prisma as any).forumSubscription.upsert({
+    await prisma.forumSubscription.upsert({
       where: { userId_postId: { userId: u.id, postId } },
       update: {},
       create: { userId: u.id, postId },
     });
   } catch {}
-  const count = await (prisma as any).forumSubscription.count({ where: { postId } });
+  const count = await prisma.forumSubscription.count({ where: { postId } });
   return reply.send({ ok: true, subscribed: true, subscriberCount: count });
 });
 
@@ -635,15 +635,15 @@ app.delete("/forum/posts/:postId/subscribe", {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
-  await (prisma as any).forumSubscription.deleteMany({ where: { userId: u.id, postId } });
-  const count = await (prisma as any).forumSubscription.count({ where: { postId } });
+  await prisma.forumSubscription.deleteMany({ where: { userId: u.id, postId } });
+  const count = await prisma.forumSubscription.count({ where: { postId } });
   return reply.send({ ok: true, subscribed: false, subscriberCount: count });
 });
 
 app.get("/forum/me/subscriptions", async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
-  const subs = await (prisma as any).forumSubscription.findMany({
+  const subs = await prisma.forumSubscription.findMany({
     where: { userId: u.id },
     orderBy: { createdAt: "desc" },
     take: 100,

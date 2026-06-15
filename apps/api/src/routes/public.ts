@@ -15,7 +15,7 @@ async function getLobbyNameMap(): Promise<Map<string, string>> {
   if (_lobbyNameCache && now - _lobbyNameCache.ts < LOBBY_NAME_TTL_MS) {
     return _lobbyNameCache.map;
   }
-  const rows = await (prisma as any).lobby.findMany({ select: { id: true, name: true } });
+  const rows = await prisma.lobby.findMany({ select: { id: true, name: true } });
   const map = new Map<string, string>();
   for (const r of rows) map.set(String(r.id), String(r.name || r.id));
   _lobbyNameCache = { ts: now, map };
@@ -32,7 +32,7 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
   const { rooms, applyWindroseReel, authFromHeader } = opts;
 
   app.get("/public/lobbies/featured", async (_req, reply) => {
-    const lobbies = await (prisma as any).lobby.findMany({
+    const lobbies = await prisma.lobby.findMany({
       where: { OR: [{ pinned: true }, { id: { in: FEATURED_ORDER } }] },
       select: {
         id: true, name: true, description: true, verified: true, pinned: true,

@@ -19,7 +19,7 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
   app.get("/featured", async (_req, reply) => {
     const featuredId = await getSiteConfig("featuredLobbyId");
     if (!featuredId) {
-      const fallback = await (prisma as any).lobby.findFirst({
+      const fallback = await prisma.lobby.findFirst({
         where: { pinned: true },
         select: {
           id: true, name: true, description: true, verified: true, pinned: true,
@@ -32,7 +32,7 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
       return reply.send({ ok: true, lobby: applyWindroseReel(fallback), source: "fallback" });
     }
 
-    const lobby = await (prisma as any).lobby.findUnique({
+    const lobby = await prisma.lobby.findUnique({
       where: { id: featuredId },
       select: {
         id: true, name: true, description: true, verified: true, pinned: true,

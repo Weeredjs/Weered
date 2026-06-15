@@ -255,7 +255,7 @@ app.patch("/rooms/:roomId", {
   }
   if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_changes" });
 
-  const updated: any = await (prisma as any).room.update({ where: { id: roomId }, data });
+  const updated: any = await prisma.room.update({ where: { id: roomId }, data });
 
   const live: any = rooms.get(normalizeRoomId(roomId));
   if (live) {

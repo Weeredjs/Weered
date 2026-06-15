@@ -62,7 +62,7 @@ async function ensureToken(acct: any): Promise<string | null> {
     });
     const t: any = await r.json().catch(() => ({}));
     if (!t.access_token) return acct.accessToken || null;
-    await (prisma as any).userGameAccount.update({
+    await prisma.userGameAccount.update({
       where: { id: acct.id },
       data: {
         accessToken: t.access_token,
@@ -321,7 +321,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
 
       const card = { uuid, name, realm, linkedAt: new Date().toISOString() };
 
-      await (prisma as any).userGameAccount.upsert({
+      await prisma.userGameAccount.upsert({
         where: { userId_gameType: { userId, gameType: "POE" } },
         update: {
           accessToken: tokens.access_token,
@@ -357,7 +357,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/poe/me", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await (prisma as any).userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
     if (!acct) return reply.send({ ok: true, linked: false });
     return reply.send({ ok: true, linked: true, account: acct.cardData, cachedAt: acct.cardCachedAt });
   });
@@ -365,7 +365,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/poe/me/characters", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await (prisma as any).userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
     if (!acct) return reply.send({ ok: true, linked: false, characters: [] });
 
     const card: any = acct.cardData || {};
@@ -400,7 +400,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     if (chars.length === 0 && forbidden) {
       return reply.send({ ok: true, linked: true, private: true, characters: card.characters || [] });
     }
-    await (prisma as any).userGameAccount.update({
+    await prisma.userGameAccount.update({
       where: { id: acct.id },
       data: { cardData: { ...card, characters: chars, charsCachedAt: new Date().toISOString() } },
     }).catch(() => {});
@@ -410,7 +410,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.delete("/poe/me", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    await (prisma as any).userGameAccount.deleteMany({ where: { userId: u.id, gameType: "POE" } });
+    await prisma.userGameAccount.deleteMany({ where: { userId: u.id, gameType: "POE" } });
     return reply.send({ ok: true });
   });
 
@@ -524,7 +524,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/poe/tree/character", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await (prisma as any).userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
     if (!acct) return reply.send({ ok: false, error: "not linked" });
     const accountName = acct.displayName || "";
     const q: any = (req as any).query || {};
@@ -557,7 +557,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     const name = String((req as any).query?.name || "");
     const realm = String((req as any).query?.realm || "pc");
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
-    const acct = await (prisma as any).userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
     if (!acct) return reply.send({ ok: true, linked: false, items: [] });
     const accountName = acct.displayName || "";
 

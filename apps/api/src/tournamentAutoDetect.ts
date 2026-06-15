@@ -41,13 +41,13 @@ export function startTournamentAutoDetect(
   console.log("[tournament-autodetect] Worker started — polling every 2m");
 
   async function freshPullForMatch(matchId: string) {
-    const m = await (prisma as any).tournamentMatch.findUnique({
+    const m = await prisma.tournamentMatch.findUnique({
       where: { id: matchId },
       select: { entryAId: true, entryBId: true },
     });
     if (!m) return;
     const entryIds = [m.entryAId, m.entryBId].filter(Boolean) as string[];
-    const entries = entryIds.length ? await (prisma as any).tournamentEntry.findMany({
+    const entries = entryIds.length ? await prisma.tournamentEntry.findMany({
       where: { id: { in: entryIds } }, select: { userId: true },
     }) : [];
     const userIds: string[] = entries.map((e: any) => e.userId).filter(Boolean);
@@ -78,7 +78,7 @@ export function startTournamentAutoDetect(
         : new Date(now.getTime() - 4 * 60 * 60 * 1000);
     const endBound = new Date(now.getTime() + 30 * 60 * 1000);
 
-    const aLogs = await (prisma as any).bungieActivityLog.findMany({
+    const aLogs = await prisma.bungieActivityLog.findMany({
       where: {
         userId: aUserId,
         period: { gte: startBound, lte: endBound },
@@ -93,7 +93,7 @@ export function startTournamentAutoDetect(
     const aInstanceIds = aLogs.map((l: any) => l.activityInstanceId).filter(Boolean);
     if (aInstanceIds.length === 0) return false;
 
-    const bLogs = await (prisma as any).bungieActivityLog.findMany({
+    const bLogs = await prisma.bungieActivityLog.findMany({
       where: {
         userId: bUserId,
         activityInstanceId: { in: aInstanceIds },
@@ -138,7 +138,7 @@ export function startTournamentAutoDetect(
       return false;
     }
 
-    await (prisma as any).tournamentMatch.update({
+    await prisma.tournamentMatch.update({
       where: { id: match.id },
       data: {
         scoreA, scoreB, winnerEntryId,
@@ -172,7 +172,7 @@ export function startTournamentAutoDetect(
       } catch {}
     }
     if (createNotification) {
-      const tournament = await (prisma as any).tournament.findUnique({
+      const tournament = await prisma.tournament.findUnique({
         where: { id: match.tournamentId },
         select: { lobbyId: true, title: true },
       });
@@ -209,14 +209,14 @@ export function startTournamentAutoDetect(
 
   async function cycle() {
     try {
-      const tourns = await (prisma as any).tournament.findMany({
+      const tourns = await prisma.tournament.findMany({
         where: { lobbyId: "destiny2", status: "ACTIVE" },
         select: { id: true },
       });
       if (tourns.length === 0) return;
       const tIds = tourns.map((t: any) => t.id);
 
-      const rawMatches = await (prisma as any).tournamentMatch.findMany({
+      const rawMatches = await prisma.tournamentMatch.findMany({
         where: {
           status: { in: ["READY", "LIVE"] },
           pgcrInstanceId: null,
@@ -229,7 +229,7 @@ export function startTournamentAutoDetect(
       const entryIds = Array.from(new Set(
         rawMatches.flatMap((m: any) => [m.entryAId, m.entryBId]).filter(Boolean)
       )) as string[];
-      const entries = entryIds.length ? await (prisma as any).tournamentEntry.findMany({
+      const entries = entryIds.length ? await prisma.tournamentEntry.findMany({
         where: { id: { in: entryIds } },
         select: { id: true, userId: true },
       }) : [];

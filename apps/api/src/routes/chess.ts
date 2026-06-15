@@ -142,7 +142,7 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     const q: any = (req as any).query || {};
     const limit = Math.max(1, Math.min(100, Number(q.limit) || 20));
 
-    const rows = await (prisma as any).chessActivityLog.findMany({
+    const rows = await prisma.chessActivityLog.findMany({
       where: { userId: u.id },
       orderBy: { playedAt: "desc" },
       take: limit,

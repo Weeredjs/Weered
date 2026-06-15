@@ -180,7 +180,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const inGameLocation = body.inGameLocation ? String(body.inGameLocation).slice(0, 60) : null;
     const watermarked = !!body.watermarked;
 
-    const existingCount = await (prisma as any).windroseBuild.count({ where: { authorId: u.id } });
+    const existingCount = await prisma.windroseBuild.count({ where: { authorId: u.id } });
     if (existingCount >= MAX_BUILDS_PER_USER) {
       return reply.code(403).send({ ok: false, error: "build_limit", message: `Build limit reached (${MAX_BUILDS_PER_USER}). Delete an old one first.` });
     }
@@ -210,7 +210,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     }
 
     const primary = processed[0];
-    const created = await (prisma as any).windroseBuild.create({
+    const created = await prisma.windroseBuild.create({
       data: {
         slug,
         title,
@@ -281,7 +281,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     }
 
     const [items, total] = await Promise.all([
-      (prisma as any).windroseBuild.findMany({
+      prisma.windroseBuild.findMany({
         where,
         orderBy,
         skip: offset,
@@ -295,7 +295,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
           images: true,
         },
       }),
-      (prisma as any).windroseBuild.count({ where }),
+      prisma.windroseBuild.count({ where }),
     ]);
 
     const enriched = items.map((b: any) => {
@@ -314,7 +314,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
   });
 
   app.get("/windrose/builds/featured", async (_req, reply) => {
-    const items = await (prisma as any).windroseBuild.findMany({
+    const items = await prisma.windroseBuild.findMany({
       where: { featured: true, moderationStatus: "APPROVED" },
       orderBy: [{ featuredAt: "desc" }, { upvotes: "desc" }],
       take: 8,
@@ -342,7 +342,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (!slug) return reply.code(400).send({ ok: false, error: "missing_slug" });
     const u = authFromHeader((req as any).headers?.authorization);
 
-    const b = await (prisma as any).windroseBuild.findUnique({
+    const b = await prisma.windroseBuild.findUnique({
       where: { slug },
       include: {
         author: { select: { id: true, name: true, avatar: true, avatarColor: true, steamId: true, tier: true, globalRole: true } },
@@ -351,15 +351,15 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (!b || (b.moderationStatus === "REMOVED" && !u)) return reply.code(404).send({ ok: false, error: "not_found" });
 
     if (!u || u.id !== b.authorId) {
-      (prisma as any).windroseBuild.update({ where: { id: b.id }, data: { views: { increment: 1 } } }).catch(() => {});
+      prisma.windroseBuild.update({ where: { id: b.id }, data: { views: { increment: 1 } } }).catch(() => {});
     }
 
     let myVote = 0;
     let mySave = false;
     if (u) {
       const [v, s] = await Promise.all([
-        (prisma as any).windroseBuildVote.findUnique({ where: { buildId_userId: { buildId: b.id, userId: u.id } } }),
-        (prisma as any).windroseBuildSave.findUnique({ where: { buildId_userId: { buildId: b.id, userId: u.id } } }),
+        prisma.windroseBuildVote.findUnique({ where: { buildId_userId: { buildId: b.id, userId: u.id } } }),
+        prisma.windroseBuildSave.findUnique({ where: { buildId_userId: { buildId: b.id, userId: u.id } } }),
       ]);
       myVote = v?.value || 0;
       mySave = !!s;
@@ -370,9 +370,9 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
 
   app.get("/windrose/builds/:slug/comments", async (req, reply) => {
     const slug = String((req as any).params?.slug || "");
-    const b = await (prisma as any).windroseBuild.findUnique({ where: { slug }, select: { id: true } });
+    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true } });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
-    const items = await (prisma as any).windroseBuildComment.findMany({
+    const items = await prisma.windroseBuildComment.findMany({
       where: { buildId: b.id },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -385,12 +385,12 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await (prisma as any).windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
+    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     const body: any = (req as any).body || {};
     const text = String(body.body || "").trim().slice(0, COMMENT_MAX);
     if (text.length < 1) return reply.code(400).send({ ok: false, error: "empty" });
-    const c = await (prisma as any).windroseBuildComment.create({
+    const c = await prisma.windroseBuildComment.create({
       data: { buildId: b.id, userId: u.id, body: text },
       include: { user: { select: { id: true, name: true, avatar: true, avatarColor: true } } },
     });
@@ -401,16 +401,16 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await (prisma as any).windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
+    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     if (b.authorId === u.id) return reply.code(400).send({ ok: false, error: "self_vote" });
 
     const body: any = (req as any).body || {};
     const value = Math.max(-1, Math.min(1, parseInt(body.value)));
     if (value === 0) {
-      await (prisma as any).windroseBuildVote.deleteMany({ where: { buildId: b.id, userId: u.id } });
+      await prisma.windroseBuildVote.deleteMany({ where: { buildId: b.id, userId: u.id } });
     } else {
-      await (prisma as any).windroseBuildVote.upsert({
+      await prisma.windroseBuildVote.upsert({
         where: { buildId_userId: { buildId: b.id, userId: u.id } },
         update: { value },
         create: { buildId: b.id, userId: u.id, value },
@@ -418,10 +418,10 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     }
 
     const [up, down] = await Promise.all([
-      (prisma as any).windroseBuildVote.count({ where: { buildId: b.id, value: 1 } }),
-      (prisma as any).windroseBuildVote.count({ where: { buildId: b.id, value: -1 } }),
+      prisma.windroseBuildVote.count({ where: { buildId: b.id, value: 1 } }),
+      prisma.windroseBuildVote.count({ where: { buildId: b.id, value: -1 } }),
     ]);
-    await (prisma as any).windroseBuild.update({
+    await prisma.windroseBuild.update({
       where: { id: b.id },
       data: { upvotes: up, downvotes: down },
     });
@@ -435,19 +435,19 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await (prisma as any).windroseBuild.findUnique({ where: { slug }, select: { id: true } });
+    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true } });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
 
-    const existing = await (prisma as any).windroseBuildSave.findUnique({
+    const existing = await prisma.windroseBuildSave.findUnique({
       where: { buildId_userId: { buildId: b.id, userId: u.id } },
     });
     if (existing) {
-      await (prisma as any).windroseBuildSave.delete({ where: { id: existing.id } });
+      await prisma.windroseBuildSave.delete({ where: { id: existing.id } });
     } else {
-      await (prisma as any).windroseBuildSave.create({ data: { buildId: b.id, userId: u.id } });
+      await prisma.windroseBuildSave.create({ data: { buildId: b.id, userId: u.id } });
     }
-    const count = await (prisma as any).windroseBuildSave.count({ where: { buildId: b.id } });
-    await (prisma as any).windroseBuild.update({ where: { id: b.id }, data: { saveCount: count } });
+    const count = await prisma.windroseBuildSave.count({ where: { buildId: b.id } });
+    await prisma.windroseBuild.update({ where: { id: b.id }, data: { saveCount: count } });
     return reply.send({ ok: true, saved: !existing, saveCount: count });
   });
 
@@ -461,7 +461,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const slug = String((req as any).params?.slug || "");
     const body: any = (req as any).body || {};
     const featured = !!body.featured;
-    const updated = await (prisma as any).windroseBuild.update({
+    const updated = await prisma.windroseBuild.update({
       where: { slug },
       data: { featured, featuredAt: featured ? new Date() : null },
     });
@@ -472,13 +472,13 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await (prisma as any).windroseBuild.findUnique({ where: { slug }, select: { id: true } });
+    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true } });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     const body: any = (req as any).body || {};
     const reason = String(body.reason || "OTHER").toUpperCase();
     if (!VALID_REPORT_REASONS.has(reason)) return reply.code(400).send({ ok: false, error: "bad_reason" });
     const note = body.note ? String(body.note).slice(0, 500) : null;
-    await (prisma as any).windroseBuildReport.create({
+    await prisma.windroseBuildReport.create({
       data: { buildId: b.id, userId: u.id, reason, note },
     });
     return reply.send({ ok: true });
@@ -488,7 +488,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await (prisma as any).windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
+    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     let isStaff = false;
     if (getGlobalRole && canAccessStaff) {
@@ -496,7 +496,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
       isStaff = canAccessStaff(role);
     }
     if (b.authorId !== u.id && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
-    await (prisma as any).windroseBuild.delete({ where: { id: b.id } });
+    await prisma.windroseBuild.delete({ where: { id: b.id } });
     return reply.send({ ok: true });
   });
 

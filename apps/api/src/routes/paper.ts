@@ -46,11 +46,11 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
         if (deb.count === 0) return { ok: false as const, balance: 0 };
         const sender = await tx.user.findUnique({ where: { id: u.id }, select: { paper: true } });
         const senderBal = (sender as any)?.paper ?? 0;
-        await (tx as any).paperTransaction.create({ data: { userId: u.id, type: "SPEND_GIFT", amount: -amount, balance: senderBal, description: `Tip to ${recipient.name}${note ? ` · ${note}` : ""}`, refId: recipient.id } });
+        await tx.paperTransaction.create({ data: { userId: u.id, type: "SPEND_GIFT", amount: -amount, balance: senderBal, description: `Tip to ${recipient.name}${note ? ` · ${note}` : ""}`, refId: recipient.id } });
         await tx.user.update({ where: { id: recipient.id }, data: { paper: { increment: amount } } });
         const recip = await tx.user.findUnique({ where: { id: recipient.id }, select: { paper: true } });
         const recipBal = (recip as any)?.paper ?? 0;
-        await (tx as any).paperTransaction.create({ data: { userId: recipient.id, type: "EARN_GIFT", amount, balance: recipBal, description: `Tip from ${u.name || u.id}${note ? ` · ${note}` : ""}`, refId: u.id } });
+        await tx.paperTransaction.create({ data: { userId: recipient.id, type: "EARN_GIFT", amount, balance: recipBal, description: `Tip from ${u.name || u.id}${note ? ` · ${note}` : ""}`, refId: u.id } });
         return { ok: true as const, balance: senderBal };
       });
       if (!result.ok) return reply.code(400).send({ ok: false, error: "insufficient_paper" });
@@ -72,7 +72,7 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
     const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
-    const txns = await (prisma as any).paperTransaction.findMany({
+    const txns = await prisma.paperTransaction.findMany({
       where: { userId: u.id },
       orderBy: { createdAt: "desc" },
       take: 50,

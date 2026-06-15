@@ -159,7 +159,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       }
     }
 
-    const def = await (prisma as any).challengeDefinition.create({
+    const def = await prisma.challengeDefinition.create({
       data: {
         title: String(body.title || "").trim(),
         description: String(body.description || "").trim(),
@@ -207,7 +207,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       if (!isMember) {
         return reply.code(403).send({ ok: false, error: "not_a_member", message: `Join the ${lobby?.name || "lobby"} to build a challenge here.` });
       }
-      const liveCount = await (prisma as any).challengeDefinition.count({
+      const liveCount = await prisma.challengeDefinition.count({
         where: { createdById: u.id, status: "ACTIVE" },
       });
       if (liveCount >= 3) {
@@ -275,7 +275,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
 
     const title = String(body.title || "").trim().slice(0, 80) || ("Complete " + descParts.join(", then "));
 
-    const def = await (prisma as any).challengeDefinition.create({
+    const def = await prisma.challengeDefinition.create({
       data: {
         title,
         description: descParts.map((p) => "• " + p).join("\n"),
@@ -291,7 +291,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
         status: "ACTIVE",
       },
     });
-    await (prisma as any).challengeInstance.create({
+    await prisma.challengeInstance.create({
       data: { definitionId: def.id, startsAt: new Date(), status: "ACTIVE" },
     });
 
@@ -304,7 +304,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const def = await (prisma as any).challengeDefinition.findUnique({
+    const def = await prisma.challengeDefinition.findUnique({
       where: { id },
       select: { id: true, lobbyId: true, createdById: true, _count: { select: { instances: true } } },
     });
@@ -334,7 +334,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     if (body.status !== undefined && ["DRAFT", "ACTIVE", "ARCHIVED"].includes(body.status)) data.status = body.status;
     if (body.objectives !== undefined) {
       if (def._count.instances > 0) {
-        const existing = await (prisma as any).challengeDefinition.findUnique({ where: { id }, select: { objectives: true } });
+        const existing = await prisma.challengeDefinition.findUnique({ where: { id }, select: { objectives: true } });
         const existingObjs: any[] = (existing?.objectives as any[]) || [];
         const incomingById: Record<string, any> = {};
         for (const o of (body.objectives as any[])) if (o?.id) incomingById[o.id] = o;
@@ -353,7 +353,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       }
     }
     if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_fields" });
-    const updated = await (prisma as any).challengeDefinition.update({ where: { id }, data });
+    const updated = await prisma.challengeDefinition.update({ where: { id }, data });
     return reply.send({ ok: true, definition: updated });
   });
 
@@ -363,7 +363,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const def = await (prisma as any).challengeDefinition.findUnique({
+    const def = await prisma.challengeDefinition.findUnique({
       where: { id },
       select: {
         id: true, lobbyId: true, createdById: true,
@@ -375,11 +375,11 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       return reply.code(403).send({ ok: false, error: "forbidden" });
     }
     if (def._count.instances > 0) {
-      await (prisma as any).challengeDefinition.update({ where: { id }, data: { status: "ARCHIVED" } });
-      await (prisma as any).challengeInstance.updateMany({ where: { definitionId: id, status: "ACTIVE" }, data: { status: "ARCHIVED" } });
+      await prisma.challengeDefinition.update({ where: { id }, data: { status: "ARCHIVED" } });
+      await prisma.challengeInstance.updateMany({ where: { definitionId: id, status: "ACTIVE" }, data: { status: "ARCHIVED" } });
       return reply.send({ ok: true, mode: "archived" });
     }
-    await (prisma as any).challengeDefinition.delete({ where: { id } });
+    await prisma.challengeDefinition.delete({ where: { id } });
     return reply.send({ ok: true, mode: "deleted" });
   });
 
@@ -389,7 +389,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const instance = await (prisma as any).challengeInstance.findUnique({
+    const instance = await prisma.challengeInstance.findUnique({
       where: { id },
       include: { definition: { select: { id: true, lobbyId: true, createdById: true } } },
     });
@@ -403,7 +403,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     if (body.endsAt !== undefined)   data.endsAt = body.endsAt ? new Date(body.endsAt) : null;
     if (body.status !== undefined && ["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"].includes(body.status)) data.status = body.status;
     if (Object.keys(data).length === 0) return reply.code(400).send({ ok: false, error: "no_fields" });
-    const updated = await (prisma as any).challengeInstance.update({ where: { id }, data });
+    const updated = await prisma.challengeInstance.update({ where: { id }, data });
     return reply.send({ ok: true, instance: updated });
   });
 
@@ -413,7 +413,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const instance = await (prisma as any).challengeInstance.findUnique({
+    const instance = await prisma.challengeInstance.findUnique({
       where: { id },
       include: {
         definition: { select: { id: true, lobbyId: true, createdById: true } },
@@ -425,10 +425,10 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       return reply.code(403).send({ ok: false, error: "forbidden" });
     }
     if (instance._count.enrollments > 0) {
-      await (prisma as any).challengeInstance.update({ where: { id }, data: { status: "ARCHIVED" } });
+      await prisma.challengeInstance.update({ where: { id }, data: { status: "ARCHIVED" } });
       return reply.send({ ok: true, mode: "archived" });
     }
-    await (prisma as any).challengeInstance.delete({ where: { id } });
+    await prisma.challengeInstance.delete({ where: { id } });
     return reply.send({ ok: true, mode: "deleted" });
   });
 

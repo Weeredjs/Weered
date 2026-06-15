@@ -56,7 +56,7 @@ app.get("/dm/previews", async (req, reply) => {
   const u = authFromHeader(req.headers.authorization);
   if (!u) return reply.code(401).send({ ok: false });
 
-  const recentDms = await (prisma as any).directMessage.findMany({
+  const recentDms = await prisma.directMessage.findMany({
     where: { OR: [{ fromId: u.id }, { toId: u.id }] },
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -80,7 +80,7 @@ app.get("/dm/previews", async (req, reply) => {
   const peers = [...byPeer.values()].slice(0, 5);
 
   const peerIds = peers.map((p: any) => p.peerId);
-  const users = peerIds.length > 0 ? await (prisma as any).user.findMany({
+  const users = peerIds.length > 0 ? await prisma.user.findMany({
     where: { id: { in: peerIds } },
     select: { id: true, name: true, avatar: true },
   }) : [];
