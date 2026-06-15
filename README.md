@@ -33,7 +33,7 @@ For the deliberate single-node scaling posture (and why horizontal WS scaling is
 
 ## Stack
 
-- **Backend:** Fastify 5, Prisma + PostgreSQL, WebSockets, LiveKit (voice/video), Redis (presence). Type-gated (`tsc --noEmit` clean) and esbuild-compiled to `dist/` for production.
+- **Backend:** Fastify 5, Prisma + PostgreSQL, WebSockets, LiveKit (voice/video). Type-gated (`tsc --noEmit` clean) and esbuild-compiled to `dist/` for production. Single-node by design (see SCALING.md); Redis pub/sub is deliberately deferred, not in use.
 - **Web:** Next.js 15.5, React 19, TypeScript.
 - **Mobile:** React Native 0.83, Expo SDK 55, expo-router, NativeWind, TanStack Query, Zustand.
 - **Desktop:** Tauri 2, Rust, native OS webview (~5 MB installer).

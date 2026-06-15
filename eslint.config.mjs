@@ -19,7 +19,9 @@ export default [
       // redundant here and produces false positives on Node/browser globals.
       // (This is the typescript-eslint project's own recommendation.)
       "no-undef": "off",
-      "@typescript-eslint/no-explicit-any": "off",
+      // Warn (non-blocking in CI) on `any` to cap growth of the ~3,300 existing
+      // casts without a big-bang burn-down.
+      "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/ban-ts-comment": "off",

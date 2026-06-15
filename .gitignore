@@ -80,3 +80,7 @@ apps/mod/run/
 .next/
 
 _drain_baseline/
+
+# Runtime + build artifacts (untracked)
+.build/
+apps/desktop/dist/
