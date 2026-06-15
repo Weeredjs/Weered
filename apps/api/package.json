@@ -12,7 +12,8 @@
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.js --sourcemap",
     "start:tsx": "tsx src/index.ts",
     "test": "vitest run test/unit",
-    "test:unit": "vitest run test/unit"
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run --config test/integration/vitest.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
