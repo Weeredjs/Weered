@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -61,7 +62,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, completed, tier: reliabilityTier(completed) });
   });
 
-  app.post("/lfg/:lobbyId", async (req, reply) => {
+  app.post("/lfg/:lobbyId", {
+  schema: { tags: ["lfg"], params: z.object({ lobbyId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const lobbyId = String((req as any).params?.lobbyId || "");
@@ -104,7 +107,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, post });
   });
 
-  app.post("/lfg/:postId/join", async (req, reply) => {
+  app.post("/lfg/:postId/join", {
+  schema: { tags: ["lfg"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
@@ -126,7 +131,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, players, playerNames, status });
   });
 
-  app.post("/lfg/:postId/leave", async (req, reply) => {
+  app.post("/lfg/:postId/leave", {
+  schema: { tags: ["lfg"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
@@ -149,7 +156,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, status });
   });
 
-  app.delete("/lfg/:postId", async (req, reply) => {
+  app.delete("/lfg/:postId", {
+  schema: { tags: ["lfg"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
@@ -166,7 +175,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.post("/lfg/:postId/roles/:index/claim", async (req, reply) => {
+  app.post("/lfg/:postId/roles/:index/claim", {
+  schema: { tags: ["lfg"], params: z.object({ postId: z.string().min(1), index: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
@@ -194,7 +205,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, status, roleClaims: claims, roleClaimNames: names });
   });
 
-  app.post("/lfg/:postId/roles/release", async (req, reply) => {
+  app.post("/lfg/:postId/roles/release", {
+  schema: { tags: ["lfg"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");
@@ -215,7 +228,9 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, status });
   });
 
-  app.post("/lfg/:postId/complete", async (req, reply) => {
+  app.post("/lfg/:postId/complete", {
+  schema: { tags: ["lfg"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const postId = String((req as any).params?.postId || "");

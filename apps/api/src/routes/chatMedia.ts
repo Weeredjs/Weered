@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import sharp from "sharp";
 import * as fs from "fs";
@@ -104,7 +105,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
   });
 
   // Upload — base64 data-URL body (same convention as avatar uploads).
-  app.post("/chat/upload", { bodyLimit: 16 * 1024 * 1024 }, async (req, reply) => {
+  app.post("/chat/upload", { bodyLimit: 16 * 1024 * 1024, schema: { tags: ["chatMedia"] } }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const user: any = await prisma.user.findUnique({
@@ -193,7 +194,9 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
   });
 
   // Report — auto-hides at threshold pending staff review.
-  app.post("/chat/attachments/:id/report", async (req, reply) => {
+  app.post("/chat/attachments/:id/report", {
+  schema: { tags: ["chatMedia"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
     const id = String((req as any).params?.id || "");
@@ -221,7 +224,9 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, attachments: rows });
   });
 
-  app.post("/staff/attachments/:id/remove", async (req, reply) => {
+  app.post("/staff/attachments/:id/remove", {
+  schema: { tags: ["chatMedia"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u: any = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
     const me: any = await prisma.user.findUnique({ where: { id: u.id }, select: { globalRole: true } });

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -10,7 +11,9 @@ type Opts = {
 export default async function notificationsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, VAPID_PUBLIC, sendPush } = opts;
 
-  app.post("/push/subscribe", async (req, reply) => {
+  app.post("/push/subscribe", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ ok: false, error: "auth" });
     const { endpoint, keys } = req.body as any;
@@ -23,7 +26,9 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
-  app.delete("/push/subscribe", async (req, reply) => {
+  app.delete("/push/subscribe", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ ok: false, error: "auth" });
     const { endpoint } = req.body as any;
@@ -36,7 +41,9 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true, key: VAPID_PUBLIC });
   });
 
-  app.post("/push/expo-register", async (req, reply) => {
+  app.post("/push/expo-register", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = (req as any).body || {};
@@ -53,14 +60,18 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
-  app.post("/push/debug", async (req, reply) => {
+  app.post("/push/debug", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     const body = (req as any).body || {};
     console.log('[push/debug]', { userId: u?.id || null, stage: body.stage, error: body.error, info: body.info });
     return reply.send({ ok: true });
   });
 
-  app.delete("/push/expo-register", async (req, reply) => {
+  app.delete("/push/expo-register", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = (req as any).body || {};
@@ -70,7 +81,9 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
-  app.post("/push/test", async (req, reply) => {
+  app.post("/push/test", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const [webSubs, expoTokens] = await Promise.all([
@@ -118,7 +131,9 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     });
   });
 
-  app.patch("/notifications/read", async (req, reply) => {
+  app.patch("/notifications/read", {
+  schema: { tags: ["notifications"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
@@ -139,7 +154,9 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     return reply.send({ ok: true });
   });
 
-  app.delete("/notifications/:id", async (req, reply) => {
+  app.delete("/notifications/:id", {
+  schema: { tags: ["notifications"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 

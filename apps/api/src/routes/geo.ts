@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { latLngToCell, cellToBoundary, gridDisk } from "h3-js";
 
@@ -10,7 +11,9 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
   const H3_RES = 7;
 
-  app.post("/me/location", async (req, reply) => {
+  app.post("/me/location", {
+  schema: { tags: ["geo"] },
+}, async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const body: any = (req as any).body || {};
@@ -27,7 +30,9 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, h3: h3Index });
   });
 
-  app.delete("/me/location", async (req, reply) => {
+  app.delete("/me/location", {
+  schema: { tags: ["geo"] },
+}, async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     await prisma.user.update({

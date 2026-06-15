@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -31,7 +32,9 @@ export default async function badgesRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, badges: result });
   });
 
-  app.post("/badges", async (req, reply) => {
+  app.post("/badges", {
+  schema: { tags: ["badges"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {

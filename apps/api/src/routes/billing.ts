@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { createHmac, timingSafeEqual, randomUUID } from "crypto";
 
@@ -65,7 +66,9 @@ app.get("/lobbies/:id/admin/tier-stats", async (req, reply) => {
   return reply.send({ ok: true, subscribers: enriched });
 });
 
-app.post("/lobbies/:id/admin/tiers", async (req, reply) => {
+app.post("/lobbies/:id/admin/tiers", {
+  schema: { tags: ["billing"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 5);
   if (!ctx) return;
   const body: any = (req as any).body || {};
@@ -104,7 +107,9 @@ app.post("/lobbies/:id/admin/tiers", async (req, reply) => {
   return reply.send({ ok: true, tier });
 });
 
-app.patch("/lobbies/:id/admin/tiers/:tierId", async (req, reply) => {
+app.patch("/lobbies/:id/admin/tiers/:tierId", {
+  schema: { tags: ["billing"], params: z.object({ id: z.string().min(1), tierId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 5);
   if (!ctx) return;
   const tierId = String((req as any).params?.tierId || "");
@@ -129,7 +134,9 @@ app.patch("/lobbies/:id/admin/tiers/:tierId", async (req, reply) => {
   return reply.send({ ok: true, tier });
 });
 
-app.patch("/lobbies/:id/admin/revenue-share", async (req, reply) => {
+app.patch("/lobbies/:id/admin/revenue-share", {
+  schema: { tags: ["billing"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 5);
   if (!ctx) return;
   const body: any = (req as any).body || {};
@@ -187,7 +194,9 @@ app.get("/subscribe/status", async (req, reply) => {
   });
 });
 
-app.post("/subscribe/checkout", async (req, reply) => {
+app.post("/subscribe/checkout", {
+  schema: { tags: ["billing"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   if (!STRIPE_SK) return reply.code(500).send({ ok: false, error: "stripe_not_configured" });
@@ -229,7 +238,9 @@ app.post("/subscribe/checkout", async (req, reply) => {
   return reply.send({ ok: true, url: session.url, sessionId: session.id });
 });
 
-app.post("/subscribe/portal", async (req, reply) => {
+app.post("/subscribe/portal", {
+  schema: { tags: ["billing"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
@@ -242,7 +253,9 @@ app.post("/subscribe/portal", async (req, reply) => {
   return reply.send({ ok: true, url: session.url });
 });
 
-app.post("/lobbies/:id/tiers/:tierId/checkout", async (req, reply) => {
+app.post("/lobbies/:id/tiers/:tierId/checkout", {
+  schema: { tags: ["billing"], params: z.object({ id: z.string().min(1), tierId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   if (!STRIPE_SK) return reply.code(500).send({ ok: false, error: "stripe_not_configured" });
@@ -293,7 +306,9 @@ app.post("/lobbies/:id/tiers/:tierId/checkout", async (req, reply) => {
   return reply.send({ ok: true, url: session.url, sessionId: session.id });
 });
 
-app.post("/lobbies/:id/tiers/portal", async (req, reply) => {
+app.post("/lobbies/:id/tiers/portal", {
+  schema: { tags: ["billing"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const lobbyId = String((req as any).params?.id || "");
@@ -479,7 +494,9 @@ app.post("/subscribe/webhook", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.post("/staff/subscriptions/grant", async (req, reply) => {
+app.post("/staff/subscriptions/grant", {
+  schema: { tags: ["billing"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const role = await getGlobalRole(u.id);

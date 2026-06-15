@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import crypto from "node:crypto";
 import { prisma } from "../lib/prisma";
 
@@ -33,7 +34,9 @@ async function userFromModToken(authHeader: string | undefined): Promise<{ userI
 export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
 
-  app.post("/mc/pair/start", async (_req, reply) => {
+  app.post("/mc/pair/start", {
+  schema: { tags: ["mc"] },
+}, async (_req, reply) => {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = randomCode();
@@ -50,7 +53,9 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     return reply.code(500).send({ ok: false, error: "could_not_generate_code" });
   });
 
-  app.post("/mc/pair/confirm", async (req, reply) => {
+  app.post("/mc/pair/confirm", {
+  schema: { tags: ["mc"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = req.body as any;
@@ -94,7 +99,9 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.post("/mc/pair/poll", async (req, reply) => {
+  app.post("/mc/pair/poll", {
+  schema: { tags: ["mc"] },
+}, async (req, reply) => {
     const body = req.body as any;
     const code = String(body?.code || "").trim().toUpperCase();
     if (!code) return reply.code(400).send({ ok: false, error: "missing_code" });
@@ -122,7 +129,9 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/mc/presence", async (req, reply) => {
+  app.post("/mc/presence", {
+  schema: { tags: ["mc"] },
+}, async (req, reply) => {
     const auth = await userFromModToken((req as any).headers?.authorization);
     if (!auth) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
@@ -205,7 +214,9 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, players });
   });
 
-  app.post("/mc/presence/leave", async (req, reply) => {
+  app.post("/mc/presence/leave", {
+  schema: { tags: ["mc"] },
+}, async (req, reply) => {
     const auth = await userFromModToken((req as any).headers?.authorization);
     if (!auth) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = req.body as any;
@@ -233,7 +244,9 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/mc/unlink", async (req, reply) => {
+  app.post("/mc/unlink", {
+  schema: { tags: ["mc"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     await (prisma as any).userGameAccount.deleteMany({

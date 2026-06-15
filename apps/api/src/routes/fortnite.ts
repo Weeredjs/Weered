@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -249,7 +250,9 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, items });
   });
 
-  app.post("/fortnite/wishlist", async (req, reply) => {
+  app.post("/fortnite/wishlist", {
+  schema: { tags: ["fortnite"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
@@ -279,7 +282,9 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.delete("/fortnite/wishlist/:cosmeticId", async (req, reply) => {
+  app.delete("/fortnite/wishlist/:cosmeticId", {
+  schema: { tags: ["fortnite"], params: z.object({ cosmeticId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const cosmeticId = String((req as any).params?.cosmeticId || "");

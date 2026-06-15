@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -156,7 +157,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.patch("/profile/me", async (req, reply) => {
+  app.patch("/profile/me", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const authHeader = (req.headers as any).authorization;
     const viewer = authFromHeader(authHeader);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
@@ -260,7 +263,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/profile/me/steam-id", async (req, reply) => {
+  app.post("/profile/me/steam-id", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
@@ -311,7 +316,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, steamId, resolvedFrom: raw !== steamId ? raw : undefined });
   });
 
-  app.post("/profile/me/twitch-login", async (req, reply) => {
+  app.post("/profile/me/twitch-login", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
@@ -327,7 +334,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, twitchLogin });
   });
 
-  app.post("/profile/me/xbox-gamertag", async (req, reply) => {
+  app.post("/profile/me/xbox-gamertag", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
@@ -357,7 +366,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, xboxGamertag: resolved.gamertag, xboxXuid: resolved.xuid });
   });
 
-  app.post("/profile/me/psn-account-id", async (req, reply) => {
+  app.post("/profile/me/psn-account-id", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
@@ -400,7 +411,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/profile/me/presence/refresh", async (req, reply) => {
+  app.post("/profile/me/presence/refresh", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const row = await prisma.user.findUnique({
@@ -437,7 +450,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, livePresence: primary ?? null, presenceCheckedAt: new Date().toISOString() });
   });
 
-  app.post("/profile/me/delete", async (req, reply) => {
+  app.post("/profile/me/delete", {
+  schema: { tags: ["profile"] },
+}, async (req, reply) => {
     const viewer = authFromHeader((req as any).headers?.authorization);
     if (!viewer) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};

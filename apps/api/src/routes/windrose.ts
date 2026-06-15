@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -468,7 +469,9 @@ app.get("/windrose/servers", async (req, reply) => {
   }
 });
 
-app.post("/windrose/servers", async (req, reply) => {
+app.post("/windrose/servers", {
+  schema: { tags: ["windrose"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const body: any = (req as any).body || {};
@@ -495,7 +498,9 @@ app.post("/windrose/servers", async (req, reply) => {
   }
 });
 
-app.patch("/windrose/servers/:id", async (req, reply) => {
+app.patch("/windrose/servers/:id", {
+  schema: { tags: ["windrose"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const id = (req.params as any).id as string;
@@ -524,7 +529,9 @@ app.patch("/windrose/servers/:id", async (req, reply) => {
   }
 });
 
-app.delete("/windrose/servers/:id", async (req, reply) => {
+app.delete("/windrose/servers/:id", {
+  schema: { tags: ["windrose"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const id = (req.params as any).id as string;
@@ -582,7 +589,9 @@ app.get("/windrose/bounties/:id", async (req, reply) => {
   }
 });
 
-app.post("/windrose/bounties", async (req, reply) => {
+app.post("/windrose/bounties", {
+  schema: { tags: ["windrose"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const body: any = (req as any).body || {};
@@ -652,7 +661,9 @@ app.post("/windrose/bounties", async (req, reply) => {
   }
 });
 
-app.post("/windrose/bounties/:id/claim", async (req, reply) => {
+app.post("/windrose/bounties/:id/claim", {
+  schema: { tags: ["windrose"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const id = (req.params as any).id as string;
@@ -693,7 +704,9 @@ app.post("/windrose/bounties/:id/claim", async (req, reply) => {
   }
 });
 
-app.post("/windrose/bounties/:id/settle", async (req, reply) => {
+app.post("/windrose/bounties/:id/settle", {
+  schema: { tags: ["windrose"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const id = (req.params as any).id as string;
@@ -725,7 +738,9 @@ app.post("/windrose/bounties/:id/settle", async (req, reply) => {
   }
 });
 
-app.post("/windrose/bounties/:id/reject", async (req, reply) => {
+app.post("/windrose/bounties/:id/reject", {
+  schema: { tags: ["windrose"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const id = (req.params as any).id as string;
@@ -755,7 +770,9 @@ app.post("/windrose/bounties/:id/reject", async (req, reply) => {
   }
 });
 
-app.post("/windrose/bounties/:id/cancel", async (req, reply) => {
+app.post("/windrose/bounties/:id/cancel", {
+  schema: { tags: ["windrose"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const id = (req.params as any).id as string;

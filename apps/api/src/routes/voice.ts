@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { AccessToken } from "livekit-server-sdk";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config
@@ -21,7 +22,9 @@ type Opts = {
 export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, rooms, ensureRoomLoaded, normalizeRoomId, isModOrOwner, awardNotoriety } = opts;
 
-  app.post("/voice/token", async (req, reply) => {
+  app.post("/voice/token", {
+  schema: { tags: ["voice"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) return reply.code(500).send({ ok: false, error: "livekit_not_configured" });
